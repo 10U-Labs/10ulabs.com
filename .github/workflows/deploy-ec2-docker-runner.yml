@@ -1,0 +1,130 @@
+name: Deploy EC2 Docker Builder Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - destroy
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/aws-runners.yaml'
+      - '.github/workflows/deploy-ec2-docker-runner.yml'
+
+jobs:
+  deploy-ec2-runner:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration from config file
+        id: config
+        run: |
+          # AWS Configuration
+          ACCOUNT_ID=$(yq '.aws.account_id' config/aws-runners.yaml)
+          REGION=$(yq '.aws.region' config/aws-runners.yaml)
+          VPC_ID=$(yq '.aws.vpc_id' config/aws-runners.yaml)
+          SUBNET_ID=$(yq '.aws.subnet_ids[0]' config/aws-runners.yaml)
+
+          # GitHub Configuration
+          RUNNER_VERSION=$(yq '.github.runner_version' config/aws-runners.yaml)
+          GITHUB_REPO=$(yq '.github.repo' config/aws-runners.yaml)
+
+          # EC2 Docker Builder Configuration
+          ENABLED=$(yq '.docker_builder.enabled' config/aws-runners.yaml)
+          INSTANCE_TYPE=$(yq '.docker_builder.instance_type' config/aws-runners.yaml)
+          ARCHITECTURE=$(yq '.docker_builder.architecture' config/aws-runners.yaml)
+          SPOT_MAX_PRICE=$(yq '.docker_builder.spot_max_price' config/aws-runners.yaml)
+          VOLUME_SIZE=$(yq '.docker_builder.storage.volume_size' config/aws-runners.yaml)
+          VOLUME_TYPE=$(yq '.docker_builder.storage.volume_type' config/aws-runners.yaml)
+          STACK_NAME=$(yq '.docker_builder.stack_name' config/aws-runners.yaml)
+          RUNNER_LABELS=$(yq '.docker_builder.runner_labels | join(",")' config/aws-runners.yaml)
+
+          # Export to GITHUB_OUTPUT
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "github_repo=$GITHUB_REPO" >> $GITHUB_OUTPUT
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+          echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
+          echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
+          echo "volume_size=$VOLUME_SIZE" >> $GITHUB_OUTPUT
+          echo "volume_type=$VOLUME_TYPE" >> $GITHUB_OUTPUT
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT
+          echo "runner_labels=$RUNNER_LABELS" >> $GITHUB_OUTPUT
+
+      - name: Check if runner is enabled
+        if: steps.config.outputs.enabled != 'true'
+        run: |
+          echo "EC2 Docker Builder is not enabled in config file"
+          exit 0
+
+      - name: Configure AWS credentials
+        if: steps.config.outputs.enabled == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Create or update CloudFormation stack
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          aws cloudformation deploy \
+            --template-file src/cicd/cloudformation/ec2-docker-runner.yaml \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --parameter-overrides \
+              InstanceType=${{ steps.config.outputs.instance_type }} \
+              Architecture=${{ steps.config.outputs.architecture }} \
+              SpotMaxPrice=${{ steps.config.outputs.spot_max_price }} \
+              VolumeSize=${{ steps.config.outputs.volume_size }} \
+              VolumeType=${{ steps.config.outputs.volume_type }} \
+              RunnerVersion=${{ steps.config.outputs.runner_version }} \
+              RunnerLabels="${{ steps.config.outputs.runner_labels }}" \
+              GitHubToken=${{ secrets.GH_RUNNER_TOKEN }} \
+              GitHubRepo=${{ steps.config.outputs.github_repo }} \
+              VpcId=${{ steps.config.outputs.vpc_id }} \
+              SubnetId=${{ steps.config.outputs.subnet_id }} \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ steps.config.outputs.region }}
+
+      - name: Destroy CloudFormation stack
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          aws cloudformation delete-stack \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+
+          aws cloudformation wait stack-delete-complete \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+
+      - name: Get runner status
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          INSTANCE_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`InstanceId`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          echo "EC2 Instance ID: $INSTANCE_ID"
+          echo "Runner should be available at: https://github.com/${{ steps.config.outputs.github_repo }}/settings/actions/runners"

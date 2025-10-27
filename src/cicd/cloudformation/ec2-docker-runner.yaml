@@ -1,0 +1,235 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'GitHub Actions Self-Hosted Runner on EC2 Spot Instance for Docker Builds'
+
+Parameters:
+  InstanceType:
+    Type: String
+    Description: EC2 instance type
+
+  Architecture:
+    Type: String
+    Description: CPU architecture (arm64 or x86_64)
+    AllowedValues:
+      - arm64
+      - x86_64
+
+  SpotMaxPrice:
+    Type: String
+    Description: Maximum hourly price for spot instance
+
+  VolumeSize:
+    Type: Number
+    Description: EBS volume size in GB
+
+  VolumeType:
+    Type: String
+    Description: EBS volume type
+    Default: gp3
+
+  RunnerVersion:
+    Type: String
+    Description: GitHub Actions runner version
+
+  RunnerLabels:
+    Type: String
+    Description: Comma-separated list of runner labels
+
+  GitHubToken:
+    Type: String
+    NoEcho: true
+    Description: GitHub Personal Access Token for runner registration
+
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository (owner/repo format)
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where the runner will be deployed
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet ID where the runner will be deployed
+
+Mappings:
+  ArchitectureMap:
+    arm64:
+      AmiParameter: '/aws/service/canonical/ubuntu/server/22.04/stable/current/arm64/hvm/ebs-gp2/ami-id'
+      RunnerArchive: 'actions-runner-linux-arm64'
+    x86_64:
+      AmiParameter: '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id'
+      RunnerArchive: 'actions-runner-linux-x64'
+
+Resources:
+  RunnerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for GitHub Actions runner
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg'
+
+  RunnerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: ECRAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                  - ecr:PutImage
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-role'
+
+  RunnerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref RunnerRole
+
+  RunnerLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-lt'
+      LaunchTemplateData:
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt RunnerInstanceProfile.Arn
+        SecurityGroupIds:
+          - !Ref RunnerSecurityGroup
+        ImageId: !Sub
+          - '{{resolve:ssm:${AmiParam}}}'
+          - AmiParam: !FindInMap [ArchitectureMap, !Ref Architecture, AmiParameter]
+        BlockDeviceMappings:
+          - DeviceName: /dev/sda1
+            Ebs:
+              VolumeSize: !Ref VolumeSize
+              VolumeType: !Ref VolumeType
+              DeleteOnTermination: true
+        UserData:
+          Fn::Base64: !Sub
+            - |
+              #!/bin/bash
+              set -e
+
+              # Update system
+              apt-get update
+              apt-get upgrade -y
+
+              # Install dependencies
+              apt-get install -y \
+                curl \
+                wget \
+                git \
+                jq \
+                unzip \
+                docker.io \
+                docker-compose
+
+              # Start and enable Docker
+              systemctl start docker
+              systemctl enable docker
+
+              # Create runner user
+              useradd -m -s /bin/bash github-runner
+              usermod -aG docker github-runner
+
+              # Install GitHub Actions runner
+              cd /home/github-runner
+              mkdir actions-runner && cd actions-runner
+
+              # Download and extract runner
+              RUNNER_ARCHIVE="${RunnerArchive}"
+              curl -o $${RUNNER_ARCHIVE}.tar.gz -L \
+                https://github.com/actions/runner/releases/download/v${RunnerVersion}/$${RUNNER_ARCHIVE}-${RunnerVersion}.tar.gz
+              tar xzf $${RUNNER_ARCHIVE}.tar.gz
+              rm $${RUNNER_ARCHIVE}.tar.gz
+
+              # Get registration token
+              REGISTRATION_TOKEN=$(curl -s -X POST \
+                -H "Authorization: token ${GitHubToken}" \
+                -H "Accept: application/vnd.github.v3+json" \
+                https://api.github.com/repos/${GitHubRepo}/actions/runners/registration-token | jq -r .token)
+
+              # Configure runner
+              chown -R github-runner:github-runner /home/github-runner
+              sudo -u github-runner ./config.sh \
+                --url https://github.com/${GitHubRepo} \
+                --token $REGISTRATION_TOKEN \
+                --labels ${RunnerLabels} \
+                --name "$(hostname)-$(ec2-metadata --instance-id | cut -d ' ' -f 2)" \
+                --work _work \
+                --unattended
+
+              # Install and start runner as service
+              ./svc.sh install github-runner
+              ./svc.sh start
+
+              # Install CloudWatch agent
+              wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/${Architecture}/latest/amazon-cloudwatch-agent.deb
+              dpkg -i -E ./amazon-cloudwatch-agent.deb
+
+              echo "Runner setup completed successfully"
+            - RunnerArchive: !FindInMap [ArchitectureMap, !Ref Architecture, RunnerArchive]
+
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${AWS::StackName}'
+              - Key: Type
+                Value: github-actions-runner
+              - Key: Purpose
+                Value: docker-builds
+
+  RunnerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref RunnerLaunchTemplate
+        Version: !GetAtt RunnerLaunchTemplate.LatestVersionNumber
+      SubnetId: !Ref SubnetId
+      InstanceMarketOptions:
+        MarketType: spot
+        SpotOptions:
+          MaxPrice: !Ref SpotMaxPrice
+          SpotInstanceType: one-time
+          InstanceInterruptionBehavior: terminate
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref RunnerInstance
+
+  InstancePrivateIp:
+    Description: Private IP address
+    Value: !GetAtt RunnerInstance.PrivateIp
+
+  SecurityGroupId:
+    Description: Security Group ID
+    Value: !Ref RunnerSecurityGroup

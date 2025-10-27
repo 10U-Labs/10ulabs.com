@@ -1,0 +1,203 @@
+name: Deploy ECS Fargate Runners
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - destroy
+      runner_count:
+        description: 'Number of runners to deploy (optional, uses config file if not specified)'
+        required: false
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/aws-runners.yaml'
+      - '.github/workflows/deploy-fargate-runners.yml'
+
+jobs:
+  deploy-fargate-runners:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration from config file
+        id: config
+        run: |
+          # AWS Configuration
+          ACCOUNT_ID=$(yq '.aws.account_id' config/aws-runners.yaml)
+          REGION=$(yq '.aws.region' config/aws-runners.yaml)
+          VPC_ID=$(yq '.aws.vpc_id' config/aws-runners.yaml)
+          SUBNET_IDS=$(yq '.aws.subnet_ids | join(",")' config/aws-runners.yaml)
+
+          # GitHub Configuration
+          RUNNER_VERSION=$(yq '.github.runner_version' config/aws-runners.yaml)
+          GITHUB_REPO=$(yq '.github.repo' config/aws-runners.yaml)
+
+          # Fargate Runners Configuration
+          ENABLED=$(yq '.fargate_runners.enabled' config/aws-runners.yaml)
+          CPU=$(yq '.fargate_runners.cpu' config/aws-runners.yaml)
+          MEMORY=$(yq '.fargate_runners.memory' config/aws-runners.yaml)
+          SPOT_WEIGHT=$(yq '.fargate_runners.spot_weight' config/aws-runners.yaml)
+          ONDEMAND_BASE=$(yq '.fargate_runners.ondemand_base' config/aws-runners.yaml)
+          MIN_INSTANCES=$(yq '.fargate_runners.min_instances' config/aws-runners.yaml)
+          MAX_INSTANCES=$(yq '.fargate_runners.max_instances' config/aws-runners.yaml)
+          DESIRED_COUNT=$(yq '.fargate_runners.desired_count' config/aws-runners.yaml)
+          RUNNER_LABELS=$(yq '.fargate_runners.runner_labels | join(",")' config/aws-runners.yaml)
+          TARGET_CPU=$(yq '.fargate_runners.scaling.target_cpu_utilization' config/aws-runners.yaml)
+          TARGET_MEMORY=$(yq '.fargate_runners.scaling.target_memory_utilization' config/aws-runners.yaml)
+          SCALE_IN_COOLDOWN=$(yq '.fargate_runners.scaling.scale_in_cooldown' config/aws-runners.yaml)
+          SCALE_OUT_COOLDOWN=$(yq '.fargate_runners.scaling.scale_out_cooldown' config/aws-runners.yaml)
+          STACK_NAME=$(yq '.fargate_runners.stack_name' config/aws-runners.yaml)
+          ECR_REPO=$(yq '.fargate_runners.ecr_repository' config/aws-runners.yaml)
+          LOG_RETENTION=$(yq '.fargate_runners.log_retention_days' config/aws-runners.yaml)
+
+          # Export to GITHUB_OUTPUT
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "github_repo=$GITHUB_REPO" >> $GITHUB_OUTPUT
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+          echo "cpu=$CPU" >> $GITHUB_OUTPUT
+          echo "memory=$MEMORY" >> $GITHUB_OUTPUT
+          echo "spot_weight=$SPOT_WEIGHT" >> $GITHUB_OUTPUT
+          echo "ondemand_base=$ONDEMAND_BASE" >> $GITHUB_OUTPUT
+          echo "min_instances=$MIN_INSTANCES" >> $GITHUB_OUTPUT
+          echo "max_instances=$MAX_INSTANCES" >> $GITHUB_OUTPUT
+          echo "desired_count=$DESIRED_COUNT" >> $GITHUB_OUTPUT
+          echo "runner_labels=$RUNNER_LABELS" >> $GITHUB_OUTPUT
+          echo "target_cpu=$TARGET_CPU" >> $GITHUB_OUTPUT
+          echo "target_memory=$TARGET_MEMORY" >> $GITHUB_OUTPUT
+          echo "scale_in_cooldown=$SCALE_IN_COOLDOWN" >> $GITHUB_OUTPUT
+          echo "scale_out_cooldown=$SCALE_OUT_COOLDOWN" >> $GITHUB_OUTPUT
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT
+          echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
+          echo "log_retention=$LOG_RETENTION" >> $GITHUB_OUTPUT
+
+      - name: Check if runner is enabled
+        if: steps.config.outputs.enabled != 'true'
+        run: |
+          echo "Fargate runners are not enabled in config file"
+          exit 0
+
+      - name: Configure AWS credentials
+        if: steps.config.outputs.enabled == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Build and push runner image
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          # Login to ECR
+          aws ecr get-login-password --region ${{ steps.config.outputs.region }} | \
+            docker login --username AWS --password-stdin \
+            ${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com
+
+          # Create ECR repository if it doesn't exist
+          aws ecr describe-repositories \
+            --repository-names ${{ steps.config.outputs.ecr_repo }} \
+            --region ${{ steps.config.outputs.region }} 2>/dev/null || \
+          aws ecr create-repository \
+            --repository-name ${{ steps.config.outputs.ecr_repo }} \
+            --region ${{ steps.config.outputs.region }}
+
+          # Build and push image
+          docker build \
+            --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
+            -t ${{ steps.config.outputs.ecr_repo }} \
+            src/cicd/docker/fargate-runner
+
+          docker tag ${{ steps.config.outputs.ecr_repo }}:latest \
+            ${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}:latest
+
+          docker push ${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}:latest
+
+      - name: Create or update CloudFormation stack
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          RUNNER_COUNT=${{ github.event.inputs.runner_count }}
+          if [ -z "$RUNNER_COUNT" ]; then
+            RUNNER_COUNT=${{ steps.config.outputs.desired_count }}
+          fi
+
+          aws cloudformation deploy \
+            --template-file src/cicd/cloudformation/fargate-runners.yaml \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --parameter-overrides \
+              Cpu=${{ steps.config.outputs.cpu }} \
+              Memory=${{ steps.config.outputs.memory }} \
+              SpotWeight=${{ steps.config.outputs.spot_weight }} \
+              OnDemandBase=${{ steps.config.outputs.ondemand_base }} \
+              MinInstances=${{ steps.config.outputs.min_instances }} \
+              MaxInstances=${{ steps.config.outputs.max_instances }} \
+              DesiredCount=$RUNNER_COUNT \
+              RunnerLabels="${{ steps.config.outputs.runner_labels }}" \
+              TargetCpuUtilization=${{ steps.config.outputs.target_cpu }} \
+              TargetMemoryUtilization=${{ steps.config.outputs.target_memory }} \
+              ScaleInCooldown=${{ steps.config.outputs.scale_in_cooldown }} \
+              ScaleOutCooldown=${{ steps.config.outputs.scale_out_cooldown }} \
+              LogRetentionDays=${{ steps.config.outputs.log_retention }} \
+              GitHubToken=${{ secrets.GH_RUNNER_TOKEN }} \
+              GitHubRepo=${{ steps.config.outputs.github_repo }} \
+              ImageUri=${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}:latest \
+              VpcId=${{ steps.config.outputs.vpc_id }} \
+              PrivateSubnetIds="${{ steps.config.outputs.subnet_ids }}" \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ steps.config.outputs.region }}
+
+      - name: Destroy CloudFormation stack
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          aws cloudformation delete-stack \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+
+          aws cloudformation wait stack-delete-complete \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+
+      - name: Get service status
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          CLUSTER_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ClusterName`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          SERVICE_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ServiceName`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          echo "ECS Cluster: $CLUSTER_NAME"
+          echo "ECS Service: $SERVICE_NAME"
+
+          aws ecs describe-services \
+            --cluster $CLUSTER_NAME \
+            --services $SERVICE_NAME \
+            --region ${{ steps.config.outputs.region }} \
+            --query 'services[0].{RunningCount:runningCount,DesiredCount:desiredCount,Status:status}' \
+            --output table
+
+          echo "Runners should be available at: https://github.com/${{ steps.config.outputs.github_repo }}/settings/actions/runners"

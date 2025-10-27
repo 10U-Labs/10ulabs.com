@@ -1,0 +1,79 @@
+---
+# AWS Configuration for GitHub Actions Self-Hosted Runners
+aws:
+  account_id: tbd
+  region: us-east-1
+
+  # VPC Configuration - Update these with your VPC details
+  vpc_id: tbd
+  # Subnet IDs for runners (use private subnets with NAT gateway)
+  subnet_ids:
+    - tbd
+    - tbd
+
+# GitHub Runner Configuration
+github:
+  runner_version: 2.311.0
+  # GitHub organization or user/repo format
+  repo: tbd
+
+# EC2 Spot Instance Configuration for Docker Builder
+docker_builder:
+  enabled: true
+  instance_type: c8gd.2xlarge
+  # ARM64 architecture for c8gd instances
+  architecture: arm64
+  spot_instance: true
+  spot_max_price: 0.5  # Maximum hourly price in USD
+
+  # Storage configuration
+  storage:
+    volume_size: 100  # GB
+    volume_type: gp3
+
+  # Runner configuration
+  runner_labels:
+    - docker-builder
+    - ec2
+    - arm64
+  max_instances: 2
+
+  # CloudFormation stack name
+  stack_name: github-runner-docker-builder
+
+# ECS Fargate Spot Configuration for General Runners
+fargate_runners:
+  enabled: true
+  cpu: 512  # 0.5 vCPU (256, 512, 1024, 2048, 4096)
+  memory: 1024  # 1GB RAM (must be compatible with CPU)
+
+  # Spot instance configuration
+  spot_instance: true
+  spot_weight: 4  # 80% spot, 20% on-demand
+  ondemand_base: 1  # Keep at least 1 on-demand instance
+
+  # Runner configuration
+  runner_labels:
+    - fargate
+    - general
+
+  # Auto-scaling configuration
+  min_instances: 1
+  max_instances: 10
+  desired_count: 2
+
+  # Scaling policies
+  scaling:
+    target_cpu_utilization: 70
+    target_memory_utilization: 80
+    scale_in_cooldown: 300  # seconds
+    scale_out_cooldown: 60  # seconds
+
+  # CloudFormation stack name
+  stack_name: github-runner-fargate
+
+  # ECR repository name for runner image
+  ecr_repository: github-runner-fargate
+
+  # CloudWatch logs retention
+  log_retention_days: 7
