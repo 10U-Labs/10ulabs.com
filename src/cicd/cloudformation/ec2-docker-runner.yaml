@@ -54,10 +54,10 @@ Parameters:
 Mappings:
   ArchitectureMap:
     arm64:
-      AmiParameter: '/aws/service/canonical/ubuntu/server/22.04/stable/current/arm64/hvm/ebs-gp2/ami-id'
+      AmiParameter: '/aws/service/debian/release/12/latest/arm64'
       RunnerArchive: 'actions-runner-linux-arm64'
     x86_64:
-      AmiParameter: '/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id'
+      AmiParameter: '/aws/service/debian/release/12/latest/amd64'
       RunnerArchive: 'actions-runner-linux-x64'
 
 Resources:
@@ -138,6 +138,7 @@ Resources:
               set -e
 
               # Update system
+              export DEBIAN_FRONTEND=noninteractive
               apt-get update
               apt-get upgrade -y
 
@@ -148,8 +149,23 @@ Resources:
                 git \
                 jq \
                 unzip \
-                docker.io \
-                docker-compose
+                sudo \
+                ca-certificates \
+                gnupg \
+                lsb-release
+
+              # Install Docker
+              install -m 0755 -d /etc/apt/keyrings
+              curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+              chmod a+r /etc/apt/keyrings/docker.gpg
+
+              echo \
+                "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+                $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+                tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+              apt-get update
+              apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
               # Start and enable Docker
               systemctl start docker
@@ -170,6 +186,10 @@ Resources:
               tar xzf $${RUNNER_ARCHIVE}.tar.gz
               rm $${RUNNER_ARCHIVE}.tar.gz
 
+              # Get instance metadata token and instance ID (IMDSv2)
+              TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+              INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+
               # Get registration token
               REGISTRATION_TOKEN=$(curl -s -X POST \
                 -H "Authorization: token ${GitHubToken}" \
@@ -182,7 +202,7 @@ Resources:
                 --url https://github.com/${GitHubRepo} \
                 --token $REGISTRATION_TOKEN \
                 --labels ${RunnerLabels} \
-                --name "$(hostname)-$(ec2-metadata --instance-id | cut -d ' ' -f 2)" \
+                --name "$(hostname)-$INSTANCE_ID" \
                 --work _work \
                 --unattended
 
@@ -191,7 +211,7 @@ Resources:
               ./svc.sh start
 
               # Install CloudWatch agent
-              wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/${Architecture}/latest/amazon-cloudwatch-agent.deb
+              wget https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${Architecture}/latest/amazon-cloudwatch-agent.deb
               dpkg -i -E ./amazon-cloudwatch-agent.deb
 
               echo "Runner setup completed successfully"

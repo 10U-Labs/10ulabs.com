@@ -45,6 +45,9 @@ jobs:
           VPC_ID=$(yq '.aws.vpc_id' config/aws-runners.yaml)
           SUBNET_IDS=$(yq '.aws.subnet_ids | join(",")' config/aws-runners.yaml)
 
+          # Base OS Configuration
+          BASE_OS_ARCH=$(yq '.base_os.architecture' config/aws-runners.yaml)
+
           # GitHub Configuration
           RUNNER_VERSION=$(yq '.github.runner_version' config/aws-runners.yaml)
           GITHUB_REPO=$(yq '.github.repo' config/aws-runners.yaml)
@@ -72,6 +75,7 @@ jobs:
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "base_os_arch=$BASE_OS_ARCH" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "github_repo=$GITHUB_REPO" >> $GITHUB_OUTPUT
           echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
@@ -123,6 +127,7 @@ jobs:
           # Build and push image
           docker build \
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
+            --build-arg RUNNER_ARCH=${{ steps.config.outputs.base_os_arch }} \
             -t ${{ steps.config.outputs.ecr_repo }} \
             src/cicd/docker/fargate-runner
 

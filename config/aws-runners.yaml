@@ -11,6 +11,17 @@ aws:
     - tbd
     - tbd
 
+# Base OS Configuration for all runners
+base_os:
+  # Operating system (debian, ubuntu, etc.)
+  os: debian
+  # OS version (12 = bookworm/stable, 11 = bullseye)
+  version: 12
+  # Variant (slim, standard)
+  variant: slim
+  # Architecture (arm64, amd64/x86_64)
+  architecture: arm64
+
 # GitHub Runner Configuration
 github:
   runner_version: 2.311.0
