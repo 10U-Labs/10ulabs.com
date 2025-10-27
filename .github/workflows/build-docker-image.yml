@@ -1,0 +1,327 @@
+name: Build Docker Images on ARM64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/aws-runners.yaml'
+      - 'src/cicd/docker/**'
+      - '.github/workflows/build-docker-image.yml'
+  schedule:
+    # Build new images monthly to include latest security patches
+    - cron: '0 3 1 * *'
+
+jobs:
+  build-docker-image:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(yq '.aws.account_id' config/aws-runners.yaml)
+          REGION=$(yq '.aws.region' config/aws-runners.yaml)
+          VPC_ID=$(yq '.aws.vpc_id' config/aws-runners.yaml)
+          SUBNET_ID=$(yq '.aws.subnet_ids[0]' config/aws-runners.yaml)
+          ARCHITECTURE=$(yq '.base_os.architecture' config/aws-runners.yaml)
+          RUNNER_VERSION=$(yq '.github.runner_version' config/aws-runners.yaml)
+          INSTANCE_TYPE=$(yq '.docker_builder.instance_type' config/aws-runners.yaml)
+          ECR_REPO=$(yq '.fargate_runners.ecr_repository' config/aws-runners.yaml)
+
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
+          echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
+          echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Create ECR repository if needed
+        run: |
+          aws ecr describe-repositories \\
+            --repository-names ${{ steps.config.outputs.ecr_repo }} \\
+            --region ${{ steps.config.outputs.region }} 2>/dev/null || \\
+          aws ecr create-repository \\
+            --repository-name ${{ steps.config.outputs.ecr_repo }} \\
+            --region ${{ steps.config.outputs.region }}
+
+      - name: Create build script
+        run: |
+          cat > build-docker.sh <<'SCRIPT_EOF'
+          #!/bin/bash
+          set -e
+
+          echo "==================================="
+          echo "Building Docker Image on ARM64"
+          echo "==================================="
+
+          # Get ECR login
+          aws ecr get-login-password --region ${AWS_REGION} | \\
+            docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+          # Build image
+          cd /build/src/cicd/docker/fargate-runner
+
+          echo "Building image with:"
+          echo "  Runner Version: ${RUNNER_VERSION}"
+          echo "  Architecture: ${ARCHITECTURE}"
+          echo ""
+
+          docker build \\
+            --build-arg RUNNER_VERSION=${RUNNER_VERSION} \\
+            --build-arg RUNNER_ARCH=${ARCHITECTURE} \\
+            --platform linux/${ARCHITECTURE} \\
+            -t ${ECR_REPO}:latest \\
+            -t ${ECR_REPO}:${BUILD_TAG} \\
+            .
+
+          # Tag for ECR
+          docker tag ${ECR_REPO}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:latest
+          docker tag ${ECR_REPO}:${BUILD_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_TAG}
+
+          # Push to ECR
+          echo ""
+          echo "Pushing to ECR..."
+          docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:latest
+          docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${BUILD_TAG}
+
+          echo ""
+          echo "✓ Docker image built and pushed successfully"
+          echo "  Repository: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+          echo "  Tags: latest, ${BUILD_TAG}"
+          SCRIPT_EOF
+
+          chmod +x build-docker.sh
+
+      - name: Create CloudFormation template for builder
+        run: |
+          cat > builder-instance.yaml <<'CFN_EOF'
+          AWSTemplateFormatVersion: '2010-09-09'
+          Parameters:
+            InstanceType:
+              Type: String
+            SubnetId:
+              Type: String
+            VpcId:
+              Type: String
+            LatestAmiId:
+              Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+              Default: /aws/service/debian/release/13/latest/arm64
+
+          Resources:
+            BuilderRole:
+              Type: AWS::IAM::Role
+              Properties:
+                AssumeRolePolicyDocument:
+                  Version: '2012-10-17'
+                  Statement:
+                    - Effect: Allow
+                      Principal:
+                        Service: ec2.amazonaws.com
+                      Action: sts:AssumeRole
+                ManagedPolicyArns:
+                  - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+                Policies:
+                  - PolicyName: ECRAccess
+                    PolicyDocument:
+                      Version: '2012-10-17'
+                      Statement:
+                        - Effect: Allow
+                          Action:
+                            - ecr:*
+                          Resource: '*'
+
+            BuilderInstanceProfile:
+              Type: AWS::IAM::InstanceProfile
+              Properties:
+                Roles:
+                  - !Ref BuilderRole
+
+            BuilderSecurityGroup:
+              Type: AWS::EC2::SecurityGroup
+              Properties:
+                GroupDescription: Security group for Docker builder
+                VpcId: !Ref VpcId
+                SecurityGroupEgress:
+                  - IpProtocol: -1
+                    CidrIp: 0.0.0.0/0
+
+            BuilderInstance:
+              Type: AWS::EC2::Instance
+              Properties:
+                InstanceType: !Ref InstanceType
+                ImageId: !Ref LatestAmiId
+                IamInstanceProfile: !Ref BuilderInstanceProfile
+                SubnetId: !Ref SubnetId
+                SecurityGroupIds:
+                  - !Ref BuilderSecurityGroup
+                InstanceMarketOptions:
+                  MarketType: spot
+                  SpotOptions:
+                    MaxPrice: '0.5'
+                    SpotInstanceType: one-time
+                Tags:
+                  - Key: Name
+                    Value: docker-builder-temp
+
+          Outputs:
+            InstanceId:
+              Value: !Ref BuilderInstance
+          CFN_EOF
+
+      - name: Launch builder instance
+        id: launch
+        run: |
+          STACK_NAME="docker-builder-$(date +%s)"
+
+          echo "Launching builder instance..."
+          aws cloudformation create-stack \\
+            --stack-name $STACK_NAME \\
+            --template-body file://builder-instance.yaml \\
+            --parameters \\
+              ParameterKey=InstanceType,ParameterValue=${{ steps.config.outputs.instance_type }} \\
+              ParameterKey=SubnetId,ParameterValue=${{ steps.config.outputs.subnet_id }} \\
+              ParameterKey=VpcId,ParameterValue=${{ steps.config.outputs.vpc_id }} \\
+            --capabilities CAPABILITY_IAM \\
+            --region ${{ steps.config.outputs.region }}
+
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT
+
+          echo "Waiting for stack creation..."
+          aws cloudformation wait stack-create-complete \\
+            --stack-name $STACK_NAME \\
+            --region ${{ steps.config.outputs.region }}
+
+          INSTANCE_ID=$(aws cloudformation describe-stacks \\
+            --stack-name $STACK_NAME \\
+            --query 'Stacks[0].Outputs[?OutputKey==`InstanceId`].OutputValue' \\
+            --output text \\
+            --region ${{ steps.config.outputs.region }})
+
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+          echo "Builder instance launched: $INSTANCE_ID"
+
+      - name: Wait for instance to be ready
+        run: |
+          echo "Waiting for SSM to be available..."
+          aws ssm wait command-executed \\
+            --instance-ids ${{ steps.launch.outputs.instance_id }} \\
+            --region ${{ steps.config.outputs.region }} || true
+
+          sleep 60  # Give instance time to fully initialize
+
+      - name: Install Docker on builder
+        run: |
+          echo "Installing Docker..."
+          COMMAND_ID=$(aws ssm send-command \\
+            --instance-ids ${{ steps.launch.outputs.instance_id }} \\
+            --document-name "AWS-RunShellScript" \\
+            --parameters 'commands=["export DEBIAN_FRONTEND=noninteractive","apt-get update","apt-get install -y ca-certificates curl gnupg","install -m 0755 -d /etc/apt/keyrings","curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg","chmod a+r /etc/apt/keyrings/docker.gpg","echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null","apt-get update","apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin","systemctl start docker"]' \\
+            --region ${{ steps.config.outputs.region }} \\
+            --output text \\
+            --query 'Command.CommandId')
+
+          echo "Waiting for Docker installation..."
+          aws ssm wait command-executed \\
+            --command-id $COMMAND_ID \\
+            --instance-id ${{ steps.launch.outputs.instance_id }} \\
+            --region ${{ steps.config.outputs.region }}
+
+          echo "Docker installed successfully"
+
+      - name: Upload build context
+        run: |
+          # Create tarball of build context
+          tar -czf build-context.tar.gz src/cicd/docker/ build-docker.sh
+
+          # Upload to S3 temporarily
+          BUCKET="github-runner-builds-${{ steps.config.outputs.account_id }}"
+          aws s3 mb s3://$BUCKET --region ${{ steps.config.outputs.region }} || true
+
+          aws s3 cp build-context.tar.gz s3://$BUCKET/build-context.tar.gz \\
+            --region ${{ steps.config.outputs.region }}
+
+          echo "bucket=$BUCKET" >> $GITHUB_ENV
+
+      - name: Build Docker image on builder instance
+        run: |
+          BUILD_TAG="${{ github.run_number }}-$(git rev-parse --short HEAD)"
+
+          COMMAND_ID=$(aws ssm send-command \\
+            --instance-ids ${{ steps.launch.outputs.instance_id }} \\
+            --document-name "AWS-RunShellScript" \\
+            --parameters commands="[
+              \"mkdir -p /build\",
+              \"aws s3 cp s3://${{ env.bucket }}/build-context.tar.gz /build/\",
+              \"cd /build && tar -xzf build-context.tar.gz\",
+              \"export AWS_REGION=${{ steps.config.outputs.region }}\",
+              \"export AWS_ACCOUNT_ID=${{ steps.config.outputs.account_id }}\",
+              \"export RUNNER_VERSION=${{ steps.config.outputs.runner_version }}\",
+              \"export ARCHITECTURE=${{ steps.config.outputs.architecture }}\",
+              \"export ECR_REPO=${{ steps.config.outputs.ecr_repo }}\",
+              \"export BUILD_TAG=${BUILD_TAG}\",
+              \"bash /build/build-docker.sh\"
+            ]" \\
+            --region ${{ steps.config.outputs.region }} \\
+            --output text \\
+            --query 'Command.CommandId')
+
+          echo "Building Docker image (Command ID: $COMMAND_ID)..."
+          echo "This may take several minutes..."
+
+          # Wait for command to complete
+          aws ssm wait command-executed \\
+            --command-id $COMMAND_ID \\
+            --instance-id ${{ steps.launch.outputs.instance_id }} \\
+            --region ${{ steps.config.outputs.region }}
+
+          # Get command output
+          aws ssm get-command-invocation \\
+            --command-id $COMMAND_ID \\
+            --instance-id ${{ steps.launch.outputs.instance_id }} \\
+            --region ${{ steps.config.outputs.region }} \\
+            --query 'StandardOutputContent' \\
+            --output text
+
+          echo ""
+          echo "✓ Docker image built and pushed successfully"
+          echo "Build tag: ${BUILD_TAG}"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Delete S3 objects
+          if [ -n "${{ env.bucket }}" ]; then
+            aws s3 rm s3://${{ env.bucket }}/build-context.tar.gz \\
+              --region ${{ steps.config.outputs.region }} || true
+          fi
+
+          # Delete CloudFormation stack (will terminate instance)
+          if [ -n "${{ steps.launch.outputs.stack_name }}" ]; then
+            echo "Terminating builder instance..."
+            aws cloudformation delete-stack \\
+              --stack-name ${{ steps.launch.outputs.stack_name }} \\
+              --region ${{ steps.config.outputs.region }}
+          fi
+
+          echo "Cleanup complete"

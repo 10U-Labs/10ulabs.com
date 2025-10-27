@@ -36,6 +36,11 @@ docker_builder:
   spot_instance: true
   spot_max_price: 0.5  # Maximum hourly price in USD
 
+  # AMI Configuration
+  # Use custom_ami_id for pre-baked AMIs (recommended for production)
+  # Leave empty to use dynamic Debian AMI lookup
+  custom_ami_id: ""  # e.g., ami-1234567890abcdef0
+
   # Storage configuration
   storage:
     volume_size: 100  # GB

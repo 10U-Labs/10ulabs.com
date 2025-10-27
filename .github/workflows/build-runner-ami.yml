@@ -1,0 +1,190 @@
+name: Build GitHub Runner AMI
+
+on:
+  workflow_dispatch:
+    inputs:
+      debian_version:
+        description: 'Debian version (leave empty to use config default)'
+        required: false
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/aws-runners.yaml'
+      - 'src/cicd/packer/github-runner-ami.pkr.hcl'
+      - '.github/workflows/build-runner-ami.yml'
+  schedule:
+    # Build new AMI monthly to include latest security patches
+    - cron: '0 2 1 * *'
+
+jobs:
+  build-ami:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration from config file
+        id: config
+        run: |
+          # AWS Configuration
+          ACCOUNT_ID=$(yq '.aws.account_id' config/aws-runners.yaml)
+          REGION=$(yq '.aws.region' config/aws-runners.yaml)
+          VPC_ID=$(yq '.aws.vpc_id' config/aws-runners.yaml)
+          SUBNET_ID=$(yq '.aws.subnet_ids[0]' config/aws-runners.yaml)
+
+          # Base OS Configuration
+          BASE_OS=$(yq '.base_os.os' config/aws-runners.yaml)
+          BASE_OS_VERSION=$(yq '.base_os.version' config/aws-runners.yaml)
+          ARCHITECTURE=$(yq '.base_os.architecture' config/aws-runners.yaml)
+
+          # Resolve "stable" to current Debian stable version
+          if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
+            DEBIAN_VERSION="13"
+            echo "Resolved Debian stable to version $DEBIAN_VERSION"
+          else
+            DEBIAN_VERSION="$BASE_OS_VERSION"
+          fi
+
+          # Override with workflow input if provided
+          if [ -n "${{ github.event.inputs.debian_version }}" ]; then
+            DEBIAN_VERSION="${{ github.event.inputs.debian_version }}"
+            echo "Using Debian version from workflow input: $DEBIAN_VERSION"
+          fi
+
+          # GitHub Runner Configuration
+          RUNNER_VERSION=$(yq '.github.runner_version' config/aws-runners.yaml)
+
+          # Docker Builder Instance Type
+          INSTANCE_TYPE=$(yq '.docker_builder.instance_type' config/aws-runners.yaml)
+
+          # Export to GITHUB_OUTPUT
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
+          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
+          echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+
+      - name: Initialize Packer
+        run: |
+          cd src/cicd/packer
+          packer init github-runner-ami.pkr.hcl
+
+      - name: Validate Packer template
+        run: |
+          cd src/cicd/packer
+          packer validate \\
+            -var="debian_version=${{ steps.config.outputs.debian_version }}" \\
+            -var="architecture=${{ steps.config.outputs.architecture }}" \\
+            -var="runner_version=${{ steps.config.outputs.runner_version }}" \\
+            -var="aws_region=${{ steps.config.outputs.region }}" \\
+            -var="instance_type=${{ steps.config.outputs.instance_type }}" \\
+            -var="vpc_id=${{ steps.config.outputs.vpc_id }}" \\
+            -var="subnet_id=${{ steps.config.outputs.subnet_id }}" \\
+            github-runner-ami.pkr.hcl
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Build AMI with Packer
+        id: build
+        run: |
+          cd src/cicd/packer
+
+          echo "Building GitHub Runner AMI..."
+          echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
+          echo "Architecture: ${{ steps.config.outputs.architecture }}"
+          echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
+          echo "Instance Type: ${{ steps.config.outputs.instance_type }}"
+          echo ""
+
+          # Run Packer build with output streaming
+          packer build \\
+            -var="debian_version=${{ steps.config.outputs.debian_version }}" \\
+            -var="architecture=${{ steps.config.outputs.architecture }}" \\
+            -var="runner_version=${{ steps.config.outputs.runner_version }}" \\
+            -var="aws_region=${{ steps.config.outputs.region }}" \\
+            -var="instance_type=${{ steps.config.outputs.instance_type }}" \\
+            -var="vpc_id=${{ steps.config.outputs.vpc_id }}" \\
+            -var="subnet_id=${{ steps.config.outputs.subnet_id }}" \\
+            -machine-readable \\
+            github-runner-ami.pkr.hcl | tee packer-output.log
+
+          # Extract AMI ID from output
+          AMI_ID=$(grep 'artifact,0,id' packer-output.log | cut -d: -f2 | cut -d, -f1 || echo "")
+
+          if [ -z "$AMI_ID" ]; then
+            echo "Failed to extract AMI ID from Packer output"
+            exit 1
+          fi
+
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+          echo ""
+          echo "✓ AMI built successfully: $AMI_ID"
+
+      - name: Tag AMI
+        if: steps.build.outputs.ami_id != ''
+        run: |
+          aws ec2 create-tags \\
+            --resources ${{ steps.build.outputs.ami_id }} \\
+            --tags \\
+              Key=ManagedBy,Value=GitHubActions \\
+              Key=Repository,Value=${{ github.repository }} \\
+              Key=Workflow,Value=${{ github.workflow }} \\
+              Key=RunId,Value=${{ github.run_id }} \\
+            --region ${{ steps.config.outputs.region }}
+
+          echo "Tagged AMI ${{ steps.build.outputs.ami_id }}"
+
+      - name: Output AMI details
+        if: steps.build.outputs.ami_id != ''
+        run: |
+          echo "==================================="
+          echo "GitHub Runner AMI Built Successfully"
+          echo "==================================="
+          echo ""
+          echo "AMI ID: ${{ steps.build.outputs.ami_id }}"
+          echo "Region: ${{ steps.config.outputs.region }}"
+          echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
+          echo "Architecture: ${{ steps.config.outputs.architecture }}"
+          echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
+          echo ""
+          echo "To use this AMI, update your CloudFormation template or"
+          echo "add it to the config file under docker_builder.custom_ami"
+          echo ""
+          echo "==================================="
+
+      - name: Update SSM Parameter (optional)
+        if: steps.build.outputs.ami_id != ''
+        continue-on-error: true
+        run: |
+          # Store AMI ID in SSM Parameter Store for easy reference
+          aws ssm put-parameter \\
+            --name "/github-runner/ami/latest/${{ steps.config.outputs.architecture }}" \\
+            --value "${{ steps.build.outputs.ami_id }}" \\
+            --type String \\
+            --overwrite \\
+            --description "Latest GitHub Runner AMI for ${{ steps.config.outputs.architecture }}" \\
+            --region ${{ steps.config.outputs.region }}
+
+          echo "Stored AMI ID in SSM Parameter Store"

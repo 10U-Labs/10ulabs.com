@@ -65,6 +65,7 @@ jobs:
           # EC2 Docker Builder Configuration
           ENABLED=$(yq '.docker_builder.enabled' config/aws-runners.yaml)
           INSTANCE_TYPE=$(yq '.docker_builder.instance_type' config/aws-runners.yaml)
+          CUSTOM_AMI_ID=$(yq '.docker_builder.custom_ami_id' config/aws-runners.yaml)
           SPOT_MAX_PRICE=$(yq '.docker_builder.spot_max_price' config/aws-runners.yaml)
           VOLUME_SIZE=$(yq '.docker_builder.storage.volume_size' config/aws-runners.yaml)
           VOLUME_TYPE=$(yq '.docker_builder.storage.volume_type' config/aws-runners.yaml)
@@ -82,6 +83,7 @@ jobs:
           echo "github_repo=$GITHUB_REPO" >> $GITHUB_OUTPUT
           echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
           echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
+          echo "custom_ami_id=$CUSTOM_AMI_ID" >> $GITHUB_OUTPUT
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
           echo "volume_size=$VOLUME_SIZE" >> $GITHUB_OUTPUT
@@ -112,6 +114,7 @@ jobs:
               InstanceType=${{ steps.config.outputs.instance_type }} \
               Architecture=${{ steps.config.outputs.architecture }} \
               DebianVersion=${{ steps.config.outputs.debian_version }} \
+              CustomAmiId="${{ steps.config.outputs.custom_ami_id }}" \
               SpotMaxPrice=${{ steps.config.outputs.spot_max_price }} \
               VolumeSize=${{ steps.config.outputs.volume_size }} \
               VolumeType=${{ steps.config.outputs.volume_type }} \
