@@ -42,6 +42,22 @@ jobs:
           VPC_ID=$(yq '.aws.vpc_id' config/aws-runners.yaml)
           SUBNET_ID=$(yq '.aws.subnet_ids[0]' config/aws-runners.yaml)
 
+          # Base OS Configuration
+          BASE_OS=$(yq '.base_os.os' config/aws-runners.yaml)
+          BASE_OS_VERSION=$(yq '.base_os.version' config/aws-runners.yaml)
+          ARCHITECTURE=$(yq '.base_os.architecture' config/aws-runners.yaml)
+
+          # Resolve "stable" to current Debian stable version
+          if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
+            # Query Debian's current stable codename from distrowatch or debian.org
+            # For now, set to current stable (Debian 13 Trixie as of 2024)
+            # TODO: Add automatic detection via API or debian.org
+            DEBIAN_VERSION="13"
+            echo "Resolved Debian stable to version $DEBIAN_VERSION"
+          else
+            DEBIAN_VERSION="$BASE_OS_VERSION"
+          fi
+
           # GitHub Configuration
           RUNNER_VERSION=$(yq '.github.runner_version' config/aws-runners.yaml)
           GITHUB_REPO=$(yq '.github.repo' config/aws-runners.yaml)
@@ -49,7 +65,6 @@ jobs:
           # EC2 Docker Builder Configuration
           ENABLED=$(yq '.docker_builder.enabled' config/aws-runners.yaml)
           INSTANCE_TYPE=$(yq '.docker_builder.instance_type' config/aws-runners.yaml)
-          ARCHITECTURE=$(yq '.docker_builder.architecture' config/aws-runners.yaml)
           SPOT_MAX_PRICE=$(yq '.docker_builder.spot_max_price' config/aws-runners.yaml)
           VOLUME_SIZE=$(yq '.docker_builder.storage.volume_size' config/aws-runners.yaml)
           VOLUME_TYPE=$(yq '.docker_builder.storage.volume_type' config/aws-runners.yaml)
@@ -61,6 +76,8 @@ jobs:
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
+          echo "base_os=$BASE_OS" >> $GITHUB_OUTPUT
+          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "github_repo=$GITHUB_REPO" >> $GITHUB_OUTPUT
           echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
@@ -94,6 +111,7 @@ jobs:
             --parameter-overrides \
               InstanceType=${{ steps.config.outputs.instance_type }} \
               Architecture=${{ steps.config.outputs.architecture }} \
+              DebianVersion=${{ steps.config.outputs.debian_version }} \
               SpotMaxPrice=${{ steps.config.outputs.spot_max_price }} \
               VolumeSize=${{ steps.config.outputs.volume_size }} \
               VolumeType=${{ steps.config.outputs.volume_type }} \

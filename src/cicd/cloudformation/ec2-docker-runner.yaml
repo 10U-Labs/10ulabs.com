@@ -13,6 +13,11 @@ Parameters:
       - arm64
       - x86_64
 
+  DebianVersion:
+    Type: String
+    Description: Debian version number (13, 12, 11, etc.)
+    Default: '13'
+
   SpotMaxPrice:
     Type: String
     Description: Maximum hourly price for spot instance
@@ -54,10 +59,10 @@ Parameters:
 Mappings:
   ArchitectureMap:
     arm64:
-      AmiParameter: '/aws/service/debian/release/12/latest/arm64'
+      AmiArch: 'arm64'
       RunnerArchive: 'actions-runner-linux-arm64'
     x86_64:
-      AmiParameter: '/aws/service/debian/release/12/latest/amd64'
+      AmiArch: 'amd64'
       RunnerArchive: 'actions-runner-linux-x64'
 
 Resources:
@@ -123,8 +128,8 @@ Resources:
         SecurityGroupIds:
           - !Ref RunnerSecurityGroup
         ImageId: !Sub
-          - '{{resolve:ssm:${AmiParam}}}'
-          - AmiParam: !FindInMap [ArchitectureMap, !Ref Architecture, AmiParameter]
+          - '{{resolve:ssm:/aws/service/debian/release/${DebianVersion}/latest/${AmiArch}}}'
+          - AmiArch: !FindInMap [ArchitectureMap, !Ref Architecture, AmiArch]
         BlockDeviceMappings:
           - DeviceName: /dev/sda1
             Ebs:

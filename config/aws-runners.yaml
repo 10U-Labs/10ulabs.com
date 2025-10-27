@@ -15,8 +15,9 @@ aws:
 base_os:
   # Operating system (debian, ubuntu, etc.)
   os: debian
-  # OS version (12 = bookworm/stable, 11 = bullseye)
-  version: 12
+  # OS version (stable, 13-trixie, 12-bookworm, etc.)
+  # Use "stable" to automatically use current Debian stable release
+  version: stable
   # Variant (slim, standard)
   variant: slim
   # Architecture (arm64, amd64/x86_64)
@@ -32,8 +33,6 @@ github:
 docker_builder:
   enabled: true
   instance_type: c8gd.2xlarge
-  # ARM64 architecture for c8gd instances
-  architecture: arm64
   spot_instance: true
   spot_max_price: 0.5  # Maximum hourly price in USD
 
