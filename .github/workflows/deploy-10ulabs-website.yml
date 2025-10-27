@@ -1,0 +1,287 @@
+name: Deploy 10ulabs.com Website
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - deploy-infrastructure
+          - deploy-content
+          - deploy-all
+          - destroy
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/websites/10ulabs.com/**'
+      - 'config/websites.yaml'
+      - '.github/workflows/deploy-10ulabs-website.yml'
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'deploy-infrastructure' || github.event.inputs.action == 'deploy-all' || github.event.inputs.action == 'destroy' || github.event_name == 'push'
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration
+        id: config
+        run: |
+          # AWS Configuration
+          ACCOUNT_ID=$(yq '.aws.account_id' config/websites.yaml)
+          REGION=$(yq '.aws.region' config/websites.yaml)
+
+          # Main Website Configuration
+          ENABLED=$(yq '.main_website.enabled' config/websites.yaml)
+          DOMAIN=$(yq '.main_website.domain' config/websites.yaml)
+          BUCKET_NAME=$(yq '.main_website.s3.bucket_name' config/websites.yaml)
+          PRICE_CLASS=$(yq '.main_website.cloudfront.price_class' config/websites.yaml)
+          DEFAULT_ROOT=$(yq '.main_website.cloudfront.default_root_object' config/websites.yaml)
+          CERT_ARN=$(yq '.main_website.certificate.arn' config/websites.yaml)
+          HOSTED_ZONE_ID=$(yq '.main_website.route53.hosted_zone_id' config/websites.yaml)
+          CREATE_ZONE=$(yq '.main_website.route53.create_hosted_zone' config/websites.yaml)
+          STACK_NAME=$(yq '.main_website.stack_name' config/websites.yaml)
+
+          # Export to GITHUB_OUTPUT
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "price_class=$PRICE_CLASS" >> $GITHUB_OUTPUT
+          echo "default_root=$DEFAULT_ROOT" >> $GITHUB_OUTPUT
+          echo "cert_arn=$CERT_ARN" >> $GITHUB_OUTPUT
+          echo "hosted_zone_id=$HOSTED_ZONE_ID" >> $GITHUB_OUTPUT
+          echo "create_zone=$CREATE_ZONE" >> $GITHUB_OUTPUT
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT
+
+      - name: Check if website is enabled
+        if: steps.config.outputs.enabled != 'true'
+        run: |
+          echo "Main website is not enabled in config file"
+          exit 0
+
+      - name: Configure AWS credentials
+        if: steps.config.outputs.enabled == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Deploy CloudFormation stack
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          echo "Deploying infrastructure for ${{ steps.config.outputs.domain }}..."
+
+          aws cloudformation deploy \
+            --template-file src/cicd/cloudformation/static-website.yaml \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --parameter-overrides \
+              DomainName=${{ steps.config.outputs.domain }} \
+              BucketName=${{ steps.config.outputs.bucket_name }} \
+              DefaultRootObject=${{ steps.config.outputs.default_root }} \
+              PriceClass=${{ steps.config.outputs.price_class }} \
+              CertificateArn="${{ steps.config.outputs.cert_arn }}" \
+              CreateHostedZone=${{ steps.config.outputs.create_zone }} \
+              HostedZoneId="${{ steps.config.outputs.hosted_zone_id }}" \
+            --capabilities CAPABILITY_IAM \
+            --region ${{ steps.config.outputs.region }}
+
+          echo "Infrastructure deployment complete!"
+
+      - name: Get stack outputs
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        id: outputs
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`DistributionId`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          WEBSITE_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`WebsiteURL`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          NAMESERVERS=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`HostedZoneNameServers`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }} || echo "N/A")
+
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+          echo "website_url=$WEBSITE_URL" >> $GITHUB_OUTPUT
+          echo "nameservers=$NAMESERVERS" >> $GITHUB_OUTPUT
+
+      - name: Display deployment info
+        if: steps.config.outputs.enabled == 'true' && github.event.inputs.action != 'destroy'
+        run: |
+          echo "==================================="
+          echo "Website Infrastructure Deployed"
+          echo "==================================="
+          echo ""
+          echo "Domain: ${{ steps.config.outputs.domain }}"
+          echo "S3 Bucket: ${{ steps.outputs.bucket_name }}"
+          echo "CloudFront Distribution: ${{ steps.outputs.distribution_id }}"
+          echo "Website URL: ${{ steps.outputs.website_url }}"
+          echo ""
+          if [ "${{ steps.outputs.nameservers }}" != "N/A" ]; then
+            echo "⚠️  UPDATE YOUR DOMAIN REGISTRAR"
+            echo "Set these nameservers for ${{ steps.config.outputs.domain }}:"
+            echo "${{ steps.outputs.nameservers }}"
+            echo ""
+          fi
+          echo "==================================="
+
+      - name: Destroy CloudFormation stack
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          echo "Destroying infrastructure for ${{ steps.config.outputs.domain }}..."
+
+          # Empty S3 bucket first
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          if [ -n "$BUCKET_NAME" ]; then
+            echo "Emptying S3 bucket: $BUCKET_NAME"
+            aws s3 rm s3://$BUCKET_NAME --recursive --region ${{ steps.config.outputs.region }}
+          fi
+
+          # Delete stack
+          aws cloudformation delete-stack \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+
+          echo "Waiting for stack deletion..."
+          aws cloudformation wait stack-delete-complete \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+
+          echo "Infrastructure destroyed successfully"
+
+  deploy-content:
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure]
+    if: |
+      always() &&
+      (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped') &&
+      (github.event.inputs.action == 'deploy-content' || github.event.inputs.action == 'deploy-all' || github.event_name == 'push')
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(yq '.aws.account_id' config/websites.yaml)
+          REGION=$(yq '.aws.region' config/websites.yaml)
+          ENABLED=$(yq '.main_website.enabled' config/websites.yaml)
+          STACK_NAME=$(yq '.main_website.stack_name' config/websites.yaml)
+
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "enabled=$ENABLED" >> $GITHUB_OUTPUT
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        if: steps.config.outputs.enabled == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Get S3 bucket and CloudFront distribution
+        if: steps.config.outputs.enabled == 'true'
+        id: resources
+        run: |
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`BucketName`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`DistributionId`].OutputValue' \
+            --output text \
+            --region ${{ steps.config.outputs.region }})
+
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+
+      - name: Upload website content to S3
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          echo "Uploading content to S3..."
+
+          aws s3 sync src/websites/10ulabs.com/ s3://${{ steps.resources.outputs.bucket_name }}/ \
+            --delete \
+            --region ${{ steps.config.outputs.region }} \
+            --exclude ".gitkeep" \
+            --cache-control "public, max-age=3600"
+
+          echo "Content uploaded successfully"
+
+      - name: Invalidate CloudFront cache
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          echo "Invalidating CloudFront cache..."
+
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id ${{ steps.resources.outputs.distribution_id }} \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+
+          echo "Invalidation created: $INVALIDATION_ID"
+          echo "CloudFront cache will be cleared shortly"
+
+      - name: Display deployment summary
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          echo "==================================="
+          echo "Website Content Deployed"
+          echo "==================================="
+          echo ""
+          echo "S3 Bucket: ${{ steps.resources.outputs.bucket_name }}"
+          echo "CloudFront Distribution: ${{ steps.resources.outputs.distribution_id }}"
+          echo ""
+          echo "Your website will be available shortly at:"
+          echo "https://$(yq '.main_website.domain' config/websites.yaml)"
+          echo ""
+          echo "Note: CloudFront cache invalidation may take 5-10 minutes"
+          echo "==================================="

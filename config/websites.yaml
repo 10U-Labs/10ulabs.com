@@ -1,0 +1,59 @@
+---
+# Website Configuration for Static Sites
+
+# AWS Configuration
+aws:
+  account_id: tbd
+  region: us-east-1
+
+# Main website configuration
+main_website:
+  enabled: true
+  domain: 10ulabs.com
+
+  # S3 Configuration
+  s3:
+    bucket_name: 10ulabs-com-website
+    versioning: false  # Versioning disabled as required
+
+  # CloudFront Configuration
+  cloudfront:
+    price_class: PriceClass_100  # Use only North America and Europe
+    default_root_object: index.html
+
+  # Certificate Configuration (ACM)
+  certificate:
+    # ARN of ACM certificate in us-east-1 (required for CloudFront)
+    # Leave empty to create new certificate
+    arn: ""
+
+  # Route53 Configuration
+  route53:
+    # Hosted zone ID - leave empty to create new hosted zone
+    hosted_zone_id: ""
+    create_hosted_zone: true
+
+  # CloudFormation stack name
+  stack_name: 10ulabs-com-website
+
+# Designer subdomain configuration
+designer_website:
+  enabled: false
+  domain: designer.10ulabs.com
+
+  s3:
+    bucket_name: designer-10ulabs-com-website
+    versioning: false
+
+  cloudfront:
+    price_class: PriceClass_100
+    default_root_object: index.html
+
+  certificate:
+    arn: ""
+
+  route53:
+    hosted_zone_id: ""  # Will use main domain's hosted zone
+    create_hosted_zone: false
+
+  stack_name: designer-10ulabs-com-website
