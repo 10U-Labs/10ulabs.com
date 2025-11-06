@@ -706,6 +706,9 @@ class BedrockClient(AWSClientBase):
             return result['content'][0]['text']
         # Amazon Nova
         return result['output']['message']['content'][0]['text']
+    def _is_already_exists_error(self, error: AWSHTTPError) -> bool:
+        """Check if error indicates resource already exists."""
+        return 'AlreadyExists' in error.error_body or 'already' in error.error_body.lower()
     def enable_model_access(self) -> bool:
         # Amazon Nova and other models are available by default, only Anthropic models require this process
         if not self.model_id.startswith('anthropic'):
@@ -713,6 +716,12 @@ class BedrockClient(AWSClientBase):
             return True
 
         logging.info("Enabling Anthropic model access for %s (one-time setup)...", self.model_id)
+        if not self._submit_use_case():
+            return False
+        self._accept_model_agreement()
+        return self._request_model_entitlement()
+    def _submit_use_case(self) -> bool:
+        """Submit use case form for Bedrock model access."""
         try:
             form_data = {
                 "companyName": "GitHub Actions Automation",
@@ -728,12 +737,15 @@ class BedrockClient(AWSClientBase):
                 body=json.dumps({'formData': json.dumps(form_data)})
             )
             logging.info("✓ Submitted use case form")
+            return True
         except AWSHTTPError as e:
-            if 'AlreadyExists' in e.error_body or 'already' in e.error_body.lower():
+            if self._is_already_exists_error(e):
                 logging.info("Use case already submitted, continuing...")
-            else:
-                logging.error("Failed to submit use case: %s", e)
-                return False
+                return True
+            logging.error("Failed to submit use case: %s", e)
+            return False
+    def _accept_model_agreement(self) -> None:
+        """Accept model agreement if offers are available."""
         try:
             response = self._make_request(
                 'bedrock',
@@ -742,22 +754,24 @@ class BedrockClient(AWSClientBase):
                 body=json.dumps({'modelId': self.model_id})
             )
             offers = json.loads(response).get('offers', [])
-            if offers:
-                offer_token = offers[0]['offerToken']
-                self._make_request(
-                    'bedrock',
-                    'CreateFoundationModelAgreement',
-                    path='/create-foundation-model-agreement',
-                    body=json.dumps({'modelId': self.model_id, 'offerToken': offer_token})
-                )
-                logging.info("✓ Accepted model agreement for %s", self.model_id)
-            else:
+            if not offers:
                 logging.info("No agreement offers (may already be accepted)")
+                return
+            offer_token = offers[0]['offerToken']
+            self._make_request(
+                'bedrock',
+                'CreateFoundationModelAgreement',
+                path='/create-foundation-model-agreement',
+                body=json.dumps({'modelId': self.model_id, 'offerToken': offer_token})
+            )
+            logging.info("✓ Accepted model agreement for %s", self.model_id)
         except AWSHTTPError as e:
-            if 'AlreadyExists' in e.error_body or 'already' in e.error_body.lower():
+            if self._is_already_exists_error(e):
                 logging.info("Agreement already accepted, continuing...")
             else:
                 logging.warning("Failed to create agreement: %s", e)
+    def _request_model_entitlement(self) -> bool:
+        """Request model entitlement."""
         try:
             self._make_request(
                 'bedrock',
@@ -766,20 +780,21 @@ class BedrockClient(AWSClientBase):
                 body=json.dumps({'modelId': self.model_id})
             )
             logging.info("✓ Requested model entitlement for %s", self.model_id)
+            logging.info("✓ Anthropic model access enabled for %s", self.model_id)
+            return True
         except AWSHTTPError as e:
-            if 'AlreadyExists' in e.error_body or 'already' in e.error_body.lower():
+            if self._is_already_exists_error(e):
                 logging.info("Entitlement already exists, continuing...")
-            elif 'not authorized to perform this action' in e.error_body:
+                logging.info("✓ Anthropic model access enabled for %s", self.model_id)
+                return True
+            if 'not authorized to perform this action' in e.error_body:
                 logging.error("FATAL: AWS account not authorized for Bedrock model access")
                 logging.error("ACTION REQUIRED: Create AWS support case to enable Bedrock")
                 logging.error("Visit: https://console.aws.amazon.com/support/home")
                 logging.error("Describe your use case for Bedrock model access")
                 return False
-            else:
-                logging.error("Failed to request model entitlement: %s", e)
-                return False
-        logging.info("✓ Anthropic model access enabled for %s", self.model_id)
-        return True
+            logging.error("Failed to request model entitlement: %s", e)
+            return False
 class AWSClientStdlib:
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
