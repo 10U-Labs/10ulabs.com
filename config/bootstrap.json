@@ -75,5 +75,11 @@
     "aws_access_key_id_in_github_secrets": true,
     "aws_secret_access_key_in_github_secrets": true,
     "github_classic_pat_in_github_secrets": true
+  },
+
+  "bedrock": {
+    "model_id": "amazon.nova-micro-v1:0",
+    "model_provider": "Amazon",
+    "enable_model_access": true
   }
 }

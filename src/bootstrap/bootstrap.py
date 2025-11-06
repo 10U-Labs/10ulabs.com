@@ -674,47 +674,38 @@ class SecretsManagerClient(AWSClientBase):
     def test_secrets_manager_access(self) -> None:
         self._make_request('secretsmanager', 'ListSecrets', params={'MaxResults': 1}, use_json=True)
 class BedrockClient(AWSClientBase):
-    def get_latest_sonnet_model_id(self) -> str:
-        try:
-            response = self._make_request(
-                'bedrock', 'ListFoundationModels',
-                params={'byProvider': 'Anthropic'},
-                use_json=True
-            )
-            models = json.loads(response)['modelSummaries']
-            sonnet_models = [
-                m for m in models
-                if 'claude' in m['modelId'].lower()
-                and 'sonnet' in m['modelId'].lower()
-            ]
-            if sonnet_models:
-                sonnet_models.sort(key=lambda m: m['modelId'], reverse=True)
-                latest = sonnet_models[0]['modelId']
-                logging.info("Using latest Sonnet model: %s", latest)
-                return latest
-            logging.warning("No Sonnet models found, using fallback")
-            return 'anthropic.claude-sonnet-4-5-20250929-v1:0'
-        except (AWSHTTPError, urllib.error.URLError, KeyError) as e:
-            logging.warning("Failed to list models: %s, using fallback", e)
-            return 'anthropic.claude-sonnet-4-5-20250929-v1:0'
+    def __init__(self, region: str, access_key_id: str, secret_access_key: str,
+                 session_token: Optional[str] = None, model_id: str = 'amazon.nova-micro-v1:0'):
+        super().__init__(region, access_key_id, secret_access_key, session_token)
+        self.model_id = model_id
     def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
-        model_id = self.get_latest_sonnet_model_id()
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}]
-        })
+        # Amazon Nova uses a different request format than Anthropic Claude
+        if self.model_id.startswith('anthropic'):
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": max_tokens,
+                "messages": [{"role": "user", "content": prompt}]
+            })
+        else:  # Amazon Nova and other models
+            body = json.dumps({
+                "messages": [{"role": "user", "content": [{"text": prompt}]}],
+                "inferenceConfig": {"max_new_tokens": max_tokens}
+            })
         response = self._make_request(
             'bedrock-runtime',
             'InvokeModel',
-            path=f"/model/{model_id}/invoke",
+            path=f"/model/{self.model_id}/invoke",
             body=body,
             use_json=True,
             signing_service='bedrock'
         )
         result = json.loads(response)
-        return result['content'][0]['text']
-    def enable_anthropic_model_access(self) -> bool:
+        # Parse response based on model type
+        if self.model_id.startswith('anthropic'):
+            return result['content'][0]['text']
+        else:  # Amazon Nova
+            return result['output']['message']['content'][0]['text']
+    def enable_model_access(self) -> bool:
         logging.info("Enabling Anthropic model access (one-time setup)...")
         try:
             form_data = {
@@ -786,12 +777,12 @@ class BedrockClient(AWSClientBase):
         return True
 class AWSClientStdlib:
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None):
+                 session_token: Optional[str] = None, bedrock_model_id: str = 'amazon.nova-micro-v1:0'):
         """Initialize AWS service clients."""
         self.sts = STSClient(region, access_key_id, secret_access_key, session_token)
         self.iam = IAMClient(region, access_key_id, secret_access_key, session_token)
         self.secrets = SecretsManagerClient(region, access_key_id, secret_access_key, session_token)
-        self.bedrock = BedrockClient(region, access_key_id, secret_access_key, session_token)
+        self.bedrock = BedrockClient(region, access_key_id, secret_access_key, session_token, bedrock_model_id)
         self.region = region
     def get_account_id(self) -> str:
         return self.sts.get_account_id()
@@ -984,10 +975,13 @@ def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
         return 1
     logging.info("Updated IAM role management policy")
     return 0
-def _enable_bedrock_access_step(aws: AWSClientStdlib) -> int:
+def _enable_bedrock_access_step(aws: AWSClientStdlib, enable: bool) -> int:
+    if not enable:
+        logging.info("Bedrock model access disabled (skipping)")
+        return 0
     print()
     logging.info("Enabling Bedrock model access")
-    if not aws.bedrock.enable_anthropic_model_access():
+    if not aws.bedrock.enable_model_access():
         logging.error("Failed to enable Bedrock model access")
         return 1
     return 0
@@ -1045,7 +1039,8 @@ def create_resources(args: argparse.Namespace) -> int:
         args.aws_region,
         access_key_id=aws_access_key,
         secret_access_key=aws_secret_key,
-        session_token=session_token
+        session_token=session_token,
+        bedrock_model_id=args.bedrock_model_id
     )
     print()
     print("GitHub Actions Self-Hosted Runners Bootstrap")
@@ -1073,7 +1068,7 @@ def create_resources(args: argparse.Namespace) -> int:
         return 1
     if _attach_iam_policies_step(aws, args.aws_iam_role_name) != 0:
         return 1
-    if _enable_bedrock_access_step(aws) != 0:
+    if _enable_bedrock_access_step(aws, args.enable_bedrock) != 0:
         return 1
     print()
     validate_oidc_role_permissions(aws, args.aws_iam_role_name)
@@ -1150,7 +1145,8 @@ def destroy_resources(args: argparse.Namespace) -> int:
         args.aws_region,
         access_key_id=aws_access_key,
         secret_access_key=aws_secret_key,
-        session_token=session_token
+        session_token=session_token,
+        bedrock_model_id='amazon.nova-micro-v1:0'  # Default for destroy, not used
     )
     if not args.force:
         try:
@@ -1426,6 +1422,11 @@ def main():  # pylint: disable=too-many-return-statements,too-many-statements
                                 help='GitHub Classic PAT with admin:org scope')
     create_required.add_argument('--github-pat-secret-name', required=True,
                                 help='AWS Secrets Manager secret name for GitHub PAT')
+    create_optional = create_parser.add_argument_group('optional arguments')
+    create_optional.add_argument('--bedrock-model-id', default='amazon.nova-micro-v1:0',
+                                help='Bedrock model ID (default: amazon.nova-micro-v1:0)')
+    create_optional.add_argument('--enable-bedrock', action='store_true', default=True,
+                                help='Enable Bedrock model access (default: True)')
     destroy_parser = subparsers.add_parser('destroy', help='Destroy bootstrap resources')
     destroy_required = destroy_parser.add_argument_group('required arguments')
     destroy_required.add_argument('--aws-access-key-id', required=True,
