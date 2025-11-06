@@ -674,6 +674,7 @@ class SecretsManagerClient(AWSClientBase):
     def test_secrets_manager_access(self) -> None:
         self._make_request('secretsmanager', 'ListSecrets', params={'MaxResults': 1}, use_json=True)
 class BedrockClient(AWSClientBase):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
                  session_token: Optional[str] = None, model_id: str = 'amazon.nova-micro-v1:0'):
         super().__init__(region, access_key_id, secret_access_key, session_token)
@@ -703,8 +704,8 @@ class BedrockClient(AWSClientBase):
         # Parse response based on model type
         if self.model_id.startswith('anthropic'):
             return result['content'][0]['text']
-        else:  # Amazon Nova
-            return result['output']['message']['content'][0]['text']
+        # Amazon Nova
+        return result['output']['message']['content'][0]['text']
     def enable_model_access(self) -> bool:
         logging.info("Enabling Anthropic model access (one-time setup)...")
         try:
@@ -776,6 +777,7 @@ class BedrockClient(AWSClientBase):
         logging.info("✓ Anthropic model access enabled")
         return True
 class AWSClientStdlib:
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
                  session_token: Optional[str] = None, bedrock_model_id: str = 'amazon.nova-micro-v1:0'):
         """Initialize AWS service clients."""
