@@ -1337,16 +1337,28 @@ def _check_readme_needs_update(bedrock: BedrockClient, bootstrap_code: str, curr
     # If README doesn't exist or is empty, it definitely needs to be created
     if not current_readme or not current_readme.strip():
         return True
-    prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on changes in the source code.
-Here is the current Python source code:
+    prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on the source code.
+
 <source_code>
 {bootstrap_code}
 </source_code>
-Here is the current README:
+
 <current_readme>
 {current_readme}
 </current_readme>
-Analyze whether the README accurately reflects the current functionality, usage, and architecture described in the source code.
+
+CRITICAL ARCHITECTURE REQUIREMENTS TO CHECK:
+- This script is SELF-CONTAINED and uses ONLY Python standard library (stdlib)
+- NO external dependencies required (no pip install, no requirements.txt)
+- NO AWS CLI required - implements AWS API calls using pure Python stdlib
+- NO boto3 or other AWS SDKs - custom AWS client implementation using urllib and stdlib only
+
+Check if the README:
+1. Incorrectly mentions AWS CLI as a requirement or dependency (MAJOR ERROR - requires update)
+2. Incorrectly mentions boto3, pip install, or requirements.txt (MAJOR ERROR - requires update)
+3. Fails to emphasize the self-contained, dependency-free architecture
+4. Has inaccurate functionality, usage, or implementation details
+
 Does the README need updating? Respond with ONLY "true" or "false"."""
     response = bedrock.invoke_model(prompt, max_tokens=10)
     return response.strip().lower() == 'true'
