@@ -1337,6 +1337,22 @@ def _check_readme_needs_update(bedrock: BedrockClient, bootstrap_code: str, curr
     # If README doesn't exist or is empty, it definitely needs to be created
     if not current_readme or not current_readme.strip():
         return True
+
+    # Deterministic checks for known issues (don't rely on LLM for obvious cases)
+    incorrect_dependencies = [
+        'AWS CLI',
+        'aws cli',
+        'boto3',
+        'pip install',
+        'requirements.txt',
+    ]
+
+    for dep in incorrect_dependencies:
+        if dep in current_readme:
+            logging.info("README mentions '%s' which is incorrect - update needed", dep)
+            return True
+
+    # If no obvious issues found, ask the LLM for deeper analysis
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on the source code.
 
 <source_code>
