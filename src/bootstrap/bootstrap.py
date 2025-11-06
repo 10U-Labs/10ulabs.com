@@ -680,6 +680,12 @@ class BedrockClient(AWSClientBase):
         super().__init__(region, access_key_id, secret_access_key, session_token)
         self.model_id = model_id
     def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
+        # Cap max_tokens based on model limits
+        # Amazon Nova models: 10240 max
+        # Anthropic Claude: 16000+ supported
+        if not self.model_id.startswith('anthropic'):
+            max_tokens = min(max_tokens, 10240)
+
         # Amazon Nova uses a different request format than Anthropic Claude
         if self.model_id.startswith('anthropic'):
             body = json.dumps({
