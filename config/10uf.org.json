@@ -1,0 +1,20 @@
+{
+  "enabled": false,
+  "domain": "10uf.org",
+  "s3": {
+    "bucket_name": "10uf_org-website",
+    "versioning": false
+  },
+  "cloudfront": {
+    "price_class": "PriceClass_100",
+    "default_root_object": "index.html"
+  },
+  "certificate": {
+    "arn": ""
+  },
+  "route53": {
+    "hosted_zone_id": "",
+    "create_hosted_zone": true
+  },
+  "stack_name": "10uf_org-website"
+}

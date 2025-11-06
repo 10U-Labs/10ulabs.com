@@ -1,0 +1,56 @@
+# AWS Credentials
+aws_access_key.txt
+aws_secret_key.txt
+*_access_key.txt
+*_secret_key.txt
+
+# GitHub Tokens
+github_token.txt
+*_token.txt
+
+# Credential directories
+credentials/
+*.credentials
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.zip
+
+# Temporary files
+tmp/
+temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so

@@ -1,0 +1,79 @@
+{
+  "_instructions": {
+    "_comment": "Bootstrap configuration - infrastructure as code with three-state architecture",
+    "_states": [
+      "State 1 (COLD): No infrastructure exists - requires direct AWS credentials + GitHub PAT in GitHub Secrets",
+      "State 2 (WARM): Infrastructure exists - uses OIDC authentication + retrieves GitHub PAT from AWS Secrets Manager",
+      "State 3 (DESTROY): Infrastructure destroys itself using OIDC authentication"
+    ],
+    "checklist": [
+      "========== STATE 1: COLD START (Initial Bootstrap) ==========",
+      "To CREATE infrastructure (first time):",
+      "  1. Create AWS IAM user: https://console.aws.amazon.com/iam/home#/users",
+      "     - Attach policy: AdministratorAccess (or PowerUserAccess + IAM permissions)",
+      "     - Create access key and save credentials",
+      "  2. Create GitHub Classic PAT: https://github.com/settings/tokens/new?scopes=admin:org,repo&description=Self-Hosted%20Runners",
+      "     - Required scopes: admin:org (for runner registration) and repo (for managing GitHub Secrets)",
+      "  3. Add secrets: https://github.com/10U-Foundation/10uf.org/settings/secrets/actions",
+      "     - AWS_ACCESS_KEY_ID (from step 1)",
+      "     - AWS_SECRET_ACCESS_KEY (from step 1)",
+      "     - GH_RUNNER_PAT (from step 2) - NOTE: Must NOT start with GITHUB_",
+      "  4. Update secrets.* flags below to true",
+      "  5. Set enabled: true",
+      "  6. Commit and push to trigger bootstrap",
+      "",
+      "========== STATE 2: WARM (After Initial Bootstrap) ==========",
+      "Once infrastructure exists, the bootstrap system is SELF-SUFFICIENT:",
+      "  - GitHub Secrets are AUTOMATICALLY DELETED during bootstrap",
+      "  - Workflow uses OIDC to authenticate with AWS",
+      "  - GitHub PAT is retrieved from AWS Secrets Manager",
+      "  - System runs on PURE OIDC - no human credentials needed",
+      "  - Subsequent runs will use OIDC automatically",
+      "",
+      "========== STATE 3: DESTROY ==========",
+      "To DESTROY infrastructure:",
+      "  1. Set enabled: false",
+      "  2. Set confirm_destroy: true",
+      "  3. Commit and push to destroy infrastructure",
+      "  - If infrastructure exists (warm state): uses OIDC to destroy itself",
+      "  - If infrastructure doesn't exist: skips (nothing to destroy)",
+      "",
+      "========== LOCAL EXECUTION (No GitHub Secrets needed) ==========",
+      "To run LOCALLY:",
+      "  1. Run: ./src/bootstrap/bootstrap.py create \\",
+      "       --aws-account-id 781581267945 \\",
+      "       --aws-region us-east-1 \\",
+      "       --aws-iam-role-name GitHubActionsRole \\",
+      "       --github-org 10U-Foundation \\",
+      "       --github-repo 10uf.org \\",
+      "       --github-pat-secret-name github-runner/credentials \\",
+      "       --aws-access-key-id YOUR_KEY \\",
+      "       --aws-secret-access-key YOUR_SECRET \\",
+      "       --github-token YOUR_PAT",
+      "  2. No dependencies required (pure Python stdlib)"
+    ]
+  },
+
+  "enabled": true,
+  "confirm_destroy": false,
+
+  "aws": {
+    "account_id": "781581267945",
+    "region": "us-east-1",
+    "iam_role_name": "GitHubActionsRole",
+    "secrets_manager": {
+      "github_pat_secret_name": "github-runner/credentials"
+    }
+  },
+
+  "github": {
+    "org": "10U-Foundation",
+    "repo": "10uf.org"
+  },
+
+  "secrets": {
+    "aws_access_key_id_in_github_secrets": true,
+    "aws_secret_access_key_in_github_secrets": true,
+    "github_classic_pat_in_github_secrets": true
+  }
+}

@@ -1,0 +1,456 @@
+name: infrastructure-in-aws-for-github_self_hosted_runners
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**/infrastructure/**'
+      - 'test/github_self_hosted_runners/infrastructure/**'
+      - 'app.py'
+      - 'cdk.json'
+      - 'requirements-cdk.txt'
+      - 'config/**'
+      - '.github/workflows/build-infrastructure-in-aws-for-github_self_hosted_runners.yml'
+  pull_request:
+    paths:
+      - 'src/**/infrastructure/**'
+      - 'test/github_self_hosted_runners/infrastructure/**'
+      - 'app.py'
+      - 'cdk.json'
+      - 'requirements-cdk.txt'
+      - 'config/**'
+      - '.github/workflows/build-infrastructure-in-aws-for-github_self_hosted_runners.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (skip deployment, just test)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  building-artifacts:
+    name: Building artifacts
+    runs-on: ubuntu-latest
+    needs: integration-testing-code
+
+    steps:
+      - name: DRY RUN - Skip CDK synthesis
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would synthesize AWS CDK stacks"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
+          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Set up Python & Node
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        with:
+          node-version: '20'
+
+      - name: Install CDK
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: npm install -g aws-cdk
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install -r requirements-cdk.txt
+
+      - name: Synthesize all stacks
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: cdk synth --all
+
+
+  deploying-artifacts:
+    name: Deploying artifacts
+    needs: building-artifacts
+    runs-on: ubuntu-latest
+    if: |
+      github.event.inputs.dry_run != 'true' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'push' || (
+        !contains(github.event.head_commit.message, '[skip-deploy]') &&
+        !contains(github.event.head_commit.message, '[skip deploy]')
+      ))
+
+    steps:
+      - name: DRY RUN - Skip deployment
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would deploy AWS infrastructure with CDK"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
+          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CDK
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: npm install -g aws-cdk
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install -r requirements-cdk.txt
+
+      - name: CDK Bootstrap (if needed)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+
+      - name: CDK Diff
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: cdk diff --all
+
+      - name: CDK Deploy
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          cdk deploy --all \
+            --require-approval never \
+            --outputs-file cdk-outputs.json
+
+      - name: Display outputs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Infrastructure deployed successfully"
+          echo ""
+          echo "Stack Outputs:"
+          cat cdk-outputs.json | jq '.'
+
+
+  e2e-testing-deployed-infrastructure:
+    name: E2E testing deployed infrastructure
+    runs-on: ubuntu-latest
+    needs: integration-testing-deployed-infrastructure
+    if: ${{ needs.integration-testing-deployed-infrastructure.result == 'success' }}
+
+    steps:
+      - name: DRY RUN - Skip E2E testing deployed infrastructure
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run E2E tests on deployed infrastructure"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
+          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pytest
+
+      - name: Run E2E tests on deployed infrastructure
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pytest test/github_self_hosted_runners/infrastructure/post_deployment/test_e2e.py -v
+
+  integration-testing-code:
+    name: Integration testing code
+    runs-on: ubuntu-latest
+    needs: unit-testing-code
+
+    steps:
+      - name: DRY RUN - Skip integration tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run integration tests with pytest"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CDK
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: npm install -g aws-cdk
+
+      - name: Install Python dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pytest
+          pip install -r requirements-cdk.txt
+
+      - name: Run integration tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pytest test/github_self_hosted_runners/infrastructure/pre_deployment/test_integration.py -v
+
+  integration-testing-deployed-infrastructure:
+    name: Integration testing deployed infrastructure
+    runs-on: ubuntu-latest
+    needs: unit-testing-deployed-infrastructure
+    if: ${{ needs.unit-testing-deployed-infrastructure.result == 'success' }}
+
+    steps:
+      - name: DRY RUN - Skip integration testing deployed infrastructure
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run integration tests on deployed infrastructure with Cinc Auditor"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
+          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Install Cinc Auditor
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor
+
+      - name: Run integration tests on deployed infrastructure
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Running integration tests on cross-resource relationships"
+
+          VPC_NAME=$(jq -r '.naming.vpc_name' config/github_self_hosted_runners.json)
+          LAMBDA_NAME=$(jq -r '.naming.lambda_function_name' config/github_self_hosted_runners.json)
+          API_GATEWAY_NAME=$(jq -r '.naming.api_gateway_name' config/github_self_hosted_runners.json)
+
+          cinc-auditor exec test/github_self_hosted_runners/infrastructure/post_deployment/integration \
+            --input account_id="${{ steps.config.outputs.account_id }}" \
+            --input region="${{ steps.config.outputs.region }}" \
+            --input vpc_name="$VPC_NAME" \
+            --input lambda_name="$LAMBDA_NAME" \
+            --input api_gateway_name="$API_GATEWAY_NAME" \
+            --reporter cli
+
+  performing-static-analysis:
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: DRY RUN - Skip static analysis
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run pylint and mypy static analysis"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linting dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pylint mypy
+
+      - name: Install project dependencies for linting
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install -r requirements-cdk.txt
+
+      - name: Performing lightweight static analysis
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pylint src/*/infrastructure \
+            --disable=line-too-long,missing-class-docstring,missing-const-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+
+      - name: Performing heavyweight static analysis
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          mypy src/github_self_hosted_runners/infrastructure --ignore-missing-imports
+
+  unit-testing-code:
+    name: Unit testing code
+    runs-on: ubuntu-latest
+    needs: performing-static-analysis
+
+    steps:
+      - name: DRY RUN - Skip unit tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run unit tests with pytest"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pytest
+          pip install -r requirements-cdk.txt
+
+      - name: Run unit tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pytest test/github_self_hosted_runners/infrastructure/pre_deployment/test_unit.py -v
+
+  unit-testing-deployed-infrastructure:
+    name: Unit testing deployed infrastructure
+    runs-on: ubuntu-latest
+    needs: deploying-artifacts
+    if: ${{ needs.deploying-artifacts.result == 'success' }}
+
+    steps:
+      - name: DRY RUN - Skip unit testing deployed infrastructure
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would test newly deployed infrastructure with Cinc Auditor"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
+          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Install Cinc Auditor
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor
+
+      - name: Run unit tests on deployed infrastructure
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Running unit tests on newly deployed infrastructure"
+
+          VPC_NAME=$(jq -r '.naming.vpc_name' config/github_self_hosted_runners.json)
+          VPC_CIDR=$(jq -r '.vpc.cidr' config/github_self_hosted_runners.json)
+          CLUSTER_NAME=$(jq -r '.naming.cluster_name' config/github_self_hosted_runners.json)
+          LAMBDA_NAME=$(jq -r '.naming.lambda_function_name' config/github_self_hosted_runners.json)
+          LAMBDA_TIMEOUT=$(jq -r '.lambda.timeout_seconds' config/github_self_hosted_runners.json)
+          LAMBDA_MEMORY=$(jq -r '.lambda.memory_mb' config/github_self_hosted_runners.json)
+          API_GATEWAY_NAME=$(jq -r '.naming.api_gateway_name' config/github_self_hosted_runners.json)
+
+          cinc-auditor exec test/github_self_hosted_runners/infrastructure/post_deployment/unit \
+            --input account_id="${{ steps.config.outputs.account_id }}" \
+            --input region="${{ steps.config.outputs.region }}" \
+            --input vpc_name="$VPC_NAME" \
+            --input vpc_cidr="$VPC_CIDR" \
+            --input cluster_name="$CLUSTER_NAME" \
+            --input lambda_name="$LAMBDA_NAME" \
+            --input lambda_timeout="$LAMBDA_TIMEOUT" \
+            --input lambda_memory="$LAMBDA_MEMORY" \
+            --input api_gateway_name="$API_GATEWAY_NAME" \
+            --reporter cli

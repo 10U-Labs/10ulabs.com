@@ -1,0 +1,582 @@
+name: Bootstrap Infrastructure
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'config/bootstrap.json'
+      - 'src/bootstrap/**'
+      - '!src/bootstrap/README.md'
+      - 'test/bootstrap/**'
+      - '.github/workflows/bootstrap.yml'
+  pull_request:
+    paths:
+      - 'config/bootstrap.json'
+      - 'src/bootstrap/**'
+      - '!src/bootstrap/README.md'
+      - 'test/bootstrap/**'
+      - '.github/workflows/bootstrap.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (show structure without executing)'
+        required: false
+        type: boolean
+        default: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  conclude-infrastructure-destroy:
+    name: Concluding infrastructure must be destroyed
+    runs-on: ubuntu-latest
+    needs: determine-infrastructure-action
+    if: needs.determine-infrastructure-action.outputs.should_destroy == 'true'
+    steps:
+      - run: 'true'
+  conclude-infrastructure-must-exist:
+    name: Concluding infrastructure must exist
+    runs-on: ubuntu-latest
+    needs: determine-infrastructure-action
+    if: needs.determine-infrastructure-action.outputs.should_create == 'true'
+    steps:
+      - run: 'true'
+  conclude-readme-skip:
+    name: Concluding README.md should not be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.should_update != 'true'
+    steps:
+      - run: 'true'
+  conclude-readme-update:
+    name: Concluding README.md should be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.should_update == 'true'
+    steps:
+      - run: 'true'
+  determine-infrastructure-action:
+    name: Determining if infrastructure should be created/updated or destroyed
+    runs-on: ubuntu-latest
+    outputs:
+      should_create: ${{ steps.decision.outputs.should_create }}
+      should_destroy: ${{ steps.decision.outputs.should_destroy }}
+      has_credentials: ${{ steps.decision.outputs.has_credentials }}
+      state: ${{ steps.state.outputs.state }}
+      enabled: ${{ steps.config.outputs.enabled }}
+      confirm_destroy: ${{ steps.config.outputs.confirm_destroy }}
+      aws_account_id: ${{ steps.config.outputs.aws_account_id }}
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      aws_iam_role_name: ${{ steps.config.outputs.aws_iam_role_name }}
+      github_pat_secret_name: ${{ steps.config.outputs.github_pat_secret_name }}
+      github_org: ${{ steps.config.outputs.github_org }}
+      github_repo: ${{ steps.config.outputs.github_repo }}
+      aws_creds_configured: ${{ steps.config.outputs.aws_creds_configured }}
+      github_pat_configured: ${{ steps.config.outputs.github_pat_configured }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read bootstrap config
+        id: config
+        run: |
+          enabled=$(jq -r '.enabled' config/bootstrap.json)
+          confirm_destroy=$(jq -r '.confirm_destroy' config/bootstrap.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
+          github_org=$(jq -r '.github.org' config/bootstrap.json)
+          github_repo=$(jq -r '.github.repo' config/bootstrap.json)
+          aws_creds_configured=$(jq -r '.secrets.aws_access_key_id_in_github_secrets and .secrets.aws_secret_access_key_in_github_secrets' config/bootstrap.json)
+          github_pat_configured=$(jq -r '.secrets.github_classic_pat_in_github_secrets' config/bootstrap.json)
+          echo "enabled=$enabled" >> $GITHUB_OUTPUT
+          echo "confirm_destroy=$confirm_destroy" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+          echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
+          echo "github_org=$github_org" >> $GITHUB_OUTPUT
+          echo "github_repo=$github_repo" >> $GITHUB_OUTPUT
+          echo "aws_creds_configured=$aws_creds_configured" >> $GITHUB_OUTPUT
+          echo "github_pat_configured=$github_pat_configured" >> $GITHUB_OUTPUT
+      - name: Detect bootstrap state
+        id: state
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "state=warm" >> $GITHUB_OUTPUT
+            echo "Bootstrap state: WARM (no AWS credentials, assuming OIDC-only mode)"
+            exit 0
+          fi
+          set +e
+          aws iam get-open-id-connect-provider \
+            --open-id-connect-provider-arn "arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:oidc-provider/token.actions.githubusercontent.com" \
+            --region ${{ steps.config.outputs.aws_region }} > /dev/null 2>&1
+          OIDC_EXISTS=$?
+          set -e
+          if [ $OIDC_EXISTS -eq 0 ]; then
+            echo "state=warm" >> $GITHUB_OUTPUT
+            echo "Bootstrap state: WARM (infrastructure exists, OIDC available)"
+          else
+            echo "state=cold" >> $GITHUB_OUTPUT
+            echo "Bootstrap state: COLD (no infrastructure, direct credentials required)"
+          fi
+      - name: Make decision
+        id: decision
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          STATE="${{ steps.state.outputs.state }}"
+          ENABLED="${{ steps.config.outputs.enabled }}"
+          CONFIRM_DESTROY="${{ steps.config.outputs.confirm_destroy }}"
+          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_credentials=false" >> $GITHUB_OUTPUT
+          fi
+          if [ "$ENABLED" == "false" ] && [ "$CONFIRM_DESTROY" == "true" ]; then
+            echo "should_create=false" >> $GITHUB_OUTPUT
+            echo "should_destroy=true" >> $GITHUB_OUTPUT
+            echo "Decision: DESTROY infrastructure"
+          else
+            echo "should_create=true" >> $GITHUB_OUTPUT
+            echo "should_destroy=false" >> $GITHUB_OUTPUT
+            echo "Decision: CREATE or UPDATE infrastructure (state: $STATE)"
+            echo "Note: bootstrap.py create is idempotent - creates new or updates existing resources"
+          fi
+  determine-readme-update:
+    name: Determining if README.md should be updated
+    runs-on: ubuntu-latest
+    needs: e2e-testing-infrastructure
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      should_update: ${{ steps.check.outputs.should_update }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read bootstrap config
+        id: config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
+      - name: Check if README needs update
+        id: check
+        run: |
+          python src/bootstrap/bootstrap.py readme \
+            --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
+            --aws-region "${{ steps.config.outputs.aws_region }}" \
+            --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
+            --check \
+            --output-file "$GITHUB_OUTPUT"
+  destroy:
+    name: Destroying infrastructure
+    runs-on: ubuntu-latest
+    needs: conclude-infrastructure-destroy
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Destroy bootstrap infrastructure
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "Destroying bootstrap infrastructure..."
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/bootstrap.json)
+          AWS_REGION=$(jq -r '.aws.region' config/bootstrap.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          GITHUB_ORG=$(jq -r '.github.org' config/bootstrap.json)
+          GITHUB_REPO=$(jq -r '.github.repo' config/bootstrap.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
+          ./src/bootstrap/bootstrap.py destroy \
+            --aws-account-id "$AWS_ACCOUNT_ID" \
+            --aws-region "$AWS_REGION" \
+            --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
+            --github-org "$GITHUB_ORG" \
+            --github-repo "$GITHUB_REPO" \
+            --github-pat-secret-name "$GITHUB_PAT_SECRET_NAME" \
+            --aws-access-key-id "${AWS_ACCESS_KEY_ID:-}" \
+            --aws-secret-access-key "${AWS_SECRET_ACCESS_KEY:-}" \
+            --force
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would destroy bootstrap infrastructure"
+  ensure-infrastructure-exists:
+    name: Ensuring infrastructure exists in defined state
+    runs-on: ubuntu-latest
+    needs: integration-testing-code
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        run: |
+          echo "Checking available credentials..."
+          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "✓ AWS credentials available"
+          else
+            echo "ℹ No AWS credentials (will use OIDC if infrastructure exists)"
+          fi
+          if [ -n "$GH_RUNNER_PAT" ]; then
+            echo "✓ GitHub PAT available"
+          else
+            echo "ℹ No GitHub PAT (will retrieve from Secrets Manager via OIDC if infrastructure exists)"
+          fi
+          echo ""
+          echo "Note: bootstrap.py will detect state and validate credentials accordingly"
+      - name: Create bootstrap infrastructure
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        run: |
+          echo "Creating bootstrap infrastructure..."
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/bootstrap.json)
+          AWS_REGION=$(jq -r '.aws.region' config/bootstrap.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          GITHUB_ORG=$(jq -r '.github.org' config/bootstrap.json)
+          GITHUB_REPO=$(jq -r '.github.repo' config/bootstrap.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
+          ./src/bootstrap/bootstrap.py create \
+            --aws-account-id "$AWS_ACCOUNT_ID" \
+            --aws-region "$AWS_REGION" \
+            --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
+            --github-org "$GITHUB_ORG" \
+            --github-repo "$GITHUB_REPO" \
+            --github-pat-secret-name "$GITHUB_PAT_SECRET_NAME" \
+            --aws-access-key-id "$AWS_ACCESS_KEY_ID" \
+            --aws-secret-access-key "$AWS_SECRET_ACCESS_KEY" \
+            --github-token "$GH_RUNNER_PAT"
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would create bootstrap infrastructure"
+  e2e-testing-infrastructure:
+    name: E2E testing infrastructure
+    runs-on: ubuntu-latest
+    needs: integration-testing-infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read bootstrap config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pytest
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install pytest
+      - name: Run E2E tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pytest test/bootstrap/post_deployment/test_e2e.py -v
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run E2E tests"
+  integration-testing-infrastructure:
+    name: Integration testing infrastructure
+    runs-on: ubuntu-latest
+    needs: unit-testing-infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read bootstrap config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pytest
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install pytest
+      - name: Run integration tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pytest test/bootstrap/post_deployment/test_integration.py -v
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run integration tests"
+  smoke-testing-infrastructure-was-destroyed:
+    name: Smoke testing infrastructure was destroyed
+    runs-on: ubuntu-latest
+    needs: destroy
+    steps:
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would verify OIDC provider no longer exists"
+      - name: Verify infrastructure destroyed
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "Verifying infrastructure destroyed..."
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/bootstrap.json)
+          AWS_REGION=$(jq -r '.aws.region' config/bootstrap.json)
+          set +e
+          aws iam get-open-id-connect-provider \
+            --open-id-connect-provider-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com" \
+            --region $AWS_REGION > /dev/null 2>&1
+          OIDC_EXISTS=$?
+          set -e
+          if [ $OIDC_EXISTS -eq 0 ]; then
+            echo "FAILED: OIDC provider still exists"
+            exit 1
+          fi
+          echo "PASSED: Infrastructure successfully destroyed"
+          echo "System returned to COLD state"
+  unit-testing-infrastructure:
+    name: Unit testing infrastructure
+    runs-on: ubuntu-latest
+    needs: ensure-infrastructure-exists
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read bootstrap config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          github_org=$(jq -r '.github.org' config/bootstrap.json)
+          github_repo=$(jq -r '.github.repo' config/bootstrap.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+          echo "github_org=$github_org" >> $GITHUB_OUTPUT
+          echo "github_repo=$github_repo" >> $GITHUB_OUTPUT
+          echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          OIDC_TOKEN=$(curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
+          CREDS=$(aws sts assume-role-with-web-identity \
+            --role-arn "arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}" \
+            --role-session-name "github-actions-post_deployment-tests" \
+            --web-identity-token "$OIDC_TOKEN" \
+            --region ${{ steps.config.outputs.aws_region }} \
+            --output json)
+          echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.Credentials.SecretAccessKey')" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ steps.config.outputs.aws_region }}" >> $GITHUB_ENV
+          echo "✓ AWS credentials configured via OIDC"
+      - name: Install CINC Auditor
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor
+          cinc-auditor version
+      - name: Running unit tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          cd test/bootstrap/post_deployment
+          cat > inputs.yml <<EOF
+          account_id: "${{ steps.config.outputs.aws_account_id }}"
+          region: "${{ steps.config.outputs.aws_region }}"
+          iam_role_name: "${{ steps.config.outputs.aws_iam_role_name }}"
+          github_org: "${{ steps.config.outputs.github_org }}"
+          github_repo: "${{ steps.config.outputs.github_repo }}"
+          github_pat_secret_name: "${{ steps.config.outputs.github_pat_secret_name }}"
+          EOF
+          set +e
+          cinc-auditor exec . \
+            --input-file inputs.yml \
+            --reporter cli json:unit-test-results.json
+          EXIT_CODE=$?
+          set -e
+          if [ $EXIT_CODE -eq 0 ] || [ $EXIT_CODE -eq 101 ]; then
+            echo "Unit tests passed (exit code: $EXIT_CODE)"
+            exit 0
+          else
+            echo "Unit tests failed (exit code: $EXIT_CODE)"
+            exit $EXIT_CODE
+          fi
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run unit tests"
+  integration-testing-code:
+    name: Integration testing code
+    runs-on: ubuntu-latest
+    needs: unit-testing-code
+    steps:
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install pytest
+      - name: Run integration tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
+          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        run: pytest test/bootstrap/pre_deployment/test_integration.py -v
+      - name: Dry run
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run integration tests"
+  performing-static-analysis:
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    needs: conclude-infrastructure-must-exist
+    steps:
+      - name: DRY RUN - Skip static analysis
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run pylint and mypy static analysis"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linting dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install pylint mypy
+
+      - name: Performing lightweight static analysis
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pylint src/bootstrap/bootstrap.py \
+            --disable=line-too-long,missing-class-docstring,missing-const-docstring,missing-function-docstring,missing-module-docstring,too-many-lines
+
+      - name: Performing heavyweight static analysis
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Running mypy on bootstrap.py..."
+          mypy src/bootstrap/bootstrap.py --no-strict-optional --ignore-missing-imports --allow-untyped-calls --allow-untyped-defs
+
+  unit-testing-code:
+    name: Unit testing code
+    runs-on: ubuntu-latest
+    needs: performing-static-analysis
+    steps:
+      - name: DRY RUN - Skip unit tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run unit tests"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: pip install pytest
+
+      - name: Functional unit testing
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Running unit tests..."
+          PYTHONPATH=src/bootstrap:$PYTHONPATH pytest test/bootstrap/pre_deployment/test_unit.py -v
+  update-readme:
+    name: Updating README.md
+    runs-on: ubuntu-latest
+    needs: conclude-readme-update
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Read bootstrap config
+        id: config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
+      - name: Update README
+        run: |
+          python src/bootstrap/bootstrap.py readme \
+            --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
+            --aws-region "${{ steps.config.outputs.aws_region }}" \
+            --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
+            --update
+      - name: Commit and push README
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/bootstrap/README.md
+          git diff --staged --quiet || git commit -m "Update bootstrap README via Bedrock"
+          git push

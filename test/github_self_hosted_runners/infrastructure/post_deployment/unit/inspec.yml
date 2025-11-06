@@ -1,0 +1,67 @@
+name: github-runners-infrastructure
+title: GitHub Self-Hosted Runners Infrastructure Validation
+maintainer: 10U Foundation, Inc
+copyright: 10U Foundation, Inc
+copyright_email: engineering@10uf.org
+license: MIT
+summary: Post-deployment validation for GitHub Self-Hosted Runners infrastructure on AWS
+version: 1.0.0
+inspec_version: '>= 5.0'
+
+depends:
+  - name: inspec-aws
+    git: https://github.com/inspec/inspec-aws.git
+
+inputs:
+  - name: account_id
+    type: String
+    description: AWS Account ID
+    required: false
+
+  - name: region
+    type: String
+    description: AWS Region
+    required: false
+    value: us-east-1
+
+  - name: vpc_name
+    type: String
+    description: VPC Name
+    required: true
+    value: github-runners-vpc
+
+  - name: vpc_cidr
+    type: String
+    description: VPC CIDR Block
+    required: true
+    value: 10.0.0.0/16
+
+  - name: cluster_name
+    type: String
+    description: ECS Cluster Name
+    required: true
+    value: github-runners-cluster
+
+  - name: lambda_name
+    type: String
+    description: Lambda Function Name
+    required: true
+    value: github-runner_webhook-handler
+
+  - name: lambda_timeout
+    type: Numeric
+    description: Lambda Timeout (seconds)
+    required: true
+    value: 30
+
+  - name: lambda_memory
+    type: Numeric
+    description: Lambda Memory (MB)
+    required: true
+    value: 256
+
+  - name: api_gateway_name
+    type: String
+    description: API Gateway Name
+    required: true
+    value: github-runner_webhook
