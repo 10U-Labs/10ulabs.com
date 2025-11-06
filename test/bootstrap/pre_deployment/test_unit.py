@@ -1820,6 +1820,21 @@ class TestReadmeHelperFunctions:
             bootstrap._check_readme_needs_update(bedrock, 'code', 'readme')
 
     @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    def test_check_readme_needs_update_empty_readme(self, mock_invoke):
+        """Test _check_readme_needs_update returns True when README is empty."""
+        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+
+        # Empty string
+        result = bootstrap._check_readme_needs_update(bedrock, 'code', '')
+        assert result is True
+        mock_invoke.assert_not_called()
+
+        # Whitespace only
+        result = bootstrap._check_readme_needs_update(bedrock, 'code', '   \n\t  ')
+        assert result is True
+        assert mock_invoke.call_count == 0  # Still not called
+
+    @patch.object(bootstrap.BedrockClient, 'invoke_model')
     def test_update_readme_success(self, mock_invoke):
         """Test _update_readme returns generated README."""
         mock_invoke.return_value = '# New README\nContent here'

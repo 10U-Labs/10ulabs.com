@@ -1328,6 +1328,9 @@ def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
     logging.error("No credentials available")
     return None, None, None
 def _check_readme_needs_update(bedrock: BedrockClient, bootstrap_code: str, current_readme: str) -> bool:
+    # If README doesn't exist or is empty, it definitely needs to be created
+    if not current_readme or not current_readme.strip():
+        return True
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on changes in the source code.
 Here is the current Python source code:
 <source_code>
