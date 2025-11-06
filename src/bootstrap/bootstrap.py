@@ -707,7 +707,12 @@ class BedrockClient(AWSClientBase):
         # Amazon Nova
         return result['output']['message']['content'][0]['text']
     def enable_model_access(self) -> bool:
-        logging.info("Enabling Anthropic model access (one-time setup)...")
+        # Amazon Nova and other models are available by default, only Anthropic models require this process
+        if not self.model_id.startswith('anthropic'):
+            logging.info("Model %s is available by default, skipping access setup", self.model_id)
+            return True
+
+        logging.info("Enabling Anthropic model access for %s (one-time setup)...", self.model_id)
         try:
             form_data = {
                 "companyName": "GitHub Actions Automation",
@@ -729,13 +734,12 @@ class BedrockClient(AWSClientBase):
             else:
                 logging.error("Failed to submit use case: %s", e)
                 return False
-        model_id = 'anthropic.claude-sonnet-4-5-20250929-v1:0'
         try:
             response = self._make_request(
                 'bedrock',
                 'ListFoundationModelAgreementOffers',
                 path='/list-foundation-model-agreement-offers',
-                body=json.dumps({'modelId': model_id})
+                body=json.dumps({'modelId': self.model_id})
             )
             offers = json.loads(response).get('offers', [])
             if offers:
@@ -744,9 +748,9 @@ class BedrockClient(AWSClientBase):
                     'bedrock',
                     'CreateFoundationModelAgreement',
                     path='/create-foundation-model-agreement',
-                    body=json.dumps({'modelId': model_id, 'offerToken': offer_token})
+                    body=json.dumps({'modelId': self.model_id, 'offerToken': offer_token})
                 )
-                logging.info("✓ Accepted model agreement for %s", model_id)
+                logging.info("✓ Accepted model agreement for %s", self.model_id)
             else:
                 logging.info("No agreement offers (may already be accepted)")
         except AWSHTTPError as e:
@@ -759,9 +763,9 @@ class BedrockClient(AWSClientBase):
                 'bedrock',
                 'FoundationModelEntitlement',
                 path='/foundation-model-entitlement',
-                body=json.dumps({'modelId': model_id})
+                body=json.dumps({'modelId': self.model_id})
             )
-            logging.info("✓ Requested model entitlement for %s", model_id)
+            logging.info("✓ Requested model entitlement for %s", self.model_id)
         except AWSHTTPError as e:
             if 'AlreadyExists' in e.error_body or 'already' in e.error_body.lower():
                 logging.info("Entitlement already exists, continuing...")
@@ -774,7 +778,7 @@ class BedrockClient(AWSClientBase):
             else:
                 logging.error("Failed to request model entitlement: %s", e)
                 return False
-        logging.info("✓ Anthropic model access enabled")
+        logging.info("✓ Anthropic model access enabled for %s", self.model_id)
         return True
 class AWSClientStdlib:
     # pylint: disable=too-many-arguments,too-many-positional-arguments
