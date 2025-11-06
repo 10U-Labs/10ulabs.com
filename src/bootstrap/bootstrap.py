@@ -1355,17 +1355,26 @@ def _update_readme(bedrock: BedrockClient, bootstrap_code: str) -> str:
 <source_code>
 {bootstrap_code}
 </source_code>
+
+CRITICAL REQUIREMENTS TO EMPHASIZE:
+- This script is SELF-CONTAINED and uses ONLY Python standard library (stdlib)
+- NO external dependencies required (no pip install, no requirements.txt)
+- NO AWS CLI required - implements AWS API calls using pure Python stdlib
+- NO boto3 or other AWS SDKs - custom AWS client implementation using urllib and stdlib only
+- This is a key selling point and architectural decision - must be prominently featured
+
 Create a professional README that includes:
-1. Title and brief overview
+1. Title and brief overview emphasizing the self-contained, dependency-free nature
 2. Purpose and what the script does
-3. Requirements
+3. Requirements: ONLY Python 3.11+ (no other dependencies, explicitly state NO AWS CLI needed)
 4. Usage instructions with command examples
 5. Architecture overview (three-state system: COLD/WARM/DESTROY)
 6. Configuration details
 7. Authentication methods (OIDC vs direct credentials)
-8. Implementation details (pure Python stdlib, AWS API clients)
+8. Implementation details: Pure Python stdlib implementation - custom AWS API clients without boto3
 9. Security considerations
 10. Troubleshooting tips
+
 Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
     try:
