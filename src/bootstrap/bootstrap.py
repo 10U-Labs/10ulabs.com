@@ -109,7 +109,7 @@ def get_secret_from_secrets_manager(secret_name: str, region: str,
     """Retrieve secret from AWS Secrets Manager using Python stdlib client."""
     secrets_client = SecretsManagerClient(region, access_key_id, secret_access_key, session_token)
     return secrets_client.get_secret_value(secret_name)
-class AWSClientBase:
+class AWSClientBase:  # pylint: disable=too-few-public-methods
     API_VERSIONS = {
         'iam': '2010-05-08',
         'sts': '2011-06-15',
@@ -342,7 +342,7 @@ class AWSClientBase:
             headers=signed_headers,
             method='POST'
         )
-    def _make_request(self, service: str, action: str, *,
+    def _make_request(self, service: str, action: str, *,  # pylint: disable=too-many-arguments
                      params: Optional[Dict[str, Any]] = None,
                      use_json: bool = False,
                      path: Optional[str] = None,
@@ -1347,7 +1347,7 @@ Generate ONLY the README content, starting with the title. Do not include any pr
     except Exception as e:
         logging.error("Failed to generate README via Bedrock: %s", e)
         raise
-def cmd_readme(args: argparse.Namespace) -> int:
+def cmd_readme(args: argparse.Namespace) -> int:  # pylint: disable=too-many-return-statements
     access_key, secret_key, session_token = _get_credentials_for_state(args)
     if not access_key:
         logging.error("Failed to obtain AWS credentials")
@@ -1383,7 +1383,7 @@ def cmd_readme(args: argparse.Namespace) -> int:
         logging.info("Generating updated README via Bedrock...")
         try:
             new_readme = _update_readme(bedrock, bootstrap_code)
-        except Exception as e:
+        except (AWSHTTPError, urllib.error.URLError, urllib.error.HTTPError) as e:
             logging.error("Failed to generate README: %s", e)
             return 1
         try:
@@ -1397,7 +1397,7 @@ def cmd_readme(args: argparse.Namespace) -> int:
             return 1
     logging.error("Either --check or --update must be specified")
     return 1
-def main():
+def main():  # pylint: disable=too-many-return-statements,too-many-statements
     parser = argparse.ArgumentParser(
         description='Bootstrap AWS infrastructure for GitHub Actions self-hosted runners'
     )
@@ -1486,7 +1486,7 @@ def main():
     except KeyboardInterrupt:
         print("\n\nAborted by user")
         return 130
-    except Exception as e:
+    except (AWSHTTPError, urllib.error.URLError, urllib.error.HTTPError, IOError, OSError) as e:
         logging.error("Unexpected error: %s", e, exc_info=True)
         return 1
 if __name__ == '__main__':
