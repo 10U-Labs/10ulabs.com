@@ -977,7 +977,7 @@ class TestCreateResources:
         result = bootstrap.create_resources(args)
 
         assert result == 0
-        mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None)
+        mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None, bedrock_model_id=args.bedrock_model_id)
         # Verify validation functions were called
         mock_aws_val.assert_called_once()
         mock_pat_val.assert_called_once()
@@ -1078,7 +1078,7 @@ class TestDestroyResources:
         result = bootstrap.destroy_resources(args)
 
         assert result == 0
-        mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None)
+        mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None, bedrock_model_id='amazon.nova-micro-v1:0')
 
     @patch('bootstrap.is_running_in_github_actions', return_value=True)
     @patch('bootstrap.AWSClientStdlib')
@@ -1581,65 +1581,11 @@ class TestBedrockClient:
         return bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
 
     @patch('urllib.request.urlopen')
-    def test_get_latest_sonnet_model_id_success(self, mock_urlopen, bedrock_client):
-        """Test get_latest_sonnet_model_id returns latest model on success."""
-        response_data = {
-            'modelSummaries': [
-                {'modelId': 'anthropic.claude-sonnet-4-5-20250929-v1:0'},
-                {'modelId': 'anthropic.claude-sonnet-3-5-v1:0'},
-            ]
-        }
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
-        mock_urlopen.return_value.__enter__.return_value = mock_response
-
-        result = bedrock_client.get_latest_sonnet_model_id()
-
-        assert result == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
-
-    @patch('urllib.request.urlopen')
-    def test_get_latest_sonnet_model_id_fallback_on_http_error(self, mock_urlopen, bedrock_client):
-        """Test get_latest_sonnet_model_id uses fallback on HTTP error."""
-        from urllib.error import HTTPError
-        from io import BytesIO
-        error = HTTPError('url', 403, 'Forbidden', {}, BytesIO(b'Access Denied'))
-        mock_urlopen.side_effect = error
-
-        result = bedrock_client.get_latest_sonnet_model_id()
-
-        assert result == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
-
-    @patch('urllib.request.urlopen')
-    def test_get_latest_sonnet_model_id_fallback_on_network_error(self, mock_urlopen, bedrock_client):
-        """Test get_latest_sonnet_model_id uses fallback on network error."""
-        from urllib.error import URLError
-        mock_urlopen.side_effect = URLError('Network error')
-
-        result = bedrock_client.get_latest_sonnet_model_id()
-
-        assert result == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
-
-    @patch('urllib.request.urlopen')
-    def test_get_latest_sonnet_model_id_fallback_on_empty_list(self, mock_urlopen, bedrock_client):
-        """Test get_latest_sonnet_model_id uses fallback when no Sonnet models found."""
-        response_data = {
-            'modelSummaries': [
-                {'modelId': 'anthropic.claude-opus-4-0:0'},
-            ]
-        }
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
-        mock_urlopen.return_value.__enter__.return_value = mock_response
-
-        result = bedrock_client.get_latest_sonnet_model_id()
-
-        assert result == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
-
-    @patch('urllib.request.urlopen')
-    @patch.object(bootstrap.BedrockClient, 'get_latest_sonnet_model_id')
-    def test_invoke_model_success(self, mock_get_model, mock_urlopen, bedrock_client):
-        """Test invoke_model returns Claude response on success."""
-        mock_get_model.return_value = 'anthropic.claude-sonnet-4-5-20250929-v1:0'
+    def test_invoke_model_success_anthropic(self, mock_urlopen):
+        """Test invoke_model returns Claude response with Anthropic model."""
+        # Create client with Anthropic model
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='anthropic.claude-sonnet-4-5-20250929-v1:0')
 
         response_data = {
             'content': [{'text': 'Test response from Claude'}]
@@ -1651,7 +1597,24 @@ class TestBedrockClient:
         result = bedrock_client.invoke_model('Test prompt')
 
         assert result == 'Test response from Claude'
-        mock_get_model.assert_called_once()
+
+    @patch('urllib.request.urlopen')
+    def test_invoke_model_success_amazon_nova(self, mock_urlopen):
+        """Test invoke_model returns response with Amazon Nova model."""
+        # Create client with Amazon Nova model
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='amazon.nova-micro-v1:0')
+
+        response_data = {
+            'output': {'message': {'content': [{'text': 'Test response from Nova'}]}}
+        }
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        result = bedrock_client.invoke_model('Test prompt')
+
+        assert result == 'Test response from Nova'
 
     def test_bedrock_client_inherits_from_base(self):
         """Test that BedrockClient inherits from AWSClientBase."""
@@ -1661,8 +1624,8 @@ class TestBedrockClient:
         assert client.access_key_id == 'AKIATEST'
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_anthropic_model_access_uses_rest_api_format(self, mock_request, bedrock_client):
-        """Test enable_anthropic_model_access uses REST API format (path+body) not JSON-RPC (params)."""
+    def test_enable_model_access_uses_rest_api_format(self, mock_request, bedrock_client):
+        """Test enable_model_access uses REST API format (path+body) not JSON-RPC (params)."""
         # Mock successful responses for all 3 steps
         mock_request.side_effect = [
             '{}',  # Step 1: PutUseCaseForModelAccess
@@ -1671,7 +1634,7 @@ class TestBedrockClient:
             '{}'   # Step 3: FoundationModelEntitlement
         ]
 
-        result = bedrock_client.enable_anthropic_model_access()
+        result = bedrock_client.enable_model_access()
 
         assert result is True
         # Verify 4 API calls (use case, list offers, create agreement, entitlement)
@@ -1687,8 +1650,8 @@ class TestBedrockClient:
             assert kwargs.get('use_json') is not True, f"Should not use use_json=True for REST APIs: {call}"
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_anthropic_model_access_idempotent_on_already_exists(self, mock_request, bedrock_client):
-        """Test enable_anthropic_model_access handles already submitted use case gracefully."""
+    def test_enable_model_access_idempotent_on_already_exists(self, mock_request, bedrock_client):
+        """Test enable_model_access handles already submitted use case gracefully."""
         from io import BytesIO
         # Use case already submitted
         error = bootstrap.AWSHTTPError(
@@ -1701,13 +1664,13 @@ class TestBedrockClient:
             '{}'  # FoundationModelEntitlement
         ]
 
-        result = bedrock_client.enable_anthropic_model_access()
+        result = bedrock_client.enable_model_access()
 
         assert result is True  # Should succeed (idempotent)
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_anthropic_model_access_accepts_agreement(self, mock_request, bedrock_client):
-        """Test enable_anthropic_model_access accepts model agreement."""
+    def test_enable_model_access_accepts_agreement(self, mock_request, bedrock_client):
+        """Test enable_model_access accepts model agreement."""
         mock_request.side_effect = [
             '{}',  # PutUseCaseForModelAccess
             '{"offers": [{"offerToken": "token123"}]}',  # ListFoundationModelAgreementOffers
@@ -1715,7 +1678,7 @@ class TestBedrockClient:
             '{}'   # FoundationModelEntitlement
         ]
 
-        result = bedrock_client.enable_anthropic_model_access()
+        result = bedrock_client.enable_model_access()
 
         assert result is True
         # Verify CreateFoundationModelAgreement was called with token
@@ -1724,8 +1687,8 @@ class TestBedrockClient:
         assert len(create_agreement_call) == 1
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_anthropic_model_access_fails_on_account_not_authorized(self, mock_request, bedrock_client):
-        """Test enable_anthropic_model_access fails when account not authorized (requires support case)."""
+    def test_enable_model_access_fails_on_account_not_authorized(self, mock_request, bedrock_client):
+        """Test enable_model_access fails when account not authorized (requires support case)."""
         from io import BytesIO
         # Account needs manual verification
         error = bootstrap.AWSHTTPError(
@@ -1738,9 +1701,24 @@ class TestBedrockClient:
             error  # FoundationModelEntitlement fails (not authorized)
         ]
 
-        result = bedrock_client.enable_anthropic_model_access()
+        result = bedrock_client.enable_model_access()
 
         assert result is False  # Should fail loudly, not silently succeed
+
+    def test_bedrock_client_accepts_custom_model_id(self):
+        """Test BedrockClient accepts custom model_id parameter."""
+        client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                          model_id='amazon.nova-micro-v1:0')
+        assert client.model_id == 'amazon.nova-micro-v1:0'
+
+        client2 = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                           model_id='anthropic.claude-sonnet-4-5-20250929-v1:0')
+        assert client2.model_id == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
+
+    def test_bedrock_client_defaults_to_amazon_nova(self):
+        """Test BedrockClient defaults to Amazon Nova Micro."""
+        client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
+        assert client.model_id == 'amazon.nova-micro-v1:0'
 
 
 class TestReadmeHelperFunctions:
