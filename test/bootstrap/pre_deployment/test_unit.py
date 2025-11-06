@@ -1624,8 +1624,11 @@ class TestBedrockClient:
         assert client.access_key_id == 'AKIATEST'
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_model_access_uses_rest_api_format(self, mock_request, bedrock_client):
-        """Test enable_model_access uses REST API format (path+body) not JSON-RPC (params)."""
+    def test_enable_model_access_uses_rest_api_format(self, mock_request):
+        """Test enable_model_access uses REST API format (path+body) not JSON-RPC (params) for Anthropic models."""
+        # Create client with Anthropic model (these tests are for Anthropic-specific flow)
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='anthropic.claude-sonnet-4-5-20250929-v1:0')
         # Mock successful responses for all 3 steps
         mock_request.side_effect = [
             '{}',  # Step 1: PutUseCaseForModelAccess
@@ -1669,8 +1672,11 @@ class TestBedrockClient:
         assert result is True  # Should succeed (idempotent)
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_model_access_accepts_agreement(self, mock_request, bedrock_client):
-        """Test enable_model_access accepts model agreement."""
+    def test_enable_model_access_accepts_agreement(self, mock_request):
+        """Test enable_model_access accepts model agreement for Anthropic models."""
+        # Create client with Anthropic model
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='anthropic.claude-sonnet-4-5-20250929-v1:0')
         mock_request.side_effect = [
             '{}',  # PutUseCaseForModelAccess
             '{"offers": [{"offerToken": "token123"}]}',  # ListFoundationModelAgreementOffers
@@ -1687,8 +1693,11 @@ class TestBedrockClient:
         assert len(create_agreement_call) == 1
 
     @patch.object(bootstrap.BedrockClient, '_make_request')
-    def test_enable_model_access_fails_on_account_not_authorized(self, mock_request, bedrock_client):
-        """Test enable_model_access fails when account not authorized (requires support case)."""
+    def test_enable_model_access_fails_on_account_not_authorized(self, mock_request):
+        """Test enable_model_access fails when account not authorized (requires support case) for Anthropic models."""
+        # Create client with Anthropic model
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='anthropic.claude-sonnet-4-5-20250929-v1:0')
         from io import BytesIO
         # Account needs manual verification
         error = bootstrap.AWSHTTPError(
@@ -1704,6 +1713,17 @@ class TestBedrockClient:
         result = bedrock_client.enable_model_access()
 
         assert result is False  # Should fail loudly, not silently succeed
+
+    def test_enable_model_access_skips_for_non_anthropic_models(self):
+        """Test enable_model_access skips the access setup for non-Anthropic models like Amazon Nova."""
+        # Amazon Nova models don't require the access setup process
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='amazon.nova-micro-v1:0')
+
+        # Should return True without making any API calls
+        result = bedrock_client.enable_model_access()
+
+        assert result is True
 
     def test_bedrock_client_accepts_custom_model_id(self):
         """Test BedrockClient accepts custom model_id parameter."""
