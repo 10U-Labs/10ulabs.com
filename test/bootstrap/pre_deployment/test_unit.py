@@ -1740,6 +1740,29 @@ class TestBedrockClient:
         client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
         assert client.model_id == 'amazon.nova-micro-v1:0'
 
+    @patch('urllib.request.urlopen')
+    def test_invoke_model_caps_max_tokens_for_amazon_nova(self, mock_urlopen):
+        """Test invoke_model caps max_tokens at 10240 for Amazon Nova models."""
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='amazon.nova-micro-v1:0')
+
+        response_data = {
+            'output': {'message': {'content': [{'text': 'Test response'}]}}
+        }
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        # Request 16000 tokens (exceeds Nova limit)
+        result = bedrock_client.invoke_model('Test prompt', max_tokens=16000)
+
+        # Verify it was capped at 10240
+        call_args = mock_urlopen.call_args
+        request = call_args[0][0]
+        body = json.loads(request.data.decode('utf-8'))
+        assert body['inferenceConfig']['max_new_tokens'] == 10240
+        assert result == 'Test response'
+
 
 class TestReadmeHelperFunctions:
     """Test README helper functions."""
