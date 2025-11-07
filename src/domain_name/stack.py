@@ -98,18 +98,39 @@ def handler(event, context):
         print("Fetching AWS account contact information...")
         contact_info = account.get_contact_information()['ContactInformation']
 
+        # Validate required fields exist
+        required_fields = {
+            'FullName': contact_info.get('FullName'),
+            'AddressLine1': contact_info.get('AddressLine1'),
+            'City': contact_info.get('City'),
+            'StateOrRegion': contact_info.get('StateOrRegion'),
+            'CountryCode': contact_info.get('CountryCode'),
+            'PostalCode': contact_info.get('PostalCode'),
+            'PhoneNumber': contact_info.get('PhoneNumber'),
+            'EmailAddress': contact_info.get('EmailAddress')
+        }
+
+        missing_fields = [k for k, v in required_fields.items() if not v]
+        if missing_fields:
+            error_msg = f"AWS account is missing required contact fields: {', '.join(missing_fields)}. Configure these in AWS Console: https://console.aws.amazon.com/billing/home#/account"
+            print(error_msg)
+            raise ValueError(error_msg)
+
+        print(f"Using AWS account contact info: {contact_info.get('EmailAddress')}")
+
         # Build registrant contact from AWS account info
+        full_name_parts = contact_info['FullName'].split(maxsplit=1)
         contact = {
-            'FirstName': contact_info.get('FullName', 'Administrator').split()[0],
-            'LastName': ' '.join(contact_info.get('FullName', 'Administrator').split()[1:]) or 'Account',
+            'FirstName': full_name_parts[0],
+            'LastName': full_name_parts[1] if len(full_name_parts) > 1 else full_name_parts[0],
             'ContactType': 'COMPANY' if contact_info.get('CompanyName') else 'PERSON',
-            'AddressLine1': contact_info.get('AddressLine1', '123 Main St'),
-            'City': contact_info.get('City', 'Seattle'),
-            'State': contact_info.get('StateOrRegion', 'WA'),
-            'CountryCode': contact_info.get('CountryCode', 'US'),
-            'ZipCode': contact_info.get('PostalCode', '98101'),
-            'PhoneNumber': contact_info.get('PhoneNumber', '+1.2065551234'),
-            'Email': contact_info.get('EmailAddress', 'admin@example.com')
+            'AddressLine1': contact_info['AddressLine1'],
+            'City': contact_info['City'],
+            'State': contact_info['StateOrRegion'],
+            'CountryCode': contact_info['CountryCode'],
+            'ZipCode': contact_info['PostalCode'],
+            'PhoneNumber': contact_info['PhoneNumber'],
+            'Email': contact_info['EmailAddress']
         }
 
         if contact_info.get('CompanyName'):
