@@ -1344,21 +1344,7 @@ def _check_readme_needs_update(bedrock: BedrockClient, bootstrap_code: str, curr
     if not current_readme or not current_readme.strip():
         return True
 
-    # Deterministic checks for known issues (don't rely on LLM for obvious cases)
-    incorrect_dependencies = [
-        'AWS CLI',
-        'aws cli',
-        'boto3',
-        'pip install',
-        'requirements.txt',
-    ]
-
-    for dep in incorrect_dependencies:
-        if dep in current_readme:
-            logging.info("README mentions '%s' which is incorrect - update needed", dep)
-            return True
-
-    # If no obvious issues found, ask the LLM for deeper analysis
+    # Ask Haiku to analyze if README needs updating
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on the source code.
 
 <source_code>
@@ -1383,7 +1369,7 @@ Check if the README:
 
 Does the README need updating? Respond with ONLY "true" or "false"."""
     response = bedrock.invoke_model(prompt, max_tokens=10)
-    return response.strip().lower() == 'true'
+    return response.strip().lower().startswith('true')
 def _update_readme(bedrock: BedrockClient, bootstrap_code: str) -> str:
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following Python bootstrap script.
 <source_code>
