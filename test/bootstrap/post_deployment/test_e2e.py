@@ -401,7 +401,8 @@ class TestBootstrapIdempotency:
              '--github-org', config['github']['org'],
              '--github-repo', config['github']['repo'],
              '--github-token', 'dummy',  # Will be retrieved from Secrets Manager
-             '--github-pat-secret-name', config['aws']['secrets_manager']['github_pat_secret_name']],
+             '--github-pat-secret-name', config['aws']['secrets_manager']['github_pat_secret_name'],
+             '--bedrock-model-id', 'us.anthropic.claude-haiku-4-5-20251001-v1:0'],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
