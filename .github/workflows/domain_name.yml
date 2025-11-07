@@ -235,63 +235,99 @@ jobs:
         run: |
           cdk deploy TenUFOrgDomain \
             --require-approval never \
-            --outputs-file domain-outputs.json
-        continue-on-error: true
+            --outputs-file domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
+          # Capture exit code
+          if grep -q "failed to deploy" /tmp/cdk_deploy.log; then
+            echo "deployment_failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "deployment_failed=false" >> $GITHUB_OUTPUT
+          fi
       - name: Fetch CloudWatch Logs
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Fetching CloudWatch logs from Lambda execution..."
-          # Get the Lambda function name from CloudFormation stack
-          FUNCTION_NAME=$(aws cloudformation describe-stack-resources \
-            --stack-name TenUFOrgDomain \
-            --query "StackResources[?ResourceType=='AWS::Lambda::Function'].PhysicalResourceId" \
-            --output text 2>/dev/null || echo "")
-          if [ -z "$FUNCTION_NAME" ]; then
-            echo "Could not find Lambda function in stack"
-            # Try to find the function by name pattern
-            FUNCTION_NAME=$(aws lambda list-functions \
-              --query "Functions[?contains(FunctionName, 'DomainRegistrationHandler')].FunctionName | [0]" \
-              --output text 2>/dev/null || echo "")
-          fi
-          if [ -n "$FUNCTION_NAME" ]; then
-            echo "Found Lambda function: $FUNCTION_NAME"
-            echo "Fetching recent CloudWatch logs..."
-            LOG_GROUP="/aws/lambda/$FUNCTION_NAME"
-            # Get the most recent log stream
-            LATEST_STREAM=$(aws logs describe-log-streams \
-              --log-group-name "$LOG_GROUP" \
-              --order-by LastEventTime \
-              --descending \
-              --max-items 1 \
-              --query 'logStreams[0].logStreamName' \
-              --output text 2>/dev/null || echo "")
-            if [ -n "$LATEST_STREAM" ]; then
-              echo "Latest log stream: $LATEST_STREAM"
-              echo ""
-              echo "=========================================="
-              echo "     CloudWatch Logs Output"
-              echo "=========================================="
-              aws logs get-log-events \
-                --log-group-name "$LOG_GROUP" \
-                --log-stream-name "$LATEST_STREAM" \
-                --limit 100 \
-                --query 'events[*].message' \
-                --output text
-              echo "=========================================="
-              echo ""
-            else
-              echo "No log streams found for function"
+
+          # First, try to extract log stream name from error message
+          if [ -f /tmp/cdk_deploy.log ]; then
+            LOG_STREAM=$(grep -oP 'CloudWatch Log Stream: \K[^\s]+' /tmp/cdk_deploy.log | tail -1 || echo "")
+            if [ -n "$LOG_STREAM" ]; then
+              echo "Found log stream in error message: $LOG_STREAM"
+              # Try to find the function name to get the log group
+              FUNCTION_NAME=$(aws lambda list-functions \
+                --query "Functions[?contains(FunctionName, 'DomainRegistrationHandler')].FunctionName | [0]" \
+                --output text 2>/dev/null || echo "")
+
+              if [ -n "$FUNCTION_NAME" ] && [ "$FUNCTION_NAME" != "None" ]; then
+                LOG_GROUP="/aws/lambda/$FUNCTION_NAME"
+              else
+                # Try to infer log group from recently created functions
+                LOG_GROUP=$(aws logs describe-log-groups \
+                  --log-group-name-prefix "/aws/lambda/" \
+                  --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName | [0]" \
+                  --output text 2>/dev/null || echo "")
+              fi
+
+              if [ -n "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
+                echo "Using log group: $LOG_GROUP"
+                echo ""
+                echo "=========================================="
+                echo "     CloudWatch Logs Output"
+                echo "=========================================="
+                aws logs get-log-events \
+                  --log-group-name "$LOG_GROUP" \
+                  --log-stream-name "$LOG_STREAM" \
+                  --limit 100 \
+                  --query 'events[*].message' \
+                  --output text 2>/dev/null || echo "Could not fetch logs from specified stream"
+                echo "=========================================="
+                echo ""
+              fi
             fi
-          else
-            echo "Could not find Lambda function to fetch logs"
           fi
+
+          # Fallback: try to find any recent logs from DomainRegistrationHandler
+          echo "Attempting to find any recent DomainRegistrationHandler logs..."
+          LOG_GROUPS=$(aws logs describe-log-groups \
+            --log-group-name-prefix "/aws/lambda/" \
+            --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName" \
+            --output text 2>/dev/null || echo "")
+
+          for LOG_GROUP in $LOG_GROUPS; do
+            if [ -n "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
+              echo "Checking log group: $LOG_GROUP"
+              LATEST_STREAM=$(aws logs describe-log-streams \
+                --log-group-name "$LOG_GROUP" \
+                --order-by LastEventTime \
+                --descending \
+                --max-items 1 \
+                --query 'logStreams[0].logStreamName' \
+                --output text 2>/dev/null || echo "")
+
+              if [ -n "$LATEST_STREAM" ] && [ "$LATEST_STREAM" != "None" ]; then
+                echo "Latest log stream: $LATEST_STREAM"
+                echo ""
+                echo "=========================================="
+                echo "     CloudWatch Logs Output"
+                echo "=========================================="
+                aws logs get-log-events \
+                  --log-group-name "$LOG_GROUP" \
+                  --log-stream-name "$LATEST_STREAM" \
+                  --limit 100 \
+                  --query 'events[*].message' \
+                  --output text 2>/dev/null || echo "Could not fetch logs"
+                echo "=========================================="
+                echo ""
+                break
+              fi
+            fi
+          done
       - name: Fail if deployment failed
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outcome == 'failure' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
       - name: Display outputs
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outcome == 'success' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
         run: |
           echo "Domain infrastructure deployed successfully"
           echo ""
