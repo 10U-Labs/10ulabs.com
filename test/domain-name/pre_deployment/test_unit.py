@@ -10,14 +10,17 @@ def test_hosted_zone_created():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "domain-name" / "10uf.org" / "config.json"
+    config_path = Path(__file__).parents[3] / "src" / "domain-name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    # Import the stack module
-    import sys
-    sys.path.insert(0, str(Path(__file__).parents[4] / "src"))
-    from domain_name import DomainStack
+    # Import stack dynamically
+    import importlib.util
+    stack_path = Path(__file__).parents[3] / "src" / "domain-name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
 
     # Create stack
     stack = DomainStack(
@@ -47,17 +50,13 @@ def test_hosted_zone_outputs():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "domain-name" / "10uf.org" / "config.json"
+    config_path = Path(__file__).parents[3] / "src" / "domain-name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    # Import the stack module
-    import sys
-    sys.path.insert(0, str(Path(__file__).parents[4] / "src"))
-
     # Dynamically import DomainStack
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "domain-name" / "10uf.org" / "stack.py"
+    stack_path = Path(__file__).parents[3] / "src" / "domain-name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
