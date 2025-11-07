@@ -243,3 +243,164 @@ def test_lambda_handler_file_exists():
     assert "get_contact_information" in code
     assert "describe_organization" in code
     assert "MasterAccountEmail" in code
+
+#
+# Lambda Handler Logic Tests
+#
+
+import unittest
+from unittest.mock import Mock, patch
+import sys
+
+# Add handler to path for import
+handler_path = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+sys.path.insert(0, str(handler_path))
+import handler as lambda_handler
+
+
+class TestLambdaHandlerDelete(unittest.TestCase):
+    """Test Lambda handler DELETE operations"""
+
+    @patch('handler.cfnresponse')
+    def test_delete_request_succeeds_without_action(self, mock_cfnresponse):
+        """DELETE requests should succeed without deleting the domain"""
+        event = {
+            'RequestType': 'Delete',
+            'ResourceProperties': {'DomainName': '10uf.org'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        mock_cfnresponse.send.assert_called_once_with(
+            event, context, mock_cfnresponse.SUCCESS, {}
+        )
+
+
+class TestLambdaHandlerAlreadyRegistered(unittest.TestCase):
+    """Test Lambda handler when domain is already registered"""
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_already_registered_returns_zone_info(self, mock_cfnresponse, mock_boto3):
+        """Already registered domain should return existing hosted zone info"""
+        # Mock clients
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+
+        # Create exceptions
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': Mock(),
+            'organizations': Mock()
+        }[service]
+
+        # Domain already registered
+        mock_route53domains.get_domain_detail.return_value = {
+            'StatusList': ['REGISTERED']
+        }
+
+        # Hosted zone exists
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [
+                {'Name': '10uf.org.', 'Id': '/hostedzone/Z1234567890ABC'}
+            ]
+        }
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10uf.org'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        mock_cfnresponse.send.assert_called_once()
+        call_args = mock_cfnresponse.send.call_args
+        assert call_args[0][2] == mock_cfnresponse.SUCCESS
+        assert call_args[0][3]['HostedZoneId'] == 'Z1234567890ABC'
+        assert call_args[0][3]['NameServers'] == 'ns1.example.com,ns2.example.com'
+        assert call_args[0][3]['DomainStatus'] == 'REGISTERED'
+
+
+class TestLambdaHandlerMissingContactFields(unittest.TestCase):
+    """Test Lambda handler with missing contact fields"""
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_missing_fields_returns_error(self, mock_cfnresponse, mock_boto3):
+        """Missing contact fields should return FAILED with error"""
+        mock_route53domains = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        # Create exceptions
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': Mock(),
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        # Domain not registered
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        # Domain available
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        # Organizations returns email
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        # Missing fields
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                # Missing other required fields
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10uf.org'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        mock_cfnresponse.send.assert_called_once()
+        call_args = mock_cfnresponse.send.call_args
+        assert call_args[0][2] == mock_cfnresponse.FAILED
+        assert 'missing contact fields' in call_args[0][3]['Error']

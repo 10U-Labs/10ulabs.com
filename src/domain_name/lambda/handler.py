@@ -2,6 +2,7 @@
 import boto3
 import json
 import time
+import cfnresponse
 
 
 def handler(event, context):
@@ -14,8 +15,6 @@ def handler(event, context):
     - Waiting for hosted zone creation
     - Returning hosted zone details
     """
-    import cfnresponse
-
     route53domains = boto3.client('route53domains', region_name='us-east-1')
     route53 = boto3.client('route53')
     account = boto3.client('account', region_name='us-east-1')
