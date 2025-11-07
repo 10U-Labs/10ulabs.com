@@ -108,10 +108,10 @@ def test_hosted_zone_configuration():
     # Get template
     template = Template.from_stack(stack)
 
-    # Verify hosted zone properties
-    template.has_resource_properties(
-        "AWS::Route53::HostedZone",
-        {
-            "Name": f"{config['domain_name']}."
-        }
-    )
+    # Note: We import the hosted zone (created by AWS during domain registration)
+    # so there won't be an AWS::Route53::HostedZone resource in CloudFormation
+    # Instead, verify that the stack has outputs for the hosted zone
+    outputs = template.find_outputs("*")
+    assert "HostedZoneId" in outputs, "Stack should have HostedZoneId output"
+    assert "HostedZoneName" in outputs, "Stack should have HostedZoneName output"
+    assert "NameServers" in outputs, "Stack should have NameServers output"
