@@ -1623,7 +1623,7 @@ class TestBedrockClient:
         assert client.region == 'us-east-1'
         assert client.access_key_id == 'AKIATEST'
 
-    @patch.object(bootstrap.BedrockClient, '_make_request')
+    @patch.object(bootstrap.BedrockClient, '_make_rest_request')
     def test_enable_model_access_uses_rest_api_format(self, mock_request):
         """Test enable_model_access uses REST API format (path+body) not JSON-RPC (params) for Anthropic models."""
         # Create client with Anthropic model (these tests are for Anthropic-specific flow)
@@ -1643,16 +1643,15 @@ class TestBedrockClient:
         # Verify 4 API calls (use case, list offers, create agreement, entitlement)
         assert len(mock_request.call_args_list) == 4
 
-        # Verify all calls use REST API format (path + body), NOT JSON-RPC (params + use_json)
+        # Verify all calls use REST API format with correct arguments
         for call in mock_request.call_args_list:
             args, kwargs = call
-            # REST API must have 'path' and 'body' kwargs
-            assert 'path' in kwargs, f"Missing 'path' - should use REST API format, not JSON-RPC: {call}"
-            assert 'body' in kwargs, f"Missing 'body' - should use REST API format, not JSON-RPC: {call}"
-            # Should NOT have use_json=True (that's for JSON-RPC APIs)
-            assert kwargs.get('use_json') is not True, f"Should not use use_json=True for REST APIs: {call}"
+            # _make_rest_request(service, path, body, signing_service)
+            assert len(args) == 4, f"Should have 4 positional args: {call}"
+            assert args[0] == 'bedrock', f"First arg should be 'bedrock': {call}"
+            assert args[3] == 'bedrock', f"Fourth arg should be 'bedrock' (signing_service): {call}"
 
-    @patch.object(bootstrap.BedrockClient, '_make_request')
+    @patch.object(bootstrap.BedrockClient, '_make_rest_request')
     def test_enable_model_access_idempotent_on_already_exists(self, mock_request, bedrock_client):
         """Test enable_model_access handles already submitted use case gracefully."""
         from io import BytesIO
@@ -1671,7 +1670,7 @@ class TestBedrockClient:
 
         assert result is True  # Should succeed (idempotent)
 
-    @patch.object(bootstrap.BedrockClient, '_make_request')
+    @patch.object(bootstrap.BedrockClient, '_make_rest_request')
     def test_enable_model_access_accepts_agreement(self, mock_request):
         """Test enable_model_access accepts model agreement for Anthropic models."""
         # Create client with Anthropic model
@@ -1689,10 +1688,10 @@ class TestBedrockClient:
         assert result is True
         # Verify CreateFoundationModelAgreement was called with token
         create_agreement_call = [call for call in mock_request.call_args_list
-                                if 'CreateFoundationModelAgreement' in str(call)]
+                                if 'create-foundation-model-agreement' in str(call)]
         assert len(create_agreement_call) == 1
 
-    @patch.object(bootstrap.BedrockClient, '_make_request')
+    @patch.object(bootstrap.BedrockClient, '_make_rest_request')
     def test_enable_model_access_fails_on_account_not_authorized(self, mock_request):
         """Test enable_model_access fails when account not authorized (requires support case) for Anthropic models."""
         # Create client with Anthropic model
