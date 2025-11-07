@@ -346,6 +346,8 @@ class STSClient(AWSClientBase):
         response = self.make_request('sts', 'GetCallerIdentity', params={})
         root = ET.fromstring(response)
         account_id_elem = root.find('.//{*}Account')
+        if account_id_elem is None or account_id_elem.text is None:
+            raise ValueError("Account ID not found in STS response")
         return account_id_elem.text
     def assume_role_with_web_identity(self, role_arn: str, web_identity_token: str,
                                       role_session_name: str = 'bootstrap-session') -> Optional[Dict[str, str]]:
@@ -360,7 +362,8 @@ class STSClient(AWSClientBase):
             access_key = root.find('.//{*}AccessKeyId')
             secret_key = root.find('.//{*}SecretAccessKey')
             session_token = root.find('.//{*}SessionToken')
-            if access_key is not None and secret_key is not None and session_token is not None:
+            if (access_key is not None and secret_key is not None and session_token is not None and
+                access_key.text is not None and secret_key.text is not None and session_token.text is not None):
                 return {
                     'access_key_id': access_key.text,
                     'secret_access_key': secret_key.text,

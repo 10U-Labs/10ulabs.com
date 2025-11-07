@@ -357,7 +357,7 @@ jobs:
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          mypy src/github_self_hosted_runners/infrastructure --ignore-missing-imports
+          mypy src/github_self_hosted_runners/infrastructure
 
   unit-testing-code:
     name: Unit testing code

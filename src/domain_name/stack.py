@@ -46,6 +46,6 @@ class DomainStack(Stack):
 
         CfnOutput(
             self, "NameServers",
-            value=Fn.join(",", self.hosted_zone.hosted_zone_name_servers),
+            value=Fn.join(",", self.hosted_zone.hosted_zone_name_servers or []),
             description=f"Name servers for {config['domain_name']} - configure these at your domain registrar"
         )
