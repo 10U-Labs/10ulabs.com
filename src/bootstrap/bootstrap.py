@@ -676,7 +676,7 @@ class SecretsManagerClient(AWSClientBase):
 class BedrockClient(AWSClientBase):
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None, model_id: str = 'amazon.nova-micro-v1:0'):
+                 session_token: Optional[str] = None, model_id: str = 'anthropic.claude-haiku-4-5-20250514-v1:0'):
         super().__init__(region, access_key_id, secret_access_key, session_token)
         self.model_id = model_id
     def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
@@ -804,7 +804,7 @@ class BedrockClient(AWSClientBase):
 class AWSClientStdlib:
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None, bedrock_model_id: str = 'amazon.nova-micro-v1:0'):
+                 session_token: Optional[str] = None, bedrock_model_id: str = 'anthropic.claude-haiku-4-5-20250514-v1:0'):
         """Initialize AWS service clients."""
         self.sts = STSClient(region, access_key_id, secret_access_key, session_token)
         self.iam = IAMClient(region, access_key_id, secret_access_key, session_token)
@@ -1490,8 +1490,8 @@ def main():  # pylint: disable=too-many-return-statements,too-many-statements
     create_required.add_argument('--github-pat-secret-name', required=True,
                                 help='AWS Secrets Manager secret name for GitHub PAT')
     create_optional = create_parser.add_argument_group('optional arguments')
-    create_optional.add_argument('--bedrock-model-id', default='amazon.nova-micro-v1:0',
-                                help='Bedrock model ID (default: amazon.nova-micro-v1:0)')
+    create_optional.add_argument('--bedrock-model-id', default='anthropic.claude-haiku-4-5-20250514-v1:0',
+                                help='Bedrock model ID (default: anthropic.claude-haiku-4-5-20250514-v1:0)')
     create_optional.add_argument('--enable-bedrock', action='store_true', default=True,
                                 help='Enable Bedrock model access (default: True)')
     destroy_parser = subparsers.add_parser('destroy', help='Destroy bootstrap resources')

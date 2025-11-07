@@ -78,8 +78,8 @@
   },
 
   "bedrock": {
-    "model_id": "amazon.nova-micro-v1:0",
-    "model_provider": "Amazon",
+    "model_id": "anthropic.claude-haiku-4-5-20250514-v1:0",
+    "model_provider": "Anthropic",
     "enable_model_access": true
   }
 }
