@@ -134,7 +134,7 @@ def handler(event, context):
 
         # Wait for registration to complete and update nameservers using exponential backoff
         import time
-        max_wait_time = 240  # 4 minutes (Lambda has 5 min timeout)
+        max_wait_time = 840  # 14 minutes (Lambda has 15 min timeout, leave 1 min buffer)
         attempt = 0
         elapsed = 0
 
@@ -188,7 +188,7 @@ def handler(event, context):
             'Traceback': tb[:1000]  # Limit to 1000 chars to avoid CloudFormation size limits
         })
 """),
-            timeout=Duration.seconds(300),
+            timeout=Duration.seconds(900),
             initial_policy=[
                 iam.PolicyStatement(
                     actions=[
