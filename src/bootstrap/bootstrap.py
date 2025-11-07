@@ -32,18 +32,7 @@ def is_running_in_github_actions() -> bool:
 def detect_bootstrap_state(account_id: str, region: str, role_name: str,
                           access_key_id: Optional[str] = None,
                           secret_access_key: Optional[str] = None) -> str:
-    """Detect current bootstrap state.
-    Args:
-        account_id: AWS account ID
-        region: AWS region
-        role_name: IAM role name
-        access_key_id: AWS access key ID (optional, will use environment if not provided)
-        secret_access_key: AWS secret access key (optional, will use environment if not provided)
-    Returns:
-        'cold' - No infrastructure exists (State 1)
-        'warm' - Infrastructure exists (State 2)
-    Note: Uses OIDC authentication if available, otherwise uses provided or environment credentials.
-    """
+
     oidc_token = get_oidc_token()
     if oidc_token:
         oidc_creds = assume_role_with_oidc(account_id, region, role_name)
@@ -106,10 +95,10 @@ def assume_role_with_oidc(account_id: str, region: str, role_name: str) -> Optio
 def get_secret_from_secrets_manager(secret_name: str, region: str,
                                     access_key_id: str, secret_access_key: str,
                                     session_token: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Retrieve secret from AWS Secrets Manager using Python stdlib client."""
+
     secrets_client = SecretsManagerClient(region, access_key_id, secret_access_key, session_token)
     return secrets_client.get_secret_value(secret_name)
-class AWSClientBase:  # pylint: disable=too-few-public-methods
+class AWSClientBase:
     API_VERSIONS = {
         'iam': '2010-05-08',
         'sts': '2011-06-15',
@@ -124,10 +113,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
         self.account_id = None
     def _add_aws_signing_headers_with_timestamp(self, headers: Dict[str, str],
                                                 host: str) -> tuple:
-        """Add required AWS signing headers and return timestamps for signing.
-        Returns:
-            Tuple of (amz_date, date_stamp) for use in signature calculation
-        """
+
         current_time = datetime.utcnow()
         amz_date = current_time.strftime('%Y%m%dT%H%M%SZ')
         date_stamp = current_time.strftime('%Y%m%d')
@@ -138,13 +124,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
         return amz_date, date_stamp
     def _build_canonical_request_string(self, method: str, *,
                                         request_components: Dict[str, Any]) -> tuple:
-        """Build canonical request string per AWS Signature Version 4 specification.
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            request_components: Dict with 'uri', 'query', 'headers', 'payload'
-        Returns:
-            Tuple of (canonical_request, signed_headers_list)
-        """
+
         uri = request_components['uri']
         query = request_components['query']
         headers = request_components['headers']
@@ -170,10 +150,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                                                     date_stamp: str,
                                                     service: str,
                                                     canonical_request: str) -> tuple:
-        """Build string to sign with credential scope for AWS Signature Version 4.
-        Returns:
-            Tuple of (string_to_sign, credential_scope)
-        """
+
         credential_scope = f"{date_stamp}/{self.region}/{service}/aws4_request"
         canonical_request_hash = hashlib.sha256(
             canonical_request.encode('utf-8')
@@ -188,14 +165,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
     def _calculate_aws_signature_v4_hmac_chain(self, date_stamp: str,
                                                service: str,
                                                string_to_sign: str) -> str:
-        """Calculate AWS Signature Version 4 using HMAC-SHA256 key derivation chain.
-        Implements the AWS SigV4 signing key derivation:
-        1. HMAC("AWS4" + secret_key, date)
-        2. HMAC(date_key, region)
-        3. HMAC(region_key, service)
-        4. HMAC(service_key, "aws4_request")
-        5. HMAC(signing_key, string_to_sign)
-        """
+
         def compute_hmac_sha256(key_material: bytes, message: str) -> bytes:
             return hmac.new(key_material, message.encode('utf-8'), hashlib.sha256).digest()
         key_with_date = compute_hmac_sha256(
@@ -214,14 +184,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
     def _build_aws_authorization_header(self, signature: str,
                                        credential_scope: str,
                                        signed_headers_list: str) -> str:
-        """Build AWS Signature Version 4 authorization header value.
-        Args:
-            signature: Calculated signature hex string
-            credential_scope: Credential scope (date/region/service/aws4_request)
-            signed_headers_list: Semicolon-separated list of signed header names
-        Returns:
-            Complete Authorization header value
-        """
+
         authorization_header = (
             f"AWS4-HMAC-SHA256 "
             f"Credential={self.access_key_id}/{credential_scope}, "
@@ -231,12 +194,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
         return authorization_header
     def _sign_request(self, method: str, service: str, *,
                      request_data: Dict[str, Any]) -> Dict[str, str]:
-        """Sign AWS API request using AWS Signature Version 4.
-        Args:
-            method: HTTP method (GET, POST, etc.)
-            service: AWS service name
-            request_data: Dict containing 'host', 'uri', 'query', 'headers', 'payload'
-        """
+
         headers = request_data['headers']
         host = request_data['host']
         amz_date, date_stamp = self._add_aws_signing_headers_with_timestamp(
@@ -264,7 +222,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
     def _prepare_json_api_request_with_signing(self, service: str, action: str,
                                                host: str,
                                                params: Optional[Dict[str, Any]]) -> urllib.request.Request:
-        """Prepare signed request for JSON-based AWS APIs (e.g., Secrets Manager)."""
+
         target = f"secretsmanager.{action}"
         params_dict = params or {}
         json_string = json.dumps(params_dict)
@@ -291,7 +249,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
     def _prepare_query_api_request_with_signing(self, service: str, action: str,
                                                 host: str,
                                                 params: Optional[Dict[str, Any]]) -> urllib.request.Request:
-        """Prepare signed request for Query-based AWS APIs (e.g., IAM, STS)."""
+
         query_params = {'Action': action, 'Version': self.API_VERSIONS.get(service, '2010-05-08')}
         if params:
             query_params.update(params)
@@ -322,7 +280,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
         )
     def _prepare_rest_api_request_with_signing(self, service: str, host: str,
                                                 path: str, body: str) -> urllib.request.Request:
-        """Prepare signed request for REST-based AWS APIs (e.g., Bedrock)."""
+
         payload = body.encode('utf-8')
         headers = {
             'Content-Type': 'application/json'
@@ -342,47 +300,13 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
             headers=signed_headers,
             method='POST'
         )
-    def _make_request(self, service: str, action: str, *,  # pylint: disable=too-many-arguments
-                     params: Optional[Dict[str, Any]] = None,
-                     use_json: bool = False,
-                     path: Optional[str] = None,
-                     body: Optional[str] = None,
-                     signing_service: Optional[str] = None) -> str:
-        """Make AWS API request with retry logic for network errors.
-        Retries on transient network errors (DNS failures, timeouts) with
-        exponential backoff. Does not retry on HTTP errors (auth, permissions, etc).
-        Args:
-            service: AWS service name for endpoint (e.g., 'bedrock-runtime')
-            action: API action name
-            params: API parameters dict
-            use_json: Use JSON API format (for services like Secrets Manager)
-            path: Custom URI path (for REST APIs like Bedrock)
-            body: Custom request body (for REST APIs like Bedrock)
-            signing_service: Override service name for signing (e.g., 'bedrock' for bedrock-runtime)
-        """
-        if service == 'iam':
-            host = 'iam.amazonaws.com'
-        else:
-            host = f"{service}.{self.region}.amazonaws.com"
-        for attempt in range(4):
-            # Pure exponential backoff base 2 starting at 32s: 2^(attempt + 5)
-            # attempt 0: 2^5 = 32s, attempt 1: 2^6 = 64s, attempt 2: 2^7 = 128s, attempt 3: 2^8 = 256s
-            timeout = 2 ** (attempt + 5)
+    def _get_host(self, service: str) -> str:
+        return 'iam.amazonaws.com' if service == 'iam' else f"{service}.{self.region}.amazonaws.com"
 
-            if path and body:
-                req = self._prepare_rest_api_request_with_signing(
-                    signing_service or service, host, path, body
-                )
-            elif use_json:
-                req = self._prepare_json_api_request_with_signing(
-                    signing_service or service, action, host, params
-                )
-            else:
-                req = self._prepare_query_api_request_with_signing(
-                    signing_service or service, action, host, params
-                )
+    def _retry_with_backoff(self, req: urllib.request.Request) -> str:
+        for attempt in range(4):
             try:
-                with urllib.request.urlopen(req, timeout=timeout) as response:
+                with urllib.request.urlopen(req, timeout=2 ** (attempt + 5)) as response:
                     return response.read().decode('utf-8')
             except urllib.error.HTTPError as e:
                 error_body = e.read().decode('utf-8') if e.fp else ''
@@ -392,15 +316,29 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                 raise AWSHTTPError(e, error_body) from e
             except (urllib.error.URLError, TimeoutError, OSError) as e:
                 if attempt == 3:
-                    error_msg = e.reason if hasattr(e, 'reason') else str(e)
-                    logging.error("Network/timeout error after 4 attempts: %s", error_msg)
+                    logging.error("Network/timeout error after 4 attempts: %s",
+                                e.reason if hasattr(e, 'reason') else str(e))
                     raise
                 delay = (2 ** attempt) + random.uniform(0, 1)
-                error_msg = e.reason if hasattr(e, 'reason') else str(e)
                 logging.warning("Network/timeout error on attempt %d/4: %s - retrying in %.1fs (next timeout: %ds)...",
-                              attempt + 1, error_msg, delay, 2 ** (attempt + 6))
+                              attempt + 1, e.reason if hasattr(e, 'reason') else str(e), delay, 2 ** (attempt + 6))
                 time.sleep(delay)
         raise RuntimeError("Retry loop completed without returning")
+
+    def _make_request(self, service: str, action: str, *, params: Optional[Dict[str, Any]] = None) -> str:
+        host = self._get_host(service)
+        req = self._prepare_query_api_request_with_signing(service, action, host, params)
+        return self._retry_with_backoff(req)
+
+    def _make_json_request(self, service: str, action: str, params: Optional[Dict[str, Any]]) -> str:
+        host = self._get_host(service)
+        req = self._prepare_json_api_request_with_signing(service, action, host, params)
+        return self._retry_with_backoff(req)
+
+    def _make_rest_request(self, service: str, path: str, body: str, signing_service: str) -> str:
+        host = self._get_host(service)
+        req = self._prepare_rest_api_request_with_signing(signing_service, host, path, body)
+        return self._retry_with_backoff(req)
 class STSClient(AWSClientBase):
     def test_sts_access(self) -> None:
         self._make_request('sts', 'GetCallerIdentity', params={})
@@ -411,15 +349,7 @@ class STSClient(AWSClientBase):
         return account_id_elem.text
     def assume_role_with_web_identity(self, role_arn: str, web_identity_token: str,
                                       role_session_name: str = 'bootstrap-session') -> Optional[Dict[str, str]]:
-        """Assume IAM role using OIDC web identity token.
-        Args:
-            role_arn: ARN of the role to assume
-            web_identity_token: OIDC token from GitHub Actions
-            role_session_name: Name for the session
-        Returns:
-            Dictionary with temporary credentials (access_key_id, secret_access_key, session_token)
-            or None if failed
-        """
+
         try:
             response = self._make_request('sts', 'AssumeRoleWithWebIdentity', params={
                 'RoleArn': role_arn,
@@ -531,7 +461,7 @@ class IAMClient(AWSClientBase):
             return False
     def put_role_policy(self, role_name: str, policy_name: str,
                        policy_document: Dict[str, Any]) -> bool:
-        """Put inline policy on role."""
+
         try:
             self._make_request('iam', 'PutRolePolicy', params={
                 'RoleName': role_name,
@@ -614,12 +544,12 @@ class IAMClient(AWSClientBase):
 class SecretsManagerClient(AWSClientBase):
     def create_secret(self, secret_name: str, secret_value: Dict[str, Any]) -> bool:
         try:
-            self._make_request('secretsmanager', 'CreateSecret', params={
+            self._make_json_request('secretsmanager', 'CreateSecret', {
                 'Name': secret_name,
                 'Description': 'GitHub runner credentials',
                 'SecretString': json.dumps(secret_value),
                 'ClientRequestToken': str(uuid.uuid4())
-            }, use_json=True)
+            })
             return True
         except AWSHTTPError as e:
             if 'ResourceExistsException' in e.error_body:
@@ -628,20 +558,20 @@ class SecretsManagerClient(AWSClientBase):
             raise
     def update_secret(self, secret_name: str, secret_value: Dict[str, Any]) -> bool:
         try:
-            self._make_request('secretsmanager', 'PutSecretValue', params={
+            self._make_json_request('secretsmanager', 'PutSecretValue', {
                 'SecretId': secret_name,
                 'SecretString': json.dumps(secret_value),
                 'ClientRequestToken': str(uuid.uuid4())
-            }, use_json=True)
+            })
             return True
         except (AWSHTTPError, urllib.error.URLError) as e:
             logging.error("Failed to update secret: %s", e)
             return False
     def secret_exists(self, secret_name: str) -> bool:
         try:
-            self._make_request('secretsmanager', 'DescribeSecret', params={
+            self._make_json_request('secretsmanager', 'DescribeSecret', {
                 'SecretId': secret_name
-            }, use_json=True)
+            })
             return True
         except AWSHTTPError as e:
             if e.code == 400:
@@ -649,9 +579,9 @@ class SecretsManagerClient(AWSClientBase):
             raise
     def get_secret_value(self, secret_name: str) -> Optional[Dict[str, Any]]:
         try:
-            response_bytes = self._make_request('secretsmanager', 'GetSecretValue', params={
+            response_bytes = self._make_json_request('secretsmanager', 'GetSecretValue', {
                 'SecretId': secret_name
-            }, use_json=True)
+            })
             response_data = json.loads(response_bytes)
             secret_string = response_data.get('SecretString')
             if secret_string:
@@ -669,33 +599,28 @@ class SecretsManagerClient(AWSClientBase):
             return None
     def delete_secret(self, secret_name: str) -> bool:
         try:
-            self._make_request('secretsmanager', 'DeleteSecret', params={
+            self._make_json_request('secretsmanager', 'DeleteSecret', {
                 'SecretId': secret_name,
                 'ForceDeleteWithoutRecovery': True
-            }, use_json=True)
+            })
             return True
         except (AWSHTTPError, urllib.error.URLError) as e:
             logging.error("Failed to delete secret: %s", e)
             return False
     def test_secrets_manager_access(self) -> None:
-        self._make_request('secretsmanager', 'ListSecrets', params={'MaxResults': 1}, use_json=True)
+        self._make_json_request('secretsmanager', 'ListSecrets', {'MaxResults': 1})
 class BedrockClient(AWSClientBase):
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
                  session_token: Optional[str] = None, model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
         super().__init__(region, access_key_id, secret_access_key, session_token)
         self.model_id = model_id
     def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
-        # Cap max_tokens based on model limits
-        # Amazon Nova models: 10240 max
-        # Anthropic Claude: 16000+ supported
         is_anthropic = (self.model_id.startswith('anthropic') or
                        self.model_id.startswith('us.anthropic') or
                        self.model_id.startswith('global.anthropic'))
         if not is_anthropic:
             max_tokens = min(max_tokens, 10240)
 
-        # Amazon Nova uses a different request format than Anthropic Claude
         if self.model_id.startswith('anthropic') or self.model_id.startswith('us.anthropic') or self.model_id.startswith('global.anthropic'):
             body = json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
@@ -707,25 +632,20 @@ class BedrockClient(AWSClientBase):
                 "messages": [{"role": "user", "content": [{"text": prompt}]}],
                 "inferenceConfig": {"max_new_tokens": max_tokens}
             })
-        response = self._make_request(
+        response = self._make_rest_request(
             'bedrock-runtime',
-            'InvokeModel',
-            path=f"/model/{self.model_id}/invoke",
-            body=body,
-            use_json=True,
-            signing_service='bedrock'
+            f"/model/{self.model_id}/invoke",
+            body,
+            'bedrock'
         )
         result = json.loads(response)
-        # Parse response based on model type
         if is_anthropic:
             return result['content'][0]['text']
-        # Amazon Nova
         return result['output']['message']['content'][0]['text']
     def _is_already_exists_error(self, error: AWSHTTPError) -> bool:
-        """Check if error indicates resource already exists."""
+
         return 'AlreadyExists' in error.error_body or 'already' in error.error_body.lower()
     def enable_model_access(self) -> bool:
-        # Amazon Nova and other models are available by default, only Anthropic models require this process
         is_anthropic = (self.model_id.startswith('anthropic') or
                        self.model_id.startswith('us.anthropic') or
                        self.model_id.startswith('global.anthropic'))
@@ -739,7 +659,7 @@ class BedrockClient(AWSClientBase):
         self._accept_model_agreement()
         return self._request_model_entitlement()
     def _submit_use_case(self) -> bool:
-        """Submit use case form for Bedrock model access."""
+
         try:
             form_data = {
                 "companyName": "GitHub Actions Automation",
@@ -748,11 +668,11 @@ class BedrockClient(AWSClientBase):
                 "industryOption": "Technology",
                 "useCases": "Automated documentation generation and code review"
             }
-            self._make_request(
+            self._make_rest_request(
                 'bedrock',
-                'PutUseCaseForModelAccess',
-                path='/put-use-case-for-model-access',
-                body=json.dumps({'formData': json.dumps(form_data)})
+                '/put-use-case-for-model-access',
+                json.dumps({'formData': json.dumps(form_data)}),
+                'bedrock'
             )
             logging.info("✓ Submitted use case form")
             return True
@@ -763,24 +683,24 @@ class BedrockClient(AWSClientBase):
             logging.error("Failed to submit use case: %s", e)
             return False
     def _accept_model_agreement(self) -> None:
-        """Accept model agreement if offers are available."""
+
         try:
-            response = self._make_request(
+            response = self._make_rest_request(
                 'bedrock',
-                'ListFoundationModelAgreementOffers',
-                path='/list-foundation-model-agreement-offers',
-                body=json.dumps({'modelId': self.model_id})
+                '/list-foundation-model-agreement-offers',
+                json.dumps({'modelId': self.model_id}),
+                'bedrock'
             )
             offers = json.loads(response).get('offers', [])
             if not offers:
                 logging.info("No agreement offers (may already be accepted)")
                 return
             offer_token = offers[0]['offerToken']
-            self._make_request(
+            self._make_rest_request(
                 'bedrock',
-                'CreateFoundationModelAgreement',
-                path='/create-foundation-model-agreement',
-                body=json.dumps({'modelId': self.model_id, 'offerToken': offer_token})
+                '/create-foundation-model-agreement',
+                json.dumps({'modelId': self.model_id, 'offerToken': offer_token}),
+                'bedrock'
             )
             logging.info("✓ Accepted model agreement for %s", self.model_id)
         except AWSHTTPError as e:
@@ -789,13 +709,13 @@ class BedrockClient(AWSClientBase):
             else:
                 logging.warning("Failed to create agreement: %s", e)
     def _request_model_entitlement(self) -> bool:
-        """Request model entitlement."""
+
         try:
-            self._make_request(
+            self._make_rest_request(
                 'bedrock',
-                'FoundationModelEntitlement',
-                path='/foundation-model-entitlement',
-                body=json.dumps({'modelId': self.model_id})
+                '/foundation-model-entitlement',
+                json.dumps({'modelId': self.model_id}),
+                'bedrock'
             )
             logging.info("✓ Requested model entitlement for %s", self.model_id)
             logging.info("✓ Anthropic model access enabled for %s", self.model_id)
@@ -814,10 +734,9 @@ class BedrockClient(AWSClientBase):
             logging.error("Failed to request model entitlement: %s", e)
             return False
 class AWSClientStdlib:
-    # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
                  session_token: Optional[str] = None, bedrock_model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
-        """Initialize AWS service clients."""
+
         self.sts = STSClient(region, access_key_id, secret_access_key, session_token)
         self.iam = IAMClient(region, access_key_id, secret_access_key, session_token)
         self.secrets = SecretsManagerClient(region, access_key_id, secret_access_key, session_token)
@@ -975,7 +894,7 @@ def _create_oidc_provider_step(aws: AWSClientStdlib, account_id: str) -> int:
     return 1
 def _create_iam_role_step(aws: AWSClientStdlib, args: argparse.Namespace,
                           trust_policy: Dict[str, Any]) -> int:
-    """Create or update IAM role. Returns 0 on success, 1 on failure."""
+
     logging.info("Checking if IAM role '%s' exists", args.aws_iam_role_name)
     if aws.iam.role_exists(args.aws_iam_role_name):
         logging.info("IAM role already exists, checking trust policy")
@@ -1015,7 +934,7 @@ def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
     return 0
 def _store_secret_and_cleanup_step(aws: AWSClientStdlib, args: argparse.Namespace,
                                     github_token: str, is_workflow: bool) -> int:
-    """Store GitHub PAT and cleanup GitHub Secrets. Returns 0 on success, 1 on failure."""
+
     print()
     logging.info("Storing GitHub PAT in AWS Secrets Manager")
     secret_value = create_secret_value(github_token, args.github_org, args.github_repo)
@@ -1256,12 +1175,7 @@ def validate_github_pat(github_token: str) -> None:
         sys.exit(1)
 def validate_oidc_role_permissions(aws_client: 'AWSClientStdlib',
                                    role_name: str) -> None:
-    """Validate OIDC IAM role has required permissions.
-    Checks that role has:
-    - PowerUserAccess managed policy attached
-    - IAMRoleManagement inline policy attached
-    Exits with code 1 if validation fails (FATAL).
-    """
+
     logging.info("Validating OIDC role permissions...")
     power_user_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
     if not aws_client.iam.managed_policy_attached(role_name, power_user_arn):
@@ -1275,15 +1189,7 @@ def validate_oidc_role_permissions(aws_client: 'AWSClientStdlib',
     logging.info("✓ OIDC role permissions validated")
 def delete_github_secrets(github_token: str, github_org: str, github_repo: str,
                           secret_names: list) -> bool:
-    """Delete secrets from GitHub repository.
-    Args:
-        github_token: GitHub Personal Access Token with admin:org scope
-        github_org: GitHub organization name
-        github_repo: GitHub repository name
-        secret_names: List of secret names to delete
-    Returns:
-        True if all secrets deleted successfully (or already deleted), False otherwise
-    """
+
     logging.info("Deleting human credentials from GitHub Secrets (AUTOMATION TO THE MOON!)")
     all_success = True
     for secret_name in secret_names:
@@ -1338,11 +1244,9 @@ def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
     logging.error("No credentials available")
     return None, None, None
 def _check_readme_needs_update(bedrock: BedrockClient, bootstrap_code: str, current_readme: str) -> bool:
-    # If README doesn't exist or is empty, it definitely needs to be created
     if not current_readme or not current_readme.strip():
         return True
 
-    # Ask Haiku to analyze if README needs updating
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on the source code.
 
 <source_code>
@@ -1399,13 +1303,11 @@ Create a professional README that includes:
 Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
     try:
-        # README generation with 16K tokens can take 60+ seconds
-        # Uses exponential backoff: 32s, 64s, 128s, 256s
         return bedrock.invoke_model(prompt, max_tokens=16000)
     except Exception as e:
         logging.error("Failed to generate README via Bedrock: %s", e)
         raise
-def cmd_readme(args: argparse.Namespace) -> int:  # pylint: disable=too-many-return-statements
+def cmd_readme(args: argparse.Namespace) -> int:
     access_key, secret_key, session_token = _get_credentials_for_state(args)
     if not access_key:
         logging.error("Failed to obtain AWS credentials")
@@ -1455,7 +1357,7 @@ def cmd_readme(args: argparse.Namespace) -> int:  # pylint: disable=too-many-ret
             return 1
     logging.error("Either --check or --update must be specified")
     return 1
-def main():  # pylint: disable=too-many-return-statements,too-many-statements
+def main():
     parser = argparse.ArgumentParser(
         description='Bootstrap AWS infrastructure for GitHub Actions self-hosted runners'
     )
