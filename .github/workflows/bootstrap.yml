@@ -272,15 +272,6 @@ jobs:
           GITHUB_REPO=$(jq -r '.github.repo' config/bootstrap.json)
           GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
           BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' config/bootstrap.json)
-          ENABLE_BEDROCK=$(jq -r '.bedrock.enable_model_access' config/bootstrap.json)
-
-          BEDROCK_FLAGS=""
-          if [ "$BEDROCK_MODEL_ID" != "null" ]; then
-            BEDROCK_FLAGS="$BEDROCK_FLAGS --bedrock-model-id $BEDROCK_MODEL_ID"
-          fi
-          if [ "$ENABLE_BEDROCK" == "true" ]; then
-            BEDROCK_FLAGS="$BEDROCK_FLAGS --enable-bedrock"
-          fi
 
           ./src/bootstrap/bootstrap.py create \
             --aws-account-id "$AWS_ACCOUNT_ID" \
@@ -292,7 +283,7 @@ jobs:
             --aws-access-key-id "$AWS_ACCESS_KEY_ID" \
             --aws-secret-access-key "$AWS_SECRET_ACCESS_KEY" \
             --github-token "$GH_RUNNER_PAT" \
-            $BEDROCK_FLAGS
+            --bedrock-model-id "$BEDROCK_MODEL_ID"
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would create bootstrap infrastructure"
