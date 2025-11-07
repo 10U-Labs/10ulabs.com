@@ -1014,16 +1014,6 @@ def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
         return 1
     logging.info("Updated IAM role management policy")
     return 0
-def _enable_bedrock_access_step(aws: AWSClientStdlib, enable: bool) -> int:
-    if not enable:
-        logging.info("Bedrock model access disabled (skipping)")
-        return 0
-    print()
-    logging.info("Enabling Bedrock model access")
-    if not aws.bedrock.enable_model_access():
-        logging.error("Failed to enable Bedrock model access")
-        return 1
-    return 0
 def _store_secret_and_cleanup_step(aws: AWSClientStdlib, args: argparse.Namespace,
                                     github_token: str, is_workflow: bool) -> int:
     """Store GitHub PAT and cleanup GitHub Secrets. Returns 0 on success, 1 on failure."""
@@ -1107,7 +1097,10 @@ def create_resources(args: argparse.Namespace) -> int:
         return 1
     if _attach_iam_policies_step(aws, args.aws_iam_role_name) != 0:
         return 1
-    if _enable_bedrock_access_step(aws, args.enable_bedrock) != 0:
+    print()
+    logging.info("Enabling Bedrock model access (auto-detects if needed)")
+    if not aws.bedrock.enable_model_access():
+        logging.error("Failed to enable Bedrock model access")
         return 1
     print()
     validate_oidc_role_permissions(aws, args.aws_iam_role_name)
@@ -1492,11 +1485,8 @@ def main():  # pylint: disable=too-many-return-statements,too-many-statements
                                 help='GitHub Classic PAT with admin:org scope')
     create_required.add_argument('--github-pat-secret-name', required=True,
                                 help='AWS Secrets Manager secret name for GitHub PAT')
-    create_optional = create_parser.add_argument_group('optional arguments')
-    create_optional.add_argument('--bedrock-model-id', default='us.anthropic.claude-haiku-4-5-20251001-v1:0',
-                                help='Bedrock model ID (default: us.anthropic.claude-haiku-4-5-20251001-v1:0)')
-    create_optional.add_argument('--enable-bedrock', action='store_true', default=True,
-                                help='Enable Bedrock model access (default: True)')
+    create_required.add_argument('--bedrock-model-id', required=True,
+                                help='Bedrock model ID (e.g., us.anthropic.claude-haiku-4-5-20251001-v1:0)')
     destroy_parser = subparsers.add_parser('destroy', help='Destroy bootstrap resources')
     destroy_required = destroy_parser.add_argument_group('required arguments')
     destroy_required.add_argument('--aws-access-key-id', required=True,
