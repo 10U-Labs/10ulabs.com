@@ -246,7 +246,6 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Fetching CloudWatch logs from Lambda execution..."
-
           # First, try to extract log stream name from error message
           if [ -f /tmp/cdk_deploy.log ]; then
             LOG_STREAM=$(grep -oP 'CloudWatch Log Stream: \K[^\s]+' /tmp/cdk_deploy.log | tail -1 || echo "")
@@ -256,7 +255,6 @@ jobs:
               FUNCTION_NAME=$(aws lambda list-functions \
                 --query "Functions[?contains(FunctionName, 'DomainRegistrationHandler')].FunctionName | [0]" \
                 --output text 2>/dev/null || echo "")
-
               if [ -n "$FUNCTION_NAME" ] && [ "$FUNCTION_NAME" != "None" ]; then
                 LOG_GROUP="/aws/lambda/$FUNCTION_NAME"
               else
@@ -266,7 +264,6 @@ jobs:
                   --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName | [0]" \
                   --output text 2>/dev/null || echo "")
               fi
-
               if [ -n "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
                 echo "Using log group: $LOG_GROUP"
                 echo ""
@@ -284,14 +281,12 @@ jobs:
               fi
             fi
           fi
-
           # Fallback: try to find any recent logs from DomainRegistrationHandler
           echo "Attempting to find any recent DomainRegistrationHandler logs..."
           LOG_GROUPS=$(aws logs describe-log-groups \
             --log-group-name-prefix "/aws/lambda/" \
             --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName" \
             --output text 2>/dev/null || echo "")
-
           for LOG_GROUP in $LOG_GROUPS; do
             if [ -n "$LOG_GROUP" ] && [ "$LOG_GROUP" != "None" ]; then
               echo "Checking log group: $LOG_GROUP"
@@ -302,7 +297,6 @@ jobs:
                 --max-items 1 \
                 --query 'logStreams[0].logStreamName' \
                 --output text 2>/dev/null || echo "")
-
               if [ -n "$LATEST_STREAM" ] && [ "$LATEST_STREAM" != "None" ]; then
                 echo "Latest log stream: $LATEST_STREAM"
                 echo ""
