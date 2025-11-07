@@ -571,8 +571,16 @@ jobs:
           git add src/bootstrap/README.md
           git diff --staged --quiet || git commit -m "Update bootstrap README via Bedrock"
           git push
+  trigger-dependent-workflows:
+    name: Triggering dependent infrastructure workflows
+    runs-on: ubuntu-latest
+    needs: [e2e-testing-infrastructure, update-readme]
+    if: |
+      always() &&
+      (needs.e2e-testing-infrastructure.result == 'success' || needs.e2e-testing-infrastructure.result == 'skipped') &&
+      (needs.update-readme.result == 'success' || needs.update-readme.result == 'skipped')
+    steps:
       - name: Trigger domain infrastructure deployment
-        if: success()
         run: |
           curl -X POST \
             -H "Accept: application/vnd.github+json" \
