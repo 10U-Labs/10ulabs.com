@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch, MagicMock
 import pytest
 
 # Add src/bootstrap to path
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
 
 import bootstrap
@@ -1302,7 +1302,7 @@ from pathlib import Path
 import pytest
 
 # Add src/bootstrap to path
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
 
 import bootstrap
