@@ -71,7 +71,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint -d "{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: false, truthy: {check-keys: false}}}" .github/workflows/domain_name.yml
+          yamllint -d "{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: false, truthy: {check-keys: false}, empty-lines: {max: 0}}}" .github/workflows/domain_name.yml
 
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
