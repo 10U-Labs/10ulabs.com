@@ -1179,7 +1179,7 @@ def destroy_resources(args: argparse.Namespace) -> int:
         access_key_id=aws_access_key,
         secret_access_key=aws_secret_key,
         session_token=session_token,
-        bedrock_model_id='amazon.nova-micro-v1:0'  # Default for destroy, not used
+        bedrock_model_id='us.anthropic.claude-haiku-4-5-20251001-v1:0'  # Default for destroy, not used
     )
     if not args.force:
         try:
