@@ -8,6 +8,7 @@ from typing import Dict, Any
 from aws_cdk import (
     Stack,
     CfnOutput,
+    Fn,
     aws_route53 as route53,
 )
 from constructs import Construct
@@ -27,22 +28,24 @@ class DomainStack(Stack):
         )
 
         # Outputs
+        export_prefix = config['domain_name'].replace('.', '-')
+
         CfnOutput(
             self, "HostedZoneId",
             value=self.hosted_zone.hosted_zone_id,
             description=f"Route53 Hosted Zone ID for {config['domain_name']}",
-            export_name=f"{config['domain_name']}-HostedZoneId"
+            export_name=f"{export_prefix}-HostedZoneId"
         )
 
         CfnOutput(
             self, "HostedZoneName",
             value=self.hosted_zone.zone_name,
             description=f"Route53 Hosted Zone Name for {config['domain_name']}",
-            export_name=f"{config['domain_name']}-HostedZoneName"
+            export_name=f"{export_prefix}-HostedZoneName"
         )
 
         CfnOutput(
             self, "NameServers",
-            value=",".join(self.hosted_zone.hosted_zone_name_servers or []),
+            value=Fn.join(",", self.hosted_zone.hosted_zone_name_servers),
             description=f"Name servers for {config['domain_name']} - configure these at your domain registrar"
         )
