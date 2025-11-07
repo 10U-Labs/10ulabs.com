@@ -132,19 +132,21 @@ def handler(event, context):
 
         print(f"Domain registration initiated: {registration['OperationId']}")
 
-        # Wait for registration to complete and update nameservers
+        # Wait for registration to complete and update nameservers using exponential backoff
         import time
         max_wait_time = 240  # 4 minutes (Lambda has 5 min timeout)
-        wait_interval = 10
+        attempt = 0
         elapsed = 0
 
         while elapsed < max_wait_time:
-            time.sleep(wait_interval)
-            elapsed += wait_interval
+            wait_time = 2 ** attempt  # Exponential backoff: 1, 2, 4, 8, 16, 32, 64, 128
+            time.sleep(wait_time)
+            elapsed += wait_time
+            attempt += 1
 
             try:
                 detail = route53domains.get_domain_detail(DomainName=domain_name)
-                print(f"Domain status check ({elapsed}s): {detail.get('StatusList', [])}")
+                print(f"Domain status check (attempt {attempt}, elapsed {elapsed}s): {detail.get('StatusList', [])}")
 
                 # Try to update nameservers
                 try:
@@ -163,7 +165,7 @@ def handler(event, context):
                     # Continue waiting
 
             except route53domains.exceptions.InvalidInput:
-                print(f"Domain not yet available, waiting... ({elapsed}s)")
+                print(f"Domain not yet available, waiting {2 ** attempt}s... (attempt {attempt + 1}, elapsed {elapsed}s)")
                 continue
 
         # If we get here, registration didn't complete in time
