@@ -778,7 +778,7 @@ class TestPolicyGenerators:
 
     def test_create_iam_role_management_policy_includes_required_actions(self):
         """Test IAM role management policy includes all required actions."""
-        policy = bootstrap.create_iam_role_management_policy()
+        policy = bootstrap.create_iam_role_management_policy('us-east-1')
 
         assert policy['Version'] == '2012-10-17'
         assert len(policy['Statement']) == 3  # IAM, Bedrock control plane, Bedrock InvokeModel
@@ -2114,7 +2114,7 @@ class TestIAMPolicyWithBedrock:
 
     def test_create_iam_role_management_policy_includes_bedrock(self):
         """Test IAM policy includes Bedrock permissions for README and model access."""
-        policy = bootstrap.create_iam_role_management_policy()
+        policy = bootstrap.create_iam_role_management_policy('us-west-2')
 
         # Policy now has 3 statements: IAM, Bedrock control plane, Bedrock InvokeModel
         assert len(policy['Statement']) == 3
@@ -2130,8 +2130,7 @@ class TestIAMPolicyWithBedrock:
         assert 'bedrock:ListFoundationModelAgreementOffers' in all_actions
         assert 'bedrock:CreateFoundationModelAgreement' in all_actions
 
-        # InvokeModel with explicit model ARNs (statement 3)
+        # InvokeModel with wildcard ARN for all foundation models in the configured region
         invoke_statement = [s for s in policy['Statement'] if 'bedrock:InvokeModel' in s['Action']][0]
         assert isinstance(invoke_statement['Resource'], list)
-        assert 'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0' in invoke_statement['Resource']
-        assert 'arn:aws:bedrock:us-east-1::foundation-model/openai.gpt-oss-120b-1:0' in invoke_statement['Resource']
+        assert 'arn:aws:bedrock:us-west-2::foundation-model/*' in invoke_statement['Resource']

@@ -74,8 +74,6 @@ jobs:
       github_pat_secret_name: ${{ steps.config.outputs.github_pat_secret_name }}
       github_org: ${{ steps.config.outputs.github_org }}
       github_repo: ${{ steps.config.outputs.github_repo }}
-      aws_creds_configured: ${{ steps.config.outputs.aws_creds_configured }}
-      github_pat_configured: ${{ steps.config.outputs.github_pat_configured }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -90,8 +88,6 @@ jobs:
           github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
           github_org=$(jq -r '.github.org' config/bootstrap.json)
           github_repo=$(jq -r '.github.repo' config/bootstrap.json)
-          aws_creds_configured=$(jq -r '.secrets.aws_access_key_id_in_github_secrets and .secrets.aws_secret_access_key_in_github_secrets' config/bootstrap.json)
-          github_pat_configured=$(jq -r '.secrets.github_classic_pat_in_github_secrets' config/bootstrap.json)
           echo "enabled=$enabled" >> $GITHUB_OUTPUT
           echo "confirm_destroy=$confirm_destroy" >> $GITHUB_OUTPUT
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
@@ -100,8 +96,6 @@ jobs:
           echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
           echo "github_org=$github_org" >> $GITHUB_OUTPUT
           echo "github_repo=$github_repo" >> $GITHUB_OUTPUT
-          echo "aws_creds_configured=$aws_creds_configured" >> $GITHUB_OUTPUT
-          echo "github_pat_configured=$github_pat_configured" >> $GITHUB_OUTPUT
       - name: Detect bootstrap state
         id: state
         env:

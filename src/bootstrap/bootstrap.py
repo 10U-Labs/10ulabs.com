@@ -864,7 +864,7 @@ def create_trust_policy(account_id: str, github_org: str, github_repo: str) -> D
             }
         }]
     }
-def create_iam_role_management_policy() -> Dict[str, Any]:
+def create_iam_role_management_policy(region: str) -> Dict[str, Any]:
     return {
         "Version": "2012-10-17",
         "Statement": [
@@ -915,8 +915,7 @@ def create_iam_role_management_policy() -> Dict[str, Any]:
                     "bedrock:InvokeModel"
                 ],
                 "Resource": [
-                    "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0",
-                    "arn:aws:bedrock:us-east-1::foundation-model/openai.gpt-oss-120b-1:0"
+                    f"arn:aws:bedrock:{region}::foundation-model/*"
                 ]
             }
         ]
@@ -1008,7 +1007,7 @@ def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
             return 1
         logging.info("Attached PowerUserAccess policy")
     logging.info("Updating IAM role management policy")
-    policy = create_iam_role_management_policy()
+    policy = create_iam_role_management_policy(aws.region)
     if not aws.iam.put_role_policy(role_name, "IAMRoleManagement", policy):
         logging.error("Failed to update IAM role management policy")
         return 1
