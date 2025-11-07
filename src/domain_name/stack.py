@@ -141,10 +141,17 @@ def handler(event, context):
         })
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        error_msg = str(e)
+        print(f"Error: {error_msg}")
         import traceback
-        traceback.print_exc()
-        cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+        tb = traceback.format_exc()
+        print(tb)
+        # Include full error and traceback in CloudFormation response
+        cfnresponse.send(event, context, cfnresponse.FAILED, {
+            'Error': error_msg,
+            'ErrorType': type(e).__name__,
+            'Traceback': tb[:1000]  # Limit to 1000 chars to avoid CloudFormation size limits
+        })
 """),
             timeout=Duration.seconds(300),
             initial_policy=[

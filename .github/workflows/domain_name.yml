@@ -231,12 +231,63 @@ jobs:
         run: cdk diff TenUFOrgDomain
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: deploy
         run: |
           cdk deploy TenUFOrgDomain \
             --require-approval never \
             --outputs-file domain-outputs.json
+        continue-on-error: true
+      - name: Fetch CloudWatch Logs on Failure
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outcome == 'failure' }}
+        run: |
+          echo "Deployment failed. Fetching CloudWatch logs..."
+          # Get the Lambda function name from CloudFormation stack
+          FUNCTION_NAME=$(aws cloudformation describe-stack-resources \
+            --stack-name TenUFOrgDomain \
+            --query "StackResources[?ResourceType=='AWS::Lambda::Function'].PhysicalResourceId" \
+            --output text 2>/dev/null || echo "")
+          if [ -z "$FUNCTION_NAME" ]; then
+            echo "Could not find Lambda function in stack"
+            # Try to find the function by name pattern
+            FUNCTION_NAME=$(aws lambda list-functions \
+              --query "Functions[?contains(FunctionName, 'DomainRegistrationHandler')].FunctionName | [0]" \
+              --output text 2>/dev/null || echo "")
+          fi
+          if [ -n "$FUNCTION_NAME" ]; then
+            echo "Found Lambda function: $FUNCTION_NAME"
+            echo "Fetching recent CloudWatch logs..."
+            LOG_GROUP="/aws/lambda/$FUNCTION_NAME"
+            # Get the most recent log stream
+            LATEST_STREAM=$(aws logs describe-log-streams \
+              --log-group-name "$LOG_GROUP" \
+              --order-by LastEventTime \
+              --descending \
+              --max-items 1 \
+              --query 'logStreams[0].logStreamName' \
+              --output text 2>/dev/null || echo "")
+            if [ -n "$LATEST_STREAM" ]; then
+              echo "Latest log stream: $LATEST_STREAM"
+              echo "=== CloudWatch Logs ==="
+              aws logs get-log-events \
+                --log-group-name "$LOG_GROUP" \
+                --log-stream-name "$LATEST_STREAM" \
+                --limit 100 \
+                --query 'events[*].message' \
+                --output text
+              echo "======================="
+            else
+              echo "No log streams found for function"
+            fi
+          else
+            echo "Could not find Lambda function to fetch logs"
+          fi
+      - name: Fail if deployment failed
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outcome == 'failure' }}
+        run: |
+          echo "CDK deployment failed. See logs above for details."
+          exit 1
       - name: Display outputs
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outcome == 'success' }}
         run: |
           echo "Domain infrastructure deployed successfully"
           echo ""
