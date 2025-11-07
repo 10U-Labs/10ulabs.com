@@ -676,22 +676,25 @@ class SecretsManagerClient(AWSClientBase):
 class BedrockClient(AWSClientBase):
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None, model_id: str = 'anthropic.claude-haiku-4-5-20250514-v1:0'):
+                 session_token: Optional[str] = None, model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
         super().__init__(region, access_key_id, secret_access_key, session_token)
         self.model_id = model_id
     def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
         # Cap max_tokens based on model limits
         # Amazon Nova models: 10240 max
         # Anthropic Claude: 16000+ supported
-        if not self.model_id.startswith('anthropic'):
+        is_anthropic = (self.model_id.startswith('anthropic') or
+                       self.model_id.startswith('us.anthropic') or
+                       self.model_id.startswith('global.anthropic'))
+        if not is_anthropic:
             max_tokens = min(max_tokens, 10240)
 
         # Amazon Nova uses a different request format than Anthropic Claude
-        if self.model_id.startswith('anthropic'):
+        if self.model_id.startswith('anthropic') or self.model_id.startswith('us.anthropic') or self.model_id.startswith('global.anthropic'):
             body = json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": max_tokens,
-                "messages": [{"role": "user", "content": prompt}]
+                "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
             })
         else:  # Amazon Nova and other models
             body = json.dumps({
@@ -708,7 +711,7 @@ class BedrockClient(AWSClientBase):
         )
         result = json.loads(response)
         # Parse response based on model type
-        if self.model_id.startswith('anthropic'):
+        if is_anthropic:
             return result['content'][0]['text']
         # Amazon Nova
         return result['output']['message']['content'][0]['text']
@@ -717,7 +720,10 @@ class BedrockClient(AWSClientBase):
         return 'AlreadyExists' in error.error_body or 'already' in error.error_body.lower()
     def enable_model_access(self) -> bool:
         # Amazon Nova and other models are available by default, only Anthropic models require this process
-        if not self.model_id.startswith('anthropic'):
+        is_anthropic = (self.model_id.startswith('anthropic') or
+                       self.model_id.startswith('us.anthropic') or
+                       self.model_id.startswith('global.anthropic'))
+        if not is_anthropic:
             logging.info("Model %s is available by default, skipping access setup", self.model_id)
             return True
 
@@ -804,7 +810,7 @@ class BedrockClient(AWSClientBase):
 class AWSClientStdlib:
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None, bedrock_model_id: str = 'anthropic.claude-haiku-4-5-20250514-v1:0'):
+                 session_token: Optional[str] = None, bedrock_model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
         """Initialize AWS service clients."""
         self.sts = STSClient(region, access_key_id, secret_access_key, session_token)
         self.iam = IAMClient(region, access_key_id, secret_access_key, session_token)
@@ -1490,8 +1496,8 @@ def main():  # pylint: disable=too-many-return-statements,too-many-statements
     create_required.add_argument('--github-pat-secret-name', required=True,
                                 help='AWS Secrets Manager secret name for GitHub PAT')
     create_optional = create_parser.add_argument_group('optional arguments')
-    create_optional.add_argument('--bedrock-model-id', default='anthropic.claude-haiku-4-5-20250514-v1:0',
-                                help='Bedrock model ID (default: anthropic.claude-haiku-4-5-20250514-v1:0)')
+    create_optional.add_argument('--bedrock-model-id', default='us.anthropic.claude-haiku-4-5-20251001-v1:0',
+                                help='Bedrock model ID (default: us.anthropic.claude-haiku-4-5-20251001-v1:0)')
     create_optional.add_argument('--enable-bedrock', action='store_true', default=True,
                                 help='Enable Bedrock model access (default: True)')
     destroy_parser = subparsers.add_parser('destroy', help='Destroy bootstrap resources')
