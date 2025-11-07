@@ -9,3 +9,5 @@ rules:
     present: false
   truthy:
     check-keys: false
+  empty-lines:
+    max: 0
