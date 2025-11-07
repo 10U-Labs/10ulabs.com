@@ -237,10 +237,10 @@ jobs:
             --require-approval never \
             --outputs-file domain-outputs.json
         continue-on-error: true
-      - name: Fetch CloudWatch Logs on Failure
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outcome == 'failure' }}
+      - name: Fetch CloudWatch Logs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          echo "Deployment failed. Fetching CloudWatch logs..."
+          echo "Fetching CloudWatch logs from Lambda execution..."
           # Get the Lambda function name from CloudFormation stack
           FUNCTION_NAME=$(aws cloudformation describe-stack-resources \
             --stack-name TenUFOrgDomain \
@@ -267,14 +267,18 @@ jobs:
               --output text 2>/dev/null || echo "")
             if [ -n "$LATEST_STREAM" ]; then
               echo "Latest log stream: $LATEST_STREAM"
-              echo "=== CloudWatch Logs ==="
+              echo ""
+              echo "=========================================="
+              echo "     CloudWatch Logs Output"
+              echo "=========================================="
               aws logs get-log-events \
                 --log-group-name "$LOG_GROUP" \
                 --log-stream-name "$LATEST_STREAM" \
                 --limit 100 \
                 --query 'events[*].message' \
                 --output text
-              echo "======================="
+              echo "=========================================="
+              echo ""
             else
               echo "No log streams found for function"
             fi
