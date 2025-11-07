@@ -530,6 +530,43 @@ class IAMClient(AWSClientBase):
         except (AWSHTTPError, urllib.error.URLError) as e:
             logging.error("Failed to delete role policy: %s", e)
             return False
+    def list_attached_managed_policies(self, role_name: str) -> list:
+        """List all managed policy ARNs attached to a role."""
+        try:
+            response = self.make_request('iam', 'ListAttachedRolePolicies', params={
+                'RoleName': role_name
+            })
+            root = ET.fromstring(response)
+            policy_arns = []
+            for member in root.findall('.//{*}member'):
+                arn_elem = member.find('.//{*}PolicyArn')
+                if arn_elem is not None and arn_elem.text:
+                    policy_arns.append(arn_elem.text)
+            return policy_arns
+        except (AWSHTTPError, urllib.error.URLError) as e:
+            logging.error("Failed to list attached managed policies: %s", e)
+            return []
+        except ET.ParseError as e:
+            logging.error("Failed to parse list attached policies response: %s", e)
+            return []
+    def list_inline_policies(self, role_name: str) -> list:
+        """List all inline policy names for a role."""
+        try:
+            response = self.make_request('iam', 'ListRolePolicies', params={
+                'RoleName': role_name
+            })
+            root = ET.fromstring(response)
+            policy_names = []
+            for member in root.findall('.//{*}member'):
+                if member.text:
+                    policy_names.append(member.text)
+            return policy_names
+        except (AWSHTTPError, urllib.error.URLError) as e:
+            logging.error("Failed to list inline policies: %s", e)
+            return []
+        except ET.ParseError as e:
+            logging.error("Failed to parse list inline policies response: %s", e)
+            return []
     def delete_role(self, role_name: str) -> bool:
         try:
             self.make_request('iam', 'DeleteRole', params={
@@ -875,33 +912,37 @@ def _create_iam_role_step(aws: AWSClientStdlib, args: argparse.Namespace,
     logging.info("Created IAM role")
     return 0
 def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
-    # Clean up old policies from previous bootstrap versions (migration)
-    power_user_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
-    if aws.iam.managed_policy_attached(role_name, power_user_arn):
-        logging.info("Removing old PowerUserAccess policy (migration)")
-        if not aws.iam.detach_managed_policy(role_name, power_user_arn):
-            logging.error("Failed to detach old PowerUserAccess policy")
-            return 1
-        logging.info("Removed old PowerUserAccess policy")
-
-    if aws.iam.inline_policy_exists(role_name, "IAMRoleManagement"):
-        logging.info("Removing old IAMRoleManagement inline policy (migration)")
-        if not aws.iam.delete_role_policy(role_name, "IAMRoleManagement"):
-            logging.error("Failed to delete old IAMRoleManagement inline policy")
-            return 1
-        logging.info("Removed old IAMRoleManagement inline policy")
-
-    # Attach AdministratorAccess
-    logging.info("Checking if AdministratorAccess policy is attached")
     admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-    if aws.iam.managed_policy_attached(role_name, admin_arn):
-        logging.info("AdministratorAccess policy already attached")
-    else:
+
+    # Remove all managed policies except AdministratorAccess
+    attached_policies = aws.iam.list_attached_managed_policies(role_name)
+    for policy_arn in attached_policies:
+        if policy_arn != admin_arn:
+            logging.info("Removing managed policy: %s", policy_arn)
+            if not aws.iam.detach_managed_policy(role_name, policy_arn):
+                logging.error("Failed to detach managed policy: %s", policy_arn)
+                return 1
+            logging.info("Removed managed policy: %s", policy_arn)
+
+    # Remove all inline policies
+    inline_policies = aws.iam.list_inline_policies(role_name)
+    for policy_name in inline_policies:
+        logging.info("Removing inline policy: %s", policy_name)
+        if not aws.iam.delete_role_policy(role_name, policy_name):
+            logging.error("Failed to delete inline policy: %s", policy_name)
+            return 1
+        logging.info("Removed inline policy: %s", policy_name)
+
+    # Attach AdministratorAccess if not already attached
+    if admin_arn not in attached_policies:
         logging.info("Attaching AdministratorAccess policy")
         if not aws.iam.attach_managed_policy(role_name, admin_arn):
             logging.error("Failed to attach AdministratorAccess policy")
             return 1
         logging.info("Attached AdministratorAccess policy")
+    else:
+        logging.info("AdministratorAccess policy already attached")
+
     return 0
 def _store_secret_and_cleanup_step(aws: AWSClientStdlib, args: argparse.Namespace,
                                     github_token: str, is_workflow: bool) -> int:
