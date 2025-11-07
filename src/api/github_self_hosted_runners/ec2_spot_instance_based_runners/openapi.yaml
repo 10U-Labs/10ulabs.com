@@ -1,0 +1,172 @@
+openapi: 3.0.3
+info:
+  title: EC2 Spot Instance GitHub Self-Hosted Runners API
+  description: API for launching ephemeral GitHub self-hosted runners on AWS EC2 spot instances
+  version: 1.0.0
+  contact:
+    name: 10U Foundation
+    url: https://10uf.org
+
+servers:
+  - url: https://api.10uf.org/v1
+    description: Production API
+
+paths:
+  /github-self-hosted-runners/ec2-spot-instance-based-runners:
+    post:
+      summary: Launch EC2 spot instance runner
+      description: |
+        Launches an ephemeral GitHub self-hosted runner on an AWS EC2 spot instance.
+        The runner will automatically register with GitHub, execute the job, and terminate.
+      operationId: launchEC2SpotRunner
+      tags:
+        - GitHub Runners
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LaunchRunnerRequest'
+            examples:
+              dockerBuilder:
+                summary: Launch docker builder runner
+                value:
+                  job_id: 12345
+                  job_labels:
+                    - docker-builder
+                    - arm64
+                    - ephemeral-ec2-spot-instance
+                  github_repo: 10U-Foundation/10uf.org
+      responses:
+        '200':
+          description: Runner launched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchRunnerSuccess'
+              examples:
+                success:
+                  summary: Successful launch
+                  value:
+                    success: true
+                    instance_id: i-0abc123def456
+                    instance_type: t4g.large
+                    availability_zone: us-east-1a
+                    job_id: 12345
+                    runner_type: ec2-spot
+        '400':
+          description: Bad request - missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingJobId:
+                  summary: Missing job_id
+                  value:
+                    error: "Missing required field: job_id"
+                missingRepo:
+                  summary: Missing github_repo
+                  value:
+                    error: "Missing required field: github_repo"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaunchRunnerError'
+              examples:
+                launchFailure:
+                  summary: Failed to launch instance
+                  value:
+                    success: false
+                    error: "InsufficientInstanceCapacity: No capacity available in all availability zones"
+                    job_id: 12345
+
+components:
+  schemas:
+    LaunchRunnerRequest:
+      type: object
+      required:
+        - job_id
+        - github_repo
+      properties:
+        job_id:
+          type: integer
+          description: GitHub workflow job ID
+          example: 12345
+        job_labels:
+          type: array
+          description: List of runner labels for the job
+          items:
+            type: string
+          example:
+            - docker-builder
+            - arm64
+            - ephemeral-ec2-spot-instance
+        github_repo:
+          type: string
+          description: GitHub repository in format "owner/repo"
+          example: 10U-Foundation/10uf.org
+
+    LaunchRunnerSuccess:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates successful launch
+          example: true
+        instance_id:
+          type: string
+          description: EC2 instance ID
+          example: i-0abc123def456
+        instance_type:
+          type: string
+          description: EC2 instance type
+          example: t4g.large
+        availability_zone:
+          type: string
+          description: AWS availability zone where instance was launched
+          example: us-east-1a
+        job_id:
+          type: integer
+          description: GitHub workflow job ID
+          example: 12345
+        runner_type:
+          type: string
+          description: Type of runner
+          enum:
+            - ec2-spot
+          example: ec2-spot
+
+    LaunchRunnerError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates failure
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "InsufficientInstanceCapacity: No capacity available"
+        job_id:
+          type: integer
+          description: GitHub workflow job ID
+          example: 12345
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Missing required field: job_id"
+        details:
+          type: string
+          description: Additional error details (optional)
+          example: "Validation failed"
+
+tags:
+  - name: GitHub Runners
+    description: Operations for managing GitHub self-hosted runners
