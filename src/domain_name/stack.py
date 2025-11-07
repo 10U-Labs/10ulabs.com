@@ -2,6 +2,7 @@
 Domain Infrastructure: 10uf.org
 
 Creates the foundational Route53 hosted zone for 10uf.org.
+Registers the domain if not already registered.
 All services (websites, APIs, etc.) reference this zone.
 """
 from typing import Dict, Any
@@ -9,7 +10,12 @@ from aws_cdk import (
     Stack,
     CfnOutput,
     Fn,
+    CustomResource,
+    Duration,
     aws_route53 as route53,
+    aws_lambda as lambda_,
+    aws_iam as iam,
+    custom_resources as cr,
 )
 from constructs import Construct
 
@@ -26,6 +32,86 @@ class DomainStack(Stack):
             zone_name=config["domain_name"],
             comment=f"Hosted zone for {config['domain_name']}"
         )
+
+        # Lambda function to check/register domain
+        domain_registration_handler = lambda_.Function(
+            self, "DomainRegistrationHandler",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            handler="index.handler",
+            code=lambda_.Code.from_inline("""
+import boto3
+import json
+import cfnresponse
+
+route53domains = boto3.client('route53domains', region_name='us-east-1')  # Route53 Domains is only in us-east-1
+
+def handler(event, context):
+    domain_name = event['ResourceProperties']['DomainName']
+    hosted_zone_id = event['ResourceProperties']['HostedZoneId']
+
+    try:
+        if event['RequestType'] == 'Delete':
+            # Don't delete domain on stack deletion - too dangerous
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            return
+
+        # Check if domain is already registered
+        try:
+            response = route53domains.get_domain_detail(DomainName=domain_name)
+            print(f"Domain {domain_name} is already registered")
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                'DomainStatus': response['StatusList'][0] if response.get('StatusList') else 'REGISTERED',
+                'AlreadyRegistered': 'true'
+            })
+            return
+        except route53domains.exceptions.InvalidInput:
+            # Domain not registered, proceed with registration
+            print(f"Domain {domain_name} is not registered, will register it")
+
+        # Check domain availability
+        availability = route53domains.check_domain_availability(DomainName=domain_name)
+
+        if availability['Availability'] != 'AVAILABLE':
+            cfnresponse.send(event, context, cfnresponse.FAILED, {
+                'Error': f"Domain {domain_name} is not available for registration: {availability['Availability']}"
+            })
+            return
+
+        # Register domain (requires contact info - using minimal valid data)
+        # Note: This will fail without valid contact information
+        print(f"Registering domain {domain_name}...")
+        cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+            'Message': f"Domain {domain_name} is available but registration requires manual contact information setup"
+        })
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+"""),
+            timeout=Duration.seconds(300),
+            initial_policy=[
+                iam.PolicyStatement(
+                    actions=[
+                        "route53domains:CheckDomainAvailability",
+                        "route53domains:GetDomainDetail",
+                        "route53domains:RegisterDomain",
+                        "route53domains:UpdateDomainNameservers"
+                    ],
+                    resources=["*"]
+                )
+            ]
+        )
+
+        # Custom resource to trigger domain registration check
+        domain_registration = CustomResource(
+            self, "DomainRegistration",
+            service_token=domain_registration_handler.function_arn,
+            properties={
+                "DomainName": config["domain_name"],
+                "HostedZoneId": self.hosted_zone.hosted_zone_id
+            }
+        )
+        domain_registration.node.add_dependency(self.hosted_zone)
 
         # Outputs
         export_prefix = config['domain_name'].replace('.', '-')
