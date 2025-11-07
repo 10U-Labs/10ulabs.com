@@ -113,10 +113,48 @@ jobs:
         run: |
           pytest test/domain-name/ -v
 
+  integration-testing-code:
+    name: Integration testing code (pre-deployment)
+    runs-on: ubuntu-latest
+    needs: unit-testing-code
+
+    steps:
+      - name: DRY RUN - Skip pre-deployment integration tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run pre-deployment integration tests"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pytest
+          pip install -r requirements-cdk.txt
+
+      - name: Run pre-deployment integration tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pytest test/domain-name/pre_deployment/integration/ -v
+
+
   building-artifacts:
     name: Building artifacts
     runs-on: ubuntu-latest
-    needs: unit-testing-code
+    needs: integration-testing-code
 
     steps:
       - name: DRY RUN - Skip CDK synthesis
@@ -292,6 +330,216 @@ jobs:
         run: |
           echo "Running unit tests on deployed domain infrastructure"
 
-          cinc-auditor exec test/domain-name/10uf.org/post_deployment/unit \
+          cinc-auditor exec test/domain-name/post_deployment/unit \
             --input domain_name="${{ steps.config.outputs.domain_name }}" \
             --reporter cli
+
+
+  integration-testing-infrastructure:
+    name: Integration testing infrastructure
+    runs-on: ubuntu-latest
+    needs: unit-testing-deployed-infrastructure
+
+    steps:
+      - name: DRY RUN - Skip integration tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run integration tests"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pytest boto3
+
+      - name: Run integration tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pytest test/domain-name/post_deployment/integration/ -v
+
+
+  e2e-testing-infrastructure:
+    name: E2E testing infrastructure
+    runs-on: ubuntu-latest
+    needs: integration-testing-infrastructure
+
+    steps:
+      - name: DRY RUN - Skip E2E tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run E2E tests"
+
+      - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pip install pytest boto3 dnspython
+
+      - name: Run E2E tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          pytest test/domain-name/post_deployment/e2e/ -v
+
+
+  determine-readme-update:
+    name: Determining if README.md should be updated
+    runs-on: ubuntu-latest
+    needs: e2e-testing-infrastructure
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      should_update: ${{ steps.check.outputs.should_update }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Check if README needs update
+        id: check
+        run: |
+          python src/bootstrap/bootstrap.py readme \
+            --module domain-name \
+            --check \
+            --output-file "$GITHUB_OUTPUT"
+
+
+  conclude-readme-skip:
+    name: Concluding README.md should not be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.should_update != 'true'
+
+    steps:
+      - run: 'true'
+
+
+  conclude-readme-update:
+    name: Concluding README.md should be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.should_update == 'true'
+
+    steps:
+      - run: 'true'
+
+
+  update-readme:
+    name: Updating README.md
+    runs-on: ubuntu-latest
+    needs: conclude-readme-update
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+
+      - name: Update README with Bedrock
+        run: |
+          python src/bootstrap/bootstrap.py readme \
+            --module domain-name \
+            --bedrock-model-id anthropic.claude-3-5-sonnet-20241022-v2:0
+
+      - name: Commit and push README if changed
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          if git diff --quiet src/domain-name/README.md; then
+            echo "No changes to README.md"
+          else
+            git add src/domain-name/README.md
+            git commit -m "Update domain-name README.md [skip ci]"
+            git push
+          fi
