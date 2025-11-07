@@ -347,8 +347,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                      use_json: bool = False,
                      path: Optional[str] = None,
                      body: Optional[str] = None,
-                     signing_service: Optional[str] = None,
-                     timeout: int = 30) -> str:
+                     signing_service: Optional[str] = None) -> str:
         """Make AWS API request with retry logic for network errors.
         Retries on transient network errors (DNS failures, timeouts) with
         exponential backoff. Does not retry on HTTP errors (auth, permissions, etc).
@@ -366,9 +365,9 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
         else:
             host = f"{service}.{self.region}.amazonaws.com"
         for attempt in range(4):
-            # Exponential backoff for timeout: base_timeout * (2 ** attempt)
-            # attempt 0: 1x, attempt 1: 2x, attempt 2: 4x, attempt 3: 8x
-            current_timeout = timeout * (2 ** attempt)
+            # Pure exponential backoff base 2 starting at 32s: 2^(attempt + 5)
+            # attempt 0: 2^5 = 32s, attempt 1: 2^6 = 64s, attempt 2: 2^7 = 128s, attempt 3: 2^8 = 256s
+            timeout = 2 ** (attempt + 5)
 
             if path and body:
                 req = self._prepare_rest_api_request_with_signing(
@@ -383,7 +382,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                     signing_service or service, action, host, params
                 )
             try:
-                with urllib.request.urlopen(req, timeout=current_timeout) as response:
+                with urllib.request.urlopen(req, timeout=timeout) as response:
                     return response.read().decode('utf-8')
             except urllib.error.HTTPError as e:
                 error_body = e.read().decode('utf-8') if e.fp else ''
@@ -399,7 +398,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                 delay = (2 ** attempt) + random.uniform(0, 1)
                 error_msg = e.reason if hasattr(e, 'reason') else str(e)
                 logging.warning("Network/timeout error on attempt %d/4: %s - retrying in %.1fs (next timeout: %ds)...",
-                              attempt + 1, error_msg, delay, current_timeout * 2)
+                              attempt + 1, error_msg, delay, 2 ** (attempt + 6))
                 time.sleep(delay)
         raise RuntimeError("Retry loop completed without returning")
 class STSClient(AWSClientBase):
@@ -686,7 +685,7 @@ class BedrockClient(AWSClientBase):
                  session_token: Optional[str] = None, model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
         super().__init__(region, access_key_id, secret_access_key, session_token)
         self.model_id = model_id
-    def invoke_model(self, prompt: str, max_tokens: int = 16000, timeout: int = 30) -> str:
+    def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
         # Cap max_tokens based on model limits
         # Amazon Nova models: 10240 max
         # Anthropic Claude: 16000+ supported
@@ -714,8 +713,7 @@ class BedrockClient(AWSClientBase):
             path=f"/model/{self.model_id}/invoke",
             body=body,
             use_json=True,
-            signing_service='bedrock',
-            timeout=timeout
+            signing_service='bedrock'
         )
         result = json.loads(response)
         # Parse response based on model type
@@ -1410,8 +1408,8 @@ Format the README in clean, professional markdown. Be comprehensive but concise.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
     try:
         # README generation with 16K tokens can take 60+ seconds
-        # Start with 30s timeout, exponential backoff will increase it on retries (60s, 120s, 240s)
-        return bedrock.invoke_model(prompt, max_tokens=16000, timeout=30)
+        # Uses exponential backoff: 32s, 64s, 128s, 256s
+        return bedrock.invoke_model(prompt, max_tokens=16000)
     except Exception as e:
         logging.error("Failed to generate README via Bedrock: %s", e)
         raise
