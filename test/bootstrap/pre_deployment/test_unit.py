@@ -343,6 +343,92 @@ class TestAWSClientStdlib:
         assert result is False
 
     @patch('urllib.request.urlopen')
+    def test_list_attached_managed_policies_returns_policy_arns(self, mock_urlopen, client):
+        """Test list_attached_managed_policies returns list of policy ARNs."""
+        xml_response = '''<?xml version="1.0"?>
+        <ListAttachedRolePoliciesResponse>
+            <ListAttachedRolePoliciesResult>
+                <AttachedPolicies>
+                    <member>
+                        <PolicyArn>arn:aws:iam::aws:policy/PowerUserAccess</PolicyArn>
+                    </member>
+                    <member>
+                        <PolicyArn>arn:aws:iam::aws:policy/AdministratorAccess</PolicyArn>
+                    </member>
+                </AttachedPolicies>
+            </ListAttachedRolePoliciesResult>
+        </ListAttachedRolePoliciesResponse>'''
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = xml_response.encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        result = client.iam.list_attached_managed_policies('test-role')
+
+        assert len(result) == 2
+        assert 'arn:aws:iam::aws:policy/PowerUserAccess' in result
+        assert 'arn:aws:iam::aws:policy/AdministratorAccess' in result
+
+    @patch('urllib.request.urlopen')
+    def test_list_attached_managed_policies_returns_empty_on_no_policies(self, mock_urlopen, client):
+        """Test list_attached_managed_policies returns empty list when no policies."""
+        xml_response = '''<?xml version="1.0"?>
+        <ListAttachedRolePoliciesResponse>
+            <ListAttachedRolePoliciesResult>
+                <AttachedPolicies></AttachedPolicies>
+            </ListAttachedRolePoliciesResult>
+        </ListAttachedRolePoliciesResponse>'''
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = xml_response.encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        result = client.iam.list_attached_managed_policies('test-role')
+
+        assert result == []
+
+    @patch('urllib.request.urlopen')
+    def test_list_inline_policies_returns_policy_names(self, mock_urlopen, client):
+        """Test list_inline_policies returns list of policy names."""
+        xml_response = '''<?xml version="1.0"?>
+        <ListRolePoliciesResponse>
+            <ListRolePoliciesResult>
+                <PolicyNames>
+                    <member>IAMRoleManagement</member>
+                    <member>CustomPolicy</member>
+                </PolicyNames>
+            </ListRolePoliciesResult>
+        </ListRolePoliciesResponse>'''
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = xml_response.encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        result = client.iam.list_inline_policies('test-role')
+
+        assert len(result) == 2
+        assert 'IAMRoleManagement' in result
+        assert 'CustomPolicy' in result
+
+    @patch('urllib.request.urlopen')
+    def test_list_inline_policies_returns_empty_on_no_policies(self, mock_urlopen, client):
+        """Test list_inline_policies returns empty list when no inline policies."""
+        xml_response = '''<?xml version="1.0"?>
+        <ListRolePoliciesResponse>
+            <ListRolePoliciesResult>
+                <PolicyNames></PolicyNames>
+            </ListRolePoliciesResult>
+        </ListRolePoliciesResponse>'''
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = xml_response.encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        result = client.iam.list_inline_policies('test-role')
+
+        assert result == []
+
+    @patch('urllib.request.urlopen')
     def test_create_secret_returns_true_on_success(self, mock_urlopen, client):
         """Test create_secret returns True on success."""
         mock_response = MagicMock()
@@ -954,10 +1040,9 @@ class TestCreateResources:
         mock_client.iam.create_oidc_provider.return_value = True
         mock_client.iam.role_exists.return_value = False
         mock_client.iam.create_role.return_value = True
-        mock_client.iam.managed_policy_attached.return_value = False
+        mock_client.iam.list_attached_managed_policies.return_value = []
+        mock_client.iam.list_inline_policies.return_value = []
         mock_client.iam.attach_managed_policy.return_value = True
-        mock_client.iam.inline_policy_exists.return_value = False
-        mock_client.iam.put_role_policy.return_value = True
         mock_client.secrets.create_secret.return_value = True
 
         result = bootstrap.create_resources(args)
@@ -985,10 +1070,9 @@ class TestCreateResources:
         mock_client.iam.oidc_provider_exists.return_value = True  # Already exists
         mock_client.iam.role_exists.return_value = False
         mock_client.iam.create_role.return_value = True
-        mock_client.iam.managed_policy_attached.return_value = False
+        mock_client.iam.list_attached_managed_policies.return_value = []
+        mock_client.iam.list_inline_policies.return_value = []
         mock_client.iam.attach_managed_policy.return_value = True
-        mock_client.iam.inline_policy_exists.return_value = False
-        mock_client.iam.put_role_policy.return_value = True
         mock_client.secrets.create_secret.return_value = True
 
         result = bootstrap.create_resources(args)
