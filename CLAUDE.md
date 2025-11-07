@@ -31,11 +31,53 @@
 - When pushing to main, use `[skip ci]` in commit messages to skip CI/CD pipelines when appropriate
 
 ### Pre-Push Testing Requirements
-Run the following checks locally before pushing to main:
-1. `yamllint` - YAML linting
-2. `pylint` - Python code linting
-3. `mypy` - Python static type checking
-4. Unit testing code
-5. Integration testing code
 
-All tests and checks must pass before pushing to main to ensure code quality and prevent breaking changes.
+Run the following checks locally before pushing to main. **CRITICAL: Use the EXACT commands that the GitHub workflows use, not generic commands.**
+
+#### 1. YAML Linting
+```bash
+yamllint .github/workflows/bootstrap.yml
+```
+
+#### 2. Python Code Linting (Pylint)
+**Use the exact workflow command with all the same flags:**
+```bash
+pylint src/bootstrap/bootstrap.py \
+  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+  --fail-under=10.0
+```
+
+**IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
+
+#### 3. Python Static Type Checking (Mypy)
+```bash
+mypy src/bootstrap/bootstrap.py
+```
+
+#### 4. Unit Tests
+```bash
+PYTHONPATH=src/bootstrap:$PYTHONPATH pytest test/bootstrap/pre_deployment/test_unit.py -v
+```
+
+#### 5. Integration Tests
+```bash
+pytest test/bootstrap/pre_deployment/test_integration.py -v
+```
+
+**NOTE:** Integration tests may require AWS credentials in environment variables:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `GH_RUNNER_PAT`
+
+### Pre-Push Checklist
+
+Before pushing to main, verify:
+- [ ] All YAML files pass `yamllint`
+- [ ] Pylint passes with `--fail-under=10.0` using the exact workflow flags
+- [ ] Mypy passes with no errors
+- [ ] All unit tests pass
+- [ ] All integration tests pass (or are appropriately skipped)
+- [ ] Code changes are committed with clear, descriptive messages
+
+**All tests and checks must pass before pushing to main to ensure code quality and prevent breaking changes.**
