@@ -505,8 +505,7 @@ jobs:
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          echo "Running mypy on bootstrap.py..."
-          mypy src/bootstrap/bootstrap.py --no-strict-optional --ignore-missing-imports --allow-untyped-calls --allow-untyped-defs
+          mypy src/bootstrap/bootstrap.py
 
   unit-testing-code:
     name: Unit testing code

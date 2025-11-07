@@ -74,7 +74,7 @@ jobs:
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          mypy src/domain_name --ignore-missing-imports
+          mypy src/domain_name
 
   unit-testing-code:
     name: Unit testing code
