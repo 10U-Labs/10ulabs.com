@@ -90,13 +90,13 @@ def test_domain_registration_lambda_exists():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[3] / "src" / "domain_name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Dynamically import DomainStack
     import importlib.util
-    stack_path = Path(__file__).parents[3] / "src" / "domain_name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -132,13 +132,13 @@ def test_domain_registration_lambda_has_correct_permissions():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[3] / "src" / "domain_name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Dynamically import DomainStack
     import importlib.util
-    stack_path = Path(__file__).parents[3] / "src" / "domain_name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -187,13 +187,13 @@ def test_custom_resource_for_domain_registration_exists():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[3] / "src" / "domain_name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Dynamically import DomainStack
     import importlib.util
-    stack_path = Path(__file__).parents[3] / "src" / "domain_name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -231,13 +231,13 @@ def test_lambda_code_contains_domain_registration_logic():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[3] / "src" / "domain_name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Dynamically import DomainStack
     import importlib.util
-    stack_path = Path(__file__).parents[3] / "src" / "domain_name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
