@@ -236,6 +236,7 @@ def handler(event, context):
                         "route53domains:RegisterDomain",
                         "route53:ListHostedZonesByName",
                         "route53:GetHostedZone",
+                        "route53:CreateHostedZone",
                         "account:GetContactInformation",
                         "organizations:DescribeOrganization"
                     ],
