@@ -391,13 +391,15 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                 if error_body:
                     logging.error("Error details: %s", error_body)
                 raise AWSHTTPError(e, error_body) from e
-            except urllib.error.URLError as e:
+            except (urllib.error.URLError, TimeoutError, OSError) as e:
                 if attempt == 3:
-                    logging.error("Network error after 4 attempts: %s", e.reason)
+                    error_msg = e.reason if hasattr(e, 'reason') else str(e)
+                    logging.error("Network/timeout error after 4 attempts: %s", error_msg)
                     raise
                 delay = (2 ** attempt) + random.uniform(0, 1)
-                logging.warning("Network error on attempt %d/4: %s - retrying in %.1fs...",
-                              attempt + 1, e.reason, delay)
+                error_msg = e.reason if hasattr(e, 'reason') else str(e)
+                logging.warning("Network/timeout error on attempt %d/4: %s - retrying in %.1fs (next timeout: %ds)...",
+                              attempt + 1, error_msg, delay, current_timeout * 2)
                 time.sleep(delay)
         raise RuntimeError("Retry loop completed without returning")
 class STSClient(AWSClientBase):
