@@ -106,12 +106,17 @@ class EC2SpotRunnerAPIStack(Stack):
             )
         )
 
-        # ACM Certificate for api.10uf.org
-        # Note: Must be in us-east-1 for API Gateway custom domain
+        # Lookup existing hosted zone from domain stack
+        hosted_zone = route53.HostedZone.from_lookup(
+            self, "HostedZone",
+            domain_name=config["hosted_zone_name"]
+        )
+
+        # ACM Certificate for api.10uf.org with DNS validation
         certificate = acm.Certificate(
             self, "APICertificate",
             domain_name=config["domain_name"],
-            validation=acm.CertificateValidation.from_dns()
+            validation=acm.CertificateValidation.from_dns(hosted_zone)
         )
 
         # API Gateway HTTP API with custom domain
@@ -145,12 +150,7 @@ class EC2SpotRunnerAPIStack(Stack):
             )
         )
 
-        # Route53 record for custom domain
-        hosted_zone = route53.HostedZone.from_lookup(
-            self, "HostedZone",
-            domain_name=config["hosted_zone_name"]
-        )
-
+        # Route53 A record for api.10uf.org pointing to API Gateway
         route53.ARecord(
             self, "APIARecord",
             zone=hosted_zone,

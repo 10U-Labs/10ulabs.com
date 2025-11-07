@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import importlib.util
 from pathlib import Path
 
 src_path = Path(__file__).parent / "src"
@@ -22,6 +23,33 @@ runner_env = cdk.Environment(
     region=runner_config["aws"]["region"]
 )
 
+# Domain Infrastructure (must be deployed first)
+domain_spec = importlib.util.spec_from_file_location(
+    "domain_infrastructure",
+    Path(__file__).parent / "src" / "domain-name" / "10uf.org" / "stack.py"
+)
+domain_module = importlib.util.module_from_spec(domain_spec)
+domain_spec.loader.exec_module(domain_module)
+DomainStack = domain_module.DomainStack
+
+domain_config_path = Path(__file__).parent / "src" / "domain-name" / "10uf.org" / "config.json"
+if domain_config_path.exists():
+    with open(domain_config_path) as f:
+        domain_config = json.load(f)
+
+    domain_env = cdk.Environment(
+        account=str(domain_config["aws_account_id"]),
+        region=domain_config["aws_region"]
+    )
+
+    domain_stack = DomainStack(
+        app,
+        "TenUFOrgDomain",
+        config=domain_config,
+        env=domain_env,
+        description="Route53 hosted zone for 10uf.org domain"
+    )
+
 github_self_hosted_runners_stack = GitHubSelfHostedRunnersStack(
     app,
     "GitHubSelfHostedRunners",
@@ -30,10 +58,7 @@ github_self_hosted_runners_stack = GitHubSelfHostedRunnersStack(
     description="Complete GitHub Actions self-hosted runners infrastructure (VPC, ECR, ECS, Lambda)"
 )
 
-import sys
-import importlib.util
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
+# Website Infrastructure
 spec = importlib.util.spec_from_file_location(
     "tenuf_infrastructure",
     Path(__file__).parent / "src" / "10uf.org" / "infrastructure" / "stack.py"
