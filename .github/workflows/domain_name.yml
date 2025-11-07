@@ -5,20 +5,20 @@ on:
     branches:
       - main
     paths:
-      - 'src/domain-name/**'
-      - 'test/domain-name/**'
+      - 'src/domain_name/**'
+      - 'test/domain_name/**'
       - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
-      - '.github/workflows/build_domain_infrastructure.yml'
+      - '.github/workflows/domain_name.yml'
   pull_request:
     paths:
-      - 'src/domain-name/**'
-      - 'test/domain-name/**'
+      - 'src/domain_name/**'
+      - 'test/domain_name/**'
       - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
-      - '.github/workflows/build_domain_infrastructure.yml'
+      - '.github/workflows/domain_name.yml'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -67,14 +67,14 @@ jobs:
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/domain-name/**/*.py \
+          pylint src/domain_name/**/*.py \
             --disable=line-too-long,missing-class-docstring,missing-const-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
 
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          mypy src/domain-name --ignore-missing-imports
+          mypy src/domain_name --ignore-missing-imports
 
   unit-testing-code:
     name: Unit testing code
@@ -111,7 +111,7 @@ jobs:
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain-name/ -v
+          pytest test/domain_name/ -v
 
   integration-testing-code:
     name: Integration testing code
@@ -148,7 +148,7 @@ jobs:
       - name: Run pre-deployment integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain-name/pre_deployment/integration/ -v
+          pytest test/domain_name/pre_deployment/integration/ -v
 
 
   building-artifacts:
@@ -169,8 +169,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -230,8 +230,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -306,9 +306,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
-          DOMAIN_NAME=$(jq -r '.domain_name' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          DOMAIN_NAME=$(jq -r '.domain_name' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "domain_name=$DOMAIN_NAME" >> $GITHUB_OUTPUT
@@ -330,7 +330,7 @@ jobs:
         run: |
           echo "Running unit tests on deployed domain infrastructure"
 
-          cinc-auditor exec test/domain-name/post_deployment/unit \
+          cinc-auditor exec test/domain_name/post_deployment/unit \
             --input domain_name="${{ steps.config.outputs.domain_name }}" \
             --reporter cli
 
@@ -353,8 +353,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -379,7 +379,7 @@ jobs:
       - name: Run integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain-name/post_deployment/integration/ -v
+          pytest test/domain_name/post_deployment/integration/ -v
 
 
   e2e-testing-infrastructure:
@@ -400,8 +400,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -426,7 +426,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain-name/post_deployment/e2e/ -v
+          pytest test/domain_name/post_deployment/e2e/ -v
 
 
   determine-readme-update:
@@ -447,8 +447,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -467,7 +467,7 @@ jobs:
         id: check
         run: |
           python src/bootstrap/bootstrap.py readme \
-            --module domain-name \
+            --module domain_name \
             --check \
             --output-file "$GITHUB_OUTPUT"
 
@@ -509,8 +509,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -528,7 +528,7 @@ jobs:
       - name: Update README with Bedrock
         run: |
           python src/bootstrap/bootstrap.py readme \
-            --module domain-name \
+            --module domain_name \
             --bedrock-model-id anthropic.claude-3-5-sonnet-20241022-v2:0
 
       - name: Commit and push README if changed
@@ -536,10 +536,10 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-          if git diff --quiet src/domain-name/README.md; then
+          if git diff --quiet src/domain_name/README.md; then
             echo "No changes to README.md"
           else
-            git add src/domain-name/README.md
-            git commit -m "Update domain-name README.md [skip ci]"
+            git add src/domain_name/README.md
+            git commit -m "Update domain_name README.md [skip ci]"
             git push
           fi

@@ -11,12 +11,12 @@ def test_stack_synthesizes_correctly():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "domain-name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Import stack dynamically
-    stack_path = Path(__file__).parents[4] / "src" / "domain-name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -45,12 +45,12 @@ def test_stack_exports_required_outputs():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "domain-name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Import stack dynamically
-    stack_path = Path(__file__).parents[4] / "src" / "domain-name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -83,12 +83,12 @@ def test_hosted_zone_configuration():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "domain-name" / "config.json"
+    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     # Import stack dynamically
-    stack_path = Path(__file__).parents[4] / "src" / "domain-name" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)

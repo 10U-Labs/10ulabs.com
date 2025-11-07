@@ -26,13 +26,13 @@ runner_env = cdk.Environment(
 # Domain Infrastructure (must be deployed first)
 domain_spec = importlib.util.spec_from_file_location(
     "domain_infrastructure",
-    Path(__file__).parent / "src" / "domain-name" / "stack.py"
+    Path(__file__).parent / "src" / "domain_name" / "stack.py"
 )
 domain_module = importlib.util.module_from_spec(domain_spec)
 domain_spec.loader.exec_module(domain_module)
 DomainStack = domain_module.DomainStack
 
-domain_config_path = Path(__file__).parent / "src" / "domain-name" / "config.json"
+domain_config_path = Path(__file__).parent / "src" / "domain_name" / "config.json"
 if domain_config_path.exists():
     with open(domain_config_path) as f:
         domain_config = json.load(f)
