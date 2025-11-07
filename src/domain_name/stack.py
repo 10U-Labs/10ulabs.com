@@ -115,12 +115,7 @@ def handler(event, context):
 
         print(f"Registering domain {domain_name} with contact: {contact['Email']}")
 
-        # Get hosted zone nameservers
-        route53 = boto3.client('route53')
-        hz = route53.get_hosted_zone(Id=hosted_zone_id)
-        nameservers = [{'Name': ns} for ns in hz['DelegationSet']['NameServers']]
-
-        # Register domain
+        # Register domain (nameservers must be set AFTER registration, not during)
         registration = route53domains.register_domain(
             DomainName=domain_name,
             DurationInYears=1,
@@ -130,11 +125,15 @@ def handler(event, context):
             TechContact=contact,
             PrivacyProtectAdminContact=True,
             PrivacyProtectRegistrantContact=True,
-            PrivacyProtectTechContact=True,
-            Nameservers=nameservers
+            PrivacyProtectTechContact=True
         )
 
         print(f"Domain registration initiated: {registration['OperationId']}")
+
+        # Note: Nameservers will need to be updated after registration completes
+        # This can be done manually or through a separate process that polls for completion
+        print("Note: Domain registered with default nameservers. Update nameservers after registration completes.")
+
         cfnresponse.send(event, context, cfnresponse.SUCCESS, {
             'OperationId': registration['OperationId'],
             'Message': f"Domain {domain_name} registration initiated"
