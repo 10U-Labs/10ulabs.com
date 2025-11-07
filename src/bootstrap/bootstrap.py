@@ -362,15 +362,22 @@ class STSClient(AWSClientBase):
             access_key = root.find('.//{*}AccessKeyId')
             secret_key = root.find('.//{*}SecretAccessKey')
             session_token = root.find('.//{*}SessionToken')
-            if (access_key is not None and secret_key is not None and session_token is not None and
-                access_key.text is not None and secret_key.text is not None and session_token.text is not None):
-                return {
-                    'access_key_id': access_key.text,
-                    'secret_access_key': secret_key.text,
-                    'session_token': session_token.text
-                }
-            logging.error("Failed to parse credentials from AssumeRoleWithWebIdentity response")
-            return None
+
+            # Check if all elements exist
+            if access_key is None or secret_key is None or session_token is None:
+                logging.error("Failed to parse credentials from AssumeRoleWithWebIdentity response")
+                return None
+
+            # Check if all text values exist
+            if access_key.text is None or secret_key.text is None or session_token.text is None:
+                logging.error("Failed to parse credentials from AssumeRoleWithWebIdentity response")
+                return None
+
+            return {
+                'access_key_id': access_key.text,
+                'secret_access_key': secret_key.text,
+                'session_token': session_token.text
+            }
         except (AWSHTTPError, urllib.error.URLError) as e:
             logging.error("Failed to assume role with web identity: %s", e)
             return None
