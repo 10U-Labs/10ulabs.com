@@ -122,7 +122,7 @@ def test_domain_registration_lambda_exists():
         {
             "Runtime": "python3.11",
             "Handler": "index.handler",
-            "Timeout": 300
+            "Timeout": 900
         }
     )
 
