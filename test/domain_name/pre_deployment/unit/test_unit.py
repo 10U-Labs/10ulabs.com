@@ -6,7 +6,7 @@ from aws_cdk.assertions import Template
 
 
 def test_hosted_zone_created():
-    """Test that hosted zone is created with correct domain name"""
+    """Test that stack references a hosted zone (imported from domain registration)"""
     app = cdk.App()
 
     # Load config
@@ -36,13 +36,12 @@ def test_hosted_zone_created():
     # Create template
     template = Template.from_stack(stack)
 
-    # Assert hosted zone exists with correct name
-    template.has_resource_properties(
-        "AWS::Route53::HostedZone",
-        {
-            "Name": f"{config['domain_name']}."
-        }
-    )
+    # Note: We import the hosted zone from AWS (created during domain registration)
+    # so there won't be an AWS::Route53::HostedZone resource in CloudFormation
+    # Instead, verify the stack has outputs referencing the hosted zone
+    outputs = template.find_outputs("*")
+    assert "HostedZoneId" in outputs
+    assert "HostedZoneName" in outputs
 
 
 def test_hosted_zone_outputs():
@@ -169,7 +168,7 @@ def test_domain_registration_lambda_has_correct_permissions():
                             "route53domains:CheckDomainAvailability",
                             "route53domains:GetDomainDetail",
                             "route53domains:RegisterDomain",
-                            "route53domains:UpdateDomainNameservers",
+                            "route53:ListHostedZonesByName",
                             "route53:GetHostedZone",
                             "account:GetContactInformation"
                         ],
