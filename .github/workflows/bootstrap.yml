@@ -577,3 +577,13 @@ jobs:
           git add src/bootstrap/README.md
           git diff --staged --quiet || git commit -m "Update bootstrap README via Bedrock"
           git push
+
+      - name: Trigger domain infrastructure deployment
+        if: success()
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{"event_type":"bilateral_authorizations_between_aws_and_github_have_been_established","client_payload":{"bootstrap_run_id":"${{ github.run_id }}"}}'
