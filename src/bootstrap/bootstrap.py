@@ -347,7 +347,8 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                      use_json: bool = False,
                      path: Optional[str] = None,
                      body: Optional[str] = None,
-                     signing_service: Optional[str] = None) -> str:
+                     signing_service: Optional[str] = None,
+                     timeout: int = 30) -> str:
         """Make AWS API request with retry logic for network errors.
         Retries on transient network errors (DNS failures, timeouts) with
         exponential backoff. Does not retry on HTTP errors (auth, permissions, etc).
@@ -365,6 +366,10 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
         else:
             host = f"{service}.{self.region}.amazonaws.com"
         for attempt in range(4):
+            # Exponential backoff for timeout: base_timeout * (2 ** attempt)
+            # attempt 0: 1x, attempt 1: 2x, attempt 2: 4x, attempt 3: 8x
+            current_timeout = timeout * (2 ** attempt)
+
             if path and body:
                 req = self._prepare_rest_api_request_with_signing(
                     signing_service or service, host, path, body
@@ -378,7 +383,7 @@ class AWSClientBase:  # pylint: disable=too-few-public-methods
                     signing_service or service, action, host, params
                 )
             try:
-                with urllib.request.urlopen(req, timeout=30) as response:
+                with urllib.request.urlopen(req, timeout=current_timeout) as response:
                     return response.read().decode('utf-8')
             except urllib.error.HTTPError as e:
                 error_body = e.read().decode('utf-8') if e.fp else ''
@@ -679,7 +684,7 @@ class BedrockClient(AWSClientBase):
                  session_token: Optional[str] = None, model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
         super().__init__(region, access_key_id, secret_access_key, session_token)
         self.model_id = model_id
-    def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
+    def invoke_model(self, prompt: str, max_tokens: int = 16000, timeout: int = 30) -> str:
         # Cap max_tokens based on model limits
         # Amazon Nova models: 10240 max
         # Anthropic Claude: 16000+ supported
@@ -707,7 +712,8 @@ class BedrockClient(AWSClientBase):
             path=f"/model/{self.model_id}/invoke",
             body=body,
             use_json=True,
-            signing_service='bedrock'
+            signing_service='bedrock',
+            timeout=timeout
         )
         result = json.loads(response)
         # Parse response based on model type
@@ -1386,7 +1392,10 @@ CRITICAL REQUIREMENTS TO EMPHASIZE:
 Create a professional README that includes:
 1. Title and brief overview emphasizing the self-contained, dependency-free nature
 2. Purpose and what the script does
-3. Requirements: ONLY Python 3.11+ (no other dependencies, explicitly state NO AWS CLI needed)
+3. Requirements section:
+   - List ONLY: Python 3.11+
+   - DO NOT list: AWS CLI, boto3, pip, requirements.txt, or any external dependencies
+   - Explicitly state: "No AWS CLI required - uses pure Python stdlib"
 4. Usage instructions with command examples
 5. Architecture overview (three-state system: COLD/WARM/DESTROY)
 6. Configuration details
@@ -1398,7 +1407,9 @@ Create a professional README that includes:
 Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
     try:
-        return bedrock.invoke_model(prompt, max_tokens=16000)
+        # README generation with 16K tokens can take 60+ seconds
+        # Start with 30s timeout, exponential backoff will increase it on retries (60s, 120s, 240s)
+        return bedrock.invoke_model(prompt, max_tokens=16000, timeout=30)
     except Exception as e:
         logging.error("Failed to generate README via Bedrock: %s", e)
         raise
