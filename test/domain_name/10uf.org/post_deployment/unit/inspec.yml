@@ -1,8 +1,0 @@
-name: 10uf-org-domain-infrastructure
-title: 10uf.org Domain Infrastructure Tests
-maintainer: 10U Foundation
-copyright: 10U Foundation
-summary: Compliance tests for 10uf.org domain infrastructure
-version: 1.0.0
-supports:
-  - platform: aws
