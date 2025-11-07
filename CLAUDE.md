@@ -32,7 +32,15 @@
 
 ### Pre-Push Testing Requirements
 
+**CRITICAL: Only run tests for the infrastructure you modified.** Don't run all tests if you only changed one stack.
+
 Run the following checks locally before pushing to main. **CRITICAL: Use the EXACT commands that the GitHub workflows use, not generic commands.**
+
+---
+
+## Bootstrap Infrastructure Tests
+
+Run these tests if you modified `src/bootstrap/` or `test/bootstrap/`:
 
 #### 1. YAML Linting
 ```bash
@@ -70,14 +78,48 @@ pytest test/bootstrap/pre_deployment/test_integration.py -v
 - `AWS_REGION`
 - `GH_RUNNER_PAT`
 
+---
+
+## Domain Infrastructure Tests
+
+Run these tests if you modified `src/domain_name/` or `test/domain_name/`:
+
+#### 1. YAML Linting
+```bash
+yamllint .github/workflows/domain_name.yml
+```
+
+#### 2. Python Static Type Checking (Mypy)
+```bash
+mypy src/domain_name/stack.py
+mypy src/domain_name/lambda/handler.py
+```
+
+#### 3. Unit Tests
+```bash
+pytest test/domain_name/pre_deployment/unit/test_unit.py -v
+```
+
+#### 4. Integration Tests
+```bash
+pytest test/domain_name/pre_deployment/integration/test_integration.py -v
+```
+
+**NOTE:** Integration tests may require AWS credentials in environment variables:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+
+---
+
 ### Pre-Push Checklist
 
-Before pushing to main, verify:
-- [ ] All YAML files pass `yamllint`
-- [ ] Pylint passes with `--fail-under=10.0` using the exact workflow flags
+Before pushing to main, verify (for the infrastructure you modified):
+- [ ] All relevant YAML files pass `yamllint`
+- [ ] Pylint passes with `--fail-under=10.0` using exact workflow flags (if applicable)
 - [ ] Mypy passes with no errors
-- [ ] All unit tests pass
-- [ ] All integration tests pass (or are appropriately skipped)
+- [ ] All relevant unit tests pass
+- [ ] All relevant integration tests pass (or are appropriately skipped)
 - [ ] Code changes are committed with clear, descriptive messages
 
 **All tests and checks must pass before pushing to main to ensure code quality and prevent breaking changes.**
