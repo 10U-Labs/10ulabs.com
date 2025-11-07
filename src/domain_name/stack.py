@@ -132,13 +132,45 @@ def handler(event, context):
 
         print(f"Domain registration initiated: {registration['OperationId']}")
 
-        # Note: Nameservers will need to be updated after registration completes
-        # This can be done manually or through a separate process that polls for completion
-        print("Note: Domain registered with default nameservers. Update nameservers after registration completes.")
+        # Wait for registration to complete and update nameservers
+        import time
+        max_wait_time = 240  # 4 minutes (Lambda has 5 min timeout)
+        wait_interval = 10
+        elapsed = 0
 
+        while elapsed < max_wait_time:
+            time.sleep(wait_interval)
+            elapsed += wait_interval
+
+            try:
+                detail = route53domains.get_domain_detail(DomainName=domain_name)
+                print(f"Domain status check ({elapsed}s): {detail.get('StatusList', [])}")
+
+                # Try to update nameservers
+                try:
+                    route53domains.update_domain_nameservers(
+                        DomainName=domain_name,
+                        Nameservers=nameservers
+                    )
+                    print(f"Successfully updated nameservers for {domain_name}")
+                    cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                        'OperationId': registration['OperationId'],
+                        'Message': f"Domain {domain_name} registered and nameservers updated"
+                    })
+                    return
+                except Exception as ns_error:
+                    print(f"Nameserver update attempt failed: {ns_error}")
+                    # Continue waiting
+
+            except route53domains.exceptions.InvalidInput:
+                print(f"Domain not yet available, waiting... ({elapsed}s)")
+                continue
+
+        # If we get here, registration didn't complete in time
+        print(f"Domain registered but nameservers not updated yet. Re-deploy stack to update nameservers.")
         cfnresponse.send(event, context, cfnresponse.SUCCESS, {
             'OperationId': registration['OperationId'],
-            'Message': f"Domain {domain_name} registration initiated"
+            'Message': f"Domain {domain_name} registration initiated. Nameservers will be updated on next deployment."
         })
 
     except Exception as e:
