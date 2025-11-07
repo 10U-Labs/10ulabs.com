@@ -32,7 +32,7 @@ class DomainStack(Stack):
             comment=f"Hosted zone for {config['domain_name']}"
         )
 
-        # Lambda function to check/register domain
+        # Lambda function to check/register domain and manage hosted zone
         domain_registration_handler = lambda_.Function(
             self, "DomainRegistrationHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
@@ -43,6 +43,7 @@ import json
 import cfnresponse
 
 route53domains = boto3.client('route53domains', region_name='us-east-1')  # Route53 Domains is only in us-east-1
+route53 = boto3.client('route53')
 account = boto3.client('account', region_name='us-east-1')
 
 def handler(event, context):
@@ -55,24 +56,25 @@ def handler(event, context):
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
             return
 
+        # Get hosted zone nameservers
+        hz = route53.get_hosted_zone(Id=hosted_zone_id)
+        nameservers = [{'Name': ns} for ns in hz['DelegationSet']['NameServers']]
+        print(f"Hosted zone nameservers: {nameservers}")
+
         # Check if domain is already registered
         try:
             response = route53domains.get_domain_detail(DomainName=domain_name)
             print(f"Domain {domain_name} is already registered")
 
             # Update nameservers to match hosted zone
-            route53 = boto3.client('route53')
-            hz = route53.get_hosted_zone(Id=hosted_zone_id)
-            nameservers = [{'Name': ns} for ns in hz['DelegationSet']['NameServers']]
-
             try:
                 route53domains.update_domain_nameservers(
                     DomainName=domain_name,
                     Nameservers=nameservers
                 )
-                print(f"Updated nameservers for {domain_name}")
+                print(f"Updated nameservers for {domain_name} to match hosted zone")
             except Exception as e:
-                print(f"Could not update nameservers: {e}")
+                print(f"Could not update nameservers (may already be correct): {e}")
 
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {
                 'DomainStatus': response['StatusList'][0] if response.get('StatusList') else 'REGISTERED',
@@ -183,6 +185,12 @@ def handler(event, context):
         export_prefix = config['domain_name'].replace('.', '-')
 
         CfnOutput(
+            self, "DomainName",
+            value=config["domain_name"],
+            description="Registered domain name"
+        )
+
+        CfnOutput(
             self, "HostedZoneId",
             value=self.hosted_zone.hosted_zone_id,
             description=f"Route53 Hosted Zone ID for {config['domain_name']}",
@@ -199,5 +207,11 @@ def handler(event, context):
         CfnOutput(
             self, "NameServers",
             value=Fn.join(",", self.hosted_zone.hosted_zone_name_servers or []),
-            description=f"Name servers for {config['domain_name']} - configure these at your domain registrar"
+            description=f"Name servers for {config['domain_name']}"
+        )
+
+        CfnOutput(
+            self, "RegistrationStatus",
+            value=domain_registration.get_att_string("DomainStatus"),
+            description="Domain registration status"
         )
