@@ -120,7 +120,7 @@ def test_domain_registration_lambda_exists():
         "AWS::Lambda::Function",
         {
             "Runtime": "python3.11",
-            "Handler": "index.handler",
+            "Handler": "handler.handler",
             "Timeout": 900
         }
     )
@@ -227,62 +227,19 @@ def test_custom_resource_for_domain_registration_exists():
     )
 
 
-def test_lambda_code_contains_domain_registration_logic():
-    """Test that Lambda code contains required domain registration logic"""
-    app = cdk.App()
+def test_lambda_handler_file_exists():
+    """Test that Lambda handler file exists and is valid Python"""
+    handler_path = Path(__file__).parents[4] / "src" / "domain_name" / "lambda" / "handler.py"
+    assert handler_path.exists(), "Lambda handler.py file must exist"
 
-    # Load config
-    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
-    with open(config_path) as f:
-        config = json.load(f)
+    # Verify it's valid Python by attempting to compile it
+    with open(handler_path) as f:
+        code = f.read()
+        compile(code, str(handler_path), 'exec')
 
-    # Dynamically import DomainStack
-    import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "domain_name" / "stack.py"
-    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
-    domain_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    # Create stack
-    stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
-        )
-    )
-
-    # Create template
-    template = Template.from_stack(stack)
-
-    # Get the Lambda function code
-    from aws_cdk.assertions import Match
-    template.has_resource_properties(
-        "AWS::Lambda::Function",
-        {
-            "Code": {
-                "ZipFile": Match.string_like_regexp(".*check_domain_availability.*")
-            }
-        }
-    )
-
-    template.has_resource_properties(
-        "AWS::Lambda::Function",
-        {
-            "Code": {
-                "ZipFile": Match.string_like_regexp(".*register_domain.*")
-            }
-        }
-    )
-
-    template.has_resource_properties(
-        "AWS::Lambda::Function",
-        {
-            "Code": {
-                "ZipFile": Match.string_like_regexp(".*get_contact_information.*")
-            }
-        }
-    )
+    # Verify it contains required logic
+    assert "check_domain_availability" in code
+    assert "register_domain" in code
+    assert "get_contact_information" in code
+    assert "describe_organization" in code
+    assert "MasterAccountEmail" in code
