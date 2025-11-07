@@ -799,62 +799,6 @@ def create_trust_policy(account_id: str, github_org: str, github_repo: str) -> D
             }
         }]
     }
-def create_iam_role_management_policy(region: str) -> Dict[str, Any]:
-    return {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "iam:CreateRole",
-                    "iam:DeleteRole",
-                    "iam:GetRole",
-                    "iam:UpdateRole",
-                    "iam:UpdateAssumeRolePolicy",
-                    "iam:AttachRolePolicy",
-                    "iam:DetachRolePolicy",
-                    "iam:PutRolePolicy",
-                    "iam:DeleteRolePolicy",
-                    "iam:GetRolePolicy",
-                    "iam:ListAttachedRolePolicies",
-                    "iam:ListRolePolicies",
-                    "iam:CreateInstanceProfile",
-                    "iam:DeleteInstanceProfile",
-                    "iam:GetInstanceProfile",
-                    "iam:AddRoleToInstanceProfile",
-                    "iam:RemoveRoleFromInstanceProfile",
-                    "iam:PassRole",
-                    "iam:TagRole",
-                    "iam:UntagRole",
-                    "iam:CreateOpenIDConnectProvider",
-                    "iam:DeleteOpenIDConnectProvider",
-                    "iam:GetOpenIDConnectProvider",
-                    "iam:TagOpenIDConnectProvider",
-                    "iam:UntagOpenIDConnectProvider"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock:ListFoundationModels",
-                    "bedrock:PutUseCaseForModelAccess",
-                    "bedrock:ListFoundationModelAgreementOffers",
-                    "bedrock:CreateFoundationModelAgreement"
-                ],
-                "Resource": "*"
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "bedrock:InvokeModel"
-                ],
-                "Resource": [
-                    f"arn:aws:bedrock:{region}::foundation-model/*"
-                ]
-            }
-        ]
-    }
 def create_secret_value(github_token: str, github_org: str, github_repo: str) -> Dict[str, Any]:
     return {
         "auth_method": "classic-pat",
@@ -931,22 +875,16 @@ def _create_iam_role_step(aws: AWSClientStdlib, args: argparse.Namespace,
     logging.info("Created IAM role")
     return 0
 def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
-    logging.info("Checking if PowerUserAccess policy is attached")
-    power_user_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
-    if aws.iam.managed_policy_attached(role_name, power_user_arn):
-        logging.info("PowerUserAccess policy already attached")
+    logging.info("Checking if AdministratorAccess policy is attached")
+    admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+    if aws.iam.managed_policy_attached(role_name, admin_arn):
+        logging.info("AdministratorAccess policy already attached")
     else:
-        logging.info("Attaching PowerUserAccess policy")
-        if not aws.iam.attach_managed_policy(role_name, power_user_arn):
-            logging.error("Failed to attach PowerUserAccess policy")
+        logging.info("Attaching AdministratorAccess policy")
+        if not aws.iam.attach_managed_policy(role_name, admin_arn):
+            logging.error("Failed to attach AdministratorAccess policy")
             return 1
-        logging.info("Attached PowerUserAccess policy")
-    logging.info("Updating IAM role management policy")
-    policy = create_iam_role_management_policy(aws.region)
-    if not aws.iam.put_role_policy(role_name, "IAMRoleManagement", policy):
-        logging.error("Failed to update IAM role management policy")
-        return 1
-    logging.info("Updated IAM role management policy")
+        logging.info("Attached AdministratorAccess policy")
     return 0
 def _store_secret_and_cleanup_step(aws: AWSClientStdlib, args: argparse.Namespace,
                                     github_token: str, is_workflow: bool) -> int:
@@ -1065,17 +1003,12 @@ def _delete_iam_role_step(aws: AWSClientStdlib, role_name: str) -> int:
     if not aws.iam.role_exists(role_name):
         logging.info("IAM role does not exist, skipping deletion")
         return 0
-    logging.info("Detaching PowerUserAccess policy")
-    power_user_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
-    if not aws.iam.detach_managed_policy(role_name, power_user_arn):
-        logging.error("Failed to detach PowerUserAccess policy")
+    logging.info("Detaching AdministratorAccess policy")
+    admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+    if not aws.iam.detach_managed_policy(role_name, admin_arn):
+        logging.error("Failed to detach AdministratorAccess policy")
         return 1
-    logging.info("Detached PowerUserAccess policy")
-    logging.info("Deleting IAM role management policy")
-    if not aws.iam.delete_role_policy(role_name, "IAMRoleManagement"):
-        logging.error("Failed to delete IAM role management policy")
-        return 1
-    logging.info("Deleted IAM role management policy")
+    logging.info("Detached AdministratorAccess policy")
     logging.info("Deleting IAM role '%s'", role_name)
     if not aws.iam.delete_role(role_name):
         logging.error("Failed to delete IAM role")
@@ -1142,7 +1075,7 @@ def validate_aws_credentials(aws_client: 'AWSClientStdlib') -> None:
         if "STS" in e.reason:
             logging.error("Check that AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct")
         elif "IAM" in e.reason:
-            logging.error("Required: IAM read/write permissions (PowerUserAccess + IAM or AdministratorAccess)")
+            logging.error("Required: AdministratorAccess or equivalent IAM permissions")
         elif "Secrets Manager" in e.reason:
             logging.error("Required: Secrets Manager read/write permissions")
         sys.exit(1)
@@ -1191,15 +1124,11 @@ def validate_oidc_role_permissions(aws_client: 'AWSClientStdlib',
                                    role_name: str) -> None:
 
     logging.info("Validating OIDC role permissions...")
-    power_user_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
-    if not aws_client.iam.managed_policy_attached(role_name, power_user_arn):
-        logging.error("FATAL: OIDC role '%s' missing PowerUserAccess managed policy", role_name)
+    admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+    if not aws_client.iam.managed_policy_attached(role_name, admin_arn):
+        logging.error("FATAL: OIDC role '%s' missing AdministratorAccess managed policy", role_name)
         sys.exit(1)
-    logging.info("✓ PowerUserAccess policy attached")
-    if not aws_client.iam.inline_policy_exists(role_name, 'IAMRoleManagement'):
-        logging.error("FATAL: OIDC role '%s' missing IAMRoleManagement inline policy", role_name)
-        sys.exit(1)
-    logging.info("✓ IAMRoleManagement policy attached")
+    logging.info("✓ AdministratorAccess policy attached")
     logging.info("✓ OIDC role permissions validated")
 def delete_github_secrets(github_token: str, github_org: str, github_repo: str,
                           secret_names: list) -> bool:
