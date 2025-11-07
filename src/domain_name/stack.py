@@ -40,10 +40,10 @@ import time
 route53domains = boto3.client('route53domains', region_name='us-east-1')
 route53 = boto3.client('route53')
 account = boto3.client('account', region_name='us-east-1')
+organizations = boto3.client('organizations', region_name='us-east-1')
 
 def handler(event, context):
     domain_name = event['ResourceProperties']['DomainName']
-    contact_email = event['ResourceProperties']['ContactEmail']
 
     try:
         if event['RequestType'] == 'Delete':
@@ -98,6 +98,12 @@ def handler(event, context):
             })
             return
 
+        # Get root account email from Organizations API
+        print("Fetching root account email from Organizations API...")
+        org_info = organizations.describe_organization()
+        contact_email = org_info['Organization']['MasterAccountEmail']
+        print(f"Using root account email: {contact_email}")
+
         # Get AWS account contact information
         print("Fetching AWS account contact information...")
         contact_info = account.get_contact_information()['ContactInformation']
@@ -118,8 +124,6 @@ def handler(event, context):
             error_msg = f"AWS account missing contact fields: {', '.join(missing_fields)}. Configure at: https://console.aws.amazon.com/billing/home#/account"
             print(error_msg)
             raise ValueError(error_msg)
-
-        print(f"Using AWS account contact info with email: {contact_email}")
 
         # Build contact from AWS account info
         full_name_parts = contact_info['FullName'].split(maxsplit=1)
@@ -232,7 +236,8 @@ def handler(event, context):
                         "route53domains:RegisterDomain",
                         "route53:ListHostedZonesByName",
                         "route53:GetHostedZone",
-                        "account:GetContactInformation"
+                        "account:GetContactInformation",
+                        "organizations:DescribeOrganization"
                     ],
                     resources=["*"]
                 )
@@ -244,8 +249,7 @@ def handler(event, context):
             self, "DomainRegistration",
             service_token=domain_registration_handler.function_arn,
             properties={
-                "DomainName": config["domain_name"],
-                "ContactEmail": config["domain_contact_email"]
+                "DomainName": config["domain_name"]
             }
         )
 

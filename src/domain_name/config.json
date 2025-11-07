@@ -1,6 +1,5 @@
 {
   "domain_name": "10uf.org",
   "aws_account_id": 781581267945,
-  "aws_region": "us-east-1",
-  "domain_contact_email": "jdrowne@gmail.com"
+  "aws_region": "us-east-1"
 }
