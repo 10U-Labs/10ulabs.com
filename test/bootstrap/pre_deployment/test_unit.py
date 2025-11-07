@@ -263,7 +263,7 @@ class TestAWSClientStdlib:
         mock_response.read.return_value = b'<Response></Response>'
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = client.iam.attach_managed_policy('test-role', 'arn:aws:iam::aws:policy/PowerUserAccess')
+        result = client.iam.attach_managed_policy('test-role', 'arn:aws:iam::aws:policy/AdministratorAccess')
 
         assert result is True
 
@@ -287,7 +287,7 @@ class TestAWSClientStdlib:
             <ListAttachedRolePoliciesResult>
                 <AttachedPolicies>
                     <member>
-                        <PolicyArn>arn:aws:iam::aws:policy/PowerUserAccess</PolicyArn>
+                        <PolicyArn>arn:aws:iam::aws:policy/AdministratorAccess</PolicyArn>
                     </member>
                 </AttachedPolicies>
             </ListAttachedRolePoliciesResult>
@@ -297,7 +297,7 @@ class TestAWSClientStdlib:
         mock_response.read.return_value = xml_response.encode('utf-8')
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = client.iam.managed_policy_attached('test-role', 'arn:aws:iam::aws:policy/PowerUserAccess')
+        result = client.iam.managed_policy_attached('test-role', 'arn:aws:iam::aws:policy/AdministratorAccess')
 
         assert result is True
 
@@ -315,7 +315,7 @@ class TestAWSClientStdlib:
         mock_response.read.return_value = xml_response.encode('utf-8')
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = client.iam.managed_policy_attached('test-role', 'arn:aws:iam::aws:policy/PowerUserAccess')
+        result = client.iam.managed_policy_attached('test-role', 'arn:aws:iam::aws:policy/AdministratorAccess')
 
         assert result is False
 
@@ -442,7 +442,7 @@ class TestAWSClientStdlib:
         mock_response.read.return_value = b'<Response></Response>'
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = client.iam.detach_managed_policy('test-role', 'arn:aws:iam::aws:policy/PowerUserAccess')
+        result = client.iam.detach_managed_policy('test-role', 'arn:aws:iam::aws:policy/AdministratorAccess')
 
         assert result is True
 
@@ -775,22 +775,6 @@ class TestPolicyGenerators:
         assert 'Federated' in statement['Principal']
         assert '123456789012' in statement['Principal']['Federated']
         assert 'test-org/test-repo' in statement['Condition']['StringLike']['token.actions.githubusercontent.com:sub']
-
-    def test_create_iam_role_management_policy_includes_required_actions(self):
-        """Test IAM role management policy includes all required actions."""
-        policy = bootstrap.create_iam_role_management_policy('us-east-1')
-
-        assert policy['Version'] == '2012-10-17'
-        assert len(policy['Statement']) == 3  # IAM, Bedrock control plane, Bedrock InvokeModel
-
-        # Check IAM statement (statement 0)
-        iam_statement = policy['Statement'][0]
-        assert iam_statement['Effect'] == 'Allow'
-        assert 'iam:CreateRole' in iam_statement['Action']
-        assert 'iam:DeleteRole' in iam_statement['Action']
-        assert 'iam:AttachRolePolicy' in iam_statement['Action']
-        assert 'iam:PassRole' in iam_statement['Action']
-        assert iam_statement['Resource'] == '*'
 
     def test_normalize_policy_produces_canonical_json(self):
         """Test normalize_policy produces canonical JSON string."""
@@ -1440,48 +1424,24 @@ class TestValidateGitHubPAT:
 class TestValidateOIDCRolePermissions:
     """Test validate_oidc_role_permissions function."""
 
-    def test_validates_power_user_access_attached(self):
-        """Test PowerUserAccess policy check passes when attached."""
+    def test_validates_administrator_access_attached(self):
+        """Test AdministratorAccess policy check passes when attached."""
         mock_client = Mock()
         mock_client.iam.managed_policy_attached = Mock(return_value=True)
-        mock_client.run = Mock(return_value=Mock(returncode=0))
 
         # Should not raise
         bootstrap.validate_oidc_role_permissions(mock_client, 'TestRole')
 
-        # Verify PowerUserAccess check was made
+        # Verify AdministratorAccess check was made
         mock_client.iam.managed_policy_attached.assert_called_once_with(
             'TestRole',
-            'arn:aws:iam::aws:policy/PowerUserAccess'
+            'arn:aws:iam::aws:policy/AdministratorAccess'
         )
 
-    def test_fails_on_missing_power_user_access(self):
-        """Test sys.exit(1) when PowerUserAccess policy not attached."""
+    def test_fails_on_missing_administrator_access(self):
+        """Test sys.exit(1) when AdministratorAccess policy not attached."""
         mock_client = Mock()
         mock_client.iam.managed_policy_attached = Mock(return_value=False)
-
-        with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_oidc_role_permissions(mock_client, 'TestRole')
-
-        assert exc_info.value.code == 1
-
-    def test_validates_iam_role_management_policy_with_stdlib(self):
-        """Test IAMRoleManagement inline policy check with stdlib."""
-        mock_client = Mock()
-        mock_client.iam.managed_policy_attached = Mock(return_value=True)
-        mock_client.iam.inline_policy_exists = Mock(return_value=True)
-
-        # Should not raise
-        bootstrap.validate_oidc_role_permissions(mock_client, 'TestRole')
-
-        # Verify inline policy check was made
-        mock_client.iam.inline_policy_exists.assert_called_once_with('TestRole', 'IAMRoleManagement')
-
-    def test_fails_on_missing_inline_policy_with_stdlib(self):
-        """Test sys.exit(1) when IAMRoleManagement policy missing (stdlib)."""
-        mock_client = Mock()
-        mock_client.iam.managed_policy_attached = Mock(return_value=True)
-        mock_client.iam.inline_policy_exists = Mock(return_value=False)
 
         with pytest.raises(SystemExit) as exc_info:
             bootstrap.validate_oidc_role_permissions(mock_client, 'TestRole')
@@ -2107,28 +2067,3 @@ class TestReadmeCommand:
         assert output_file.read_text() == 'should_update=false\n'
 
 
-class TestIAMPolicyWithBedrock:
-    """Test IAM policy includes Bedrock permissions."""
-
-    def test_create_iam_role_management_policy_includes_bedrock(self):
-        """Test IAM policy includes Bedrock permissions for README and model access."""
-        policy = bootstrap.create_iam_role_management_policy('us-west-2')
-
-        # Policy now has 3 statements: IAM, Bedrock control plane, Bedrock InvokeModel
-        assert len(policy['Statement']) == 3
-
-        # Find all Bedrock actions across statements
-        all_actions = []
-        for statement in policy['Statement']:
-            all_actions.extend(statement['Action'])
-
-        # Control plane permissions (statement 1)
-        assert 'bedrock:ListFoundationModels' in all_actions
-        assert 'bedrock:PutUseCaseForModelAccess' in all_actions
-        assert 'bedrock:ListFoundationModelAgreementOffers' in all_actions
-        assert 'bedrock:CreateFoundationModelAgreement' in all_actions
-
-        # InvokeModel with wildcard ARN for all foundation models in the configured region
-        invoke_statement = [s for s in policy['Statement'] if 'bedrock:InvokeModel' in s['Action']][0]
-        assert isinstance(invoke_statement['Resource'], list)
-        assert 'arn:aws:bedrock:us-west-2::foundation-model/*' in invoke_statement['Resource']
