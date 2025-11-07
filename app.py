@@ -68,6 +68,33 @@ if website_config and website_config.get("enabled", False):
         description="Static website infrastructure for 10uf.org"
     )
 
+# EC2 Spot Runner API
+api_spec = importlib.util.spec_from_file_location(
+    "ec2_spot_runner_api",
+    Path(__file__).parent / "src" / "api" / "github_self_hosted_runners" / "ec2_spot_instance_based_runners" / "stack.py"
+)
+api_module = importlib.util.module_from_spec(api_spec)
+api_spec.loader.exec_module(api_module)
+EC2SpotRunnerAPIStack = api_module.EC2SpotRunnerAPIStack
+
+api_config_path = Path(__file__).parent / "src" / "api" / "github_self_hosted_runners" / "ec2_spot_instance_based_runners" / "config.json"
+if api_config_path.exists():
+    with open(api_config_path) as f:
+        api_config = json.load(f)
+
+    api_env = cdk.Environment(
+        account=str(api_config["aws_account_id"]),
+        region=api_config["aws_region"]
+    )
+
+    ec2_spot_runner_api_stack = EC2SpotRunnerAPIStack(
+        app,
+        "EC2SpotRunnerAPI",
+        config=api_config,
+        env=api_env,
+        description="API for launching EC2 spot instance GitHub self-hosted runners at api.10uf.org"
+    )
+
 cdk.Tags.of(app).add("ManagedBy", "CDK")
 cdk.Tags.of(app).add("Project", "10UF")
 cdk.Tags.of(app).add("Repository", "10U-Foundation/10uf.org")
