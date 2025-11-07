@@ -49,6 +49,7 @@ account = boto3.client('account', region_name='us-east-1')
 def handler(event, context):
     domain_name = event['ResourceProperties']['DomainName']
     hosted_zone_id = event['ResourceProperties']['HostedZoneId']
+    contact_email = event['ResourceProperties']['ContactEmail']
 
     try:
         if event['RequestType'] == 'Delete':
@@ -106,8 +107,7 @@ def handler(event, context):
             'StateOrRegion': contact_info.get('StateOrRegion'),
             'CountryCode': contact_info.get('CountryCode'),
             'PostalCode': contact_info.get('PostalCode'),
-            'PhoneNumber': contact_info.get('PhoneNumber'),
-            'EmailAddress': contact_info.get('EmailAddress')
+            'PhoneNumber': contact_info.get('PhoneNumber')
         }
 
         missing_fields = [k for k, v in required_fields.items() if not v]
@@ -116,7 +116,7 @@ def handler(event, context):
             print(error_msg)
             raise ValueError(error_msg)
 
-        print(f"Using AWS account contact info: {contact_info.get('EmailAddress')}")
+        print(f"Using AWS account contact info with email: {contact_email}")
 
         # Build registrant contact from AWS account info
         full_name_parts = contact_info['FullName'].split(maxsplit=1)
@@ -130,7 +130,7 @@ def handler(event, context):
             'CountryCode': contact_info['CountryCode'],
             'ZipCode': contact_info['PostalCode'],
             'PhoneNumber': contact_info['PhoneNumber'],
-            'Email': contact_info['EmailAddress']
+            'Email': contact_email
         }
 
         if contact_info.get('CompanyName'):
@@ -231,7 +231,8 @@ def handler(event, context):
             service_token=domain_registration_handler.function_arn,
             properties={
                 "DomainName": config["domain_name"],
-                "HostedZoneId": self.hosted_zone.hosted_zone_id
+                "HostedZoneId": self.hosted_zone.hosted_zone_id,
+                "ContactEmail": config["domain_contact_email"]
             }
         )
         domain_registration.node.add_dependency(self.hosted_zone)
