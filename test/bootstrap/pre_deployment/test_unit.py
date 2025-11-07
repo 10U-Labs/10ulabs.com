@@ -1078,7 +1078,7 @@ class TestDestroyResources:
         result = bootstrap.destroy_resources(args)
 
         assert result == 0
-        mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None, bedrock_model_id='amazon.nova-micro-v1:0')
+        mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None, bedrock_model_id='us.anthropic.claude-haiku-4-5-20251001-v1:0')
 
     @patch('bootstrap.is_running_in_github_actions', return_value=True)
     @patch('bootstrap.AWSClientStdlib')
@@ -1735,10 +1735,10 @@ class TestBedrockClient:
                                            model_id='anthropic.claude-sonnet-4-5-20250929-v1:0')
         assert client2.model_id == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
 
-    def test_bedrock_client_defaults_to_amazon_nova(self):
-        """Test BedrockClient defaults to Amazon Nova Micro."""
+    def test_bedrock_client_defaults_to_claude_haiku(self):
+        """Test BedrockClient defaults to Claude Haiku 4.5."""
         client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
-        assert client.model_id == 'amazon.nova-micro-v1:0'
+        assert client.model_id == 'us.anthropic.claude-haiku-4-5-20251001-v1:0'
 
     @patch('urllib.request.urlopen')
     def test_invoke_model_caps_max_tokens_for_amazon_nova(self, mock_urlopen):
@@ -1761,6 +1761,36 @@ class TestBedrockClient:
         request = call_args[0][0]
         body = json.loads(request.data.decode('utf-8'))
         assert body['inferenceConfig']['max_new_tokens'] == 10240
+        assert result == 'Test response'
+
+    @patch('urllib.request.urlopen')
+    def test_invoke_model_uses_claude_4_format_for_anthropic(self, mock_urlopen):
+        """Test invoke_model uses Claude 4+ request format for Anthropic models."""
+        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123',
+                                                   model_id='us.anthropic.claude-haiku-4-5-20251001-v1:0')
+
+        response_data = {
+            'content': [{'text': 'Test response'}]
+        }
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps(response_data).encode('utf-8')
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        result = bedrock_client.invoke_model('Test prompt', max_tokens=1000)
+
+        # Verify Claude 4+ format: content must be array with type/text structure
+        call_args = mock_urlopen.call_args
+        request = call_args[0][0]
+        body = json.loads(request.data.decode('utf-8'))
+        assert 'messages' in body
+        assert len(body['messages']) == 1
+        assert body['messages'][0]['role'] == 'user'
+        assert isinstance(body['messages'][0]['content'], list)
+        assert len(body['messages'][0]['content']) == 1
+        assert body['messages'][0]['content'][0]['type'] == 'text'
+        assert body['messages'][0]['content'][0]['text'] == 'Test prompt'
+        assert body['anthropic_version'] == 'bedrock-2023-05-31'
+        assert body['max_tokens'] == 1000
         assert result == 'Test response'
 
 
