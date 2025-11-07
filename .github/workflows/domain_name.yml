@@ -61,11 +61,17 @@ jobs:
 
       - name: Install linting dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install pylint mypy
+        run: pip install pylint mypy yamllint
 
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: pip install -r requirements-cdk.txt
+
+      - name: Linting YAML files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Running yamllint on workflow files..."
+          yamllint .github/workflows/domain_name.yml
 
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
