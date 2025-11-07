@@ -1061,12 +1061,28 @@ def _delete_iam_role_step(aws: AWSClientStdlib, role_name: str) -> int:
     if not aws.iam.role_exists(role_name):
         logging.info("IAM role does not exist, skipping deletion")
         return 0
-    logging.info("Detaching AdministratorAccess policy")
-    admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-    if not aws.iam.detach_managed_policy(role_name, admin_arn):
-        logging.error("Failed to detach AdministratorAccess policy")
-        return 1
-    logging.info("Detached AdministratorAccess policy")
+
+    # Remove all managed policies
+    logging.info("Listing and removing all managed policies")
+    attached_policies = aws.iam.list_attached_managed_policies(role_name)
+    for policy_arn in attached_policies:
+        logging.info("Detaching managed policy: %s", policy_arn)
+        if not aws.iam.detach_managed_policy(role_name, policy_arn):
+            logging.error("Failed to detach managed policy: %s", policy_arn)
+            return 1
+        logging.info("Detached managed policy: %s", policy_arn)
+
+    # Remove all inline policies
+    logging.info("Listing and removing all inline policies")
+    inline_policies = aws.iam.list_inline_policies(role_name)
+    for policy_name in inline_policies:
+        logging.info("Deleting inline policy: %s", policy_name)
+        if not aws.iam.delete_role_policy(role_name, policy_name):
+            logging.error("Failed to delete inline policy: %s", policy_name)
+            return 1
+        logging.info("Deleted inline policy: %s", policy_name)
+
+    # Delete the role
     logging.info("Deleting IAM role '%s'", role_name)
     if not aws.iam.delete_role(role_name):
         logging.error("Failed to delete IAM role")

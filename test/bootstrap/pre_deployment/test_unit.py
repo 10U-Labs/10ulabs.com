@@ -1146,6 +1146,8 @@ class TestDestroyResources:
         mock_client.secrets.secret_exists.return_value = True
         mock_client.secrets.delete_secret.return_value = True
         mock_client.iam.role_exists.return_value = True
+        mock_client.iam.list_attached_managed_policies.return_value = ['arn:aws:iam::aws:policy/AdministratorAccess']
+        mock_client.iam.list_inline_policies.return_value = []
         mock_client.iam.detach_managed_policy.return_value = True
         mock_client.iam.delete_role_policy.return_value = True
         mock_client.iam.delete_role.return_value = True
