@@ -26,6 +26,12 @@ on:
         required: false
         type: boolean
         default: false
+  workflow_run:
+    workflows: ["Bootstrap Infrastructure"]
+    types:
+      - completed
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -40,6 +46,10 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
+    # Only run if not triggered by bootstrap, OR if triggered by bootstrap and it succeeded
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: DRY RUN - Skip static analysis
