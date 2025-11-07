@@ -9,7 +9,6 @@ from typing import Dict, Any
 from aws_cdk import (
     Stack,
     CfnOutput,
-    Fn,
     CustomResource,
     Duration,
     aws_route53 as route53,
