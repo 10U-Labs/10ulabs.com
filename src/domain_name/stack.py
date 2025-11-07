@@ -15,7 +15,6 @@ from aws_cdk import (
     aws_route53 as route53,
     aws_lambda as lambda_,
     aws_iam as iam,
-    custom_resources as cr,
 )
 from constructs import Construct
 
@@ -44,6 +43,7 @@ import json
 import cfnresponse
 
 route53domains = boto3.client('route53domains', region_name='us-east-1')  # Route53 Domains is only in us-east-1
+account = boto3.client('account', region_name='us-east-1')
 
 def handler(event, context):
     domain_name = event['ResourceProperties']['DomainName']
@@ -59,6 +59,21 @@ def handler(event, context):
         try:
             response = route53domains.get_domain_detail(DomainName=domain_name)
             print(f"Domain {domain_name} is already registered")
+
+            # Update nameservers to match hosted zone
+            route53 = boto3.client('route53')
+            hz = route53.get_hosted_zone(Id=hosted_zone_id)
+            nameservers = [{'Name': ns} for ns in hz['DelegationSet']['NameServers']]
+
+            try:
+                route53domains.update_domain_nameservers(
+                    DomainName=domain_name,
+                    Nameservers=nameservers
+                )
+                print(f"Updated nameservers for {domain_name}")
+            except Exception as e:
+                print(f"Could not update nameservers: {e}")
+
             cfnresponse.send(event, context, cfnresponse.SUCCESS, {
                 'DomainStatus': response['StatusList'][0] if response.get('StatusList') else 'REGISTERED',
                 'AlreadyRegistered': 'true'
@@ -66,7 +81,7 @@ def handler(event, context):
             return
         except route53domains.exceptions.InvalidInput:
             # Domain not registered, proceed with registration
-            print(f"Domain {domain_name} is not registered, will register it")
+            print(f"Domain {domain_name} is not registered, checking availability...")
 
         # Check domain availability
         availability = route53domains.check_domain_availability(DomainName=domain_name)
@@ -77,15 +92,58 @@ def handler(event, context):
             })
             return
 
-        # Register domain (requires contact info - using minimal valid data)
-        # Note: This will fail without valid contact information
-        print(f"Registering domain {domain_name}...")
+        # Get AWS account contact information
+        print("Fetching AWS account contact information...")
+        contact_info = account.get_contact_information()['ContactInformation']
+
+        # Build registrant contact from AWS account info
+        contact = {
+            'FirstName': contact_info.get('FullName', 'Administrator').split()[0],
+            'LastName': ' '.join(contact_info.get('FullName', 'Administrator').split()[1:]) or 'Account',
+            'ContactType': 'COMPANY' if contact_info.get('CompanyName') else 'PERSON',
+            'AddressLine1': contact_info.get('AddressLine1', '123 Main St'),
+            'City': contact_info.get('City', 'Seattle'),
+            'State': contact_info.get('StateOrRegion', 'WA'),
+            'CountryCode': contact_info.get('CountryCode', 'US'),
+            'ZipCode': contact_info.get('PostalCode', '98101'),
+            'PhoneNumber': contact_info.get('PhoneNumber', '+1.2065551234'),
+            'Email': contact_info.get('EmailAddress', 'admin@example.com')
+        }
+
+        if contact_info.get('CompanyName'):
+            contact['OrganizationName'] = contact_info['CompanyName']
+
+        print(f"Registering domain {domain_name} with contact: {contact['Email']}")
+
+        # Get hosted zone nameservers
+        route53 = boto3.client('route53')
+        hz = route53.get_hosted_zone(Id=hosted_zone_id)
+        nameservers = [{'Name': ns} for ns in hz['DelegationSet']['NameServers']]
+
+        # Register domain
+        registration = route53domains.register_domain(
+            DomainName=domain_name,
+            DurationInYears=1,
+            AutoRenew=True,
+            AdminContact=contact,
+            RegistrantContact=contact,
+            TechContact=contact,
+            PrivacyProtectAdminContact=True,
+            PrivacyProtectRegistrantContact=True,
+            PrivacyProtectTechContact=True,
+            Nameservers=nameservers
+        )
+
+        print(f"Domain registration initiated: {registration['OperationId']}")
         cfnresponse.send(event, context, cfnresponse.SUCCESS, {
-            'Message': f"Domain {domain_name} is available but registration requires manual contact information setup"
+            'OperationId': registration['OperationId'],
+            'Message': f"Domain {domain_name} registration initiated"
         })
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
 """),
             timeout=Duration.seconds(300),
@@ -95,7 +153,9 @@ def handler(event, context):
                         "route53domains:CheckDomainAvailability",
                         "route53domains:GetDomainDetail",
                         "route53domains:RegisterDomain",
-                        "route53domains:UpdateDomainNameservers"
+                        "route53domains:UpdateDomainNameservers",
+                        "route53:GetHostedZone",
+                        "account:GetContactInformation"
                     ],
                     resources=["*"]
                 )
