@@ -577,8 +577,7 @@ jobs:
     needs: [update-readme, conclude-readme-skip]
     if: |
       always() &&
-      (needs.update-readme.result == 'success' || needs.update-readme.result == 'skipped') &&
-      (needs.conclude-readme-skip.result == 'success' || needs.conclude-readme-skip.result == 'skipped')
+      (needs.update-readme.result == 'success' || needs.conclude-readme-skip.result == 'success')
     steps:
       - name: Trigger domain infrastructure deployment
         run: |
