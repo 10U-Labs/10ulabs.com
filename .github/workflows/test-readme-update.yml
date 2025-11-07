@@ -1,21 +1,17 @@
 name: Test README Update
 on:
   workflow_dispatch:
-    inputs:
-      update:
-        description: 'Update the README (true) or just check (false)'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
-  test-readme:
-    name: Testing README check/update
+  determine-readme-update:
+    name: Determining if README.md should be updated
     runs-on: ubuntu-latest
+    outputs:
+      should_update: ${{ steps.check.outputs.should_update }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,26 +38,62 @@ jobs:
           aws-region: ${{ steps.config.outputs.aws_region }}
 
       - name: Check if README needs update
-        if: ${{ !inputs.update }}
+        id: check
         run: |
-          echo "=== Checking if README needs update ==="
           python src/bootstrap/bootstrap.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
             --check \
-            --output-file check-result.txt
-          cat check-result.txt
-          if grep -q "should_update=true" check-result.txt; then
-            echo "✅ README needs updating (as expected)"
-          else
-            echo "❌ README does not need updating (unexpected - should detect AWS CLI issue)"
-          fi
+            --output-file "$GITHUB_OUTPUT"
+
+  conclude-readme-skip:
+    name: Concluding README.md should not be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.should_update != 'true'
+    steps:
+      - run: 'true'
+
+  conclude-readme-update:
+    name: Concluding README.md should be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.should_update == 'true'
+    steps:
+      - run: 'true'
+
+  update-readme:
+    name: Updating README.md
+    runs-on: ubuntu-latest
+    needs: conclude-readme-update
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read bootstrap config
+        id: config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
+          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
 
       - name: Update README
-        if: ${{ inputs.update }}
         run: |
-          echo "=== Updating README ==="
           python src/bootstrap/bootstrap.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
@@ -69,7 +101,6 @@ jobs:
             --update
 
       - name: Commit and push README
-        if: ${{ inputs.update }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
