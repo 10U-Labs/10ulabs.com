@@ -7,7 +7,6 @@ on:
     paths:
       - 'src/**/infrastructure/**'
       - 'src/api/**'
-      - 'src/domain-name/**'
       - 'test/github_self_hosted_runners/infrastructure/**'
       - 'app.py'
       - 'cdk.json'
@@ -18,7 +17,6 @@ on:
     paths:
       - 'src/**/infrastructure/**'
       - 'src/api/**'
-      - 'src/domain-name/**'
       - 'test/github_self_hosted_runners/infrastructure/**'
       - 'app.py'
       - 'cdk.json'
