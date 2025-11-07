@@ -252,8 +252,10 @@ import unittest
 from unittest.mock import Mock, patch
 import sys
 
-# Add handler to path for import
+# Add fixtures (for cfnresponse stub) and handler to path for import
+fixtures_path = Path(__file__).parents[2] / "fixtures"
 handler_path = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+sys.path.insert(0, str(fixtures_path))
 sys.path.insert(0, str(handler_path))
 import handler as lambda_handler
 
