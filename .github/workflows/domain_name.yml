@@ -111,7 +111,7 @@ jobs:
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain_name/ -v
+          pytest test/domain_name/pre_deployment/unit/ -v
 
   integration-testing-code:
     name: Integration testing code
