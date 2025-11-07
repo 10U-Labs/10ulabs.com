@@ -68,7 +68,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pylint src/domain_name/**/*.py \
-            --disable=line-too-long,missing-class-docstring,missing-const-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
 
       - name: Performing heavyweight static analysis
