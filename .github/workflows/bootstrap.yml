@@ -574,11 +574,11 @@ jobs:
   trigger-dependent-workflows:
     name: Triggering dependent infrastructure workflows
     runs-on: ubuntu-latest
-    needs: [e2e-testing-infrastructure, update-readme]
+    needs: [update-readme, conclude-readme-skip]
     if: |
       always() &&
-      (needs.e2e-testing-infrastructure.result == 'success' || needs.e2e-testing-infrastructure.result == 'skipped') &&
-      (needs.update-readme.result == 'success' || needs.update-readme.result == 'skipped')
+      (needs.update-readme.result == 'success' || needs.update-readme.result == 'skipped') &&
+      (needs.conclude-readme-skip.result == 'success' || needs.conclude-readme-skip.result == 'skipped')
     steps:
       - name: Trigger domain infrastructure deployment
         run: |
