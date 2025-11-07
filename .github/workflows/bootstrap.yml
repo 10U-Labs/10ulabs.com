@@ -493,7 +493,13 @@ jobs:
 
       - name: Install linting dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install pylint mypy
+        run: pip install pylint mypy yamllint
+
+      - name: Linting YAML files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Running yamllint on workflow files..."
+          yamllint .github/workflows/bootstrap.yml
 
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
