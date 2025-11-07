@@ -325,25 +325,25 @@ class AWSClientBase:
                 time.sleep(delay)
         raise RuntimeError("Retry loop completed without returning")
 
-    def _make_request(self, service: str, action: str, *, params: Optional[Dict[str, Any]] = None) -> str:
+    def make_request(self, service: str, action: str, *, params: Optional[Dict[str, Any]] = None) -> str:
         host = self._get_host(service)
         req = self._prepare_query_api_request_with_signing(service, action, host, params)
         return self._retry_with_backoff(req)
 
-    def _make_json_request(self, service: str, action: str, params: Optional[Dict[str, Any]]) -> str:
+    def make_json_request(self, service: str, action: str, params: Optional[Dict[str, Any]]) -> str:
         host = self._get_host(service)
         req = self._prepare_json_api_request_with_signing(service, action, host, params)
         return self._retry_with_backoff(req)
 
-    def _make_rest_request(self, service: str, path: str, body: str, signing_service: str) -> str:
+    def make_rest_request(self, service: str, path: str, body: str, signing_service: str) -> str:
         host = self._get_host(service)
         req = self._prepare_rest_api_request_with_signing(signing_service, host, path, body)
         return self._retry_with_backoff(req)
 class STSClient(AWSClientBase):
     def test_sts_access(self) -> None:
-        self._make_request('sts', 'GetCallerIdentity', params={})
+        self.make_request('sts', 'GetCallerIdentity', params={})
     def get_account_id(self) -> str:
-        response = self._make_request('sts', 'GetCallerIdentity', params={})
+        response = self.make_request('sts', 'GetCallerIdentity', params={})
         root = ET.fromstring(response)
         account_id_elem = root.find('.//{*}Account')
         return account_id_elem.text
@@ -351,7 +351,7 @@ class STSClient(AWSClientBase):
                                       role_session_name: str = 'bootstrap-session') -> Optional[Dict[str, str]]:
 
         try:
-            response = self._make_request('sts', 'AssumeRoleWithWebIdentity', params={
+            response = self.make_request('sts', 'AssumeRoleWithWebIdentity', params={
                 'RoleArn': role_arn,
                 'RoleSessionName': role_session_name,
                 'WebIdentityToken': web_identity_token
@@ -378,7 +378,7 @@ class IAMClient(AWSClientBase):
     def oidc_provider_exists(self, account_id: str) -> bool:
         arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
         try:
-            self._make_request('iam', 'GetOpenIDConnectProvider', params={
+            self.make_request('iam', 'GetOpenIDConnectProvider', params={
                 'OpenIDConnectProviderArn': arn
             })
             return True
@@ -389,7 +389,7 @@ class IAMClient(AWSClientBase):
     def create_oidc_provider(self) -> bool:
         thumbprint = "6938fd4d98bab03faadb97b34396831e3780aea1"
         try:
-            response = self._make_request('iam', 'CreateOpenIDConnectProvider', params={
+            response = self.make_request('iam', 'CreateOpenIDConnectProvider', params={
                 'Url': 'https://token.actions.githubusercontent.com',
                 'ClientIDList.member.1': 'sts.amazonaws.com',
                 'ThumbprintList.member.1': thumbprint,
@@ -403,7 +403,7 @@ class IAMClient(AWSClientBase):
             return False
     def role_exists(self, role_name: str) -> bool:
         try:
-            self._make_request('iam', 'GetRole', params={
+            self.make_request('iam', 'GetRole', params={
                 'RoleName': role_name
             })
             return True
@@ -413,7 +413,7 @@ class IAMClient(AWSClientBase):
             raise
     def get_role_trust_policy(self, role_name: str) -> Optional[Dict[str, Any]]:
         try:
-            response = self._make_request('iam', 'GetRole', params={
+            response = self.make_request('iam', 'GetRole', params={
                 'RoleName': role_name
             })
             root = ET.fromstring(response)
@@ -427,7 +427,7 @@ class IAMClient(AWSClientBase):
             return None
     def update_role_trust_policy(self, role_name: str, trust_policy: Dict[str, Any]) -> bool:
         try:
-            self._make_request('iam', 'UpdateAssumeRolePolicy', params={
+            self.make_request('iam', 'UpdateAssumeRolePolicy', params={
                 'RoleName': role_name,
                 'PolicyDocument': json.dumps(trust_policy)
             })
@@ -437,7 +437,7 @@ class IAMClient(AWSClientBase):
             return False
     def create_role(self, role_name: str, trust_policy: Dict[str, Any]) -> bool:
         try:
-            response = self._make_request('iam', 'CreateRole', params={
+            response = self.make_request('iam', 'CreateRole', params={
                 'RoleName': role_name,
                 'AssumeRolePolicyDocument': json.dumps(trust_policy),
                 'Description': 'Role for GitHub Actions workflows',
@@ -451,7 +451,7 @@ class IAMClient(AWSClientBase):
             return False
     def attach_managed_policy(self, role_name: str, policy_arn: str) -> bool:
         try:
-            self._make_request('iam', 'AttachRolePolicy', params={
+            self.make_request('iam', 'AttachRolePolicy', params={
                 'RoleName': role_name,
                 'PolicyArn': policy_arn
             })
@@ -463,7 +463,7 @@ class IAMClient(AWSClientBase):
                        policy_document: Dict[str, Any]) -> bool:
 
         try:
-            self._make_request('iam', 'PutRolePolicy', params={
+            self.make_request('iam', 'PutRolePolicy', params={
                 'RoleName': role_name,
                 'PolicyName': policy_name,
                 'PolicyDocument': json.dumps(policy_document)
@@ -474,7 +474,7 @@ class IAMClient(AWSClientBase):
             return False
     def managed_policy_attached(self, role_name: str, policy_arn: str) -> bool:
         try:
-            response = self._make_request('iam', 'ListAttachedRolePolicies', params={
+            response = self.make_request('iam', 'ListAttachedRolePolicies', params={
                 'RoleName': role_name
             })
             root = ET.fromstring(response)
@@ -491,7 +491,7 @@ class IAMClient(AWSClientBase):
             return False
     def inline_policy_exists(self, role_name: str, policy_name: str) -> bool:
         try:
-            self._make_request('iam', 'GetRolePolicy', params={
+            self.make_request('iam', 'GetRolePolicy', params={
                 'RoleName': role_name,
                 'PolicyName': policy_name
             })
@@ -502,7 +502,7 @@ class IAMClient(AWSClientBase):
             raise
     def detach_managed_policy(self, role_name: str, policy_arn: str) -> bool:
         try:
-            self._make_request('iam', 'DetachRolePolicy', params={
+            self.make_request('iam', 'DetachRolePolicy', params={
                 'RoleName': role_name,
                 'PolicyArn': policy_arn
             })
@@ -512,7 +512,7 @@ class IAMClient(AWSClientBase):
             return False
     def delete_role_policy(self, role_name: str, policy_name: str) -> bool:
         try:
-            self._make_request('iam', 'DeleteRolePolicy', params={
+            self.make_request('iam', 'DeleteRolePolicy', params={
                 'RoleName': role_name,
                 'PolicyName': policy_name
             })
@@ -522,7 +522,7 @@ class IAMClient(AWSClientBase):
             return False
     def delete_role(self, role_name: str) -> bool:
         try:
-            self._make_request('iam', 'DeleteRole', params={
+            self.make_request('iam', 'DeleteRole', params={
                 'RoleName': role_name
             })
             return True
@@ -532,7 +532,7 @@ class IAMClient(AWSClientBase):
     def delete_oidc_provider(self, account_id: str) -> bool:
         arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
         try:
-            self._make_request('iam', 'DeleteOpenIDConnectProvider', params={
+            self.make_request('iam', 'DeleteOpenIDConnectProvider', params={
                 'OpenIDConnectProviderArn': arn
             })
             return True
@@ -540,11 +540,11 @@ class IAMClient(AWSClientBase):
             logging.error("Failed to delete OIDC provider: %s", e)
             return False
     def test_iam_access(self) -> None:
-        self._make_request('iam', 'ListRoles', params={'MaxItems': 1})
+        self.make_request('iam', 'ListRoles', params={'MaxItems': 1})
 class SecretsManagerClient(AWSClientBase):
     def create_secret(self, secret_name: str, secret_value: Dict[str, Any]) -> bool:
         try:
-            self._make_json_request('secretsmanager', 'CreateSecret', {
+            self.make_json_request('secretsmanager', 'CreateSecret', {
                 'Name': secret_name,
                 'Description': 'GitHub runner credentials',
                 'SecretString': json.dumps(secret_value),
@@ -558,7 +558,7 @@ class SecretsManagerClient(AWSClientBase):
             raise
     def update_secret(self, secret_name: str, secret_value: Dict[str, Any]) -> bool:
         try:
-            self._make_json_request('secretsmanager', 'PutSecretValue', {
+            self.make_json_request('secretsmanager', 'PutSecretValue', {
                 'SecretId': secret_name,
                 'SecretString': json.dumps(secret_value),
                 'ClientRequestToken': str(uuid.uuid4())
@@ -569,7 +569,7 @@ class SecretsManagerClient(AWSClientBase):
             return False
     def secret_exists(self, secret_name: str) -> bool:
         try:
-            self._make_json_request('secretsmanager', 'DescribeSecret', {
+            self.make_json_request('secretsmanager', 'DescribeSecret', {
                 'SecretId': secret_name
             })
             return True
@@ -579,7 +579,7 @@ class SecretsManagerClient(AWSClientBase):
             raise
     def get_secret_value(self, secret_name: str) -> Optional[Dict[str, Any]]:
         try:
-            response_bytes = self._make_json_request('secretsmanager', 'GetSecretValue', {
+            response_bytes = self.make_json_request('secretsmanager', 'GetSecretValue', {
                 'SecretId': secret_name
             })
             response_data = json.loads(response_bytes)
@@ -599,7 +599,7 @@ class SecretsManagerClient(AWSClientBase):
             return None
     def delete_secret(self, secret_name: str) -> bool:
         try:
-            self._make_json_request('secretsmanager', 'DeleteSecret', {
+            self.make_json_request('secretsmanager', 'DeleteSecret', {
                 'SecretId': secret_name,
                 'ForceDeleteWithoutRecovery': True
             })
@@ -608,12 +608,15 @@ class SecretsManagerClient(AWSClientBase):
             logging.error("Failed to delete secret: %s", e)
             return False
     def test_secrets_manager_access(self) -> None:
-        self._make_json_request('secretsmanager', 'ListSecrets', {'MaxResults': 1})
+        self.make_json_request('secretsmanager', 'ListSecrets', {'MaxResults': 1})
 class BedrockClient(AWSClientBase):
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None, model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
+                 session_token: Optional[str] = None):
         super().__init__(region, access_key_id, secret_access_key, session_token)
+        self.model_id = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'
+    def set_model_id(self, model_id: str):
         self.model_id = model_id
+        return self
     def invoke_model(self, prompt: str, max_tokens: int = 16000) -> str:
         is_anthropic = (self.model_id.startswith('anthropic') or
                        self.model_id.startswith('us.anthropic') or
@@ -632,7 +635,7 @@ class BedrockClient(AWSClientBase):
                 "messages": [{"role": "user", "content": [{"text": prompt}]}],
                 "inferenceConfig": {"max_new_tokens": max_tokens}
             })
-        response = self._make_rest_request(
+        response = self.make_rest_request(
             'bedrock-runtime',
             f"/model/{self.model_id}/invoke",
             body,
@@ -668,7 +671,7 @@ class BedrockClient(AWSClientBase):
                 "industryOption": "Technology",
                 "useCases": "Automated documentation generation and code review"
             }
-            self._make_rest_request(
+            self.make_rest_request(
                 'bedrock',
                 '/put-use-case-for-model-access',
                 json.dumps({'formData': json.dumps(form_data)}),
@@ -685,7 +688,7 @@ class BedrockClient(AWSClientBase):
     def _accept_model_agreement(self) -> None:
 
         try:
-            response = self._make_rest_request(
+            response = self.make_rest_request(
                 'bedrock',
                 '/list-foundation-model-agreement-offers',
                 json.dumps({'modelId': self.model_id}),
@@ -696,7 +699,7 @@ class BedrockClient(AWSClientBase):
                 logging.info("No agreement offers (may already be accepted)")
                 return
             offer_token = offers[0]['offerToken']
-            self._make_rest_request(
+            self.make_rest_request(
                 'bedrock',
                 '/create-foundation-model-agreement',
                 json.dumps({'modelId': self.model_id, 'offerToken': offer_token}),
@@ -711,7 +714,7 @@ class BedrockClient(AWSClientBase):
     def _request_model_entitlement(self) -> bool:
 
         try:
-            self._make_rest_request(
+            self.make_rest_request(
                 'bedrock',
                 '/foundation-model-entitlement',
                 json.dumps({'modelId': self.model_id}),
@@ -735,13 +738,16 @@ class BedrockClient(AWSClientBase):
             return False
 class AWSClientStdlib:
     def __init__(self, region: str, access_key_id: str, secret_access_key: str,
-                 session_token: Optional[str] = None, bedrock_model_id: str = 'us.anthropic.claude-haiku-4-5-20251001-v1:0'):
+                 session_token: Optional[str] = None):
 
         self.sts = STSClient(region, access_key_id, secret_access_key, session_token)
         self.iam = IAMClient(region, access_key_id, secret_access_key, session_token)
         self.secrets = SecretsManagerClient(region, access_key_id, secret_access_key, session_token)
-        self.bedrock = BedrockClient(region, access_key_id, secret_access_key, session_token, bedrock_model_id)
+        self.bedrock = BedrockClient(region, access_key_id, secret_access_key, session_token)
         self.region = region
+    def set_bedrock_model_id(self, model_id: str):
+        self.bedrock.set_model_id(model_id)
+        return self
     def get_account_id(self) -> str:
         return self.sts.get_account_id()
     def validate_access(self) -> None:
@@ -986,9 +992,8 @@ def create_resources(args: argparse.Namespace) -> int:
         args.aws_region,
         access_key_id=aws_access_key,
         secret_access_key=aws_secret_key,
-        session_token=session_token,
-        bedrock_model_id=args.bedrock_model_id
-    )
+        session_token=session_token
+    ).set_bedrock_model_id(args.bedrock_model_id)
     print()
     print("GitHub Actions Self-Hosted Runners Bootstrap")
     print("=" * 50)
@@ -1095,8 +1100,7 @@ def destroy_resources(args: argparse.Namespace) -> int:
         args.aws_region,
         access_key_id=aws_access_key,
         secret_access_key=aws_secret_key,
-        session_token=session_token,
-        bedrock_model_id='us.anthropic.claude-haiku-4-5-20251001-v1:0'  # Default for destroy, not used
+        session_token=session_token
     )
     if not args.force:
         try:
@@ -1307,6 +1311,39 @@ Generate ONLY the README content, starting with the title. Do not include any pr
     except Exception as e:
         logging.error("Failed to generate README via Bedrock: %s", e)
         raise
+def _read_file_safe(file_path: str, description: str) -> Optional[str]:
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except IOError as e:
+        logging.error("Failed to read %s: %s", description, e)
+        return None
+def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
+                        bootstrap_code: str, current_readme: str) -> int:
+    logging.info("Checking if README needs update via Bedrock...")
+    needs_update = _check_readme_needs_update(bedrock, bootstrap_code, current_readme)
+    logging.info("README needs update" if needs_update else "README is current")
+    print(needs_update)
+    if args.output_file:
+        with open(args.output_file, 'a', encoding='utf-8') as f:
+            should_update = 'true' if needs_update else 'false'
+            f.write(f'should_update={should_update}\n')
+    return 0
+def _handle_readme_update(bedrock: 'BedrockClient', bootstrap_code: str, readme_path: str) -> int:
+    logging.info("Generating updated README via Bedrock...")
+    try:
+        new_readme = _update_readme(bedrock, bootstrap_code)
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(new_readme)
+        logging.info("Updated README written to %s", readme_path)
+        print(f"README updated successfully: {readme_path}")
+        return 0
+    except (AWSHTTPError, urllib.error.URLError, urllib.error.HTTPError) as e:
+        logging.error("Failed to generate README: %s", e)
+        return 1
+    except IOError as e:
+        logging.error("Failed to write README: %s", e)
+        return 1
 def cmd_readme(args: argparse.Namespace) -> int:
     access_key, secret_key, session_token = _get_credentials_for_state(args)
     if not access_key:
@@ -1314,50 +1351,20 @@ def cmd_readme(args: argparse.Namespace) -> int:
         return 1
     bedrock = BedrockClient(args.aws_region, access_key, secret_key, session_token)
     script_path = os.path.abspath(__file__)
-    try:
-        with open(script_path, 'r', encoding='utf-8') as f:
-            bootstrap_code = f.read()
-    except IOError as e:
-        logging.error("Failed to read bootstrap.py: %s", e)
+    bootstrap_code = _read_file_safe(script_path, "bootstrap.py")
+    if bootstrap_code is None:
         return 1
     readme_path = os.path.join(os.path.dirname(script_path), 'README.md')
-    current_readme = ""
-    if os.path.exists(readme_path):
-        try:
-            with open(readme_path, 'r', encoding='utf-8') as f:
-                current_readme = f.read()
-        except IOError as e:
-            logging.error("Failed to read README.md: %s", e)
-            return 1
+    current_readme = _read_file_safe(readme_path, "README.md") if os.path.exists(readme_path) else ""
+    if current_readme is None:
+        return 1
     if args.check:
-        logging.info("Checking if README needs update via Bedrock...")
-        needs_update = _check_readme_needs_update(bedrock, bootstrap_code, current_readme)
-        logging.info("README needs update" if needs_update else "README is current")
-        print(needs_update)
-        if args.output_file:
-            with open(args.output_file, 'a', encoding='utf-8') as f:
-                should_update = 'true' if needs_update else 'false'
-                f.write(f'should_update={should_update}\n')
-        return 0
+        return _handle_readme_check(args, bedrock, bootstrap_code, current_readme)
     if args.update:
-        logging.info("Generating updated README via Bedrock...")
-        try:
-            new_readme = _update_readme(bedrock, bootstrap_code)
-        except (AWSHTTPError, urllib.error.URLError, urllib.error.HTTPError) as e:
-            logging.error("Failed to generate README: %s", e)
-            return 1
-        try:
-            with open(readme_path, 'w', encoding='utf-8') as f:
-                f.write(new_readme)
-            logging.info("Updated README written to %s", readme_path)
-            print(f"README updated successfully: {readme_path}")
-            return 0
-        except IOError as e:
-            logging.error("Failed to write README: %s", e)
-            return 1
+        return _handle_readme_update(bedrock, bootstrap_code, readme_path)
     logging.error("Either --check or --update must be specified")
     return 1
-def main():
+def _setup_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Bootstrap AWS infrastructure for GitHub Actions self-hosted runners'
     )
@@ -1429,6 +1436,12 @@ def main():
                                 help='AWS access key ID (not needed in GitHub Actions with OIDC)')
     readme_optional.add_argument('--aws-secret-access-key',
                                 help='AWS secret access key (not needed in GitHub Actions with OIDC)')
+    return parser
+def _execute_command(args: argparse.Namespace) -> int:
+    command_map = {'create': create_resources, 'destroy': destroy_resources, 'readme': cmd_readme}
+    return command_map[args.command](args) if args.command in command_map else 1
+def main():
+    parser = _setup_argparse()
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1438,13 +1451,7 @@ def main():
     elif args.quiet:
         logging.getLogger().setLevel(logging.ERROR)
     try:
-        if args.command == 'create':
-            return create_resources(args)
-        if args.command == 'destroy':
-            return destroy_resources(args)
-        if args.command == 'readme':
-            return cmd_readme(args)
-        return 1
+        return _execute_command(args)
     except KeyboardInterrupt:
         print("\n\nAborted by user")
         return 130
