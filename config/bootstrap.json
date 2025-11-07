@@ -18,9 +18,8 @@
       "     - AWS_ACCESS_KEY_ID (from step 1)",
       "     - AWS_SECRET_ACCESS_KEY (from step 1)",
       "     - GH_RUNNER_PAT (from step 2) - NOTE: Must NOT start with GITHUB_",
-      "  4. Update secrets.* flags below to true",
-      "  5. Set enabled: true",
-      "  6. Commit and push to trigger bootstrap",
+      "  4. Set enabled: true",
+      "  5. Commit and push to trigger bootstrap",
       "",
       "========== STATE 2: WARM (After Initial Bootstrap) ==========",
       "Once infrastructure exists, the bootstrap system is SELF-SUFFICIENT:",
@@ -47,38 +46,28 @@
       "       --github-org 10U-Foundation \\",
       "       --github-repo 10uf.org \\",
       "       --github-pat-secret-name github-runner/credentials \\",
+      "       --bedrock-model-id us.anthropic.claude-haiku-4-5-20251001-v1:0 \\",
       "       --aws-access-key-id YOUR_KEY \\",
       "       --aws-secret-access-key YOUR_SECRET \\",
       "       --github-token YOUR_PAT",
       "  2. No dependencies required (pure Python stdlib)"
     ]
   },
-
-  "enabled": true,
-  "confirm_destroy": false,
-
   "aws": {
     "account_id": "781581267945",
-    "region": "us-east-1",
     "iam_role_name": "GitHubActionsRole",
+    "region": "us-east-1",
     "secrets_manager": {
       "github_pat_secret_name": "github-runner/credentials"
     }
   },
-
+  "bedrock": {
+    "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  },
+  "confirm_destroy": false,
+  "enabled": true,
   "github": {
     "org": "10U-Foundation",
     "repo": "10uf.org"
-  },
-
-  "secrets": {
-    "aws_access_key_id_in_github_secrets": true,
-    "aws_secret_access_key_in_github_secrets": true,
-    "github_classic_pat_in_github_secrets": true
-  },
-
-  "bedrock": {
-    "model_id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    "model_provider": "Anthropic"
   }
 }
