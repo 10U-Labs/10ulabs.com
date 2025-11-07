@@ -131,8 +131,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/10uf.org/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/10uf.org/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -192,8 +192,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/10uf.org/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/10uf.org/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -268,9 +268,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/10uf.org/config.json)
-          REGION=$(jq -r '.aws_region' src/domain-name/10uf.org/config.json)
-          DOMAIN_NAME=$(jq -r '.domain_name' src/domain-name/10uf.org/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain-name/config.json)
+          REGION=$(jq -r '.aws_region' src/domain-name/config.json)
+          DOMAIN_NAME=$(jq -r '.domain_name' src/domain-name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "domain_name=$DOMAIN_NAME" >> $GITHUB_OUTPUT
