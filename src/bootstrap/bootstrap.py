@@ -875,6 +875,23 @@ def _create_iam_role_step(aws: AWSClientStdlib, args: argparse.Namespace,
     logging.info("Created IAM role")
     return 0
 def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
+    # Clean up old policies from previous bootstrap versions (migration)
+    power_user_arn = "arn:aws:iam::aws:policy/PowerUserAccess"
+    if aws.iam.managed_policy_attached(role_name, power_user_arn):
+        logging.info("Removing old PowerUserAccess policy (migration)")
+        if not aws.iam.detach_managed_policy(role_name, power_user_arn):
+            logging.error("Failed to detach old PowerUserAccess policy")
+            return 1
+        logging.info("Removed old PowerUserAccess policy")
+
+    if aws.iam.inline_policy_exists(role_name, "IAMRoleManagement"):
+        logging.info("Removing old IAMRoleManagement inline policy (migration)")
+        if not aws.iam.delete_role_policy(role_name, "IAMRoleManagement"):
+            logging.error("Failed to delete old IAMRoleManagement inline policy")
+            return 1
+        logging.info("Removed old IAMRoleManagement inline policy")
+
+    # Attach AdministratorAccess
     logging.info("Checking if AdministratorAccess policy is attached")
     admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
     if aws.iam.managed_policy_attached(role_name, admin_arn):
