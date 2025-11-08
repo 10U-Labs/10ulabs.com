@@ -65,7 +65,7 @@ def synthesized_stacks(runner_config: dict) -> dict:
     for key, value in {
         "ManagedBy": "CDK",
         "Project": "10UF",
-        "Repository": "10U-Foundation/10uf.org",
+        "Repository": "10U-Foundation/10ulabs.com",
     }.items():
         cdk.Tags.of(app).add(key, value)
 
@@ -186,7 +186,7 @@ def test_global_tags_present_on_stacks(synthesized_stacks):
     expected_tags = [
         {"Key": "ManagedBy", "Value": "CDK"},
         {"Key": "Project", "Value": "10UF"},
-        {"Key": "Repository", "Value": "10U-Foundation/10uf.org"},
+        {"Key": "Repository", "Value": "10U-Foundation/10ulabs.com"},
     ]
 
     vpc_template: assertions.Template = synthesized_stacks["vpc_template"]

@@ -173,7 +173,7 @@ jobs:
         run: pip install -r requirements-cdk.txt
       - name: Synthesize domain stack
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk synth TenUFOrgDomain
+        run: cdk synth TenULabsOrgDomain
   deploying-artifacts:
     name: Deploying artifacts
     needs: building-artifacts
@@ -228,12 +228,12 @@ jobs:
           cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk diff TenUFOrgDomain
+        run: cdk diff TenULabsOrgDomain
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cdk deploy TenUFOrgDomain \
+          cdk deploy TenULabsOrgDomain \
             --require-approval never \
             --outputs-file domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           # Capture exit code

@@ -49,7 +49,7 @@ def get_test_config():
             "memory_mb": 256
         },
         "github": {
-            "repo": "10U-Foundation/10uf.org"
+            "repo": "10U-Foundation/10ulabs.com"
         },
         "fargate_runners": {
             "cpu": "256",

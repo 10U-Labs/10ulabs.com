@@ -2,7 +2,7 @@
 Infrastructure: EC2 Spot Instance Based GitHub Self-Hosted Runners API
 
 Creates:
-- API Gateway HTTP API with custom domain (api.10uf.org)
+- API Gateway HTTP API with custom domain (api.10ulabs.com)
 - Lambda function for handling API requests
 - Route53 record for custom domain
 - ACM certificate for HTTPS
@@ -112,7 +112,7 @@ class EC2SpotRunnerAPIStack(Stack):
             domain_name=config["hosted_zone_name"]
         )
 
-        # ACM Certificate for api.10uf.org with DNS validation
+        # ACM Certificate for api.10ulabs.com with DNS validation
         certificate = acm.Certificate(
             self, "APICertificate",
             domain_name=config["domain_name"],
@@ -150,7 +150,7 @@ class EC2SpotRunnerAPIStack(Stack):
             )
         )
 
-        # Route53 A record for api.10uf.org pointing to API Gateway
+        # Route53 A record for api.10ulabs.com pointing to API Gateway
         route53.ARecord(
             self, "APIARecord",
             zone=hosted_zone,

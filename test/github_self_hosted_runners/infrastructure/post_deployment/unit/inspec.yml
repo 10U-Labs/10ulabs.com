@@ -2,7 +2,7 @@ name: github-runners-infrastructure
 title: GitHub Self-Hosted Runners Infrastructure Validation
 maintainer: 10U Foundation, Inc
 copyright: 10U Foundation, Inc
-copyright_email: engineering@10uf.org
+copyright_email: engineering@10ulabs.com
 license: MIT
 summary: Post-deployment validation for GitHub Self-Hosted Runners infrastructure on AWS
 version: 1.0.0

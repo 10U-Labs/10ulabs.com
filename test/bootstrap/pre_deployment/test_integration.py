@@ -32,7 +32,7 @@ TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
 TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 TEST_ROLE_NAME = 'GitHubActionsBootstrapCITest'
 TEST_GITHUB_ORG = '10U-Foundation'
-TEST_GITHUB_REPO = '10uf.org'
+TEST_GITHUB_REPO = '10ulabs.com'
 
 
 def run_command(cmd, check=True, capture_output=True):

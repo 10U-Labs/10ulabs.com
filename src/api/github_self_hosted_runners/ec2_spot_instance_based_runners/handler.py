@@ -158,7 +158,7 @@ def lambda_handler(event, context):
     {
         "job_id": 12345,
         "job_labels": ["docker-builder", "arm64"],
-        "github_repo": "10U-Foundation/10uf.org"
+        "github_repo": "10U-Foundation/10ulabs.com"
     }
     """
     logger.info(f"Received API request: {json.dumps(event)}")

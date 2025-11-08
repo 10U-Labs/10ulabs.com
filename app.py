@@ -44,10 +44,10 @@ if domain_config_path.exists():
 
     domain_stack = DomainStack(
         app,
-        "TenUFOrgDomain",
+        "TenULabsOrgDomain",
         config=domain_config,
         env=domain_env,
-        description="Route53 hosted zone for 10uf.org domain"
+        description="Route53 hosted zone for 10ulabs.com domain"
     )
 
 github_self_hosted_runners_stack = GitHubSelfHostedRunnersStack(
@@ -61,15 +61,15 @@ github_self_hosted_runners_stack = GitHubSelfHostedRunnersStack(
 # Website Infrastructure
 spec = importlib.util.spec_from_file_location(
     "tenuf_infrastructure",
-    Path(__file__).parent / "src" / "10uf.org" / "infrastructure" / "stack.py"
+    Path(__file__).parent / "src" / "10ulabs.com" / "infrastructure" / "stack.py"
 )
 tenuf_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tenuf_module)
-TenUFComStack = tenuf_module.TenUFComStack
+TenULabsComStack = tenuf_module.TenULabsComStack
 
 website_config_paths = [
-    Path(__file__).parent / "config" / "websites" / "10uf.org.json",
-    Path(__file__).parent / "config" / "10uf.org.json"
+    Path(__file__).parent / "config" / "websites" / "10ulabs.com.json",
+    Path(__file__).parent / "config" / "10ulabs.com.json"
 ]
 
 website_config = None
@@ -85,12 +85,12 @@ if website_config and website_config.get("enabled", False):
         region=runner_config["aws"]["region"]
     )
 
-    website_stack = TenUFComStack(
+    website_stack = TenULabsComStack(
         app,
-        "TenUFCom",
+        "TenULabsCom",
         config=website_config,
         env=website_env,
-        description="Static website infrastructure for 10uf.org"
+        description="Static website infrastructure for 10ulabs.com"
     )
 
 # EC2 Spot Runner API
@@ -117,11 +117,11 @@ if api_config_path.exists():
         "EC2SpotRunnerAPI",
         config=api_config,
         env=api_env,
-        description="API for launching EC2 spot instance GitHub self-hosted runners at api.10uf.org"
+        description="API for launching EC2 spot instance GitHub self-hosted runners at api.10ulabs.com"
     )
 
 cdk.Tags.of(app).add("ManagedBy", "CDK")
 cdk.Tags.of(app).add("Project", "10UF")
-cdk.Tags.of(app).add("Repository", "10U-Foundation/10uf.org")
+cdk.Tags.of(app).add("Repository", "10U-Foundation/10ulabs.com")
 
 app.synth()

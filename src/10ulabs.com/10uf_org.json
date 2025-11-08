@@ -4,7 +4,7 @@
     "Parameters": {
         "DomainName": {
             "Type": "String",
-            "Description": "Domain name for the website (e.g., 10uf.org)"
+            "Description": "Domain name for the website (e.g., 10ulabs.com)"
         },
         "BucketName": {
             "Type": "String",

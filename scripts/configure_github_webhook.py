@@ -19,7 +19,7 @@ def main():
     stack_name = 'GitHubRunnersWebhook'
     secret_name = 'github-webhook-secret'
     region = 'us-east-1'
-    repo = '10U-Foundation/10uf.org'
+    repo = '10U-Foundation/10ulabs.com'
 
     print("===================================")
     print("GitHub Webhook Configuration")
