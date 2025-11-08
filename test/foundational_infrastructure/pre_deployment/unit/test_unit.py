@@ -1390,21 +1390,17 @@ def test_cloudtrail_s3_bucket_has_encryption():
     )
 
 
-def test_cloudtrail_s3_bucket_blocks_public_access():
-    """Test that CloudTrail S3 bucket blocks all public access"""
+def test_cloudtrail_s3_bucket_blocks_public_acls():
     app = cdk.App()
-
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
-
     import importlib.util
     stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
-
     stack = DomainStack(
         app,
         "TestDomainStack",
@@ -1414,15 +1410,104 @@ def test_cloudtrail_s3_bucket_blocks_public_access():
             region=config["aws_region"]
         )
     )
-
     template = Template.from_stack(stack)
     template.has_resource_properties(
         "AWS::S3::Bucket",
         {
             "PublicAccessBlockConfiguration": {
-                "BlockPublicAcls": True,
-                "BlockPublicPolicy": True,
-                "IgnorePublicAcls": True,
+                "BlockPublicAcls": True
+            }
+        }
+    )
+
+
+def test_cloudtrail_s3_bucket_blocks_public_policy():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::S3::Bucket",
+        {
+            "PublicAccessBlockConfiguration": {
+                "BlockPublicPolicy": True
+            }
+        }
+    )
+
+
+def test_cloudtrail_s3_bucket_ignores_public_acls():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::S3::Bucket",
+        {
+            "PublicAccessBlockConfiguration": {
+                "IgnorePublicAcls": True
+            }
+        }
+    )
+
+
+def test_cloudtrail_s3_bucket_restricts_public_buckets():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::S3::Bucket",
+        {
+            "PublicAccessBlockConfiguration": {
                 "RestrictPublicBuckets": True
             }
         }
