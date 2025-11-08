@@ -265,25 +265,27 @@ jobs:
           LATEST_LOG_GROUP=""
           LATEST_TIMESTAMP=0
           for LOG_GROUP in $LOG_GROUPS; do
-            STREAM_INFO=$(aws logs describe-log-streams \
+            STREAMS=$(aws logs describe-log-streams \
               --log-group-name "$LOG_GROUP" \
               --order-by LastEventTime \
               --descending \
-              --max-items 1 \
-              --query 'logStreams[0].[logStreamName,lastEventTime]' \
+              --max-items 5 \
+              --query 'logStreams[].[logStreamName,lastEventTime]' \
               --output text 2>/dev/null || echo "")
-            if [ -z "$STREAM_INFO" ]; then
+            if [ -z "$STREAMS" ]; then
               continue
             fi
-            TIMESTAMP=$(echo "$STREAM_INFO" | awk '{print $2}')
-            if [ "$TIMESTAMP" = "None" ] || ! [[ "$TIMESTAMP" =~ ^[0-9]+$ ]]; then
-              continue
-            fi
-            if [ "$TIMESTAMP" -gt "$LATEST_TIMESTAMP" ]; then
-              LATEST_TIMESTAMP=$TIMESTAMP
-              LATEST_LOG_GROUP="$LOG_GROUP"
-              LATEST_STREAM=$(echo "$STREAM_INFO" | awk '{print $1}')
-            fi
+            while IFS=$'\t' read -r STREAM_NAME TIMESTAMP; do
+              if [ "$TIMESTAMP" = "None" ] || ! [[ "$TIMESTAMP" =~ ^[0-9]+$ ]]; then
+                continue
+              fi
+              if [ "$TIMESTAMP" -gt "$LATEST_TIMESTAMP" ]; then
+                LATEST_TIMESTAMP=$TIMESTAMP
+                LATEST_LOG_GROUP="$LOG_GROUP"
+                LATEST_STREAM="$STREAM_NAME"
+              fi
+              break
+            done <<< "$STREAMS"
           done
           if [ -z "$LATEST_LOG_GROUP" ]; then
             echo "WARNING: Could not find any log groups with events"
