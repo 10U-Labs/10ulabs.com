@@ -807,6 +807,343 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
         assert 'missing contact fields' in call_args[0][3]['Error']
 
 
+class TestLambdaHandlerRegistrationFailure(unittest.TestCase):
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_registration_failure_calls_get_operation_detail(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'FAILED',
+            'Message': 'Payment method not configured'
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        mock_route53domains.get_operation_detail.assert_called_once_with(OperationId='op-123')
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_registration_failure_returns_failed_status(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'FAILED',
+            'Message': 'Payment method not configured'
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
+        assert call_args[0][2] == mock_cfnresponse.FAILED
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_registration_failure_includes_error_message(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'FAILED',
+            'Message': 'Payment method not configured'
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
+        assert call_args[0][3]['Error'] == 'Payment method not configured'
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_registration_failure_includes_operation_id(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'FAILED',
+            'Message': 'Payment method not configured'
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
+        assert call_args[0][3]['OperationId'] == 'op-123'
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_registration_failure_includes_payment_hint(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'FAILED',
+            'Message': 'Payment method not configured'
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
+        assert 'payment' in call_args[0][3]['Hint'].lower()
+
+
 def test_lambda_directory_contains_handler():
     """Test that Lambda directory contains handler.py for deployment"""
     lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
