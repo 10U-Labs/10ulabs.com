@@ -276,6 +276,9 @@ jobs:
               continue
             fi
             TIMESTAMP=$(echo "$STREAM_INFO" | awk '{print $2}')
+            if [ "$TIMESTAMP" = "None" ] || ! [[ "$TIMESTAMP" =~ ^[0-9]+$ ]]; then
+              continue
+            fi
             if [ "$TIMESTAMP" -gt "$LATEST_TIMESTAMP" ]; then
               LATEST_TIMESTAMP=$TIMESTAMP
               LATEST_LOG_GROUP="$LOG_GROUP"
