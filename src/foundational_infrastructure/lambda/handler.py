@@ -60,6 +60,14 @@ def get_contact_info(account, organizations):
         raise ValueError(error_msg)
 
     full_name_parts = contact_info['FullName'].split(maxsplit=1)
+
+    phone = contact_info['PhoneNumber']
+    phone_digits = ''.join(c for c in phone if c.isdigit() or c == '+')
+    if not phone_digits.startswith('+'):
+        phone_digits = '+' + phone_digits
+
+    phone_formatted = phone_digits[:2] + '.' + phone_digits[2:]
+
     contact = {
         'FirstName': full_name_parts[0],
         'LastName': full_name_parts[1] if len(full_name_parts) > 1 else full_name_parts[0],
@@ -69,7 +77,7 @@ def get_contact_info(account, organizations):
         'State': contact_info['StateOrRegion'],
         'CountryCode': contact_info['CountryCode'],
         'ZipCode': contact_info['PostalCode'],
-        'PhoneNumber': contact_info['PhoneNumber'],
+        'PhoneNumber': phone_formatted,
         'Email': contact_email
     }
 
