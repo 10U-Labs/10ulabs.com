@@ -6,9 +6,13 @@ from aws_cdk import (
     CfnOutput,
     CustomResource,
     Duration,
+    RemovalPolicy,
     aws_route53 as route53,
     aws_lambda as lambda_,
     aws_iam as iam,
+    aws_s3 as s3,
+    aws_cloudtrail as cloudtrail,
+    aws_logs as logs,
 )
 from constructs import Construct
 
@@ -16,6 +20,32 @@ from constructs import Construct
 class DomainStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
+
+        cloudtrail_bucket = s3.Bucket(
+            self, "CloudTrailBucket",
+            versioned=False,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.RETAIN,
+            enforce_ssl=True
+        )
+
+        cloudtrail_log_group = logs.LogGroup(
+            self, "CloudTrailLogGroup",
+            retention=logs.RetentionDays.ONE_YEAR,
+            removal_policy=RemovalPolicy.RETAIN
+        )
+
+        trail = cloudtrail.Trail(
+            self, "DomainCloudTrail",
+            bucket=cloudtrail_bucket,
+            cloud_watch_log_group=cloudtrail_log_group,
+            cloud_watch_logs_retention=logs.RetentionDays.ONE_YEAR,
+            send_to_cloud_watch_logs=True,
+            is_multi_region_trail=True,
+            include_global_service_events=True,
+            management_events=cloudtrail.ReadWriteType.ALL
+        )
 
         lambda_dir = os.path.join(os.path.dirname(__file__), "lambda")
 
@@ -49,6 +79,8 @@ class DomainStack(Stack):
                 "DomainName": config["domain_name"]
             }
         )
+
+        domain_registration.node.add_dependency(trail)
 
         self.hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
             self, "HostedZone",
