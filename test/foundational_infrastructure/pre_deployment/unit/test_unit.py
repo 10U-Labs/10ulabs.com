@@ -122,24 +122,17 @@ def test_hosted_zone_exports_name_servers():
     assert "NameServers" in outputs
 
 
-def test_domain_registration_lambda_exists():
-    """Test that domain registration Lambda function is created"""
+def test_domain_registration_lambda_has_python_runtime():
     app = cdk.App()
-
-    # Load config
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
-
-    # Dynamically import DomainStack
     import importlib.util
     stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
-
-    # Create stack
     stack = DomainStack(
         app,
         "TestDomainStack",
@@ -149,16 +142,68 @@ def test_domain_registration_lambda_exists():
             region=config["aws_region"]
         )
     )
-
-    # Create template
     template = Template.from_stack(stack)
-
-    # Assert Lambda function exists with correct properties
     template.has_resource_properties(
         "AWS::Lambda::Function",
         {
-            "Runtime": "python3.11",
-            "Handler": "handler.handler",
+            "Runtime": "python3.11"
+        }
+    )
+
+
+def test_domain_registration_lambda_has_correct_handler():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
+            "Handler": "handler.handler"
+        }
+    )
+
+
+def test_domain_registration_lambda_has_timeout():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
             "Timeout": 900
         }
     )
