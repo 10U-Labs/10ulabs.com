@@ -267,24 +267,17 @@ def test_domain_registration_lambda_has_correct_permissions():
     )
 
 
-def test_custom_resource_for_domain_registration_exists():
-    """Test that custom resource for domain registration is created"""
+def test_custom_resource_for_domain_registration_count():
     app = cdk.App()
-
-    # Load config
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
-
-    # Dynamically import DomainStack
     import importlib.util
     stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
-
-    # Create stack
     stack = DomainStack(
         app,
         "TestDomainStack",
@@ -294,14 +287,31 @@ def test_custom_resource_for_domain_registration_exists():
             region=config["aws_region"]
         )
     )
-
-    # Create template
     template = Template.from_stack(stack)
-
-    # Assert custom resource exists
     template.resource_count_is("AWS::CloudFormation::CustomResource", 1)
 
-    # Verify custom resource has correct properties
+
+def test_custom_resource_has_domain_name_property():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
     from aws_cdk.assertions import Match
     template.has_resource_properties(
         "AWS::CloudFormation::CustomResource",
