@@ -6,9 +6,13 @@ from aws_cdk import (
     CfnOutput,
     CustomResource,
     Duration,
+    RemovalPolicy,
     aws_route53 as route53,
     aws_lambda as lambda_,
     aws_iam as iam,
+    aws_s3 as s3,
+    aws_cloudtrail as cloudtrail,
+    aws_logs as logs,
 )
 from constructs import Construct
 
@@ -54,6 +58,32 @@ class DomainStack(Stack):
             self, "HostedZone",
             hosted_zone_id=domain_registration.get_att_string("HostedZoneId"),
             zone_name=config["domain_name"]
+        )
+
+        cloudtrail_bucket = s3.Bucket(
+            self, "CloudTrailBucket",
+            versioned=False,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.RETAIN,
+            enforce_ssl=True
+        )
+
+        cloudtrail_log_group = logs.LogGroup(
+            self, "CloudTrailLogGroup",
+            retention=logs.RetentionDays.ONE_YEAR,
+            removal_policy=RemovalPolicy.RETAIN
+        )
+
+        _trail = cloudtrail.Trail(
+            self, "DomainCloudTrail",
+            bucket=cloudtrail_bucket,
+            cloud_watch_log_group=cloudtrail_log_group,
+            cloud_watch_logs_retention=logs.RetentionDays.ONE_YEAR,
+            send_to_cloud_watch_logs=True,
+            is_multi_region_trail=True,
+            include_global_service_events=True,
+            management_events=cloudtrail.ReadWriteType.ALL
         )
 
         export_prefix = config['domain_name'].replace('.', '-')
