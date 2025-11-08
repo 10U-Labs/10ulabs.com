@@ -26,7 +26,8 @@ class DomainStack(Stack):
             versioned=False,
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
-            removal_policy=RemovalPolicy.RETAIN,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
             enforce_ssl=True
         )
 
