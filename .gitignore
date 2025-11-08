@@ -54,4 +54,3 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
-src/domain_name/lambda/cfnresponse.py
