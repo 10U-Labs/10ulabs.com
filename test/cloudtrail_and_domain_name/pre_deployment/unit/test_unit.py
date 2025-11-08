@@ -6,26 +6,26 @@ from aws_cdk.assertions import Template
 
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     assert config_path.exists(), f"Config file not found at {config_path}"
 
 
 def test_config_has_aws_account_id():
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     assert "aws_account_id" in config
 
 
 def test_config_has_aws_region():
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     assert "aws_region" in config
 
 
 def test_config_has_domain_name():
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     assert "domain_name" in config
@@ -34,12 +34,12 @@ def test_config_has_domain_name():
 def test_hosted_zone_has_id_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -64,12 +64,12 @@ def test_hosted_zone_has_id_output():
 def test_hosted_zone_has_name_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -94,12 +94,12 @@ def test_hosted_zone_has_name_output():
 def test_hosted_zone_exports_name_servers():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -124,11 +124,11 @@ def test_hosted_zone_exports_name_servers():
 
 def test_domain_registration_lambda_has_python_runtime():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -153,11 +153,11 @@ def test_domain_registration_lambda_has_python_runtime():
 
 def test_domain_registration_lambda_has_correct_handler():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -182,11 +182,11 @@ def test_domain_registration_lambda_has_correct_handler():
 
 def test_domain_registration_lambda_has_timeout():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -211,11 +211,11 @@ def test_domain_registration_lambda_has_timeout():
 
 def test_custom_resource_for_domain_registration_count():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -235,11 +235,11 @@ def test_custom_resource_for_domain_registration_count():
 
 def test_custom_resource_has_domain_name_property():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -264,47 +264,47 @@ def test_custom_resource_has_domain_name_property():
 
 
 def test_lambda_handler_file_exists():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     assert handler_path.exists(), "Lambda handler.py file must exist"
 
 
 def test_lambda_handler_is_valid_python():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
         compile(code, str(handler_path), 'exec')
 
 
 def test_lambda_handler_contains_check_domain_availability():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
     assert "check_domain_availability" in code
 
 
 def test_lambda_handler_contains_register_domain():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
     assert "register_domain" in code
 
 
 def test_lambda_handler_contains_get_contact_information():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
     assert "get_contact_information" in code
 
 
 def test_lambda_handler_contains_describe_organization():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
     assert "describe_organization" in code
 
 
 def test_lambda_handler_contains_master_account_email():
-    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
     assert "MasterAccountEmail" in code
@@ -319,7 +319,7 @@ import sys
 
 # Add fixtures (cfnresponse stub) and handler to path
 fixtures_path = Path(__file__).parents[2] / "fixtures"
-handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+handler_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
 sys.path.insert(0, str(fixtures_path))
 sys.path.insert(0, str(handler_path))
 import handler as lambda_handler
@@ -1210,21 +1210,21 @@ class TestPhoneNumberFormatting(unittest.TestCase):
 
 def test_lambda_directory_contains_handler():
     """Test that Lambda directory contains handler.py for deployment"""
-    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    lambda_dir = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
     handler_path = lambda_dir / "handler.py"
     assert handler_path.exists(), "handler.py must exist in lambda directory for deployment"
 
 
 def test_lambda_directory_contains_cfnresponse():
     """Test that Lambda directory contains cfnresponse.py for deployment"""
-    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    lambda_dir = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
     assert cfnresponse_path.exists(), "cfnresponse.py must exist in lambda directory for deployment"
 
 
 def test_cfnresponse_contains_send_function():
     """Test that cfnresponse.py contains send() function definition"""
-    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    lambda_dir = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
 
     with open(cfnresponse_path) as f:
@@ -1234,7 +1234,7 @@ def test_cfnresponse_contains_send_function():
 
 def test_cfnresponse_makes_http_put_request():
     """Test that cfnresponse.py makes HTTP PUT request to CloudFormation"""
-    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    lambda_dir = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
 
     with open(cfnresponse_path) as f:
@@ -1243,7 +1243,7 @@ def test_cfnresponse_makes_http_put_request():
 
 
 def test_cfnresponse_is_not_empty():
-    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    lambda_dir = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
 
     with open(cfnresponse_path) as f:
@@ -1252,7 +1252,7 @@ def test_cfnresponse_is_not_empty():
 
 
 def test_cfnresponse_is_not_pass_stub():
-    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    lambda_dir = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
 
     with open(cfnresponse_path) as f:
@@ -1265,12 +1265,12 @@ def test_cloudtrail_s3_bucket_exists():
     """Test that CloudTrail S3 bucket resource is created"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1294,12 +1294,12 @@ def test_cloudtrail_s3_bucket_has_encryption():
     """Test that CloudTrail S3 bucket has encryption configured"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1334,11 +1334,11 @@ def test_cloudtrail_s3_bucket_has_encryption():
 
 def test_cloudtrail_s3_bucket_blocks_public_acls():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1365,11 +1365,11 @@ def test_cloudtrail_s3_bucket_blocks_public_acls():
 
 def test_cloudtrail_s3_bucket_blocks_public_policy():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1396,11 +1396,11 @@ def test_cloudtrail_s3_bucket_blocks_public_policy():
 
 def test_cloudtrail_s3_bucket_ignores_public_acls():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1427,11 +1427,11 @@ def test_cloudtrail_s3_bucket_ignores_public_acls():
 
 def test_cloudtrail_s3_bucket_restricts_public_buckets():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1460,12 +1460,12 @@ def test_cloudtrail_s3_bucket_versioning_disabled():
     """Test that CloudTrail S3 bucket has versioning disabled as specified"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1496,12 +1496,12 @@ def test_cloudtrail_log_group_exists():
     """Test that CloudWatch Logs log group resource is created"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1525,12 +1525,12 @@ def test_cloudtrail_log_group_has_retention():
     """Test that CloudWatch Logs log group has 1-year retention configured"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1559,12 +1559,12 @@ def test_cloudtrail_trail_exists():
     """Test that CloudTrail trail resource is created"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1588,12 +1588,12 @@ def test_cloudtrail_trail_is_logging():
     """Test that CloudTrail trail is configured to log"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1622,12 +1622,12 @@ def test_cloudtrail_trail_is_multi_region():
     """Test that CloudTrail trail is configured as multi-region"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1656,12 +1656,12 @@ def test_cloudtrail_trail_includes_global_events():
     """Test that CloudTrail trail includes global service events"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1688,11 +1688,11 @@ def test_cloudtrail_trail_includes_global_events():
 
 def test_cloudtrail_trail_logs_all_read_write_events():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1721,11 +1721,11 @@ def test_cloudtrail_trail_logs_all_read_write_events():
 
 def test_cloudtrail_trail_includes_management_events():
     app = cdk.App()
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1756,12 +1756,12 @@ def test_cloudtrail_trail_sends_to_cloudwatch_logs():
     """Test that CloudTrail trail is configured to send logs to CloudWatch"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1791,12 +1791,12 @@ def test_cloudtrail_trail_sends_to_cloudwatch_logs():
 def test_cloudtrail_trail_exists_for_dependency():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1824,12 +1824,12 @@ def test_cloudtrail_trail_exists_for_dependency():
 def test_domain_registration_depends_on_cloudtrail():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         config = json.load(f)
 
     import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
@@ -1871,11 +1871,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53domains_check_availability_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1887,11 +1887,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53domains_get_domain_detail_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1903,11 +1903,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53domains_get_operation_detail_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1919,11 +1919,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53domains_register_domain_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1935,11 +1935,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53_list_hosted_zones_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1951,11 +1951,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53_get_hosted_zone_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1967,11 +1967,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_route53_create_hosted_zone_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1983,11 +1983,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_account_get_contact_info_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -1999,11 +1999,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_account_get_alternate_contact_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
@@ -2015,11 +2015,11 @@ class TestLambdaIAMPermissions(unittest.TestCase):
     def test_lambda_has_organizations_describe_org_permission(self):
         from aws_cdk.assertions import Match
         app = cdk.App()
-        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
         with open(config_path) as f:
             config = json.load(f)
         import importlib.util
-        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
         spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
