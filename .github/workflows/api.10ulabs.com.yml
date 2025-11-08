@@ -5,24 +5,26 @@ on:
     branches:
       - main
     paths:
-      - 'src/**/infrastructure/**'
+      - 'src/github_self_hosted_runners/**'
       - 'src/api/**'
-      - 'test/github_self_hosted_runners/infrastructure/**'
+      - 'test/github_self_hosted_runners/**'
       - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
-      - 'config/**'
-      - '.github/workflows/build-infrastructure-in-aws-for-github_self_hosted_runners.yml'
+      - 'config/github_self_hosted_runners.json'
+      - 'config/api.json'
+      - '.github/workflows/api.10ulabs.com.yml'
   pull_request:
     paths:
-      - 'src/**/infrastructure/**'
+      - 'src/github_self_hosted_runners/**'
       - 'src/api/**'
-      - 'test/github_self_hosted_runners/infrastructure/**'
+      - 'test/github_self_hosted_runners/**'
       - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
-      - 'config/**'
-      - '.github/workflows/build-infrastructure-in-aws-for-github_self_hosted_runners.yml'
+      - 'config/github_self_hosted_runners.json'
+      - 'config/api.json'
+      - '.github/workflows/api.10ulabs.com.yml'
   workflow_dispatch:
     inputs:
       dry_run:
