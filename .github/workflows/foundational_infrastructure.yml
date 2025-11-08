@@ -146,8 +146,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -196,8 +196,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -343,9 +343,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
-          DOMAIN_NAME=$(jq -r '.foundational_infrastructure' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
+          DOMAIN_NAME=$(jq -r '.domain_name' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "foundational_infrastructure=$DOMAIN_NAME" >> $GITHUB_OUTPUT
@@ -381,8 +381,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -419,8 +419,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -458,8 +458,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -507,8 +507,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
-          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/foundational_infrastructure.json)
+          REGION=$(jq -r '.aws_region' config/foundational_infrastructure.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
