@@ -173,7 +173,7 @@ jobs:
         run: pip install -r requirements-cdk.txt
       - name: Synthesize domain stack
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk synth TenULabsDomain
+        run: cdk synth TenULabsDomainName
   deploying-artifacts:
     name: Deploying artifacts
     needs: building-artifacts
@@ -228,16 +228,16 @@ jobs:
           cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk diff TenULabsDomain
+        run: cdk diff TenULabsDomainName
       - name: Cleanup failed stack if needed
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name TenULabsDomain --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name TenULabsDomainName --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
           if [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ] || [ "$STACK_STATUS" = "CREATE_FAILED" ]; then
             echo "Stack is in failed state ($STACK_STATUS), deleting before redeployment..."
-            aws cloudformation delete-stack --stack-name TenULabsDomain
+            aws cloudformation delete-stack --stack-name TenULabsDomainName
             echo "Waiting for stack deletion to complete..."
-            aws cloudformation wait stack-delete-complete --stack-name TenULabsDomain
+            aws cloudformation wait stack-delete-complete --stack-name TenULabsDomainName
             echo "Stack deleted successfully"
           else
             echo "Stack status: $STACK_STATUS (no cleanup needed)"
@@ -246,7 +246,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cdk deploy TenULabsDomain \
+          cdk deploy TenULabsDomainName \
             --require-approval never \
             --outputs-file domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
