@@ -1,11 +1,12 @@
 """Lambda handler for domain registration"""
-import boto3
-import json
 import time
-import cfnresponse
+import traceback
+
+import boto3
+import cfnresponse  # pylint: disable=import-error
 
 
-def handler(event, context):
+def handler(event, context):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """
     CloudFormation custom resource handler for domain registration.
 
@@ -178,13 +179,13 @@ def handler(event, context):
 
                 print(f"Hosted zone not yet available, will retry in {2 ** attempt}s...")
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 print(f"Error checking for hosted zone: {e}")
 
         # If we get here, hosted zone wasn't found in time
         # Registration likely succeeded but zone creation is still pending
-        print(f"Domain registration initiated but hosted zone not yet available.")
-        print(f"Re-deploy the stack later to complete setup once zone appears.")
+        print("Domain registration initiated but hosted zone not yet available.")
+        print("Re-deploy the stack later to complete setup once zone appears.")
 
         cfnresponse.send(event, context, cfnresponse.FAILED, {
             'Error': 'Hosted zone not created within timeout period',
@@ -192,10 +193,9 @@ def handler(event, context):
             'Message': 'Domain registration initiated but hosted zone not yet available. Wait a few minutes and re-deploy.'
         })
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         error_msg = str(e)
         print(f"Error: {error_msg}")
-        import traceback
         tb = traceback.format_exc()
         print(tb)
         cfnresponse.send(event, context, cfnresponse.FAILED, {
