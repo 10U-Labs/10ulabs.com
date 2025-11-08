@@ -250,13 +250,11 @@ jobs:
             --log-group-name-prefix "/aws/lambda/TenULabsDomainName" \
             --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName" \
             --output text 2>/dev/null || echo "")
-
           if [ -z "$LOG_GROUPS" ]; then
             echo "No DomainRegistration Lambda log groups found for TenULabsDomainName stack"
             echo "This is expected if the stack failed before Lambda was created"
             exit 0
           fi
-
           for LOG_GROUP in $LOG_GROUPS; do
             echo "Checking log group: $LOG_GROUP"
             LATEST_STREAM=$(aws logs describe-log-streams \
@@ -266,7 +264,6 @@ jobs:
               --max-items 1 \
               --query 'logStreams[0].logStreamName' \
               --output text 2>/dev/null || echo "")
-
             if [ -n "$LATEST_STREAM" ] && [ "$LATEST_STREAM" != "None" ]; then
               echo "Latest log stream: $LATEST_STREAM"
               echo ""
