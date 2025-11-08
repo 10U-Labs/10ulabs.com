@@ -119,6 +119,7 @@ def register_new_domain(route53domains, account, organizations, domain_name):
 
     registration_contact = get_contact_info(account, organizations)
     print(f"Registering domain {domain_name} with contact: {registration_contact['Email']}")
+    print(f"Phone number formatted as: {registration_contact['PhoneNumber']}")
 
     registration = route53domains.register_domain(
         DomainName=domain_name,
@@ -127,9 +128,11 @@ def register_new_domain(route53domains, account, organizations, domain_name):
         AdminContact=registration_contact,
         RegistrantContact=registration_contact,
         TechContact=registration_contact,
+        BillingContact=registration_contact,
         PrivacyProtectAdminContact=True,
         PrivacyProtectRegistrantContact=True,
-        PrivacyProtectTechContact=True
+        PrivacyProtectTechContact=True,
+        PrivacyProtectBillingContact=True
     )
 
     print(f"Domain registration initiated: {registration['OperationId']}")
