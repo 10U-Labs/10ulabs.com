@@ -91,37 +91,6 @@ def test_hosted_zone_has_name_output():
     assert "HostedZoneName" in outputs
 
 
-def test_hosted_zone_exports_name():
-    app = cdk.App()
-
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
-    with open(config_path) as f:
-        config = json.load(f)
-
-    import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
-    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
-    domain_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-
-    outputs = template.find_outputs("*")
-
-    assert "HostedZoneName" in outputs
-
-
 def test_hosted_zone_exports_name_servers():
     app = cdk.App()
 
