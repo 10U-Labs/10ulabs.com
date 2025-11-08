@@ -23,7 +23,7 @@ class DomainStack(Stack):
             self, "DomainRegistrationHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
             handler="handler.handler",
-            code=lambda_.Code.from_asset(lambda_dir, exclude=["cfnresponse.py"]),
+            code=lambda_.Code.from_asset(lambda_dir),
             timeout=Duration.seconds(900),
             initial_policy=[
                 iam.PolicyStatement(
