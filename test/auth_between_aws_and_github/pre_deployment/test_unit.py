@@ -971,22 +971,29 @@ class TestPolicyGenerators:
         assert statement['Principal'] != '*'
         assert 'AWS' not in statement['Principal'] or statement['Principal'].get('AWS') != '*'
 
-    def test_trust_policy_conditions_are_restrictive(self):
-        """Test trust policy conditions are properly restrictive."""
+    def test_trust_policy_has_string_like_condition(self):
         policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'my-org', 'my-repo')
-
         statement = policy['Statement'][0]
         conditions = statement['Condition']
-
-        # Verify both StringLike and StringEquals conditions exist
         assert 'StringLike' in conditions
+
+    def test_trust_policy_has_string_equals_condition(self):
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'my-org', 'my-repo')
+        statement = policy['Statement'][0]
+        conditions = statement['Condition']
         assert 'StringEquals' in conditions
 
-        # Verify sub claim is scoped to specific repo
+    def test_trust_policy_restricts_sub_claim_to_repo(self):
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'my-org', 'my-repo')
+        statement = policy['Statement'][0]
+        conditions = statement['Condition']
         sub = conditions['StringLike']['token.actions.githubusercontent.com:sub']
         assert sub == 'repo:my-org/my-repo:*'
 
-        # Verify audience is exact match
+    def test_trust_policy_restricts_aud_claim_to_sts(self):
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'my-org', 'my-repo')
+        statement = policy['Statement'][0]
+        conditions = statement['Condition']
         aud = conditions['StringEquals']['token.actions.githubusercontent.com:aud']
         assert aud == 'sts.amazonaws.com'
 
