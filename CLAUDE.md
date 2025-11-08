@@ -93,20 +93,20 @@ pytest test/bootstrap/pre_deployment/test_integration.py -v
 
 ---
 
-## Domain Infrastructure Tests
+## Foundational Infrastructure Tests
 
-Run these tests if you modified `src/domain_name/` or `test/domain_name/`:
+Run these tests if you modified `src/foundational_infrastructure/` or `test/foundational_infrastructure/`:
 
 #### 1. YAML Linting
 ```bash
-yamllint .github/workflows/domain_name.yml
+yamllint .github/workflows/foundational_infrastructure.yml
 ```
 
 #### 2. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
 pip install -q pylint
-pylint src/domain_name/stack.py src/domain_name/lambda/handler.py \
+pylint src/foundational_infrastructure/stack.py src/foundational_infrastructure/lambda/handler.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```
@@ -121,19 +121,19 @@ pip install -q -r requirements-cdk.txt
 
 **Then run mypy:**
 ```bash
-mypy src/domain_name
+mypy src/foundational_infrastructure
 ```
 
 #### 4. Unit Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest test/domain_name/pre_deployment/unit/test_unit.py -v
+python -m pytest test/foundational_infrastructure/pre_deployment/unit/test_unit.py -v
 ```
 
 #### 5. Integration Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest test/domain_name/pre_deployment/integration/test_integration.py -v
+python -m pytest test/foundational_infrastructure/pre_deployment/integration/test_integration.py -v
 ```
 
 **NOTE:** Integration tests may require AWS credentials in environment variables:

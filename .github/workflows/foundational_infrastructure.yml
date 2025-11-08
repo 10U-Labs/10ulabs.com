@@ -1,23 +1,23 @@
-name: Domain Infrastructure
+name: Foundational Infrastructure
 on:
   push:
     branches:
       - main
     paths:
-      - 'src/domain_name/**'
-      - 'test/domain_name/**'
+      - 'src/foundational_infrastructure/**'
+      - 'test/foundational_infrastructure/**'
       - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
-      - '.github/workflows/domain_name.yml'
+      - '.github/workflows/foundational_infrastructure.yml'
   pull_request:
     paths:
-      - 'src/domain_name/**'
-      - 'test/domain_name/**'
+      - 'src/foundational_infrastructure/**'
+      - 'test/foundational_infrastructure/**'
       - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
-      - '.github/workflows/domain_name.yml'
+      - '.github/workflows/foundational_infrastructure.yml'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -60,17 +60,17 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint .github/workflows/domain_name.yml
+          yamllint .github/workflows/foundational_infrastructure.yml
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/domain_name/stack.py src/domain_name/lambda/handler.py \
+          pylint src/foundational_infrastructure/stack.py src/foundational_infrastructure/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          MYPYPATH=stubs python -m mypy src/domain_name
+          MYPYPATH=stubs python -m mypy src/foundational_infrastructure
   unit-testing-code:
     name: Unit testing code
     runs-on: ubuntu-latest
@@ -100,7 +100,7 @@ jobs:
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain_name/pre_deployment/unit/ -v
+          pytest test/foundational_infrastructure/pre_deployment/unit/ -v
   integration-testing-code:
     name: Integration testing code
     runs-on: ubuntu-latest
@@ -130,7 +130,7 @@ jobs:
       - name: Run pre-deployment integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain_name/pre_deployment/integration/ -v
+          pytest test/foundational_infrastructure/pre_deployment/integration/ -v
   building-artifacts:
     name: Building artifacts
     runs-on: ubuntu-latest
@@ -146,8 +146,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -196,8 +196,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -343,12 +343,12 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
-          DOMAIN_NAME=$(jq -r '.domain_name' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
+          DOMAIN_NAME=$(jq -r '.foundational_infrastructure' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-          echo "domain_name=$DOMAIN_NAME" >> $GITHUB_OUTPUT
+          echo "foundational_infrastructure=$DOMAIN_NAME" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
@@ -363,8 +363,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running unit tests on deployed domain infrastructure"
-          cinc-auditor exec test/domain_name/post_deployment/unit \
-            --input domain_name="${{ steps.config.outputs.domain_name }}" \
+          cinc-auditor exec test/foundational_infrastructure/post_deployment/unit \
+            --input foundational_infrastructure="${{ steps.config.outputs.foundational_infrastructure }}" \
             --reporter cli
   integration-testing-infrastructure:
     name: Integration testing infrastructure
@@ -381,8 +381,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -403,7 +403,7 @@ jobs:
       - name: Run integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain_name/post_deployment/integration/ -v
+          pytest test/foundational_infrastructure/post_deployment/integration/ -v
   e2e-testing-infrastructure:
     name: E2E testing infrastructure
     runs-on: ubuntu-latest
@@ -419,8 +419,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -441,7 +441,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/domain_name/post_deployment/e2e/ -v
+          pytest test/foundational_infrastructure/post_deployment/e2e/ -v
   determine-readme-update:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest
@@ -458,8 +458,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -475,7 +475,7 @@ jobs:
         id: check
         run: |
           python src/bootstrap/bootstrap.py readme \
-            --module domain_name \
+            --module foundational_infrastructure \
             --check \
             --output-file "$GITHUB_OUTPUT"
   conclude-readme-skip:
@@ -507,8 +507,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/domain_name/config.json)
-          REGION=$(jq -r '.aws_region' src/domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/foundational_infrastructure/config.json)
+          REGION=$(jq -r '.aws_region' src/foundational_infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -523,16 +523,16 @@ jobs:
       - name: Update README with Bedrock
         run: |
           python src/bootstrap/bootstrap.py readme \
-            --module domain_name \
+            --module foundational_infrastructure \
             --bedrock-model-id anthropic.claude-3-5-sonnet-20241022-v2:0
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          if git diff --quiet src/domain_name/README.md; then
+          if git diff --quiet src/foundational_infrastructure/README.md; then
             echo "No changes to README.md"
           else
-            git add src/domain_name/README.md
-            git commit -m "Update domain_name README.md [skip ci]"
+            git add src/foundational_infrastructure/README.md
+            git commit -m "Update foundational_infrastructure README.md [skip ci]"
             git push
           fi
