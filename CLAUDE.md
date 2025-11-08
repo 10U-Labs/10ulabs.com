@@ -24,6 +24,18 @@
 
 ## Development Workflow
 
+### Coding Standards
+
+**CRITICAL: DO NOT ADD COMMENTS TO CODE**
+- NEVER add inline comments (# comments)
+- NEVER add docstrings ("""...""")
+- NEVER add pylint disable comments
+- NEVER add type: ignore comments
+- NEVER add mypy ignore comments
+- NEVER add ANY form of comment to source code
+- If linters fail, fix the actual code - don't disable the warnings with comments
+- The only exception is if comments already exist in the original code - don't remove existing comments unless explicitly asked
+
 ### Branch and Push Strategy
 - **Always push to main**
 - **No PRs** - direct commits to main branch
