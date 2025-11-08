@@ -1173,6 +1173,480 @@ class TestDomainRegistrationParameters(unittest.TestCase):
         call_args = mock_route53domains.register_domain.call_args
         assert call_args[1].get('PrivacyProtectBillingContact') is True
 
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_register_domain_includes_admin_contact(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'SUCCESSFUL'
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [{
+                'Id': '/hostedzone/Z123',
+                'Name': '10ulabs.com.'
+            }]
+        }
+
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_route53domains.register_domain.call_args
+        assert 'AdminContact' in call_args[1]
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_register_domain_includes_registrant_contact(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'SUCCESSFUL'
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [{
+                'Id': '/hostedzone/Z123',
+                'Name': '10ulabs.com.'
+            }]
+        }
+
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_route53domains.register_domain.call_args
+        assert 'RegistrantContact' in call_args[1]
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_register_domain_includes_tech_contact(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'SUCCESSFUL'
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [{
+                'Id': '/hostedzone/Z123',
+                'Name': '10ulabs.com.'
+            }]
+        }
+
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_route53domains.register_domain.call_args
+        assert 'TechContact' in call_args[1]
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_register_domain_enables_admin_privacy_protection(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'SUCCESSFUL'
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [{
+                'Id': '/hostedzone/Z123',
+                'Name': '10ulabs.com.'
+            }]
+        }
+
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_route53domains.register_domain.call_args
+        assert call_args[1].get('PrivacyProtectAdminContact') is True
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_register_domain_enables_registrant_privacy_protection(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'SUCCESSFUL'
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [{
+                'Id': '/hostedzone/Z123',
+                'Name': '10ulabs.com.'
+            }]
+        }
+
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_route53domains.register_domain.call_args
+        assert call_args[1].get('PrivacyProtectRegistrantContact') is True
+
+    @patch('handler.time')
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_register_domain_enables_tech_privacy_protection(self, mock_cfnresponse, mock_boto3, mock_time):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1.2125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        mock_route53domains.register_domain.return_value = {
+            'OperationId': 'op-123'
+        }
+
+        mock_route53domains.get_operation_detail.return_value = {
+            'Status': 'SUCCESSFUL'
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [{
+                'Id': '/hostedzone/Z123',
+                'Name': '10ulabs.com.'
+            }]
+        }
+
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_route53domains.register_domain.call_args
+        assert call_args[1].get('PrivacyProtectTechContact') is True
+
 
 class TestPhoneNumberFormatting(unittest.TestCase):
 
