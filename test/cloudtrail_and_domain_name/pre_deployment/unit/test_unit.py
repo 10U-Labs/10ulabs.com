@@ -209,6 +209,28 @@ def test_domain_registration_lambda_has_timeout():
     )
 
 
+def test_domain_registration_lambda_has_description():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+    template = Template.from_stack(stack)
+    from aws_cdk.assertions import Match
+    template.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
+            "Description": Match.string_like_regexp("Domain registration handler - Updated .*")
+        }
+    )
+
+
 def test_custom_resource_for_domain_registration_count():
     app = cdk.App()
     config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
@@ -2058,6 +2080,33 @@ def test_cloudtrail_s3_bucket_versioning_disabled():
         versioning = properties.get("VersioningConfiguration")
         if versioning:
             assert versioning.get("Status") != "Enabled", "S3 bucket should not have versioning enabled"
+
+
+def test_cloudtrail_s3_bucket_has_auto_delete():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::S3::Bucket",
+        {
+            "PublicAccessBlockConfiguration": {
+                "BlockPublicAcls": True,
+                "BlockPublicPolicy": True,
+                "IgnorePublicAcls": True,
+                "RestrictPublicBuckets": True
+            }
+        }
+    )
+    template.has_resource_properties("Custom::S3AutoDeleteObjects", {})
 
 
 def test_cloudtrail_log_group_exists():
