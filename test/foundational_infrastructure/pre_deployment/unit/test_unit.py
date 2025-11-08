@@ -1744,21 +1744,17 @@ def test_cloudtrail_trail_includes_global_events():
     )
 
 
-def test_cloudtrail_trail_has_event_selectors():
-    """Test that CloudTrail trail has event selectors for management events"""
+def test_cloudtrail_trail_logs_all_read_write_events():
     app = cdk.App()
-
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
-
     import importlib.util
     stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
-
     stack = DomainStack(
         app,
         "TestDomainStack",
@@ -1768,14 +1764,45 @@ def test_cloudtrail_trail_has_event_selectors():
             region=config["aws_region"]
         )
     )
-
     template = Template.from_stack(stack)
     template.has_resource_properties(
         "AWS::CloudTrail::Trail",
         {
             "EventSelectors": [
                 {
-                    "ReadWriteType": "All",
+                    "ReadWriteType": "All"
+                }
+            ]
+        }
+    )
+
+
+def test_cloudtrail_trail_includes_management_events():
+    app = cdk.App()
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::CloudTrail::Trail",
+        {
+            "EventSelectors": [
+                {
                     "IncludeManagementEvents": True
                 }
             ]
