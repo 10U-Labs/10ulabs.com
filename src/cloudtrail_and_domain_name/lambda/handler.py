@@ -143,8 +143,7 @@ def register_new_domain(route53domains, account, organizations, domain_name):
         print(f"Registration failed: {error_msg}")
         return None, {
             'Error': error_msg,
-            'OperationId': registration['OperationId'],
-            'Hint': 'Check AWS account payment method and currency settings at https://console.aws.amazon.com/billing/home#/paymentmethods'
+            'OperationId': registration['OperationId']
         }
 
     return registration, None
