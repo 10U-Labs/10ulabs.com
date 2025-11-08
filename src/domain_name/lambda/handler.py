@@ -2,6 +2,7 @@ import time
 import traceback
 
 import boto3
+from botocore.exceptions import ClientError
 import cfnresponse
 
 
@@ -116,7 +117,7 @@ def wait_for_hosted_zone(route53, domain_name, registration):
 
             print(f"Hosted zone not yet available, will retry in {2 ** attempt}s...")
 
-        except Exception as e:
+        except ClientError as e:
             print(f"Error checking for hosted zone: {e}")
 
     print("Domain registration initiated but hosted zone not yet available.")
@@ -187,7 +188,7 @@ def handler(event, context):
         else:
             cfnresponse.send(event, context, cfnresponse.FAILED, error_data)
 
-    except Exception as e:
+    except (ClientError, ValueError, KeyError) as e:
         error_msg = str(e)
         print(f"Error: {error_msg}")
         tb = traceback.format_exc()
