@@ -408,15 +408,18 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
         assert 'missing contact fields' in call_args[0][3]['Error']
 
 
-def test_lambda_directory_contains_required_files():
-    """Test that Lambda directory contains all required files for deployment"""
+def test_lambda_directory_contains_handler():
+    """Test that Lambda directory contains handler.py for deployment"""
     lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+    handler_path = lambda_dir / "handler.py"
+    assert handler_path.exists(), "handler.py must exist in lambda directory for deployment"
 
-    required_files = ["handler.py", "cfnresponse.py"]
 
-    for required_file in required_files:
-        file_path = lambda_dir / required_file
-        assert file_path.exists(), f"{required_file} must exist in lambda directory for deployment"
+def test_lambda_directory_contains_cfnresponse():
+    """Test that Lambda directory contains cfnresponse.py for deployment"""
+    lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+    cfnresponse_path = lambda_dir / "cfnresponse.py"
+    assert cfnresponse_path.exists(), "cfnresponse.py must exist in lambda directory for deployment"
 
 
 def test_cfnresponse_contains_send_function():
