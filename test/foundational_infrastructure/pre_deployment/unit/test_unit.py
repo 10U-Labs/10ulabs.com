@@ -209,65 +209,6 @@ def test_domain_registration_lambda_has_timeout():
     )
 
 
-def test_domain_registration_lambda_has_correct_permissions():
-    """Test that domain registration Lambda has all required IAM permissions"""
-    app = cdk.App()
-
-    # Load config
-    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
-    with open(config_path) as f:
-        config = json.load(f)
-
-    # Dynamically import DomainStack
-    import importlib.util
-    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
-    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
-    domain_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    # Create stack
-    stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
-        )
-    )
-
-    # Create template
-    template = Template.from_stack(stack)
-
-    # Check for IAM role with required permissions
-    template.has_resource_properties(
-        "AWS::IAM::Policy",
-        {
-            "PolicyDocument": {
-                "Statement": [
-                    {
-                        "Action": [
-                            "route53domains:CheckDomainAvailability",
-                            "route53domains:GetDomainDetail",
-                            "route53domains:GetOperationDetail",
-                            "route53domains:RegisterDomain",
-                            "route53:ListHostedZonesByName",
-                            "route53:GetHostedZone",
-                            "route53:CreateHostedZone",
-                            "account:GetContactInformation",
-                            "account:GetAlternateContact",
-                            "organizations:DescribeOrganization"
-                        ],
-                        "Effect": "Allow",
-                        "Resource": "*"
-                    }
-                ]
-            }
-        }
-    )
-
-
 def test_custom_resource_for_domain_registration_count():
     app = cdk.App()
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
@@ -2054,6 +1995,22 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["account:GetContactInformation"])}]}})
+
+    def test_lambda_has_account_get_alternate_contact_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["account:GetAlternateContact"])}]}})
 
     def test_lambda_has_organizations_describe_org_permission(self):
         from aws_cdk.assertions import Match
