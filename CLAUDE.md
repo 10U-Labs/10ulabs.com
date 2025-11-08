@@ -93,20 +93,20 @@ pytest test/auth_between_aws_and_github/pre_deployment/test_integration.py -v
 
 ---
 
-## Foundational Infrastructure Tests
+## CloudTrail and Domain Name Tests
 
-Run these tests if you modified `src/foundational_infrastructure/` or `test/foundational_infrastructure/`:
+Run these tests if you modified `src/cloudtrail_and_domain_name/` or `test/cloudtrail_and_domain_name/`:
 
 #### 1. YAML Linting
 ```bash
-yamllint .github/workflows/foundational_infrastructure.yml
+yamllint .github/workflows/cloudtrail_and_domain_name.yml
 ```
 
 #### 2. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
 pip install -q pylint
-pylint src/foundational_infrastructure/stack.py src/foundational_infrastructure/lambda/handler.py \
+pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/lambda/handler.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```
@@ -121,19 +121,19 @@ pip install -q -r requirements-cdk.txt
 
 **Then run mypy:**
 ```bash
-mypy src/foundational_infrastructure
+mypy src/cloudtrail_and_domain_name
 ```
 
 #### 4. Unit Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest test/foundational_infrastructure/pre_deployment/unit/test_unit.py -v
+python -m pytest test/cloudtrail_and_domain_name/pre_deployment/unit/test_unit.py -v
 ```
 
 #### 5. Integration Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest test/foundational_infrastructure/pre_deployment/integration/test_integration.py -v
+python -m pytest test/cloudtrail_and_domain_name/pre_deployment/integration/test_integration.py -v
 ```
 
 **NOTE:** Integration tests may require AWS credentials in environment variables:
