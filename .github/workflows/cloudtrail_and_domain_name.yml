@@ -248,12 +248,10 @@ jobs:
         run: |
           echo "Fetching CloudWatch logs from Lambda execution..."
           echo "Searching for TenULabsDomainName DomainRegistration Lambda log groups..."
-
           LOG_GROUPS=$(aws logs describe-log-groups \
             --log-group-name-prefix "/aws/lambda/TenULabsDomainName" \
             --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName" \
             --output text 2>/dev/null || echo "")
-
           if [ -z "$LOG_GROUPS" ]; then
             echo "WARNING: No DomainRegistration Lambda log groups found"
             echo "This may mean the Lambda was not created, or log group naming changed"
@@ -264,12 +262,10 @@ jobs:
               --output text 2>/dev/null || echo "No log groups found"
             exit 0
           fi
-
           FOUND_LOGS=false
           for LOG_GROUP in $LOG_GROUPS; do
             echo ""
             echo "Found log group: $LOG_GROUP"
-
             LATEST_STREAM=$(aws logs describe-log-streams \
               --log-group-name "$LOG_GROUP" \
               --order-by LastEventTime \
@@ -277,31 +273,26 @@ jobs:
               --max-items 1 \
               --query 'logStreams[0].logStreamName' \
               --output text 2>/dev/null || echo "")
-
             if [ -z "$LATEST_STREAM" ] || [ "$LATEST_STREAM" = "None" ]; then
               echo "No log streams found in $LOG_GROUP"
               continue
             fi
-
             echo "Latest log stream: $LATEST_STREAM"
             echo ""
             echo "=========================================="
             echo "   CloudWatch Logs from Lambda Execution"
             echo "=========================================="
-
             aws logs get-log-events \
               --log-group-name "$LOG_GROUP" \
               --log-stream-name "$LATEST_STREAM" \
               --limit 100 \
               --query 'events[*].message' \
               --output text 2>/dev/null || echo "Could not fetch logs"
-
             echo "=========================================="
             echo ""
             FOUND_LOGS=true
             break
           done
-
           if [ "$FOUND_LOGS" = "false" ]; then
             echo "WARNING: Could not fetch any logs from CloudWatch"
           fi
