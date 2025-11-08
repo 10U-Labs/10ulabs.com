@@ -461,7 +461,7 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python src/bootstrap/bootstrap.py readme \
+          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --module foundational_infrastructure \
             --check \
             --output-file "$GITHUB_OUTPUT"
@@ -509,7 +509,7 @@ jobs:
           aws-region: ${{ steps.config.outputs.region }}
       - name: Update README with Bedrock
         run: |
-          python src/bootstrap/bootstrap.py readme \
+          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --module foundational_infrastructure \
             --bedrock-model-id anthropic.claude-3-5-sonnet-20241022-v2:0
       - name: Commit and push README if changed

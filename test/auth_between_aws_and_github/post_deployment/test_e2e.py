@@ -326,7 +326,7 @@ class TestBootstrapIdempotency:
     """
 
     def test_bootstrap_create_is_idempotent(self):
-        """Test that running bootstrap.py create again is safe and idempotent."""
+        """Test that running auth_between_aws_and_github.py create again is safe and idempotent."""
         config = load_config()
 
         # Prerequisite: System must be in WARM state (OIDC working)
@@ -387,12 +387,12 @@ class TestBootstrapIdempotency:
         secret_data = json.loads(secret_result.stdout)
         original_secret_arn = secret_data['ARN']
 
-        # Step 2: Run bootstrap.py create again (idempotency test)
-        # Note: In WARM state, bootstrap.py will use OIDC authentication and retrieve
+        # Step 2: Run auth_between_aws_and_github.py create again (idempotency test)
+        # Note: In WARM state, auth_between_aws_and_github.py will use OIDC authentication and retrieve
         # the GitHub PAT from Secrets Manager. The AWS credentials and GitHub token
         # parameters are still required by argparse but will be ignored.
         bootstrap_result = subprocess.run(
-            ['python', 'src/bootstrap/bootstrap.py', 'create',
+            ['python', 'src/auth_between_aws_and_github/auth_between_aws_and_github.py', 'create',
              '--aws-account-id', config['aws']['account_id'],
              '--aws-region', config['aws']['region'],
              '--aws-iam-role-name', config['aws']['iam_role_name'],
@@ -409,8 +409,8 @@ class TestBootstrapIdempotency:
             env=env
         )
 
-        # Verify bootstrap.py succeeded
-        assert bootstrap_result.returncode == 0, f"bootstrap.py create failed:\nSTDOUT:\n{bootstrap_result.stdout}\nSTDERR:\n{bootstrap_result.stderr}"
+        # Verify auth_between_aws_and_github.py succeeded
+        assert bootstrap_result.returncode == 0, f"auth_between_aws_and_github.py create failed:\nSTDOUT:\n{bootstrap_result.stdout}\nSTDERR:\n{bootstrap_result.stderr}"
 
         # Step 3: Verify same resource ARNs (no duplicates created)
         # Check OIDC provider still has same ARN

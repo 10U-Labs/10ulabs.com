@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for bootstrap.py using pytest.
+Unit tests for auth_between_aws_and_github.py using pytest.
 
 Uses only unittest.mock from standard library - no external test dependencies.
 Pytest itself comes with Python or can be installed via system package manager.
@@ -15,11 +15,11 @@ from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 
-# Add src/bootstrap to path
+# Add src/auth_between_aws_and_github to path
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
+sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
 
-import bootstrap
+import auth_between_aws_and_github
 
 
 class TestHelperFunctions:
@@ -28,24 +28,24 @@ class TestHelperFunctions:
     @patch('os.environ.get', return_value='true')
     def test_is_running_in_github_actions_returns_true(self, mock_env):
         """Test is_running_in_github_actions returns True when GITHUB_ACTIONS=true."""
-        result = bootstrap.is_running_in_github_actions()
+        result = auth_between_aws_and_github.is_running_in_github_actions()
         assert result is True
         mock_env.assert_called_once_with('GITHUB_ACTIONS', '')
 
     @patch('os.environ.get', return_value='false')
     def test_is_running_in_github_actions_returns_false(self, mock_env):
         """Test is_running_in_github_actions returns False when GITHUB_ACTIONS=false."""
-        result = bootstrap.is_running_in_github_actions()
+        result = auth_between_aws_and_github.is_running_in_github_actions()
         assert result is False
 
     @patch('os.environ.get', return_value='')
     def test_is_running_in_github_actions_returns_false_when_empty(self, mock_env):
         """Test is_running_in_github_actions returns False when GITHUB_ACTIONS is empty."""
-        result = bootstrap.is_running_in_github_actions()
+        result = auth_between_aws_and_github.is_running_in_github_actions()
         assert result is False
 
-    @patch('bootstrap.assume_role_with_oidc')
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.assume_role_with_oidc')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_detect_bootstrap_state_warm_with_oidc(self, mock_get_token, mock_assume_role):
         """Test detect_bootstrap_state returns warm when OIDC role assumption succeeds."""
         mock_get_token.return_value = 'test-oidc-token'
@@ -55,24 +55,24 @@ class TestHelperFunctions:
             'session_token': 'token'
         }
 
-        result = bootstrap.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
 
         assert result == 'warm'
         mock_assume_role.assert_called_once_with('123456789012', 'us-east-1', 'test-role')
 
-    @patch('bootstrap.assume_role_with_oidc')
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.assume_role_with_oidc')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_detect_bootstrap_state_cold_with_oidc_failure(self, mock_get_token, mock_assume_role):
         """Test detect_bootstrap_state returns cold when OIDC role assumption fails."""
         mock_get_token.return_value = 'test-oidc-token'
         mock_assume_role.return_value = None
 
-        result = bootstrap.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
 
         assert result == 'cold'
 
     @patch('urllib.request.urlopen')
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_detect_bootstrap_state_warm_with_credentials(self, mock_get_token, mock_urlopen):
         """Test detect_bootstrap_state returns warm when OIDC provider exists."""
         mock_get_token.return_value = None
@@ -80,7 +80,7 @@ class TestHelperFunctions:
         mock_response.read.return_value = b'<Response></Response>'
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = bootstrap.detect_bootstrap_state(
+        result = auth_between_aws_and_github.detect_bootstrap_state(
             '123456789012', 'us-east-1', 'test-role',
             'AKIATEST', 'secret'
         )
@@ -88,7 +88,7 @@ class TestHelperFunctions:
         assert result == 'warm'
 
     @patch('urllib.request.urlopen')
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_detect_bootstrap_state_cold_with_credentials(self, mock_get_token, mock_urlopen):
         """Test detect_bootstrap_state returns cold when OIDC provider doesn't exist."""
         from urllib.error import HTTPError
@@ -97,24 +97,24 @@ class TestHelperFunctions:
         error = HTTPError('url', 404, 'Not Found', {}, BytesIO(b'Not Found'))
         mock_urlopen.side_effect = error
 
-        result = bootstrap.detect_bootstrap_state(
+        result = auth_between_aws_and_github.detect_bootstrap_state(
             '123456789012', 'us-east-1', 'test-role',
             'AKIATEST', 'secret'
         )
 
         assert result == 'cold'
 
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_detect_bootstrap_state_cold_with_no_credentials(self, mock_get_token):
         """Test detect_bootstrap_state returns cold when no credentials available."""
         mock_get_token.return_value = None
 
-        result = bootstrap.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
 
         assert result == 'cold'
 
-    @patch('bootstrap.STSClient')
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.STSClient')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_assume_role_with_oidc_success(self, mock_get_token, mock_sts_class):
         """Test assume_role_with_oidc returns credentials on success."""
         mock_get_token.return_value = 'test-oidc-token'
@@ -126,22 +126,22 @@ class TestHelperFunctions:
         }
         mock_sts_class.return_value = mock_sts_instance
 
-        result = bootstrap.assume_role_with_oidc('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.assume_role_with_oidc('123456789012', 'us-east-1', 'test-role')
 
         assert result is not None
         assert result['access_key_id'] == 'AKIATEST'
 
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_assume_role_with_oidc_no_token(self, mock_get_token):
         """Test assume_role_with_oidc returns None when no OIDC token."""
         mock_get_token.return_value = None
 
-        result = bootstrap.assume_role_with_oidc('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.assume_role_with_oidc('123456789012', 'us-east-1', 'test-role')
 
         assert result is None
 
-    @patch('bootstrap.STSClient')
-    @patch('bootstrap.get_oidc_token')
+    @patch('auth_between_aws_and_github.STSClient')
+    @patch('auth_between_aws_and_github.get_oidc_token')
     def test_assume_role_with_oidc_failure(self, mock_get_token, mock_sts_class):
         """Test assume_role_with_oidc returns None when role assumption fails."""
         mock_get_token.return_value = 'test-oidc-token'
@@ -149,18 +149,18 @@ class TestHelperFunctions:
         mock_sts_instance.assume_role_with_web_identity.return_value = None
         mock_sts_class.return_value = mock_sts_instance
 
-        result = bootstrap.assume_role_with_oidc('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.assume_role_with_oidc('123456789012', 'us-east-1', 'test-role')
 
         assert result is None
 
-    @patch('bootstrap.SecretsManagerClient')
+    @patch('auth_between_aws_and_github.SecretsManagerClient')
     def test_get_secret_from_secrets_manager_success(self, mock_sm_class):
         """Test get_secret_from_secrets_manager returns secret value."""
         mock_sm_instance = MagicMock()
         mock_sm_instance.get_secret_value.return_value = {'key': 'value'}
         mock_sm_class.return_value = mock_sm_instance
 
-        result = bootstrap.get_secret_from_secrets_manager(
+        result = auth_between_aws_and_github.get_secret_from_secrets_manager(
             'test-secret', 'us-east-1', 'AKIATEST', 'secret'
         )
 
@@ -174,7 +174,7 @@ class TestAWSClientStdlib:
     @pytest.fixture
     def client(self):
         """Create AWSClientStdlib fixture."""
-        return bootstrap.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret123')
+        return auth_between_aws_and_github.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret123')
 
     def test_init_sets_credentials(self, client):
         """Test __init__ sets credentials correctly."""
@@ -182,9 +182,9 @@ class TestAWSClientStdlib:
         assert client.sts is not None
         assert client.iam is not None
         assert client.secrets is not None
-        assert isinstance(client.sts, bootstrap.STSClient)
-        assert isinstance(client.iam, bootstrap.IAMClient)
-        assert isinstance(client.secrets, bootstrap.SecretsManagerClient)
+        assert isinstance(client.sts, auth_between_aws_and_github.STSClient)
+        assert isinstance(client.iam, auth_between_aws_and_github.IAMClient)
+        assert isinstance(client.secrets, auth_between_aws_and_github.SecretsManagerClient)
 
     @patch('urllib.request.urlopen')
     def test_oidc_provider_exists_returns_true_when_found(self, mock_urlopen, client):
@@ -795,7 +795,7 @@ class TestAWSClientStdlib:
         error = HTTPError('url', 403, 'Forbidden', {}, BytesIO(b'Forbidden'))
         mock_urlopen.side_effect = error
 
-        with pytest.raises(bootstrap.AWSHTTPError):
+        with pytest.raises(auth_between_aws_and_github.AWSHTTPError):
             client.validate_access()
 
     @patch('urllib.request.urlopen')
@@ -815,7 +815,7 @@ class TestAWSClientStdlib:
 
         mock_urlopen.side_effect = side_effect
 
-        with pytest.raises(bootstrap.AWSHTTPError):
+        with pytest.raises(auth_between_aws_and_github.AWSHTTPError):
             client.validate_access()
 
     @patch('urllib.request.urlopen')
@@ -841,7 +841,7 @@ class TestAWSClientStdlib:
 
         mock_urlopen.side_effect = side_effect
 
-        with pytest.raises(bootstrap.AWSHTTPError):
+        with pytest.raises(auth_between_aws_and_github.AWSHTTPError):
             client.validate_access()
 
 
@@ -850,7 +850,7 @@ class TestPolicyGenerators:
 
     def test_create_trust_policy_generates_valid_policy(self):
         """Test create_trust_policy generates correct structure."""
-        policy = bootstrap.create_trust_policy('123456789012', 'test-org', 'test-repo')
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'test-org', 'test-repo')
 
         assert policy['Version'] == '2012-10-17'
         assert len(policy['Statement']) == 1
@@ -869,7 +869,7 @@ class TestPolicyGenerators:
             "Statement": [{"Effect": "Allow", "Action": "s3:GetObject"}]
         }
 
-        result = bootstrap.normalize_policy(policy)
+        result = auth_between_aws_and_github.normalize_policy(policy)
 
         # Should be compact JSON with sorted keys
         assert '"Action":"s3:GetObject"' in result
@@ -890,7 +890,7 @@ class TestPolicyGenerators:
             "Statement": [{"Effect": "Allow", "Action": "s3:GetObject"}]
         }
 
-        assert bootstrap.policies_equal(policy1, policy2) is True
+        assert auth_between_aws_and_github.policies_equal(policy1, policy2) is True
 
     def test_policies_equal_returns_true_for_reordered_keys(self):
         """Test policies_equal returns True for policies with reordered keys."""
@@ -903,7 +903,7 @@ class TestPolicyGenerators:
             "Version": "2012-10-17"
         }
 
-        assert bootstrap.policies_equal(policy1, policy2) is True
+        assert auth_between_aws_and_github.policies_equal(policy1, policy2) is True
 
     def test_policies_equal_returns_false_for_different_policies(self):
         """Test policies_equal returns False for different policies."""
@@ -916,11 +916,11 @@ class TestPolicyGenerators:
             "Statement": [{"Effect": "Allow", "Action": "s3:PutObject"}]
         }
 
-        assert bootstrap.policies_equal(policy1, policy2) is False
+        assert auth_between_aws_and_github.policies_equal(policy1, policy2) is False
 
     def test_trust_policy_requires_specific_github_org_repo(self):
         """Test trust policy restricts access to specific GitHub org/repo only."""
-        policy = bootstrap.create_trust_policy('123456789012', 'test-org', 'test-repo')
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'test-org', 'test-repo')
 
         statement = policy['Statement'][0]
         # Verify condition restricts to specific org/repo
@@ -932,7 +932,7 @@ class TestPolicyGenerators:
 
     def test_trust_policy_requires_correct_audience(self):
         """Test trust policy requires sts.amazonaws.com audience."""
-        policy = bootstrap.create_trust_policy('123456789012', 'test-org', 'test-repo')
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'test-org', 'test-repo')
 
         statement = policy['Statement'][0]
         # Verify audience condition exists and is correct
@@ -943,7 +943,7 @@ class TestPolicyGenerators:
     def test_trust_policy_uses_correct_oidc_provider_arn(self):
         """Test trust policy uses correct OIDC provider ARN format."""
         account_id = '123456789012'
-        policy = bootstrap.create_trust_policy(account_id, 'test-org', 'test-repo')
+        policy = auth_between_aws_and_github.create_trust_policy(account_id, 'test-org', 'test-repo')
 
         statement = policy['Statement'][0]
         federated_principal = statement['Principal']['Federated']
@@ -954,7 +954,7 @@ class TestPolicyGenerators:
 
     def test_trust_policy_only_allows_assume_role_with_web_identity(self):
         """Test trust policy only allows AssumeRoleWithWebIdentity action."""
-        policy = bootstrap.create_trust_policy('123456789012', 'test-org', 'test-repo')
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'test-org', 'test-repo')
 
         statement = policy['Statement'][0]
         # Verify only one specific action is allowed
@@ -964,7 +964,7 @@ class TestPolicyGenerators:
 
     def test_trust_policy_no_wildcard_principals(self):
         """Test trust policy does not allow wildcard principals."""
-        policy = bootstrap.create_trust_policy('123456789012', 'test-org', 'test-repo')
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'test-org', 'test-repo')
 
         statement = policy['Statement'][0]
         # Verify principal is not wildcard
@@ -973,7 +973,7 @@ class TestPolicyGenerators:
 
     def test_trust_policy_conditions_are_restrictive(self):
         """Test trust policy conditions are properly restrictive."""
-        policy = bootstrap.create_trust_policy('123456789012', 'my-org', 'my-repo')
+        policy = auth_between_aws_and_github.create_trust_policy('123456789012', 'my-org', 'my-repo')
 
         statement = policy['Statement'][0]
         conditions = statement['Condition']
@@ -996,7 +996,7 @@ class TestSecretValueGeneration:
 
     def test_create_secret_value_generates_correct_structure(self):
         """Test create_secret_value generates correct structure."""
-        result = bootstrap.create_secret_value('ghp_test123', 'test-org', 'test-repo')
+        result = auth_between_aws_and_github.create_secret_value('ghp_test123', 'test-org', 'test-repo')
 
         assert result['auth_method'] == 'classic-pat'
         assert result['github_token'] == 'ghp_test123'
@@ -1023,11 +1023,11 @@ class TestCreateResources:
         args.github_token = 'ghp_test123'
         return args
 
-    @patch('bootstrap.validate_oidc_role_permissions')
-    @patch('bootstrap.validate_github_pat')
-    @patch('bootstrap.validate_aws_credentials')
-    @patch('bootstrap.is_running_in_github_actions', return_value=False)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.validate_oidc_role_permissions')
+    @patch('auth_between_aws_and_github.validate_github_pat')
+    @patch('auth_between_aws_and_github.validate_aws_credentials')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=False)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_create_uses_stdlib_client_in_local_mode(self, mock_stdlib, mock_gh_check,
                                                       mock_aws_val, mock_pat_val, mock_role_val, args):
         """Test that create_resources uses AWSClientStdlib in local mode."""
@@ -1045,7 +1045,7 @@ class TestCreateResources:
         mock_client.iam.attach_managed_policy.return_value = True
         mock_client.secrets.create_secret.return_value = True
 
-        result = bootstrap.create_resources(args)
+        result = auth_between_aws_and_github.create_resources(args)
 
         assert result == 0
         mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None)
@@ -1055,11 +1055,11 @@ class TestCreateResources:
         mock_pat_val.assert_called_once()
         mock_role_val.assert_called_once()
 
-    @patch('bootstrap.validate_oidc_role_permissions')
-    @patch('bootstrap.validate_github_pat')
-    @patch('bootstrap.validate_aws_credentials')
-    @patch('bootstrap.is_running_in_github_actions', return_value=True)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.validate_oidc_role_permissions')
+    @patch('auth_between_aws_and_github.validate_github_pat')
+    @patch('auth_between_aws_and_github.validate_aws_credentials')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=True)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_create_skips_existing_oidc_provider(self, mock_stdlib, mock_gh_check,
                                                   mock_aws_val, mock_pat_val, mock_role_val, args):
         """Test that create_resources skips OIDC provider if it already exists."""
@@ -1075,16 +1075,16 @@ class TestCreateResources:
         mock_client.iam.attach_managed_policy.return_value = True
         mock_client.secrets.create_secret.return_value = True
 
-        result = bootstrap.create_resources(args)
+        result = auth_between_aws_and_github.create_resources(args)
 
         assert result == 0
         mock_client.iam.create_oidc_provider.assert_not_called()
 
-    @patch('bootstrap.validate_oidc_role_permissions')
-    @patch('bootstrap.validate_github_pat')
-    @patch('bootstrap.validate_aws_credentials')
-    @patch('bootstrap.is_running_in_github_actions', return_value=False)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.validate_oidc_role_permissions')
+    @patch('auth_between_aws_and_github.validate_github_pat')
+    @patch('auth_between_aws_and_github.validate_aws_credentials')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=False)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_create_returns_error_when_oidc_creation_fails(self, mock_stdlib, mock_gh_check,
                                                             mock_aws_val, mock_pat_val, mock_role_val, args):
         """Test that create_resources returns error code when OIDC creation fails."""
@@ -1095,15 +1095,15 @@ class TestCreateResources:
         mock_client.iam.oidc_provider_exists.return_value = False
         mock_client.iam.create_oidc_provider.return_value = False  # Fails
 
-        result = bootstrap.create_resources(args)
+        result = auth_between_aws_and_github.create_resources(args)
 
         assert result == 1
 
-    @patch('bootstrap.validate_oidc_role_permissions')
-    @patch('bootstrap.validate_github_pat')
-    @patch('bootstrap.validate_aws_credentials')
-    @patch('bootstrap.is_running_in_github_actions', return_value=False)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.validate_oidc_role_permissions')
+    @patch('auth_between_aws_and_github.validate_github_pat')
+    @patch('auth_between_aws_and_github.validate_aws_credentials')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=False)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_create_returns_error_when_role_creation_fails(self, mock_stdlib, mock_gh_check,
                                                             mock_aws_val, mock_pat_val, mock_role_val, args):
         """Test that create_resources returns error code when role creation fails."""
@@ -1115,7 +1115,7 @@ class TestCreateResources:
         mock_client.iam.role_exists.return_value = False
         mock_client.iam.create_role.return_value = False  # Fails
 
-        result = bootstrap.create_resources(args)
+        result = auth_between_aws_and_github.create_resources(args)
 
         assert result == 1
 
@@ -1137,8 +1137,8 @@ class TestDestroyResources:
         args.force = True
         return args
 
-    @patch('bootstrap.is_running_in_github_actions', return_value=False)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=False)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_destroy_uses_stdlib_client_in_local_mode(self, mock_stdlib, mock_gh_check, args):
         """Test that destroy_resources uses AWSClientStdlib in local mode."""
         mock_client = Mock()
@@ -1154,13 +1154,13 @@ class TestDestroyResources:
         mock_client.iam.oidc_provider_exists.return_value = True
         mock_client.iam.delete_oidc_provider.return_value = True
 
-        result = bootstrap.destroy_resources(args)
+        result = auth_between_aws_and_github.destroy_resources(args)
 
         assert result == 0
         mock_stdlib.assert_called_once_with('us-east-1', access_key_id='AKIATEST', secret_access_key='secret123', session_token=None)
 
-    @patch('bootstrap.is_running_in_github_actions', return_value=True)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=True)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_destroy_skips_non_existent_resources(self, mock_stdlib, mock_gh_check, args):
         """Test that destroy_resources skips resources that don't exist."""
         mock_client = Mock()
@@ -1169,15 +1169,15 @@ class TestDestroyResources:
         mock_client.iam.role_exists.return_value = False  # Doesn't exist
         mock_client.iam.oidc_provider_exists.return_value = False  # Doesn't exist
 
-        result = bootstrap.destroy_resources(args)
+        result = auth_between_aws_and_github.destroy_resources(args)
 
         assert result == 0
         mock_client.secrets.delete_secret.assert_not_called()
         mock_client.iam.delete_role.assert_not_called()
         mock_client.iam.delete_oidc_provider.assert_not_called()
 
-    @patch('bootstrap.is_running_in_github_actions', return_value=False)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=False)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     @patch('builtins.input', return_value='n')
     def test_destroy_aborts_when_user_declines_confirmation(self, mock_input, mock_stdlib, mock_gh_check, args):
         """Test that destroy_resources aborts when user declines confirmation."""
@@ -1185,13 +1185,13 @@ class TestDestroyResources:
         mock_client = Mock()
         mock_stdlib.return_value = mock_client
 
-        result = bootstrap.destroy_resources(args)
+        result = auth_between_aws_and_github.destroy_resources(args)
 
         assert result == 1
         mock_client.secrets.delete_secret.assert_not_called()
 
-    @patch('bootstrap.is_running_in_github_actions', return_value=False)
-    @patch('bootstrap.AWSClientStdlib')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions', return_value=False)
+    @patch('auth_between_aws_and_github.AWSClientStdlib')
     def test_destroy_returns_error_when_secret_deletion_fails(self, mock_stdlib, mock_gh_check, args):
         """Test that destroy_resources returns error when secret deletion fails."""
         mock_client = Mock()
@@ -1199,7 +1199,7 @@ class TestDestroyResources:
         mock_client.secrets.secret_exists.return_value = True
         mock_client.secrets.delete_secret.return_value = False  # Fails
 
-        result = bootstrap.destroy_resources(args)
+        result = auth_between_aws_and_github.destroy_resources(args)
 
         assert result == 1
 
@@ -1214,7 +1214,7 @@ class TestDeleteGitHubSecrets:
         mock_response.status = 204
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = bootstrap.delete_github_secrets(
+        result = auth_between_aws_and_github.delete_github_secrets(
             'ghp_test123',
             'test-org',
             'test-repo',
@@ -1232,7 +1232,7 @@ class TestDeleteGitHubSecrets:
         error = HTTPError('url', 404, 'Not Found', {}, BytesIO(b'Not Found'))
         mock_urlopen.side_effect = error
 
-        result = bootstrap.delete_github_secrets(
+        result = auth_between_aws_and_github.delete_github_secrets(
             'ghp_test123',
             'test-org',
             'test-repo',
@@ -1249,7 +1249,7 @@ class TestDeleteGitHubSecrets:
         error = HTTPError('url', 500, 'Internal Server Error', {}, BytesIO(b'Error'))
         mock_urlopen.side_effect = error
 
-        result = bootstrap.delete_github_secrets(
+        result = auth_between_aws_and_github.delete_github_secrets(
             'ghp_test123',
             'test-org',
             'test-repo',
@@ -1265,7 +1265,7 @@ class TestDeleteGitHubSecrets:
         mock_response.status = 204
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        bootstrap.delete_github_secrets(
+        auth_between_aws_and_github.delete_github_secrets(
             'ghp_test123',
             'test-org',
             'test-repo',
@@ -1286,13 +1286,13 @@ class TestDeleteGitHubSecrets:
 class TestMainFunction:
     """Test main entry point."""
 
-    @patch('sys.argv', ['bootstrap.py'])
+    @patch('sys.argv', ['auth_between_aws_and_github.py'])
     def test_main_shows_help_when_no_args(self):
         """Test main shows help when called with no arguments."""
-        result = bootstrap.main()
+        result = auth_between_aws_and_github.main()
         assert result == 1
 
-    @patch('sys.argv', ['bootstrap.py', '--verbose', 'create',
+    @patch('sys.argv', ['auth_between_aws_and_github.py', '--verbose', 'create',
                         '--aws-account-id', '123456789012',
                         '--aws-region', 'us-east-1',
                         '--aws-iam-role-name', 'TestRole',
@@ -1301,18 +1301,18 @@ class TestMainFunction:
                         '--aws-access-key-id', 'AKIATEST',
                         '--aws-secret-access-key', 'secret',
                         '--github-token', 'ghp_test123'])
-    @patch('bootstrap.create_resources')
+    @patch('auth_between_aws_and_github.create_resources')
     def test_main_sets_debug_level_with_verbose_flag(self, mock_create):
         """Test --verbose flag sets DEBUG log level."""
         import logging
         mock_create.return_value = 0
 
         with patch('sys.exit'):
-            bootstrap.main()
+            auth_between_aws_and_github.main()
 
         assert logging.getLogger().level == logging.DEBUG
 
-    @patch('sys.argv', ['bootstrap.py', '--quiet', 'create',
+    @patch('sys.argv', ['auth_between_aws_and_github.py', '--quiet', 'create',
                         '--aws-account-id', '123456789012',
                         '--aws-region', 'us-east-1',
                         '--aws-iam-role-name', 'TestRole',
@@ -1321,18 +1321,18 @@ class TestMainFunction:
                         '--aws-access-key-id', 'AKIATEST',
                         '--aws-secret-access-key', 'secret',
                         '--github-token', 'ghp_test123'])
-    @patch('bootstrap.create_resources')
+    @patch('auth_between_aws_and_github.create_resources')
     def test_main_sets_error_level_with_quiet_flag(self, mock_create):
         """Test --quiet flag sets ERROR log level."""
         import logging
         mock_create.return_value = 0
 
         with patch('sys.exit'):
-            bootstrap.main()
+            auth_between_aws_and_github.main()
 
         assert logging.getLogger().level == logging.ERROR
 
-    @patch('sys.argv', ['bootstrap.py', 'destroy',
+    @patch('sys.argv', ['auth_between_aws_and_github.py', 'destroy',
                         '--aws-account-id', '123456789012',
                         '--aws-region', 'us-east-1',
                         '--aws-iam-role-name', 'TestRole',
@@ -1341,20 +1341,20 @@ class TestMainFunction:
                         '--aws-access-key-id', 'AKIATEST',
                         '--aws-secret-access-key', 'secret',
                         '--force'])
-    @patch('bootstrap.destroy_resources')
+    @patch('auth_between_aws_and_github.destroy_resources')
     def test_main_calls_destroy_with_force_flag(self, mock_destroy):
         """Test main calls destroy_resources with --force."""
         mock_destroy.return_value = 0
 
         with patch('sys.exit'):
-            bootstrap.main()
+            auth_between_aws_and_github.main()
 
         mock_destroy.assert_called_once()
         args = mock_destroy.call_args[0][0]
         assert args.force is True
 #!/usr/bin/env python3
 """
-Unit tests for validation functions in bootstrap.py
+Unit tests for validation functions in auth_between_aws_and_github.py
 
 Tests the three validation functions that check credentials/permissions:
 - validate_aws_credentials()
@@ -1371,11 +1371,11 @@ from pathlib import Path
 
 import pytest
 
-# Add src/bootstrap to path
+# Add src/auth_between_aws_and_github to path
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
+sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
 
-import bootstrap
+import auth_between_aws_and_github
 
 
 class TestValidateAWSCredentials:
@@ -1387,7 +1387,7 @@ class TestValidateAWSCredentials:
         mock_client.validate_access = Mock(return_value=None)
 
         # Should not raise - validation passes
-        bootstrap.validate_aws_credentials(mock_client)
+        auth_between_aws_and_github.validate_aws_credentials(mock_client)
 
         # Verify validate_access was called
         mock_client.validate_access.assert_called_once()
@@ -1400,18 +1400,18 @@ class TestValidateAWSCredentials:
         mock_client = Mock()
         # Create AWSHTTPError wrapping the original error
         original_error = urllib.error.HTTPError('url', 403, 'Forbidden', {}, BytesIO(b'Forbidden'))
-        error = bootstrap.AWSHTTPError(original_error, 'Access Denied')
+        error = auth_between_aws_and_github.AWSHTTPError(original_error, 'Access Denied')
         mock_client.validate_access = Mock(side_effect=error)
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_aws_credentials(mock_client)
+            auth_between_aws_and_github.validate_aws_credentials(mock_client)
 
         assert exc_info.value.code == 1
 
 class TestValidateGitHubPAT:
     """Test validate_github_pat function."""
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_validates_admin_org_scope(self, mock_urlopen):
         """Test admin:org scope validation passes."""
         mock_response = MagicMock()
@@ -1420,12 +1420,12 @@ class TestValidateGitHubPAT:
         mock_urlopen.return_value = mock_response
 
         # Should not raise
-        bootstrap.validate_github_pat('ghp_test123')
+        auth_between_aws_and_github.validate_github_pat('ghp_test123')
 
         # Verify API call was made
         mock_urlopen.assert_called_once()
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_validates_repo_scope(self, mock_urlopen):
         """Test repo scope validation passes."""
         mock_response = MagicMock()
@@ -1434,9 +1434,9 @@ class TestValidateGitHubPAT:
         mock_urlopen.return_value = mock_response
 
         # Should not raise
-        bootstrap.validate_github_pat('ghp_test123')
+        auth_between_aws_and_github.validate_github_pat('ghp_test123')
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_fails_on_missing_admin_org_scope(self, mock_urlopen):
         """Test sys.exit(1) on missing admin:org scope."""
         mock_response = MagicMock()
@@ -1446,11 +1446,11 @@ class TestValidateGitHubPAT:
         mock_urlopen.return_value = mock_response
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_github_pat('ghp_test123')
+            auth_between_aws_and_github.validate_github_pat('ghp_test123')
 
         assert exc_info.value.code == 1
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_fails_on_missing_repo_scope(self, mock_urlopen):
         """Test sys.exit(1) on missing repo scope."""
         mock_response = MagicMock()
@@ -1460,11 +1460,11 @@ class TestValidateGitHubPAT:
         mock_urlopen.return_value = mock_response
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_github_pat('ghp_test123')
+            auth_between_aws_and_github.validate_github_pat('ghp_test123')
 
         assert exc_info.value.code == 1
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_fails_on_missing_both_scopes(self, mock_urlopen):
         """Test sys.exit(1) on missing both required scopes."""
         mock_response = MagicMock()
@@ -1473,11 +1473,11 @@ class TestValidateGitHubPAT:
         mock_urlopen.return_value = mock_response
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_github_pat('ghp_test123')
+            auth_between_aws_and_github.validate_github_pat('ghp_test123')
 
         assert exc_info.value.code == 1
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_fails_on_invalid_token(self, mock_urlopen):
         """Test sys.exit(1) on 401 Unauthorized response."""
         from urllib.error import HTTPError
@@ -1491,18 +1491,18 @@ class TestValidateGitHubPAT:
         )
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_github_pat('ghp_invalid')
+            auth_between_aws_and_github.validate_github_pat('ghp_invalid')
 
         assert exc_info.value.code == 1
 
-    @patch('bootstrap.urllib.request.urlopen')
+    @patch('auth_between_aws_and_github.urllib.request.urlopen')
     def test_fails_on_network_error(self, mock_urlopen):
         """Test sys.exit(1) on network error."""
         from urllib.error import URLError
         mock_urlopen.side_effect = URLError("Network error")
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_github_pat('ghp_test123')
+            auth_between_aws_and_github.validate_github_pat('ghp_test123')
 
         assert exc_info.value.code == 1
 
@@ -1516,7 +1516,7 @@ class TestValidateOIDCRolePermissions:
         mock_client.iam.managed_policy_attached = Mock(return_value=True)
 
         # Should not raise
-        bootstrap.validate_oidc_role_permissions(mock_client, 'TestRole')
+        auth_between_aws_and_github.validate_oidc_role_permissions(mock_client, 'TestRole')
 
         # Verify AdministratorAccess check was made
         mock_client.iam.managed_policy_attached.assert_called_once_with(
@@ -1530,7 +1530,7 @@ class TestValidateOIDCRolePermissions:
         mock_client.iam.managed_policy_attached = Mock(return_value=False)
 
         with pytest.raises(SystemExit) as exc_info:
-            bootstrap.validate_oidc_role_permissions(mock_client, 'TestRole')
+            auth_between_aws_and_github.validate_oidc_role_permissions(mock_client, 'TestRole')
 
         assert exc_info.value.code == 1
 
@@ -1540,30 +1540,30 @@ class TestClassHierarchy:
 
     def test_iam_client_inherits_from_base(self):
         """Test that IAMClient inherits from AWSClientBase."""
-        client = bootstrap.IAMClient('us-east-1', 'AKIATEST', 'secret')
-        assert isinstance(client, bootstrap.AWSClientBase)
+        client = auth_between_aws_and_github.IAMClient('us-east-1', 'AKIATEST', 'secret')
+        assert isinstance(client, auth_between_aws_and_github.AWSClientBase)
         assert client.region == 'us-east-1'
         assert client.access_key_id == 'AKIATEST'
         assert client.secret_access_key == 'secret'
 
     def test_secrets_manager_client_inherits_from_base(self):
         """Test that SecretsManagerClient inherits from AWSClientBase."""
-        client = bootstrap.SecretsManagerClient('us-east-1', 'AKIATEST', 'secret')
-        assert isinstance(client, bootstrap.AWSClientBase)
+        client = auth_between_aws_and_github.SecretsManagerClient('us-east-1', 'AKIATEST', 'secret')
+        assert isinstance(client, auth_between_aws_and_github.AWSClientBase)
         assert client.region == 'us-east-1'
         assert client.access_key_id == 'AKIATEST'
 
     def test_sts_client_inherits_from_base(self):
         """Test that STSClient inherits from AWSClientBase."""
-        client = bootstrap.STSClient('us-east-1', 'AKIATEST', 'secret')
-        assert isinstance(client, bootstrap.AWSClientBase)
+        client = auth_between_aws_and_github.STSClient('us-east-1', 'AKIATEST', 'secret')
+        assert isinstance(client, auth_between_aws_and_github.AWSClientBase)
         assert client.region == 'us-east-1'
         assert client.access_key_id == 'AKIATEST'
         assert client.secret_access_key == 'secret'
 
     def test_base_client_has_signing_methods(self):
         """Test that AWSClientBase has AWS Signature V4 signing infrastructure."""
-        client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'secret')
+        client = auth_between_aws_and_github.AWSClientBase('us-east-1', 'AKIATEST', 'secret')
 
         # Verify signing infrastructure methods exist
         assert hasattr(client, '_add_aws_signing_headers_with_timestamp')
@@ -1578,7 +1578,7 @@ class TestClassHierarchy:
 
     def test_canonical_request_url_encodes_uri_segments(self):
         """Test that canonical request URL-encodes special chars in URI per AWS SigV4."""
-        client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'secret')
+        client = auth_between_aws_and_github.AWSClientBase('us-east-1', 'AKIATEST', 'secret')
 
         # Test with URI containing special characters (like Bedrock model IDs with colons)
         canonical_request, _ = client._build_canonical_request_string(
@@ -1602,21 +1602,21 @@ class TestContainerUtilityMethods:
 
     def test_container_has_utility_methods(self):
         """Test that AWSClientStdlib has utility methods."""
-        client = bootstrap.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret')
+        client = auth_between_aws_and_github.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret')
 
         assert callable(client.get_account_id)
         assert callable(client.validate_access)
 
     def test_get_account_id_delegates_to_sts_client(self):
         """Test that get_account_id delegation exists."""
-        client = bootstrap.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret')
+        client = auth_between_aws_and_github.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret')
 
         assert hasattr(client, 'get_account_id')
         assert hasattr(client.sts, 'get_account_id')
 
     def test_validate_access_consolidates_service_checks(self):
         """Test that validate_access consolidates service validation."""
-        client = bootstrap.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret')
+        client = auth_between_aws_and_github.AWSClientStdlib('us-east-1', 'AKIATEST', 'secret')
 
         # Verify validate_access is a single method that tests all services
         assert callable(client.validate_access)
@@ -1633,13 +1633,13 @@ class TestBedrockClient:
     @pytest.fixture
     def bedrock_client(self):
         """Create BedrockClient fixture."""
-        return bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
+        return auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
 
     @patch('urllib.request.urlopen')
     def test_invoke_model_success_anthropic(self, mock_urlopen):
         """Test invoke_model returns Claude response with Anthropic model."""
         # Create client with Anthropic model
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
 
         response_data = {
             'content': [{'text': 'Test response from Claude'}]
@@ -1656,7 +1656,7 @@ class TestBedrockClient:
     def test_invoke_model_success_amazon_nova(self, mock_urlopen):
         """Test invoke_model returns response with Amazon Nova model."""
         # Create client with Amazon Nova model
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
 
         response_data = {
             'output': {'message': {'content': [{'text': 'Test response from Nova'}]}}
@@ -1671,16 +1671,16 @@ class TestBedrockClient:
 
     def test_bedrock_client_inherits_from_base(self):
         """Test that BedrockClient inherits from AWSClientBase."""
-        client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
-        assert isinstance(client, bootstrap.AWSClientBase)
+        client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        assert isinstance(client, auth_between_aws_and_github.AWSClientBase)
         assert client.region == 'us-east-1'
         assert client.access_key_id == 'AKIATEST'
 
-    @patch.object(bootstrap.BedrockClient, 'make_rest_request')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'make_rest_request')
     def test_enable_model_access_uses_rest_api_format(self, mock_request):
         """Test enable_model_access uses REST API format (path+body) not JSON-RPC (params) for Anthropic models."""
         # Create client with Anthropic model (these tests are for Anthropic-specific flow)
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
         # Mock successful responses for all 3 steps
         mock_request.side_effect = [
             '{}',  # Step 1: PutUseCaseForModelAccess
@@ -1703,12 +1703,12 @@ class TestBedrockClient:
             assert args[0] == 'bedrock', f"First arg should be 'bedrock': {call}"
             assert args[3] == 'bedrock', f"Fourth arg should be 'bedrock' (signing_service): {call}"
 
-    @patch.object(bootstrap.BedrockClient, 'make_rest_request')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'make_rest_request')
     def test_enable_model_access_idempotent_on_already_exists(self, mock_request, bedrock_client):
         """Test enable_model_access handles already submitted use case gracefully."""
         from io import BytesIO
         # Use case already submitted
-        error = bootstrap.AWSHTTPError(
+        error = auth_between_aws_and_github.AWSHTTPError(
             urllib.error.HTTPError('url', 400, 'Bad Request', {}, BytesIO(b'')),
             '{"message": "Use case already exists"}'
         )
@@ -1722,11 +1722,11 @@ class TestBedrockClient:
 
         assert result is True  # Should succeed (idempotent)
 
-    @patch.object(bootstrap.BedrockClient, 'make_rest_request')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'make_rest_request')
     def test_enable_model_access_accepts_agreement(self, mock_request):
         """Test enable_model_access accepts model agreement for Anthropic models."""
         # Create client with Anthropic model
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
         mock_request.side_effect = [
             '{}',  # PutUseCaseForModelAccess
             '{"offers": [{"offerToken": "token123"}]}',  # ListFoundationModelAgreementOffers
@@ -1742,14 +1742,14 @@ class TestBedrockClient:
                                 if 'create-foundation-model-agreement' in str(call)]
         assert len(create_agreement_call) == 1
 
-    @patch.object(bootstrap.BedrockClient, 'make_rest_request')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'make_rest_request')
     def test_enable_model_access_fails_on_account_not_authorized(self, mock_request):
         """Test enable_model_access fails when account not authorized (requires support case) for Anthropic models."""
         # Create client with Anthropic model
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
         from io import BytesIO
         # Account needs manual verification
-        error = bootstrap.AWSHTTPError(
+        error = auth_between_aws_and_github.AWSHTTPError(
             urllib.error.HTTPError('url', 400, 'Bad Request', {}, BytesIO(b'')),
             '{"message":"Your account is not authorized to perform this action. Please create a support case"}'
         )
@@ -1766,7 +1766,7 @@ class TestBedrockClient:
     def test_enable_model_access_skips_for_non_anthropic_models(self):
         """Test enable_model_access skips the access setup for non-Anthropic models like Amazon Nova."""
         # Amazon Nova models don't require the access setup process
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
 
         # Should return True without making any API calls
         result = bedrock_client.enable_model_access()
@@ -1775,21 +1775,21 @@ class TestBedrockClient:
 
     def test_bedrock_client_accepts_custom_model_id(self):
         """Test BedrockClient accepts custom model_id parameter."""
-        client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
+        client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
         assert client.model_id == 'amazon.nova-micro-v1:0'
 
-        client2 = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
+        client2 = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('anthropic.claude-sonnet-4-5-20250929-v1:0')
         assert client2.model_id == 'anthropic.claude-sonnet-4-5-20250929-v1:0'
 
     def test_bedrock_client_defaults_to_claude_haiku(self):
         """Test BedrockClient defaults to Claude Haiku 4.5."""
-        client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
+        client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123')
         assert client.model_id == 'us.anthropic.claude-haiku-4-5-20251001-v1:0'
 
     @patch('urllib.request.urlopen')
     def test_invoke_model_caps_max_tokens_for_amazon_nova(self, mock_urlopen):
         """Test invoke_model caps max_tokens at 10240 for Amazon Nova models."""
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('amazon.nova-micro-v1:0')
 
         response_data = {
             'output': {'message': {'content': [{'text': 'Test response'}]}}
@@ -1811,7 +1811,7 @@ class TestBedrockClient:
     @patch('urllib.request.urlopen')
     def test_invoke_model_uses_claude_4_format_for_anthropic(self, mock_urlopen):
         """Test invoke_model uses Claude 4+ request format for Anthropic models."""
-        bedrock_client = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('us.anthropic.claude-haiku-4-5-20251001-v1:0')
+        bedrock_client = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret123').set_model_id('us.anthropic.claude-haiku-4-5-20251001-v1:0')
 
         response_data = {
             'content': [{'text': 'Test response'}]
@@ -1841,9 +1841,9 @@ class TestBedrockClient:
 class TestReadmeHelperFunctions:
     """Test README helper functions."""
 
-    @patch('bootstrap.assume_role_with_oidc')
-    @patch('bootstrap.is_running_in_github_actions')
-    @patch('bootstrap.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.assume_role_with_oidc')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions')
+    @patch('auth_between_aws_and_github.detect_bootstrap_state')
     def test_get_credentials_for_state_oidc(self, mock_state, mock_is_gha, mock_oidc):
         """Test _get_credentials_for_state uses OIDC in warm state."""
         mock_state.return_value = 'warm'
@@ -1859,14 +1859,14 @@ class TestReadmeHelperFunctions:
         args.aws_region = 'us-east-1'
         args.aws_iam_role_name = 'TestRole'
 
-        access_key, secret_key, session_token = bootstrap._get_credentials_for_state(args)
+        access_key, secret_key, session_token = auth_between_aws_and_github._get_credentials_for_state(args)
 
         assert access_key == 'AKIAOIDC'
         assert session_token == 'token'
         mock_oidc.assert_called_once()
 
-    @patch('bootstrap.is_running_in_github_actions')
-    @patch('bootstrap.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.is_running_in_github_actions')
+    @patch('auth_between_aws_and_github.detect_bootstrap_state')
     def test_get_credentials_for_state_direct_credentials(self, mock_state, mock_is_gha):
         """Test _get_credentials_for_state uses direct credentials in cold state."""
         mock_state.return_value = 'cold'
@@ -1879,97 +1879,97 @@ class TestReadmeHelperFunctions:
         args.aws_access_key_id = 'AKIADIRECT'
         args.aws_secret_access_key = 'secretdirect'
 
-        access_key, secret_key, session_token = bootstrap._get_credentials_for_state(args)
+        access_key, secret_key, session_token = auth_between_aws_and_github._get_credentials_for_state(args)
 
         assert access_key == 'AKIADIRECT'
         assert secret_key == 'secretdirect'
         assert session_token is None
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_returns_true(self, mock_invoke):
         """Test _check_readme_needs_update returns True when update needed."""
         mock_invoke.return_value = 'true'
 
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
-        result = bootstrap._check_readme_needs_update(bedrock, 'code', 'readme')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')
 
         assert result is True
         mock_invoke.assert_called_once()
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_returns_false(self, mock_invoke):
         """Test _check_readme_needs_update returns False when current."""
         mock_invoke.return_value = 'false'
 
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
-        result = bootstrap._check_readme_needs_update(bedrock, 'code', 'readme')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')
 
         assert result is False
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_propagates_exception(self, mock_invoke):
         """Test _check_readme_needs_update propagates exceptions."""
         mock_invoke.side_effect = Exception('Bedrock error')
 
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
 
         with pytest.raises(Exception, match='Bedrock error'):
-            bootstrap._check_readme_needs_update(bedrock, 'code', 'readme')
+            auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_empty_readme(self, mock_invoke):
         """Test _check_readme_needs_update returns True when README is empty."""
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
 
         # Empty string
-        result = bootstrap._check_readme_needs_update(bedrock, 'code', '')
+        result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', '')
         assert result is True
         mock_invoke.assert_not_called()
 
         # Whitespace only
-        result = bootstrap._check_readme_needs_update(bedrock, 'code', '   \n\t  ')
+        result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', '   \n\t  ')
         assert result is True
         assert mock_invoke.call_count == 0  # Still not called
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_handles_verbose_true_response(self, mock_invoke):
         """Test _check_readme_needs_update handles 'true' with explanation."""
         # Haiku sometimes responds with 'true\n\nExplanation...' instead of just 'true'
         mock_invoke.return_value = 'true\n\nThe README incorrectly mentions AWS CLI'
 
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
-        result = bootstrap._check_readme_needs_update(bedrock, 'code', 'readme')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')
 
         assert result is True
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_update_readme_success(self, mock_invoke):
         """Test _update_readme returns generated README."""
         mock_invoke.return_value = '# New README\nContent here'
 
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
-        result = bootstrap._update_readme(bedrock, 'code')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        result = auth_between_aws_and_github._update_readme(bedrock, 'code')
 
         assert result == '# New README\nContent here'
         mock_invoke.assert_called_once()
 
-    @patch.object(bootstrap.BedrockClient, 'invoke_model')
+    @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_update_readme_raises_on_exception(self, mock_invoke):
         """Test _update_readme raises exception on failure."""
         mock_invoke.side_effect = Exception('Bedrock error')
 
-        bedrock = bootstrap.BedrockClient('us-east-1', 'AKIATEST', 'secret')
+        bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
 
         with pytest.raises(Exception):
-            bootstrap._update_readme(bedrock, 'code')
+            auth_between_aws_and_github._update_readme(bedrock, 'code')
 
 
 class TestReadmeCommand:
     """Test cmd_readme function."""
 
-    @patch('bootstrap._check_readme_needs_update')
-    @patch('bootstrap.BedrockClient')
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._check_readme_needs_update')
+    @patch('auth_between_aws_and_github.BedrockClient')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     @patch('builtins.open', create=True)
     @patch('os.path.exists')
     def test_cmd_readme_check_update_needed(self, mock_exists, mock_open, mock_creds,
@@ -1989,14 +1989,14 @@ class TestReadmeCommand:
         args.aws_region = 'us-east-1'
         args.output_file = None
 
-        result = bootstrap.cmd_readme(args)
+        result = auth_between_aws_and_github.cmd_readme(args)
 
         assert result == 0
         mock_check.assert_called_once()
 
-    @patch('bootstrap._check_readme_needs_update')
-    @patch('bootstrap.BedrockClient')
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._check_readme_needs_update')
+    @patch('auth_between_aws_and_github.BedrockClient')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     @patch('builtins.open', create=True)
     @patch('os.path.exists')
     def test_cmd_readme_check_no_update_needed(self, mock_exists, mock_open, mock_creds,
@@ -2016,13 +2016,13 @@ class TestReadmeCommand:
         args.aws_region = 'us-east-1'
         args.output_file = None
 
-        result = bootstrap.cmd_readme(args)
+        result = auth_between_aws_and_github.cmd_readme(args)
 
         assert result == 0
 
-    @patch('bootstrap._update_readme')
-    @patch('bootstrap.BedrockClient')
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._update_readme')
+    @patch('auth_between_aws_and_github.BedrockClient')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     @patch('builtins.open', create=True)
     @patch('os.path.exists')
     def test_cmd_readme_update_success(self, mock_exists, mock_open, mock_creds,
@@ -2041,12 +2041,12 @@ class TestReadmeCommand:
         args.update = True
         args.aws_region = 'us-east-1'
 
-        result = bootstrap.cmd_readme(args)
+        result = auth_between_aws_and_github.cmd_readme(args)
 
         assert result == 0
         mock_update.assert_called_once()
 
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     def test_cmd_readme_fails_without_credentials(self, mock_creds):
         """Test cmd_readme returns 1 when credentials unavailable."""
         mock_creds.return_value = (None, None, None)
@@ -2055,13 +2055,13 @@ class TestReadmeCommand:
         args.check = True
         args.aws_region = 'us-east-1'
 
-        result = bootstrap.cmd_readme(args)
+        result = auth_between_aws_and_github.cmd_readme(args)
 
         assert result == 1
 
-    @patch('bootstrap._check_readme_needs_update')
-    @patch('bootstrap.BedrockClient')
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._check_readme_needs_update')
+    @patch('auth_between_aws_and_github.BedrockClient')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     @patch('builtins.open', create=True)
     @patch('os.path.exists')
     def test_cmd_readme_propagates_bedrock_errors(self, mock_exists, mock_open, mock_creds,
@@ -2088,11 +2088,11 @@ class TestReadmeCommand:
 
         # Verify exception propagates instead of being caught
         with pytest.raises(HTTPError, match='Forbidden'):
-            bootstrap.cmd_readme(args)
+            auth_between_aws_and_github.cmd_readme(args)
 
-    @patch('bootstrap._check_readme_needs_update')
-    @patch('bootstrap.BedrockClient')
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._check_readme_needs_update')
+    @patch('auth_between_aws_and_github.BedrockClient')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     def test_cmd_readme_writes_to_output_file_when_update_needed(self, mock_creds,
                                                                   mock_bedrock_class,
                                                                   mock_check, tmp_path, monkeypatch):
@@ -2101,14 +2101,14 @@ class TestReadmeCommand:
         mock_check.return_value = True
 
         # Create real temp files
-        bootstrap_file = tmp_path / "bootstrap.py"
+        bootstrap_file = tmp_path / "auth_between_aws_and_github.py"
         bootstrap_file.write_text("code content")
         readme_file = tmp_path / "README.md"
         readme_file.write_text("readme content")
         output_file = tmp_path / "output.txt"
 
         # Patch the file paths
-        monkeypatch.setattr('bootstrap.os.path.abspath', lambda x: str(bootstrap_file))
+        monkeypatch.setattr('auth_between_aws_and_github.os.path.abspath', lambda x: str(bootstrap_file))
 
         args = MagicMock()
         args.check = True
@@ -2116,14 +2116,14 @@ class TestReadmeCommand:
         args.aws_region = 'us-east-1'
         args.output_file = str(output_file)
 
-        result = bootstrap.cmd_readme(args)
+        result = auth_between_aws_and_github.cmd_readme(args)
 
         assert result == 0
         assert output_file.read_text() == 'should_update=true\n'
 
-    @patch('bootstrap._check_readme_needs_update')
-    @patch('bootstrap.BedrockClient')
-    @patch('bootstrap._get_credentials_for_state')
+    @patch('auth_between_aws_and_github._check_readme_needs_update')
+    @patch('auth_between_aws_and_github.BedrockClient')
+    @patch('auth_between_aws_and_github._get_credentials_for_state')
     def test_cmd_readme_writes_to_output_file_when_no_update_needed(self, mock_creds,
                                                                      mock_bedrock_class,
                                                                      mock_check, tmp_path, monkeypatch):
@@ -2132,14 +2132,14 @@ class TestReadmeCommand:
         mock_check.return_value = False
 
         # Create real temp files
-        bootstrap_file = tmp_path / "bootstrap.py"
+        bootstrap_file = tmp_path / "auth_between_aws_and_github.py"
         bootstrap_file.write_text("code content")
         readme_file = tmp_path / "README.md"
         readme_file.write_text("readme content")
         output_file = tmp_path / "output.txt"
 
         # Patch the file paths
-        monkeypatch.setattr('bootstrap.os.path.abspath', lambda x: str(bootstrap_file))
+        monkeypatch.setattr('auth_between_aws_and_github.os.path.abspath', lambda x: str(bootstrap_file))
 
         args = MagicMock()
         args.check = True
@@ -2147,7 +2147,7 @@ class TestReadmeCommand:
         args.aws_region = 'us-east-1'
         args.output_file = str(output_file)
 
-        result = bootstrap.cmd_readme(args)
+        result = auth_between_aws_and_github.cmd_readme(args)
 
         assert result == 0
         assert output_file.read_text() == 'should_update=false\n'

@@ -1,21 +1,21 @@
-name: Bootstrap Infrastructure
+name: Ensuring appropriate bilateral authorizations between AWS and GitHub
 on:
   push:
     branches:
       - main
     paths:
-      - 'config/bootstrap.json'
-      - 'src/bootstrap/**'
-      - '!src/bootstrap/README.md'
-      - 'test/bootstrap/**'
-      - '.github/workflows/bootstrap.yml'
+      - 'config/auth_between_aws_and_github.json'
+      - 'src/auth_between_aws_and_github/**'
+      - '!src/auth_between_aws_and_github/README.md'
+      - 'test/auth_between_aws_and_github/**'
+      - '.github/workflows/auth_between_aws_and_github.yml'
   pull_request:
     paths:
-      - 'config/bootstrap.json'
-      - 'src/bootstrap/**'
-      - '!src/bootstrap/README.md'
-      - 'test/bootstrap/**'
-      - '.github/workflows/bootstrap.yml'
+      - 'config/auth_between_aws_and_github.json'
+      - 'src/auth_between_aws_and_github/**'
+      - '!src/auth_between_aws_and_github/README.md'
+      - 'test/auth_between_aws_and_github/**'
+      - '.github/workflows/auth_between_aws_and_github.yml'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -77,17 +77,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read bootstrap config
+      - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          enabled=$(jq -r '.enabled' config/bootstrap.json)
-          confirm_destroy=$(jq -r '.confirm_destroy' config/bootstrap.json)
-          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
-          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
-          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
-          github_org=$(jq -r '.github.org' config/bootstrap.json)
-          github_repo=$(jq -r '.github.repo' config/bootstrap.json)
+          enabled=$(jq -r '.enabled' config/auth_between_aws_and_github.json)
+          confirm_destroy=$(jq -r '.confirm_destroy' config/auth_between_aws_and_github.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
+          github_org=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
+          github_repo=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
           echo "enabled=$enabled" >> $GITHUB_OUTPUT
           echo "confirm_destroy=$confirm_destroy" >> $GITHUB_OUTPUT
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
@@ -96,7 +96,7 @@ jobs:
           echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
           echo "github_org=$github_org" >> $GITHUB_OUTPUT
           echo "github_repo=$github_repo" >> $GITHUB_OUTPUT
-      - name: Detect bootstrap state
+      - name: Detect auth_between_aws_and_github state
         id: state
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -142,7 +142,7 @@ jobs:
             echo "should_create=true" >> $GITHUB_OUTPUT
             echo "should_destroy=false" >> $GITHUB_OUTPUT
             echo "Decision: CREATE or UPDATE infrastructure (state: $STATE)"
-            echo "Note: bootstrap.py create is idempotent - creates new or updates existing resources"
+            echo "Note: auth_between_aws_and_github.py create is idempotent - creates new or updates existing resources"
           fi
   determine-readme-update:
     name: Determining if README.md should be updated
@@ -157,12 +157,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read bootstrap config
+      - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
-          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -178,7 +178,7 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python src/bootstrap/bootstrap.py readme \
+          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
@@ -195,20 +195,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Destroy bootstrap infrastructure
+      - name: Destroy auth_between_aws_and_github infrastructure
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          echo "Destroying bootstrap infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/bootstrap.json)
-          AWS_REGION=$(jq -r '.aws.region' config/bootstrap.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
-          GITHUB_ORG=$(jq -r '.github.org' config/bootstrap.json)
-          GITHUB_REPO=$(jq -r '.github.repo' config/bootstrap.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
-          ./src/bootstrap/bootstrap.py destroy \
+          echo "Destroying auth_between_aws_and_github infrastructure..."
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          AWS_REGION=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          GITHUB_ORG=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
+          GITHUB_REPO=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
+          ./src/auth_between_aws_and_github/auth_between_aws_and_github.py destroy \
             --aws-account-id "$AWS_ACCOUNT_ID" \
             --aws-region "$AWS_REGION" \
             --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
@@ -220,7 +220,7 @@ jobs:
             --force
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would destroy bootstrap infrastructure"
+        run: echo "DRY RUN - Would destroy auth_between_aws_and_github infrastructure"
   ensure-infrastructure-exists:
     name: Ensuring infrastructure exists in defined state
     runs-on: ubuntu-latest
@@ -250,23 +250,23 @@ jobs:
             echo "ℹ No GitHub PAT (will retrieve from Secrets Manager via OIDC if infrastructure exists)"
           fi
           echo ""
-          echo "Note: bootstrap.py will detect state and validate credentials accordingly"
-      - name: Create bootstrap infrastructure
+          echo "Note: auth_between_aws_and_github.py will detect state and validate credentials accordingly"
+      - name: Create auth_between_aws_and_github infrastructure
         if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
         run: |
-          echo "Creating bootstrap infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/bootstrap.json)
-          AWS_REGION=$(jq -r '.aws.region' config/bootstrap.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
-          GITHUB_ORG=$(jq -r '.github.org' config/bootstrap.json)
-          GITHUB_REPO=$(jq -r '.github.repo' config/bootstrap.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
-          BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' config/bootstrap.json)
-          ./src/bootstrap/bootstrap.py create \
+          echo "Creating auth_between_aws_and_github infrastructure..."
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          AWS_REGION=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          GITHUB_ORG=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
+          GITHUB_REPO=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
+          BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' config/auth_between_aws_and_github.json)
+          ./src/auth_between_aws_and_github/auth_between_aws_and_github.py create \
             --aws-account-id "$AWS_ACCOUNT_ID" \
             --aws-region "$AWS_REGION" \
             --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
@@ -279,7 +279,7 @@ jobs:
             --bedrock-model-id "$BEDROCK_MODEL_ID"
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would create bootstrap infrastructure"
+        run: echo "DRY RUN - Would create auth_between_aws_and_github infrastructure"
   e2e-testing-infrastructure:
     name: E2E testing infrastructure
     runs-on: ubuntu-latest
@@ -287,13 +287,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read bootstrap config
+      - name: Read auth_between_aws_and_github config
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
-          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -317,13 +317,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read bootstrap config
+      - name: Read auth_between_aws_and_github config
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
-          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -358,8 +358,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Verifying infrastructure destroyed..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/bootstrap.json)
-          AWS_REGION=$(jq -r '.aws.region' config/bootstrap.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          AWS_REGION=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
           set +e
           aws iam get-open-id-connect-provider \
             --open-id-connect-provider-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com" \
@@ -379,16 +379,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read bootstrap config
+      - name: Read auth_between_aws_and_github config
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
-          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
-          github_org=$(jq -r '.github.org' config/bootstrap.json)
-          github_repo=$(jq -r '.github.repo' config/bootstrap.json)
-          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/bootstrap.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          github_org=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
+          github_repo=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -498,13 +498,13 @@ jobs:
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/bootstrap/bootstrap.py \
+          pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          mypy src/bootstrap/bootstrap.py
+          mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
   unit-testing-code:
     name: Unit testing code
     runs-on: ubuntu-latest
@@ -539,12 +539,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read bootstrap config
+      - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/bootstrap.json)
-          aws_region=$(jq -r '.aws.region' config/bootstrap.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
+          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -559,7 +559,7 @@ jobs:
           aws-region: ${{ steps.config.outputs.aws_region }}
       - name: Update README
         run: |
-          python src/bootstrap/bootstrap.py readme \
+          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
@@ -568,8 +568,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/bootstrap/README.md
-          git diff --staged --quiet || git commit -m "Update bootstrap README via Bedrock"
+          git add src/auth_between_aws_and_github/README.md
+          git diff --staged --quiet || git commit -m "Update auth_between_aws_and_github README via Bedrock"
           git push
   trigger-dependent-workflows:
     name: Triggering dependent infrastructure workflows
