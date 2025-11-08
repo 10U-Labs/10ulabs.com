@@ -106,7 +106,7 @@ yamllint .github/workflows/domain_name.yml
 **Use the exact workflow command with all the same flags:**
 ```bash
 pip install -q pylint
-pylint src/domain_name/**/*.py \
+pylint src/domain_name/stack.py src/domain_name/lambda/handler.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```

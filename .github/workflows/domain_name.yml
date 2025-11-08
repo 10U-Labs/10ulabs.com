@@ -64,7 +64,7 @@ jobs:
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/domain_name/**/*.py \
+          pylint src/domain_name/stack.py src/domain_name/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Performing heavyweight static analysis
