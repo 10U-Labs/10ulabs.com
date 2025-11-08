@@ -456,7 +456,7 @@ def test_cfnresponse_is_not_empty_stub():
 
 
 def test_cloudtrail_s3_bucket_exists():
-    """Test that CloudTrail S3 bucket is created with correct properties"""
+    """Test that CloudTrail S3 bucket resource is created"""
     app = cdk.App()
 
     config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
@@ -481,8 +481,35 @@ def test_cloudtrail_s3_bucket_exists():
     )
 
     template = Template.from_stack(stack)
+    template.resource_count_is("AWS::S3::Bucket", 1)
 
-    from aws_cdk.assertions import Match
+
+def test_cloudtrail_s3_bucket_has_encryption():
+    """Test that CloudTrail S3 bucket has encryption configured"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
     template.has_resource_properties(
         "AWS::S3::Bucket",
         {
@@ -494,7 +521,40 @@ def test_cloudtrail_s3_bucket_exists():
                         }
                     }
                 ]
-            },
+            }
+        }
+    )
+
+
+def test_cloudtrail_s3_bucket_blocks_public_access():
+    """Test that CloudTrail S3 bucket blocks all public access"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::S3::Bucket",
+        {
             "PublicAccessBlockConfiguration": {
                 "BlockPublicAcls": True,
                 "BlockPublicPolicy": True,
@@ -542,7 +602,7 @@ def test_cloudtrail_s3_bucket_versioning_disabled():
 
 
 def test_cloudtrail_log_group_exists():
-    """Test that CloudWatch Logs log group for CloudTrail is created"""
+    """Test that CloudWatch Logs log group resource is created"""
     app = cdk.App()
 
     config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
@@ -567,7 +627,35 @@ def test_cloudtrail_log_group_exists():
     )
 
     template = Template.from_stack(stack)
+    template.resource_count_is("AWS::Logs::LogGroup", 1)
 
+
+def test_cloudtrail_log_group_has_retention():
+    """Test that CloudWatch Logs log group has 1-year retention configured"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
     template.has_resource_properties(
         "AWS::Logs::LogGroup",
         {
@@ -577,7 +665,7 @@ def test_cloudtrail_log_group_exists():
 
 
 def test_cloudtrail_trail_exists():
-    """Test that CloudTrail trail is created with correct configuration"""
+    """Test that CloudTrail trail resource is created"""
     app = cdk.App()
 
     config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
@@ -602,14 +690,140 @@ def test_cloudtrail_trail_exists():
     )
 
     template = Template.from_stack(stack)
+    template.resource_count_is("AWS::CloudTrail::Trail", 1)
 
-    from aws_cdk.assertions import Match
+
+def test_cloudtrail_trail_is_logging():
+    """Test that CloudTrail trail is configured to log"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
     template.has_resource_properties(
         "AWS::CloudTrail::Trail",
         {
-            "IsLogging": True,
-            "IsMultiRegionTrail": True,
-            "IncludeGlobalServiceEvents": True,
+            "IsLogging": True
+        }
+    )
+
+
+def test_cloudtrail_trail_is_multi_region():
+    """Test that CloudTrail trail is configured as multi-region"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::CloudTrail::Trail",
+        {
+            "IsMultiRegionTrail": True
+        }
+    )
+
+
+def test_cloudtrail_trail_includes_global_events():
+    """Test that CloudTrail trail includes global service events"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::CloudTrail::Trail",
+        {
+            "IncludeGlobalServiceEvents": True
+        }
+    )
+
+
+def test_cloudtrail_trail_has_event_selectors():
+    """Test that CloudTrail trail has event selectors for management events"""
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    template.has_resource_properties(
+        "AWS::CloudTrail::Trail",
+        {
             "EventSelectors": [
                 {
                     "ReadWriteType": "All",
@@ -620,8 +834,8 @@ def test_cloudtrail_trail_exists():
     )
 
 
-def test_cloudtrail_sends_to_cloudwatch_logs():
-    """Test that CloudTrail is configured to send logs to CloudWatch"""
+def test_cloudtrail_trail_sends_to_cloudwatch_logs():
+    """Test that CloudTrail trail is configured to send logs to CloudWatch"""
     app = cdk.App()
 
     config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
