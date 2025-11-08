@@ -70,7 +70,7 @@ jobs:
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy src/domain_name
+          PYTHONPATH=src/domain_name/lambda:$PYTHONPATH python -m mypy src/domain_name
   unit-testing-code:
     name: Unit testing code
     runs-on: ubuntu-latest
