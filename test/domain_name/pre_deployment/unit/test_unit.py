@@ -408,23 +408,45 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
         assert 'missing contact fields' in call_args[0][3]['Error']
 
 
-def test_lambda_deployment_package_includes_cfnresponse():
-    """Test that Lambda deployment package includes cfnresponse.py"""
+def test_lambda_directory_contains_required_files():
+    """Test that Lambda directory contains all required files for deployment"""
     lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
 
-    required_files = [
-        "handler.py",
-        "cfnresponse.py"
-    ]
+    required_files = ["handler.py", "cfnresponse.py"]
 
     for required_file in required_files:
         file_path = lambda_dir / required_file
         assert file_path.exists(), f"{required_file} must exist in lambda directory for deployment"
 
+
+def test_cfnresponse_contains_send_function():
+    """Test that cfnresponse.py contains send() function definition"""
+    lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
+
     with open(cfnresponse_path) as f:
         content = f.read()
-        assert "def send(" in content, "cfnresponse.py must contain functional send() implementation"
-        assert "http.request('PUT'" in content, "cfnresponse.py must make HTTP PUT request to CloudFormation"
+        assert "def send(" in content, "cfnresponse.py must contain send() function definition"
+
+
+def test_cfnresponse_makes_http_put_request():
+    """Test that cfnresponse.py makes HTTP PUT request to CloudFormation"""
+    lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+    cfnresponse_path = lambda_dir / "cfnresponse.py"
+
+    with open(cfnresponse_path) as f:
+        content = f.read()
+        assert "http.request('PUT'" in content, "cfnresponse.py must make HTTP PUT request to CloudFormation presigned URL"
+
+
+def test_cfnresponse_is_not_empty_stub():
+    """Test that cfnresponse.py has functional implementation, not just empty stub"""
+    lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+    cfnresponse_path = lambda_dir / "cfnresponse.py"
+
+    with open(cfnresponse_path) as f:
+        content = f.read()
         assert content.strip() != "", "cfnresponse.py must not be empty"
-        assert "pass" not in content or "http.request" in content, "cfnresponse.py must have functional implementation, not just 'pass'"
+
+        has_pass_only = "pass" in content and "http.request" not in content
+        assert not has_pass_only, "cfnresponse.py must have functional implementation, not just 'pass' stub"
