@@ -5,6 +5,32 @@ import aws_cdk as cdk
 from aws_cdk.assertions import Template
 
 
+def test_config_file_exists_in_correct_location():
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    assert config_path.exists(), f"Config file not found at {config_path}"
+
+
+def test_config_has_aws_account_id():
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "aws_account_id" in config
+
+
+def test_config_has_aws_region():
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "aws_region" in config
+
+
+def test_config_has_domain_name():
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "domain_name" in config
+
+
 def test_hosted_zone_created():
     """Test that stack references a hosted zone (imported from domain registration)"""
     app = cdk.App()
