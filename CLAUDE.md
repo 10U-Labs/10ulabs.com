@@ -34,7 +34,8 @@
 - NEVER add mypy ignore comments
 - NEVER add ANY form of comment to source code
 - If linters fail, fix the actual code - don't disable the warnings with comments
-- The only exception is if comments already exist in the original code - don't remove existing comments unless explicitly asked
+- If comments already exist in the original code, REMOVE THEM
+- Code should have ZERO comments of any kind
 
 ### Branch and Push Strategy
 - **Always push to main**
