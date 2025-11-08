@@ -44,7 +44,7 @@ if domain_config_path.exists():
 
     domain_stack = DomainStack(
         app,
-        "TenULabsOrgDomain",
+        "TenULabsDomain",
         config=domain_config,
         env=domain_env,
         description="Route53 hosted zone for 10ulabs.com domain"
