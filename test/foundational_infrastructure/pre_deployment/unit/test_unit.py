@@ -256,6 +256,7 @@ def test_domain_registration_lambda_has_correct_permissions():
                             "route53:GetHostedZone",
                             "route53:CreateHostedZone",
                             "account:GetContactInformation",
+                            "account:GetAlternateContact",
                             "organizations:DescribeOrganization"
                         ],
                         "Effect": "Allow",

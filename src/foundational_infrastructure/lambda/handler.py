@@ -42,15 +42,33 @@ def get_existing_domain_zone(route53domains, route53, domain_name):
 
 
 def get_contact_info(account, organizations):
-    print("Fetching root account email from Organizations API...")
-    org_info = organizations.describe_organization()
-    contact_email = org_info['Organization']['MasterAccountEmail']
-    print(f"Using root account email: {contact_email}")
+    print("Fetching account email address...")
+    contact_email = None
+
+    try:
+        contact_email = organizations.describe_organization()['Organization']['MasterAccountEmail']
+        print(f"Using organization root account email: {contact_email}")
+    except organizations.exceptions.AWSOrganizationsNotInUseException:
+        print("Account is not in an AWS Organization, will use billing contact email")
+    except ClientError as e:
+        print(f"Unable to access Organizations API: {e}")
+        print("Will use billing contact email instead")
 
     print("Fetching AWS account contact information...")
     contact_info = account.get_contact_information()['ContactInformation']
 
-    required_fields = {
+    if not contact_email:
+        try:
+            contact_email = account.get_alternate_contact(AlternateContactType='BILLING')['AlternateContact']['EmailAddress']
+            print(f"Using billing alternate contact email: {contact_email}")
+        except ClientError:
+            print("No billing alternate contact configured")
+            if contact_info.get('FullName'):
+                contact_email = f"admin@{contact_info.get('FullName', 'example').replace(' ', '.').lower()}.com"
+                print(f"WARNING: Generated email address: {contact_email}")
+                print("Please update domain contacts after registration")
+
+    missing_fields = [k for k, v in {
         'FullName': contact_info.get('FullName'),
         'AddressLine1': contact_info.get('AddressLine1'),
         'City': contact_info.get('City'),
@@ -58,21 +76,15 @@ def get_contact_info(account, organizations):
         'CountryCode': contact_info.get('CountryCode'),
         'PostalCode': contact_info.get('PostalCode'),
         'PhoneNumber': contact_info.get('PhoneNumber')
-    }
+    }.items() if not v]
 
-    missing_fields = [k for k, v in required_fields.items() if not v]
     if missing_fields:
-        error_msg = f"AWS account missing contact fields: {', '.join(missing_fields)}. Configure at: https://console.aws.amazon.com/billing/home#/account"
-        print(error_msg)
-        raise ValueError(error_msg)
+        print(f"AWS account missing contact fields: {', '.join(missing_fields)}. Configure at: https://console.aws.amazon.com/billing/home#/account")
+        raise ValueError(f"AWS account missing contact fields: {', '.join(missing_fields)}. Configure at: https://console.aws.amazon.com/billing/home#/account")
 
     full_name_parts = contact_info['FullName'].split(maxsplit=1)
-
-    phone = contact_info['PhoneNumber']
-    phone_digits = ''.join(c for c in phone if c.isdigit())
-
-    country_iso = contact_info['CountryCode']
-    country_dialing_code = COUNTRY_DIALING_CODES.get(country_iso, '1')
+    phone_digits = ''.join(c for c in contact_info['PhoneNumber'] if c.isdigit())
+    country_dialing_code = COUNTRY_DIALING_CODES.get(contact_info['CountryCode'], '1')
 
     if phone_digits.startswith(country_dialing_code):
         phone_formatted = f"+{country_dialing_code}.{phone_digits[len(country_dialing_code):]}"
