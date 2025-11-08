@@ -89,20 +89,38 @@ Run these tests if you modified `src/domain_name/` or `test/domain_name/`:
 yamllint .github/workflows/domain_name.yml
 ```
 
-#### 2. Python Static Type Checking (Mypy)
+#### 2. Python Code Linting (Pylint)
+**Use the exact workflow command with all the same flags:**
 ```bash
-mypy src/domain_name/stack.py
-mypy src/domain_name/lambda/handler.py
+pip install -q pylint
+pylint src/domain_name/**/*.py \
+  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+  --fail-under=10.0
 ```
 
-#### 3. Unit Tests
+**IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
+
+#### 3. Python Static Type Checking (Mypy)
+**First install dependencies:**
 ```bash
-pytest test/domain_name/pre_deployment/unit/test_unit.py -v
+pip install -q -r requirements-cdk.txt
 ```
 
-#### 4. Integration Tests
+**Then run mypy:**
 ```bash
-pytest test/domain_name/pre_deployment/integration/test_integration.py -v
+mypy src/domain_name
+```
+
+#### 4. Unit Tests
+**Requires CDK dependencies installed (see step 3):**
+```bash
+python -m pytest test/domain_name/pre_deployment/unit/test_unit.py -v
+```
+
+#### 5. Integration Tests
+**Requires CDK dependencies installed (see step 3):**
+```bash
+python -m pytest test/domain_name/pre_deployment/integration/test_integration.py -v
 ```
 
 **NOTE:** Integration tests may require AWS credentials in environment variables:
