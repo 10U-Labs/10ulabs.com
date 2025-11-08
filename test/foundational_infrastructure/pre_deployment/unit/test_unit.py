@@ -1144,6 +1144,134 @@ class TestLambdaHandlerRegistrationFailure(unittest.TestCase):
         assert 'payment' in call_args[0][3]['Hint'].lower()
 
 
+class TestPhoneNumberFormatting(unittest.TestCase):
+
+    def test_phone_with_dashes_us(self):
+        from handler import get_contact_info
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'test@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '212-555-1234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        contact = get_contact_info(mock_account, mock_organizations)
+
+        assert contact['PhoneNumber'] == '+1.2125551234'
+
+    def test_phone_with_parentheses_us(self):
+        from handler import get_contact_info
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'test@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '(212) 555-1234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        contact = get_contact_info(mock_account, mock_organizations)
+
+        assert contact['PhoneNumber'] == '+1.2125551234'
+
+    def test_phone_with_country_code_us(self):
+        from handler import get_contact_info
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'test@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '+1 (212) 555-1234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        contact = get_contact_info(mock_account, mock_organizations)
+
+        assert contact['PhoneNumber'] == '+1.2125551234'
+
+    def test_phone_uk_format(self):
+        from handler import get_contact_info
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'test@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'Jane Smith',
+                'PhoneNumber': '020 7123 4567',
+                'AddressLine1': '10 Downing St',
+                'City': 'London',
+                'StateOrRegion': 'England',
+                'CountryCode': 'GB',
+                'PostalCode': 'SW1A 2AA'
+            }
+        }
+
+        contact = get_contact_info(mock_account, mock_organizations)
+
+        assert contact['PhoneNumber'] == '+44.02071234567'
+
+    def test_phone_already_formatted_us(self):
+        from handler import get_contact_info
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'test@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+                'PhoneNumber': '12125551234',
+                'AddressLine1': '123 Main St',
+                'City': 'New York',
+                'StateOrRegion': 'NY',
+                'CountryCode': 'US',
+                'PostalCode': '10001'
+            }
+        }
+
+        contact = get_contact_info(mock_account, mock_organizations)
+
+        assert contact['PhoneNumber'] == '+1.2125551234'
+
+
 def test_lambda_directory_contains_handler():
     """Test that Lambda directory contains handler.py for deployment"""
     lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
