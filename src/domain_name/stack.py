@@ -1,11 +1,6 @@
-"""
-Domain Infrastructure: 10uf.org
-
-Creates the foundational Route53 hosted zone for 10uf.org.
-Registers the domain if not already registered.
-All services (websites, APIs, etc.) reference this zone.
-"""
+import os
 from typing import Dict, Any
+
 from aws_cdk import (
     Stack,
     CfnOutput,
@@ -19,15 +14,9 @@ from constructs import Construct
 
 
 class DomainStack(Stack):
-    """CDK Stack for 10uf.org domain infrastructure."""
-
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
-        # Lambda function to register domain and find/create hosted zone
-        # Note: AWS automatically creates a hosted zone when registering a domain
-        # This Lambda either finds the existing zone or registers the domain (which creates one)
-        import os
         lambda_dir = os.path.join(os.path.dirname(__file__), "lambda")
 
         domain_registration_handler = lambda_.Function(
@@ -53,7 +42,6 @@ class DomainStack(Stack):
             ]
         )
 
-        # Custom resource runs first - registers domain or finds existing zone
         domain_registration = CustomResource(
             self, "DomainRegistration",
             service_token=domain_registration_handler.function_arn,
@@ -62,15 +50,12 @@ class DomainStack(Stack):
             }
         )
 
-        # Import the hosted zone that AWS created during domain registration
-        # (not creating a new one - avoiding duplicate zones)
         self.hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
             self, "HostedZone",
             hosted_zone_id=domain_registration.get_att_string("HostedZoneId"),
             zone_name=config["domain_name"]
         )
 
-        # Outputs
         export_prefix = config['domain_name'].replace('.', '-')
 
         CfnOutput(
