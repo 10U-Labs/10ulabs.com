@@ -60,6 +60,7 @@ class DomainStack(Stack):
                     actions=[
                         "route53domains:CheckDomainAvailability",
                         "route53domains:GetDomainDetail",
+                        "route53domains:GetOperationDetail",
                         "route53domains:RegisterDomain",
                         "route53:ListHostedZonesByName",
                         "route53:GetHostedZone",

@@ -267,6 +267,7 @@ def test_domain_registration_lambda_has_correct_permissions():
                         "Action": [
                             "route53domains:CheckDomainAvailability",
                             "route53domains:GetDomainDetail",
+                            "route53domains:GetOperationDetail",
                             "route53domains:RegisterDomain",
                             "route53:ListHostedZonesByName",
                             "route53:GetHostedZone",
@@ -1816,3 +1817,150 @@ def test_domain_registration_depends_on_cloudtrail():
                 trail_id in depends_on for trail_id in cloudtrail_ids
             )
             assert has_cloudtrail_dependency, "Domain registration should depend on CloudTrail trail"
+
+
+class TestLambdaIAMPermissions(unittest.TestCase):
+
+    def test_lambda_has_route53domains_check_availability_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:CheckDomainAvailability"])}]}})
+
+    def test_lambda_has_route53domains_get_domain_detail_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:GetDomainDetail"])}]}})
+
+    def test_lambda_has_route53domains_get_operation_detail_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:GetOperationDetail"])}]}})
+
+    def test_lambda_has_route53domains_register_domain_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:RegisterDomain"])}]}})
+
+    def test_lambda_has_route53_list_hosted_zones_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53:ListHostedZonesByName"])}]}})
+
+    def test_lambda_has_route53_get_hosted_zone_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53:GetHostedZone"])}]}})
+
+    def test_lambda_has_route53_create_hosted_zone_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53:CreateHostedZone"])}]}})
+
+    def test_lambda_has_account_get_contact_info_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["account:GetContactInformation"])}]}})
+
+    def test_lambda_has_organizations_describe_org_permission(self):
+        from aws_cdk.assertions import Match
+        app = cdk.App()
+        config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+        with open(config_path) as f:
+            config = json.load(f)
+        import importlib.util
+        stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+        spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+        domain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(domain_module)
+        DomainStack = domain_module.DomainStack
+        stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+        template = Template.from_stack(stack)
+        template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["organizations:DescribeOrganization"])}]}})
