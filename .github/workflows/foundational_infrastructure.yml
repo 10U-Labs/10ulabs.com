@@ -257,28 +257,46 @@ jobs:
           fi
           for LOG_GROUP in $LOG_GROUPS; do
             echo "Checking log group: $LOG_GROUP"
-            LATEST_STREAM=$(aws logs describe-log-streams \
+            ALL_STREAMS=$(aws logs describe-log-streams \
               --log-group-name "$LOG_GROUP" \
-              --order-by LastEventTime \
+              --order-by LastIngestionTime \
               --descending \
-              --max-items 1 \
-              --query 'logStreams[0].logStreamName' \
+              --max-items 10 \
+              --query 'logStreams[*].logStreamName' \
               --output text 2>/dev/null || echo "")
-            if [ -n "$LATEST_STREAM" ] && [ "$LATEST_STREAM" != "None" ]; then
-              echo "Latest log stream: $LATEST_STREAM"
-              echo ""
-              echo "=========================================="
-              echo "     CloudWatch Logs (Last 10 minutes)"
-              echo "=========================================="
-              aws logs get-log-events \
+            if [ -z "$ALL_STREAMS" ]; then
+              echo "No log streams found in $LOG_GROUP"
+              continue
+            fi
+            FOUND_LOGS=false
+            for STREAM in $ALL_STREAMS; do
+              EVENTS=$(aws logs get-log-events \
                 --log-group-name "$LOG_GROUP" \
-                --log-stream-name "$LATEST_STREAM" \
+                --log-stream-name "$STREAM" \
                 --start-time $START_TIME \
-                --limit 200 \
-                --query 'events[*].message' \
-                --output text 2>/dev/null || echo "Could not fetch logs"
-              echo "=========================================="
-              echo ""
+                --limit 1 \
+                --query 'events[0]' \
+                --output text 2>/dev/null || echo "")
+              if [ -n "$EVENTS" ] && [ "$EVENTS" != "None" ]; then
+                echo "Found logs in stream: $STREAM"
+                echo ""
+                echo "=========================================="
+                echo "     CloudWatch Logs (Last 10 minutes)"
+                echo "=========================================="
+                aws logs get-log-events \
+                  --log-group-name "$LOG_GROUP" \
+                  --log-stream-name "$STREAM" \
+                  --start-time $START_TIME \
+                  --limit 200 \
+                  --query 'events[*].message' \
+                  --output text 2>/dev/null || echo "Could not fetch logs"
+                echo "=========================================="
+                echo ""
+                FOUND_LOGS=true
+                break
+              fi
+            done
+            if [ "$FOUND_LOGS" = "true" ]; then
               break
             fi
           done

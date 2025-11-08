@@ -5,6 +5,13 @@ import boto3
 from botocore.exceptions import ClientError
 import cfnresponse
 
+COUNTRY_DIALING_CODES = {
+    'US': '1', 'CA': '1', 'GB': '44', 'AU': '61', 'DE': '49', 'FR': '33',
+    'IT': '39', 'ES': '34', 'NL': '31', 'BE': '32', 'CH': '41', 'AT': '43',
+    'SE': '46', 'NO': '47', 'DK': '45', 'FI': '358', 'IE': '353', 'NZ': '64',
+    'JP': '81', 'KR': '82', 'CN': '86', 'IN': '91', 'BR': '55', 'MX': '52'
+}
+
 
 def get_existing_domain_zone(route53domains, route53, domain_name):
     domain_detail = route53domains.get_domain_detail(DomainName=domain_name)
@@ -62,11 +69,15 @@ def get_contact_info(account, organizations):
     full_name_parts = contact_info['FullName'].split(maxsplit=1)
 
     phone = contact_info['PhoneNumber']
-    phone_digits = ''.join(c for c in phone if c.isdigit() or c == '+')
-    if not phone_digits.startswith('+'):
-        phone_digits = '+' + phone_digits
+    phone_digits = ''.join(c for c in phone if c.isdigit())
 
-    phone_formatted = phone_digits[:2] + '.' + phone_digits[2:]
+    country_iso = contact_info['CountryCode']
+    country_dialing_code = COUNTRY_DIALING_CODES.get(country_iso, '1')
+
+    if phone_digits.startswith(country_dialing_code):
+        phone_formatted = f"+{country_dialing_code}.{phone_digits[len(country_dialing_code):]}"
+    else:
+        phone_formatted = f"+{country_dialing_code}.{phone_digits}"
 
     contact = {
         'FirstName': full_name_parts[0],
