@@ -66,6 +66,7 @@ class DomainStack(Stack):
                         "route53:GetHostedZone",
                         "route53:CreateHostedZone",
                         "account:GetContactInformation",
+                        "account:GetAlternateContact",
                         "organizations:DescribeOrganization"
                     ],
                     resources=["*"]
