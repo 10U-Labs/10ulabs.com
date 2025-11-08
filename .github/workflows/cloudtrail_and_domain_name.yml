@@ -262,40 +262,45 @@ jobs:
               --output text 2>/dev/null || echo "No log groups found"
             exit 0
           fi
-          FOUND_LOGS=false
+          LATEST_LOG_GROUP=""
+          LATEST_TIMESTAMP=0
           for LOG_GROUP in $LOG_GROUPS; do
-            echo ""
-            echo "Found log group: $LOG_GROUP"
-            LATEST_STREAM=$(aws logs describe-log-streams \
+            STREAM_INFO=$(aws logs describe-log-streams \
               --log-group-name "$LOG_GROUP" \
               --order-by LastEventTime \
               --descending \
               --max-items 1 \
-              --query 'logStreams[0].logStreamName' \
+              --query 'logStreams[0].[logStreamName,lastEventTime]' \
               --output text 2>/dev/null || echo "")
-            if [ -z "$LATEST_STREAM" ] || [ "$LATEST_STREAM" = "None" ]; then
-              echo "No log streams found in $LOG_GROUP"
+            if [ -z "$STREAM_INFO" ]; then
               continue
             fi
-            echo "Latest log stream: $LATEST_STREAM"
-            echo ""
-            echo "=========================================="
-            echo "   CloudWatch Logs from Lambda Execution"
-            echo "=========================================="
-            aws logs get-log-events \
-              --log-group-name "$LOG_GROUP" \
-              --log-stream-name "$LATEST_STREAM" \
-              --limit 100 \
-              --query 'events[*].message' \
-              --output text 2>/dev/null || echo "Could not fetch logs"
-            echo "=========================================="
-            echo ""
-            FOUND_LOGS=true
-            break
+            TIMESTAMP=$(echo "$STREAM_INFO" | awk '{print $2}')
+            if [ "$TIMESTAMP" -gt "$LATEST_TIMESTAMP" ]; then
+              LATEST_TIMESTAMP=$TIMESTAMP
+              LATEST_LOG_GROUP="$LOG_GROUP"
+              LATEST_STREAM=$(echo "$STREAM_INFO" | awk '{print $1}')
+            fi
           done
-          if [ "$FOUND_LOGS" = "false" ]; then
-            echo "WARNING: Could not fetch any logs from CloudWatch"
+          if [ -z "$LATEST_LOG_GROUP" ]; then
+            echo "WARNING: Could not find any log groups with events"
+            exit 0
           fi
+          echo ""
+          echo "Most recent log group: $LATEST_LOG_GROUP"
+          echo "Latest log stream: $LATEST_STREAM"
+          echo ""
+          echo "=========================================="
+          echo "   CloudWatch Logs from Lambda Execution"
+          echo "=========================================="
+          aws logs get-log-events \
+            --log-group-name "$LATEST_LOG_GROUP" \
+            --log-stream-name "$LATEST_STREAM" \
+            --limit 100 \
+            --query 'events[*].message' \
+            --output text 2>/dev/null || echo "Could not fetch logs"
+          echo "=========================================="
+          echo ""
       - name: Fail if deployment failed
         if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
         run: |
