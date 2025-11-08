@@ -229,6 +229,19 @@ jobs:
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: cdk diff TenULabsOrgDomain
+      - name: Cleanup failed stack if needed
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name TenULabsOrgDomain --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+          if [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ] || [ "$STACK_STATUS" = "CREATE_FAILED" ]; then
+            echo "Stack is in failed state ($STACK_STATUS), deleting before redeployment..."
+            aws cloudformation delete-stack --stack-name TenULabsOrgDomain
+            echo "Waiting for stack deletion to complete..."
+            aws cloudformation wait stack-delete-complete --stack-name TenULabsOrgDomain
+            echo "Stack deleted successfully"
+          else
+            echo "Stack status: $STACK_STATUS (no cleanup needed)"
+          fi
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
