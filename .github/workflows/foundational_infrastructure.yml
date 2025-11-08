@@ -236,8 +236,7 @@ jobs:
           cdk deploy TenULabsOrgDomain \
             --require-approval never \
             --outputs-file domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
-          # Capture exit code
-          if grep -q "failed to deploy" /tmp/cdk_deploy.log; then
+          if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
             echo "deployment_failed=true" >> $GITHUB_OUTPUT
           else
             echo "deployment_failed=false" >> $GITHUB_OUTPUT
