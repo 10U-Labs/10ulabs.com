@@ -232,16 +232,20 @@ jobs:
       - name: Cleanup failed stack if needed
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          STACK_STATUS=$(aws cloudformation describe-stacks --stack-name TenULabsDomainName --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
-          if [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ] || [ "$STACK_STATUS" = "CREATE_FAILED" ]; then
-            echo "Stack is in failed state ($STACK_STATUS), deleting before redeployment..."
-            aws cloudformation delete-stack --stack-name TenULabsDomainName
-            echo "Waiting for stack deletion to complete..."
-            aws cloudformation wait stack-delete-complete --stack-name TenULabsDomainName
-            echo "Stack deleted successfully"
-          else
-            echo "Stack status: $STACK_STATUS (no cleanup needed)"
-          fi
+          for STACK_NAME in TenUFOrgDomain TenULabsOrgDomain TenULabsDomain TenULabsDomainName; do
+            STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+            if [ "$STACK_STATUS" != "DOES_NOT_EXIST" ]; then
+              if [ "$STACK_NAME" != "TenULabsDomainName" ] || [ "$STACK_STATUS" = "ROLLBACK_COMPLETE" ] || [ "$STACK_STATUS" = "CREATE_FAILED" ]; then
+                echo "Deleting old/failed stack $STACK_NAME (status: $STACK_STATUS)..."
+                aws cloudformation delete-stack --stack-name $STACK_NAME
+                echo "Waiting for stack deletion to complete..."
+                aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME
+                echo "Stack $STACK_NAME deleted successfully"
+              else
+                echo "Stack $STACK_NAME status: $STACK_STATUS (no cleanup needed)"
+              fi
+            fi
+          done
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
