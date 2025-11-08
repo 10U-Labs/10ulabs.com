@@ -406,3 +406,25 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
         call_args = mock_cfnresponse.send.call_args
         assert call_args[0][2] == mock_cfnresponse.FAILED
         assert 'missing contact fields' in call_args[0][3]['Error']
+
+
+def test_lambda_deployment_package_includes_cfnresponse():
+    """Test that Lambda deployment package includes cfnresponse.py"""
+    lambda_dir = Path(__file__).parents[4] / "src" / "domain_name" / "lambda"
+
+    required_files = [
+        "handler.py",
+        "cfnresponse.py"
+    ]
+
+    for required_file in required_files:
+        file_path = lambda_dir / required_file
+        assert file_path.exists(), f"{required_file} must exist in lambda directory for deployment"
+
+    cfnresponse_path = lambda_dir / "cfnresponse.py"
+    with open(cfnresponse_path) as f:
+        content = f.read()
+        assert "def send(" in content, "cfnresponse.py must contain functional send() implementation"
+        assert "http.request('PUT'" in content, "cfnresponse.py must make HTTP PUT request to CloudFormation"
+        assert content.strip() != "", "cfnresponse.py must not be empty"
+        assert "pass" not in content or "http.request" in content, "cfnresponse.py must have functional implementation, not just 'pass'"
