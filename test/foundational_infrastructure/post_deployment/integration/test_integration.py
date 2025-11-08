@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture
 def config():
     """Load domain config"""
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         return json.load(f)
 

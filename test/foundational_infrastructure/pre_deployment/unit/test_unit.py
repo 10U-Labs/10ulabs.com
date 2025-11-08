@@ -10,7 +10,7 @@ def test_hosted_zone_created():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -49,7 +49,7 @@ def test_hosted_zone_outputs():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -89,7 +89,7 @@ def test_domain_registration_lambda_exists():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -131,7 +131,7 @@ def test_domain_registration_lambda_has_correct_permissions():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -188,7 +188,7 @@ def test_custom_resource_for_domain_registration_exists():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -459,7 +459,7 @@ def test_cloudtrail_s3_bucket_exists():
     """Test that CloudTrail S3 bucket resource is created"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -488,7 +488,7 @@ def test_cloudtrail_s3_bucket_has_encryption():
     """Test that CloudTrail S3 bucket has encryption configured"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -530,7 +530,7 @@ def test_cloudtrail_s3_bucket_blocks_public_access():
     """Test that CloudTrail S3 bucket blocks all public access"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -569,7 +569,7 @@ def test_cloudtrail_s3_bucket_versioning_disabled():
     """Test that CloudTrail S3 bucket has versioning disabled as specified"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -605,7 +605,7 @@ def test_cloudtrail_log_group_exists():
     """Test that CloudWatch Logs log group resource is created"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -634,7 +634,7 @@ def test_cloudtrail_log_group_has_retention():
     """Test that CloudWatch Logs log group has 1-year retention configured"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -668,7 +668,7 @@ def test_cloudtrail_trail_exists():
     """Test that CloudTrail trail resource is created"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -697,7 +697,7 @@ def test_cloudtrail_trail_is_logging():
     """Test that CloudTrail trail is configured to log"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -731,7 +731,7 @@ def test_cloudtrail_trail_is_multi_region():
     """Test that CloudTrail trail is configured as multi-region"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -765,7 +765,7 @@ def test_cloudtrail_trail_includes_global_events():
     """Test that CloudTrail trail includes global service events"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -799,7 +799,7 @@ def test_cloudtrail_trail_has_event_selectors():
     """Test that CloudTrail trail has event selectors for management events"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -838,7 +838,7 @@ def test_cloudtrail_trail_sends_to_cloudwatch_logs():
     """Test that CloudTrail trail is configured to send logs to CloudWatch"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -874,7 +874,7 @@ def test_domain_registration_depends_on_cloudtrail():
     """Test that domain registration has explicit dependency on CloudTrail"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 

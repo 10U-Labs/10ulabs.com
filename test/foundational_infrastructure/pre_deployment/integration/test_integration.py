@@ -11,7 +11,7 @@ def test_stack_synthesizes_correctly():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -45,7 +45,7 @@ def test_stack_exports_required_outputs():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -83,7 +83,7 @@ def test_hosted_zone_configuration():
     app = cdk.App()
 
     # Load config
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -121,7 +121,7 @@ def test_cloudtrail_resources_synthesize():
     """Test that CloudTrail resources synthesize correctly"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -152,7 +152,7 @@ def test_cloudtrail_multi_region_configuration():
     """Test that CloudTrail is configured as multi-region trail"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
@@ -187,7 +187,7 @@ def test_cloudtrail_dependency_chain():
     """Test that CloudFormation dependency chain ensures CloudTrail deploys before domain registration"""
     app = cdk.App()
 
-    config_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
