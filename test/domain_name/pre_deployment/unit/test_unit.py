@@ -1,4 +1,4 @@
-"""Unit tests for 10uf.org domain stack"""
+"""Unit tests for 10ulabs.com domain stack"""
 import json
 from pathlib import Path
 import aws_cdk as cdk
@@ -268,7 +268,7 @@ class TestLambdaHandlerDelete(unittest.TestCase):
         """DELETE requests should succeed without deleting the domain"""
         event = {
             'RequestType': 'Delete',
-            'ResourceProperties': {'DomainName': '10uf.org'},
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
             'ResponseURL': 'https://example.com',
             'StackId': 'stack-123',
             'RequestId': 'req-123',
@@ -315,7 +315,7 @@ class TestLambdaHandlerAlreadyRegistered(unittest.TestCase):
         # Hosted zone exists
         mock_route53.list_hosted_zones_by_name.return_value = {
             'HostedZones': [
-                {'Name': '10uf.org.', 'Id': '/hostedzone/Z1234567890ABC'}
+                {'Name': '10ulabs.com.', 'Id': '/hostedzone/Z1234567890ABC'}
             ]
         }
         mock_route53.get_hosted_zone.return_value = {
@@ -326,7 +326,7 @@ class TestLambdaHandlerAlreadyRegistered(unittest.TestCase):
 
         event = {
             'RequestType': 'Create',
-            'ResourceProperties': {'DomainName': '10uf.org'},
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
             'ResponseURL': 'https://example.com',
             'StackId': 'stack-123',
             'RequestId': 'req-123',
@@ -391,7 +391,7 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
 
         event = {
             'RequestType': 'Create',
-            'ResourceProperties': {'DomainName': '10uf.org'},
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
             'ResponseURL': 'https://example.com',
             'StackId': 'stack-123',
             'RequestId': 'req-123',

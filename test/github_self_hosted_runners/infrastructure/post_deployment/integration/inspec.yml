@@ -2,7 +2,7 @@ name: github-runners-infrastructure-integration
 title: GitHub Self-Hosted Runners Infrastructure Integration Tests
 maintainer: 10U Foundation, Inc
 copyright: 10U Foundation, Inc
-copyright_email: engineering@10uf.org
+copyright_email: engineering@10ulabs.com
 license: MIT
 summary: Integration tests for GitHub Self-Hosted Runners infrastructure (cross-resource relationships)
 version: 1.0.0

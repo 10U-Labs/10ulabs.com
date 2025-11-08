@@ -5,10 +5,10 @@ info:
   version: 1.0.0
   contact:
     name: 10U Foundation
-    url: https://10uf.org
+    url: https://10ulabs.com
 
 servers:
-  - url: https://api.10uf.org/v1
+  - url: https://api.10ulabs.com/v1
     description: Production API
 
 paths:
@@ -36,7 +36,7 @@ paths:
                     - docker-builder
                     - arm64
                     - ephemeral-ec2-spot-instance
-                  github_repo: 10U-Foundation/10uf.org
+                  github_repo: 10U-Foundation/10ulabs.com
       responses:
         '200':
           description: Runner launched successfully
@@ -107,7 +107,7 @@ components:
         github_repo:
           type: string
           description: GitHub repository in format "owner/repo"
-          example: 10U-Foundation/10uf.org
+          example: 10U-Foundation/10ulabs.com
 
     LaunchRunnerSuccess:
       type: object

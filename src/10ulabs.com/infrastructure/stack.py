@@ -14,7 +14,7 @@ from aws_cdk import (
 from constructs import Construct
 
 
-class TenUFComStack(Stack):
+class TenULabsComStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)

@@ -14,7 +14,7 @@
       "     - Create access key and save credentials",
       "  2. Create GitHub Classic PAT: https://github.com/settings/tokens/new?scopes=admin:org,repo&description=Self-Hosted%20Runners",
       "     - Required scopes: admin:org (for runner registration) and repo (for managing GitHub Secrets)",
-      "  3. Add secrets: https://github.com/10U-Foundation/10uf.org/settings/secrets/actions",
+      "  3. Add secrets: https://github.com/10U-Foundation/10ulabs.com/settings/secrets/actions",
       "     - AWS_ACCESS_KEY_ID (from step 1)",
       "     - AWS_SECRET_ACCESS_KEY (from step 1)",
       "     - GH_RUNNER_PAT (from step 2) - NOTE: Must NOT start with GITHUB_",
@@ -44,7 +44,7 @@
       "       --aws-region us-east-1 \\",
       "       --aws-iam-role-name GitHubActionsRole \\",
       "       --github-org 10U-Foundation \\",
-      "       --github-repo 10uf.org \\",
+      "       --github-repo 10ulabs.com \\",
       "       --github-pat-secret-name github-runner/credentials \\",
       "       --bedrock-model-id us.anthropic.claude-haiku-4-5-20251001-v1:0 \\",
       "       --aws-access-key-id YOUR_KEY \\",
@@ -68,6 +68,6 @@
   "enabled": true,
   "github": {
     "org": "10U-Foundation",
-    "repo": "10uf.org"
+    "repo": "10ulabs.com"
   }
 }

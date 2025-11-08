@@ -35,7 +35,7 @@
   },
   "github": {
     "runner_version": "2.311.0",
-    "repo": "10U-Foundation/10uf.org"
+    "repo": "10U-Foundation/10ulabs.com"
   },
   "docker_builder": {
     "enabled": true,

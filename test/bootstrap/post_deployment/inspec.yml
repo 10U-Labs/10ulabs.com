@@ -2,7 +2,7 @@ name: bootstrap-infrastructure
 title: Bootstrap Infrastructure Compliance Validation
 maintainer: 10U Foundation, Inc
 copyright: 10U Foundation, Inc
-copyright_email: engineering@10uf.org
+copyright_email: engineering@10ulabs.com
 license: MIT
 summary: Validates that bootstrap infrastructure for GitHub Actions OIDC is secure and correctly configured
 version: 1.0.0

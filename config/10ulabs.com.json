@@ -1,6 +1,6 @@
 {
   "enabled": false,
-  "domain": "10uf.org",
+  "domain": "10ulabs.com",
   "s3": {
     "bucket_name": "10uf_org-website",
     "versioning": false

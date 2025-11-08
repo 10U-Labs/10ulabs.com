@@ -13,7 +13,7 @@ set -e
 STACK_NAME="GitHubRunnersWebhook"
 SECRET_NAME="github-webhook-secret"
 REGION="us-east-1"
-REPO="10U-Foundation/10uf.org"
+REPO="10U-Foundation/10ulabs.com"
 
 echo "==================================="
 echo "GitHub Webhook Configuration"
