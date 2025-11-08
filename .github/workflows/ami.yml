@@ -269,7 +269,7 @@ jobs:
         run: |
           AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
           AWS_REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
-          IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/bootstrap.json)
+          IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
 
           AMI_NAME_PREFIX="github-runner-debian-"
 

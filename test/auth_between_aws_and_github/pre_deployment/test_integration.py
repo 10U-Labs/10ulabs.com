@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Integration tests for bootstrap.py
+Integration tests for auth_between_aws_and_github.py
 
 Tests component integration and real API integration (read-only operations).
 
@@ -27,7 +27,7 @@ import pytest
 
 # Test configuration
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
-BOOTSTRAP_SCRIPT = REPO_ROOT / 'src' / 'bootstrap' / 'bootstrap.py'
+BOOTSTRAP_SCRIPT = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
 TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
 TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 TEST_ROLE_NAME = 'GitHubActionsBootstrapCITest'
@@ -93,10 +93,10 @@ class TestArgumentValidation:
 
 
 class TestDependencyRequirements:
-    """Test that bootstrap.py uses only Python stdlib (no external dependencies)."""
+    """Test that auth_between_aws_and_github.py uses only Python stdlib (no external dependencies)."""
 
     def test_script_loads_without_boto3(self):
-        """Test that bootstrap.py can be imported without boto3 installed."""
+        """Test that auth_between_aws_and_github.py can be imported without boto3 installed."""
         test_script = """
 import sys
 
@@ -116,9 +116,9 @@ class ImportBlocker:
 
 sys.meta_path.insert(0, ImportBlocker())
 
-# Now try to import bootstrap
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+# Now try to import auth_between_aws_and_github as bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 print("imports_without_boto3=True")
 """
@@ -126,7 +126,7 @@ print("imports_without_boto3=True")
         assert 'imports_without_boto3=True' in result.stdout
 
     def test_script_loads_without_awscli(self):
-        """Test that bootstrap.py can be imported without AWS CLI installed."""
+        """Test that auth_between_aws_and_github.py can be imported without AWS CLI installed."""
         test_script = """
 import sys
 
@@ -146,9 +146,9 @@ class ImportBlocker:
 
 sys.meta_path.insert(0, ImportBlocker())
 
-# Now try to import bootstrap
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+# Now try to import auth_between_aws_and_github as bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 print("imports_without_awscli=True")
 """
@@ -156,11 +156,11 @@ print("imports_without_awscli=True")
         assert 'imports_without_awscli=True' in result.stdout
 
     def test_all_imports_are_stdlib(self):
-        """Test that bootstrap.py only imports from Python stdlib."""
+        """Test that auth_between_aws_and_github.py only imports from Python stdlib."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 # Get all imported modules
 imported_modules = set(sys.modules.keys())
@@ -188,8 +188,8 @@ class TestModeDetection:
         """Test that script correctly detects local mode."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 import os
 
 # Ensure we're not in GitHub Actions
@@ -205,13 +205,13 @@ print(f"is_github_actions={bootstrap.is_running_in_github_actions()}")
         """Test that script correctly detects GitHub Actions mode."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
+sys.path.insert(0, 'src/auth_between_aws_and_github')
 import os
 
 # Set GitHub Actions environment variable
 os.environ['GITHUB_ACTIONS'] = 'true'
 
-import bootstrap
+import auth_between_aws_and_github as bootstrap
 
 print(f"is_github_actions={bootstrap.is_running_in_github_actions()}")
 """
@@ -385,8 +385,8 @@ class TestAWSSignatureValidation:
         """Verify STS requests use API version 2011-06-15."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
 request = client._prepare_query_api_request_with_signing(
@@ -407,8 +407,8 @@ print("sts_signature_valid=True")
         """Verify IAM requests use API version 2010-05-08."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
 request = client._prepare_query_api_request_with_signing(
@@ -429,8 +429,8 @@ print("iam_signature_valid=True")
         """Verify Secrets Manager requests use JSON format with X-Amz-Target."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
 request = client._prepare_json_api_request_with_signing(
@@ -450,8 +450,8 @@ print("secrets_signature_valid=True")
         """Verify requests include required AWS Signature V4 headers."""
         test_script = """
 import sys
-sys.path.insert(0, 'src/bootstrap')
-import bootstrap
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
 request = client._prepare_query_api_request_with_signing(
@@ -506,7 +506,7 @@ def get_aws_credentials():
     if is_github_actions():
         try:
             # Get config
-            config_path = REPO_ROOT / 'config' / 'bootstrap.json'
+            config_path = REPO_ROOT / 'config' / 'auth_between_aws_and_github.json'
             with open(config_path) as f:
                 config = json.load(f)
 
@@ -514,9 +514,9 @@ def get_aws_credentials():
             role_name = config['aws']['iam_role_name']
             region = config['aws']['region']
 
-            # Add src/bootstrap to path if not already
-            sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-            import bootstrap
+            # Add src/auth_between_aws_and_github to path if not already
+            sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+            import auth_between_aws_and_github as bootstrap
 
             # Assume role with OIDC (this calls get_oidc_token() internally)
             temp_creds = bootstrap.assume_role_with_oidc(account_id, region, role_name)
@@ -563,15 +563,15 @@ def get_github_pat():
             access_key, secret_key, session_token, region = creds
 
             # Get secret name from config
-            config_path = REPO_ROOT / 'config' / 'bootstrap.json'
+            config_path = REPO_ROOT / 'config' / 'auth_between_aws_and_github.json'
             with open(config_path) as f:
                 config = json.load(f)
 
             secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
 
-            # Add src/bootstrap to path if not already
-            sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-            import bootstrap
+            # Add src/auth_between_aws_and_github to path if not already
+            sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+            import auth_between_aws_and_github as bootstrap
 
             # Retrieve PAT from Secrets Manager
             secret_data = bootstrap.get_secret_from_secrets_manager(
@@ -604,8 +604,8 @@ class TestAWSAPIIntegration:
         assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.STSClient(region, access_key, secret_key, session_token)
 
@@ -620,8 +620,8 @@ class TestAWSAPIIntegration:
         assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
         account_id = client.get_account_id()
@@ -643,8 +643,8 @@ class TestAWSAPIIntegration:
         assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
 
@@ -663,8 +663,8 @@ class TestAWSStateDetectionIntegration:
         assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
         account_id = client.get_account_id()
@@ -681,8 +681,8 @@ class TestAWSStateDetectionIntegration:
         assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
 
@@ -699,8 +699,8 @@ class TestAWSStateDetectionIntegration:
         assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
 
@@ -720,8 +720,8 @@ class TestGitHubAPIIntegration:
         github_token = get_github_pat()
         assert github_token is not None, "GitHub PAT should be available"
 
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'bootstrap'))
-        import bootstrap
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
 
         # Makes real GitHub API call to validate token scopes
         # This is READ-ONLY - only reads token scopes

@@ -51,19 +51,19 @@ Run the following checks locally before pushing to main. **CRITICAL: Use the EXA
 
 ---
 
-## Bootstrap Infrastructure Tests
+## AWS-GitHub Auth Infrastructure Tests
 
-Run these tests if you modified `src/bootstrap/` or `test/bootstrap/`:
+Run these tests if you modified `src/auth_between_aws_and_github/` or `test/auth_between_aws_and_github/`:
 
 #### 1. YAML Linting
 ```bash
-yamllint .github/workflows/bootstrap.yml
+yamllint .github/workflows/auth_between_aws_and_github.yml
 ```
 
 #### 2. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
-pylint src/bootstrap/bootstrap.py \
+pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```
@@ -72,17 +72,17 @@ pylint src/bootstrap/bootstrap.py \
 
 #### 3. Python Static Type Checking (Mypy)
 ```bash
-mypy src/bootstrap/bootstrap.py
+mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
 ```
 
 #### 4. Unit Tests
 ```bash
-PYTHONPATH=src/bootstrap:$PYTHONPATH pytest test/bootstrap/pre_deployment/test_unit.py -v
+PYTHONPATH=src/bootstrap:$PYTHONPATH pytest test/auth_between_aws_and_github/pre_deployment/test_unit.py -v
 ```
 
 #### 5. Integration Tests
 ```bash
-pytest test/bootstrap/pre_deployment/test_integration.py -v
+pytest test/auth_between_aws_and_github/pre_deployment/test_integration.py -v
 ```
 
 **NOTE:** Integration tests may require AWS credentials in environment variables:

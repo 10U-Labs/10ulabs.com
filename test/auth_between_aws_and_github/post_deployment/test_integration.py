@@ -245,9 +245,9 @@ class TestBedrockIntegration:
         """Test that Bedrock README check works with OIDC credentials (catches signing errors)."""
         config = load_config()
 
-        # Run bootstrap.py readme --check (uses OIDC automatically in GitHub Actions)
+        # Run auth_between_aws_and_github.py readme --check (uses OIDC automatically in GitHub Actions)
         result = subprocess.run(
-            ['python', str(REPO_ROOT / 'src' / 'bootstrap' / 'bootstrap.py'), 'readme',
+            ['python', str(REPO_ROOT / 'src' / 'bootstrap' / 'auth_between_aws_and_github.py'), 'readme',
              '--aws-account-id', config['aws']['account_id'],
              '--aws-region', config['aws']['region'],
              '--aws-iam-role-name', config['aws']['iam_role_name'],

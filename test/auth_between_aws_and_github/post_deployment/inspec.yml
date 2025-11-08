@@ -1,10 +1,10 @@
-name: bootstrap-infrastructure
-title: Bootstrap Infrastructure Compliance Validation
+name: auth-between-aws-and-github
+title: AWS-GitHub Authentication Infrastructure Compliance Validation
 maintainer: 10U Foundation, Inc
 copyright: 10U Foundation, Inc
 copyright_email: engineering@10ulabs.com
 license: MIT
-summary: Validates that bootstrap infrastructure for GitHub Actions OIDC is secure and correctly configured
+summary: Validates that bilateral authorization infrastructure between AWS and GitHub is secure and correctly configured
 version: 1.0.0
 inspec_version: '>= 5.0'
 
