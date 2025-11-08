@@ -87,6 +87,46 @@ def get_contact_info(account, organizations):
     return contact
 
 
+def register_new_domain(route53domains, account, organizations, domain_name):
+    domain_availability = route53domains.check_domain_availability(DomainName=domain_name)['Availability']
+    if domain_availability != 'AVAILABLE':
+        return None, {
+            'Error': f"Domain {domain_name} is not available: {domain_availability}"
+        }
+
+    registration_contact = get_contact_info(account, organizations)
+    print(f"Registering domain {domain_name} with contact: {registration_contact['Email']}")
+
+    registration = route53domains.register_domain(
+        DomainName=domain_name,
+        DurationInYears=1,
+        AutoRenew=True,
+        AdminContact=registration_contact,
+        RegistrantContact=registration_contact,
+        TechContact=registration_contact,
+        PrivacyProtectAdminContact=True,
+        PrivacyProtectRegistrantContact=True,
+        PrivacyProtectTechContact=True
+    )
+
+    print(f"Domain registration initiated: {registration['OperationId']}")
+    print("AWS will automatically create a hosted zone for this domain")
+
+    print("Checking registration operation status...")
+    time.sleep(5)
+    operation_detail = route53domains.get_operation_detail(OperationId=registration['OperationId'])
+    if operation_detail['Status'] == 'FAILED':
+        error_msg = operation_detail.get('Message', 'Domain registration failed')
+        print(f"Registration failed: {error_msg}")
+        return None, {
+            'Error': error_msg,
+            'OperationId': registration['OperationId'],
+            'Hint': 'Check AWS account payment method and currency settings at https://console.aws.amazon.com/billing/home#/paymentmethods'
+        }
+
+    return registration, None
+
+
 def wait_for_hosted_zone(route53, domain_name, registration):
     max_wait_time = 840
     attempt = 0
@@ -163,31 +203,10 @@ def handler(event, context):
         except route53domains.exceptions.InvalidInput:
             print(f"Domain {domain_name} not registered, proceeding with registration...")
 
-        availability = route53domains.check_domain_availability(DomainName=domain_name)
-        if availability['Availability'] != 'AVAILABLE':
-            cfnresponse.send(event, context, cfnresponse.FAILED, {
-                'Error': f"Domain {domain_name} is not available: {availability['Availability']}"
-            })
+        registration, reg_error = register_new_domain(route53domains, account, organizations, domain_name)
+        if reg_error:
+            cfnresponse.send(event, context, cfnresponse.FAILED, reg_error)
             return
-
-        contact = get_contact_info(account, organizations)
-
-        print(f"Registering domain {domain_name} with contact: {contact['Email']}")
-
-        registration = route53domains.register_domain(
-            DomainName=domain_name,
-            DurationInYears=1,
-            AutoRenew=True,
-            AdminContact=contact,
-            RegistrantContact=contact,
-            TechContact=contact,
-            PrivacyProtectAdminContact=True,
-            PrivacyProtectRegistrantContact=True,
-            PrivacyProtectTechContact=True
-        )
-
-        print(f"Domain registration initiated: {registration['OperationId']}")
-        print("AWS will automatically create a hosted zone for this domain")
 
         response_data, error_data = wait_for_hosted_zone(route53, domain_name, registration)
 
