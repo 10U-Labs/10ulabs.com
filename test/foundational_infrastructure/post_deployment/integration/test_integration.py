@@ -19,11 +19,9 @@ def route53_client(config):
     return boto3.client('route53', region_name=config['aws_region'])
 
 
-def test_hosted_zone_can_create_record(route53_client, config):
-    """Test that we can create a record in the hosted zone"""
+def test_hosted_zone_exists(route53_client, config):
     domain_name = config['domain_name']
 
-    # Find the hosted zone
     zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
     zone = None
     for z in zones['HostedZones']:
@@ -33,7 +31,17 @@ def test_hosted_zone_can_create_record(route53_client, config):
 
     assert zone is not None, f"Hosted zone for {domain_name} not found"
 
-    # Try to create a test record
+
+def test_hosted_zone_can_create_record(route53_client, config):
+    domain_name = config['domain_name']
+
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+    zone = None
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            zone = z
+            break
+
     test_record = f"integration-test.{domain_name}"
 
     try:
@@ -54,7 +62,6 @@ def test_hosted_zone_can_create_record(route53_client, config):
 
         assert response['ResponseMetadata']['HTTPStatusCode'] == 200
 
-        # Clean up - delete the test record
         route53_client.change_resource_record_sets(
             HostedZoneId=zone['Id'],
             ChangeBatch={
@@ -74,17 +81,12 @@ def test_hosted_zone_can_create_record(route53_client, config):
         pytest.fail(f"Failed to create test record: {e}")
 
 
-def test_hosted_zone_exports_are_usable(config):
-    """Test that CloudFormation exports from domain stack are available"""
+def test_hosted_zone_id_export_exists(config):
     cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
 
     domain_name = config['domain_name']
-    expected_exports = [
-        f"{domain_name}-HostedZoneId",
-        f"{domain_name}-HostedZoneName"
-    ]
+    expected_export = f"{domain_name}-HostedZoneId"
 
-    # List all exports
     exports = []
     paginator = cf_client.get_paginator('list_exports')
     for page in paginator.paginate():
@@ -92,15 +94,28 @@ def test_hosted_zone_exports_are_usable(config):
 
     export_names = [e['Name'] for e in exports]
 
-    for expected_export in expected_exports:
-        assert expected_export in export_names, f"Missing CloudFormation export: {expected_export}"
+    assert expected_export in export_names, f"Missing CloudFormation export: {expected_export}"
 
 
-def test_other_stacks_can_import_hosted_zone(route53_client, config):
-    """Test that other stacks can successfully reference the hosted zone"""
+def test_hosted_zone_name_export_exists(config):
+    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+
+    domain_name = config['domain_name']
+    expected_export = f"{domain_name}-HostedZoneName"
+
+    exports = []
+    paginator = cf_client.get_paginator('list_exports')
+    for page in paginator.paginate():
+        exports.extend(page['Exports'])
+
+    export_names = [e['Name'] for e in exports]
+
+    assert expected_export in export_names, f"Missing CloudFormation export: {expected_export}"
+
+
+def test_hosted_zone_is_discoverable(route53_client, config):
     domain_name = config['domain_name']
 
-    # Verify we can look up the zone (simulating what other stacks would do)
     zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
 
     zone = None
@@ -110,7 +125,33 @@ def test_other_stacks_can_import_hosted_zone(route53_client, config):
             break
 
     assert zone is not None, "Hosted zone should be discoverable by other stacks"
+
+
+def test_hosted_zone_has_id(route53_client, config):
+    domain_name = config['domain_name']
+
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+
+    zone = None
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            zone = z
+            break
+
     assert 'Id' in zone, "Hosted zone should have an ID for other stacks to reference"
+
+
+def test_hosted_zone_is_public(route53_client, config):
+    domain_name = config['domain_name']
+
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+
+    zone = None
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            zone = z
+            break
+
     assert zone['Config']['PrivateZone'] == False, "Hosted zone should be public"
 
 
@@ -267,12 +308,17 @@ def test_cloudtrail_log_group_has_one_year_retention(logs_client, cloudtrail_cli
     assert log_group['retentionInDays'] == 365, "Log group should have 1-year retention"
 
 
-def test_cloudtrail_has_event_selectors(cloudtrail_client):
-    """Test that CloudTrail has event selectors configured"""
+def test_cloudtrail_has_event_selectors_property(cloudtrail_client):
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
     assert 'EventSelectors' in selectors, "Trail should have event selectors"
+
+
+def test_cloudtrail_has_at_least_one_event_selector(cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
     assert len(selectors['EventSelectors']) > 0, "Trail should have at least one event selector"
 
 

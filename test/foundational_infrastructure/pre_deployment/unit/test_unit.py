@@ -31,16 +31,13 @@ def test_config_has_domain_name():
     assert "domain_name" in config
 
 
-def test_hosted_zone_created():
-    """Test that stack references a hosted zone (imported from domain registration)"""
+def test_hosted_zone_has_id_output():
     app = cdk.App()
 
-    # Load config
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    # Import stack dynamically
     import importlib.util
     stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
@@ -48,7 +45,6 @@ def test_hosted_zone_created():
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
 
-    # Create stack
     stack = DomainStack(
         app,
         "TestDomainStack",
@@ -59,27 +55,19 @@ def test_hosted_zone_created():
         )
     )
 
-    # Create template
     template = Template.from_stack(stack)
 
-    # Note: We import the hosted zone from AWS (created during domain registration)
-    # so there won't be an AWS::Route53::HostedZone resource in CloudFormation
-    # Instead, verify the stack has outputs referencing the hosted zone
     outputs = template.find_outputs("*")
     assert "HostedZoneId" in outputs
-    assert "HostedZoneName" in outputs
 
 
-def test_hosted_zone_outputs():
-    """Test that stack exports hosted zone ID and name"""
+def test_hosted_zone_has_name_output():
     app = cdk.App()
 
-    # Load config
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    # Dynamically import DomainStack
     import importlib.util
     stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
@@ -87,7 +75,6 @@ def test_hosted_zone_outputs():
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
 
-    # Create stack
     stack = DomainStack(
         app,
         "TestDomainStack",
@@ -98,15 +85,102 @@ def test_hosted_zone_outputs():
         )
     )
 
-    # Create template
     template = Template.from_stack(stack)
 
-    # Get all outputs
+    outputs = template.find_outputs("*")
+    assert "HostedZoneName" in outputs
+
+
+def test_hosted_zone_exports_id():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
     outputs = template.find_outputs("*")
 
-    # Assert required outputs exist
     assert "HostedZoneId" in outputs
+
+
+def test_hosted_zone_exports_name():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    outputs = template.find_outputs("*")
+
     assert "HostedZoneName" in outputs
+
+
+def test_hosted_zone_exports_name_servers():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    outputs = template.find_outputs("*")
+
     assert "NameServers" in outputs
 
 
@@ -254,20 +328,49 @@ def test_custom_resource_for_domain_registration_exists():
 
 
 def test_lambda_handler_file_exists():
-    """Test that Lambda handler file exists and is valid Python"""
     handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
     assert handler_path.exists(), "Lambda handler.py file must exist"
 
-    # Verify it's valid Python by attempting to compile it
+
+def test_lambda_handler_is_valid_python():
+    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
     with open(handler_path) as f:
         code = f.read()
         compile(code, str(handler_path), 'exec')
 
-    # Verify it contains required logic
+
+def test_lambda_handler_contains_check_domain_availability():
+    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    with open(handler_path) as f:
+        code = f.read()
     assert "check_domain_availability" in code
+
+
+def test_lambda_handler_contains_register_domain():
+    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    with open(handler_path) as f:
+        code = f.read()
     assert "register_domain" in code
+
+
+def test_lambda_handler_contains_get_contact_information():
+    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    with open(handler_path) as f:
+        code = f.read()
     assert "get_contact_information" in code
+
+
+def test_lambda_handler_contains_describe_organization():
+    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    with open(handler_path) as f:
+        code = f.read()
     assert "describe_organization" in code
+
+
+def test_lambda_handler_contains_master_account_email():
+    handler_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda" / "handler.py"
+    with open(handler_path) as f:
+        code = f.read()
     assert "MasterAccountEmail" in code
 
 #
@@ -311,17 +414,13 @@ class TestLambdaHandlerDelete(unittest.TestCase):
 
 
 class TestLambdaHandlerAlreadyRegistered(unittest.TestCase):
-    """Test Lambda handler when domain is already registered"""
 
     @patch('handler.boto3')
     @patch('handler.cfnresponse')
-    def test_already_registered_returns_zone_info(self, mock_cfnresponse, mock_boto3):
-        """Already registered domain should return existing hosted zone info"""
-        # Mock clients
+    def test_already_registered_calls_cfnresponse_send_once(self, mock_cfnresponse, mock_boto3):
         mock_route53domains = Mock()
         mock_route53 = Mock()
 
-        # Create exceptions
         InvalidInput = type('InvalidInput', (Exception,), {})
         mock_route53domains.exceptions = Mock()
         mock_route53domains.exceptions.InvalidInput = InvalidInput
@@ -333,12 +432,10 @@ class TestLambdaHandlerAlreadyRegistered(unittest.TestCase):
             'organizations': Mock()
         }[service]
 
-        # Domain already registered
         mock_route53domains.get_domain_detail.return_value = {
             'StatusList': ['REGISTERED']
         }
 
-        # Hosted zone exists
         mock_route53.list_hosted_zones_by_name.return_value = {
             'HostedZones': [
                 {'Name': '10ulabs.com.', 'Id': '/hostedzone/Z1234567890ABC'}
@@ -364,25 +461,209 @@ class TestLambdaHandlerAlreadyRegistered(unittest.TestCase):
         lambda_handler.handler(event, context)
 
         mock_cfnresponse.send.assert_called_once()
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_already_registered_returns_success(self, mock_cfnresponse, mock_boto3):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': Mock(),
+            'organizations': Mock()
+        }[service]
+
+        mock_route53domains.get_domain_detail.return_value = {
+            'StatusList': ['REGISTERED']
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [
+                {'Name': '10ulabs.com.', 'Id': '/hostedzone/Z1234567890ABC'}
+            ]
+        }
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
         call_args = mock_cfnresponse.send.call_args
         assert call_args[0][2] == mock_cfnresponse.SUCCESS
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_already_registered_returns_hosted_zone_id(self, mock_cfnresponse, mock_boto3):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': Mock(),
+            'organizations': Mock()
+        }[service]
+
+        mock_route53domains.get_domain_detail.return_value = {
+            'StatusList': ['REGISTERED']
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [
+                {'Name': '10ulabs.com.', 'Id': '/hostedzone/Z1234567890ABC'}
+            ]
+        }
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
         assert call_args[0][3]['HostedZoneId'] == 'Z1234567890ABC'
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_already_registered_returns_name_servers(self, mock_cfnresponse, mock_boto3):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': Mock(),
+            'organizations': Mock()
+        }[service]
+
+        mock_route53domains.get_domain_detail.return_value = {
+            'StatusList': ['REGISTERED']
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [
+                {'Name': '10ulabs.com.', 'Id': '/hostedzone/Z1234567890ABC'}
+            ]
+        }
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
         assert call_args[0][3]['NameServers'] == 'ns1.example.com,ns2.example.com'
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_already_registered_returns_domain_status(self, mock_cfnresponse, mock_boto3):
+        mock_route53domains = Mock()
+        mock_route53 = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': mock_route53,
+            'account': Mock(),
+            'organizations': Mock()
+        }[service]
+
+        mock_route53domains.get_domain_detail.return_value = {
+            'StatusList': ['REGISTERED']
+        }
+
+        mock_route53.list_hosted_zones_by_name.return_value = {
+            'HostedZones': [
+                {'Name': '10ulabs.com.', 'Id': '/hostedzone/Z1234567890ABC'}
+            ]
+        }
+        mock_route53.get_hosted_zone.return_value = {
+            'DelegationSet': {
+                'NameServers': ['ns1.example.com', 'ns2.example.com']
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
         assert call_args[0][3]['DomainStatus'] == 'REGISTERED'
 
 
 class TestLambdaHandlerMissingContactFields(unittest.TestCase):
-    """Test Lambda handler with missing contact fields"""
 
     @patch('handler.boto3')
     @patch('handler.cfnresponse')
-    def test_missing_fields_returns_error(self, mock_cfnresponse, mock_boto3):
-        """Missing contact fields should return FAILED with error"""
+    def test_missing_fields_calls_cfnresponse_send_once(self, mock_cfnresponse, mock_boto3):
         mock_route53domains = Mock()
         mock_account = Mock()
         mock_organizations = Mock()
 
-        # Create exceptions
         InvalidInput = type('InvalidInput', (Exception,), {})
         mock_route53domains.exceptions = Mock()
         mock_route53domains.exceptions.InvalidInput = InvalidInput
@@ -394,24 +675,19 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
             'organizations': mock_organizations
         }[service]
 
-        # Domain not registered
         mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
 
-        # Domain available
         mock_route53domains.check_domain_availability.return_value = {
             'Availability': 'AVAILABLE'
         }
 
-        # Organizations returns email
         mock_organizations.describe_organization.return_value = {
             'Organization': {'MasterAccountEmail': 'root@example.com'}
         }
 
-        # Missing fields
         mock_account.get_contact_information.return_value = {
             'ContactInformation': {
                 'FullName': 'John Doe',
-                # Missing other required fields
             }
         }
 
@@ -429,8 +705,105 @@ class TestLambdaHandlerMissingContactFields(unittest.TestCase):
         lambda_handler.handler(event, context)
 
         mock_cfnresponse.send.assert_called_once()
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_missing_fields_returns_failed_status(self, mock_cfnresponse, mock_boto3):
+        mock_route53domains = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': Mock(),
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
         call_args = mock_cfnresponse.send.call_args
         assert call_args[0][2] == mock_cfnresponse.FAILED
+
+    @patch('handler.boto3')
+    @patch('handler.cfnresponse')
+    def test_missing_fields_returns_error_message(self, mock_cfnresponse, mock_boto3):
+        mock_route53domains = Mock()
+        mock_account = Mock()
+        mock_organizations = Mock()
+
+        InvalidInput = type('InvalidInput', (Exception,), {})
+        mock_route53domains.exceptions = Mock()
+        mock_route53domains.exceptions.InvalidInput = InvalidInput
+
+        mock_boto3.client.side_effect = lambda service, **kwargs: {
+            'route53domains': mock_route53domains,
+            'route53': Mock(),
+            'account': mock_account,
+            'organizations': mock_organizations
+        }[service]
+
+        mock_route53domains.get_domain_detail.side_effect = InvalidInput('Not found')
+
+        mock_route53domains.check_domain_availability.return_value = {
+            'Availability': 'AVAILABLE'
+        }
+
+        mock_organizations.describe_organization.return_value = {
+            'Organization': {'MasterAccountEmail': 'root@example.com'}
+        }
+
+        mock_account.get_contact_information.return_value = {
+            'ContactInformation': {
+                'FullName': 'John Doe',
+            }
+        }
+
+        event = {
+            'RequestType': 'Create',
+            'ResourceProperties': {'DomainName': '10ulabs.com'},
+            'ResponseURL': 'https://example.com',
+            'StackId': 'stack-123',
+            'RequestId': 'req-123',
+            'LogicalResourceId': 'Domain'
+        }
+        context = Mock()
+        context.log_stream_name = 'log-stream'
+
+        lambda_handler.handler(event, context)
+
+        call_args = mock_cfnresponse.send.call_args
         assert 'missing contact fields' in call_args[0][3]['Error']
 
 
@@ -468,8 +841,7 @@ def test_cfnresponse_makes_http_put_request():
         assert "http.request('PUT'" in content, "cfnresponse.py must make HTTP PUT request to CloudFormation presigned URL"
 
 
-def test_cfnresponse_is_not_empty_stub():
-    """Test that cfnresponse.py has functional implementation, not just empty stub"""
+def test_cfnresponse_is_not_empty():
     lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
     cfnresponse_path = lambda_dir / "cfnresponse.py"
 
@@ -477,6 +849,13 @@ def test_cfnresponse_is_not_empty_stub():
         content = f.read()
         assert content.strip() != "", "cfnresponse.py must not be empty"
 
+
+def test_cfnresponse_is_not_pass_stub():
+    lambda_dir = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "lambda"
+    cfnresponse_path = lambda_dir / "cfnresponse.py"
+
+    with open(cfnresponse_path) as f:
+        content = f.read()
         has_pass_only = "pass" in content and "http.request" not in content
         assert not has_pass_only, "cfnresponse.py must have functional implementation, not just 'pass' stub"
 
@@ -896,8 +1275,40 @@ def test_cloudtrail_trail_sends_to_cloudwatch_logs():
     )
 
 
+def test_cloudtrail_trail_exists_for_dependency():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "foundational_infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    from aws_cdk.assertions import Match
+    cloudtrail_resources = template.find_resources("AWS::CloudTrail::Trail")
+    cloudtrail_ids = list(cloudtrail_resources.keys())
+
+    assert len(cloudtrail_ids) > 0, "CloudTrail trail should exist"
+
+
 def test_domain_registration_depends_on_cloudtrail():
-    """Test that domain registration has explicit dependency on CloudTrail"""
     app = cdk.App()
 
     config_path = Path(__file__).parents[4] / "config" / "foundational_infrastructure.json"
@@ -935,8 +1346,6 @@ def test_domain_registration_depends_on_cloudtrail():
 
             cloudtrail_resources = template.find_resources("AWS::CloudTrail::Trail")
             cloudtrail_ids = list(cloudtrail_resources.keys())
-
-            assert len(cloudtrail_ids) > 0, "CloudTrail trail should exist"
 
             has_cloudtrail_dependency = any(
                 trail_id in depends_on for trail_id in cloudtrail_ids
