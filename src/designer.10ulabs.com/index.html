@@ -18,9 +18,33 @@
 
     <div class="container">
         <div class="palette">
-            <h2>Components</h2>
+            <h2>Parts</h2>
+            <div class="component-item" draggable="true" data-component="blank-panel-1u" data-size="1" data-default-color="#bdc3c7">
+                <div class="component-name">Blank Panel (1U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="blank-panel-2u" data-size="2" data-default-color="#95a5a6">
+                <div class="component-name">Blank Panel (2U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="custom" data-size="1" data-default-color="#7f8c8d">
+                <div class="component-name">Custom Part (1U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="display" data-size="2" data-default-color="#1abc9c">
+                <div class="component-name">Display (2U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="nas" data-size="2" data-default-color="#9b59b6">
+                <div class="component-name">NAS (2U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="patch-panel" data-size="1" data-default-color="#34495e">
+                <div class="component-name">Patch Panel (1U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="pdu" data-size="1" data-default-color="#e67e22">
+                <div class="component-name">PDU (1U)</div>
+            </div>
             <div class="component-item" draggable="true" data-component="server" data-size="2" data-default-color="#3498db">
                 <div class="component-name">Server (2U)</div>
+            </div>
+            <div class="component-item" draggable="true" data-component="shelf" data-size="1" data-default-color="#16a085">
+                <div class="component-name">Shelf (1U)</div>
             </div>
             <div class="component-item" draggable="true" data-component="switch" data-size="1" data-default-color="#f39c12">
                 <div class="component-name">Switch (1U)</div>
@@ -28,14 +52,12 @@
             <div class="component-item" draggable="true" data-component="ups" data-size="2" data-default-color="#e74c3c">
                 <div class="component-name">UPS (2U)</div>
             </div>
-            <div class="component-item" draggable="true" data-component="ventilation" data-size="1" data-default-color="#95a5a6">
-                <div class="component-name">Ventilation Panel (1U)</div>
+            <div class="component-item" draggable="true" data-component="venting" data-size="1" data-default-color="#95a5a6">
+                <div class="component-name">Venting Panel (1U)</div>
             </div>
             <div class="component-item" draggable="true" data-component="wifi-bridge" data-size="1" data-default-color="#2ecc71">
                 <div class="component-name">WiFi Bridge (1U)</div>
             </div>
-
-            <button class="reset-btn" onclick="resetRack()" style="width: 100%; margin-top: 20px; margin-left: 0;">Reset</button>
 
             <div class="height-control" style="margin-top: 20px; flex-direction: column; align-items: stretch; gap: 10px;">
                 <label style="text-align: center;">Rack Height</label>
@@ -45,6 +67,8 @@
                     <button class="height-btn" id="increaseHeight">+</button>
                 </div>
             </div>
+
+            <button class="reset-btn" onclick="resetRack()" style="width: 100%; margin-top: 20px; margin-left: 0;">Reset</button>
         </div>
 
         <div class="main-area" id="mainArea">
