@@ -294,24 +294,34 @@ function updateComponentHeight(delta) {
         }
 
         if (newHeight !== component.size) {
-            const endSlot = component.startSlot + newHeight - 1;
+            const newStartSlot = component.startSlot - delta;
 
-            if (endSlot > rackHeight) {
+            if (newStartSlot < 1) {
+                alert(`Cannot change height: would go below slot 1`);
+                return;
+            }
+
+            const currentEndSlot = component.startSlot + component.size - 1;
+            if (currentEndSlot > rackHeight) {
                 alert(`Cannot change height: would exceed rack height (max slot: ${rackHeight}U)`);
                 return;
             }
 
             const otherComponents = placedComponents.filter(c => c.id !== selectedComponentId);
-            for (let i = component.startSlot; i < component.startSlot + newHeight; i++) {
-                for (const other of otherComponents) {
-                    const otherEnd = other.startSlot + other.size - 1;
-                    if (i >= other.startSlot && i <= otherEnd) {
-                        alert(`Cannot change height: would overlap with ${other.customName || getComponentName(other.type)} at slot ${i}U`);
-                        return;
+
+            if (delta > 0) {
+                for (let i = newStartSlot; i < component.startSlot; i++) {
+                    for (const other of otherComponents) {
+                        const otherEnd = other.startSlot + other.size - 1;
+                        if (i >= other.startSlot && i <= otherEnd) {
+                            alert(`Cannot change height: would overlap with ${other.customName || getComponentName(other.type)} at slot ${i}U`);
+                            return;
+                        }
                     }
                 }
             }
 
+            component.startSlot = newStartSlot;
             component.size = newHeight;
             document.getElementById('componentHeightValue').textContent = `${newHeight}U`;
         }
