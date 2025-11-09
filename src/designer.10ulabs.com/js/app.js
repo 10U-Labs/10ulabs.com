@@ -153,8 +153,26 @@ function handleDragOver(e) {
         partSize = parseInt(sessionStorage.getItem('draggingPartSize') || '1');
     }
 
-    const affectedSlots = getAffectedSlots(currentSlot, partSize);
-    const isValid = isValidPlacement(targetRackId, currentSlot, partSize, existingPartId);
+    let bestStartSlot = currentSlot;
+    let isValid = isValidPlacement(targetRackId, currentSlot, partSize, existingPartId);
+
+    if (!isValid && partSize > 1) {
+        for (let offset = 1; offset < partSize; offset++) {
+            const tryStartSlot = currentSlot - offset;
+            if (tryStartSlot >= 1) {
+                const tryEndSlot = tryStartSlot + partSize - 1;
+                if (tryEndSlot >= currentSlot) {
+                    if (isValidPlacement(targetRackId, tryStartSlot, partSize, existingPartId)) {
+                        bestStartSlot = tryStartSlot;
+                        isValid = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    const affectedSlots = getAffectedSlots(bestStartSlot, partSize);
 
     document.querySelectorAll('.rack-slot').forEach(slot => {
         slot.classList.remove('drag-over', 'drag-over-invalid');
@@ -193,11 +211,47 @@ function handleDrop(e) {
     const existingPartId = e.dataTransfer.getData('existingPart');
 
     if (existingPartId) {
-        movePart(existingPartId, targetRackId, slot);
+        const part = placedParts.find(c => c.id === existingPartId);
+        const partSize = part ? part.size : 1;
+
+        let bestStartSlot = slot;
+        if (!isValidPlacement(targetRackId, slot, partSize, existingPartId) && partSize > 1) {
+            for (let offset = 1; offset < partSize; offset++) {
+                const tryStartSlot = slot - offset;
+                if (tryStartSlot >= 1) {
+                    const tryEndSlot = tryStartSlot + partSize - 1;
+                    if (tryEndSlot >= slot) {
+                        if (isValidPlacement(targetRackId, tryStartSlot, partSize, existingPartId)) {
+                            bestStartSlot = tryStartSlot;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        movePart(existingPartId, targetRackId, bestStartSlot);
     } else {
         const partType = e.dataTransfer.getData('partType');
         const partSize = parseInt(e.dataTransfer.getData('partSize'));
-        addPart(partType, partSize, targetRackId, slot);
+
+        let bestStartSlot = slot;
+        if (!canPlacePart(targetRackId, slot, partSize) && partSize > 1) {
+            for (let offset = 1; offset < partSize; offset++) {
+                const tryStartSlot = slot - offset;
+                if (tryStartSlot >= 1) {
+                    const tryEndSlot = tryStartSlot + partSize - 1;
+                    if (tryEndSlot >= slot) {
+                        if (canPlacePart(targetRackId, tryStartSlot, partSize)) {
+                            bestStartSlot = tryStartSlot;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        addPart(partType, partSize, targetRackId, bestStartSlot);
     }
 }
 
