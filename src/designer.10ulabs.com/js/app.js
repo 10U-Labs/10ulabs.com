@@ -294,35 +294,59 @@ function updateComponentHeight(delta) {
         }
 
         if (newHeight !== component.size) {
-            const newStartSlot = component.startSlot - delta;
-
-            if (newStartSlot < 1) {
-                alert(`Cannot change height: would go below slot 1`);
-                return;
-            }
-
-            const currentEndSlot = component.startSlot + component.size - 1;
-            if (currentEndSlot > rackHeight) {
-                alert(`Cannot change height: would exceed rack height (max slot: ${rackHeight}U)`);
-                return;
-            }
-
             const otherComponents = placedComponents.filter(c => c.id !== selectedComponentId);
 
             if (delta > 0) {
-                for (let i = newStartSlot; i < component.startSlot; i++) {
-                    for (const other of otherComponents) {
-                        const otherEnd = other.startSlot + other.size - 1;
-                        if (i >= other.startSlot && i <= otherEnd) {
-                            alert(`Cannot change height: would overlap with ${other.customName || getComponentName(other.type)} at slot ${i}U`);
-                            return;
+                const expandDownStartSlot = component.startSlot - delta;
+                const expandUpEndSlot = component.startSlot + component.size - 1 + delta;
+
+                let canExpandDown = expandDownStartSlot >= 1;
+                let canExpandUp = expandUpEndSlot <= rackHeight;
+
+                if (canExpandDown) {
+                    let hasConflictDown = false;
+                    for (let i = expandDownStartSlot; i < component.startSlot; i++) {
+                        for (const other of otherComponents) {
+                            const otherEnd = other.startSlot + other.size - 1;
+                            if (i >= other.startSlot && i <= otherEnd) {
+                                hasConflictDown = true;
+                                break;
+                            }
                         }
+                        if (hasConflictDown) break;
                     }
+                    canExpandDown = !hasConflictDown;
                 }
+
+                if (canExpandUp) {
+                    let hasConflictUp = false;
+                    const currentEnd = component.startSlot + component.size - 1;
+                    for (let i = currentEnd + 1; i <= expandUpEndSlot; i++) {
+                        for (const other of otherComponents) {
+                            const otherEnd = other.startSlot + other.size - 1;
+                            if (i >= other.startSlot && i <= otherEnd) {
+                                hasConflictUp = true;
+                                break;
+                            }
+                        }
+                        if (hasConflictUp) break;
+                    }
+                    canExpandUp = !hasConflictUp;
+                }
+
+                if (canExpandDown) {
+                    component.startSlot = expandDownStartSlot;
+                    component.size = newHeight;
+                } else if (canExpandUp) {
+                    component.size = newHeight;
+                } else {
+                    alert(`Cannot change height: no free slots available above or below`);
+                    return;
+                }
+            } else {
+                component.size = newHeight;
             }
 
-            component.startSlot = newStartSlot;
-            component.size = newHeight;
             document.getElementById('componentHeightValue').textContent = `${newHeight}U`;
         }
 
