@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="10U Labs Rack Designer - Design 10 inch server racks">
-    <title>10U Labs Rack Designer</title>
+    <meta name="description" content="10U Labs Rack Front View Designer - Design 10 inch server racks">
+    <title>10U Labs Rack Front View Designer</title>
     <style>
         * {
             margin: 0;
@@ -246,6 +246,28 @@
             cursor: not-allowed;
         }
 
+        .reset-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-left: auto;
+        }
+
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+        }
+
+        .reset-btn:active {
+            transform: translateY(0);
+        }
+
         .details-panel {
             background: #f8f9fa;
             border-radius: 15px;
@@ -379,7 +401,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>10U Labs Rack Designer</h1>
+        <h1>10U Labs Rack Front View Designer</h1>
         <p>Design your 10" server rack configuration</p>
     </div>
 
@@ -413,6 +435,7 @@
                     <button class="height-btn" id="decreaseHeight">−</button>
                     <span class="height-value" id="heightValue">5U</span>
                     <button class="height-btn" id="increaseHeight">+</button>
+                    <button class="reset-btn" onclick="resetRack()">Reset</button>
                 </div>
             </div>
 
@@ -726,6 +749,16 @@
             document.getElementById('heightValue').textContent = `${rackHeight}U`;
             initRack();
             renderComponents();
+        }
+
+        function resetRack() {
+            if (placedComponents.length > 0) {
+                if (confirm('Are you sure you want to remove all components from the rack?')) {
+                    placedComponents = [];
+                    deselectComponent();
+                    renderComponents();
+                }
+            }
         }
 
         document.getElementById('increaseHeight').addEventListener('click', () => updateHeight(1));
