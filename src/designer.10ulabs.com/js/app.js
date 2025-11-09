@@ -446,14 +446,6 @@ document.querySelectorAll('.component-item').forEach(item => {
     item.addEventListener('dragstart', handleDragStart);
 });
 
-document.addEventListener('click', (e) => {
-    if (selectedComponentId &&
-        !e.target.closest('.placed-component') &&
-        !e.target.closest('.details-panel')) {
-        deselectComponent();
-    }
-});
-
 initRack();
 document.getElementById('mainArea').classList.add('no-selection');
 
