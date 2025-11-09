@@ -88,7 +88,7 @@ body {
     gap: 12px;
     flex-shrink: 0;
     flex-wrap: wrap;
-    max-width: calc(3 * 260px + 2 * 12px);
+    max-width: calc(3 * (260px + 40px) + 2 * 12px);
 }
 
 .rack-section {
