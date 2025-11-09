@@ -70,31 +70,18 @@
                 <button class="height-btn" id="increaseHeight">+</button>
             </div>
 
+            <div class="height-control" style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <button class="height-btn" id="decreaseRackCount">−</button>
+                <span class="height-value" id="rackCountValue">3 Racks</span>
+                <button class="height-btn" id="increaseRackCount">+</button>
+            </div>
+
             <button class="save-btn" onclick="return false" style="width: 100%; margin-top: 20px; margin-left: 0;">Save</button>
             <button class="reset-btn" onclick="resetAllRacks()" style="width: 100%; margin-top: 10px; margin-left: 0;">Reset All</button>
         </div>
 
         <div class="main-area" id="mainArea">
-            <div class="racks-container">
-                <div class="rack-section">
-                    <h3 class="rack-title">Rack 1</h3>
-                    <div class="rack-container">
-                        <div class="rack" id="rack1" data-rack-id="1"></div>
-                    </div>
-                </div>
-                <div class="rack-section">
-                    <h3 class="rack-title">Rack 2</h3>
-                    <div class="rack-container">
-                        <div class="rack" id="rack2" data-rack-id="2"></div>
-                    </div>
-                </div>
-                <div class="rack-section">
-                    <h3 class="rack-title">Rack 3</h3>
-                    <div class="rack-container">
-                        <div class="rack" id="rack3" data-rack-id="3"></div>
-                    </div>
-                </div>
-            </div>
+            <div class="racks-container" id="racksContainer"></div>
 
             <div class="details-panel" id="detailsPanel" style="display: none;">
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
