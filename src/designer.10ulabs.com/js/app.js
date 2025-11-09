@@ -163,11 +163,9 @@ function selectComponent(componentId) {
     const component = placedComponents.find(c => c.id === componentId);
 
     if (component) {
-        document.getElementById('detailType').textContent = getComponentName(component.type);
-        document.getElementById('detailSize').textContent = `${component.size}U`;
-        document.getElementById('detailPosition').textContent = `${component.startSlot}U - ${component.startSlot + component.size - 1}U`;
         document.getElementById('componentName').value = component.customName || getComponentName(component.type);
         document.getElementById('componentColor').value = component.customColor || defaultColors[component.type];
+        document.getElementById('componentHeight').value = component.size;
         document.getElementById('detailsPanel').style.display = 'block';
         document.getElementById('mainArea').classList.remove('no-selection');
     }
@@ -182,16 +180,64 @@ function deselectComponent() {
     renderComponents();
 }
 
-function applyChanges() {
+function updateComponentName() {
     if (!selectedComponentId) return;
 
     const component = placedComponents.find(c => c.id === selectedComponentId);
     if (component) {
         const newName = document.getElementById('componentName').value.trim();
-        const newColor = document.getElementById('componentColor').value;
-
         component.customName = newName || null;
+        renderComponents();
+    }
+}
+
+function updateComponentColor() {
+    if (!selectedComponentId) return;
+
+    const component = placedComponents.find(c => c.id === selectedComponentId);
+    if (component) {
+        const newColor = document.getElementById('componentColor').value;
         component.customColor = newColor;
+        renderComponents();
+    }
+}
+
+function updateComponentHeight() {
+    if (!selectedComponentId) return;
+
+    const component = placedComponents.find(c => c.id === selectedComponentId);
+    if (component) {
+        const newHeight = parseInt(document.getElementById('componentHeight').value);
+
+        if (newHeight < 1 || newHeight > 10) {
+            alert('Height must be between 1U and 10U');
+            document.getElementById('componentHeight').value = component.size;
+            return;
+        }
+
+        if (newHeight !== component.size) {
+            const endSlot = component.startSlot + newHeight - 1;
+
+            if (endSlot > rackHeight) {
+                alert(`Cannot change height: would exceed rack height (max slot: ${rackHeight}U)`);
+                document.getElementById('componentHeight').value = component.size;
+                return;
+            }
+
+            const otherComponents = placedComponents.filter(c => c.id !== selectedComponentId);
+            for (let i = component.startSlot; i < component.startSlot + newHeight; i++) {
+                for (const other of otherComponents) {
+                    const otherEnd = other.startSlot + other.size - 1;
+                    if (i >= other.startSlot && i <= otherEnd) {
+                        alert(`Cannot change height: would overlap with ${other.customName || getComponentName(other.type)} at slot ${i}U`);
+                        document.getElementById('componentHeight').value = component.size;
+                        return;
+                    }
+                }
+            }
+
+            component.size = newHeight;
+        }
 
         renderComponents();
     }
@@ -331,3 +377,14 @@ document.addEventListener('click', (e) => {
 
 initRack();
 document.getElementById('mainArea').classList.add('no-selection');
+
+document.getElementById('componentName').addEventListener('blur', updateComponentName);
+document.getElementById('componentName').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        updateComponentName();
+        e.target.blur();
+    }
+});
+
+document.getElementById('componentColor').addEventListener('change', updateComponentColor);
+document.getElementById('componentHeight').addEventListener('change', updateComponentHeight);
