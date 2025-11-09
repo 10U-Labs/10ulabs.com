@@ -1,4 +1,5 @@
 let rackHeight = 12;
+let rackCount = 3;
 let placedParts = [];
 let selectedPartId = null;
 
@@ -21,9 +22,25 @@ const defaultColors = {
 };
 
 function initRacks() {
-    for (let rackId = 1; rackId <= 3; rackId++) {
-        const rack = document.getElementById(`rack${rackId}`);
-        rack.innerHTML = '';
+    const racksContainer = document.getElementById('racksContainer');
+    racksContainer.innerHTML = '';
+
+    for (let rackId = 1; rackId <= rackCount; rackId++) {
+        const rackSection = document.createElement('div');
+        rackSection.className = 'rack-section';
+
+        const rackTitle = document.createElement('h3');
+        rackTitle.className = 'rack-title';
+        rackTitle.textContent = `Rack ${rackId}`;
+        rackSection.appendChild(rackTitle);
+
+        const rackContainer = document.createElement('div');
+        rackContainer.className = 'rack-container';
+
+        const rack = document.createElement('div');
+        rack.className = 'rack';
+        rack.id = `rack${rackId}`;
+        rack.dataset.rackId = rackId;
 
         for (let i = 1; i <= rackHeight; i++) {
             const slot = document.createElement('div');
@@ -42,6 +59,10 @@ function initRacks() {
 
             rack.appendChild(slot);
         }
+
+        rackContainer.appendChild(rack);
+        rackSection.appendChild(rackContainer);
+        racksContainer.appendChild(rackSection);
     }
 }
 
@@ -491,8 +512,32 @@ function resetAllRacks() {
     }
 }
 
+function updateRackCount(delta) {
+    const newCount = rackCount + delta;
+
+    if (newCount < 1) {
+        return;
+    }
+
+    if (delta < 0) {
+        const partsInRemovedRacks = placedParts.filter(p => p.rackId > newCount);
+        if (partsInRemovedRacks.length > 0) {
+            alert(`Cannot remove rack${newCount < rackCount - 1 ? 's' : ''}: ${partsInRemovedRacks.length} part${partsInRemovedRacks.length > 1 ? 's' : ''} would be removed. Please move or delete them first.`);
+            return;
+        }
+    }
+
+    rackCount = newCount;
+    document.getElementById('rackCountValue').textContent = `${rackCount} Rack${rackCount > 1 ? 's' : ''}`;
+    initRacks();
+    renderParts();
+}
+
 document.getElementById('increaseHeight').addEventListener('click', () => updateHeight(1));
 document.getElementById('decreaseHeight').addEventListener('click', () => updateHeight(-1));
+
+document.getElementById('increaseRackCount').addEventListener('click', () => updateRackCount(1));
+document.getElementById('decreaseRackCount').addEventListener('click', () => updateRackCount(-1));
 
 document.querySelectorAll('.part-item').forEach(item => {
     item.addEventListener('dragstart', handleDragStart);
