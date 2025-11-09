@@ -231,6 +231,27 @@ body {
     cursor: not-allowed;
 }
 
+.save-btn {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+}
+
+.save-btn:active {
+    transform: translateY(0);
+}
+
 .reset-btn {
     background: linear-gradient(135deg, #e74c3c, #c0392b);
     color: white;
