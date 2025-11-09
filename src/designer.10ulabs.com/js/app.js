@@ -46,14 +46,14 @@ function handleDragStart(e) {
     const element = e.currentTarget;
     const partType = element.dataset.part;
     const partSize = element.dataset.size;
+    const partId = element.dataset.partId;
 
     if (partType) {
         e.dataTransfer.setData('partType', partType);
         e.dataTransfer.setData('partSize', partSize);
         e.dataTransfer.effectAllowed = 'copy';
         sessionStorage.setItem('draggingPartSize', partSize);
-    } else {
-        const partId = element.dataset.partId;
+    } else if (partId) {
         e.dataTransfer.setData('existingPart', partId);
         e.dataTransfer.effectAllowed = 'move';
         element.classList.add('dragging');
@@ -61,7 +61,9 @@ function handleDragStart(e) {
     }
 
     document.querySelectorAll('.placed-part').forEach(comp => {
-        comp.style.pointerEvents = 'none';
+        if (comp !== element) {
+            comp.style.pointerEvents = 'none';
+        }
     });
 }
 
@@ -375,6 +377,7 @@ function renderParts() {
         partEl.className = `placed-part`;
         partEl.dataset.partId = part.id;
         partEl.draggable = true;
+        partEl.style.pointerEvents = '';
 
         if (part.id === selectedPartId) {
             partEl.classList.add('selected');
