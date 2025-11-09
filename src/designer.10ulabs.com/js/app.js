@@ -58,6 +58,10 @@ function handleDragStart(e) {
         e.target.classList.add('dragging');
         sessionStorage.setItem('draggingComponentId', componentId);
     }
+
+    document.querySelectorAll('.placed-component').forEach(comp => {
+        comp.style.pointerEvents = 'none';
+    });
 }
 
 function handleDragEnd(e) {
@@ -66,6 +70,10 @@ function handleDragEnd(e) {
     sessionStorage.removeItem('draggingComponentId');
     document.querySelectorAll('.rack-slot').forEach(slot => {
         slot.classList.remove('drag-over', 'drag-over-invalid');
+    });
+
+    document.querySelectorAll('.placed-component').forEach(comp => {
+        comp.style.pointerEvents = '';
     });
 }
 
