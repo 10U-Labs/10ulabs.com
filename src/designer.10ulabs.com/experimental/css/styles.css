@@ -86,7 +86,7 @@ body {
 .racks-container {
     display: flex;
     gap: 10px;
-    flex: 1;
+    flex-shrink: 0;
     flex-wrap: nowrap;
 }
 
@@ -298,6 +298,7 @@ body {
     padding: 20px;
     animation: slideIn 0.3s ease;
     width: 300px;
+    flex-shrink: 0;
 }
 
 @keyframes slideIn {
