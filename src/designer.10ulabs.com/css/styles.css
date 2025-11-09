@@ -356,6 +356,21 @@ body {
     cursor: pointer;
 }
 
+.privacy-notice {
+    text-align: center;
+    padding: 10px;
+}
+
+.privacy-notice a {
+    color: #667eea;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.privacy-notice a:hover {
+    text-decoration: underline;
+}
+
 .footer {
     text-align: center;
     color: white;
