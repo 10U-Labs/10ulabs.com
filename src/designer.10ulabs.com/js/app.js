@@ -50,31 +50,100 @@ function handleDragStart(e) {
         e.dataTransfer.setData('componentType', componentType);
         e.dataTransfer.setData('componentSize', componentSize);
         e.dataTransfer.effectAllowed = 'copy';
+        sessionStorage.setItem('draggingComponentSize', componentSize);
     } else {
         const componentId = e.target.dataset.componentId;
         e.dataTransfer.setData('existingComponent', componentId);
         e.dataTransfer.effectAllowed = 'move';
         e.target.classList.add('dragging');
+        sessionStorage.setItem('draggingComponentId', componentId);
     }
 }
 
 function handleDragEnd(e) {
     e.target.classList.remove('dragging');
+    sessionStorage.removeItem('draggingComponentSize');
+    sessionStorage.removeItem('draggingComponentId');
+    document.querySelectorAll('.rack-slot').forEach(slot => {
+        slot.classList.remove('drag-over', 'drag-over-invalid');
+    });
+}
+
+function getAffectedSlots(startSlot, componentSize) {
+    const slots = [];
+    for (let i = startSlot; i < startSlot + componentSize; i++) {
+        slots.push(i);
+    }
+    return slots;
+}
+
+function isValidPlacement(startSlot, componentSize, excludeId = null) {
+    if (startSlot + componentSize - 1 > rackHeight) {
+        return false;
+    }
+
+    for (let i = startSlot; i < startSlot + componentSize; i++) {
+        for (const component of placedComponents) {
+            if (excludeId && component.id === excludeId) continue;
+            const componentEnd = component.startSlot + component.size - 1;
+            if (i >= component.startSlot && i <= componentEnd) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 function handleDragOver(e) {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    e.currentTarget.classList.add('drag-over');
+
+    const currentSlot = parseInt(e.currentTarget.dataset.slot);
+    const existingComponentId = e.dataTransfer.types.includes('existingcomponent') ?
+        sessionStorage.getItem('draggingComponentId') : null;
+
+    let componentSize = 1;
+    if (existingComponentId) {
+        const component = placedComponents.find(c => c.id === existingComponentId);
+        componentSize = component ? component.size : 1;
+    } else if (e.dataTransfer.types.includes('componentsize')) {
+        componentSize = parseInt(sessionStorage.getItem('draggingComponentSize') || '1');
+    }
+
+    const affectedSlots = getAffectedSlots(currentSlot, componentSize);
+    const isValid = isValidPlacement(currentSlot, componentSize, existingComponentId);
+
+    document.querySelectorAll('.rack-slot').forEach(slot => {
+        slot.classList.remove('drag-over', 'drag-over-invalid');
+    });
+
+    affectedSlots.forEach(slotNum => {
+        const slotElement = document.querySelector(`.rack-slot[data-slot="${slotNum}"]`);
+        if (slotElement) {
+            if (isValid) {
+                slotElement.classList.add('drag-over');
+            } else {
+                slotElement.classList.add('drag-over-invalid');
+            }
+        }
+    });
+
+    e.dataTransfer.dropEffect = isValid ? 'copy' : 'none';
 }
 
 function handleDragLeave(e) {
-    e.currentTarget.classList.remove('drag-over');
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+        document.querySelectorAll('.rack-slot').forEach(slot => {
+            slot.classList.remove('drag-over', 'drag-over-invalid');
+        });
+    }
 }
 
 function handleDrop(e) {
     e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
+    document.querySelectorAll('.rack-slot').forEach(slot => {
+        slot.classList.remove('drag-over', 'drag-over-invalid');
+    });
 
     const slot = parseInt(e.currentTarget.dataset.slot);
     const existingComponentId = e.dataTransfer.getData('existingComponent');
