@@ -1,4 +1,4 @@
-let rackHeight = 5;
+let rackHeight = 12;
 let placedComponents = [];
 let selectedComponentId = null;
 
@@ -14,7 +14,8 @@ const defaultColors = {
     'shelf': '#16a085',
     'switch': '#f39c12',
     'ups': '#e74c3c',
-    'venting': '#95a5a6',
+    'venting-1u': '#95a5a6',
+    'venting-2u': '#7f8c8d',
     'wifi-bridge': '#2ecc71'
 };
 
@@ -312,7 +313,8 @@ function getComponentName(type) {
         'shelf': 'Shelf',
         'switch': 'Switch',
         'ups': 'UPS',
-        'venting': 'Venting Panel',
+        'venting-1u': 'Venting Panel (1U)',
+        'venting-2u': 'Venting Panel (2U)',
         'wifi-bridge': 'WiFi Bridge'
     };
     return names[type] || type;

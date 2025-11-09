@@ -84,10 +84,6 @@ body {
     gap: 30px;
 }
 
-.main-area.no-selection {
-    grid-template-columns: 1fr;
-}
-
 .rack-section {
     display: flex;
     flex-direction: column;
