@@ -53,7 +53,7 @@ body {
     color: #667eea;
 }
 
-.component-item {
+.part-item {
     background: white;
     border: 2px solid #667eea;
     border-radius: 8px;
@@ -64,16 +64,16 @@ body {
     user-select: none;
 }
 
-.component-item:hover {
+.part-item:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.component-item:active {
+.part-item:active {
     cursor: grabbing;
 }
 
-.component-name {
+.part-name {
     font-weight: bold;
     color: #333;
 }
@@ -139,7 +139,7 @@ body {
     font-weight: bold;
 }
 
-.placed-component {
+.placed-part {
     position: absolute;
     left: 0;
     right: 0;
@@ -155,20 +155,20 @@ body {
     z-index: 10;
 }
 
-.placed-component:hover {
+.placed-part:hover {
     filter: brightness(1.1);
 }
 
-.placed-component.selected {
+.placed-part.selected {
     box-shadow: 0 0 0 3px #fff, 0 0 0 6px #667eea;
 }
 
-.placed-component.dragging {
+.placed-part.dragging {
     cursor: grabbing;
     opacity: 0.7;
 }
 
-.component-remove {
+.part-remove {
     position: absolute;
     right: 10px;
     background: rgba(255, 255, 255, 0.3);
@@ -182,7 +182,7 @@ body {
     transition: background 0.2s ease;
 }
 
-.component-remove:hover {
+.part-remove:hover {
     background: rgba(255, 255, 255, 0.5);
 }
 
@@ -369,7 +369,7 @@ body {
     box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
 }
 
-.component-info {
+.part-info {
     background: #e8f4f8;
     border-left: 4px solid #3498db;
     padding: 15px;
@@ -377,14 +377,14 @@ body {
     margin-bottom: 20px;
 }
 
-.component-info p {
+.part-info p {
     color: #555;
     font-size: 0.9rem;
     line-height: 1.5;
     margin-bottom: 5px;
 }
 
-.component-info p:last-child {
+.part-info p:last-child {
     margin-bottom: 0;
 }
 
