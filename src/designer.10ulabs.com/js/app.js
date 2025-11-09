@@ -1,6 +1,6 @@
 let rackHeight = 12;
-let placedComponents = [];
-let selectedComponentId = null;
+let placedParts = [];
+let selectedPartId = null;
 
 const defaultColors = {
     'blank-panel-1u': '#bdc3c7',
@@ -43,58 +43,58 @@ function initRack() {
 }
 
 function handleDragStart(e) {
-    const componentType = e.target.dataset.component;
-    const componentSize = e.target.dataset.size;
+    const partType = e.target.dataset.part;
+    const partSize = e.target.dataset.size;
 
-    if (componentType) {
-        e.dataTransfer.setData('componentType', componentType);
-        e.dataTransfer.setData('componentSize', componentSize);
+    if (partType) {
+        e.dataTransfer.setData('partType', partType);
+        e.dataTransfer.setData('partSize', partSize);
         e.dataTransfer.effectAllowed = 'copy';
-        sessionStorage.setItem('draggingComponentSize', componentSize);
+        sessionStorage.setItem('draggingPartSize', partSize);
     } else {
-        const componentId = e.target.dataset.componentId;
-        e.dataTransfer.setData('existingComponent', componentId);
+        const partId = e.target.dataset.partId;
+        e.dataTransfer.setData('existingPart', partId);
         e.dataTransfer.effectAllowed = 'move';
         e.target.classList.add('dragging');
-        sessionStorage.setItem('draggingComponentId', componentId);
+        sessionStorage.setItem('draggingPartId', partId);
     }
 
-    document.querySelectorAll('.placed-component').forEach(comp => {
+    document.querySelectorAll('.placed-part').forEach(comp => {
         comp.style.pointerEvents = 'none';
     });
 }
 
 function handleDragEnd(e) {
     e.target.classList.remove('dragging');
-    sessionStorage.removeItem('draggingComponentSize');
-    sessionStorage.removeItem('draggingComponentId');
+    sessionStorage.removeItem('draggingPartSize');
+    sessionStorage.removeItem('draggingPartId');
     document.querySelectorAll('.rack-slot').forEach(slot => {
         slot.classList.remove('drag-over', 'drag-over-invalid');
     });
 
-    document.querySelectorAll('.placed-component').forEach(comp => {
+    document.querySelectorAll('.placed-part').forEach(comp => {
         comp.style.pointerEvents = '';
     });
 }
 
-function getAffectedSlots(startSlot, componentSize) {
+function getAffectedSlots(startSlot, partSize) {
     const slots = [];
-    for (let i = startSlot; i < startSlot + componentSize; i++) {
+    for (let i = startSlot; i < startSlot + partSize; i++) {
         slots.push(i);
     }
     return slots;
 }
 
-function isValidPlacement(startSlot, componentSize, excludeId = null) {
-    if (startSlot + componentSize - 1 > rackHeight) {
+function isValidPlacement(startSlot, partSize, excludeId = null) {
+    if (startSlot + partSize - 1 > rackHeight) {
         return false;
     }
 
-    for (let i = startSlot; i < startSlot + componentSize; i++) {
-        for (const component of placedComponents) {
-            if (excludeId && component.id === excludeId) continue;
-            const componentEnd = component.startSlot + component.size - 1;
-            if (i >= component.startSlot && i <= componentEnd) {
+    for (let i = startSlot; i < startSlot + partSize; i++) {
+        for (const part of placedParts) {
+            if (excludeId && part.id === excludeId) continue;
+            const partEnd = part.startSlot + part.size - 1;
+            if (i >= part.startSlot && i <= partEnd) {
                 return false;
             }
         }
@@ -107,19 +107,19 @@ function handleDragOver(e) {
     e.preventDefault();
 
     const currentSlot = parseInt(e.currentTarget.dataset.slot);
-    const existingComponentId = e.dataTransfer.types.includes('existingcomponent') ?
-        sessionStorage.getItem('draggingComponentId') : null;
+    const existingPartId = e.dataTransfer.types.includes('existingpart') ?
+        sessionStorage.getItem('draggingPartId') : null;
 
-    let componentSize = 1;
-    if (existingComponentId) {
-        const component = placedComponents.find(c => c.id === existingComponentId);
-        componentSize = component ? component.size : 1;
-    } else if (e.dataTransfer.types.includes('componentsize')) {
-        componentSize = parseInt(sessionStorage.getItem('draggingComponentSize') || '1');
+    let partSize = 1;
+    if (existingPartId) {
+        const part = placedParts.find(c => c.id === existingPartId);
+        partSize = part ? part.size : 1;
+    } else if (e.dataTransfer.types.includes('partsize')) {
+        partSize = parseInt(sessionStorage.getItem('draggingPartSize') || '1');
     }
 
-    const affectedSlots = getAffectedSlots(currentSlot, componentSize);
-    const isValid = isValidPlacement(currentSlot, componentSize, existingComponentId);
+    const affectedSlots = getAffectedSlots(currentSlot, partSize);
+    const isValid = isValidPlacement(currentSlot, partSize, existingPartId);
 
     document.querySelectorAll('.rack-slot').forEach(slot => {
         slot.classList.remove('drag-over', 'drag-over-invalid');
@@ -154,24 +154,24 @@ function handleDrop(e) {
     });
 
     const slot = parseInt(e.currentTarget.dataset.slot);
-    const existingComponentId = e.dataTransfer.getData('existingComponent');
+    const existingPartId = e.dataTransfer.getData('existingPart');
 
-    if (existingComponentId) {
-        moveComponent(existingComponentId, slot);
+    if (existingPartId) {
+        movePart(existingPartId, slot);
     } else {
-        const componentType = e.dataTransfer.getData('componentType');
-        const componentSize = parseInt(e.dataTransfer.getData('componentSize'));
-        addComponent(componentType, componentSize, slot);
+        const partType = e.dataTransfer.getData('partType');
+        const partSize = parseInt(e.dataTransfer.getData('partSize'));
+        addPart(partType, partSize, slot);
     }
 }
 
-function addComponent(type, size, startSlot) {
-    if (!canPlaceComponent(startSlot, size)) {
-        alert(`Cannot place component: slots ${startSlot} to ${startSlot + size - 1} are not available or exceed rack height.`);
+function addPart(type, size, startSlot) {
+    if (!canPlacePart(startSlot, size)) {
+        alert(`Cannot place part: slots ${startSlot} to ${startSlot + size - 1} are not available or exceed rack height.`);
         return;
     }
 
-    const component = {
+    const part = {
         id: Date.now().toString(),
         type: type,
         size: size,
@@ -180,36 +180,36 @@ function addComponent(type, size, startSlot) {
         customColor: null
     };
 
-    placedComponents.push(component);
-    renderComponents();
+    placedParts.push(part);
+    renderParts();
 }
 
-function moveComponent(componentId, newStartSlot) {
-    const component = placedComponents.find(c => c.id === componentId);
-    if (!component) return;
+function movePart(partId, newStartSlot) {
+    const part = placedParts.find(c => c.id === partId);
+    if (!part) return;
 
-    const otherComponents = placedComponents.filter(c => c.id !== componentId);
+    const otherParts = placedParts.filter(c => c.id !== partId);
 
-    for (let i = newStartSlot; i < newStartSlot + component.size; i++) {
+    for (let i = newStartSlot; i < newStartSlot + part.size; i++) {
         if (i > rackHeight) {
-            alert(`Cannot place component: exceeds rack height.`);
+            alert(`Cannot place part: exceeds rack height.`);
             return;
         }
 
-        for (const other of otherComponents) {
+        for (const other of otherParts) {
             const otherEnd = other.startSlot + other.size - 1;
             if (i >= other.startSlot && i <= otherEnd) {
-                alert(`Cannot place component: slot ${i} is occupied.`);
+                alert(`Cannot place part: slot ${i} is occupied.`);
                 return;
             }
         }
     }
 
-    component.startSlot = newStartSlot;
-    renderComponents();
+    part.startSlot = newStartSlot;
+    renderParts();
 }
 
-function canPlaceComponent(startSlot, size, excludeId = null) {
+function canPlacePart(startSlot, size, excludeId = null) {
     const endSlot = startSlot + size - 1;
 
     if (endSlot > rackHeight) {
@@ -217,10 +217,10 @@ function canPlaceComponent(startSlot, size, excludeId = null) {
     }
 
     for (let i = startSlot; i < startSlot + size; i++) {
-        for (const component of placedComponents) {
-            if (excludeId && component.id === excludeId) continue;
-            const componentEnd = component.startSlot + component.size - 1;
-            if (i >= component.startSlot && i <= componentEnd) {
+        for (const part of placedParts) {
+            if (excludeId && part.id === excludeId) continue;
+            const partEnd = part.startSlot + part.size - 1;
+            if (i >= part.startSlot && i <= partEnd) {
                 return false;
             }
         }
@@ -229,84 +229,84 @@ function canPlaceComponent(startSlot, size, excludeId = null) {
     return true;
 }
 
-function removeComponent(componentId) {
-    placedComponents = placedComponents.filter(c => c.id !== componentId);
-    if (selectedComponentId === componentId) {
-        deselectComponent();
+function removePart(partId) {
+    placedParts = placedParts.filter(c => c.id !== partId);
+    if (selectedPartId === partId) {
+        deselectPart();
     }
-    renderComponents();
+    renderParts();
 }
 
-function selectComponent(componentId) {
-    selectedComponentId = componentId;
-    const component = placedComponents.find(c => c.id === componentId);
+function selectPart(partId) {
+    selectedPartId = partId;
+    const part = placedParts.find(c => c.id === partId);
 
-    if (component) {
-        document.getElementById('componentName').value = component.customName || getComponentName(component.type);
-        document.getElementById('componentColor').value = component.customColor || defaultColors[component.type];
-        document.getElementById('componentHeightValue').textContent = `${component.size}U`;
+    if (part) {
+        document.getElementById('partName').value = part.customName || getPartName(part.type);
+        document.getElementById('partColor').value = part.customColor || defaultColors[part.type];
+        document.getElementById('partHeightValue').textContent = `${part.size}U`;
         document.getElementById('detailsPanel').style.display = 'block';
         document.getElementById('mainArea').classList.remove('no-selection');
     }
 
-    renderComponents();
+    renderParts();
 }
 
-function deselectComponent() {
-    selectedComponentId = null;
+function deselectPart() {
+    selectedPartId = null;
     document.getElementById('detailsPanel').style.display = 'none';
     document.getElementById('mainArea').classList.add('no-selection');
-    renderComponents();
+    renderParts();
 }
 
-function updateComponentName() {
-    if (!selectedComponentId) return;
+function updatePartName() {
+    if (!selectedPartId) return;
 
-    const component = placedComponents.find(c => c.id === selectedComponentId);
-    if (component) {
-        const newName = document.getElementById('componentName').value.trim();
-        component.customName = newName || null;
-        renderComponents();
+    const part = placedParts.find(c => c.id === selectedPartId);
+    if (part) {
+        const newName = document.getElementById('partName').value.trim();
+        part.customName = newName || null;
+        renderParts();
     }
 }
 
-function updateComponentColor() {
-    if (!selectedComponentId) return;
+function updatePartColor() {
+    if (!selectedPartId) return;
 
-    const component = placedComponents.find(c => c.id === selectedComponentId);
-    if (component) {
-        const newColor = document.getElementById('componentColor').value;
-        component.customColor = newColor;
-        renderComponents();
+    const part = placedParts.find(c => c.id === selectedPartId);
+    if (part) {
+        const newColor = document.getElementById('partColor').value;
+        part.customColor = newColor;
+        renderParts();
     }
 }
 
-function updateComponentHeight(delta) {
-    if (!selectedComponentId) return;
+function updatePartHeight(delta) {
+    if (!selectedPartId) return;
 
-    const component = placedComponents.find(c => c.id === selectedComponentId);
-    if (component) {
-        const newHeight = component.size + delta;
+    const part = placedParts.find(c => c.id === selectedPartId);
+    if (part) {
+        const newHeight = part.size + delta;
 
         if (newHeight < 1 || newHeight > 10) {
             alert('Height must be between 1U and 10U');
             return;
         }
 
-        if (newHeight !== component.size) {
-            const otherComponents = placedComponents.filter(c => c.id !== selectedComponentId);
+        if (newHeight !== part.size) {
+            const otherParts = placedParts.filter(c => c.id !== selectedPartId);
 
             if (delta > 0) {
-                const expandDownStartSlot = component.startSlot - delta;
-                const expandUpEndSlot = component.startSlot + component.size - 1 + delta;
+                const expandDownStartSlot = part.startSlot - delta;
+                const expandUpEndSlot = part.startSlot + part.size - 1 + delta;
 
                 let canExpandDown = expandDownStartSlot >= 1;
                 let canExpandUp = expandUpEndSlot <= rackHeight;
 
                 if (canExpandDown) {
                     let hasConflictDown = false;
-                    for (let i = expandDownStartSlot; i < component.startSlot; i++) {
-                        for (const other of otherComponents) {
+                    for (let i = expandDownStartSlot; i < part.startSlot; i++) {
+                        for (const other of otherParts) {
                             const otherEnd = other.startSlot + other.size - 1;
                             if (i >= other.startSlot && i <= otherEnd) {
                                 hasConflictDown = true;
@@ -320,9 +320,9 @@ function updateComponentHeight(delta) {
 
                 if (canExpandUp) {
                     let hasConflictUp = false;
-                    const currentEnd = component.startSlot + component.size - 1;
+                    const currentEnd = part.startSlot + part.size - 1;
                     for (let i = currentEnd + 1; i <= expandUpEndSlot; i++) {
-                        for (const other of otherComponents) {
+                        for (const other of otherParts) {
                             const otherEnd = other.startSlot + other.size - 1;
                             if (i >= other.startSlot && i <= otherEnd) {
                                 hasConflictUp = true;
@@ -335,84 +335,84 @@ function updateComponentHeight(delta) {
                 }
 
                 if (canExpandDown) {
-                    component.startSlot = expandDownStartSlot;
-                    component.size = newHeight;
+                    part.startSlot = expandDownStartSlot;
+                    part.size = newHeight;
                 } else if (canExpandUp) {
-                    component.size = newHeight;
+                    part.size = newHeight;
                 } else {
                     alert(`Cannot change height: no free slots available above or below`);
                     return;
                 }
             } else {
-                component.size = newHeight;
+                part.size = newHeight;
             }
 
-            document.getElementById('componentHeightValue').textContent = `${newHeight}U`;
+            document.getElementById('partHeightValue').textContent = `${newHeight}U`;
         }
 
-        renderComponents();
+        renderParts();
     }
 }
 
-function deleteComponent() {
-    if (!selectedComponentId) return;
+function deletePart() {
+    if (!selectedPartId) return;
 
-    if (confirm('Are you sure you want to delete this component?')) {
-        removeComponent(selectedComponentId);
+    if (confirm('Are you sure you want to delete this part?')) {
+        removePart(selectedPartId);
     }
 }
 
-function renderComponents() {
-    document.querySelectorAll('.placed-component').forEach(el => el.remove());
+function renderParts() {
+    document.querySelectorAll('.placed-part').forEach(el => el.remove());
 
     const rack = document.getElementById('rack');
     const slotHeight = 40;
 
-    placedComponents.forEach(component => {
-        const componentEl = document.createElement('div');
-        componentEl.className = `placed-component`;
-        componentEl.dataset.componentId = component.id;
-        componentEl.draggable = true;
+    placedParts.forEach(part => {
+        const partEl = document.createElement('div');
+        partEl.className = `placed-part`;
+        partEl.dataset.partId = part.id;
+        partEl.draggable = true;
 
-        if (component.id === selectedComponentId) {
-            componentEl.classList.add('selected');
+        if (part.id === selectedPartId) {
+            partEl.classList.add('selected');
         }
 
-        const bottomPosition = (component.startSlot - 1) * slotHeight;
-        componentEl.style.bottom = `${bottomPosition}px`;
-        componentEl.style.height = `${component.size * slotHeight}px`;
+        const bottomPosition = (part.startSlot - 1) * slotHeight;
+        partEl.style.bottom = `${bottomPosition}px`;
+        partEl.style.height = `${part.size * slotHeight}px`;
 
-        const color = component.customColor || defaultColors[component.type];
-        componentEl.style.background = color;
-        componentEl.style.border = `2px solid ${adjustBrightness(color, -20)}`;
+        const color = part.customColor || defaultColors[part.type];
+        partEl.style.background = color;
+        partEl.style.border = `2px solid ${adjustBrightness(color, -20)}`;
 
         const nameSpan = document.createElement('span');
-        nameSpan.textContent = component.customName || getComponentName(component.type);
+        nameSpan.textContent = part.customName || getPartName(part.type);
 
         const removeBtn = document.createElement('button');
-        removeBtn.className = 'component-remove';
+        removeBtn.className = 'part-remove';
         removeBtn.textContent = '×';
         removeBtn.onclick = (e) => {
             e.stopPropagation();
-            removeComponent(component.id);
+            removePart(part.id);
         };
 
-        componentEl.appendChild(nameSpan);
-        componentEl.appendChild(removeBtn);
+        partEl.appendChild(nameSpan);
+        partEl.appendChild(removeBtn);
 
-        componentEl.addEventListener('dragstart', handleDragStart);
-        componentEl.addEventListener('dragend', handleDragEnd);
-        componentEl.addEventListener('click', (e) => {
+        partEl.addEventListener('dragstart', handleDragStart);
+        partEl.addEventListener('dragend', handleDragEnd);
+        partEl.addEventListener('click', (e) => {
             if (e.target !== removeBtn) {
-                selectComponent(component.id);
+                selectPart(part.id);
             }
         });
 
-        rack.appendChild(componentEl);
+        rack.appendChild(partEl);
     });
 }
 
-function getComponentName(type) {
+function getPartName(type) {
     const names = {
         'blank-panel-1u': 'Blank Panel (1U)',
         'blank-panel-2u': 'Blank Panel (2U)',
@@ -448,27 +448,27 @@ function updateHeight(delta) {
         return;
     }
 
-    const maxUsedSlot = placedComponents.reduce((max, c) => {
+    const maxUsedSlot = placedParts.reduce((max, c) => {
         return Math.max(max, c.startSlot + c.size - 1);
     }, 0);
 
     if (newHeight < maxUsedSlot) {
-        alert(`Cannot reduce height below ${maxUsedSlot}U: components are using those slots.`);
+        alert(`Cannot reduce height below ${maxUsedSlot}U: parts are using those slots.`);
         return;
     }
 
     rackHeight = newHeight;
     document.getElementById('heightValue').textContent = `${rackHeight}U`;
     initRack();
-    renderComponents();
+    renderParts();
 }
 
 function resetRack() {
-    if (placedComponents.length > 0) {
-        if (confirm('Are you sure you want to remove all components from the rack?')) {
-            placedComponents = [];
-            deselectComponent();
-            renderComponents();
+    if (placedParts.length > 0) {
+        if (confirm('Are you sure you want to remove all parts from the rack?')) {
+            placedParts = [];
+            deselectPart();
+            renderParts();
         }
     }
 }
@@ -476,21 +476,21 @@ function resetRack() {
 document.getElementById('increaseHeight').addEventListener('click', () => updateHeight(1));
 document.getElementById('decreaseHeight').addEventListener('click', () => updateHeight(-1));
 
-document.querySelectorAll('.component-item').forEach(item => {
+document.querySelectorAll('.part-item').forEach(item => {
     item.addEventListener('dragstart', handleDragStart);
 });
 
 initRack();
 document.getElementById('mainArea').classList.add('no-selection');
 
-document.getElementById('componentName').addEventListener('blur', updateComponentName);
-document.getElementById('componentName').addEventListener('keypress', (e) => {
+document.getElementById('partName').addEventListener('blur', updatePartName);
+document.getElementById('partName').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
-        updateComponentName();
+        updatePartName();
         e.target.blur();
     }
 });
 
-document.getElementById('componentColor').addEventListener('change', updateComponentColor);
-document.getElementById('increaseComponentHeight').addEventListener('click', () => updateComponentHeight(1));
-document.getElementById('decreaseComponentHeight').addEventListener('click', () => updateComponentHeight(-1));
+document.getElementById('partColor').addEventListener('change', updatePartColor);
+document.getElementById('increasePartHeight').addEventListener('click', () => updatePartHeight(1));
+document.getElementById('decreasePartHeight').addEventListener('click', () => updatePartHeight(-1));
