@@ -20,25 +20,28 @@ const defaultColors = {
     'wifi-bridge': '#2ecc71'
 };
 
-function initRack() {
-    const rack = document.getElementById('rack');
-    rack.innerHTML = '';
+function initRacks() {
+    for (let rackId = 1; rackId <= 3; rackId++) {
+        const rack = document.getElementById(`rack${rackId}`);
+        rack.innerHTML = '';
 
-    for (let i = 1; i <= rackHeight; i++) {
-        const slot = document.createElement('div');
-        slot.className = 'rack-slot';
-        slot.dataset.slot = i;
+        for (let i = 1; i <= rackHeight; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'rack-slot';
+            slot.dataset.slot = i;
+            slot.dataset.rackId = rackId;
 
-        const slotNumber = document.createElement('div');
-        slotNumber.className = 'rack-slot-number';
-        slotNumber.textContent = i;
-        slot.appendChild(slotNumber);
+            const slotNumber = document.createElement('div');
+            slotNumber.className = 'rack-slot-number';
+            slotNumber.textContent = i;
+            slot.appendChild(slotNumber);
 
-        slot.addEventListener('dragover', handleDragOver);
-        slot.addEventListener('drop', handleDrop);
-        slot.addEventListener('dragleave', handleDragLeave);
+            slot.addEventListener('dragover', handleDragOver);
+            slot.addEventListener('drop', handleDrop);
+            slot.addEventListener('dragleave', handleDragLeave);
 
-        rack.appendChild(slot);
+            rack.appendChild(slot);
+        }
     }
 }
 
@@ -47,6 +50,7 @@ function handleDragStart(e) {
     const partType = element.dataset.part;
     const partSize = element.dataset.size;
     const partId = element.dataset.partId;
+    const rackId = element.dataset.rackId;
 
     if (partType) {
         e.dataTransfer.setData('partType', partType);
@@ -55,9 +59,11 @@ function handleDragStart(e) {
         sessionStorage.setItem('draggingPartSize', partSize);
     } else if (partId) {
         e.dataTransfer.setData('existingPart', partId);
+        e.dataTransfer.setData('sourceRackId', rackId);
         e.dataTransfer.effectAllowed = 'move';
         element.classList.add('dragging');
         sessionStorage.setItem('draggingPartId', partId);
+        sessionStorage.setItem('draggingPartRackId', rackId);
     }
 
     document.querySelectorAll('.placed-part').forEach(comp => {
@@ -72,6 +78,7 @@ function handleDragEnd(e) {
     element.classList.remove('dragging');
     sessionStorage.removeItem('draggingPartSize');
     sessionStorage.removeItem('draggingPartId');
+    sessionStorage.removeItem('draggingPartRackId');
     document.querySelectorAll('.rack-slot').forEach(slot => {
         slot.classList.remove('drag-over', 'drag-over-invalid');
     });
@@ -89,13 +96,15 @@ function getAffectedSlots(startSlot, partSize) {
     return slots;
 }
 
-function isValidPlacement(startSlot, partSize, excludeId = null) {
+function isValidPlacement(rackId, startSlot, partSize, excludeId = null) {
     if (startSlot + partSize - 1 > rackHeight) {
         return false;
     }
 
+    const rackParts = placedParts.filter(p => p.rackId === rackId);
+
     for (let i = startSlot; i < startSlot + partSize; i++) {
-        for (const part of placedParts) {
+        for (const part of rackParts) {
             if (excludeId && part.id === excludeId) continue;
             const partEnd = part.startSlot + part.size - 1;
             if (i >= part.startSlot && i <= partEnd) {
@@ -111,6 +120,7 @@ function handleDragOver(e) {
     e.preventDefault();
 
     const currentSlot = parseInt(e.currentTarget.dataset.slot);
+    const targetRackId = parseInt(e.currentTarget.dataset.rackId);
     const existingPartId = e.dataTransfer.types.includes('existingpart') ?
         sessionStorage.getItem('draggingPartId') : null;
 
@@ -123,14 +133,14 @@ function handleDragOver(e) {
     }
 
     const affectedSlots = getAffectedSlots(currentSlot, partSize);
-    const isValid = isValidPlacement(currentSlot, partSize, existingPartId);
+    const isValid = isValidPlacement(targetRackId, currentSlot, partSize, existingPartId);
 
     document.querySelectorAll('.rack-slot').forEach(slot => {
         slot.classList.remove('drag-over', 'drag-over-invalid');
     });
 
     affectedSlots.forEach(slotNum => {
-        const slotElement = document.querySelector(`.rack-slot[data-slot="${slotNum}"]`);
+        const slotElement = document.querySelector(`.rack-slot[data-slot="${slotNum}"][data-rack-id="${targetRackId}"]`);
         if (slotElement) {
             if (isValid) {
                 slotElement.classList.add('drag-over');
@@ -158,19 +168,20 @@ function handleDrop(e) {
     });
 
     const slot = parseInt(e.currentTarget.dataset.slot);
+    const targetRackId = parseInt(e.currentTarget.dataset.rackId);
     const existingPartId = e.dataTransfer.getData('existingPart');
 
     if (existingPartId) {
-        movePart(existingPartId, slot);
+        movePart(existingPartId, targetRackId, slot);
     } else {
         const partType = e.dataTransfer.getData('partType');
         const partSize = parseInt(e.dataTransfer.getData('partSize'));
-        addPart(partType, partSize, slot);
+        addPart(partType, partSize, targetRackId, slot);
     }
 }
 
-function addPart(type, size, startSlot) {
-    if (!canPlacePart(startSlot, size)) {
+function addPart(type, size, rackId, startSlot) {
+    if (!canPlacePart(rackId, startSlot, size)) {
         alert(`Cannot place part: slots ${startSlot} to ${startSlot + size - 1} are not available or exceed rack height.`);
         return;
     }
@@ -179,6 +190,7 @@ function addPart(type, size, startSlot) {
         id: Date.now().toString(),
         type: type,
         size: size,
+        rackId: rackId,
         startSlot: startSlot,
         customName: null,
         customColor: null
@@ -188,11 +200,11 @@ function addPart(type, size, startSlot) {
     renderParts();
 }
 
-function movePart(partId, newStartSlot) {
+function movePart(partId, newRackId, newStartSlot) {
     const part = placedParts.find(c => c.id === partId);
     if (!part) return;
 
-    const otherParts = placedParts.filter(c => c.id !== partId);
+    const otherParts = placedParts.filter(c => c.id !== partId || c.rackId !== newRackId);
 
     for (let i = newStartSlot; i < newStartSlot + part.size; i++) {
         if (i > rackHeight) {
@@ -201,6 +213,7 @@ function movePart(partId, newStartSlot) {
         }
 
         for (const other of otherParts) {
+            if (other.rackId !== newRackId) continue;
             const otherEnd = other.startSlot + other.size - 1;
             if (i >= other.startSlot && i <= otherEnd) {
                 alert(`Cannot place part: slot ${i} is occupied.`);
@@ -209,19 +222,22 @@ function movePart(partId, newStartSlot) {
         }
     }
 
+    part.rackId = newRackId;
     part.startSlot = newStartSlot;
     renderParts();
 }
 
-function canPlacePart(startSlot, size, excludeId = null) {
+function canPlacePart(rackId, startSlot, size, excludeId = null) {
     const endSlot = startSlot + size - 1;
 
     if (endSlot > rackHeight) {
         return false;
     }
 
+    const rackParts = placedParts.filter(p => p.rackId === rackId);
+
     for (let i = startSlot; i < startSlot + size; i++) {
-        for (const part of placedParts) {
+        for (const part of rackParts) {
             if (excludeId && part.id === excludeId) continue;
             const partEnd = part.startSlot + part.size - 1;
             if (i >= part.startSlot && i <= partEnd) {
@@ -298,7 +314,7 @@ function updatePartHeight(delta) {
         }
 
         if (newHeight !== part.size) {
-            const otherParts = placedParts.filter(c => c.id !== selectedPartId);
+            const otherParts = placedParts.filter(c => !(c.id === selectedPartId && c.rackId === part.rackId));
 
             if (delta > 0) {
                 const expandDownStartSlot = part.startSlot - delta;
@@ -311,6 +327,7 @@ function updatePartHeight(delta) {
                     let hasConflictDown = false;
                     for (let i = expandDownStartSlot; i < part.startSlot; i++) {
                         for (const other of otherParts) {
+                            if (other.rackId !== part.rackId) continue;
                             const otherEnd = other.startSlot + other.size - 1;
                             if (i >= other.startSlot && i <= otherEnd) {
                                 hasConflictDown = true;
@@ -327,6 +344,7 @@ function updatePartHeight(delta) {
                     const currentEnd = part.startSlot + part.size - 1;
                     for (let i = currentEnd + 1; i <= expandUpEndSlot; i++) {
                         for (const other of otherParts) {
+                            if (other.rackId !== part.rackId) continue;
                             const otherEnd = other.startSlot + other.size - 1;
                             if (i >= other.startSlot && i <= otherEnd) {
                                 hasConflictUp = true;
@@ -358,24 +376,19 @@ function updatePartHeight(delta) {
     }
 }
 
-function deletePart() {
-    if (!selectedPartId) return;
-
-    if (confirm('Are you sure you want to delete this part?')) {
-        removePart(selectedPartId);
-    }
-}
-
 function renderParts() {
     document.querySelectorAll('.placed-part').forEach(el => el.remove());
 
-    const rack = document.getElementById('rack');
     const slotHeight = 40;
 
     placedParts.forEach(part => {
+        const rack = document.getElementById(`rack${part.rackId}`);
+        if (!rack) return;
+
         const partEl = document.createElement('div');
         partEl.className = `placed-part`;
         partEl.dataset.partId = part.id;
+        partEl.dataset.rackId = part.rackId;
         partEl.draggable = true;
         partEl.style.pointerEvents = '';
 
@@ -464,13 +477,13 @@ function updateHeight(delta) {
 
     rackHeight = newHeight;
     document.getElementById('heightValue').textContent = `${rackHeight}U`;
-    initRack();
+    initRacks();
     renderParts();
 }
 
-function resetRack() {
+function resetAllRacks() {
     if (placedParts.length > 0) {
-        if (confirm('Are you sure you want to remove all parts from the rack?')) {
+        if (confirm('Are you sure you want to remove all parts from all racks?')) {
             placedParts = [];
             deselectPart();
             renderParts();
@@ -485,7 +498,7 @@ document.querySelectorAll('.part-item').forEach(item => {
     item.addEventListener('dragstart', handleDragStart);
 });
 
-initRack();
+initRacks();
 document.getElementById('mainArea').classList.add('no-selection');
 
 document.getElementById('partName').addEventListener('blur', updatePartName);
