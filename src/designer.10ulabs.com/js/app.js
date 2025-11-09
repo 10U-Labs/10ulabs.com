@@ -3,11 +3,19 @@ let placedComponents = [];
 let selectedComponentId = null;
 
 const defaultColors = {
+    'blank-panel-1u': '#bdc3c7',
+    'blank-panel-2u': '#95a5a6',
+    'custom': '#7f8c8d',
+    'display': '#1abc9c',
+    'nas': '#9b59b6',
+    'patch-panel': '#34495e',
+    'pdu': '#e67e22',
     'server': '#3498db',
-    'wifi-bridge': '#2ecc71',
-    'ventilation': '#95a5a6',
+    'shelf': '#16a085',
+    'switch': '#f39c12',
     'ups': '#e74c3c',
-    'switch': '#f39c12'
+    'venting': '#95a5a6',
+    'wifi-bridge': '#2ecc71'
 };
 
 function initRack() {
@@ -249,11 +257,19 @@ function renderComponents() {
 
 function getComponentName(type) {
     const names = {
+        'blank-panel-1u': 'Blank Panel (1U)',
+        'blank-panel-2u': 'Blank Panel (2U)',
+        'custom': 'Custom Part',
+        'display': 'Display',
+        'nas': 'NAS',
+        'patch-panel': 'Patch Panel',
+        'pdu': 'PDU',
         'server': 'Server',
-        'wifi-bridge': 'WiFi Bridge',
-        'ventilation': 'Ventilation Panel',
+        'shelf': 'Shelf',
+        'switch': 'Switch',
         'ups': 'UPS',
-        'switch': 'Switch'
+        'venting': 'Venting Panel',
+        'wifi-bridge': 'WiFi Bridge'
     };
     return names[type] || type;
 }
