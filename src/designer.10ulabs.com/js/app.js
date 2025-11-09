@@ -549,17 +549,38 @@ function updateHeight(delta) {
             alert(`Cannot reduce height to ${newHeight}U: Rack ${rackId} has ${totalUsedSlots}U of parts that won't fit. Please remove some parts first.`);
             return;
         }
+    }
 
-        const partsAboveNewHeight = partsInRack.filter(p => p.startSlot > newHeight);
-        if (partsAboveNewHeight.length > 0) {
-            alert(`Cannot reduce height to ${newHeight}U: ${partsAboveNewHeight.length} part${partsAboveNewHeight.length > 1 ? 's' : ''} in Rack ${rackId} ${partsAboveNewHeight.length > 1 ? 'are' : 'is'} above slot ${newHeight}. Please move or remove ${partsAboveNewHeight.length > 1 ? 'them' : 'it'} first.`);
-            return;
-        }
+    for (let rackId = 1; rackId <= rackCount; rackId++) {
+        const partsInRack = placedParts.filter(p => p.rackId === rackId);
+        const partsToRelocate = partsInRack.filter(p => p.startSlot > newHeight || (p.startSlot + p.size - 1) > newHeight);
 
-        const partsSpanningAboveNewHeight = partsInRack.filter(p => p.startSlot <= newHeight && (p.startSlot + p.size - 1) > newHeight);
-        if (partsSpanningAboveNewHeight.length > 0) {
-            alert(`Cannot reduce height to ${newHeight}U: ${partsSpanningAboveNewHeight.length} part${partsSpanningAboveNewHeight.length > 1 ? 's' : ''} in Rack ${rackId} ${partsSpanningAboveNewHeight.length > 1 ? 'span' : 'spans'} above slot ${newHeight}. Please move or remove ${partsSpanningAboveNewHeight.length > 1 ? 'them' : 'it'} first.`);
-            return;
+        if (partsToRelocate.length > 0) {
+            partsToRelocate.sort((a, b) => a.startSlot - b.startSlot);
+
+            for (const part of partsToRelocate) {
+                let foundSlot = false;
+                for (let slot = 1; slot <= newHeight - part.size + 1; slot++) {
+                    const tempPlacedParts = placedParts.filter(p => p.id !== part.id);
+                    const canPlace = tempPlacedParts.every(p => {
+                        if (p.rackId !== rackId) return true;
+                        const pEnd = p.startSlot + p.size - 1;
+                        const partEnd = slot + part.size - 1;
+                        return partEnd < p.startSlot || slot > pEnd;
+                    });
+
+                    if (canPlace) {
+                        part.startSlot = slot;
+                        foundSlot = true;
+                        break;
+                    }
+                }
+
+                if (!foundSlot) {
+                    alert(`Cannot reduce height to ${newHeight}U: Unable to automatically reposition parts in Rack ${rackId}. Please manually rearrange parts first.`);
+                    return;
+                }
+            }
         }
     }
 
