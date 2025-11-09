@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="10U Labs Rack Front View Designer - Three Rack Experimental View">
+    <title>10U Labs Rack Front View Designer - 3 Racks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>10U Labs Rack Front View Designer - 3 Racks</h1>
+        <p>Design your 10" server rack configuration across three racks</p>
+    </div>
+
+    <div class="container">
+        <div class="palette">
+            <div class="part-item" draggable="true" data-part="custom" data-size="1" data-default-color="#7f8c8d">
+                <div class="part-name">Custom Part</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="blank-panel-1u" data-size="1" data-default-color="#bdc3c7">
+                <div class="part-name">Blank Panel (1U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="blank-panel-2u" data-size="2" data-default-color="#95a5a6">
+                <div class="part-name">Blank Panel (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="display" data-size="2" data-default-color="#1abc9c">
+                <div class="part-name">Display (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="nas" data-size="2" data-default-color="#9b59b6">
+                <div class="part-name">NAS (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="patch-panel" data-size="1" data-default-color="#34495e">
+                <div class="part-name">Patch Panel (1U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="pdu" data-size="1" data-default-color="#e67e22">
+                <div class="part-name">PDU (1U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="san" data-size="2" data-default-color="#8e44ad">
+                <div class="part-name">SAN (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="server" data-size="2" data-default-color="#3498db">
+                <div class="part-name">Server (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="shelf" data-size="1" data-default-color="#16a085">
+                <div class="part-name">Shelf (1U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="switch" data-size="1" data-default-color="#f39c12">
+                <div class="part-name">Switch (1U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="ups" data-size="2" data-default-color="#e74c3c">
+                <div class="part-name">UPS (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="venting-1u" data-size="1" data-default-color="#95a5a6">
+                <div class="part-name">Venting Panel (1U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="venting-2u" data-size="2" data-default-color="#7f8c8d">
+                <div class="part-name">Venting Panel (2U)</div>
+            </div>
+            <div class="part-item" draggable="true" data-part="wifi-bridge" data-size="1" data-default-color="#2ecc71">
+                <div class="part-name">WiFi Bridge (1U)</div>
+            </div>
+
+            <div class="height-control" style="margin-top: 20px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <button class="height-btn" id="decreaseHeight">−</button>
+                <span class="height-value" id="heightValue">12U</span>
+                <button class="height-btn" id="increaseHeight">+</button>
+            </div>
+
+            <button class="save-btn" onclick="return false" style="width: 100%; margin-top: 20px; margin-left: 0;">Save</button>
+            <button class="reset-btn" onclick="resetAllRacks()" style="width: 100%; margin-top: 10px; margin-left: 0;">Reset All</button>
+        </div>
+
+        <div class="main-area" id="mainArea">
+            <div class="racks-container">
+                <div class="rack-section">
+                    <h3 class="rack-title">Rack 1</h3>
+                    <div class="rack-container">
+                        <div class="rack" id="rack1" data-rack-id="1"></div>
+                    </div>
+                </div>
+                <div class="rack-section">
+                    <h3 class="rack-title">Rack 2</h3>
+                    <div class="rack-container">
+                        <div class="rack" id="rack2" data-rack-id="2"></div>
+                    </div>
+                </div>
+                <div class="rack-section">
+                    <h3 class="rack-title">Rack 3</h3>
+                    <div class="rack-container">
+                        <div class="rack" id="rack3" data-rack-id="3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="details-panel" id="detailsPanel" style="display: none;">
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                    <button class="close-btn" onclick="deselectPart()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s ease;">&times;</button>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="partName" placeholder="Enter part name">
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <button class="height-btn" id="decreasePartHeight">−</button>
+                        <span class="height-value" id="partHeightValue">1U</span>
+                        <button class="height-btn" id="increasePartHeight">+</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="color" id="partColor">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Copyright &copy; 10U Labs, LLC 2025. All rights reserved.
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
