@@ -43,8 +43,9 @@ function initRack() {
 }
 
 function handleDragStart(e) {
-    const partType = e.target.dataset.part;
-    const partSize = e.target.dataset.size;
+    const element = e.currentTarget;
+    const partType = element.dataset.part;
+    const partSize = element.dataset.size;
 
     if (partType) {
         e.dataTransfer.setData('partType', partType);
@@ -52,10 +53,10 @@ function handleDragStart(e) {
         e.dataTransfer.effectAllowed = 'copy';
         sessionStorage.setItem('draggingPartSize', partSize);
     } else {
-        const partId = e.target.dataset.partId;
+        const partId = element.dataset.partId;
         e.dataTransfer.setData('existingPart', partId);
         e.dataTransfer.effectAllowed = 'move';
-        e.target.classList.add('dragging');
+        element.classList.add('dragging');
         sessionStorage.setItem('draggingPartId', partId);
     }
 
@@ -65,7 +66,8 @@ function handleDragStart(e) {
 }
 
 function handleDragEnd(e) {
-    e.target.classList.remove('dragging');
+    const element = e.currentTarget;
+    element.classList.remove('dragging');
     sessionStorage.removeItem('draggingPartSize');
     sessionStorage.removeItem('draggingPartId');
     document.querySelectorAll('.rack-slot').forEach(slot => {
