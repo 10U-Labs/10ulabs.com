@@ -276,8 +276,12 @@ body {
 
 .details-panel h2 {
     font-size: 1.3rem;
-    margin-bottom: 20px;
     color: #667eea;
+}
+
+.close-btn:hover {
+    background: #f0f0f0 !important;
+    color: #333 !important;
 }
 
 .form-group {
