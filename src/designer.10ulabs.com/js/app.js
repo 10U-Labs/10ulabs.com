@@ -556,11 +556,11 @@ function updateHeight(delta) {
         const partsToRelocate = partsInRack.filter(p => p.startSlot > newHeight || (p.startSlot + p.size - 1) > newHeight);
 
         if (partsToRelocate.length > 0) {
-            partsToRelocate.sort((a, b) => a.startSlot - b.startSlot);
+            partsToRelocate.sort((a, b) => b.startSlot - a.startSlot);
 
             for (const part of partsToRelocate) {
                 let foundSlot = false;
-                for (let slot = 1; slot <= newHeight - part.size + 1; slot++) {
+                for (let slot = newHeight - part.size + 1; slot >= 1; slot--) {
                     const tempPlacedParts = placedParts.filter(p => p.id !== part.id);
                     const canPlace = tempPlacedParts.every(p => {
                         if (p.rackId !== rackId) return true;
