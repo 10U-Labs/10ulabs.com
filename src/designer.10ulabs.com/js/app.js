@@ -165,7 +165,7 @@ function selectComponent(componentId) {
     if (component) {
         document.getElementById('componentName').value = component.customName || getComponentName(component.type);
         document.getElementById('componentColor').value = component.customColor || defaultColors[component.type];
-        document.getElementById('componentHeight').value = component.size;
+        document.getElementById('componentHeightValue').textContent = `${component.size}U`;
         document.getElementById('detailsPanel').style.display = 'block';
         document.getElementById('mainArea').classList.remove('no-selection');
     }
@@ -202,16 +202,15 @@ function updateComponentColor() {
     }
 }
 
-function updateComponentHeight() {
+function updateComponentHeight(delta) {
     if (!selectedComponentId) return;
 
     const component = placedComponents.find(c => c.id === selectedComponentId);
     if (component) {
-        const newHeight = parseInt(document.getElementById('componentHeight').value);
+        const newHeight = component.size + delta;
 
         if (newHeight < 1 || newHeight > 10) {
             alert('Height must be between 1U and 10U');
-            document.getElementById('componentHeight').value = component.size;
             return;
         }
 
@@ -220,7 +219,6 @@ function updateComponentHeight() {
 
             if (endSlot > rackHeight) {
                 alert(`Cannot change height: would exceed rack height (max slot: ${rackHeight}U)`);
-                document.getElementById('componentHeight').value = component.size;
                 return;
             }
 
@@ -230,13 +228,13 @@ function updateComponentHeight() {
                     const otherEnd = other.startSlot + other.size - 1;
                     if (i >= other.startSlot && i <= otherEnd) {
                         alert(`Cannot change height: would overlap with ${other.customName || getComponentName(other.type)} at slot ${i}U`);
-                        document.getElementById('componentHeight').value = component.size;
                         return;
                     }
                 }
             }
 
             component.size = newHeight;
+            document.getElementById('componentHeightValue').textContent = `${newHeight}U`;
         }
 
         renderComponents();
@@ -387,4 +385,5 @@ document.getElementById('componentName').addEventListener('keypress', (e) => {
 });
 
 document.getElementById('componentColor').addEventListener('change', updateComponentColor);
-document.getElementById('componentHeight').addEventListener('change', updateComponentHeight);
+document.getElementById('increaseComponentHeight').addEventListener('click', () => updateComponentHeight(1));
+document.getElementById('decreaseComponentHeight').addEventListener('click', () => updateComponentHeight(-1));

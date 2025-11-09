@@ -84,12 +84,16 @@
                     <input type="text" id="componentName" placeholder="Enter component name">
                 </div>
                 <div class="form-group">
-                    <label for="componentColor">Background Color</label>
-                    <input type="color" id="componentColor">
+                    <label>Height</label>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                        <button class="height-btn" id="decreaseComponentHeight">−</button>
+                        <span class="height-value" id="componentHeightValue">1U</span>
+                        <button class="height-btn" id="increaseComponentHeight">+</button>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label for="componentHeight">Height (U)</label>
-                    <input type="number" id="componentHeight" min="1" max="10" value="1">
+                    <label for="componentColor">Background Color</label>
+                    <input type="color" id="componentColor">
                 </div>
             </div>
         </div>
