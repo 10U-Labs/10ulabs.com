@@ -75,12 +75,13 @@ class ApiStack(Stack):
             )
         )
 
-        health = api.root.add_resource("health")
-        health.add_method("GET", apigw.LambdaIntegration(api_handler))
+        api.root.add_resource("health").add_method("GET", apigw.LambdaIntegration(api_handler))
 
-        v1 = api.root.add_resource("v1")
-        echo = v1.add_resource("echo")
-        echo.add_method("POST", apigw.LambdaIntegration(api_handler))
+        api.root.add_resource("v1").add_resource("echo").add_method(
+            "POST", apigw.LambdaIntegration(api_handler)
+        )
+
+        api.root.add_resource("{proxy+}").add_method("ANY", apigw.LambdaIntegration(api_handler))
 
         route53.ARecord(
             self, "ApiAliasRecord",
