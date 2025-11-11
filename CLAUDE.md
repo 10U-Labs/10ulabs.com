@@ -33,9 +33,9 @@
 
 ### PR Creation Workflow
 After completing work, committing, and running all required pre-deployment tests:
-1. Push to the claude/ branch: `git push -u origin <claude-branch-name>`
-2. Create PR: `gh pr create --base main --title "..." --body "..."`
-3. Immediately merge and delete remote branch: `gh pr merge --merge --delete-branch`
+1. Push commits to the claude/ branch
+2. Create pull request to main with descriptive title and comprehensive summary
+3. Immediately merge the PR and delete the remote branch
 4. CI/CD will run post-deployment after merge
 
 ### Pre-Push Testing Requirements
