@@ -40,7 +40,7 @@ def main():
     api_endpoint = args.api_endpoint.rstrip('/')
 
     print(f"Polling API endpoint: {api_endpoint}")
-    print(f"Validating /invalid returns 404 status code...")
+    print("Validating /invalid returns 404 status code...")
 
     success = poll_until_propagated(api_endpoint, args.max_attempts)
 
