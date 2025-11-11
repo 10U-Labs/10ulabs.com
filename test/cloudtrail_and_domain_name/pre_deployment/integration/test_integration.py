@@ -143,7 +143,7 @@ def test_cloudtrail_resources_synthesize():
 
     template = Template.from_stack(stack)
 
-    template.resource_count_is("AWS::S3::Bucket", 1)
+    template.resource_count_is("AWS::S3::Bucket", 2)
     template.resource_count_is("AWS::Logs::LogGroup", 1)
     template.resource_count_is("AWS::CloudTrail::Trail", 1)
 

@@ -21,6 +21,26 @@ class DomainStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
+        access_log_bucket = s3.Bucket(
+            self, "CloudTrailAccessLogBucket",
+            versioned=False,
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            removal_policy=RemovalPolicy.RETAIN,
+            enforce_ssl=True,
+            lifecycle_rules=[
+                s3.LifecycleRule(
+                    transitions=[
+                        s3.Transition(
+                            storage_class=s3.StorageClass.GLACIER,
+                            transition_after=Duration.days(90)
+                        )
+                    ],
+                    expiration=Duration.days(1825)
+                )
+            ]
+        )
+
         cloudtrail_bucket = s3.Bucket(
             self, "CloudTrailBucket",
             versioned=False,
@@ -28,7 +48,9 @@ class DomainStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            enforce_ssl=True
+            enforce_ssl=True,
+            server_access_logs_bucket=access_log_bucket,
+            server_access_logs_prefix="cloudtrail-bucket-access-logs/"
         )
 
         cloudtrail_log_group = logs.LogGroup(
