@@ -98,54 +98,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pytest test/cloudtrail_and_domain_name/test_unit.py -v
-  building-artifacts:
-    name: Building artifacts
-    runs-on: ubuntu-latest
-    needs: unit-testing-code
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
-    steps:
-      - name: DRY RUN - Skip CDK synthesis
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would synthesize AWS CDK domain stack"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Load configuration
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.config.outputs.region }}
-      - name: Set up Python & Node
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - uses: actions/setup-node@v4
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        with:
-          node-version: '20'
-      - name: Install CDK
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: npm install -g aws-cdk
-      - name: Install dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r requirements-cdk.txt
-      - name: Synthesize domain stack
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk synth TenULabsDomainName
   deploying-artifacts:
-    name: Deploying artifacts
-    needs: building-artifacts
+    name: Ensuring infrastructure is in desired state
+    needs: unit-testing-code
     runs-on: ubuntu-latest
     if: |
       github.event.inputs.dry_run != 'true' &&
