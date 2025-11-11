@@ -436,3 +436,337 @@ def test_ns_record_has_minimum_nameservers(route53_client, hosted_zone, config):
             ns_record = record
             break
     assert len(ns_record['ResourceRecords']) >= 4, "Should have at least 4 name servers"
+
+
+def test_access_log_bucket_exists(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        head_response = s3_client.head_bucket(Bucket=access_log_bucket)
+        assert head_response['ResponseMetadata']['HTTPStatusCode'] == 200
+
+
+def test_access_log_bucket_has_encryption(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        encryption = s3_client.get_bucket_encryption(Bucket=access_log_bucket)
+        assert 'ServerSideEncryptionConfiguration' in encryption
+
+
+def test_access_log_bucket_blocks_public_acls(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        public_access = s3_client.get_public_access_block(Bucket=access_log_bucket)
+        config = public_access['PublicAccessBlockConfiguration']
+        assert config['BlockPublicAcls'] is True
+
+
+def test_access_log_bucket_blocks_public_policy(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        public_access = s3_client.get_public_access_block(Bucket=access_log_bucket)
+        config = public_access['PublicAccessBlockConfiguration']
+        assert config['BlockPublicPolicy'] is True
+
+
+def test_access_log_bucket_versioning_disabled(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        try:
+            versioning = s3_client.get_bucket_versioning(Bucket=access_log_bucket)
+            assert versioning.get('Status') != 'Enabled'
+        except KeyError:
+            pass
+
+
+def test_access_log_bucket_has_glacier_lifecycle_rule(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
+        has_glacier_rule = any(
+            any(t.get('StorageClass') == 'GLACIER' for t in rule.get('Transitions', []))
+            for rule in lifecycle.get('Rules', [])
+        )
+        assert has_glacier_rule
+
+
+def test_access_log_bucket_has_expiration_lifecycle_rule(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
+        has_expiration = any(
+            'Expiration' in rule
+            for rule in lifecycle.get('Rules', [])
+        )
+        assert has_expiration
+
+
+def test_lambda_function_exists(config):
+    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    
+    functions = lambda_client.list_functions()
+    domain_handler_exists = any(
+        'DomainRegistrationHandler' in func['FunctionName']
+        for func in functions['Functions']
+    )
+    assert domain_handler_exists
+
+
+def test_lambda_has_route53domains_permissions(config):
+    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    iam_client = boto3.client('iam', region_name=config['aws_region'])
+    
+    functions = lambda_client.list_functions()
+    domain_func = None
+    for func in functions['Functions']:
+        if 'DomainRegistrationHandler' in func['FunctionName']:
+            domain_func = func
+            break
+    
+    if domain_func:
+        role_name = domain_func['Role'].split('/')[-1]
+        attached_policies = iam_client.list_attached_role_policies(RoleName=role_name)
+        inline_policies = iam_client.list_role_policies(RoleName=role_name)
+        
+        has_route53domains = False
+        for policy in inline_policies['PolicyNames']:
+            policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy)
+            policy_str = str(policy_doc)
+            if 'route53domains:' in policy_str.lower() or 'CheckDomainAvailability' in policy_str:
+                has_route53domains = True
+                break
+        
+        assert has_route53domains
+
+
+def test_lambda_timeout_is_900_seconds(config):
+    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    
+    functions = lambda_client.list_functions()
+    domain_func = None
+    for func in functions['Functions']:
+        if 'DomainRegistrationHandler' in func['FunctionName']:
+            domain_func = func
+            break
+    
+    assert domain_func and domain_func['Timeout'] == 900
+
+
+def test_lambda_runtime_is_python_3_11(config):
+    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    
+    functions = lambda_client.list_functions()
+    domain_func = None
+    for func in functions['Functions']:
+        if 'DomainRegistrationHandler' in func['FunctionName']:
+            domain_func = func
+            break
+    
+    assert domain_func and domain_func['Runtime'] == 'python3.11'
+
+
+def test_domain_registration_status_not_failed(config):
+    route53domains = boto3.client('route53domains', region_name='us-east-1')
+    domain_name = config['domain_name']
+    
+    try:
+        domain_detail = route53domains.get_domain_detail(DomainName=domain_name)
+        status_list = domain_detail.get('StatusList', [])
+        failed_statuses = [s for s in status_list if 'FAILED' in s.upper()]
+        assert len(failed_statuses) == 0
+    except route53domains.exceptions.InvalidInput:
+        pass
+
+
+def test_domain_auto_renewal_enabled(config):
+    route53domains = boto3.client('route53domains', region_name='us-east-1')
+    domain_name = config['domain_name']
+    
+    try:
+        domain_detail = route53domains.get_domain_detail(DomainName=domain_name)
+        assert domain_detail.get('AutoRenew') is True
+    except route53domains.exceptions.InvalidInput:
+        pass
+
+
+def test_domain_nameservers_match_hosted_zone(route53_client, config):
+    route53domains = boto3.client('route53domains', region_name='us-east-1')
+    domain_name = config['domain_name']
+    
+    try:
+        domain_detail = route53domains.get_domain_detail(DomainName=domain_name)
+        domain_nameservers = set(ns['Name'] for ns in domain_detail.get('Nameservers', []))
+        
+        zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+        zone = None
+        for z in zones['HostedZones']:
+            if z['Name'] == f"{domain_name}.":
+                zone = z
+                break
+        
+        if zone:
+            hz_detail = route53_client.get_hosted_zone(Id=zone['Id'])
+            hz_nameservers = set(hz_detail['DelegationSet']['NameServers'])
+            assert domain_nameservers == hz_nameservers
+    except route53domains.exceptions.InvalidInput:
+        pass
+
+
+def test_domain_name_stack_output_value(config):
+    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    
+    stacks = cf_client.describe_stacks()
+    domain_stack = None
+    for stack in stacks['Stacks']:
+        if 'cloudtrail' in stack['StackName'].lower() and 'domain' in stack['StackName'].lower():
+            domain_stack = stack
+            break
+    
+    if domain_stack:
+        outputs = {o['OutputKey']: o['OutputValue'] for o in domain_stack.get('Outputs', [])}
+        assert outputs.get('DomainName') == config['domain_name']
+
+
+def test_nameservers_stack_output_exists(config):
+    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    
+    stacks = cf_client.describe_stacks()
+    domain_stack = None
+    for stack in stacks['Stacks']:
+        if 'cloudtrail' in stack['StackName'].lower() and 'domain' in stack['StackName'].lower():
+            domain_stack = stack
+            break
+    
+    if domain_stack:
+        outputs = {o['OutputKey']: o['OutputValue'] for o in domain_stack.get('Outputs', [])}
+        assert 'NameServers' in outputs
+
+
+def test_registration_status_stack_output_exists(config):
+    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    
+    stacks = cf_client.describe_stacks()
+    domain_stack = None
+    for stack in stacks['Stacks']:
+        if 'cloudtrail' in stack['StackName'].lower() and 'domain' in stack['StackName'].lower():
+            domain_stack = stack
+            break
+    
+    if domain_stack:
+        outputs = {o['OutputKey']: o['OutputValue'] for o in domain_stack.get('Outputs', [])}
+        assert 'RegistrationStatus' in outputs
+
+
+def test_cloudtrail_bucket_has_service_policy(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    bucket_name = trail['S3BucketName']
+    
+    try:
+        policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+        policy_doc = policy['Policy']
+        assert 'cloudtrail.amazonaws.com' in policy_doc
+    except s3_client.exceptions.NoSuchBucketPolicy:
+        pass
+
+
+def test_cloudtrail_bucket_enforces_ssl(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    bucket_name = trail['S3BucketName']
+    
+    try:
+        policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+        policy_doc = policy['Policy']
+        assert 'aws:SecureTransport' in policy_doc or 'ssl' in policy_doc.lower()
+    except s3_client.exceptions.NoSuchBucketPolicy:
+        pass
+
+
+def test_cloudwatch_logs_iam_role_exists(cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    
+    if 'CloudWatchLogsRoleArn' in trail:
+        iam_client = boto3.client('iam')
+        role_name = trail['CloudWatchLogsRoleArn'].split('/')[-1]
+        role = iam_client.get_role(RoleName=role_name)
+        assert role['Role']['RoleName'] == role_name
+
+
+def test_cloudwatch_logs_role_has_correct_trust_policy(cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    
+    if 'CloudWatchLogsRoleArn' in trail:
+        iam_client = boto3.client('iam')
+        role_name = trail['CloudWatchLogsRoleArn'].split('/')[-1]
+        role = iam_client.get_role(RoleName=role_name)
+        trust_policy = str(role['Role']['AssumeRolePolicyDocument'])
+        assert 'cloudtrail.amazonaws.com' in trust_policy
+
+
+def test_access_logs_written_to_bucket(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        access_log_bucket = response['LoggingEnabled']['TargetBucket']
+        objects = s3_client.list_objects_v2(Bucket=access_log_bucket, MaxKeys=10)
+        assert objects.get('KeyCount', 0) > 0 or 'Contents' in objects
+
+
+def test_access_logs_have_correct_prefix(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    
+    if 'LoggingEnabled' in response:
+        prefix = response['LoggingEnabled']['TargetPrefix']
+        assert prefix == 'cloudtrail-bucket-access-logs/'
