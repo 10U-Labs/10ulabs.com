@@ -93,6 +93,24 @@ After completing work, committing, and running all required pre-deployment tests
 3. Immediately merge the PR and delete the remote branch
 4. CI/CD will run post-deployment after merge
 
+### Commit Message Flags
+
+Use these flags in commit messages to control workflow behavior:
+
+**`[post-deployment]`** - Skip all pre-deployment steps, run only post-deployment tests
+- Skips: Static analysis, unit tests, integration tests, building, deployment
+- Runs: Post-deployment integration tests, E2E tests
+- Use when: Testing changes to post-deployment test files only
+
+**`[skip-deploy]`** or **`[skip deploy]`** - Run all checks but skip actual deployment
+- Runs: Static analysis, unit tests, integration tests, building
+- Skips: Deployment step only
+- Use when: Testing changes that don't need deployment
+
+**Examples:**
+- `[post-deployment] Fix E2E DNS resolution tests` - Only runs post-deployment tests
+- `[skip-deploy] Update CDK stack configuration` - Runs all checks but no deployment
+
 ### Pre-Push Testing Requirements
 
 **CRITICAL: Only run pre-deployment tests for the infrastructure you modified.** Don't run all tests if you only changed one stack.
