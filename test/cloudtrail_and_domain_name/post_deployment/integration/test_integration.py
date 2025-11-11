@@ -220,6 +220,14 @@ def test_cloudtrail_s3_bucket_has_encryption(s3_client, cloudtrail_client):
 
     encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
     assert 'ServerSideEncryptionConfiguration' in encryption, "Bucket should have encryption enabled"
+
+
+def test_cloudtrail_s3_bucket_encryption_has_rules(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    bucket_name = trail['S3BucketName']
+
+    encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
     assert 'Rules' in encryption['ServerSideEncryptionConfiguration'], "Bucket should have encryption rules"
 
 

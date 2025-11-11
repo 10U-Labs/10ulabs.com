@@ -1,9 +1,0 @@
-name: 10uf-org-domain-infrastructure
-title: 10ulabs.com Domain Infrastructure Tests
-maintainer: 10U Foundation
-copyright: 10U Foundation
-summary: Compliance tests for 10ulabs.com domain infrastructure
-version: 1.0.0
-depends:
-  - name: inspec-aws
-    url: https://github.com/inspec/inspec-aws/archive/main.tar.gz
