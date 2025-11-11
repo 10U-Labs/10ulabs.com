@@ -27,16 +27,6 @@ def hosted_zone(route53_client, config):
     return None
 
 
-def test_hosted_zone_exists(hosted_zone, config):
-    assert hosted_zone is not None, f"Hosted zone for {config['domain_name']} not found"
-
-
-def test_hosted_zone_has_minimum_nameservers(route53_client, hosted_zone):
-    ns_response = route53_client.get_hosted_zone(Id=hosted_zone['Id'])
-    name_servers = ns_response['DelegationSet']['NameServers']
-    assert len(name_servers) >= 4, "Should have at least 4 name servers"
-
-
 def test_each_nameserver_resolves_soa(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
     ns_response = route53_client.get_hosted_zone(Id=hosted_zone['Id'])
@@ -111,45 +101,3 @@ def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, ho
             )
         except:
             pass
-
-
-def test_soa_record_exists(route53_client, hosted_zone):
-    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
-    soa_record = None
-    for record in records['ResourceRecordSets']:
-        if record['Type'] == 'SOA':
-            soa_record = record
-            break
-    assert soa_record is not None, "SOA record should exist"
-
-
-def test_soa_record_has_values(route53_client, hosted_zone):
-    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
-    soa_record = None
-    for record in records['ResourceRecordSets']:
-        if record['Type'] == 'SOA':
-            soa_record = record
-            break
-    assert len(soa_record['ResourceRecords']) > 0, "SOA record should have values"
-
-
-def test_ns_record_exists(route53_client, hosted_zone, config):
-    domain_name = config['domain_name']
-    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
-    ns_record = None
-    for record in records['ResourceRecordSets']:
-        if record['Type'] == 'NS' and record['Name'] == f"{domain_name}.":
-            ns_record = record
-            break
-    assert ns_record is not None, "NS record should exist"
-
-
-def test_ns_record_has_minimum_nameservers(route53_client, hosted_zone, config):
-    domain_name = config['domain_name']
-    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
-    ns_record = None
-    for record in records['ResourceRecordSets']:
-        if record['Type'] == 'NS' and record['Name'] == f"{domain_name}.":
-            ns_record = record
-            break
-    assert len(ns_record['ResourceRecords']) >= 4, "Should have at least 4 name servers"

@@ -374,3 +374,65 @@ def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
         limit=1
     )
     assert len(streams['logStreams']) > 0, "CloudTrail should have created log streams in CloudWatch Logs"
+
+
+@pytest.fixture
+def hosted_zone(route53_client, config):
+    domain_name = config['domain_name']
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            return z
+    return None
+
+
+def test_hosted_zone_exists(hosted_zone, config):
+    assert hosted_zone is not None, f"Hosted zone for {config['domain_name']} not found"
+
+
+def test_hosted_zone_has_minimum_nameservers(route53_client, hosted_zone):
+    ns_response = route53_client.get_hosted_zone(Id=hosted_zone['Id'])
+    name_servers = ns_response['DelegationSet']['NameServers']
+    assert len(name_servers) >= 4, "Should have at least 4 name servers"
+
+
+def test_soa_record_exists(route53_client, hosted_zone):
+    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
+    soa_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'SOA':
+            soa_record = record
+            break
+    assert soa_record is not None, "SOA record should exist"
+
+
+def test_soa_record_has_values(route53_client, hosted_zone):
+    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
+    soa_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'SOA':
+            soa_record = record
+            break
+    assert len(soa_record['ResourceRecords']) > 0, "SOA record should have values"
+
+
+def test_ns_record_exists(route53_client, hosted_zone, config):
+    domain_name = config['domain_name']
+    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
+    ns_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'NS' and record['Name'] == f"{domain_name}.":
+            ns_record = record
+            break
+    assert ns_record is not None, "NS record should exist"
+
+
+def test_ns_record_has_minimum_nameservers(route53_client, hosted_zone, config):
+    domain_name = config['domain_name']
+    records = route53_client.list_resource_record_sets(HostedZoneId=hosted_zone['Id'])
+    ns_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'NS' and record['Name'] == f"{domain_name}.":
+            ns_record = record
+            break
+    assert len(ns_record['ResourceRecords']) >= 4, "Should have at least 4 name servers"

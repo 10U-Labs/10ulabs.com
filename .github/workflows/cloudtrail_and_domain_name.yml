@@ -438,7 +438,9 @@ jobs:
         id: check
         run: |
           python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
-            --module cloudtrail_and_domain_name \
+            --aws-account-id "${{ steps.config.outputs.account_id }}" \
+            --aws-iam-role-name "GitHubActionsRole" \
+            --aws-region "${{ steps.config.outputs.region }}" \
             --check \
             --output-file "$GITHUB_OUTPUT"
   conclude-readme-skip:
@@ -486,8 +488,10 @@ jobs:
       - name: Update README with Bedrock
         run: |
           python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
-            --module cloudtrail_and_domain_name \
-            --bedrock-model-id anthropic.claude-3-5-sonnet-20241022-v2:0
+            --aws-account-id "${{ steps.config.outputs.account_id }}" \
+            --aws-iam-role-name "GitHubActionsRole" \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --update
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
