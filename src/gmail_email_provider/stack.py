@@ -33,7 +33,6 @@ class GmailEmailProviderStack(Stack):
         google_verification_record = route53.TxtRecord(
             self, "GoogleSiteVerification",
             zone=hosted_zone,
-            record_name=domain_name,
             values=[f"google-site-verification={google_site_verification}"],
             ttl=Duration.seconds(config.get("ttl", 300))
         )
