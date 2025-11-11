@@ -41,14 +41,14 @@ jobs:
     name: Concluding README.md should not be updated
     runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.should_update != 'true'
+    if: needs.determine-readme-update.outputs.readme_is_current == 'true'
     steps:
       - run: 'true'
   conclude-readme-update:
     name: Concluding README.md should be updated
     runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.should_update == 'true'
+    if: needs.determine-readme-update.outputs.readme_is_current != 'true'
     steps:
       - run: 'true'
   determine-infrastructure-action:
@@ -143,7 +143,7 @@ jobs:
     needs: e2e-testing-infrastructure
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
-      should_update: ${{ steps.check.outputs.should_update }}
+      readme_is_current: ${{ steps.check.outputs.readme_is_current }}
     permissions:
       id-token: write
       contents: read
