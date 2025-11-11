@@ -1,4 +1,4 @@
-name: CloudTrail and Domain Name
+name: Ensuring CloudTrail and domain name exist and are properly configured
 on:
   push:
     branches:
