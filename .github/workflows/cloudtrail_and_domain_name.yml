@@ -439,7 +439,7 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python src/cloudtrail_and_domain_name/manage_readme.py \
+          python src/cloudtrail_and_domain_name/readme.py \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
@@ -489,7 +489,7 @@ jobs:
         run: pip install boto3
       - name: Update README with Bedrock
         run: |
-          python src/cloudtrail_and_domain_name/manage_readme.py \
+          python src/cloudtrail_and_domain_name/readme.py \
             --update \
             --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
