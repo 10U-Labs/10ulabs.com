@@ -8,8 +8,7 @@ import pytest
 
 @pytest.fixture
 def config():
-    """Load domain config"""
-    config_path = Path(__file__).parents[4] / "src" / "domain_name" / "config.json"
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         return json.load(f)
 
