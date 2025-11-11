@@ -25,6 +25,13 @@
 - If comments already exist in the original code, REMOVE THEM
 - Code should have ZERO comments of any kind
 
+**CRITICAL: S3 BUCKET VERSIONING MUST BE DISABLED**
+- NEVER enable versioning on S3 buckets (`versioned=False`)
+- ALL S3 buckets in all CDK stacks MUST have `versioned=False`
+- This applies to CloudTrail buckets, access log buckets, and any other S3 buckets
+- If you create or modify an S3 bucket, always explicitly set `versioned=False`
+- Versioning increases costs and complexity without providing value for this use case
+
 ### Branch and PR Strategy
 - **Create PRs to main** - After pushing to your claude/ branch, create a pull request
 - **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
