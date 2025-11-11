@@ -136,3 +136,81 @@ def test_stack_has_google_verification_output(config):
     if gmail_stack:
         outputs = {o['OutputKey']: o['OutputValue'] for o in gmail_stack.get('Outputs', [])}
         assert 'GoogleVerificationRecord' in outputs or 'GoogleVerificationValue' in outputs
+
+
+def test_gmail_mx_record_exists(route53_client, config):
+    domain_name = config['domain_name']
+
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+    zone = None
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            zone = z
+            break
+
+    assert zone is not None
+
+    records = route53_client.list_resource_record_sets(
+        HostedZoneId=zone['Id'],
+        StartRecordName=f"{domain_name}.",
+        StartRecordType='MX'
+    )
+
+    mx_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'MX' and record['Name'] == f"{domain_name}.":
+            mx_record = record
+            break
+
+    assert mx_record is not None
+
+
+def test_gmail_mx_record_has_correct_priority(route53_client, config):
+    domain_name = config['domain_name']
+
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+    zone = None
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            zone = z
+            break
+
+    records = route53_client.list_resource_record_sets(
+        HostedZoneId=zone['Id'],
+        StartRecordName=f"{domain_name}.",
+        StartRecordType='MX'
+    )
+
+    mx_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'MX' and record['Name'] == f"{domain_name}.":
+            mx_record = record
+            break
+
+    record_values = [rr['Value'] for rr in mx_record['ResourceRecords']]
+    assert any('1 smtp.google.com' in val for val in record_values)
+
+
+def test_gmail_mx_record_has_ttl(route53_client, config):
+    domain_name = config['domain_name']
+
+    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
+    zone = None
+    for z in zones['HostedZones']:
+        if z['Name'] == f"{domain_name}.":
+            zone = z
+            break
+
+    records = route53_client.list_resource_record_sets(
+        HostedZoneId=zone['Id'],
+        StartRecordName=f"{domain_name}.",
+        StartRecordType='MX'
+    )
+
+    mx_record = None
+    for record in records['ResourceRecordSets']:
+        if record['Type'] == 'MX' and record['Name'] == f"{domain_name}.":
+            mx_record = record
+            break
+
+    assert 'TTL' in mx_record
