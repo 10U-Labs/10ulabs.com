@@ -8,6 +8,7 @@
 
 ### GitHub Access
 - You have unrestricted access to GitHub via the GitHub PAT (Personal Access Token) in your environment variables
+- The GitHub PAT does not expire and has unlimited validity
 - These two credential sets allow you to debug anything in the project
 
 ## Development Workflow
