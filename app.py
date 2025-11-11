@@ -61,15 +61,15 @@ github_self_hosted_runners_stack = GitHubSelfHostedRunnersStack(
 # Website Infrastructure
 spec = importlib.util.spec_from_file_location(
     "tenuf_infrastructure",
-    Path(__file__).parent / "src" / "10ulabs.com" / "infrastructure" / "stack.py"
+    Path(__file__).parent / "src" / "website" / "infrastructure" / "stack.py"
 )
 tenuf_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tenuf_module)
 TenULabsComStack = tenuf_module.TenULabsComStack
 
 website_config_paths = [
-    Path(__file__).parent / "config" / "websites" / "10ulabs.com.json",
-    Path(__file__).parent / "config" / "10ulabs.com.json"
+    Path(__file__).parent / "config" / "websites" / "website.json",
+    Path(__file__).parent / "config" / "website.json"
 ]
 
 website_config = None
