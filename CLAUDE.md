@@ -70,6 +70,16 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 - If you create or modify an S3 bucket, always explicitly set `versioned=False`
 - Versioning increases costs and complexity without providing value for this use case
 
+**CRITICAL: TESTS MUST HAVE ONLY ONE ASSERT**
+- Each test function must contain exactly ONE assert statement
+- If testing multiple conditions, split into multiple test functions
+- Use pytest fixtures to eliminate setup assertions (e.g., "assert object is not None")
+- Test names should be descriptive and indicate what single behavior is being tested
+- Example: Instead of `test_bucket_properties` with 3 asserts, create:
+  - `test_bucket_exists`
+  - `test_bucket_has_encryption`
+  - `test_bucket_blocks_public_access`
+
 ### Branch and PR Strategy
 - **Create PRs to main** - After pushing to your claude/ branch, create a pull request
 - **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
