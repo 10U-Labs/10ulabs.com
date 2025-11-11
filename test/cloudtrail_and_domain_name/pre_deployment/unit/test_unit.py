@@ -2046,8 +2046,43 @@ def test_cloudtrail_s3_bucket_restricts_public_buckets():
     )
 
 
+def test_cloudtrail_s3_bucket_with_logging_exists():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    import importlib.util
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    resources = template.find_resources("AWS::S3::Bucket")
+    cloudtrail_bucket_found = False
+    for resource_id, resource in resources.items():
+        properties = resource.get("Properties", {})
+        if "LoggingConfiguration" in properties:
+            cloudtrail_bucket_found = True
+            break
+    assert cloudtrail_bucket_found, "CloudTrail S3 bucket with LoggingConfiguration not found"
+
+
 def test_cloudtrail_s3_bucket_versioning_disabled():
-    """Test that CloudTrail S3 bucket has versioning disabled as specified"""
     app = cdk.App()
 
     config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
@@ -2075,15 +2110,15 @@ def test_cloudtrail_s3_bucket_versioning_disabled():
 
     from aws_cdk.assertions import Match
     resources = template.find_resources("AWS::S3::Bucket")
-    cloudtrail_bucket_found = False
+    versioning_disabled = True
     for resource_id, resource in resources.items():
         properties = resource.get("Properties", {})
         if "LoggingConfiguration" in properties:
-            cloudtrail_bucket_found = True
             versioning = properties.get("VersioningConfiguration")
-            if versioning:
-                assert versioning.get("Status") != "Enabled", "CloudTrail S3 bucket should not have versioning enabled"
-    assert cloudtrail_bucket_found, "CloudTrail S3 bucket with LoggingConfiguration not found"
+            if versioning and versioning.get("Status") == "Enabled":
+                versioning_disabled = False
+                break
+    assert versioning_disabled, "CloudTrail S3 bucket should not have versioning enabled"
 
 
 def test_cloudtrail_s3_bucket_has_auto_delete():
@@ -2648,3 +2683,362 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["organizations:DescribeOrganization"])}]}})
+
+
+def test_stack_synthesizes_correctly():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    assert template is not None
+
+
+def test_stack_exports_required_outputs():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    outputs = template.find_outputs("*")
+
+    required_outputs = ["HostedZoneId", "HostedZoneName", "NameServers"]
+    for output_name in required_outputs:
+        assert output_name in outputs, f"Missing required output: {output_name}"
+
+
+def test_hosted_zone_has_id_output_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    outputs = template.find_outputs("*")
+    assert "HostedZoneId" in outputs, "Stack should have HostedZoneId output"
+
+
+def test_hosted_zone_has_name_output_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    outputs = template.find_outputs("*")
+    assert "HostedZoneName" in outputs, "Stack should have HostedZoneName output"
+
+
+def test_hosted_zone_has_nameservers_output_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    outputs = template.find_outputs("*")
+    assert "NameServers" in outputs, "Stack should have NameServers output"
+
+
+def test_cloudtrail_resources_synthesize():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+
+    template.resource_count_is("AWS::S3::Bucket", 2)
+    template.resource_count_is("AWS::Logs::LogGroup", 1)
+    template.resource_count_is("AWS::CloudTrail::Trail", 1)
+
+
+def test_cloudtrail_has_exactly_one_trail_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    trail_resources = template.find_resources("AWS::CloudTrail::Trail")
+    assert len(trail_resources) == 1, "Should have exactly one CloudTrail trail"
+
+
+def test_cloudtrail_is_multi_region_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    trail_resources = template.find_resources("AWS::CloudTrail::Trail")
+    for trail_id, trail in trail_resources.items():
+        properties = trail.get("Properties", {})
+        assert properties.get("IsMultiRegionTrail") is True, "CloudTrail should be multi-region"
+
+
+def test_cloudtrail_includes_global_service_events_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    trail_resources = template.find_resources("AWS::CloudTrail::Trail")
+    for trail_id, trail in trail_resources.items():
+        properties = trail.get("Properties", {})
+        assert properties.get("IncludeGlobalServiceEvents") is True, "CloudTrail should include global service events"
+
+
+def test_cloudtrail_trail_exists_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    cloudtrail_resources = template.find_resources("AWS::CloudTrail::Trail")
+    assert len(cloudtrail_resources) > 0, "CloudTrail trail should exist"
+
+
+def test_domain_registration_custom_resource_exists_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    custom_resources = template.find_resources("AWS::CloudFormation::CustomResource")
+    assert len(custom_resources) > 0, "Custom resource for domain registration should exist"
+
+
+def test_domain_registration_depends_on_cloudtrail_in_template():
+    app = cdk.App()
+
+    config_path = Path(__file__).parents[4] / "config" / "cloudtrail_and_domain_name.json"
+    with open(config_path) as f:
+        config = json.load(f)
+
+    stack_path = Path(__file__).parents[4] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    spec = importlib.util.spec_from_file_location("domain_stack", stack_path)
+    domain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(domain_module)
+    DomainStack = domain_module.DomainStack
+
+    stack = DomainStack(
+        app,
+        "TestDomainStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws_account_id"]),
+            region=config["aws_region"]
+        )
+    )
+
+    template = Template.from_stack(stack)
+    custom_resources = template.find_resources("AWS::CloudFormation::CustomResource")
+    cloudtrail_resources = template.find_resources("AWS::CloudTrail::Trail")
+    cloudtrail_ids = set(cloudtrail_resources.keys())
+
+    for resource_id, resource in custom_resources.items():
+        properties = resource.get("Properties", {})
+        if "DomainName" in properties:
+            depends_on = resource.get("DependsOn", [])
+            if not isinstance(depends_on, list):
+                depends_on = [depends_on]
+
+            depends_on_set = set(depends_on)
+            has_cloudtrail_dep = bool(cloudtrail_ids & depends_on_set)
+
+            assert has_cloudtrail_dep, f"Domain registration custom resource should depend on CloudTrail, but DependsOn is {depends_on}"
