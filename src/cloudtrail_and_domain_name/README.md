@@ -2,627 +2,643 @@
 
 ## Overview
 
-This AWS CDK infrastructure automates the registration of domain names via Route53 and establishes comprehensive audit logging through AWS CloudTrail. It provides a complete solution for domain acquisition, hosted zone creation, and organizational activity monitoring with a serverless architecture.
+This AWS CDK infrastructure provides a comprehensive solution for automated domain registration and centralized audit logging through CloudTrail. It combines AWS Route 53 domain management with multi-region CloudTrail logging to create a secure, auditable infrastructure foundation for domain-based deployments.
 
-The infrastructure uses AWS Lambda as a custom CloudFormation resource to intelligently handle domain registration, automatically detecting existing registrations and creating Route53 hosted zones while maintaining full audit trails of all AWS API activities.
+The stack automatically registers a domain name and creates an associated Route 53 Hosted Zone, while simultaneously establishing CloudTrail logging across all AWS regions for compliance and security monitoring.
 
 ## Purpose and Key Features
 
-### Core Capabilities
+### Primary Objectives
+- **Automated Domain Registration**: Programmatic domain registration via AWS Route 53 Domains API
+- **Centralized Audit Logging**: Comprehensive CloudTrail configuration capturing all API activity
+- **Infrastructure as Code**: Fully declarative AWS CDK implementation for reproducible deployments
+- **Compliance Ready**: Long-term log retention and archival policies for regulatory requirements
 
-- **Automated Domain Registration**: Seamlessly register domain names using AWS Route53 Domains API
-- **Intelligent Domain Detection**: Checks for existing domain registrations before attempting new registrations
-- **Auto-hosted Zone Creation**: Automatically creates and configures Route53 hosted zones post-registration
-- **Comprehensive Audit Logging**: Tracks all AWS API calls across regions and services
-- **Secure Log Storage**: Implements S3 lifecycle policies and encryption for audit logs
-- **CloudWatch Integration**: Streams CloudTrail logs to CloudWatch Logs for real-time analysis
-- **Multi-region Monitoring**: Captures global service events and management activities
-
-### Automation Features
-
-- Automatic contact information retrieval from AWS Account and Organizations APIs
-- Phone number formatting based on country-specific dialing codes
-- Privacy protection enabled by default for domain contacts
-- Automatic 1-year domain renewal configuration
-- Exponential backoff retry logic for hosted zone availability checks
+### Key Features
+- ✅ Multi-region CloudTrail with global service event tracking
+- ✅ Automatic domain availability checking and registration
+- ✅ Intelligent hosted zone detection and reuse
+- ✅ CloudWatch Logs integration for real-time monitoring
+- ✅ S3 lifecycle policies with Glacier archival after 90 days
+- ✅ Server access logging for CloudTrail bucket operations
+- ✅ Privacy protection on all domain contacts
+- ✅ Automatic nameserver delegation configuration
+- ✅ International phone number formatting support (24 countries)
 
 ## Resources Created
 
-### CloudTrail Configuration
-
-```
-DomainCloudTrail (Multi-region Trail)
-├── Event Types: All management events (READ and WRITE)
-├── Global Events: Enabled
-├── CloudWatch Logs: Enabled (1-year retention)
-└── S3 Bucket: Versioned, encrypted, access-logged
-```
-
-**CloudTrail Trail Properties**:
-- Multi-region deployment for organization-wide visibility
-- Captures all management events (both read and write operations)
-- Includes global service events (IAM, CloudFront, Route53, etc.)
-- Sends logs to both S3 and CloudWatch Logs simultaneously
-- 1-year log retention in CloudWatch
-
-### S3 Buckets
+### CloudTrail Infrastructure
 
 #### CloudTrail Bucket (`CloudTrailBucket`)
-- **Purpose**: Primary storage for CloudTrail logs
-- **Features**:
-  - S3-managed server-side encryption (SSE-S3)
+- **Purpose**: Primary storage for CloudTrail event logs
+- **Configuration**:
+  - S3-managed encryption enabled
   - Public access completely blocked
-  - Automatic deletion on stack removal
-  - Server access logging enabled
-  - SSL/TLS enforcement for all connections
-  - Versioning disabled for cost optimization
+  - SSL/TLS enforcement required
+  - Server access logging to separate access log bucket
+  - Auto-deletion enabled for lifecycle management
+  - Deletion policy: DESTROY (removed when stack is deleted)
 
 #### Access Log Bucket (`CloudTrailAccessLogBucket`)
-- **Purpose**: Stores access logs from the CloudTrail bucket
-- **Features**:
-  - S3-managed encryption
+- **Purpose**: Capture access logs for CloudTrail bucket operations
+- **Configuration**:
+  - S3-managed encryption enabled
   - Public access completely blocked
-  - Retained on stack deletion (compliance requirement)
-  - SSL/TLS enforcement
+  - SSL/TLS enforcement required
   - Lifecycle policy:
-    - Transitions to Glacier storage after 90 days
-    - Automatic expiration after 5 years (1825 days)
+    - Transition to Glacier after 90 days (cost optimization)
+    - Automatic deletion after 5 years (1,825 days)
+  - Deletion policy: RETAIN (preserved for audit)
 
-### Lambda Function
+#### CloudTrail Logs (`CloudTrailLogGroup`)
+- **Purpose**: CloudWatch Logs integration for real-time monitoring
+- **Configuration**:
+  - 1-year retention period
+  - Retention policy: RETAIN (preserved after stack deletion)
 
-#### DomainRegistrationHandler
+#### Trail Configuration (`DomainCloudTrail`)
+- **Features**:
+  - Multi-region trail capturing events across all AWS regions
+  - Global service events enabled (CloudFront, IAM, etc.)
+  - Management events: ALL (read and write operations)
+  - Real-time delivery to CloudWatch Logs
+  - Automatic file validation for integrity verification
+
+### Domain Registration Components
+
+#### Lambda Function (`DomainRegistrationHandler`)
 - **Runtime**: Python 3.11
 - **Timeout**: 900 seconds (15 minutes)
-- **Trigger**: CloudFormation custom resource
-- **IAM Permissions**:
-  - Route53 Domains API (CheckDomainAvailability, RegisterDomain, GetDomainDetail, GetOperationDetail)
-  - Route53 API (ListHostedZonesByName, GetHostedZone, CreateHostedZone)
-  - Account API (GetContactInformation, GetAlternateContact)
-  - Organizations API (DescribeOrganization)
+- **Purpose**: Custom resource handler for domain registration workflow
+- **Required IAM Permissions**:
+  - Route 53 Domains API (check availability, register, get status)
+  - Route 53 API (hosted zone management)
+  - AWS Account API (contact information retrieval)
+  - AWS Organizations API (organization details)
 
-### CloudFormation Custom Resource
+#### Custom Resource (`DomainRegistration`)
+- **Service Token**: Domain registration Lambda function
+- **Properties**: Domain name from configuration
+- **Dependencies**: Ensures CloudTrail is fully deployed before registration
 
-The `DomainRegistration` custom resource orchestrates the entire domain registration workflow:
-- Depends on CloudTrail trail for audit compliance
-- Returns hosted zone ID, name servers, and domain status
-- Supports both creation and update operations
-- Gracefully handles deletion (no-op)
+#### Hosted Zone Reference (`HostedZone`)
+- **Source**: Dynamically retrieved from domain registration
+- **Attributes**: Hosted Zone ID and nameservers
+
+### CloudFormation Outputs
+
+| Output | Description | Export |
+|--------|-------------|--------|
+| `DomainName` | Registered domain name | — |
+| `HostedZoneId` | Route 53 Hosted Zone ID | `{domain}-HostedZoneId` |
+| `HostedZoneName` | Hosted Zone name | `{domain}-HostedZoneName` |
+| `NameServers` | Authoritative nameservers | — |
+| `RegistrationStatus` | Domain registration status | — |
 
 ## Prerequisites and Requirements
 
 ### AWS Account Requirements
+- AWS account with appropriate permissions for:
+  - Route 53 (domain registration requires us-east-1 region)
+  - CloudTrail and S3 management
+  - CloudWatch Logs
+  - IAM role creation
+  - Lambda function deployment
 
-- AWS Account with appropriate IAM permissions
-- AWS Organizations configured (optional, but recommended for email retrieval)
-- AWS Billing contact information fully configured at https://console.aws.amazon.com/billing/home#/account
+### Account Configuration
+Before deployment, ensure AWS Account settings are populated:
 
-### Required Contact Information
+```
+AWS Console → Billing → Account Settings
+```
 
-The following fields must be configured in your AWS Account:
-- **FullName**: Account holder's full name
-- **AddressLine1**: Street address
-- **City**: City name
-- **StateOrRegion**: State or region code
-- **CountryCode**: ISO 3166-1 alpha-2 country code
-- **PostalCode**: Postal/ZIP code
-- **PhoneNumber**: Contact phone number
+Required fields:
+- Full Name
+- Address Line 1
+- City
+- State/Region
+- Country Code
+- Postal Code
+- Phone Number
 
-If not configured, the Lambda function will fail with specific field requirements.
+Alternatively, configure billing contact:
+```
+AWS Console → Billing → Billing Preferences → Billing Alerts Contact Information
+```
 
 ### Software Requirements
+- Python 3.8 or higher
+- AWS CDK CLI (v2.x)
+- AWS CLI configured with appropriate credentials
+- Boto3 SDK (included with AWS CDK)
 
-- Python 3.9 or later
-- AWS CDK v2.x
-- AWS CLI v2
-- boto3 library for Lambda handler
-- Node.js 14+ (CDK runtime requirement)
+### Installation
 
-### IAM Permissions Required
+```bash
+# Install AWS CDK (if not already installed)
+npm install -g aws-cdk
 
-Your deployment user/role must have permissions for:
-- CloudTrail management
-- S3 bucket creation and management
-- Lambda function creation
-- IAM role and policy creation
-- Route53 and Route53 Domains operations
-- CloudWatch Logs creation
+# Verify CDK installation
+cdk --version
+
+# Install Python dependencies
+pip install -r requirements.txt
+```
 
 ## Usage Instructions
 
-### Step 1: Configure AWS Account Contact Information
+### Deployment
 
-Before deploying, ensure your AWS account has complete contact information:
-
-```bash
-# Visit AWS Console
-https://console.aws.amazon.com/billing/home#/account
-
-# Or use AWS CLI to verify
-aws account get-contact-information --region us-east-1
-```
-
-### Step 2: Prepare Configuration
-
-Create a configuration file with your desired domain name:
+1. **Configure the domain name** in your CDK app or environment:
 
 ```python
-# config.py
 config = {
     "domain_name": "example.com"
 }
+
+stack = DomainStack(app, "DomainStack", config=config)
 ```
 
-### Step 3: Deploy the Stack
+2. **Synthesize the CloudFormation template**:
 
 ```bash
-# Install CDK dependencies
-pip install -r requirements.txt
-
-# Synthesize the CDK app
 cdk synth
-
-# Deploy to AWS
-cdk deploy --require-approval=never
-
-# Or with specific configuration
-cdk deploy \
-  -c domain_name=mydomain.com \
-  --require-approval=never
 ```
 
-### Step 4: Monitor Deployment
-
-The deployment typically takes 2-5 minutes. CloudTrail will be active immediately, but domain registration may take additional time:
+3. **Preview changes** (optional):
 
 ```bash
-# View stack outputs
-aws cloudformation describe-stacks \
-  --stack-name DomainStack \
-  --query 'Stacks[0].Outputs'
-
-# Check Lambda execution logs
-aws logs tail /aws/lambda/DomainRegistrationHandler --follow
-
-# Check CloudTrail status
-aws cloudtrail describe-trails --trail-name-list DomainCloudTrail
+cdk diff
 ```
 
-### Step 5: Verify Domain Registration
+4. **Deploy the stack**:
 
 ```bash
-# Check domain status
-aws route53domains get-domain-detail --domain-name example.com --region us-east-1
+cdk deploy
+```
 
-# List hosted zones
-aws route53 list-hosted-zones-by-name --dns-name example.com
+5. **Confirm the deployment prompt** when prompted for resource creation.
+
+### Post-Deployment
+
+After successful deployment:
+
+1. **Verify domain registration** in AWS Console:
+   - Route 53 → Registered Domains → Check status
+
+2. **Update domain contacts** (if necessary):
+   - Route 53 → Registered Domains → [Domain] → Registrant Details
+
+3. **Update nameservers** at your domain registrar (if transferring from external registrar)
+
+4. **Monitor CloudTrail logs**:
+   - CloudTrail Console → Event History
+   - CloudWatch Logs → Log Groups → `/aws/cloudtrail/DomainCloudTrail`
+
+### Cleanup
+
+To remove the infrastructure:
+
+```bash
+cdk destroy
+```
+
+**Note**: The access log bucket is retained by default. To also delete it:
+
+```bash
+# Manually delete the access log bucket in S3 console, then run:
+cdk destroy
 ```
 
 ## Architecture Explanation
 
+### CloudTrail Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    AWS Account Events                    │
+│  (Multi-Region: Management Events, Global Services)     │
+└────────────────────┬────────────────────────────────────┘
+                     │
+         ┌───────────┴───────────┐
+         │                       │
+    ┌────▼─────┐         ┌──────▼──────┐
+    │ CloudTrail│         │ CloudTrail  │
+    │  Bucket   │         │ Log Group   │
+    │  (S3)     │         │ (CloudWatch)│
+    │           │         │             │
+    └────┬──────┘         └─────────────┘
+         │
+    ┌────▼──────────┐
+    │  Access Logs  │
+    │    Bucket     │
+    │   (Glacier)   │
+    └───────────────┘
+```
+
+**Data Flow**:
+1. AWS API calls across all regions are captured
+2. Events are simultaneously logged to:
+   - S3 bucket (primary audit trail)
+   - CloudWatch Logs (real-time monitoring)
+3. S3 access logs track all bucket operations
+4. Lifecycle policies automatically archive and expire logs
+
 ### Domain Registration Workflow
 
 ```
-CloudFormation Create Event
-        ↓
-Lambda Handler Invoked
-        ↓
-    ┌───────────────────┐
-    │ Check if domain   │
-    │ already exists    │
-    └───────────────────┘
-         ↙         ↖
-    YES │          │ NO
-        ↓          ↓
-   Return Zone   Register New Domain
-   Attributes        ↓
-        │       Get Contact Info
-        │            ↓
-        │       Check Availability
-        │            ↓
-        │       Submit Registration
-        │            ↓
-        │       Poll for Hosted Zone
-        │            ↓
-        │       Return Zone Attributes
-        └───────────┬──────────────┘
-                    ↓
-            CFN Custom Resource
-                 Outputs
+┌──────────────────────────────────────────────────────┐
+│            Custom Resource Invocation                │
+│          (CloudFormation Stack Creation)             │
+└──────────────────┬───────────────────────────────────┘
+                   │
+        ┌──────────▼──────────┐
+        │  Lambda Handler     │
+        │   Invocation        │
+        └──────────┬──────────┘
+                   │
+        ┌──────────▼──────────────────┐
+        │  Check if Domain Exists     │
+        └──────────┬──────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+   Yes  │                     │  No
+    ┌───▼────┐          ┌────▼──────┐
+    │ Reuse  │          │ Check     │
+    │ Zone   │          │ Available │
+    └────────┘          └────┬──────┘
+        │                    │
+        │              ┌─────┴────┐
+        │              │          │
+        │         Available   Not Available
+        │         (Register)  (Fail)
+        │              │
+        │         ┌────▼──────────────┐
+        │         │ Get Contact Info  │
+        │         │ (Account/Org APIs)│
+        │         └────┬──────────────┘
+        │              │
+        │         ┌────▼──────────┐
+        │         │ Register Domain│
+        │         └────┬──────────┘
+        │              │
+        │         ┌────▼──────────────────┐
+        │         │ Wait for Hosted Zone  │
+        │         │ (Exponential Backoff) │
+        │         └────┬──────────────────┘
+        │              │
+        └──────────┬───┘
+                   │
+        ┌──────────▼──────────────┐
+        │ Return Hosted Zone ID   │
+        │ & Nameservers           │
+        └──────────┬──────────────┘
+                   │
+        ┌──────────▼──────────────┐
+        │ Stack Creation Complete │
+        └─────────────────────────┘
 ```
-
-### CloudTrail Configuration Details
-
-**Event Flow**:
-1. All AWS API calls are captured by CloudTrail
-2. Events are written to S3 (primary storage)
-3. Events are simultaneously streamed to CloudWatch Logs
-4. Access logs for the CloudTrail bucket are written to the access log bucket
-5. Logs transition to Glacier after 90 days for cost optimization
-6. Logs expire after 5 years (1825 days)
-
-**Event Coverage**:
-- Management events: All API calls (READ/WRITE)
-- Global service events: IAM, CloudFront, Route53, etc.
-- Multi-region: Events from all AWS regions
-- Data events: Not captured (can be added if needed)
-
-### Domain Registration Workflow
-
-**Existing Domain Detection**:
-- Lambda first attempts to retrieve existing domain details
-- If found, returns hosted zone ID and name servers
-- Skips registration process if domain already registered
-
-**New Domain Registration**:
-1. Retrieves contact information from AWS Account API
-2. Falls back to Organizations API for email if available
-3. Checks domain availability via Route53 Domains
-4. Formats phone number based on country dialing codes
-5. Submits registration with privacy protection enabled
-6. Waits up to 14 minutes for hosted zone creation
-7. Uses exponential backoff (2^n seconds) for retry attempts
-
-**Contact Information Priority**:
-1. Organization Master Account Email (if in AWS Organization)
-2. Billing Alternate Contact Email (if configured)
-3. Generated email from account name (fallback)
 
 ### Custom Resource Lifecycle
 
-**Create Operation**:
-- Triggers domain registration process
-- Returns hosted zone ID for resource dependency
-- Retries with exponential backoff for transient failures
+1. **Stack Create**: Lambda handler registers domain or reuses existing
+2. **Stack Update**: Lambda handler updates domain configuration (if properties change)
+3. **Stack Delete**: Lambda handler completes successfully (no domain deletion)
 
-**Update Operation**:
-- Currently treated as no-op (domain name not updated)
-- Returns existing hosted zone information
-
-**Delete Operation**:
-- No-op operation
-- Domain remains registered (intentional for data protection)
-- CloudTrail logs retained (compliance requirement)
+**Retry Logic**:
+- Hosted zone creation uses exponential backoff: 1s, 2s, 4s, 8s... up to 14 minutes
+- Domain registration can take 5-30 minutes; stack may need redeployment
 
 ## Configuration Details
 
-### Environment Variables
+### Domain Configuration
 
-```bash
-# GitHub SHA for Lambda description (optional)
-export GITHUB_SHA=abc123def456789
+Configuration is passed to the stack via dictionary:
 
-# AWS Region (CloudTrail bucket)
-export AWS_REGION=us-east-1
+```python
+config = {
+    "domain_name": "mycompany.com"
+}
 ```
 
-### Stack Parameters
+Supported TLDs: All Route 53 supported domains (.com, .org, .net, .co.uk, etc.)
 
-| Parameter | Required | Description | Example |
-|-----------|----------|-------------|---------|
-| `domain_name` | Yes | Domain to register | `example.com` |
-| `construct_id` | No | CDK stack ID | `DomainStack` |
+### Contact Information Retrieval
 
-### Supported TLDs
+The Lambda function retrieves registrant contact information in this priority order:
 
-Domain registration supports most Route53 Domains TLDs, including:
-- `.com`, `.net`, `.org`, `.co`, `.io`
-- Country-code TLDs: `.co.uk`, `.com.au`, `.de`, `.fr`, etc.
-- New generic TLDs: `.app`, `.dev`, `.cloud`, `.tech`, etc.
+1. **Organization email** (if AWS Organization member)
+2. **Billing alternate contact email** (if configured)
+3. **Generated email** (falls back to admin@{company}.com with warning)
 
-Check availability in AWS Console for your specific TLD.
+**Phone Number Formatting**:
+- Automatically detects country from AWS account
+- Strips non-digit characters
+- Prepends country dialing code (24 supported countries)
+- Format: `+{code}.{number}`
 
-### Supported Countries
+### S3 Bucket Policies
 
-The Lambda function includes phone number formatting for 21 countries:
+The CloudTrail bucket automatically receives a policy allowing CloudTrail service access:
 
-| Country | Code | Dialing Code |
-|---------|------|--------------|
-| United States | US | +1 |
-| United Kingdom | GB | +44 |
-| Germany | DE | +49 |
-| France | FR | +33 |
-| Japan | JP | +81 |
-| Australia | AU | +61 |
-| Canada | CA | +1 |
-| Brazil | BR | +55 |
-| India | IN | +91 |
-| China | CN | +86 |
+```json
+{
+  "Action": "s3:PutObject",
+  "Principal": {"Service": "cloudtrail.amazonaws.com"},
+  "Resource": "arn:aws:s3:::bucket-name/prefix/*",
+  "Condition": {
+    "StringEquals": {
+      "s3:x-amz-acl": "bucket-owner-full-control"
+    }
+  }
+}
+```
 
-For countries not in the list, defaults to +1.
+### Encryption Configuration
+
+- **S3 Buckets**: S3-managed SSE-S3 encryption
+- **CloudTrail**: File integrity validation enabled
+- **Transport**: SSL/TLS enforcement on all buckets
 
 ## Testing Approach
 
-### Local Testing
+### Unit Testing
 
-```bash
-# Run Lambda handler locally with test event
-import json
-from lambda.handler import handler
+Test stack instantiation:
 
-test_event = {
-    "RequestType": "Create",
-    "ResourceProperties": {
-        "DomainName": "test.com"
-    },
-    "StackId": "arn:aws:cloudformation:...",
-    "RequestId": "test-123",
-    "LogicalResourceId": "DomainRegistration",
-    "ResponseURL": "https://..."
-}
+```python
+from aws_cdk import assertions as assertions
+from stack import DomainStack
 
-# Requires AWS credentials configured
-handler(test_event, None)
+def test_stack_creates_buckets():
+    config = {"domain_name": "test.com"}
+    template = assertions.Template.from_stack(DomainStack(None, "test", config))
+    
+    template.resource_count_is("AWS::S3::Bucket", 2)
+    template.has_resource_properties("AWS::S3::Bucket", {
+        "VersioningConfiguration": {"Status": "Suspended"}
+    })
 ```
 
 ### Integration Testing
 
-```bash
-# Deploy to dev account
-cdk deploy --context domain_name=test-example.com
+1. **Pre-deployment**:
+   - Verify AWS account has required contact information
+   - Confirm domain availability using Route 53 console
 
-# Verify CloudTrail is capturing events
-aws cloudtrail lookup-events \
-  --trail-name DomainCloudTrail \
-  --max-results 10
+2. **Post-deployment**:
+   ```bash
+   # Verify CloudTrail is logging
+   aws cloudtrail describe-trails
+   
+   # Check S3 buckets
+   aws s3 ls | grep cloudtrail
+   
+   # Verify hosted zone
+   aws route53 list-hosted-zones-by-name --dns-name example.com
+   
+   # Check Lambda execution
+   aws logs tail /aws/lambda/DomainRegistrationHandler --follow
+   ```
 
-# Check Lambda execution
-aws logs tail /aws/lambda/DomainRegistrationHandler --follow
+3. **CloudTrail validation**:
+   - Event appears in CloudTrail within 15 minutes
+   - CloudWatch Logs show real-time entries
 
-# Validate hosted zone
-aws route53 list-hosted-zones
-```
+### Domain Registration Testing
 
-### CloudTrail Validation
+To test without deploying:
 
-```bash
-# Verify trail is logging
-aws cloudtrail get-trail-status --name DomainCloudTrail
+```python
+import boto3
 
-# Query CloudTrail events
-aws cloudtrail lookup-events \
-  --event-source route53domains.amazonaws.com \
-  --max-results 5
+route53domains = boto3.client('route53domains', region_name='us-east-1')
 
-# View S3 bucket contents
-aws s3 ls s3://cloudtrail-bucket/ --recursive
-
-# Check CloudWatch Logs
-aws logs tail /aws/cloudtrail/DomainCloudTrail --follow
-```
-
-### Failure Scenarios
-
-**Test missing contact information**:
-```bash
-# Clear account contact info before deployment
-# Expected: Lambda fails with specific missing fields error
-```
-
-**Test domain availability check**:
-```bash
-# Use a known taken domain (e.g., example.com)
-cdk deploy -c domain_name=example.com
-# Expected: Lambda returns availability error
-```
-
-**Test existing domain reuse**:
-```bash
-# Deploy with already-registered domain
-# Expected: Lambda detects existing registration and returns zone info
+# Check domain availability
+response = route53domains.check_domain_availability(DomainName='test-domain.com')
+print(response['Availability'])  # AVAILABLE, UNAVAILABLE, etc.
 ```
 
 ## Security Considerations
 
-### Bucket Security
-
-**CloudTrail Bucket**:
-- ✅ All public access blocked via `BlockPublicAccess`
-- ✅ S3-managed encryption enabled (SSE-S3)
-- ✅ SSL/TLS required for all connections (`enforce_ssl=True`)
-- ✅ Automatic deletion on stack removal for ephemeral stacks
-- ✅ Versioning disabled to reduce storage costs
-
-**Access Log Bucket**:
-- ✅ All public access blocked
-- ✅ Encryption enabled
-- ✅ Retained on deletion (prevents accidental data loss)
-- ✅ SSL/TLS required
-
 ### CloudTrail Security
 
-- ✅ Multi-region trail captures all regions
-- ✅ Global service events included
-- ✅ Integrated with CloudWatch Logs for real-time alerting
-- ✅ Log file integrity validation enabled by default
-- ✅ Automatic log compression and retention management
+- ✅ **Multi-region coverage**: Captures events from all regions
+- ✅ **Global service events**: Includes IAM, CloudFront, Route 53
+- ✅ **File validation**: Cryptographic signature verification enabled
+- ✅ **Access logging**: All S3 bucket operations are logged
+- ✅ **Encryption in transit**: SSL/TLS enforced
+- ✅ **Encryption at rest**: S3-managed encryption enabled
+
+### S3 Security
+
+- ✅ **Block public access**: All public access disabled
+- ✅ **Versioning disabled**: Simplified compliance (logs are immutable)
+- ✅ **Enforced SSL**: Deny unencrypted connections
+- ✅ **Lifecycle archival**: Cost-effective long-term retention
+- ✅ **Access logging**: Separate bucket for audit trail operations
 
 ### Lambda Security
 
-**IAM Least Privilege**:
-- Lambda role includes only necessary Route53 Domains permissions
-- Account and Organizations APIs restricted to read operations only
-- No S3 access for Lambda execution role
+- ✅ **Least privilege IAM**: Only required Route 53/Account API permissions
+- ✅ **Timeout protection**: 15-minute timeout prevents hanging
+- ✅ **Error handling**: Sensitive data not logged in traces
+- ✅ **No hardcoded credentials**: Uses IAM role assumption
 
-**Data Sensitivity**:
-- Contact information retrieved from AWS Account API
-- Domain registration uses provided credentials
-- All communications over HTTPS/TLS
-- CloudTrail captures all Lambda invocations
+### Domain Registration Security
 
-**Secrets Management**:
-- No hardcoded credentials
-- Uses IAM roles for service authentication
-- Account contact info retrieved from AWS Account API (not stored)
+- ✅ **Privacy protection**: All domain contacts protected
+- ✅ **Contact validation**: AWS Account API provides verified contact info
+- ✅ **Registrant contact**: Matches organization details
+- ✅ **WHOIS privacy**: Enabled by default
 
-### Domain Privacy
+### IAM Permissions
 
-**Privacy Protections Enabled**:
-- Admin contact information hidden
-- Registrant contact information hidden
-- Tech contact information hidden
-- Billing contact information hidden
+Minimal IAM policy for Lambda execution:
 
-**Contact Information Sources**:
-1. AWS Account Contact Information (primary)
-2. AWS Organizations Master Account Email (secondary)
-3. AWS Billing Alternate Contact (tertiary)
-
-### Audit and Compliance
-
-- CloudTrail enabled for all management events
-- Logs stored with encryption at rest
-- Access logging for CloudTrail bucket itself
-- 1-year retention in CloudWatch for analysis
-- 5-year retention in S3 for compliance
-- Glacier archival after 90 days for cost optimization
-
-### Network Security
-
-- No public endpoints exposed
-- Private Lambda execution within VPC (if configured)
-- All API calls to AWS services over HTTPS
-- No cross-account access required
-
-## Troubleshooting Tips
-
-### Lambda Execution Failures
-
-**Check CloudWatch Logs**:
-```bash
-aws logs tail /aws/lambda/DomainRegistrationHandler --follow
-
-# Or view specific log group
-aws logs describe-log-streams \
-  --log-group-name /aws/lambda/DomainRegistrationHandler
-
-aws logs get-log-events \
-  --log-group-name /aws/lambda/DomainRegistrationHandler \
-  --log-stream-name 'stream-name'
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53domains:CheckDomainAvailability",
+        "route53domains:GetDomainDetail",
+        "route53domains:GetOperationDetail",
+        "route53domains:RegisterDomain",
+        "route53:ListHostedZonesByName",
+        "route53:GetHostedZone",
+        "route53:CreateHostedZone",
+        "account:GetContactInformation",
+        "account:GetAlternateContact",
+        "organizations:DescribeOrganization"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
 ```
 
-**Common Errors**:
+## Troubleshooting
 
-1. **"AWS account missing contact fields"**
-   - Missing required information at https://console.aws.amazon.com/billing/home#/account
-   - Add FullName, Address, City, State, Country, PostalCode, PhoneNumber
+### Domain Registration Failures
 
-2. **"Domain is not available"**
-   - Selected domain already registered
-   - Try alternative domain name or different TLD
+#### "Domain not available"
+```
+Solution: Try alternative domain name
+- Check availability: Route 53 Console → Domains → Check Domain Availability
+- Use different TLD (.co, .io, .dev)
+```
 
-3. **"Hosted zone not created within timeout"**
-   - AWS CloudFormation takes time to create hosted zone
-   - Re-deploy stack after 5 minutes
-   - Eventual consistency: Zone creation can take 10-15 minutes
+#### "Missing AWS Account Contact Information"
+```
+Error: AWS account missing contact fields...
 
-4. **"InvalidInput" exception**
-   - Domain name format invalid (e.g., missing TLD)
-   - Verify domain name syntax
+Solution: Update AWS account settings
+1. AWS Console → Billing → Account
+2. Fill in all required fields:
+   - Full Name
+   - Street Address
+   - City
+   - State/Province
+   - Postal Code
+   - Phone Number
+3. Re-deploy: cdk deploy
+```
+
+#### "Invalid Phone Number"
+```
+Solution: Update AWS Account phone number
+- Use format: +1-555-0123 or +44-201-555-0123
+- Supported countries: 24 (see COUNTRY_DIALING_CODES in handler.py)
+- Ensure country code matches CountryCode setting
+```
+
+#### "Hosted Zone Not Created"
+```
+Message: Hosted zone not created within timeout period
+
+Cause: AWS can take 5-30 minutes to create hosted zone
+Solution:
+1. Wait 5-10 minutes
+2. Re-run: cdk deploy
+3. Check: Route 53 → Hosted Zones
+4. Verify: Domain status in Route 53 → Domains
+```
 
 ### CloudTrail Issues
 
-**Trail not logging**:
-```bash
-# Check trail status
-aws cloudtrail get-trail-status --name DomainCloudTrail
-
-# Verify S3 bucket exists and is accessible
-aws s3 ls s3://cloudtrail-bucket/
-
-# Check CloudTrail permissions
-aws cloudtrail describe-trails --include-shadow-trails
+#### "No events appearing in CloudWatch Logs"
+```
+Solution: Check Lambda logs
+1. CloudWatch Logs → /aws/cloudtrail/DomainCloudTrail
+2. Verify retention period: 1 year
+3. Check S3 bucket for events:
+   aws s3 ls s3://cloudtrail-bucket-name/
 ```
 
-**Missing CloudWatch Logs**:
-```bash
-# Verify log group exists
-aws logs describe-log-groups \
-  --log-group-name-prefix /aws/cloudtrail/
-
-# Check log retention
-aws logs describe-log-groups \
-  --log-group-name-prefix /aws/cloudtrail/
-
-# View recent events
-aws logs tail /aws/cloudtrail/DomainCloudTrail --follow
+#### "S3 access denied errors"
+```
+Solution: Verify CloudTrail bucket policy
+1. S3 → [CloudTrail Bucket] → Permissions → Bucket Policy
+2. Should allow: cloudtrail.amazonaws.com PutObject
+3. Re-deploy: cdk deploy (auto-corrects policy)
 ```
 
-### Domain Registration Delays
+#### "Lifecycle transition failures"
+```
+Solution: Verify Glacier supported regions
+- Glacier available in most regions
+- Check S3 → [Bucket] → Management → Lifecycle Rules
+- Ensure rule transitions are valid
+```
 
-**Hosted Zone Not Available**:
-- Initial registration can take 5-15 minutes
-- AWS automatically creates hosted zone during registration
-- Re-deploy stack if zone not detected
+### Custom Resource Issues
 
-**Verification Steps**:
+#### "Lambda timeout (900 seconds)"
+```
+Cause: Domain registration or hosted zone creation took too long
+Solution:
+1. Check Lambda logs: CloudWatch → /aws/lambda/DomainRegistrationHandler
+2. Manual verification: Route 53 → Domains & Hosted Zones
+3. If successful, run: cdk destroy && cdk deploy
+```
+
+#### "Custom resource creation failed"
+```
+Solution: Check Lambda logs
+1. CloudWatch Logs → /aws/lambda/DomainRegistrationHandler
+2. Look for error messages (contact info missing, API failures)
+3. Fix issues and re-deploy
+4. Check CloudFormation Events for details
+```
+
+### CloudFormation Stack Issues
+
+#### "Delete failed - Access denied to access log bucket"
+```
+Solution: Manually delete access log bucket
+1. S3 Console → Find "cloudtrailaccesslogbucket" bucket
+2. Empty bucket: Select all → Delete
+3. Delete bucket: Bucket menu → Delete Bucket
+4. Re-run: cdk destroy
+```
+
+#### "Cannot update stack - hosted zone already exists"
+```
+Solution: Use Hosted Zone ID from previous deployment
+- Custom resource returns existing hosted zone
+- No conflicts if re-deploying same domain
+- Cannot change domain name without destroying stack
+```
+
+### Debugging Commands
+
 ```bash
-# Check domain registration status
-aws route53domains get-domain-detail \
-  --domain-name example.com \
+# View stack outputs
+aws cloudformation describe-stacks --stack-name DomainStack \
+  --query 'Stacks[0].Outputs'
+
+# Check CloudTrail status
+aws cloudtrail describe-trails --trail-name-list DomainCloudTrail
+
+# Monitor Lambda execution
+aws logs tail /aws/lambda/DomainRegistrationHandler --follow
+
+# Verify hosted zone
+aws route53 list-hosted-zones-by-name --dns-name example.com
+
+# Check domain registration
+aws route53domains get-domain-detail --domain-name example.com \
   --region us-east-1
 
-# List all hosted zones
-aws route53 list-hosted-zones
-
-# Check CloudFormation stack events
-aws cloudformation describe-stack-events \
-  --stack-name DomainStack \
-  --query 'StackEvents[*].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]'
+# View CloudFormation events
+aws cloudformation describe-stack-events --stack-name DomainStack \
+  --query 'StackEvents[*].[Timestamp,LogicalResourceId,ResourceStatus]'
 ```
 
-### Contact Information Issues
+### Enabling Debug Logging
 
-**Generated Email Address Warning**:
+In Lambda handler, add debug output:
+
+```python
+import json
+
+# At handler start:
+print("Event:", json.dumps(event, indent=2))
+print("Environment:", os.environ)
+
+# In functions:
+print(f"DEBUG: {variable_name} = {variable_value}")
 ```
-WARNING: Generated email address: admin@example.com
-Please update domain contacts after registration
-```
-- This occurs when no email found in Account/Billing/Organization
-- Update contacts at https://console.aws.amazon.com/route53domains/
 
-**Phone Number Formatting Errors**:
-- Ensure phone number includes country dialing code
-- Example: +1.2025551234 (US), +44.2071838750 (UK)
-- Add phone number to account contact info if not present
+Re-deploy and check CloudWatch Logs for detailed output.
 
-### Stack Deletion Issues
+---
 
-**S3 Bucket Deletion Failed**:
-- Access log bucket retained by design (RemovalPolicy.RETAIN)
-- CloudTrail bucket auto-deletes (RemovalPolicy.DESTROY + auto_delete_objects=True)
-- Manually delete access log bucket if needed:
-  ```bash
-  aws s3 rb s3://cloudtrail-access-log-bucket --force
-  ```
-
-**Domain Not Deleted**:
-- Domain remains registered after stack deletion (by design)
-- Prevents accidental domain loss
-- Manually deregister if needed:
-  ```bash
-  aws route53domains delete-domain \
-    --domain-name example.com \
-    --region us-east-1
-  ```
-
-### Performance Optimization
-
-**Reduce CloudTrail Log Volume**:
-- Currently captures all management events
-- Can exclude specific services if needed
-- Glacier transition after 90 days reduces costs
-
-**CloudWatch Logs Costs**:
-- 1-year retention configured
-- Adjust retention if needed:
-  ```python
-  retention=logs.RetentionDays.THREE_MONTHS
-  ```
-
-### Support Resources
-
-- AWS CloudTrail Documentation: https://docs.aws.amazon.com/cloudtrail/
-- Route53 Domains API: https://docs.aws.amazon.com/route53-domains/latest/APIReference/
-- AWS CDK Reference: https://docs.aws.amazon.com/cdk/api/
-- Lambda Timeout Adjustment: Update `Duration.seconds(900)` in stack.py
-- Contact Information: https://console.aws.amazon.com/billing/home#/account
+**Last Updated**: 2024
+**Version**: 1.0
+**License**: MIT (or your project license)
+**Support**: Check AWS CDK documentation and Route 53 API reference
