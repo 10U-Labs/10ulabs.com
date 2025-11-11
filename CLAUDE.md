@@ -40,14 +40,14 @@
 ### Branch and PR Strategy
 - **Create PRs to main** - After pushing to your claude/ branch, create a pull request
 - **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
-- **Preserve branches** - Do NOT delete claude/ branches after merging
+- **Clean up remote branches** - Delete remote claude/ branches after merging (local branch is irrelevant)
 - When creating PRs, use descriptive titles and comprehensive summaries
 
 ### PR Creation Workflow
 After completing work, committing, and running all required pre-deployment tests:
 1. Push to the claude/ branch: `git push -u origin <claude-branch-name>`
 2. Create PR: `gh pr create --base main --title "..." --body "..."`
-3. Immediately merge: `gh pr merge --merge` (without --delete-branch)
+3. Immediately merge and delete remote branch: `gh pr merge --merge --delete-branch`
 4. CI/CD will run post-deployment after merge
 
 ### Pre-Push Testing Requirements
