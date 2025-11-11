@@ -9,13 +9,6 @@ on:
       - '!src/auth_between_aws_and_github/README.md'
       - 'test/auth_between_aws_and_github/**'
       - '.github/workflows/auth_between_aws_and_github.yml'
-  pull_request:
-    paths:
-      - 'config/auth_between_aws_and_github.json'
-      - 'src/auth_between_aws_and_github/**'
-      - '!src/auth_between_aws_and_github/README.md'
-      - 'test/auth_between_aws_and_github/**'
-      - '.github/workflows/auth_between_aws_and_github.yml'
   workflow_dispatch:
     inputs:
       dry_run:
