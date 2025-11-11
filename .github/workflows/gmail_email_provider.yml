@@ -356,10 +356,10 @@ jobs:
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          if git diff --quiet src/gmail_email_provider/README.md; then
+          git add src/gmail_email_provider/README.md
+          if git diff --cached --quiet; then
             echo "No changes to README.md"
           else
-            git add src/gmail_email_provider/README.md
             git commit -m "Update gmail_email_provider README.md [skip ci]"
             git push
           fi
