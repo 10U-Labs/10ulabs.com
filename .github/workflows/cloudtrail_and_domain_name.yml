@@ -7,7 +7,6 @@ on:
       - 'src/cloudtrail_and_domain_name/**'
       - 'test/cloudtrail_and_domain_name/**'
       - 'config/cloudtrail_and_domain_name.json'
-      - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
@@ -153,12 +152,12 @@ jobs:
           cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk diff TenULabsDomainName
+        run: cdk diff --app "python src/cloudtrail_and_domain_name/app.py" TenULabsDomainName
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cdk deploy TenULabsDomainName \
+          cdk deploy --app "python src/cloudtrail_and_domain_name/app.py" TenULabsDomainName \
             --require-approval never \
             --outputs-file domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
