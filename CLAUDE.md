@@ -80,6 +80,12 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
   - `test_bucket_has_encryption`
   - `test_bucket_blocks_public_access`
 
+**CRITICAL: PREFER SERVERLESS ARCHITECTURE**
+- ALWAYS prefer serverless architecture (Lambda, API Gateway, DynamoDB, S3, etc.) for all services
+- Use EC2 instances ONLY when building AMIs or Docker images where build-time compute is required
+- Never use EC2 for application hosting when serverless alternatives exist
+- Benefits of serverless: no server management, automatic scaling, pay-per-use pricing, built-in high availability
+
 ### Branch and PR Strategy
 - **Create PRs to main** - After pushing to your claude/ branch, create a pull request
 - **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
