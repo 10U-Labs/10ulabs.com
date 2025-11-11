@@ -1,0 +1,84 @@
+import json
+from pathlib import Path
+import boto3
+import requests
+import pytest
+
+
+@pytest.fixture
+def config():
+    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    with open(config_path) as f:
+        return json.load(f)
+
+
+@pytest.fixture
+def cloudformation_client(config):
+    return boto3.client('cloudformation', region_name=config['aws_region'])
+
+
+@pytest.fixture
+def api_endpoint(cloudformation_client, config):
+    stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
+    outputs = stacks['Stacks'][0].get('Outputs', [])
+
+    for output in outputs:
+        if output['OutputKey'] == 'ApiEndpoint':
+            return output['OutputValue']
+
+    subdomain = config['subdomain_name']
+    return f"https://{subdomain}/prod"
+
+
+def test_health_endpoint_returns_200(api_endpoint):
+    response = requests.get(f"{api_endpoint}/health", timeout=10)
+    assert response.status_code == 200
+
+
+def test_health_endpoint_returns_json(api_endpoint):
+    response = requests.get(f"{api_endpoint}/health", timeout=10)
+    data = response.json()
+    assert 'status' in data
+
+
+def test_health_endpoint_status_is_healthy(api_endpoint):
+    response = requests.get(f"{api_endpoint}/health", timeout=10)
+    data = response.json()
+    assert data['status'] == 'healthy'
+
+
+def test_echo_endpoint_returns_200_with_valid_json(api_endpoint):
+    payload = {'message': 'test'}
+    response = requests.post(
+        f"{api_endpoint}/v1/echo",
+        json=payload,
+        timeout=10
+    )
+    assert response.status_code == 200
+
+
+def test_echo_endpoint_echoes_input(api_endpoint):
+    payload = {'message': 'hello world', 'number': 42}
+    response = requests.post(
+        f"{api_endpoint}/v1/echo",
+        json=payload,
+        timeout=10
+    )
+    data = response.json()
+    assert data['echo'] == payload
+
+
+def test_echo_endpoint_returns_request_id(api_endpoint):
+    payload = {'test': 'data'}
+    response = requests.post(
+        f"{api_endpoint}/v1/echo",
+        json=payload,
+        timeout=10
+    )
+    data = response.json()
+    assert 'received_at' in data
+
+
+def test_invalid_endpoint_returns_404(api_endpoint):
+    response = requests.get(f"{api_endpoint}/invalid", timeout=10)
+    assert response.status_code == 404
