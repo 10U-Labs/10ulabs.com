@@ -9,6 +9,8 @@ spec = importlib.util.spec_from_file_location(
     "gmail_email_provider",
     Path(__file__).parent / "stack.py"
 )
+if spec is None or spec.loader is None:
+    raise RuntimeError("Failed to load gmail_email_provider stack module")
 gmail_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gmail_module)
 GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
