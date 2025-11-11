@@ -1335,12 +1335,12 @@ def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
                         bootstrap_code: str, current_readme: str) -> int:
     logging.info("Checking if README needs update via Bedrock...")
     needs_update = _check_readme_needs_update(bedrock, bootstrap_code, current_readme)
-    logging.info("README needs update" if needs_update else "README is current")
-    print(needs_update)
+    readme_is_current = not needs_update
+    logging.info("README is current" if readme_is_current else "README needs update")
+    print(readme_is_current)
     if args.output_file:
         with open(args.output_file, 'a', encoding='utf-8') as f:
-            should_update = 'true' if needs_update else 'false'
-            f.write(f'should_update={should_update}\n')
+            f.write(f'readme_is_current={str(readme_is_current).lower()}\n')
     return 0
 def _handle_readme_update(bedrock: 'BedrockClient', bootstrap_code: str, readme_path: str) -> int:
     logging.info("Generating updated README via Bedrock...")
