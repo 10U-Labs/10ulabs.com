@@ -227,7 +227,7 @@ def test_domain_registration_lambda_has_description():
     template.has_resource_properties(
         "AWS::Lambda::Function",
         {
-            "Description": Match.string_like_regexp("Domain registration handler - Updated .*")
+            "Description": "Domain registration handler"
         }
     )
 
