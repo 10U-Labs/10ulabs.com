@@ -11,6 +11,18 @@
 - The GitHub PAT does not expire and has unlimited validity
 - These two credential sets allow you to debug anything in the project
 
+**CRITICAL: When using the GitHub API via curl:**
+- Get the PAT value from the environment: `echo $GITHUB_PAT`
+- Pass the literal PAT value directly in the curl command (not the variable)
+- Use this format:
+```bash
+curl -s -H "Authorization: Bearer <paste-the-actual-pat-value-here>" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_ID"
+```
+
+**DO NOT use environment variable expansion like `$GITHUB_PAT` in curl commands** - it may not expand correctly in some contexts.
+
 ## Development Workflow
 
 ### Coding Standards
