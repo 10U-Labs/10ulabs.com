@@ -405,7 +405,11 @@ jobs:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest
     needs: e2e-testing-infrastructure
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      always() &&
+      (needs.e2e-testing-infrastructure.result == 'success' ||
+       contains(github.event.head_commit.message, '[post-deployment]')) &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       should_update: ${{ steps.check.outputs.should_update }}
     permissions:
