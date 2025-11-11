@@ -15,8 +15,8 @@ control '10ulabs-com-hosted-zone-name' do
   title '10ulabs.com Hosted Zone Has Correct Name'
   desc 'Verify that the hosted zone has the correct domain name'
 
-  describe aws_hosted_zone("#{domain_name}.") do
-    its('name') { should eq "#{domain_name}." }
+  describe aws_hosted_zones.where(name: "#{domain_name}.") do
+    it { should exist }
   end
 end
 
