@@ -85,7 +85,8 @@ def test_hosted_zone_id_export_exists(config):
     cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
 
     domain_name = config['domain_name']
-    expected_export = f"{domain_name}-HostedZoneId"
+    normalized_domain = domain_name.replace('.', '-')
+    expected_export = f"{normalized_domain}-HostedZoneId"
 
     exports = []
     paginator = cf_client.get_paginator('list_exports')
@@ -101,7 +102,8 @@ def test_hosted_zone_name_export_exists(config):
     cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
 
     domain_name = config['domain_name']
-    expected_export = f"{domain_name}-HostedZoneName"
+    normalized_domain = domain_name.replace('.', '-')
+    expected_export = f"{normalized_domain}-HostedZoneName"
 
     exports = []
     paginator = cf_client.get_paginator('list_exports')
@@ -212,13 +214,13 @@ def test_cloudtrail_s3_bucket_exists(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_s3_bucket_has_encryption(s3_client, cloudtrail_client):
-    """Test that CloudTrail S3 bucket has encryption enabled"""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
 
     encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
-    assert 'Rules' in encryption, "Bucket should have encryption enabled"
+    assert 'ServerSideEncryptionConfiguration' in encryption, "Bucket should have encryption enabled"
+    assert 'Rules' in encryption['ServerSideEncryptionConfiguration'], "Bucket should have encryption rules"
 
 
 def test_cloudtrail_s3_bucket_blocks_public_acls(s3_client, cloudtrail_client):
@@ -286,22 +288,20 @@ def test_cloudtrail_has_cloudwatch_logs_configured(cloudtrail_client):
 
 
 def test_cloudtrail_log_group_exists(logs_client, cloudtrail_client):
-    """Test that CloudWatch Logs log group for CloudTrail exists"""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
-    log_group_name = log_group_arn.split(':')[-1].replace('log-group:', '').split(':')[0]
+    log_group_name = log_group_arn.split(':log-group:')[1].split(':')[0]
 
     response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
     assert len(response['logGroups']) > 0, "Log group should exist"
 
 
 def test_cloudtrail_log_group_has_one_year_retention(logs_client, cloudtrail_client):
-    """Test that CloudWatch Logs log group has 1-year retention"""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
-    log_group_name = log_group_arn.split(':')[-1].replace('log-group:', '').split(':')[0]
+    log_group_name = log_group_arn.split(':log-group:')[1].split(':')[0]
 
     response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
     log_group = response['logGroups'][0]
@@ -354,11 +354,10 @@ def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
-    """Test that CloudTrail has successfully written logs to CloudWatch Logs"""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
-    log_group_name = log_group_arn.split(':')[-1].replace('log-group:', '').split(':')[0]
+    log_group_name = log_group_arn.split(':log-group:')[1].split(':')[0]
 
     streams = logs_client.describe_log_streams(
         logGroupName=log_group_name,
