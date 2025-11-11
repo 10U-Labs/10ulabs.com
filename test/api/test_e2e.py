@@ -27,7 +27,7 @@ def api_endpoint(cloudformation_client, config):
             return output['OutputValue']
 
     subdomain = config['subdomain_name']
-    return f"https://{subdomain}/prod"
+    return f"https://{subdomain}"
 
 
 def test_health_endpoint_returns_200(api_endpoint):
