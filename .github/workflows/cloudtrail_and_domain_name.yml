@@ -317,8 +317,8 @@ jobs:
           echo ""
           echo "Stack Outputs:"
           cat domain-outputs.json | jq '.'
-  integration-testing-deployed-infrastructure:
-    name: Integration testing deployed infrastructure
+  integration-testing-infrastructure:
+    name: Integration testing infrastructure
     runs-on: ubuntu-latest
     needs: deploying-artifacts
     if: |
@@ -326,9 +326,9 @@ jobs:
       (needs.deploying-artifacts.result == 'success' ||
        contains(github.event.head_commit.message, '[post-deployment]'))
     steps:
-      - name: DRY RUN - Skip integration testing deployed infrastructure
+      - name: DRY RUN - Skip integration tests
         if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would test newly deployed domain infrastructure with Cinc Auditor"
+        run: echo "DRY RUN - Would run integration tests with Cinc Auditor and pytest"
       - name: Checkout code
         if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/checkout@v4
@@ -352,48 +352,23 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor
-      - name: Run unit tests on deployed infrastructure
+      - name: Run Cinc Auditor integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          echo "Running unit tests on deployed domain infrastructure"
+          echo "Running Cinc Auditor integration tests on deployed domain infrastructure"
           cinc-auditor exec test/cloudtrail_and_domain_name/post_deployment/unit \
             --input domain_name="${{ steps.config.outputs.domain_name }}" \
             --reporter cli
-  integration-testing-infrastructure:
-    name: Integration testing infrastructure
-    runs-on: ubuntu-latest
-    needs: integration-testing-deployed-infrastructure
-    steps:
-      - name: DRY RUN - Skip integration tests
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run integration tests"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Load configuration
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.config.outputs.region }}
       - name: Set up Python
         if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
+      - name: Install Python dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest boto3
-      - name: Run integration tests
+      - name: Run pytest integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pytest test/cloudtrail_and_domain_name/post_deployment/integration/ -v
