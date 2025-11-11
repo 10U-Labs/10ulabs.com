@@ -26,6 +26,11 @@ def cloudformation_client(config):
     return boto3.client('cloudformation', region_name=config['aws_region'])
 
 
+@pytest.fixture
+def acm_client(config):
+    return boto3.client('acm', region_name=config['aws_region'])
+
+
 def test_api_gateway_exists(apigw_client):
     apis = apigw_client.get_rest_apis()
     api_names = [api['name'] for api in apis['items']]
@@ -63,3 +68,104 @@ def test_stack_has_api_endpoint_output(cloudformation_client):
     outputs = stacks['Stacks'][0].get('Outputs', [])
     output_keys = [o['OutputKey'] for o in outputs]
     assert 'ApiEndpoint' in output_keys
+
+
+def test_api_gateway_has_health_resource(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+
+    resources = apigw_client.get_resources(restApiId=api_id)
+    resource_paths = [r['path'] for r in resources['items']]
+    assert '/health' in resource_paths
+
+
+def test_api_gateway_has_v1_echo_resource(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+
+    resources = apigw_client.get_resources(restApiId=api_id)
+    resource_paths = [r['path'] for r in resources['items']]
+    assert '/v1/echo' in resource_paths
+
+
+def test_api_gateway_has_proxy_plus_resource(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+
+    resources = apigw_client.get_resources(restApiId=api_id)
+    resource_paths = [r['path'] for r in resources['items']]
+    assert '/{proxy+}' in resource_paths
+
+
+def test_api_gateway_health_has_get_method(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+
+    resources = apigw_client.get_resources(restApiId=api_id)
+    health_resource = None
+    for r in resources['items']:
+        if r['path'] == '/health':
+            health_resource = r
+            break
+
+    assert 'GET' in health_resource['resourceMethods']
+
+
+def test_api_gateway_echo_has_post_method(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+
+    resources = apigw_client.get_resources(restApiId=api_id)
+    echo_resource = None
+    for r in resources['items']:
+        if r['path'] == '/v1/echo':
+            echo_resource = r
+            break
+
+    assert 'POST' in echo_resource['resourceMethods']
+
+
+def test_certificate_exists_for_subdomain(acm_client, config):
+    subdomain = config['subdomain_name']
+    certificates = acm_client.list_certificates()
+
+    cert_arns = [
+        cert['CertificateArn']
+        for cert in certificates['CertificateSummaryList']
+        if cert['DomainName'] == subdomain
+    ]
+    assert len(cert_arns) > 0
+
+
+def test_certificate_status_is_issued(acm_client, config):
+    subdomain = config['subdomain_name']
+    certificates = acm_client.list_certificates()
+
+    cert_arn = None
+    for cert in certificates['CertificateSummaryList']:
+        if cert['DomainName'] == subdomain:
+            cert_arn = cert['CertificateArn']
+            break
+
+    cert_details = acm_client.describe_certificate(CertificateArn=cert_arn)
+    assert cert_details['Certificate']['Status'] == 'ISSUED'
