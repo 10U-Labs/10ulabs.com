@@ -1877,7 +1877,7 @@ def test_cloudtrail_s3_bucket_exists():
     )
 
     template = Template.from_stack(stack)
-    template.resource_count_is("AWS::S3::Bucket", 1)
+    template.resource_count_is("AWS::S3::Bucket", 2)
 
 
 def test_cloudtrail_s3_bucket_has_encryption():
@@ -2075,11 +2075,15 @@ def test_cloudtrail_s3_bucket_versioning_disabled():
 
     from aws_cdk.assertions import Match
     resources = template.find_resources("AWS::S3::Bucket")
+    cloudtrail_bucket_found = False
     for resource_id, resource in resources.items():
         properties = resource.get("Properties", {})
-        versioning = properties.get("VersioningConfiguration")
-        if versioning:
-            assert versioning.get("Status") != "Enabled", "S3 bucket should not have versioning enabled"
+        if "LoggingConfiguration" in properties:
+            cloudtrail_bucket_found = True
+            versioning = properties.get("VersioningConfiguration")
+            if versioning:
+                assert versioning.get("Status") != "Enabled", "CloudTrail S3 bucket should not have versioning enabled"
+    assert cloudtrail_bucket_found, "CloudTrail S3 bucket with LoggingConfiguration not found"
 
 
 def test_cloudtrail_s3_bucket_has_auto_delete():
