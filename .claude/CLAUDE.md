@@ -37,17 +37,24 @@
 - If comments already exist in the original code, REMOVE THEM
 - Code should have ZERO comments of any kind
 
-### Branch and Push Strategy
-- **Always push to main**
-- **No PRs** - direct commits to main branch
-- **No non-main branches** - all work happens on main
-- When pushing to main, use `[skip ci]` in commit messages to skip CI/CD pipelines when appropriate
+### Branch and PR Strategy
+- **Create PRs to main** - After pushing to your claude/ branch, create a pull request
+- **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
+- **Preserve branches** - Do NOT delete claude/ branches after merging
+- When creating PRs, use descriptive titles and comprehensive summaries
+
+### PR Creation Workflow
+After completing work, committing, and running all required pre-deployment tests:
+1. Push to the claude/ branch: `git push -u origin <claude-branch-name>`
+2. Create PR: `gh pr create --base main --title "..." --body "..."`
+3. Immediately merge: `gh pr merge --merge` (without --delete-branch)
+4. CI/CD will run post-deployment after merge
 
 ### Pre-Push Testing Requirements
 
-**CRITICAL: Only run tests for the infrastructure you modified.** Don't run all tests if you only changed one stack.
+**CRITICAL: Only run pre-deployment tests for the infrastructure you modified.** Don't run all tests if you only changed one stack.
 
-Run the following checks locally before pushing to main. **CRITICAL: Use the EXACT commands that the GitHub workflows use, not generic commands.**
+Run the following pre-deployment checks locally before pushing. **CRITICAL: Use the EXACT commands that the GitHub workflows use, not generic commands.**
 
 ---
 
@@ -143,14 +150,14 @@ python -m pytest test/cloudtrail_and_domain_name/pre_deployment/integration/test
 
 ---
 
-### Pre-Push Checklist
+### Pre-Deployment Checklist
 
-Before pushing to main, verify (for the infrastructure you modified):
+Before creating PR, verify (for the infrastructure you modified):
 - [ ] All relevant YAML files pass `yamllint`
 - [ ] Pylint passes with `--fail-under=10.0` using exact workflow flags (if applicable)
 - [ ] Mypy passes with no errors
-- [ ] All relevant unit tests pass
-- [ ] All relevant integration tests pass (or are appropriately skipped)
+- [ ] All relevant pre-deployment unit tests pass
+- [ ] All relevant pre-deployment integration tests pass (or are appropriately skipped)
 - [ ] Code changes are committed with clear, descriptive messages
 
-**All tests and checks must pass before pushing to main to ensure code quality and prevent breaking changes.**
+**All pre-deployment tests and checks must pass before creating PR to ensure code quality and prevent breaking changes.**
