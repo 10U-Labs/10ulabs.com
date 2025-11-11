@@ -1,38 +1,430 @@
-# Gmail Email Provider Infrastructure with AWS CDK
+# Gmail Email Provider AWS CDK Stack
 
 ## Overview
 
-This AWS CDK infrastructure stack configures Gmail as an email provider for your domain by automating DNS verification through Route53. It creates a Google Site Verification TXT record in your hosted zone, enabling secure email delivery and Google service integration.
+This AWS CDK infrastructure code provisions DNS records required to configure Gmail as an email provider for a custom domain. It automates the setup of DNS verification records through Route53, enabling email services via Gmail's infrastructure while maintaining your custom domain identity.
 
 ## Purpose and Key Features
 
-- **Automated DNS Configuration**: Programmatically creates DNS TXT records required for Google site verification
-- **Cross-Stack References**: Uses CloudFormation exports to reference an existing Route53 hosted zone
-- **Google Integration Ready**: Enables Gmail services and Google Workspace integration for your domain
-- **Configurable TTL**: Supports customizable DNS record time-to-live values
-- **Infrastructure as Code**: Fully declarative infrastructure using AWS CDK with Python
+This stack handles the DNS-level configuration necessary for Gmail email provider integration:
+
+- **Google Site Verification**: Creates a TXT record for domain ownership verification
+- **MX Record Configuration**: Sets up Mail Exchange records pointing to Gmail's servers
+- **Cross-Stack Integration**: Imports hosted zone information from a parent domain stack
+- **Automated DNS Management**: Eliminates manual DNS record creation and reduces configuration errors
+- **Environment Flexibility**: Supports multiple domains through configurable parameters
 
 ## Resources Created
 
-### Route53 TXT Record
-- **Resource Type**: `AWS::Route53::RecordSet`
-- **Purpose**: Stores Google site verification token for domain ownership verification
-- **Format**: `google-site-verification=<verification-code>`
-- **Hosted Zone**: Imported from existing hosted zone via CloudFormation cross-stack exports
+### Route53 Records
 
-### CloudFormation Exports Reference
-The stack imports the following exports from a domain/hosted zone stack:
-- `{domain-name}-HostedZoneId`: The Route53 hosted zone ID
-- `{domain-name}-HostedZoneName`: The Route53 hosted zone name
+1. **Google Site Verification TXT Record**
+   - Type: TXT
+   - Value: `google-site-verification={verification-code}`
+   - Purpose: Proves domain ownership to Google services
+   - TTL: Configurable (default: 300 seconds)
+
+2. **Gmail MX Record**
+   - Type: MX
+   - Priority: 1
+   - Host: `smtp.google.com.`
+   - Purpose: Routes email traffic to Gmail's SMTP servers
+
+### Cross-Stack References
+
+The stack imports the following resources from a parent domain stack via CloudFormation exports:
+- `{domain-name-with-hyphens}-HostedZoneId`: The Route53 hosted zone identifier
+- `{domain-name-with-hyphens}-HostedZoneName`: The Route53 hosted zone name
 
 ## Prerequisites and Requirements
 
-### AWS Resources
-- An existing Route53 hosted zone for your domain
-- A parent CDK stack that exports the hosted zone ID and name
-- AWS credentials configured with appropriate IAM permissions
+### AWS Account and Permissions
 
-### Required IAM Permissions
+- AWS account with appropriate IAM permissions for:
+  - Route53 record creation and management
+  - CloudFormation stack operations
+  - Importing cross-stack references
+
+### Domain Setup
+
+- Custom domain registered and configured in Route53
+- Parent domain stack already deployed (exports hosted zone information)
+- DNS nameservers pointing to the Route53 hosted zone
+
+### Google/Gmail Requirements
+
+- Active Google Workspace or Gmail account
+- Google Site Verification code obtained from Google Search Console
+- Access to Gmail's SMTP configuration
+
+### Software Requirements
+
+- Python 3.9+
+- AWS CDK v2.x or later
+- AWS CLI configured with appropriate credentials
+- boto3 library
+
+## Usage Instructions
+
+### Installation
+
+1. **Install Dependencies**
+   ```bash
+   pip install aws-cdk-lib constructs
+   ```
+
+2. **Set Up AWS Credentials**
+   ```bash
+   aws configure
+   # Enter your AWS Access Key ID, Secret Access Key, default region, and output format
+   ```
+
+### Configuration
+
+Create a `config.json` file with your domain and verification details:
+
+```json
+{
+  "domain_name": "example.com",
+  "google_site_verification": "your-verification-code-here",
+  "ttl": 300
+}
+```
+
+### Deployment
+
+1. **Load Configuration**
+   ```python
+   import json
+   with open('config.json') as f:
+       config = json.load(f)
+   ```
+
+2. **Initialize Stack in App**
+   ```python
+   from aws_cdk import App
+   from stack import GmailEmailProviderStack
+
+   app = App()
+   gmail_stack = GmailEmailProviderStack(
+       app, 
+       "GmailEmailProviderStack",
+       config=config,
+       env={
+           "account": "YOUR_ACCOUNT_ID",
+           "region": "us-east-1"
+       }
+   )
+   app.synth()
+   ```
+
+3. **Deploy to AWS**
+   ```bash
+   cdk deploy
+   ```
+
+4. **Confirm Changes**
+   - Review the CloudFormation changeset
+   - Type `y` to proceed with deployment
+
+### Verification
+
+After deployment, verify DNS records are created:
+
+```bash
+# Check TXT record
+dig example.com TXT
+
+# Check MX record
+dig example.com MX
+
+# Or use nslookup
+nslookup -type=MX example.com
+nslookup -type=TXT example.com
+```
+
+## Architecture Explanation
+
+### DNS Verification Flow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Gmail Email Provider Stack (This Stack)                │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Imports Hosted Zone via CloudFormation Exports   │   │
+│  │ • HostedZoneId                                   │   │
+│  │ • HostedZoneName                                 │   │
+│  └──────────────────────────────────────────────────┘   │
+│                          │                               │
+│                          ▼                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ Creates DNS Records in Route53                   │   │
+│  │ • TXT: google-site-verification={code}           │   │
+│  │ • MX:  priority=1, host=smtp.google.com.         │   │
+│  └──────────────────────────────────────────────────┘   │
+│                          │                               │
+└──────────────────────────┼───────────────────────────────┘
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+         Google Services         Gmail SMTP Servers
+         (Verify Domain)         (Email Delivery)
+```
+
+### Stack Dependencies
+
+**Cross-Stack Reference Model:**
+
+```
+Parent Domain Stack (Exports)
+├── {domain}-HostedZoneId
+└── {domain}-HostedZoneName
+        │
+        ▼
+Gmail Email Provider Stack (Imports)
+├── Creates TXT verification record
+└── Creates MX routing record
+```
+
+This design pattern allows:
+- **Separation of Concerns**: Domain infrastructure separate from email configuration
+- **Reusability**: Single domain stack supports multiple email provider configurations
+- **Flexibility**: Easy to add additional email providers without modifying domain stack
+
+### CloudFormation Cross-Stack References
+
+The stack uses `Fn.import_value()` to retrieve exported values from the parent domain stack:
+
+```python
+hosted_zone_id = Fn.import_value(f"{export_prefix}-HostedZoneId")
+hosted_zone_name = Fn.import_value(f"{export_prefix}-HostedZoneName")
+```
+
+The domain name is transformed to create valid export names:
+- `example.com` → `example-com-HostedZoneId`
+- `mail.example.com` → `mail-example-com-HostedZoneName`
+
+## Configuration Details
+
+### Configuration Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `domain_name` | String | Yes | - | Your custom domain (e.g., "example.com") |
+| `google_site_verification` | String | Yes | - | Verification code from Google Search Console |
+| `ttl` | Integer | No | 300 | DNS TTL in seconds |
+
+### Obtaining Google Site Verification Code
+
+1. Go to [Google Search Console](https://search.google.com/search-console)
+2. Add your property (domain)
+3. Choose "TXT record" verification method
+4. Copy the verification string (alphanumeric code after `google-site-verification=`)
+5. Add to `config.json` without the `google-site-verification=` prefix
+
+**Example:**
+```
+If Google provides: google-site-verification=abc123xyz456
+Your config value: abc123xyz456
+```
+
+### TTL Configuration
+
+- **Lower TTL (60-300 seconds)**: Faster DNS propagation updates, higher query load
+- **Higher TTL (3600+ seconds)**: Reduced DNS queries, slower update propagation
+- **Recommended**: 300-900 seconds for email infrastructure
+
+## Testing Approach
+
+### Pre-Deployment Validation
+
+1. **Verify Configuration File**
+   ```bash
+   cat config.json | python -m json.tool
+   ```
+
+2. **Validate Stack Syntax**
+   ```bash
+   cdk synth
+   ```
+
+3. **Check CloudFormation Template**
+   ```bash
+   cat cdk.out/GmailEmailProviderStack.template.json | python -m json.tool
+   ```
+
+### Post-Deployment Testing
+
+1. **Verify DNS Records Propagate**
+   ```bash
+   # Wait 5 minutes for DNS propagation
+   sleep 300
+   
+   # Check TXT record
+   dig @8.8.8.8 example.com TXT | grep google-site-verification
+   
+   # Check MX record
+   dig @8.8.8.8 example.com MX
+   ```
+
+2. **Use Google's Verification Tool**
+   - Visit [Google Search Console](https://search.google.com/search-console)
+   - Click "Verify" next to your property
+   - Google will check the TXT record
+
+3. **Test Gmail MX Records**
+   ```bash
+   # MX record should return priority 1 with smtp.google.com
+   nslookup -type=MX example.com
+   ```
+
+4. **Email Delivery Test**
+   - Send test email to user@example.com
+   - Verify receipt and proper routing
+
+### CloudFormation Validation
+
+```bash
+# View stack outputs
+aws cloudformation describe-stacks \
+  --stack-name GmailEmailProviderStack \
+  --query 'Stacks[0].Outputs'
+
+# View stack resources
+aws cloudformation describe-stack-resources \
+  --stack-name GmailEmailProviderStack
+```
+
+## Security Considerations
+
+### DNS Security Best Practices
+
+1. **Record Validation**
+   - Verify TXT record values match Google's requirements exactly
+   - MX record priority must be appropriate for your infrastructure
+   - Regularly audit DNS records for unauthorized changes
+
+2. **Access Control**
+   - Restrict Route53 modifications to authorized personnel
+   - Use IAM policies to limit DNS management permissions
+   - Enable CloudTrail logging for all DNS modifications
+
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": [
+       "route53:ChangeResourceRecordSets",
+       "route53:GetHostedZone"
+     ],
+     "Resource": [
+       "arn:aws:route53:::hostedzone/HOSTED_ZONE_ID"
+     ]
+   }
+   ```
+
+3. **Verification Code Protection**
+   - Store `google_site_verification` in AWS Secrets Manager or Parameter Store, not in version control
+   - Never commit `config.json` to public repositories
+   - Add to `.gitignore`:
+     ```
+     config.json
+     config.*.json
+     ```
+
+### Email Security
+
+1. **DMARC Configuration** (Recommended additional setup)
+   - Add DMARC policy TXT record to prevent email spoofing
+   - Format: `v=DMARC1; p=reject; rua=mailto:admin@example.com`
+
+2. **SPF Records** (Recommended additional setup)
+   - Add SPF record: `v=spf1 include:_spf.google.com ~all`
+   - Specifies which servers can send email for your domain
+
+3. **DKIM Records** (Recommended additional setup)
+   - Gmail automatically signs emails; add DKIM public key to DNS
+   - Enhances email authentication and deliverability
+
+### Stack Security
+
+- All resources created in your VPC account
+- No data exposure through CloudFormation outputs
+- DNS changes logged in CloudTrail
+- Use cross-account roles if needed for multi-account deployments
+
+## Troubleshooting Tips
+
+### Common Issues and Solutions
+
+#### 1. Import Value Not Found
+
+**Error:** `Cross stack reference HostedZoneId not found`
+
+**Causes and Solutions:**
+```bash
+# Verify parent stack is deployed
+aws cloudformation list-stacks \
+  --stack-status-filter CREATE_COMPLETE
+
+# Check exported values
+aws cloudformation list-exports \
+  --query 'Exports[?Name==`example-com-HostedZoneId`]'
+
+# Solution: Deploy parent domain stack first
+cdk deploy DomainStack
+```
+
+**Domain name transformation check:**
+- `example.com` should export `example-com-HostedZoneId`
+- `mail.example.org` should export `mail-example-org-HostedZoneId`
+
+#### 2. DNS Records Not Propagating
+
+**Symptoms:** Records don't appear in DNS queries
+
+**Solutions:**
+```bash
+# Clear local DNS cache (macOS)
+sudo dscacheutil -flushcache
+
+# Verify record in Route53
+aws route53 list-resource-record-sets \
+  --hosted-zone-id Z1234567890ABC \
+  --query 'ResourceRecordSets[?Type==`TXT`]'
+
+# Check propagation globally
+dig @1.1.1.1 example.com TXT
+dig @8.8.8.8 example.com TXT
+```
+
+**Typical resolution time:** 5-15 minutes
+
+#### 3. Google Verification Fails
+
+**Symptoms:** Google Search Console says verification record not found
+
+**Verification checklist:**
+```bash
+# 1. Confirm exact TXT record value
+dig example.com TXT +short
+
+# 2. Should output exactly:
+# "google-site-verification=abc123xyz456"
+
+# 3. If missing prefix, update config and redeploy
+cdk deploy
+
+# 4. Google typically rechecks every few minutes
+# Wait 5-10 minutes before retrying verification
+```
+
+#### 4. CloudFormation Stack Creation Fails
+
+**Error:** `User: arn:aws:iam::... is not authorized to perform: route53:ChangeResourceRecordSets`
+
+**Solution:** Ensure IAM user/role has permissions:
 ```json
 {
   "Version": "2012-10-17",
@@ -40,12 +432,8 @@ The stack imports the following exports from a domain/hosted zone stack:
     {
       "Effect": "Allow",
       "Action": [
-        "route53:CreateResourceRecordSets",
-        "route53:ListResourceRecordSets",
-        "route53:GetHostedZone",
-        "cloudformation:CreateStack",
-        "cloudformation:UpdateStack",
-        "cloudformation:DescribeStacks"
+        "route53:*",
+        "cloudformation:*"
       ],
       "Resource": "*"
     }
@@ -53,459 +441,108 @@ The stack imports the following exports from a domain/hosted zone stack:
 }
 ```
 
-### Software Requirements
-- Python 3.8 or higher
-- AWS CDK CLI (v2.0 or later)
-- AWS CLI configured with appropriate credentials
-- boto3 (for AWS interactions)
+#### 5. MX Record Priority Issues
 
-### Configuration Requirements
-- Domain name matching the hosted zone
-- Google Site Verification code from Google Search Console
-- Parent stack that exports the hosted zone information
+**Symptoms:** Email not routing correctly
 
-## Usage Instructions
-
-### 1. Installation
-
-Clone or download the infrastructure code and install dependencies:
-
+**Check current MX records:**
 ```bash
-# Install AWS CDK
-npm install -g aws-cdk
+dig example.com MX +short
 
-# Install Python dependencies
-pip install aws-cdk-lib constructs
+# Should show:
+# 1 smtp.google.com.
 ```
 
-### 2. Configuration
-
-Create a configuration file or define the config dictionary with your domain and verification details:
-
-```python
-config = {
-    "domain_name": "example.com",
-    "google_site_verification": "your-verification-code-here",
-    "ttl": 300  # Optional: defaults to 300 seconds
-}
-```
-
-### 3. Stack Definition
-
-Define the stack in your CDK app:
-
-```python
-from aws_cdk import App
-from stack import GmailEmailProviderStack
-
-app = App()
-
-config = {
-    "domain_name": "example.com",
-    "google_site_verification": "abc123def456ghi789",
-    "ttl": 300
-}
-
-email_stack = GmailEmailProviderStack(
-    app, "GmailEmailProviderStack",
-    config=config,
-    env={
-        "account": "123456789012",
-        "region": "us-east-1"
-    }
-)
-
-app.synth()
-```
-
-### 4. Deployment
-
-Deploy the stack using AWS CDK:
-
+**If incorrect, update and redeploy:**
 ```bash
-# Synthesize CloudFormation template
-cdk synth
-
-# Review changes
-cdk diff
-
-# Deploy to AWS
+# Modify config.json and redeploy
 cdk deploy
 
-# Deploy with automatic approval (use with caution)
-cdk deploy --require-approval never
-```
-
-### 5. Verification
-
-After deployment, verify the DNS record:
-
-```bash
-# Query the TXT record
-nslookup -type=TXT example.com
-
-# Or using dig
-dig TXT example.com
-
-# Or using AWS CLI
+# Verify changes
 aws route53 list-resource-record-sets \
-  --hosted-zone-id Z123456789ABC \
-  --query "ResourceRecordSets[?Type=='TXT']"
+  --hosted-zone-id ZONE_ID \
+  --query 'ResourceRecordSets[?Type==`MX`]'
 ```
 
-## Architecture Explanation
+#### 6. Configuration Validation Errors
 
-### DNS Verification Flow for Gmail
+**Error:** `google_site_verification is required in config`
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ Google Search Console                                   │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ User enters domain: example.com                     │ │
-│ │ Google generates verification code                  │ │
-│ └─────────────────────────────────────────────────────┘ │
-└──────────────────┬──────────────────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────┐
-│ AWS CDK Stack (This Infrastructure)                     │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ 1. Import HostedZone from CloudFormation Export    │ │
-│ │ 2. Create TXT Record with verification value       │ │
-│ │ 3. Output record details                           │ │
-│ └─────────────────────────────────────────────────────┘ │
-└──────────────────┬──────────────────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────┐
-│ Route53 Hosted Zone (example.com)                       │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ TXT Record: google-site-verification=abc123...     │ │
-│ │ TTL: 300 seconds                                    │ │
-│ └─────────────────────────────────────────────────────┘ │
-└──────────────────┬──────────────────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────────────────┐
-│ Google DNS Verification                                 │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ Google queries DNS: TXT record at example.com       │ │
-│ │ Verifies: google-site-verification=abc123...       │ │
-│ │ Status: ✓ Verified                                 │ │
-│ └─────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Cross-Stack References
-
-This stack uses CloudFormation **cross-stack exports** to reference an existing hosted zone:
-
-```
-Parent Stack (Domain Stack)
-├── Route53 HostedZone
-└── Exports:
-    ├── "example-com-HostedZoneId" → Z123456789ABC
-    └── "example-com-HostedZoneName" → example.com
-
-                    ↓ (Fn.import_value)
-
-Gmail Email Provider Stack
-├── Imports hosted zone attributes
-├── Creates TXT record
-└── Outputs verification details
-```
-
-**Benefits:**
-- Loose coupling between stacks
-- Automated dependency resolution
-- No manual zone ID/name copying required
-- Supports multi-stack deployments
-
-### Domain Name Export Convention
-
-The stack uses a predictable naming convention for CloudFormation exports:
-- Dots (`.`) in domain names are replaced with hyphens (`-`)
-- Export format: `{sanitized-domain-name}-HostedZoneId` and `{sanitized-domain-name}-HostedZoneName`
-
-Example: `example.com` → `example-com-HostedZoneId`
-
-## Configuration Details
-
-### Required Parameters
-
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `domain_name` | string | Your registered domain name | `example.com` |
-| `google_site_verification` | string | Verification code from Google Search Console | `abc123def456ghi789` |
-
-### Optional Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `ttl` | integer | `300` | DNS record TTL in seconds |
-
-### Configuration Example
-
+**Solution:**
 ```python
-config = {
-    # Required
-    "domain_name": "mail.example.com",
-    "google_site_verification": "verification_code_from_google_console",
-    
-    # Optional
-    "ttl": 3600  # Keep record for 1 hour
-}
-```
-
-### Obtaining Google Site Verification Code
-
-1. Log in to [Google Search Console](https://search.google.com/search-console)
-2. Add your property (domain)
-3. Select "DNS record" verification method
-4. Copy the provided verification code
-5. Use this code in the `google_site_verification` configuration
-
-## Testing Approach
-
-### 1. Pre-Deployment Validation
-
-```bash
-# Validate CDK syntax
-cdk synth
-
-# Check for configuration errors
-python -m py_compile stack.py
-
-# Lint infrastructure code
-pylint stack.py
-```
-
-### 2. DNS Record Verification
-
-```bash
-# Immediately after deployment
-dig +short TXT example.com | grep google-site-verification
-
-# Using nslookup
-nslookup -type=TXT example.com 8.8.8.8
-
-# Query Route53 directly
-aws route53 list-resource-record-sets \
-  --hosted-zone-id Z123456789ABC \
-  --query "ResourceRecordSets[?Name=='example.com.']"
-```
-
-### 3. Google Verification Confirmation
-
-1. Go to Google Search Console
-2. Navigate to the property settings
-3. Click "Verify" to confirm DNS record
-4. Google will confirm ownership within minutes
-
-### 4. Integration Testing
-
-```python
-import boto3
-from botocore.exceptions import ClientError
-
-route53_client = boto3.client('route53')
-
-def verify_txt_record(hosted_zone_id, domain_name):
-    """Verify TXT record exists in Route53"""
-    try:
-        response = route53_client.list_resource_record_sets(
-            HostedZoneId=hosted_zone_id,
-            StartRecordName=domain_name,
-            StartRecordType='TXT'
-        )
-        
-        for record in response['ResourceRecordSets']:
-            if 'google-site-verification' in str(record.get('ResourceRecords', [])):
-                return True
-        return False
-    except ClientError as e:
-        print(f"Error verifying record: {e}")
-        return False
-```
-
-## Security Considerations
-
-### 1. Verification Code Protection
-- Store verification codes in AWS Secrets Manager or Parameter Store, not in source code
-- Never commit verification codes to version control
-- Use environment variables or secure parameter passing
-
-```python
-import json
-from aws_cdk import aws_secretsmanager
-
-# Load config from Secrets Manager
-secret = aws_secretsmanager.Secret.from_secret_name_v2(
-    self, "GoogleVerification",
-    secret_name="google-verification-secret"
-)
-
-config = json.loads(secret.secret_value.to_string())
-```
-
-### 2. IAM Permissions
-- Apply principle of least privilege
-- Restrict Route53 permissions to specific hosted zones
-- Use resource-based policies when possible
-
-```json
+# Verify config.json format
 {
-  "Effect": "Allow",
-  "Action": "route53:*",
-  "Resource": "arn:aws:route53:::hostedzone/Z123456789ABC"
+  "domain_name": "example.com",
+  "google_site_verification": "your-code-here",  # Required!
+  "ttl": 300
 }
+
+# Ensure no typos in key names
 ```
 
-### 3. DNS Security
-- Enable DNSSEC for the hosted zone
-- Implement DNS firewall rules
-- Monitor DNS query logs
+#### 7. Stack Update/Deletion Issues
 
-### 4. Access Control
-- Restrict stack deployment permissions
-- Enable CloudTrail logging for audit trails
-- Use MFA for production deployments
-
-### 5. Configuration Management
-- Use AWS Systems Manager Parameter Store for configuration
-- Implement configuration validation
-- Version control infrastructure code only
-
-## Troubleshooting Tips
-
-### Issue: CloudFormation Export Not Found
-
-**Error Message:**
-```
-Error: Unable to resolve cross-stack reference to export-name
-```
-
-**Solution:**
-1. Verify the parent stack has been deployed
-2. Check export names match exactly (case-sensitive)
-3. Verify parent stack is in the same account and region
-4. List available exports:
+**To update TTL or verification code:**
 ```bash
-aws cloudformation list-exports --query "Exports[?Name=='example-com-HostedZoneId']"
+# Modify config.json
+# Redeploy
+cdk deploy
+
+# View changes
+cdk diff
 ```
 
-### Issue: TXT Record Not Creating
-
-**Error Message:**
-```
-Resource creation cancelled
-```
-
-**Solutions:**
-- Verify hosted zone exists and is active
-- Check IAM permissions for Route53
-- Ensure domain name in config matches hosted zone exactly
-- Verify TTL is a valid integer value
-
-### Issue: DNS Record Not Resolving
-
-**Symptoms:**
-- `nslookup` returns no results
-- Google verification fails
-- Record shows in Route53 but doesn't resolve
-
-**Solutions:**
-1. Wait for DNS propagation (up to 48 hours, typically 5-30 minutes)
-2. Force refresh DNS cache:
+**To delete the stack:**
 ```bash
-# macOS
-sudo dscacheutil -flushcache
+# Review what will be deleted
+cdk destroy
 
-# Linux
-sudo systemctl restart systemd-resolved
-
-# Windows
-ipconfig /flushdns
-```
-3. Check nameservers are correct:
-```bash
-dig NS example.com
+# Confirm deletion
+# Note: DNS records will be removed, email may stop working
 ```
 
-### Issue: Google Verification Fails
-
-**Symptoms:**
-- Record exists but Google still can't verify
-- Error: "Couldn't verify your ownership of example.com"
-
-**Solutions:**
-1. Verify exact verification code from Google
-2. Ensure record format is exactly: `google-site-verification=CODE`
-3. Check for trailing spaces in configuration
-4. Wait 5-10 minutes for DNS propagation
-5. Verify through Google Search Console again
-
-### Issue: Imported HostedZone Attributes Error
-
-**Error:**
-```
-Error: HostedZone.from_hosted_zone_attributes() received invalid zone_name
-```
-
-**Solution:**
-- Ensure zone name has trailing dot: `example.com.`
-- Verify export value format
-- Check for special characters in domain name
-
-### Issue: Stack Update Fails
-
-**Error:**
-```
-User: arn:aws:iam::... is not authorized to perform: route53:ChangeResourceRecordSets
-```
-
-**Solution:**
-- Verify IAM user/role has Route53 permissions
-- Check resource-based policies on hosted zone
-- Ensure CloudFormation service role has required permissions
-
-### Debugging Commands
+### Debug Commands
 
 ```bash
-# View stack events
-aws cloudformation describe-stack-events \
+# View complete stack information
+aws cloudformation describe-stacks \
   --stack-name GmailEmailProviderStack
 
-# Check CloudFormation exports
-aws cloudformation list-exports
+# View stack events (deployment history)
+aws cloudformation describe-stack-events \
+  --stack-name GmailEmailProviderStack \
+  --query 'StackEvents[0:10]'
 
-# Query Route53 directly
+# Validate template before deployment
+cdk synth | aws cloudformation validate-template \
+  --template-body file:///dev/stdin
+
+# Check Route53 records in hosted zone
 aws route53 list-resource-record-sets \
-  --hosted-zone-id Z123456789ABC
+  --hosted-zone-id Z1234567890ABC
 
-# Enable debug logging in CDK
-cdk deploy --debug 2>&1 | tee deploy.log
-
-# Validate CloudFormation template
-aws cloudformation validate-template \
-  --template-body file://cdk.out/template.json
+# Monitor CDK deployment in verbose mode
+cdk deploy --verbose --require-approval=never
 ```
 
-## Best Practices
+### Contacting Support
 
-1. **Use Configuration Management**: Store sensitive data in AWS Secrets Manager
-2. **Version Your Infrastructure**: Keep infrastructure code in Git with version tags
-3. **Test Before Deployment**: Use `cdk diff` to preview changes
-4. **Monitor DNS Changes**: Enable CloudTrail for audit logs
-5. **Automate Verification**: Integrate verification checks into CI/CD pipelines
-6. **Document Your Setup**: Maintain runbooks for DNS management
-7. **Plan for Rollback**: Keep previous DNS configurations documented
-8. **Regular Backups**: Export Route53 records periodically
+If issues persist:
+
+1. **Check AWS Status**: https://status.aws.amazon.com/
+2. **Review CloudFormation Events**: Look for detailed error messages
+3. **Check CDK Logs**: Review deployment output for specific failures
+4. **Google Support**: For Gmail/Google Workspace verification issues
+5. **AWS Support**: For Route53 or CloudFormation issues (requires support plan)
 
 ## Additional Resources
 
-- [AWS CDK Documentation](https://docs.aws.amazon.com/cdk/v2/guide/)
-- [Route53 User Guide](https://docs.aws.amazon.com/route53/)
-- [Google Search Console Help](https://support.google.com/webmasters)
-- [AWS CDK Python Reference](https://docs.aws.amazon.com/cdk/api/v2/python/)
-- [CloudFormation Cross-Stack References](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/walkthrough-crossstackref.html)
+- [AWS CDK Documentation](https://docs.aws.amazon.com/cdk/)
+- [Route53 DNS Records](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html)
+- [Google Search Console](https://search.google.com/search-console)
+- [Gmail for Business Setup](https://support.google.com/a/answer/9003945)
+- [DNS Best Practices](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/best-practices.html)
+
+## License
+
+Specify your license here (e.g., MIT, Apache 2.0, etc.)
