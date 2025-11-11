@@ -177,6 +177,11 @@ jobs:
           echo ""
           echo "Stack Outputs:"
           cat api-outputs.json | jq '.'
+      - name: Validate API propagation
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
+        run: |
+          API_ENDPOINT=$(jq -r '.TenULabsApi.ApiEndpoint' api-outputs.json)
+          python src/api/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing-infrastructure:
     name: Integration testing
     runs-on: ubuntu-latest
