@@ -50,6 +50,35 @@ if domain_config_path.exists():
         description="Route53 hosted zone for 10ulabs.com domain"
     )
 
+gmail_spec = importlib.util.spec_from_file_location(
+    "gmail_email_provider",
+    Path(__file__).parent / "src" / "gmail_email_provider" / "stack.py"
+)
+gmail_module = importlib.util.module_from_spec(gmail_spec)
+gmail_spec.loader.exec_module(gmail_module)
+GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
+
+gmail_config_path = Path(__file__).parent / "config" / "gmail_email_provider.json"
+if gmail_config_path.exists():
+    with open(gmail_config_path) as f:
+        gmail_config = json.load(f)
+
+    gmail_env = cdk.Environment(
+        account=str(gmail_config["aws_account_id"]),
+        region=gmail_config["aws_region"]
+    )
+
+    gmail_stack = GmailEmailProviderStack(
+        app,
+        "GmailEmailProvider",
+        config=gmail_config,
+        env=gmail_env,
+        description="Gmail email provider DNS configuration for 10ulabs.com"
+    )
+
+    if domain_config_path.exists():
+        gmail_stack.add_dependency(domain_stack)
+
 github_self_hosted_runners_stack = GitHubSelfHostedRunnersStack(
     app,
     "GitHubSelfHostedRunners",
