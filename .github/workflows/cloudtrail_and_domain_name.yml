@@ -11,15 +11,6 @@ on:
       - 'cdk.json'
       - 'requirements-cdk.txt'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
-  pull_request:
-    paths:
-      - 'src/cloudtrail_and_domain_name/**'
-      - 'test/cloudtrail_and_domain_name/**'
-      - 'config/cloudtrail_and_domain_name.json'
-      - 'app.py'
-      - 'cdk.json'
-      - 'requirements-cdk.txt'
-      - '.github/workflows/cloudtrail_and_domain_name.yml'
   workflow_dispatch:
     inputs:
       dry_run:
