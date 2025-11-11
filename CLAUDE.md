@@ -23,6 +23,31 @@ curl -s -H "Authorization: Bearer <paste-the-actual-pat-value-here>" \
 
 **DO NOT use environment variable expansion like `$GITHUB_PAT` in curl commands** - it may not expand correctly in some contexts.
 
+## Troubleshooting Workflow Failures
+
+**CRITICAL: When troubleshooting failed GitHub Actions workflows, ALWAYS check logs first:**
+
+1. Get the workflow run ID from the user or GitHub UI
+2. Use the GitHub API to fetch the workflow logs:
+```bash
+PAT=$(echo $GITHUB_PAT)
+curl -s -H "Authorization: Bearer $PAT" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
+```
+3. Identify the failed job and fetch its logs:
+```bash
+curl -s -L -H "Authorization: Bearer $PAT" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/JOB_ID/logs" > /tmp/logs.txt
+```
+4. Search for errors in the logs:
+```bash
+grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
+```
+
+**Do NOT guess at the failure cause - ALWAYS read the actual logs first.**
+
 ## Development Workflow
 
 ### Coding Standards
