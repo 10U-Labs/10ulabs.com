@@ -24,7 +24,7 @@ on:
       - '.github/workflows/build-ami-for-github_self_hosted_runners.yml'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

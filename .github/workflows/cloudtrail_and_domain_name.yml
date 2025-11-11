@@ -22,7 +22,7 @@ on:
     types:
       - bilateral_authorizations_between_aws_and_github_have_been_established
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   id-token: write
