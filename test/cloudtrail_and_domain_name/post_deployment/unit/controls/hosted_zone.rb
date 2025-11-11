@@ -16,7 +16,7 @@ control '10uf-org-hosted-zone-name' do
   desc 'Verify that the hosted zone has the correct domain name'
 
   describe aws_hosted_zone(zone_name: "#{domain_name}.") do
-    its('name') { should eq "#{domain_name}." }
+    its('zone_name') { should eq "#{domain_name}." }
   end
 end
 
