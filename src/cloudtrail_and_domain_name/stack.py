@@ -23,7 +23,7 @@ class DomainStack(Stack):
 
         access_log_bucket = s3.Bucket(
             self, "CloudTrailAccessLogBucket",
-            versioned=True,
+            versioned=False,
             encryption=s3.BucketEncryption.S3_MANAGED,
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             removal_policy=RemovalPolicy.RETAIN,
@@ -36,7 +36,7 @@ class DomainStack(Stack):
                             transition_after=Duration.days(90)
                         )
                     ],
-                    expiration=Duration.days(2555)
+                    expiration=Duration.days(1825)
                 )
             ]
         )
