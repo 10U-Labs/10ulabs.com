@@ -78,7 +78,7 @@ class DomainStack(Stack):
             handler="handler.handler",
             code=lambda_.Code.from_asset(lambda_dir),
             timeout=Duration.seconds(900),
-            description=f"Domain registration handler - Updated {os.environ.get('GITHUB_SHA', 'local')[:8]}",
+            description="Domain registration handler",
             initial_policy=[
                 iam.PolicyStatement(
                     actions=[
