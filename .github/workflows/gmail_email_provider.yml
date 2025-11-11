@@ -7,7 +7,6 @@ on:
       - 'src/gmail_email_provider/**'
       - 'test/gmail_email_provider/**'
       - 'config/gmail_email_provider.json'
-      - 'app.py'
       - 'cdk.json'
       - 'requirements-cdk.txt'
       - '.github/workflows/gmail_email_provider.yml'
@@ -153,12 +152,12 @@ jobs:
           cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cdk diff GmailEmailProvider
+        run: cdk diff --app "python src/gmail_email_provider/app.py" GmailEmailProvider
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cdk deploy GmailEmailProvider \
+          cdk deploy --app "python src/gmail_email_provider/app.py" GmailEmailProvider \
             --require-approval never \
             --outputs-file gmail-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
