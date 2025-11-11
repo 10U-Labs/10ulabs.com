@@ -9,6 +9,8 @@ spec = importlib.util.spec_from_file_location(
     "domain_infrastructure",
     Path(__file__).parent / "stack.py"
 )
+if spec is None or spec.loader is None:
+    raise RuntimeError("Failed to load domain_infrastructure stack module")
 domain_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(domain_module)
 DomainStack = domain_module.DomainStack
