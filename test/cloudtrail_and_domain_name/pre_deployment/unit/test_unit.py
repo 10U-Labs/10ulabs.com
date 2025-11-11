@@ -1,6 +1,7 @@
 """Unit tests for 10ulabs.com domain stack"""
 import json
 from pathlib import Path
+import importlib.util
 import aws_cdk as cdk
 from aws_cdk.assertions import Template
 
