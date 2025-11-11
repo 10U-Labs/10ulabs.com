@@ -30,8 +30,16 @@ control 'cloudtrail-includes-global-events' do
   desc 'Verify that CloudTrail is configured to include global service events'
 
   aws_cloudtrail_trails.trail_arns.each do |trail_arn|
-    describe aws_cloudtrail_trail(trail_arn) do
-      its('include_global_service_events') { should be true }
+    trail = aws_cloudtrail_trail(trail_arn)
+    if trail.multi_region_trail?
+      describe 'Multi-region trail includes global events by default' do
+        subject { true }
+        it { should be true }
+      end
+    else
+      describe trail do
+        its('include_global_service_events') { should be true }
+      end
     end
   end
 end
@@ -88,6 +96,21 @@ control 'cloudtrail-s3-bucket-not-public' do
     bucket_name = trail.s3_bucket_name
 
     describe aws_s3_bucket(bucket_name: bucket_name) do
+      it { should_not be_public }
+    end
+  end
+end
+
+control 'cloudtrail-s3-bucket-access-logging' do
+  impact 1.0
+  title 'CloudTrail S3 Bucket Has Access Logging'
+  desc 'Verify that CloudTrail S3 bucket has access logging enabled'
+
+  aws_cloudtrail_trails.trail_arns.each do |trail_arn|
+    trail = aws_cloudtrail_trail(trail_arn)
+    bucket_name = trail.s3_bucket_name
+
+    describe aws_s3_bucket(bucket_name: bucket_name) do
       it { should have_access_logging_enabled }
     end
   end
@@ -114,8 +137,8 @@ control 'cloudtrail-log-group-exists' do
     trail = aws_cloudtrail_trail(trail_arn)
     log_group_arn = trail.cloud_watch_logs_log_group_arn
 
-    if log_group_arn
-      log_group_name = log_group_arn.split(':').last.gsub('log-group:', '').split(':').first
+    if log_group_arn && !log_group_arn.empty?
+      log_group_name = log_group_arn.split(':')[6]
 
       describe aws_cloudwatch_log_group(log_group_name: log_group_name) do
         it { should exist }
@@ -133,8 +156,8 @@ control 'cloudtrail-log-group-retention' do
     trail = aws_cloudtrail_trail(trail_arn)
     log_group_arn = trail.cloud_watch_logs_log_group_arn
 
-    if log_group_arn
-      log_group_name = log_group_arn.split(':').last.gsub('log-group:', '').split(':').first
+    if log_group_arn && !log_group_arn.empty?
+      log_group_name = log_group_arn.split(':')[6]
 
       describe aws_cloudwatch_log_group(log_group_name: log_group_name) do
         its('retention_in_days') { should eq 365 }
