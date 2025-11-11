@@ -37,6 +37,18 @@ class GmailEmailProviderStack(Stack):
             ttl=Duration.seconds(config.get("ttl", 300))
         )
 
+        mx_record = route53.MxRecord(
+            self, "GmailMxRecord",
+            zone=hosted_zone,
+            values=[
+                route53.MxRecordValue(
+                    host_name="smtp.google.com.",
+                    priority=1
+                )
+            ],
+            ttl=Duration.seconds(config.get("ttl", 300))
+        )
+
         CfnOutput(
             self, "GoogleVerificationRecord",
             value=google_verification_record.domain_name,
@@ -47,4 +59,10 @@ class GmailEmailProviderStack(Stack):
             self, "GoogleVerificationValue",
             value=f"google-site-verification={google_site_verification}",
             description="Google site verification value"
+        )
+
+        CfnOutput(
+            self, "GmailMxRecordOutput",
+            value=mx_record.domain_name,
+            description=f"Gmail MX record for {domain_name}"
         )
