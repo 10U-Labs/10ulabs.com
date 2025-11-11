@@ -411,7 +411,7 @@ jobs:
        contains(github.event.head_commit.message, '[post-deployment]')) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
-      should_update: ${{ steps.check.outputs.should_update }}
+      readme_is_current: ${{ steps.check.outputs.readme_is_current }}
     permissions:
       id-token: write
       contents: read
@@ -434,27 +434,27 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
+      - name: Install boto3
+        run: pip install boto3
       - name: Check if README needs update
         id: check
         run: |
-          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
-            --aws-account-id "${{ steps.config.outputs.account_id }}" \
-            --aws-iam-role-name "GitHubActionsRole" \
-            --aws-region "${{ steps.config.outputs.region }}" \
+          python src/cloudtrail_and_domain_name/manage_readme.py \
             --check \
+            --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
   conclude-readme-skip:
     name: Concluding README.md should not be updated
     runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.should_update != 'true'
+    if: needs.determine-readme-update.outputs.readme_is_current == 'true'
     steps:
       - run: 'true'
   conclude-readme-update:
     name: Concluding README.md should be updated
     runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.should_update == 'true'
+    if: needs.determine-readme-update.outputs.readme_is_current != 'true'
     steps:
       - run: 'true'
   update-readme:
@@ -485,13 +485,13 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
+      - name: Install boto3
+        run: pip install boto3
       - name: Update README with Bedrock
         run: |
-          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
-            --aws-account-id "${{ steps.config.outputs.account_id }}" \
-            --aws-iam-role-name "GitHubActionsRole" \
-            --aws-region "${{ steps.config.outputs.region }}" \
-            --update
+          python src/cloudtrail_and_domain_name/manage_readme.py \
+            --update \
+            --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
