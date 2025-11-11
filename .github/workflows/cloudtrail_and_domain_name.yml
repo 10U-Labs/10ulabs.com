@@ -97,7 +97,7 @@ jobs:
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/cloudtrail_and_domain_name/pre_deployment/unit/ -v
+          pytest test/cloudtrail_and_domain_name/test_unit.py -v
   building-artifacts:
     name: Building artifacts
     runs-on: ubuntu-latest
@@ -326,7 +326,7 @@ jobs:
       - name: Run pytest integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/cloudtrail_and_domain_name/post_deployment/integration/ -v
+          pytest test/cloudtrail_and_domain_name/test_integration.py -v
   e2e-testing-infrastructure:
     name: E2E testing infrastructure
     runs-on: ubuntu-latest
@@ -368,7 +368,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/cloudtrail_and_domain_name/post_deployment/e2e/ -v
+          pytest test/cloudtrail_and_domain_name/test_e2e.py -v
   determine-readme-update:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest
