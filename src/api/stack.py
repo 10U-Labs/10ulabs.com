@@ -103,6 +103,6 @@ class ApiStack(Stack):
 
         CfnOutput(
             self, "ApiEndpoint",
-            value=f"https://{subdomain_name}/prod",
+            value=f"https://{subdomain_name}",
             description="API endpoint URL"
         )

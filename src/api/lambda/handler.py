@@ -30,7 +30,7 @@ def handler(event, context):
                 },
                 'body': json.dumps({
                     'echo': body,
-                    'received_at': context.request_id
+                    'received_at': context.aws_request_id
                 })
             }
         except json.JSONDecodeError:
