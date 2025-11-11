@@ -67,7 +67,7 @@ jobs:
         run: |
           MYPYPATH=stubs python -m mypy src/cloudtrail_and_domain_name
   unit-testing-code:
-    name: Unit testing code
+    name: Unit testing
     runs-on: ubuntu-latest
     needs: performing-static-analysis
     if: |
@@ -286,7 +286,7 @@ jobs:
           echo "Stack Outputs:"
           cat domain-outputs.json | jq '.'
   integration-testing-infrastructure:
-    name: Integration testing infrastructure
+    name: Integration testing
     runs-on: ubuntu-latest
     needs: deploying-artifacts
     if: |
@@ -328,7 +328,7 @@ jobs:
         run: |
           pytest test/cloudtrail_and_domain_name/test_integration.py -v
   e2e-testing-infrastructure:
-    name: E2E testing infrastructure
+    name: E2E testing
     runs-on: ubuntu-latest
     needs: integration-testing-infrastructure
     if: |
@@ -472,7 +472,7 @@ jobs:
             git push
           fi
   dispatch-success-event:
-    name: Dispatch success event
+    name: Dispatching success event
     runs-on: ubuntu-latest
     needs: [update-readme, conclude-readme-skip]
     if: |
