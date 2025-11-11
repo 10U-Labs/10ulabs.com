@@ -261,13 +261,115 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pytest test/api/test_e2e.py -v
-  dispatch-success-event:
-    name: Dispatching success event
+  determine-readme-update:
+    name: Determining if README.md should be updated
     runs-on: ubuntu-latest
     needs: e2e-testing-infrastructure
     if: |
       always() &&
-      needs.e2e-testing-infrastructure.result == 'success'
+      (needs.e2e-testing-infrastructure.result == 'success' ||
+       contains(github.event.head_commit.message, '[post-deployment]')) &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      readme_is_current: ${{ steps.check.outputs.readme_is_current }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
+          REGION=$(jq -r '.aws_region' config/api.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+      - name: Install boto3
+        run: pip install boto3
+      - name: Check if README needs update
+        id: check
+        run: |
+          python src/api/readme.py \
+            --check \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --output-file "$GITHUB_OUTPUT"
+  conclude-readme-skip:
+    name: Concluding README.md should not be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.readme_is_current == 'true'
+    steps:
+      - run: 'true'
+  conclude-readme-update:
+    name: Concluding README.md should be updated
+    runs-on: ubuntu-latest
+    needs: determine-readme-update
+    if: needs.determine-readme-update.outputs.readme_is_current != 'true'
+    steps:
+      - run: 'true'
+  update-readme:
+    name: Updating README.md
+    runs-on: ubuntu-latest
+    needs: conclude-readme-update
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
+          REGION=$(jq -r '.aws_region' config/api.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+      - name: Install boto3
+        run: pip install boto3
+      - name: Update README with Bedrock
+        run: |
+          python src/api/readme.py \
+            --update \
+            --aws-region "${{ steps.config.outputs.region }}"
+      - name: Commit and push README if changed
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add src/api/README.md
+          if git diff --cached --quiet; then
+            echo "No changes to README.md"
+          else
+            git commit -m "Update api README.md [skip ci]"
+            git push
+          fi
+  dispatch-success-event:
+    name: Dispatching success event
+    runs-on: ubuntu-latest
+    needs: [update-readme, conclude-readme-skip]
+    if: |
+      always() &&
+      (needs.update-readme.result == 'success' || needs.conclude-readme-skip.result == 'success')
     steps:
       - name: Dispatch api_is_ready_for_collections event
         run: |
