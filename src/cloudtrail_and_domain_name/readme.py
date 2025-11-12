@@ -112,6 +112,8 @@ Create a professional README that includes:
 9. Security considerations (bucket policies, encryption, etc.)
 10. Troubleshooting tips
 
+IMPORTANT: Do NOT include a "License" section. The repository already has a LICENSE.md file, so the README must not duplicate licensing information.
+
 Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
 
