@@ -422,12 +422,28 @@ jobs:
           python-version: '3.11'
       - name: Install linting dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install pylint mypy yamllint
+        run: |
+          pip install pylint mypy yamllint
+          npm install -g jsonlint markdownlint-cli2
       - name: Linting YAML files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/auth_between_aws_and_github.yml
+      - name: Linting JSON configuration files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Validating JSON syntax in config.json..."
+          jsonlint -q src/auth_between_aws_and_github/config.json
+      - name: Linting Markdown documentation
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          if [ -f src/auth_between_aws_and_github/README.md ]; then
+            echo "Linting README.md..."
+            markdownlint-cli2 src/auth_between_aws_and_github/README.md
+          else
+            echo "No README.md found, skipping markdown linting"
+          fi
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
