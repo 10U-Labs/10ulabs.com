@@ -8,7 +8,6 @@ on:
       - 'test/cloudtrail_and_domain_name/**'
       - 'config/cloudtrail_and_domain_name.json'
       - 'cdk.json'
-      - 'requirements-cdk.txt'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
   workflow_dispatch:
     inputs:
@@ -49,7 +48,7 @@ jobs:
         run: pip install pylint mypy yamllint
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r requirements-cdk.txt
+        run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - name: Linting YAML files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
@@ -92,7 +91,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest
-          pip install -r requirements-cdk.txt
+          pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
@@ -145,7 +144,7 @@ jobs:
         run: npm install -g aws-cdk
       - name: Install dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r requirements-cdk.txt
+        run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - name: CDK Bootstrap (if needed)
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
