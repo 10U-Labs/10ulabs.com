@@ -2633,8 +2633,8 @@ class TestReadmeHelperFunctions:
 
     @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_returns_true(self, mock_invoke):
-        
-        mock_invoke.return_value = 'true'
+
+        mock_invoke.return_value = '{"readme_should_be_updated": true, "reasoning": "Test reasoning"}'
 
         bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
         result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')
@@ -2643,8 +2643,8 @@ class TestReadmeHelperFunctions:
 
     @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_calls_invoke_model_once(self, mock_invoke):
-        
-        mock_invoke.return_value = 'true'
+
+        mock_invoke.return_value = '{"readme_should_be_updated": true, "reasoning": "Test reasoning"}'
 
         bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
         auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')
@@ -2653,8 +2653,8 @@ class TestReadmeHelperFunctions:
 
     @patch.object(auth_between_aws_and_github.BedrockClient, 'invoke_model')
     def test_check_readme_needs_update_returns_false(self, mock_invoke):
-        
-        mock_invoke.return_value = 'false'
+
+        mock_invoke.return_value = '{"readme_should_be_updated": false, "reasoning": "README is current"}'
 
         bedrock = auth_between_aws_and_github.BedrockClient('us-east-1', 'AKIATEST', 'secret')
         result = auth_between_aws_and_github._check_readme_needs_update(bedrock, 'code', 'readme')

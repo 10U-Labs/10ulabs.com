@@ -1298,9 +1298,31 @@ Check if the README has ANY issues, including but not limited to:
 9. Contains a "License" section (MAJOR ERROR - repository has LICENSE.md, README must not duplicate licensing)
 10. Any other inaccuracies, inconsistencies, or outdated information
 
-Does the README need updating? Respond with ONLY "true" or "false"."""
+Respond with ONLY a JSON object in this exact format:
+{{
+  "readme_should_be_updated": true,
+  "reasoning": "Explain your thought process and what issues you found, if any"
+}}
+
+or
+
+{{
+  "readme_should_be_updated": false,
+  "reasoning": "Explain your thought process and confirm the README is current"
+}}
+
+Do not include any other text or formatting outside the JSON object."""
     response = bedrock.invoke_model(prompt, max_tokens=max_tokens)
-    return response.strip().lower().startswith('true')
+    try:
+        result = json.loads(response.strip())
+        needs_update = bool(result.get('readme_should_be_updated', False))
+        reasoning = result.get('reasoning', 'No reasoning provided')
+        logging.info("Bedrock reasoning: %s", reasoning)
+        return needs_update
+    except json.JSONDecodeError as e:
+        logging.warning("Failed to parse JSON response from Bedrock: %s", e)
+        logging.warning("Raw response: %s", response)
+        return response.strip().lower().startswith('true')
 def _update_readme(bedrock: BedrockClient, source_code: str, max_tokens: int = 16000) -> str:
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following Python script that manages AWS-GitHub authentication infrastructure.
 
