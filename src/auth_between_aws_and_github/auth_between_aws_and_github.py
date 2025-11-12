@@ -1385,8 +1385,8 @@ def cmd_readme(args: argparse.Namespace) -> int:
     current_readme = _read_file_safe(readme_path, "README.md") if os.path.exists(readme_path) else ""
     if current_readme is None:
         return 1
-    max_tokens_check = getattr(args, 'max_tokens', 200)
-    max_tokens_generate = getattr(args, 'max_tokens_generate', 16000)
+    max_tokens_check = int(getattr(args, 'max_tokens', None) or 200)
+    max_tokens_generate = int(getattr(args, 'max_tokens_generate', None) or 16000)
     if args.check:
         return _handle_readme_check(args, bedrock, source_code, current_readme, max_tokens_check)
     if args.update:
