@@ -1354,7 +1354,14 @@ Create a professional README that includes:
 
 IMPORTANT: Do NOT include a "License" section. The repository already has a LICENSE.md file, so the README must not duplicate licensing information.
 
-Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
+Format the README in clean, professional markdown that passes markdownlint-cli2 validation:
+- Use ATX-style headings (# ## ###) with blank lines before and after
+- Use fenced code blocks with language specifiers (```bash, ```python, etc.)
+- Ensure proper list formatting with consistent indentation
+- Use blank lines to separate blocks of content
+- End file with a single newline
+- Be comprehensive but concise
+
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
     try:
         return bedrock.invoke_model(prompt, max_tokens=max_tokens)
