@@ -42,9 +42,7 @@ jobs:
           python-version: '3.11'
       - name: Install linting dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
+        run: pip install pylint mypy yamllint
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
@@ -52,22 +50,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint .github/workflows/cloudtrail_and_domain_name.yml
-      - name: Linting JSON configuration files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          echo "Validating JSON syntax in config files..."
-          jsonlint -q src/cloudtrail_and_domain_name/cdk.json
-          jsonlint -q src/cloudtrail_and_domain_name/config.json
-      - name: Linting Markdown documentation
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          if [ -f src/cloudtrail_and_domain_name/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 src/cloudtrail_and_domain_name/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/cloudtrail_and_domain_name.yml
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |

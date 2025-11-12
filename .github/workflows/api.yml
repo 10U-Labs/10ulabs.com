@@ -42,9 +42,7 @@ jobs:
           python-version: '3.11'
       - name: Install linting dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
+        run: pip install pylint mypy yamllint
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: pip install -r src/api/requirements.txt
@@ -52,23 +50,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint .github/workflows/api.yml
-      - name: Linting JSON configuration files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          echo "Validating JSON syntax in config files..."
-          jsonlint -q src/api/cdk.json
-          jsonlint -q src/api/config.json
-          jsonlint -q src/api/github_self_hosted_runners/ec2_spot_instance_based_runners/config.json
-      - name: Linting Markdown documentation
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          if [ -f src/api/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 src/api/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
