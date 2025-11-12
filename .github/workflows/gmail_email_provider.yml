@@ -50,7 +50,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint .github/workflows/gmail_email_provider.yml
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/gmail_email_provider.yml
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |

@@ -65,15 +65,15 @@ Check if the README has ANY issues, including but not limited to:
 
 Respond with ONLY a JSON object in this exact format:
 {{
-  "readme_is_current": true,
-  "reasoning": "Explain your thought process and confirm the README is current"
+  "readme_should_be_updated": true,
+  "reasoning": "Explain your thought process and what issues you found, if any"
 }}
 
 or
 
 {{
-  "readme_is_current": false,
-  "reasoning": "Explain your thought process and what issues you found"
+  "readme_should_be_updated": false,
+  "reasoning": "Explain your thought process and confirm the README is current"
 }}
 
 Do not include any other text or formatting outside the JSON object."""
@@ -93,16 +93,18 @@ Do not include any other text or formatting outside the JSON object."""
         answer_text = response['output']['message']['content'][0]['text'].strip()
         try:
             result = json.loads(answer_text)
-            is_current = bool(result.get('readme_is_current', False))
+            needs_update = bool(result.get('readme_should_be_updated', False))
             reasoning = result.get('reasoning', 'No reasoning provided')
             logging.info("Bedrock reasoning: %s", reasoning)
+            is_current = not needs_update
             status = 'current' if is_current else 'not current'
             logging.info("Bedrock assessment: README is %s", status)
             return is_current
         except json.JSONDecodeError as e:
             logging.warning("Failed to parse JSON response from Bedrock: %s", e)
             logging.warning("Raw response: %s", answer_text)
-            is_current = answer_text.lower().startswith('true')
+            needs_update = answer_text.lower().startswith('true')
+            is_current = not needs_update
             status = 'current (fallback)' if is_current else 'not current (fallback)'
             logging.info("Bedrock assessment: README is %s", status)
             return is_current
