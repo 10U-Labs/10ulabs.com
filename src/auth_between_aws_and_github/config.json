@@ -63,7 +63,7 @@
   },
   "bedrock": {
     "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
-    "max_tokens_check": 200,
+    "max_tokens_check": 4000,
     "max_tokens_generate": 16000
   },
   "confirm_destroy": false,
