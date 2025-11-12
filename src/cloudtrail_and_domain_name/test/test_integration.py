@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture
 def config():
     """Load domain config"""
-    config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    config_path = Path(__file__).parents[3] / "config" / "cloudtrail_and_domain_name.json"
     with open(config_path) as f:
         return json.load(f)
 
@@ -386,7 +386,7 @@ def hosted_zone(route53_client, config):
     return None
 
 
-def test_hosted_zone_exists(hosted_zone, config):
+def test_hosted_zone_fixture_returns_zone(hosted_zone, config):
     assert hosted_zone is not None, f"Hosted zone for {config['domain_name']} not found"
 
 
