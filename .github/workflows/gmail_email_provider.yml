@@ -62,7 +62,7 @@ jobs:
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          MYPYPATH=stubs python -m mypy src/gmail_email_provider
+          python -m mypy src/gmail_email_provider
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest
