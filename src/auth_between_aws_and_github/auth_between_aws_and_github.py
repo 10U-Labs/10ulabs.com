@@ -363,12 +363,12 @@ class STSClient(AWSClientBase):
             secret_key = root.find('.//{*}SecretAccessKey')
             session_token = root.find('.//{*}SessionToken')
 
-            # Check if all elements exist
+            
             if access_key is None or secret_key is None or session_token is None:
                 logging.error("Failed to parse credentials from AssumeRoleWithWebIdentity response")
                 return None
 
-            # Check if all text values exist
+            
             if access_key.text is None or secret_key.text is None or session_token.text is None:
                 logging.error("Failed to parse credentials from AssumeRoleWithWebIdentity response")
                 return None
@@ -531,7 +531,7 @@ class IAMClient(AWSClientBase):
             logging.error("Failed to delete role policy: %s", e)
             return False
     def list_attached_managed_policies(self, role_name: str) -> list:
-        """List all managed policy ARNs attached to a role."""
+        
         try:
             response = self.make_request('iam', 'ListAttachedRolePolicies', params={
                 'RoleName': role_name
@@ -550,7 +550,7 @@ class IAMClient(AWSClientBase):
             logging.error("Failed to parse list attached policies response: %s", e)
             return []
     def list_inline_policies(self, role_name: str) -> list:
-        """List all inline policy names for a role."""
+        
         try:
             response = self.make_request('iam', 'ListRolePolicies', params={
                 'RoleName': role_name
@@ -677,7 +677,7 @@ class BedrockClient(AWSClientBase):
                 "max_tokens": max_tokens,
                 "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
             })
-        else:  # Amazon Nova and other models
+        else:  
             body = json.dumps({
                 "messages": [{"role": "user", "content": [{"text": prompt}]}],
                 "inferenceConfig": {"max_new_tokens": max_tokens}
@@ -914,7 +914,7 @@ def _create_iam_role_step(aws: AWSClientStdlib, args: argparse.Namespace,
 def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
     admin_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 
-    # Remove all managed policies except AdministratorAccess
+    
     attached_policies = aws.iam.list_attached_managed_policies(role_name)
     for policy_arn in attached_policies:
         if policy_arn != admin_arn:
@@ -924,7 +924,7 @@ def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
                 return 1
             logging.info("Removed managed policy: %s", policy_arn)
 
-    # Remove all inline policies
+    
     inline_policies = aws.iam.list_inline_policies(role_name)
     for policy_name in inline_policies:
         logging.info("Removing inline policy: %s", policy_name)
@@ -933,7 +933,7 @@ def _attach_iam_policies_step(aws: AWSClientStdlib, role_name: str) -> int:
             return 1
         logging.info("Removed inline policy: %s", policy_name)
 
-    # Attach AdministratorAccess if not already attached
+    
     if admin_arn not in attached_policies:
         logging.info("Attaching AdministratorAccess policy")
         if not aws.iam.attach_managed_policy(role_name, admin_arn):
@@ -1062,7 +1062,7 @@ def _delete_iam_role_step(aws: AWSClientStdlib, role_name: str) -> int:
         logging.info("IAM role does not exist, skipping deletion")
         return 0
 
-    # Remove all managed policies
+    
     logging.info("Listing and removing all managed policies")
     attached_policies = aws.iam.list_attached_managed_policies(role_name)
     for policy_arn in attached_policies:
@@ -1072,7 +1072,7 @@ def _delete_iam_role_step(aws: AWSClientStdlib, role_name: str) -> int:
             return 1
         logging.info("Detached managed policy: %s", policy_arn)
 
-    # Remove all inline policies
+    
     logging.info("Listing and removing all inline policies")
     inline_policies = aws.iam.list_inline_policies(role_name)
     for policy_name in inline_policies:
@@ -1082,7 +1082,7 @@ def _delete_iam_role_step(aws: AWSClientStdlib, role_name: str) -> int:
             return 1
         logging.info("Deleted inline policy: %s", policy_name)
 
-    # Delete the role
+    
     logging.info("Deleting IAM role '%s'", role_name)
     if not aws.iam.delete_role(role_name):
         logging.error("Failed to delete IAM role")
