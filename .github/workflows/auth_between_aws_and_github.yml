@@ -4,7 +4,6 @@ on:
     branches:
       - main
     paths:
-      - 'config/auth_between_aws_and_github.json'
       - 'src/auth_between_aws_and_github/**'
       - '!src/auth_between_aws_and_github/README.md'
       - 'test/auth_between_aws_and_github/**'
@@ -73,14 +72,14 @@ jobs:
       - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          enabled=$(jq -r '.enabled' config/auth_between_aws_and_github.json)
-          confirm_destroy=$(jq -r '.confirm_destroy' config/auth_between_aws_and_github.json)
-          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
-          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
-          github_org=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
-          github_repo=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
+          enabled=$(jq -r '.enabled' src/auth_between_aws_and_github/config.json)
+          confirm_destroy=$(jq -r '.confirm_destroy' src/auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
+          github_org=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
+          github_repo=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
           echo "enabled=$enabled" >> $GITHUB_OUTPUT
           echo "confirm_destroy=$confirm_destroy" >> $GITHUB_OUTPUT
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
@@ -153,9 +152,9 @@ jobs:
       - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -195,12 +194,12 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Destroying auth_between_aws_and_github infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          AWS_REGION=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
-          GITHUB_ORG=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
-          GITHUB_REPO=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          AWS_REGION=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          GITHUB_ORG=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
+          GITHUB_REPO=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
           ./src/auth_between_aws_and_github/auth_between_aws_and_github.py destroy \
             --aws-account-id "$AWS_ACCOUNT_ID" \
             --aws-region "$AWS_REGION" \
@@ -252,13 +251,13 @@ jobs:
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
         run: |
           echo "Creating auth_between_aws_and_github infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          AWS_REGION=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
-          GITHUB_ORG=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
-          GITHUB_REPO=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
-          BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' config/auth_between_aws_and_github.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          AWS_REGION=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          GITHUB_ORG=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
+          GITHUB_REPO=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
+          BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' src/auth_between_aws_and_github/config.json)
           ./src/auth_between_aws_and_github/auth_between_aws_and_github.py create \
             --aws-account-id "$AWS_ACCOUNT_ID" \
             --aws-region "$AWS_REGION" \
@@ -284,9 +283,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -314,9 +313,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -351,8 +350,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Verifying infrastructure destroyed..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          AWS_REGION=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          AWS_REGION=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
           set +e
           aws iam get-open-id-connect-provider \
             --open-id-connect-provider-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com" \
@@ -376,12 +375,12 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
-          github_org=$(jq -r '.github.org' config/auth_between_aws_and_github.json)
-          github_repo=$(jq -r '.github.repo' config/auth_between_aws_and_github.json)
-          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' config/auth_between_aws_and_github.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          github_org=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
+          github_repo=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -535,9 +534,9 @@ jobs:
       - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' config/auth_between_aws_and_github.json)
-          aws_region=$(jq -r '.aws.region' config/auth_between_aws_and_github.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT

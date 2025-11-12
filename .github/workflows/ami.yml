@@ -19,7 +19,7 @@ on:
     branches:
       - main
     paths:
-      - 'config/github_self_hosted_runners.json'
+      - 'src/github_self_hosted_runners/config.json'
       - 'src/github_self_hosted_runners/ami_builder/**'
       - '.github/workflows/build-ami-for-github_self_hosted_runners.yml'
 
@@ -51,13 +51,13 @@ jobs:
       - name: Load configuration from config file
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
-          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
-          VPC_NAME=$(jq -r '.naming.vpc_name' config/github_self_hosted_runners.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/github_self_hosted_runners/config.json)
+          REGION=$(jq -r '.aws.region' src/github_self_hosted_runners/config.json)
+          VPC_NAME=$(jq -r '.naming.vpc_name' src/github_self_hosted_runners/config.json)
 
-          BASE_OS=$(jq -r '.base_os.os' config/github_self_hosted_runners.json)
-          BASE_OS_VERSION=$(jq -r '.base_os.version' config/github_self_hosted_runners.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' config/github_self_hosted_runners.json)
+          BASE_OS=$(jq -r '.base_os.os' src/github_self_hosted_runners/config.json)
+          BASE_OS_VERSION=$(jq -r '.base_os.version' src/github_self_hosted_runners/config.json)
+          ARCHITECTURE=$(jq -r '.base_os.architecture' src/github_self_hosted_runners/config.json)
 
           if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
             DEBIAN_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
@@ -71,10 +71,10 @@ jobs:
             echo "Using Debian version from workflow input: $DEBIAN_VERSION"
           fi
 
-          RUNNER_VERSION=$(jq -r '.github.runner_version' config/github_self_hosted_runners.json)
+          RUNNER_VERSION=$(jq -r '.github.runner_version' src/github_self_hosted_runners/config.json)
 
-          INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' config/github_self_hosted_runners.json)
-          SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' config/github_self_hosted_runners.json)
+          INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' src/github_self_hosted_runners/config.json)
+          SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' src/github_self_hosted_runners/config.json)
 
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
@@ -267,8 +267,8 @@ jobs:
       - name: Load configuration from config file
         id: config
         run: |
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
-          AWS_REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/github_self_hosted_runners/config.json)
+          AWS_REGION=$(jq -r '.aws.region' src/github_self_hosted_runners/config.json)
           IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
 
           AMI_NAME_PREFIX="github-runner-debian-"
@@ -472,8 +472,8 @@ jobs:
       - name: Load configuration from config file
         id: aws-config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
-          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/github_self_hosted_runners/config.json)
+          REGION=$(jq -r '.aws.region' src/github_self_hosted_runners/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -502,10 +502,10 @@ jobs:
       - name: Load AMI validation config
         id: config
         run: |
-          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' config/github_self_hosted_runners.json)
-          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' config/github_self_hosted_runners.json)
-          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' config/github_self_hosted_runners.json)
-          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' config/github_self_hosted_runners.json)
+          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' src/github_self_hosted_runners/config.json)
+          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' src/github_self_hosted_runners/config.json)
+          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' src/github_self_hosted_runners/config.json)
+          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' src/github_self_hosted_runners/config.json)
 
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
@@ -659,8 +659,8 @@ jobs:
       - name: Load configuration from config file
         id: aws-config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' config/github_self_hosted_runners.json)
-          REGION=$(jq -r '.aws.region' config/github_self_hosted_runners.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/github_self_hosted_runners/config.json)
+          REGION=$(jq -r '.aws.region' src/github_self_hosted_runners/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
 
@@ -689,10 +689,10 @@ jobs:
       - name: Load AMI validation config
         id: config
         run: |
-          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' config/github_self_hosted_runners.json)
-          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' config/github_self_hosted_runners.json)
-          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' config/github_self_hosted_runners.json)
-          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' config/github_self_hosted_runners.json)
+          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' src/github_self_hosted_runners/config.json)
+          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' src/github_self_hosted_runners/config.json)
+          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' src/github_self_hosted_runners/config.json)
+          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' src/github_self_hosted_runners/config.json)
 
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
