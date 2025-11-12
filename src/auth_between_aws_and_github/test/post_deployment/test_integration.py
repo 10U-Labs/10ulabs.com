@@ -972,8 +972,8 @@ class TestSecretsManagerComplianceIntegration:
     def test_secret_github_repo_matches_config(self, config, secret_value):
         assert secret_value['github_repo'] == config['github']['repo']
 
-    def test_secret_created_by_is_bootstrap_script(self, secret_value):
-        assert secret_value['created_by'] == 'bootstrap-script'
+    def test_secret_created_by_is_auth_script(self, secret_value):
+        assert secret_value['created_by'] == 'auth-script'
 
     def test_secret_has_created_at_timestamp(self, secret_value):
         assert 'created_at' in secret_value
