@@ -413,7 +413,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint .github/workflows/bootstrap.yml
+          yamllint .github/workflows/auth_between_aws_and_github.yml
       - name: Performing lightweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
