@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
 """
-Unit tests for auth_between_aws_and_github.py using pytest.
+Unit tests for auth_between_aws_and_github.py.
+
+Tests pure logic without external dependencies or real API calls:
+- Helper functions and environment detection
+- AWS Signature V4 request format validation (with fake credentials)
+- CLI argument validation
+- Dependency requirements (stdlib-only imports)
+- OIDC token handling
+- State detection
+- Credential management
 
 Uses only unittest.mock from standard library - no external test dependencies.
-Pytest itself comes with Python or can be installed via system package manager.
 """
 
 import json
+import os
 import subprocess
 import sys
 import urllib.error
@@ -20,6 +29,26 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
 
 import auth_between_aws_and_github
+
+BOOTSTRAP_SCRIPT = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
+TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
+TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+TEST_ROLE_NAME = 'GitHubActionsBootstrapCITest'
+TEST_GITHUB_ORG = '10U-Foundation'
+TEST_GITHUB_REPO = '10ulabs.com'
+
+
+def run_command(cmd, check=True, capture_output=True):
+    result = subprocess.run(
+        cmd,
+        shell=True if isinstance(cmd, str) else False,
+        capture_output=capture_output,
+        text=True,
+        check=False
+    )
+    if check and result.returncode != 0:
+        raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
+    return result
 
 
 class TestHelperFunctions:
@@ -3016,5 +3045,230 @@ class TestReadmeCommand:
         auth_between_aws_and_github.cmd_readme(args)
 
         assert output_file.read_text() == 'should_update=false\n'
+
+
+class TestArgumentValidation:
+
+    def test_no_command_returns_error_code(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT)], check=False)
+        assert result.returncode != 0
+
+    def test_no_command_shows_usage_message(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT)], check=False)
+        assert 'usage:' in result.stderr.lower() or 'usage:' in result.stdout.lower()
+
+    def test_help_flag_returns_success_code(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
+        assert result.returncode == 0
+
+    def test_help_flag_shows_usage_message(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
+        assert 'usage:' in result.stdout.lower()
+
+    def test_help_flag_shows_create_command(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
+        assert 'create' in result.stdout.lower()
+
+    def test_help_flag_shows_destroy_command(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
+        assert 'destroy' in result.stdout.lower()
+
+    def test_invalid_command_returns_error_code(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), 'invalid-command'], check=False)
+        assert result.returncode != 0
+
+    def test_invalid_command_shows_error_message(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), 'invalid-command'], check=False)
+        assert 'invalid choice' in result.stderr.lower() or 'unrecognized' in result.stderr.lower()
+
+    def test_create_command_with_missing_params_returns_error_code(self):
+        result = run_command(
+            [str(BOOTSTRAP_SCRIPT), 'create', '--aws-account-id', TEST_ACCOUNT_ID],
+            check=False
+        )
+        assert result.returncode != 0
+
+    def test_create_command_with_missing_params_shows_required_message(self):
+        result = run_command(
+            [str(BOOTSTRAP_SCRIPT), 'create', '--aws-account-id', TEST_ACCOUNT_ID],
+            check=False
+        )
+        assert 'required' in result.stderr.lower() or 'arguments are required' in result.stderr.lower()
+
+    def test_destroy_command_with_missing_params_returns_error_code(self):
+        result = run_command(
+            [str(BOOTSTRAP_SCRIPT), 'destroy', '--aws-account-id', TEST_ACCOUNT_ID],
+            check=False
+        )
+        assert result.returncode != 0
+
+    def test_destroy_command_with_missing_params_shows_required_message(self):
+        result = run_command(
+            [str(BOOTSTRAP_SCRIPT), 'destroy', '--aws-account-id', TEST_ACCOUNT_ID],
+            check=False
+        )
+        assert 'required' in result.stderr.lower() or 'arguments are required' in result.stderr.lower()
+
+
+class TestDependencyRequirements:
+
+    def test_script_loads_without_boto3(self):
+        test_script = """
+import sys
+
+if 'boto3' in sys.modules:
+    del sys.modules['boto3']
+
+class ImportBlocker:
+    def find_module(self, fullname, path=None):
+        if fullname == 'boto3' or fullname.startswith('boto3.'):
+            return self
+        return None
+
+    def load_module(self, fullname):
+        raise ImportError(f"Import of {fullname} is blocked for testing")
+
+sys.meta_path.insert(0, ImportBlocker())
+
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+print("imports_without_boto3=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'imports_without_boto3=True' in result.stdout
+
+    def test_script_loads_without_awscli(self):
+        test_script = """
+import sys
+
+if 'awscli' in sys.modules:
+    del sys.modules['awscli']
+
+class ImportBlocker:
+    def find_module(self, fullname, path=None):
+        if fullname == 'awscli' or fullname.startswith('awscli.'):
+            return self
+        return None
+
+    def load_module(self, fullname):
+        raise ImportError(f"Import of {fullname} is blocked for testing")
+
+sys.meta_path.insert(0, ImportBlocker())
+
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+print("imports_without_awscli=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'imports_without_awscli=True' in result.stdout
+
+    def test_all_imports_are_stdlib(self):
+        test_script = """
+import sys
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+imported_modules = set(sys.modules.keys())
+
+external_packages = {'boto3', 'botocore', 'awscli', 'requests', 'urllib3'}
+
+found_external = external_packages & imported_modules
+
+if found_external:
+    print(f"ERROR: Found external packages: {found_external}")
+    sys.exit(1)
+
+print("only_stdlib_imports=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'only_stdlib_imports=True' in result.stdout
+
+
+class TestAWSSignatureValidation:
+
+    def test_sts_request_uses_correct_api_version(self):
+        test_script = """
+import sys
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
+request = client._prepare_query_api_request_with_signing(
+    'sts', 'GetCallerIdentity', 'sts.us-east-1.amazonaws.com', {}
+)
+
+assert b'Version=2011-06-15' in request.data, f"Expected STS API version 2011-06-15, got: {request.data}"
+assert b'Action=GetCallerIdentity' in request.data, f"Expected Action=GetCallerIdentity, got: {request.data}"
+assert request.method == 'POST', f"Expected POST method, got: {request.method}"
+
+print("sts_signature_valid=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'sts_signature_valid=True' in result.stdout
+
+    def test_iam_request_uses_correct_api_version(self):
+        test_script = """
+import sys
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
+request = client._prepare_query_api_request_with_signing(
+    'iam', 'ListRoles', 'iam.us-east-1.amazonaws.com', {}
+)
+
+assert b'Version=2010-05-08' in request.data, f"Expected IAM API version 2010-05-08, got: {request.data}"
+assert b'Action=ListRoles' in request.data, f"Expected Action=ListRoles, got: {request.data}"
+assert request.method == 'POST', f"Expected POST method, got: {request.method}"
+
+print("iam_signature_valid=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'iam_signature_valid=True' in result.stdout
+
+    def test_secrets_manager_request_uses_json_format(self):
+        test_script = """
+import sys
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
+request = client._prepare_json_api_request_with_signing(
+    'secretsmanager', 'ListSecrets', 'secretsmanager.us-east-1.amazonaws.com', {}
+)
+
+assert request.method == 'POST', f"Expected POST method, got: {request.method}"
+assert 'X-amz-target' in request.headers or 'X-Amz-Target' in request.headers, f"Expected X-Amz-Target header, got: {list(request.headers.keys())}"
+
+print("secrets_signature_valid=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'secrets_signature_valid=True' in result.stdout
+
+    def test_request_includes_required_aws_signature_headers(self):
+        test_script = """
+import sys
+sys.path.insert(0, 'src/auth_between_aws_and_github')
+import auth_between_aws_and_github as bootstrap
+
+client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
+request = client._prepare_query_api_request_with_signing(
+    'sts', 'GetCallerIdentity', 'sts.us-east-1.amazonaws.com', {}
+)
+
+headers_lower = {k.lower(): v for k, v in request.headers.items()}
+assert 'authorization' in headers_lower, f"Missing Authorization header, got: {list(request.headers.keys())}"
+assert 'AWS4-HMAC-SHA256' in request.headers.get('Authorization', ''), "Authorization should use AWS4-HMAC-SHA256"
+assert 'x-amz-date' in headers_lower, f"Missing x-amz-date header, got: {list(request.headers.keys())}"
+assert 'content-type' in headers_lower, f"Missing Content-Type header, got: {list(request.headers.keys())}"
+
+assert request.host == 'sts.us-east-1.amazonaws.com', f"Expected host sts.us-east-1.amazonaws.com, got: {request.host}"
+
+print("signature_headers_valid=True")
+"""
+        result = run_command(['python3', '-c', test_script], check=True, capture_output=True)
+        assert 'signature_headers_valid=True' in result.stdout
 
 

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Integration tests for bootstrap infrastructure.
+Post-deployment integration tests for auth_between_aws_and_github infrastructure.
 
-These tests verify integration between AWS services:
+These tests verify integration between AWS services after infrastructure deployment:
 - OIDC authentication flow (GitHub Actions → AWS STS → IAM Role)
 - Secrets Manager integration (OIDC → Secrets Manager → GitHub PAT)
 - GitHub API integration (PAT → GitHub API → Runner Registration Token)
 - Bedrock integration (OIDC → Bedrock → README check - catches signing errors)
+- Auth module AWS API integration (real STS, IAM, Secrets Manager calls)
+- Auth module GitHub API integration (real GitHub PAT validation)
 
-Note: Unit tests are in CINC Auditor controls (*.rb files).
-      End-to-end workflow tests are in test_e2e.py.
+These tests require deployed infrastructure and make real API calls.
 """
 
 import json
@@ -267,3 +268,239 @@ class TestBedrockIntegration:
         # If success, verify output format
         output = result.stdout.strip().split('\n')[-1]
         assert output in ['True', 'False'], f"Expected 'True' or 'False', got: {output}"
+
+
+def is_github_actions():
+    return os.environ.get('GITHUB_ACTIONS', '').lower() == 'true'
+
+
+def get_aws_credentials_from_auth_module():
+    access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+    secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    session_token = os.environ.get('AWS_SESSION_TOKEN')
+    region = os.environ.get('AWS_REGION', 'us-east-1')
+
+    if access_key and secret_key:
+        return (access_key, secret_key, session_token, region)
+
+    if is_github_actions():
+        try:
+            config_path = REPO_ROOT / 'config' / 'auth_between_aws_and_github.json'
+            with open(config_path) as f:
+                config = json.load(f)
+
+            account_id = config['aws']['account_id']
+            role_name = config['aws']['iam_role_name']
+            region = config['aws']['region']
+
+            import sys
+            sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+            import auth_between_aws_and_github as bootstrap
+
+            temp_creds = bootstrap.assume_role_with_oidc(account_id, region, role_name)
+            if temp_creds:
+                return (
+                    temp_creds['access_key_id'],
+                    temp_creds['secret_access_key'],
+                    temp_creds['session_token'],
+                    region
+                )
+        except Exception as e:
+            import logging
+            logging.warning("OIDC authentication failed in integration tests: %s", e)
+            pass
+
+    return None
+
+
+def has_aws_credentials_for_auth_module():
+    return get_aws_credentials_from_auth_module() is not None
+
+
+def get_github_pat_from_auth_module():
+    pat = os.environ.get('GH_RUNNER_PAT')
+    if pat:
+        return pat
+
+    if is_github_actions():
+        try:
+            creds = get_aws_credentials_from_auth_module()
+            if not creds:
+                return None
+
+            access_key, secret_key, session_token, region = creds
+
+            config_path = REPO_ROOT / 'config' / 'auth_between_aws_and_github.json'
+            with open(config_path) as f:
+                config = json.load(f)
+
+            secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
+
+            import sys
+            sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+            import auth_between_aws_and_github as bootstrap
+
+            secret_data = bootstrap.get_secret_from_secrets_manager(
+                secret_name, region, access_key, secret_key, session_token
+            )
+
+            if secret_data:
+                return secret_data.get('github_token')
+            return None
+        except Exception as e:
+            import logging
+            logging.warning("Failed to retrieve GitHub PAT from Secrets Manager: %s", e)
+            return None
+
+    return None
+
+
+def has_github_pat_for_auth_module():
+    return get_github_pat_from_auth_module() is not None
+
+
+class TestAuthModuleAWSAPIIntegration:
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_sts_get_caller_identity_works(self):
+        creds = get_aws_credentials_from_auth_module()
+        assert creds is not None, "Credentials should be available"
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.STSClient(region, access_key, secret_key, session_token)
+
+        client.test_sts_access()
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_get_account_id_returns_numeric_value(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+        account_id = client.get_account_id()
+
+        assert account_id.isdigit()
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_get_account_id_returns_twelve_digits(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+        account_id = client.get_account_id()
+
+        assert len(account_id) == 12
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_validate_access_with_real_credentials(self):
+        creds = get_aws_credentials_from_auth_module()
+        assert creds is not None, "Credentials should be available"
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
+        client.validate_access()
+
+
+class TestAuthModuleAWSStateDetectionIntegration:
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_oidc_provider_exists_returns_boolean(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+        account_id = client.get_account_id()
+
+        exists = client.iam.oidc_provider_exists(account_id)
+        assert isinstance(exists, bool)
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_role_exists_returns_boolean(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
+        exists = client.iam.role_exists('NonExistentRoleThatShouldNeverExist12345')
+        assert isinstance(exists, bool)
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_role_exists_returns_false_for_nonexistent_role(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
+        exists = client.iam.role_exists('NonExistentRoleThatShouldNeverExist12345')
+        assert exists is False
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_secret_exists_returns_boolean(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
+        exists = client.secrets.secret_exists('non-existent-secret-12345')
+        assert isinstance(exists, bool)
+
+    @pytest.mark.skipif(not has_aws_credentials_for_auth_module(), reason="No AWS credentials available")
+    def test_secret_exists_returns_false_for_nonexistent_secret(self):
+        creds = get_aws_credentials_from_auth_module()
+        access_key, secret_key, session_token, region = creds
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
+        exists = client.secrets.secret_exists('non-existent-secret-12345')
+        assert exists is False
+
+
+class TestAuthModuleGitHubAPIIntegration:
+
+    @pytest.mark.skipif(not has_github_pat_for_auth_module(), reason="No GitHub PAT available")
+    def test_github_pat_validation_with_real_api(self):
+        github_token = get_github_pat_from_auth_module()
+        assert github_token is not None, "GitHub PAT should be available"
+
+        import sys
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        bootstrap.validate_github_pat(github_token)
