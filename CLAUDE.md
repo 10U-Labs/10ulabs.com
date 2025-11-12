@@ -93,11 +93,11 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 - When creating PRs, use descriptive titles and comprehensive summaries
 
 ### PR Creation Workflow
-After completing work, committing, and running all required pre-deployment tests:
+After completing work, committing, and running ALL required tests (pre-deployment AND post-deployment):
 1. Push commits to the claude/ branch
 2. Create pull request to main with descriptive title and comprehensive summary
 3. Immediately merge the PR and delete the remote branch
-4. CI/CD will run post-deployment after merge
+4. CI/CD will run full post-deployment test suite after merge (including tests requiring deployed infrastructure)
 
 ### Commit Message Flags
 
@@ -125,11 +125,14 @@ Use these flags in commit messages to control workflow behavior:
 3. **Use environment variables for credentials** - AWS credentials and tokens should come from environment variables
 4. **All checks must pass before pushing** - If any check fails (even pre-existing issues), understand why before pushing
 5. **Report pre-existing failures** - If checks fail on code you didn't modify, document this in commit message
+6. **Run post-deployment tests** - Run as many post-deployment tests as possible with environment credentials before pushing
 
 **Static analysis includes:** YAML linting, JSON linting, Markdown linting, Pylint, Mypy
-**Tests include:** Unit tests, integration tests
+**Tests include:** Unit tests, pre-deployment integration tests, post-deployment integration tests, E2E tests
 
 **Run ALL checks listed below for the infrastructure you're working on, not just checks for files you modified.**
+
+**Post-deployment tests:** Some tests require deployed infrastructure (WARM state) and will be skipped locally. Run all post-deployment tests that can execute with just AWS credentials from environment variables. This catches issues early before the CI/CD pipeline runs.
 
 ---
 
@@ -196,6 +199,34 @@ pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -
 - `AWS_REGION` - AWS region (e.g., us-east-1)
 - `GITHUB_PAT` - GitHub Personal Access Token
 
+#### 8. Post-Deployment Integration Tests
+
+**IMPORTANT:** Run as many post-deployment tests as possible with environment credentials.
+
+Check credentials are available:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
+```
+
+Run post-deployment integration tests (uses environment variables automatically):
+```bash
+pytest src/auth_between_aws_and_github/test/post_deployment/test_integration.py -v
+```
+
+**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute (typically 10-15 tests pass, 50+ skipped).
+
+#### 9. Post-Deployment E2E Tests
+
+Run post-deployment E2E tests (uses environment variables automatically):
+```bash
+pytest src/auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
+```
+
+**Note:** Most E2E tests require WARM state and will be skipped locally. This is expected.
+
 ---
 
 ## CloudTrail and Domain Name Tests
@@ -259,7 +290,7 @@ python -m pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
 
 ---
 
-### Pre-Deployment Checklist
+### Pre-Push Checklist
 
 **CRITICAL: Before creating PR, verify ALL of the following (for the infrastructure you modified):**
 
@@ -273,9 +304,12 @@ python -m pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
 **Tests:**
 - [ ] All relevant pre-deployment unit tests pass
 - [ ] All relevant pre-deployment integration tests pass (with environment variable credentials)
+- [ ] All relevant post-deployment integration tests pass (with environment variable credentials)
+- [ ] All relevant post-deployment E2E tests pass (with environment variable credentials)
 
 **General:**
 - [ ] Code changes are committed with clear, descriptive messages
 - [ ] Used EXACT commands from GitHub workflows (not generic commands)
+- [ ] Documented any pre-existing test failures that aren't from your changes
 
 **All static analysis checks and tests must pass before creating PR to ensure code quality and prevent breaking changes.**
