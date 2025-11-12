@@ -57,7 +57,7 @@ jobs:
           pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
-      - name: Performing heavyweight static analysis
+      - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           MYPYPATH=src/cloudtrail_and_domain_name/stubs python -m mypy src/cloudtrail_and_domain_name
