@@ -50,13 +50,17 @@ def check_readme_is_current(bedrock_client, source_code: str, current_readme: st
 {current_readme}
 </current_readme>
 
-Check if the README:
-1. Accurately describes the infrastructure components (API Gateway, Lambda, ACM certificate, Route53)
-2. Documents the Lambda function endpoints and behavior
-3. Explains the API Gateway REST API configuration
-4. Has correct usage instructions for the CDK stack
-5. Mentions all key resources created by the stack
-6. Is free of outdated or incorrect information
+Check if the README has ANY issues, including but not limited to:
+1. Title doesn't match actual infrastructure name or uses outdated terminology
+2. Inconsistent or outdated terminology throughout the document
+3. Inaccurately describes the infrastructure components (API Gateway, Lambda, ACM certificate, Route53)
+4. Missing or incorrect documentation of Lambda function endpoints and behavior
+5. Fails to explain the API Gateway REST API configuration
+6. Incorrect usage instructions for the CDK stack
+7. Missing key resources created by the stack
+8. Outdated command examples or file paths
+9. Missing or incorrect API endpoint documentation
+10. Any other inaccuracies, inconsistencies, or outdated information
 
 Is the README current and accurate? Respond with ONLY "true" or "false"."""
 
