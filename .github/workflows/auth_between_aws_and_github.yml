@@ -450,7 +450,7 @@ jobs:
           pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
-      - name: Performing heavyweight static analysis
+      - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
