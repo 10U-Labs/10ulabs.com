@@ -26,7 +26,7 @@ import pytest
 
 
 # Test configuration
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 BOOTSTRAP_SCRIPT = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
 TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
 TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
@@ -52,43 +52,64 @@ def run_command(cmd, check=True, capture_output=True):
 class TestArgumentValidation:
     """Test command-line argument validation."""
 
-    def test_no_command_shows_help(self):
-        """Test that running without command shows help."""
+    def test_no_command_returns_error_code(self):
         result = run_command([str(BOOTSTRAP_SCRIPT)], check=False)
         assert result.returncode != 0
-        # Should show usage information
+
+    def test_no_command_shows_usage_message(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT)], check=False)
         assert 'usage:' in result.stderr.lower() or 'usage:' in result.stdout.lower()
 
-    def test_help_flag_shows_help(self):
-        """Test --help flag shows help message."""
+    def test_help_flag_returns_success_code(self):
         result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
         assert result.returncode == 0
+
+    def test_help_flag_shows_usage_message(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
         assert 'usage:' in result.stdout.lower()
+
+    def test_help_flag_shows_create_command(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
         assert 'create' in result.stdout.lower()
+
+    def test_help_flag_shows_destroy_command(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), '--help'], check=False)
         assert 'destroy' in result.stdout.lower()
 
-    def test_invalid_command_shows_error(self):
-        """Test invalid command shows error."""
+    def test_invalid_command_returns_error_code(self):
         result = run_command([str(BOOTSTRAP_SCRIPT), 'invalid-command'], check=False)
         assert result.returncode != 0
+
+    def test_invalid_command_shows_error_message(self):
+        result = run_command([str(BOOTSTRAP_SCRIPT), 'invalid-command'], check=False)
         assert 'invalid choice' in result.stderr.lower() or 'unrecognized' in result.stderr.lower()
 
-    def test_create_command_requires_all_parameters(self):
-        """Test that create command enforces required parameters."""
+    def test_create_command_with_missing_params_returns_error_code(self):
         result = run_command(
             [str(BOOTSTRAP_SCRIPT), 'create', '--aws-account-id', TEST_ACCOUNT_ID],
             check=False
         )
         assert result.returncode != 0
+
+    def test_create_command_with_missing_params_shows_required_message(self):
+        result = run_command(
+            [str(BOOTSTRAP_SCRIPT), 'create', '--aws-account-id', TEST_ACCOUNT_ID],
+            check=False
+        )
         assert 'required' in result.stderr.lower() or 'arguments are required' in result.stderr.lower()
 
-    def test_destroy_command_requires_all_parameters(self):
-        """Test that destroy command enforces required parameters."""
+    def test_destroy_command_with_missing_params_returns_error_code(self):
         result = run_command(
             [str(BOOTSTRAP_SCRIPT), 'destroy', '--aws-account-id', TEST_ACCOUNT_ID],
             check=False
         )
         assert result.returncode != 0
+
+    def test_destroy_command_with_missing_params_shows_required_message(self):
+        result = run_command(
+            [str(BOOTSTRAP_SCRIPT), 'destroy', '--aws-account-id', TEST_ACCOUNT_ID],
+            check=False
+        )
         assert 'required' in result.stderr.lower() or 'arguments are required' in result.stderr.lower()
 
 
@@ -222,9 +243,7 @@ print(f"is_github_actions={bootstrap.is_running_in_github_actions()}")
 class TestUserInteraction:
     """Test interactive user prompts and confirmations."""
 
-    def test_destroy_prompts_for_confirmation_without_force(self):
-        """Test that destroy command prompts for confirmation without --force flag."""
-        # Use Popen to send input to interactive prompt
+    def test_destroy_without_force_returns_error_code_on_decline(self):
         proc = subprocess.Popen(
             [str(BOOTSTRAP_SCRIPT), 'destroy',
              '--aws-account-id', TEST_ACCOUNT_ID,
@@ -242,11 +261,27 @@ class TestUserInteraction:
         )
         stdout, stderr = proc.communicate(input='n\n', timeout=30)
         assert proc.returncode == 1
+
+    def test_destroy_without_force_shows_aborted_message_on_decline(self):
+        proc = subprocess.Popen(
+            [str(BOOTSTRAP_SCRIPT), 'destroy',
+             '--aws-account-id', TEST_ACCOUNT_ID,
+             '--aws-region', TEST_REGION,
+             '--aws-iam-role-name', TEST_ROLE_NAME,
+             '--github-org', TEST_GITHUB_ORG,
+             '--github-repo', TEST_GITHUB_REPO,
+             '--github-pat-secret-name', 'github-runner/credentials',
+             '--aws-access-key-id', 'AKIATEST',
+             '--aws-secret-access-key', 'test'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = proc.communicate(input='n\n', timeout=30)
         assert 'Aborted' in stdout or 'Aborted' in stderr
 
-    def test_destroy_with_force_flag_skips_prompt(self):
-        """Test that destroy with --force flag skips confirmation prompt."""
-        # This should fail fast with bad credentials without prompting
+    def test_destroy_with_force_does_not_show_aborted_in_stdout(self):
         proc = subprocess.Popen(
             [str(BOOTSTRAP_SCRIPT), 'destroy', '--force',
              '--aws-account-id', TEST_ACCOUNT_ID,
@@ -262,18 +297,37 @@ class TestUserInteraction:
             stderr=subprocess.PIPE,
             text=True
         )
-        # Don't send any input - it should proceed without prompting
         try:
             stdout, stderr = proc.communicate(timeout=30)
-            # Should not contain "Aborted" since we didn't decline
             assert 'Aborted' not in stdout
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            pytest.fail("Script hung waiting for input despite --force flag")
+
+    def test_destroy_with_force_does_not_show_aborted_in_stderr(self):
+        proc = subprocess.Popen(
+            [str(BOOTSTRAP_SCRIPT), 'destroy', '--force',
+             '--aws-account-id', TEST_ACCOUNT_ID,
+             '--aws-region', TEST_REGION,
+             '--aws-iam-role-name', TEST_ROLE_NAME,
+             '--github-org', TEST_GITHUB_ORG,
+             '--github-repo', TEST_GITHUB_REPO,
+             '--github-pat-secret-name', 'github-runner/credentials',
+             '--aws-access-key-id', 'AKIATEST',
+             '--aws-secret-access-key', 'test'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        try:
+            stdout, stderr = proc.communicate(timeout=30)
             assert 'Aborted' not in stderr
         except subprocess.TimeoutExpired:
             proc.kill()
             pytest.fail("Script hung waiting for input despite --force flag")
 
-    def test_destroy_accepts_yes(self):
-        """Test that destroy accepts 'y' as confirmation."""
+    def test_destroy_does_not_abort_in_stdout_on_yes(self):
         proc = subprocess.Popen(
             [str(BOOTSTRAP_SCRIPT), 'destroy',
              '--aws-account-id', TEST_ACCOUNT_ID,
@@ -290,12 +344,28 @@ class TestUserInteraction:
             text=True
         )
         stdout, stderr = proc.communicate(input='y\n', timeout=30)
-        # Should not abort - will fail on bad credentials later
         assert 'Aborted' not in stdout
+
+    def test_destroy_does_not_abort_in_stderr_on_yes(self):
+        proc = subprocess.Popen(
+            [str(BOOTSTRAP_SCRIPT), 'destroy',
+             '--aws-account-id', TEST_ACCOUNT_ID,
+             '--aws-region', TEST_REGION,
+             '--aws-iam-role-name', TEST_ROLE_NAME,
+             '--github-org', TEST_GITHUB_ORG,
+             '--github-repo', TEST_GITHUB_REPO,
+             '--github-pat-secret-name', 'github-runner/credentials',
+             '--aws-access-key-id', 'AKIATEST',
+             '--aws-secret-access-key', 'test'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        stdout, stderr = proc.communicate(input='y\n', timeout=30)
         assert 'Aborted' not in stderr
 
-    def test_destroy_accepts_empty_input(self):
-        """Test that destroy defaults to 'y' on empty input."""
+    def test_destroy_does_not_abort_in_stdout_on_empty_input(self):
         proc = subprocess.Popen(
             [str(BOOTSTRAP_SCRIPT), 'destroy',
              '--aws-account-id', TEST_ACCOUNT_ID,
@@ -312,12 +382,9 @@ class TestUserInteraction:
             text=True
         )
         stdout, stderr = proc.communicate(input='\n', timeout=30)
-        # Should not abort - empty input means yes
         assert 'Aborted' not in stdout
-        assert 'Aborted' not in stderr
 
-    def test_destroy_handles_keyboard_interrupt(self):
-        """Test that destroy handles Ctrl+C gracefully."""
+    def test_destroy_does_not_abort_in_stderr_on_empty_input(self):
         proc = subprocess.Popen(
             [str(BOOTSTRAP_SCRIPT), 'destroy',
              '--aws-account-id', TEST_ACCOUNT_ID,
@@ -333,12 +400,52 @@ class TestUserInteraction:
             stderr=subprocess.PIPE,
             text=True
         )
-        # Send Ctrl+C (SIGINT)
+        stdout, stderr = proc.communicate(input='\n', timeout=30)
+        assert 'Aborted' not in stderr
+
+    def test_destroy_returns_nonzero_on_keyboard_interrupt(self):
+        proc = subprocess.Popen(
+            [str(BOOTSTRAP_SCRIPT), 'destroy',
+             '--aws-account-id', TEST_ACCOUNT_ID,
+             '--aws-region', TEST_REGION,
+             '--aws-iam-role-name', TEST_ROLE_NAME,
+             '--github-org', TEST_GITHUB_ORG,
+             '--github-repo', TEST_GITHUB_REPO,
+             '--github-pat-secret-name', 'github-runner/credentials',
+             '--aws-access-key-id', 'AKIATEST',
+             '--aws-secret-access-key', 'test'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
         try:
             proc.send_signal(subprocess.signal.SIGINT)
             stdout, stderr = proc.communicate(timeout=30)
-            # SIGINT returns exit code -2 or 1 depending on how it's handled
-            assert proc.returncode != 0, "Process should exit with non-zero code on interrupt"
+            assert proc.returncode != 0
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            pytest.fail("Script didn't handle SIGINT gracefully")
+
+    def test_destroy_shows_aborted_or_fails_on_keyboard_interrupt(self):
+        proc = subprocess.Popen(
+            [str(BOOTSTRAP_SCRIPT), 'destroy',
+             '--aws-account-id', TEST_ACCOUNT_ID,
+             '--aws-region', TEST_REGION,
+             '--aws-iam-role-name', TEST_ROLE_NAME,
+             '--github-org', TEST_GITHUB_ORG,
+             '--github-repo', TEST_GITHUB_REPO,
+             '--github-pat-secret-name', 'github-runner/credentials',
+             '--aws-access-key-id', 'AKIATEST',
+             '--aws-secret-access-key', 'test'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        try:
+            proc.send_signal(subprocess.signal.SIGINT)
+            stdout, stderr = proc.communicate(timeout=30)
             assert 'Aborted' in stdout or 'Aborted' in stderr or proc.returncode < 0
         except subprocess.TimeoutExpired:
             proc.kill()
@@ -614,10 +721,8 @@ class TestAWSAPIIntegration:
         client.test_sts_access()
 
     @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
-    def test_get_account_id_returns_valid_format(self):
-        """Integration: Verify get_account_id returns 12-digit account ID."""
+    def test_get_account_id_returns_numeric_value(self):
         creds = get_aws_credentials()
-        assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
         sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
@@ -626,9 +731,20 @@ class TestAWSAPIIntegration:
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
         account_id = client.get_account_id()
 
-        # Validate format
-        assert account_id.isdigit(), f"Account ID should be numeric, got: {account_id}"
-        assert len(account_id) == 12, f"Account ID should be 12 digits, got: {len(account_id)}"
+        assert account_id.isdigit()
+
+    @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
+    def test_get_account_id_returns_twelve_digits(self):
+        creds = get_aws_credentials()
+        access_key, secret_key, session_token, region = creds
+
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+        account_id = client.get_account_id()
+
+        assert len(account_id) == 12
 
     @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
     def test_validate_access_with_real_credentials(self):
@@ -657,10 +773,8 @@ class TestAWSStateDetectionIntegration:
     """Integration tests for AWS infrastructure state detection (read-only)."""
 
     @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
-    def test_oidc_provider_exists_check_works(self):
-        """Integration: Verify OIDC provider existence check works with real AWS."""
+    def test_oidc_provider_exists_returns_boolean(self):
         creds = get_aws_credentials()
-        assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
         sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
@@ -669,16 +783,12 @@ class TestAWSStateDetectionIntegration:
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
         account_id = client.get_account_id()
 
-        # This is READ-ONLY - just checks if provider exists
-        # Returns True or False, doesn't modify anything
         exists = client.iam.oidc_provider_exists(account_id)
-        assert isinstance(exists, bool), f"Expected boolean, got: {type(exists)}"
+        assert isinstance(exists, bool)
 
     @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
-    def test_role_exists_check_works(self):
-        """Integration: Verify role existence check works with real AWS."""
+    def test_role_exists_returns_boolean(self):
         creds = get_aws_credentials()
-        assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
         sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
@@ -686,17 +796,12 @@ class TestAWSStateDetectionIntegration:
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
 
-        # This is READ-ONLY - just checks if role exists
-        # Test with a role that definitely doesn't exist
         exists = client.iam.role_exists('NonExistentRoleThatShouldNeverExist12345')
-        assert isinstance(exists, bool), f"Expected boolean, got: {type(exists)}"
-        assert exists is False, "Non-existent role should return False"
+        assert isinstance(exists, bool)
 
     @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
-    def test_secret_exists_check_works(self):
-        """Integration: Verify secret existence check works with real AWS."""
+    def test_role_exists_returns_false_for_nonexistent_role(self):
         creds = get_aws_credentials()
-        assert creds is not None, "Credentials should be available"
         access_key, secret_key, session_token, region = creds
 
         sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
@@ -704,11 +809,34 @@ class TestAWSStateDetectionIntegration:
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
 
-        # This is READ-ONLY - just checks if secret exists
-        # Test with a secret that definitely doesn't exist
+        exists = client.iam.role_exists('NonExistentRoleThatShouldNeverExist12345')
+        assert exists is False
+
+    @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
+    def test_secret_exists_returns_boolean(self):
+        creds = get_aws_credentials()
+        access_key, secret_key, session_token, region = creds
+
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
         exists = client.secrets.secret_exists('non-existent-secret-12345')
-        assert isinstance(exists, bool), f"Expected boolean, got: {type(exists)}"
-        assert exists is False, "Non-existent secret should return False"
+        assert isinstance(exists, bool)
+
+    @pytest.mark.skipif(not has_aws_credentials(), reason="No AWS credentials available")
+    def test_secret_exists_returns_false_for_nonexistent_secret(self):
+        creds = get_aws_credentials()
+        access_key, secret_key, session_token, region = creds
+
+        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        import auth_between_aws_and_github as bootstrap
+
+        client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
+
+        exists = client.secrets.secret_exists('non-existent-secret-12345')
+        assert exists is False
 
 
 class TestGitHubAPIIntegration:
