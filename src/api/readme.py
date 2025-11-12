@@ -111,6 +111,8 @@ Create a professional README that includes:
 8. Testing the API
 9. Architecture notes (serverless, CORS enabled, access logging)
 
+IMPORTANT: Do NOT include a "License" section. The repository already has a LICENSE.md file, so the README must not duplicate licensing information.
+
 Format the output as proper Markdown with appropriate headers, code blocks, and sections. Be specific about what each resource does and why it exists. Do not include any preamble or explanation - output ONLY the README.md content."""
 
     try:
