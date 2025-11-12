@@ -8,8 +8,8 @@ import pytest
 
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
-CONFIG_FILE = REPO_ROOT / 'config' / 'bootstrap.json'
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
+CONFIG_FILE = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'config.json'
 
 
 def load_config():
@@ -259,9 +259,9 @@ class TestBedrockIntegration:
         
         config = load_config()
 
-        
+
         result = subprocess.run(
-            ['python', str(REPO_ROOT / 'src' / 'bootstrap' / 'auth_between_aws_and_github.py'), 'readme',
+            ['python', str(REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'), 'readme',
              '--aws-account-id', config['aws']['account_id'],
              '--aws-region', config['aws']['region'],
              '--aws-iam-role-name', config['aws']['iam_role_name'],
@@ -298,7 +298,7 @@ def get_aws_credentials_from_auth_module():
 
     if is_github_actions():
         try:
-            config_path = REPO_ROOT / 'config' / 'auth_between_aws_and_github.json'
+            config_path = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'config.json'
             with open(config_path) as f:
                 config = json.load(f)
 
@@ -343,7 +343,7 @@ def get_github_pat_from_auth_module():
 
             access_key, secret_key, session_token, region = creds
 
-            config_path = REPO_ROOT / 'config' / 'auth_between_aws_and_github.json'
+            config_path = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'config.json'
             with open(config_path) as f:
                 config = json.load(f)
 
