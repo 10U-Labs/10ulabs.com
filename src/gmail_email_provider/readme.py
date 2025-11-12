@@ -35,7 +35,7 @@ def read_source_files() -> str:
 
     return combined
 
-def check_readme_is_current(bedrock_client, source_code: str, current_readme: str) -> bool:
+def check_readme_is_current(bedrock_client, source_code: str, current_readme: str, model_id: str, max_tokens: int) -> bool:
     if not current_readme or not current_readme.strip():
         logging.info("README is empty or missing")
         return False
@@ -66,13 +66,13 @@ Is the README current and accurate? Respond with ONLY "true" or "false"."""
 
     try:
         response = bedrock_client.converse(
-            modelId='us.anthropic.claude-sonnet-4-20250514-v1:0',
+            modelId=model_id,
             messages=[{
                 'role': 'user',
                 'content': [{'text': prompt}]
             }],
             inferenceConfig={
-                'maxTokens': 10
+                'maxTokens': max_tokens
             }
         )
 
@@ -84,7 +84,7 @@ Is the README current and accurate? Respond with ONLY "true" or "false"."""
         logging.error(f"Failed to check README with Bedrock: {e}")
         sys.exit(1)
 
-def generate_readme(bedrock_client, source_code: str) -> str:
+def generate_readme(bedrock_client, source_code: str, model_id: str, max_tokens: int) -> str:
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following AWS CDK infrastructure code that configures Gmail as an email provider through DNS verification.
 
 <source_code>
@@ -113,13 +113,13 @@ Generate ONLY the README content, starting with the title. Do not include any pr
 
     try:
         response = bedrock_client.converse(
-            modelId='us.anthropic.claude-sonnet-4-20250514-v1:0',
+            modelId=model_id,
             messages=[{
                 'role': 'user',
                 'content': [{'text': prompt}]
             }],
             inferenceConfig={
-                'maxTokens': 16000
+                'maxTokens': max_tokens
             }
         )
 
@@ -153,8 +153,36 @@ def main():
         required=True,
         help='AWS region for Bedrock'
     )
+    parser.add_argument(
+        '--bedrock-model-id',
+        help='Bedrock model ID to use'
+    )
+    parser.add_argument(
+        '--max-tokens-check',
+        type=int,
+        help='Max tokens for README check'
+    )
+    parser.add_argument(
+        '--max-tokens-generate',
+        type=int,
+        help='Max tokens for README generation'
+    )
 
     args = parser.parse_args()
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, 'config.json')
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except IOError as e:
+        logging.error(f"Failed to read config.json: {e}")
+        sys.exit(1)
+
+    bedrock_model_id = args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
+    max_tokens_check = args.max_tokens_check or config.get('bedrock', {}).get('max_tokens_check', 200)
+    max_tokens_generate = args.max_tokens_generate or config.get('bedrock', {}).get('max_tokens_generate', 16000)
 
     if not args.check and not args.update:
         logging.error("Either --check or --update must be specified")
@@ -164,7 +192,6 @@ def main():
         logging.error("Cannot specify both --check and --update")
         sys.exit(1)
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     readme_path = os.path.join(script_dir, 'README.md')
 
     logging.info("Reading source files...")
@@ -188,7 +215,7 @@ def main():
                 sys.exit(1)
 
         logging.info("Checking if README is current via Bedrock...")
-        readme_is_current = check_readme_is_current(bedrock_client, source_code, current_readme)
+        readme_is_current = check_readme_is_current(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
 
         print(readme_is_current)
 
@@ -203,7 +230,7 @@ def main():
 
     elif args.update:
         logging.info("Generating updated README via Bedrock...")
-        new_readme = generate_readme(bedrock_client, source_code)
+        new_readme = generate_readme(bedrock_client, source_code, bedrock_model_id, max_tokens_generate)
 
         try:
             with open(readme_path, 'w', encoding='utf-8') as f:
