@@ -1,18 +1,4 @@
 #!/usr/bin/env python3
-"""
-Post-deployment integration tests for auth_between_aws_and_github infrastructure.
-
-These tests verify integration between AWS services after infrastructure deployment:
-- OIDC authentication flow (GitHub Actions → AWS STS → IAM Role)
-- Secrets Manager integration (OIDC → Secrets Manager → GitHub PAT)
-- GitHub API integration (PAT → GitHub API → Runner Registration Token)
-- Bedrock integration (OIDC → Bedrock → README check - catches signing errors)
-- Auth module AWS API integration (real STS, IAM, Secrets Manager calls)
-- Auth module GitHub API integration (real GitHub PAT validation)
-
-These tests require deployed infrastructure and make real API calls.
-"""
-
 import json
 import os
 import subprocess
@@ -21,19 +7,19 @@ from pathlib import Path
 import pytest
 
 
-# Test configuration
+
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 CONFIG_FILE = REPO_ROOT / 'config' / 'bootstrap.json'
 
 
 def load_config():
-    """Load bootstrap configuration."""
+    
     with open(CONFIG_FILE, 'r') as f:
         return json.load(f)
 
 
 def get_github_oidc_token():
-    """Get OIDC token from GitHub Actions environment."""
+    
     token_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL')
     token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
 
@@ -58,7 +44,7 @@ def get_github_oidc_token():
 
 
 def assume_role_with_oidc(account_id, region, role_name, oidc_token):
-    """Assume IAM role using OIDC token."""
+    
     role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
 
     result = subprocess.run(
@@ -84,16 +70,16 @@ def assume_role_with_oidc(account_id, region, role_name, oidc_token):
 
 
 class TestOIDCAuthentication:
-    """Test OIDC authentication integration with AWS STS."""
+    
 
     def test_oidc_token_retrieval(self):
-        """Test that we can retrieve OIDC token from GitHub Actions."""
+        
         token = get_github_oidc_token()
         assert token is not None
         assert len(token) > 0
 
     def test_assume_role_with_oidc(self):
-        """Test that we can assume IAM role using OIDC."""
+        
         config = load_config()
         oidc_token = get_github_oidc_token()
 
@@ -109,7 +95,7 @@ class TestOIDCAuthentication:
         assert creds['session_token']
 
     def test_temporary_credentials_work(self):
-        """Test that temporary credentials from OIDC work for AWS API calls."""
+        
         config = load_config()
         oidc_token = get_github_oidc_token()
         creds = assume_role_with_oidc(
@@ -119,7 +105,7 @@ class TestOIDCAuthentication:
             oidc_token
         )
 
-        # Use temporary credentials to call AWS API
+        
         env = os.environ.copy()
         env['AWS_ACCESS_KEY_ID'] = creds['access_key_id']
         env['AWS_SECRET_ACCESS_KEY'] = creds['secret_access_key']
@@ -140,11 +126,11 @@ class TestOIDCAuthentication:
 
 
 class TestSecretsManagerIntegration:
-    """Test Secrets Manager integration with OIDC credentials."""
+    
 
     @pytest.fixture
     def oidc_creds(self):
-        """Get OIDC credentials for tests."""
+        
         config = load_config()
         oidc_token = get_github_oidc_token()
         return assume_role_with_oidc(
@@ -155,7 +141,7 @@ class TestSecretsManagerIntegration:
         )
 
     def test_retrieve_github_pat_from_secrets_manager(self, oidc_creds):
-        """Test that we can retrieve GitHub PAT from Secrets Manager using OIDC."""
+        
         config = load_config()
 
         env = os.environ.copy()
@@ -163,7 +149,7 @@ class TestSecretsManagerIntegration:
         env['AWS_SECRET_ACCESS_KEY'] = oidc_creds['secret_access_key']
         env['AWS_SESSION_TOKEN'] = oidc_creds['session_token']
 
-        # Get GitHub PAT from Secrets Manager
+        
         result = subprocess.run(
             ['aws', 'secretsmanager', 'get-secret-value',
              '--secret-id', config['aws']['secrets_manager']['github_pat_secret_name'],
@@ -182,11 +168,11 @@ class TestSecretsManagerIntegration:
 
 
 class TestGitHubAPIIntegration:
-    """Test GitHub API integration using PAT from Secrets Manager."""
+    
 
     @pytest.fixture
     def oidc_creds(self):
-        """Get OIDC credentials for tests."""
+        
         config = load_config()
         oidc_token = get_github_oidc_token()
         return assume_role_with_oidc(
@@ -197,7 +183,7 @@ class TestGitHubAPIIntegration:
         )
 
     def test_github_pat_works_for_runner_registration(self, oidc_creds):
-        """Test that GitHub PAT can generate runner registration tokens."""
+        
         config = load_config()
 
         env = os.environ.copy()
@@ -205,7 +191,7 @@ class TestGitHubAPIIntegration:
         env['AWS_SECRET_ACCESS_KEY'] = oidc_creds['secret_access_key']
         env['AWS_SESSION_TOKEN'] = oidc_creds['session_token']
 
-        # Get GitHub PAT from Secrets Manager
+        
         result = subprocess.run(
             ['aws', 'secretsmanager', 'get-secret-value',
              '--secret-id', config['aws']['secrets_manager']['github_pat_secret_name'],
@@ -221,7 +207,7 @@ class TestGitHubAPIIntegration:
         secret_data = json.loads(result.stdout)
         github_pat = secret_data['github_token']
 
-        # Test PAT by getting runner registration token
+        
         result = subprocess.run(
             ['curl', '-s', '-X', 'POST',
              '-H', 'Accept: application/vnd.github+json',
@@ -240,13 +226,13 @@ class TestGitHubAPIIntegration:
 
 
 class TestBedrockIntegration:
-    """Test Bedrock integration with OIDC credentials."""
+    
 
     def test_bedrock_readme_check_with_oidc(self):
-        """Test that Bedrock README check works with OIDC credentials (catches signing errors)."""
+        
         config = load_config()
 
-        # Run auth_between_aws_and_github.py readme --check (uses OIDC automatically in GitHub Actions)
+        
         result = subprocess.run(
             ['python', str(REPO_ROOT / 'src' / 'bootstrap' / 'auth_between_aws_and_github.py'), 'readme',
              '--aws-account-id', config['aws']['account_id'],
@@ -258,14 +244,14 @@ class TestBedrockIntegration:
             cwd=REPO_ROOT
         )
 
-        # Test goal: Verify Bedrock integration works end-to-end
-        # - Tests AWS signature is correct (service name, URI encoding, etc.)
-        # - Tests IAM permissions are configured correctly
-        # - Tests model access is working
+        
+        
+        
+        
         if result.returncode != 0:
             pytest.fail(f"Bedrock README check failed:\n{result.stderr}\n\nBootstrap should have configured everything correctly!")
 
-        # If success, verify output format
+        
         output = result.stdout.strip().split('\n')[-1]
         assert output in ['True', 'False'], f"Expected 'True' or 'False', got: {output}"
 
