@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/cloudtrail_and_domain_name/**'
       - 'test/cloudtrail_and_domain_name/**'
-      - 'config/cloudtrail_and_domain_name.json'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
   workflow_dispatch:
     inputs:
@@ -118,8 +117,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -256,8 +255,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -298,8 +297,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -341,8 +340,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -392,8 +391,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/cloudtrail_and_domain_name.json)
-          REGION=$(jq -r '.aws_region' config/cloudtrail_and_domain_name.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python

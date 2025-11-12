@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/api/**'
       - 'test/api/**'
-      - 'config/api.json'
       - '.github/workflows/api.yml'
   workflow_dispatch:
     inputs:
@@ -118,8 +117,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
-          REGION=$(jq -r '.aws_region' config/api.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/config.json)
+          REGION=$(jq -r '.aws_region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -199,8 +198,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
-          REGION=$(jq -r '.aws_region' config/api.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/config.json)
+          REGION=$(jq -r '.aws_region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -241,8 +240,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
-          REGION=$(jq -r '.aws_region' config/api.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/config.json)
+          REGION=$(jq -r '.aws_region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -284,8 +283,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
-          REGION=$(jq -r '.aws_region' config/api.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/config.json)
+          REGION=$(jq -r '.aws_region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -335,8 +334,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/api.json)
-          REGION=$(jq -r '.aws_region' config/api.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/config.json)
+          REGION=$(jq -r '.aws_region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
