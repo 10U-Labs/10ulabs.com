@@ -181,8 +181,8 @@ def main():
         sys.exit(1)
 
     bedrock_model_id = args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
-    max_tokens_check = args.max_tokens_check or config.get('bedrock', {}).get('max_tokens_check', 200)
-    max_tokens_generate = args.max_tokens_generate or config.get('bedrock', {}).get('max_tokens_generate', 16000)
+    max_tokens_check = int(args.max_tokens_check or config.get('bedrock', {}).get('max_tokens_check', 200))
+    max_tokens_generate = int(args.max_tokens_generate or config.get('bedrock', {}).get('max_tokens_generate', 16000))
 
     if not args.check and not args.update:
         logging.error("Either --check or --update must be specified")
