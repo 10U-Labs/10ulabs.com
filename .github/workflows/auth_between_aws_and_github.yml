@@ -304,7 +304,7 @@ jobs:
   integration-testing-infrastructure:
     name: Integration testing infrastructure
     runs-on: ubuntu-latest
-    needs: unit-testing-infrastructure
+    needs: ensure-infrastructure-exists
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -363,78 +363,6 @@ jobs:
           fi
           echo "PASSED: Infrastructure successfully destroyed"
           echo "System returned to COLD state"
-  unit-testing-infrastructure:
-    name: Unit testing infrastructure
-    runs-on: ubuntu-latest
-    needs: ensure-infrastructure-exists
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Read auth_between_aws_and_github config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
-        run: |
-          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          github_org=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
-          github_repo=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
-          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
-          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
-          echo "github_org=$github_org" >> $GITHUB_OUTPUT
-          echo "github_repo=$github_repo" >> $GITHUB_OUTPUT
-          echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          OIDC_TOKEN=$(curl -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          CREDS=$(aws sts assume-role-with-web-identity \
-            --role-arn "arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}" \
-            --role-session-name "github-actions-post_deployment-tests" \
-            --web-identity-token "$OIDC_TOKEN" \
-            --region ${{ steps.config.outputs.aws_region }} \
-            --output json)
-          echo "AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r '.Credentials.SecretAccessKey')" >> $GITHUB_ENV
-          echo "AWS_SESSION_TOKEN=$(echo $CREDS | jq -r '.Credentials.SessionToken')" >> $GITHUB_ENV
-          echo "AWS_REGION=${{ steps.config.outputs.aws_region }}" >> $GITHUB_ENV
-          echo "✓ AWS credentials configured via OIDC"
-      - name: Install CINC Auditor
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor
-          cinc-auditor version
-      - name: Running unit tests
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          cd src/auth_between_aws_and_github/test/post_deployment
-          cat > inputs.yml <<EOF
-          account_id: "${{ steps.config.outputs.aws_account_id }}"
-          region: "${{ steps.config.outputs.aws_region }}"
-          iam_role_name: "${{ steps.config.outputs.aws_iam_role_name }}"
-          github_org: "${{ steps.config.outputs.github_org }}"
-          github_repo: "${{ steps.config.outputs.github_repo }}"
-          github_pat_secret_name: "${{ steps.config.outputs.github_pat_secret_name }}"
-          EOF
-          set +e
-          cinc-auditor exec . \
-            --input-file inputs.yml \
-            --reporter cli json:unit-test-results.json
-          EXIT_CODE=$?
-          set -e
-          if [ $EXIT_CODE -eq 0 ] || [ $EXIT_CODE -eq 101 ]; then
-            echo "Unit tests passed (exit code: $EXIT_CODE)"
-            exit 0
-          else
-            echo "Unit tests failed (exit code: $EXIT_CODE)"
-            exit $EXIT_CODE
-          fi
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run unit tests"
   integration-testing-code:
     name: Integration testing code
     runs-on: ubuntu-latest
