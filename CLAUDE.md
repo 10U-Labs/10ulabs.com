@@ -134,7 +134,19 @@ Run these tests if you modified `src/auth_between_aws_and_github/`:
 yamllint .github/workflows/auth_between_aws_and_github.yml
 ```
 
-#### 2. Python Code Linting (Pylint)
+#### 2. JSON Configuration Linting
+```bash
+jsonlint -q src/auth_between_aws_and_github/config.json
+```
+
+#### 3. Markdown Documentation Linting (if README exists)
+```bash
+markdownlint-cli2 src/auth_between_aws_and_github/README.md
+```
+
+**NOTE:** This will only run if README.md exists. All default markdownlint rules are enforced.
+
+#### 4. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
 pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
@@ -144,17 +156,17 @@ pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
 
 **IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
 
-#### 3. Python Static Type Checking (Mypy)
+#### 5. Python Static Type Checking (Mypy)
 ```bash
 mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
 ```
 
-#### 4. Unit Tests
+#### 6. Unit Tests
 ```bash
 PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
 ```
 
-#### 5. Integration Tests
+#### 7. Integration Tests
 ```bash
 pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
 ```
@@ -221,6 +233,8 @@ python -m pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
 
 Before creating PR, verify (for the infrastructure you modified):
 - [ ] All relevant YAML files pass `yamllint`
+- [ ] JSON config files pass `jsonlint` validation
+- [ ] Markdown README passes `markdownlint-cli2` (if applicable)
 - [ ] Pylint passes with `--fail-under=10.0` using exact workflow flags (if applicable)
 - [ ] Mypy passes with no errors
 - [ ] All relevant pre-deployment unit tests pass
