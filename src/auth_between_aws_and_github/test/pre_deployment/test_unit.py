@@ -67,7 +67,7 @@ class TestHelperFunctions:
 
     @patch('auth_between_aws_and_github.assume_role_with_oidc')
     @patch('auth_between_aws_and_github.get_oidc_token')
-    def test_detect_bootstrap_state_warm_with_oidc(self, mock_get_token, mock_assume_role):
+    def test_detect_infrastructure_state_warm_with_oidc(self, mock_get_token, mock_assume_role):
         
         mock_get_token.return_value = 'test-oidc-token'
         mock_assume_role.return_value = {
@@ -76,13 +76,13 @@ class TestHelperFunctions:
             'session_token': 'token'
         }
 
-        result = auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.detect_infrastructure_state('123456789012', 'us-east-1', 'test-role')
 
         assert result == 'warm'
 
     @patch('auth_between_aws_and_github.assume_role_with_oidc')
     @patch('auth_between_aws_and_github.get_oidc_token')
-    def test_detect_bootstrap_state_calls_assume_role_with_oidc_correctly(self, mock_get_token, mock_assume_role):
+    def test_detect_infrastructure_state_calls_assume_role_with_oidc_correctly(self, mock_get_token, mock_assume_role):
         
         mock_get_token.return_value = 'test-oidc-token'
         mock_assume_role.return_value = {
@@ -91,31 +91,31 @@ class TestHelperFunctions:
             'session_token': 'token'
         }
 
-        auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        auth_between_aws_and_github.detect_infrastructure_state('123456789012', 'us-east-1', 'test-role')
 
         assert mock_assume_role.call_args == call('123456789012', 'us-east-1', 'test-role')
 
     @patch('auth_between_aws_and_github.assume_role_with_oidc')
     @patch('auth_between_aws_and_github.get_oidc_token')
-    def test_detect_bootstrap_state_cold_with_oidc_failure(self, mock_get_token, mock_assume_role):
+    def test_detect_infrastructure_state_cold_with_oidc_failure(self, mock_get_token, mock_assume_role):
         
         mock_get_token.return_value = 'test-oidc-token'
         mock_assume_role.return_value = None
 
-        result = auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.detect_infrastructure_state('123456789012', 'us-east-1', 'test-role')
 
         assert result == 'cold'
 
     @patch('urllib.request.urlopen')
     @patch('auth_between_aws_and_github.get_oidc_token')
-    def test_detect_bootstrap_state_warm_with_credentials(self, mock_get_token, mock_urlopen):
+    def test_detect_infrastructure_state_warm_with_credentials(self, mock_get_token, mock_urlopen):
         
         mock_get_token.return_value = None
         mock_response = MagicMock()
         mock_response.read.return_value = b'<Response></Response>'
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
-        result = auth_between_aws_and_github.detect_bootstrap_state(
+        result = auth_between_aws_and_github.detect_infrastructure_state(
             '123456789012', 'us-east-1', 'test-role',
             'AKIATEST', 'secret'
         )
@@ -124,7 +124,7 @@ class TestHelperFunctions:
 
     @patch('urllib.request.urlopen')
     @patch('auth_between_aws_and_github.get_oidc_token')
-    def test_detect_bootstrap_state_cold_with_credentials(self, mock_get_token, mock_urlopen):
+    def test_detect_infrastructure_state_cold_with_credentials(self, mock_get_token, mock_urlopen):
         
         from urllib.error import HTTPError
         from io import BytesIO
@@ -132,7 +132,7 @@ class TestHelperFunctions:
         error = HTTPError('url', 404, 'Not Found', {}, BytesIO(b'Not Found'))
         mock_urlopen.side_effect = error
 
-        result = auth_between_aws_and_github.detect_bootstrap_state(
+        result = auth_between_aws_and_github.detect_infrastructure_state(
             '123456789012', 'us-east-1', 'test-role',
             'AKIATEST', 'secret'
         )
@@ -140,11 +140,11 @@ class TestHelperFunctions:
         assert result == 'cold'
 
     @patch('auth_between_aws_and_github.get_oidc_token')
-    def test_detect_bootstrap_state_cold_with_no_credentials(self, mock_get_token):
+    def test_detect_infrastructure_state_cold_with_no_credentials(self, mock_get_token):
         
         mock_get_token.return_value = None
 
-        result = auth_between_aws_and_github.detect_bootstrap_state('123456789012', 'us-east-1', 'test-role')
+        result = auth_between_aws_and_github.detect_infrastructure_state('123456789012', 'us-east-1', 'test-role')
 
         assert result == 'cold'
 
@@ -1292,7 +1292,7 @@ class TestSecretValueGeneration:
 
     def test_create_secret_value_sets_created_by_field(self):
         result = auth_between_aws_and_github.create_secret_value('ghp_test123', 'test-org', 'test-repo')
-        assert result['created_by'] == 'bootstrap-script'
+        assert result['created_by'] == 'auth-script'
 
     def test_create_secret_value_includes_created_at_timestamp(self):
         result = auth_between_aws_and_github.create_secret_value('ghp_test123', 'test-org', 'test-repo')
@@ -2538,7 +2538,7 @@ class TestReadmeHelperFunctions:
 
     @patch('auth_between_aws_and_github.assume_role_with_oidc')
     @patch('auth_between_aws_and_github.is_running_in_github_actions')
-    @patch('auth_between_aws_and_github.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.detect_infrastructure_state')
     def test_get_credentials_for_state_oidc_returns_access_key(self, mock_state, mock_is_gha, mock_oidc):
         
         mock_state.return_value = 'warm'
@@ -2560,7 +2560,7 @@ class TestReadmeHelperFunctions:
 
     @patch('auth_between_aws_and_github.assume_role_with_oidc')
     @patch('auth_between_aws_and_github.is_running_in_github_actions')
-    @patch('auth_between_aws_and_github.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.detect_infrastructure_state')
     def test_get_credentials_for_state_oidc_returns_session_token(self, mock_state, mock_is_gha, mock_oidc):
         
         mock_state.return_value = 'warm'
@@ -2581,7 +2581,7 @@ class TestReadmeHelperFunctions:
         assert session_token == 'token'
 
     @patch('auth_between_aws_and_github.is_running_in_github_actions')
-    @patch('auth_between_aws_and_github.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.detect_infrastructure_state')
     def test_get_credentials_for_state_returns_access_key(self, mock_state, mock_is_gha):
         mock_state.return_value = 'cold'
         mock_is_gha.return_value = False
@@ -2598,7 +2598,7 @@ class TestReadmeHelperFunctions:
         assert access_key == 'AKIADIRECT'
 
     @patch('auth_between_aws_and_github.is_running_in_github_actions')
-    @patch('auth_between_aws_and_github.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.detect_infrastructure_state')
     def test_get_credentials_for_state_returns_secret_key(self, mock_state, mock_is_gha):
         mock_state.return_value = 'cold'
         mock_is_gha.return_value = False
@@ -2615,7 +2615,7 @@ class TestReadmeHelperFunctions:
         assert secret_key == 'secretdirect'
 
     @patch('auth_between_aws_and_github.is_running_in_github_actions')
-    @patch('auth_between_aws_and_github.detect_bootstrap_state')
+    @patch('auth_between_aws_and_github.detect_infrastructure_state')
     def test_get_credentials_for_state_returns_no_session_token(self, mock_state, mock_is_gha):
         mock_state.return_value = 'cold'
         mock_is_gha.return_value = False
