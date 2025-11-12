@@ -120,16 +120,16 @@ Use these flags in commit messages to control workflow behavior:
 ### Pre-Push Static Analysis and Testing Requirements
 
 **CRITICAL REQUIREMENTS:**
-1. **Run ALL applicable static analysis AND tests locally BEFORE pushing** - This catches issues early and prevents wasted CI/CD cycles
-2. **Use the EXACT commands from GitHub workflows** - Do NOT use generic commands like `pylint .` or `pytest`
+1. **Run ALL static analysis AND tests for the infrastructure you're working on** - Run EVERY check that the workflow runs, regardless of which specific files you modified
+2. **Use the EXACT commands from GitHub workflows** - Do NOT use generic commands like `pylint .` or `pytest`. Copy commands verbatim including all flags and config
 3. **Use environment variables for credentials** - AWS credentials and tokens should come from environment variables
-4. **Only run checks for infrastructure you modified** - Don't run all checks if you only changed one stack
-5. **All static analysis and tests must pass before pushing** - If any check or test fails, fix it before pushing to remote
+4. **All checks must pass before pushing** - If any check fails (even pre-existing issues), understand why before pushing
+5. **Report pre-existing failures** - If checks fail on code you didn't modify, document this in commit message
 
 **Static analysis includes:** YAML linting, JSON linting, Markdown linting, Pylint, Mypy
 **Tests include:** Unit tests, integration tests
 
-Run the following pre-deployment static analysis and tests locally before pushing.
+**Run ALL checks listed below for the infrastructure you're working on, not just checks for files you modified.**
 
 ---
 
