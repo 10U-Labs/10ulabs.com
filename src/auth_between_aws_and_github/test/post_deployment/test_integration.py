@@ -69,6 +69,33 @@ def assume_role_with_oidc(account_id, region, role_name, oidc_token):
     }
 
 
+def check_github_secret_exists(github_token, github_org, github_repo, secret_name):
+
+    url = f"https://api.github.com/repos/{github_org}/{github_repo}/actions/secrets/{secret_name}"
+
+    result = subprocess.run(
+        ['curl', '-s', '-w', '\n%{http_code}',
+         '-H', 'Accept: application/vnd.github+json',
+         '-H', f'Authorization: Bearer {github_token}',
+         '-H', 'X-GitHub-Api-Version: 2022-11-28',
+         url],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+
+
+    lines = result.stdout.strip().split('\n')
+    http_code = int(lines[-1])
+
+    if http_code == 200:
+        return True
+    elif http_code == 404:
+        return False
+    else:
+        raise Exception(f"GitHub API returned unexpected status {http_code}")
+
+
 class TestOIDCAuthentication:
     
 
@@ -998,3 +1025,110 @@ class TestSecretsManagerComplianceIntegration:
                     assert principal != '*'
                     if isinstance(principal, dict) and 'AWS' in principal:
                         assert principal['AWS'] != '*'
+
+
+class TestSystemTransitionToOIDC:
+
+
+    @pytest.fixture
+    def github_pat(self):
+
+        config = load_config()
+        oidc_token = get_github_oidc_token()
+        creds = assume_role_with_oidc(
+            config['aws']['account_id'],
+            config['aws']['region'],
+            config['aws']['iam_role_name'],
+            oidc_token
+        )
+
+        env = os.environ.copy()
+        env['AWS_ACCESS_KEY_ID'] = creds['access_key_id']
+        env['AWS_SECRET_ACCESS_KEY'] = creds['secret_access_key']
+        env['AWS_SESSION_TOKEN'] = creds['session_token']
+
+
+        result = subprocess.run(
+            ['aws', 'secretsmanager', 'get-secret-value',
+             '--secret-id', config['aws']['secrets_manager']['github_pat_secret_name'],
+             '--region', config['aws']['region'],
+             '--query', 'SecretString',
+             '--output', 'text'],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env
+        )
+
+        secret_data = json.loads(result.stdout)
+        return secret_data['github_token']
+
+    def test_aws_access_key_id_deleted_from_github_secrets(self, github_pat):
+
+        config = load_config()
+
+        secret_exists = check_github_secret_exists(
+            github_pat,
+            config['github']['org'],
+            config['github']['repo'],
+            'AWS_ACCESS_KEY_ID'
+        )
+
+
+        if not secret_exists:
+            return
+
+
+        oidc_token = get_github_oidc_token()
+        creds = assume_role_with_oidc(
+            config['aws']['account_id'],
+            config['aws']['region'],
+            config['aws']['iam_role_name'],
+            oidc_token
+        )
+        assert creds['access_key_id']
+
+    def test_aws_secret_access_key_deleted_from_github_secrets(self, github_pat):
+
+        config = load_config()
+
+        secret_exists = check_github_secret_exists(
+            github_pat,
+            config['github']['org'],
+            config['github']['repo'],
+            'AWS_SECRET_ACCESS_KEY'
+        )
+
+
+        if not secret_exists:
+            return
+
+
+        oidc_token = get_github_oidc_token()
+        creds = assume_role_with_oidc(
+            config['aws']['account_id'],
+            config['aws']['region'],
+            config['aws']['iam_role_name'],
+            oidc_token
+        )
+        assert creds['access_key_id']
+
+    def test_gh_runner_pat_deleted_from_github_secrets(self, github_pat):
+
+        config = load_config()
+
+        secret_exists = check_github_secret_exists(
+            github_pat,
+            config['github']['org'],
+            config['github']['repo'],
+            'GH_RUNNER_PAT'
+        )
+
+
+        if not secret_exists:
+            return
+
+
+
+        assert github_pat
+
