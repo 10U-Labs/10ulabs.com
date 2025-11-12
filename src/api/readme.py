@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import logging
 import os
 import sys
@@ -35,7 +36,7 @@ def read_source_files() -> str:
 
     return combined
 
-def check_readme_is_current(bedrock_client, source_code: str, current_readme: str) -> bool:
+def check_readme_is_current(bedrock_client, source_code: str, current_readme: str, model_id: str, max_tokens: int) -> bool:
     if not current_readme or not current_readme.strip():
         logging.info("README is empty or missing")
         return False
@@ -66,13 +67,13 @@ Is the README current and accurate? Respond with ONLY "true" or "false"."""
 
     try:
         response = bedrock_client.converse(
-            modelId='us.anthropic.claude-haiku-4-5-20251001-v1:0',
+            modelId=model_id,
             messages=[{
                 'role': 'user',
                 'content': [{'text': prompt}]
             }],
             inferenceConfig={
-                'maxTokens': 10
+                'maxTokens': max_tokens
             }
         )
 
@@ -85,7 +86,7 @@ Is the README current and accurate? Respond with ONLY "true" or "false"."""
         logging.error("Failed to check README with Bedrock: %s", e)
         sys.exit(1)
 
-def generate_readme(bedrock_client, source_code: str) -> str:
+def generate_readme(bedrock_client, source_code: str, model_id: str, max_tokens: int) -> str:
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following AWS CDK infrastructure code that creates an API Gateway REST API with Lambda backend.
 
 <source_code>
@@ -114,13 +115,13 @@ Format the output as proper Markdown with appropriate headers, code blocks, and 
 
     try:
         response = bedrock_client.converse(
-            modelId='us.anthropic.claude-sonnet-4-5-20251001-v2:0',
+            modelId=model_id,
             messages=[{
                 'role': 'user',
                 'content': [{'text': prompt}]
             }],
             inferenceConfig={
-                'maxTokens': 4096
+                'maxTokens': max_tokens
             }
         )
 
@@ -137,7 +138,24 @@ def main():
     parser.add_argument('--update', action='store_true', help='Update README')
     parser.add_argument('--aws-region', required=True, help='AWS region')
     parser.add_argument('--output-file', help='Output file for check result (for GitHub Actions)')
+    parser.add_argument('--bedrock-model-id', help='Bedrock model ID to use')
+    parser.add_argument('--max-tokens-check', type=int, help='Max tokens for README check')
+    parser.add_argument('--max-tokens-generate', type=int, help='Max tokens for README generation')
     args = parser.parse_args()
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, 'config.json')
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except IOError as e:
+        logging.error("Failed to read config.json: %s", e)
+        sys.exit(1)
+
+    bedrock_model_id = args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
+    max_tokens_check = args.max_tokens_check or config.get('bedrock', {}).get('max_tokens_check', 200)
+    max_tokens_generate = args.max_tokens_generate or config.get('bedrock', {}).get('max_tokens_generate', 16000)
 
     if not args.check and not args.update:
         logging.error("Must specify either --check or --update")
@@ -145,7 +163,6 @@ def main():
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     source_code = read_source_files()
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     readme_path = os.path.join(script_dir, 'README.md')
 
     if args.check:
@@ -155,7 +172,7 @@ def main():
         except FileNotFoundError:
             current_readme = ""
 
-        is_current = check_readme_is_current(bedrock_client, source_code, current_readme)
+        is_current = check_readme_is_current(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
 
         if args.output_file:
             with open(args.output_file, 'a', encoding='utf-8') as f:
@@ -164,7 +181,7 @@ def main():
         sys.exit(0 if is_current else 1)
 
     elif args.update:
-        new_readme = generate_readme(bedrock_client, source_code)
+        new_readme = generate_readme(bedrock_client, source_code, bedrock_model_id, max_tokens_generate)
 
         with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(new_readme)
