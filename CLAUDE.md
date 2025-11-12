@@ -117,11 +117,19 @@ Use these flags in commit messages to control workflow behavior:
 - `[post-deployment] Fix E2E DNS resolution tests` - Only runs post-deployment tests
 - `[skip-deploy] Update CDK stack configuration` - Runs all checks but no deployment
 
-### Pre-Push Testing Requirements
+### Pre-Push Static Analysis and Testing Requirements
 
-**CRITICAL: Only run pre-deployment tests for the infrastructure you modified.** Don't run all tests if you only changed one stack.
+**CRITICAL REQUIREMENTS:**
+1. **Run ALL applicable static analysis AND tests locally BEFORE pushing** - This catches issues early and prevents wasted CI/CD cycles
+2. **Use the EXACT commands from GitHub workflows** - Do NOT use generic commands like `pylint .` or `pytest`
+3. **Use environment variables for credentials** - AWS credentials and tokens should come from environment variables
+4. **Only run checks for infrastructure you modified** - Don't run all checks if you only changed one stack
+5. **All static analysis and tests must pass before pushing** - If any check or test fails, fix it before pushing to remote
 
-Run the following pre-deployment checks locally before pushing. **CRITICAL: Use the EXACT commands that the GitHub workflows use, not generic commands.**
+**Static analysis includes:** YAML linting, JSON linting, Markdown linting, Pylint, Mypy
+**Tests include:** Unit tests, integration tests
+
+Run the following pre-deployment static analysis and tests locally before pushing.
 
 ---
 
@@ -167,15 +175,26 @@ PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest src/auth_between_a
 ```
 
 #### 7. Integration Tests
+
+**IMPORTANT:** Integration tests require AWS credentials in environment variables. Check credentials first:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
+```
+
+Run integration tests (uses environment variables automatically):
 ```bash
 pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
 ```
 
-**NOTE:** Integration tests may require AWS credentials in environment variables:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-- `GH_RUNNER_PAT`
+**Required environment variables:**
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_SESSION_TOKEN` - (optional) AWS session token if using temporary credentials
+- `AWS_REGION` - AWS region (e.g., us-east-1)
+- `GITHUB_PAT` - GitHub Personal Access Token
 
 ---
 
@@ -217,28 +236,46 @@ python -m pytest src/cloudtrail_and_domain_name/test/test_unit.py -v
 ```
 
 #### 5. Integration Tests
-**Requires CDK dependencies installed (see step 3):**
+
+**IMPORTANT:** Requires CDK dependencies (see step 3) and AWS credentials in environment variables.
+
+Check credentials first:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+```
+
+Run integration tests (uses environment variables automatically):
 ```bash
 python -m pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
 ```
 
-**NOTE:** Integration tests may require AWS credentials in environment variables:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
+**Required environment variables:**
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_SESSION_TOKEN` - (optional) AWS session token if using temporary credentials
+- `AWS_REGION` - AWS region (e.g., us-east-1)
 
 ---
 
 ### Pre-Deployment Checklist
 
-Before creating PR, verify (for the infrastructure you modified):
+**CRITICAL: Before creating PR, verify ALL of the following (for the infrastructure you modified):**
+
+**Static Analysis:**
 - [ ] All relevant YAML files pass `yamllint`
 - [ ] JSON config files pass `jsonlint` validation
 - [ ] Markdown README passes `markdownlint-cli2` (if applicable)
 - [ ] Pylint passes with `--fail-under=10.0` using exact workflow flags (if applicable)
 - [ ] Mypy passes with no errors
-- [ ] All relevant pre-deployment unit tests pass
-- [ ] All relevant pre-deployment integration tests pass (or are appropriately skipped)
-- [ ] Code changes are committed with clear, descriptive messages
 
-**All pre-deployment tests and checks must pass before creating PR to ensure code quality and prevent breaking changes.**
+**Tests:**
+- [ ] All relevant pre-deployment unit tests pass
+- [ ] All relevant pre-deployment integration tests pass (with environment variable credentials)
+
+**General:**
+- [ ] Code changes are committed with clear, descriptive messages
+- [ ] Used EXACT commands from GitHub workflows (not generic commands)
+
+**All static analysis checks and tests must pass before creating PR to ensure code quality and prevent breaking changes.**
