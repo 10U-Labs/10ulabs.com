@@ -7,8 +7,7 @@ These tests verify complete business workflows:
 - Complete runner registration workflow (GitHub Actions → OIDC → AWS → GitHub API)
 - Security posture validation (no long-lived credentials remaining in GitHub Secrets)
 
-Note: Unit tests are in CINC Auditor controls (*.rb files).
-      Integration tests are in test_integration.py.
+Note: Integration tests are in test_integration.py.
 """
 
 import json
