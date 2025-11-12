@@ -444,7 +444,7 @@ jobs:
           else
             echo "No README.md found, skipping markdown linting"
           fi
-      - name: Performing lightweight static analysis
+      - name: Linting Python files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
