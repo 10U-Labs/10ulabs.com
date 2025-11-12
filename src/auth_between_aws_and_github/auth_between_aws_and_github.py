@@ -1295,7 +1295,8 @@ Check if the README has ANY issues, including but not limited to:
 6. Inaccurate functionality, usage, or implementation details
 7. Outdated command examples or file paths
 8. Missing or incorrect architecture descriptions
-9. Any other inaccuracies, inconsistencies, or outdated information
+9. Contains a "License" section (MAJOR ERROR - repository has LICENSE.md, README must not duplicate licensing)
+10. Any other inaccuracies, inconsistencies, or outdated information
 
 Does the README need updating? Respond with ONLY "true" or "false"."""
     response = bedrock.invoke_model(prompt, max_tokens=max_tokens)
