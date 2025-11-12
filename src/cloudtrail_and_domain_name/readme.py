@@ -64,7 +64,20 @@ Check if the README has ANY issues, including but not limited to:
 9. Missing or incorrect configuration details
 10. Any other inaccuracies, inconsistencies, or outdated information
 
-Is the README current and accurate? Respond with ONLY "true" or "false"."""
+Respond with ONLY a JSON object in this exact format:
+{{
+  "readme_is_current": true,
+  "reasoning": "Explain your thought process and confirm the README is current"
+}}
+
+or
+
+{{
+  "readme_is_current": false,
+  "reasoning": "Explain your thought process and what issues you found"
+}}
+
+Do not include any other text or formatting outside the JSON object."""
 
     try:
         response = bedrock_client.converse(
@@ -78,10 +91,20 @@ Is the README current and accurate? Respond with ONLY "true" or "false"."""
             }
         )
 
-        answer = response['output']['message']['content'][0]['text'].strip().lower()
-        is_current = answer.startswith('true')
-        logging.info(f"Bedrock assessment: README is {'current' if is_current else 'not current'}")
-        return is_current
+        answer_text = response['output']['message']['content'][0]['text'].strip()
+        try:
+            result = json.loads(answer_text)
+            is_current = bool(result.get('readme_is_current', False))
+            reasoning = result.get('reasoning', 'No reasoning provided')
+            logging.info(f"Bedrock reasoning: {reasoning}")
+            logging.info(f"Bedrock assessment: README is {'current' if is_current else 'not current'}")
+            return is_current
+        except json.JSONDecodeError as e:
+            logging.warning(f"Failed to parse JSON response from Bedrock: {e}")
+            logging.warning(f"Raw response: {answer_text}")
+            is_current = answer_text.lower().startswith('true')
+            logging.info(f"Bedrock assessment (fallback): README is {'current' if is_current else 'not current'}")
+            return is_current
     except Exception as e:
         logging.error(f"Failed to check README with Bedrock: {e}")
         sys.exit(1)

@@ -63,7 +63,20 @@ Check if the README has ANY issues, including but not limited to:
 9. Missing or incorrect API endpoint documentation
 10. Any other inaccuracies, inconsistencies, or outdated information
 
-Is the README current and accurate? Respond with ONLY "true" or "false"."""
+Respond with ONLY a JSON object in this exact format:
+{{
+  "readme_is_current": true,
+  "reasoning": "Explain your thought process and confirm the README is current"
+}}
+
+or
+
+{{
+  "readme_is_current": false,
+  "reasoning": "Explain your thought process and what issues you found"
+}}
+
+Do not include any other text or formatting outside the JSON object."""
 
     try:
         response = bedrock_client.converse(
@@ -77,11 +90,22 @@ Is the README current and accurate? Respond with ONLY "true" or "false"."""
             }
         )
 
-        answer = response['output']['message']['content'][0]['text'].strip().lower()
-        is_current = answer.startswith('true')
-        status = 'current' if is_current else 'not current'
-        logging.info("Bedrock assessment: README is %s", status)
-        return is_current
+        answer_text = response['output']['message']['content'][0]['text'].strip()
+        try:
+            result = json.loads(answer_text)
+            is_current = bool(result.get('readme_is_current', False))
+            reasoning = result.get('reasoning', 'No reasoning provided')
+            logging.info("Bedrock reasoning: %s", reasoning)
+            status = 'current' if is_current else 'not current'
+            logging.info("Bedrock assessment: README is %s", status)
+            return is_current
+        except json.JSONDecodeError as e:
+            logging.warning("Failed to parse JSON response from Bedrock: %s", e)
+            logging.warning("Raw response: %s", answer_text)
+            is_current = answer_text.lower().startswith('true')
+            status = 'current (fallback)' if is_current else 'not current (fallback)'
+            logging.info("Bedrock assessment: README is %s", status)
+            return is_current
     except (KeyError, IndexError, TypeError) as e:
         logging.error("Failed to check README with Bedrock: %s", e)
         sys.exit(1)
