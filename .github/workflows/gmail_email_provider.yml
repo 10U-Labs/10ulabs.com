@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/gmail_email_provider/**'
       - 'test/gmail_email_provider/**'
-      - 'config/gmail_email_provider.json'
       - '.github/workflows/gmail_email_provider.yml'
   workflow_dispatch:
     inputs:
@@ -118,8 +117,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/gmail_email_provider.json)
-          REGION=$(jq -r '.aws_region' config/gmail_email_provider.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -194,8 +193,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/gmail_email_provider.json)
-          REGION=$(jq -r '.aws_region' config/gmail_email_provider.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -236,8 +235,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/gmail_email_provider.json)
-          REGION=$(jq -r '.aws_region' config/gmail_email_provider.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -279,8 +278,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/gmail_email_provider.json)
-          REGION=$(jq -r '.aws_region' config/gmail_email_provider.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -330,8 +329,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' config/gmail_email_provider.json)
-          REGION=$(jq -r '.aws_region' config/gmail_email_provider.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
