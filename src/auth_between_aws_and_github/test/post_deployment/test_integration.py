@@ -2,20 +2,10 @@
 import json
 import os
 import subprocess
-from pathlib import Path
 
 import pytest
 
-
-
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
-CONFIG_FILE = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'config.json'
-
-
-def load_config():
-    
-    with open(CONFIG_FILE, 'r') as f:
-        return json.load(f)
+from conftest import REPO_ROOT, CONFIG_FILE, load_config
 
 
 def get_github_oidc_token():
