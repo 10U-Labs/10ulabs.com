@@ -1241,12 +1241,18 @@ def delete_github_secrets(github_token: str, github_org: str, github_repo: str,
     return all_success
 def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
     is_workflow = is_running_in_github_actions()
+    access_key_id = getattr(args, 'aws_access_key_id', None)
+    secret_access_key = getattr(args, 'aws_secret_access_key', None)
+    if not access_key_id:
+        access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    if not secret_access_key:
+        secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     state = detect_infrastructure_state(
         args.aws_account_id,
         args.aws_region,
         args.aws_iam_role_name,
-        args.aws_access_key_id if hasattr(args, 'aws_access_key_id') else None,
-        args.aws_secret_access_key if hasattr(args, 'aws_secret_access_key') else None
+        access_key_id,
+        secret_access_key
     )
     if state == 'warm' and is_workflow:
         logging.info("Using OIDC authentication (warm state)")
@@ -1255,9 +1261,9 @@ def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
             logging.error("Failed to assume role with OIDC")
             return None, None, None
         return oidc_creds['access_key_id'], oidc_creds['secret_access_key'], oidc_creds['session_token']
-    if hasattr(args, 'aws_access_key_id') and hasattr(args, 'aws_secret_access_key'):
+    if access_key_id and secret_access_key:
         logging.info("Using direct credentials")
-        return args.aws_access_key_id, args.aws_secret_access_key, None
+        return access_key_id, secret_access_key, None
     logging.error("No credentials available")
     return None, None, None
 def _check_readme_needs_update(bedrock: BedrockClient, source_code: str, current_readme: str) -> bool:
