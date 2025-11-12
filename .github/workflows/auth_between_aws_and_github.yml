@@ -50,7 +50,7 @@ jobs:
     steps:
       - run: 'true'
   determine-infrastructure-action:
-    name: Determining if infrastructure should be created/updated or destroyed
+    name: Determining if infrastructure should exist of be destroyed
     runs-on: ubuntu-latest
     outputs:
       should_create: ${{ steps.decision.outputs.should_create }}
