@@ -1280,11 +1280,16 @@ CRITICAL ARCHITECTURE REQUIREMENTS TO CHECK:
 - NO AWS CLI required - implements AWS API calls using pure Python stdlib
 - NO boto3 or other AWS SDKs - custom AWS client implementation using urllib and stdlib only
 
-Check if the README:
-1. Incorrectly mentions AWS CLI as a requirement or dependency (MAJOR ERROR - requires update)
-2. Incorrectly mentions boto3, pip install, or requirements.txt (MAJOR ERROR - requires update)
-3. Fails to emphasize the self-contained, dependency-free architecture
-4. Has inaccurate functionality, usage, or implementation details
+Check if the README has ANY issues, including but not limited to:
+1. Title doesn't match actual infrastructure name (e.g., uses outdated terminology like "bootstrap" when it should be "auth_between_aws_and_github")
+2. Inconsistent or outdated terminology throughout the document
+3. Incorrectly mentions AWS CLI as a requirement or dependency (MAJOR ERROR)
+4. Incorrectly mentions boto3, pip install, or requirements.txt (MAJOR ERROR)
+5. Fails to emphasize the self-contained, dependency-free architecture
+6. Inaccurate functionality, usage, or implementation details
+7. Outdated command examples or file paths
+8. Missing or incorrect architecture descriptions
+9. Any other inaccuracies, inconsistencies, or outdated information
 
 Does the README need updating? Respond with ONLY "true" or "false"."""
     response = bedrock.invoke_model(prompt, max_tokens=10)
