@@ -190,7 +190,7 @@ pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/la
 #### 3. Python Static Type Checking (Mypy)
 **First install dependencies:**
 ```bash
-pip install -q -r requirements-cdk.txt
+pip install -q -r src/cloudtrail_and_domain_name/requirements.txt
 ```
 
 **Then run mypy:**
