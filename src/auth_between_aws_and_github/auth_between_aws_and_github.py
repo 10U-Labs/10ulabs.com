@@ -29,9 +29,9 @@ class AWSHTTPError(Exception):
         super().__init__(f"AWS API error {original_error.code}: {original_error.msg}")
 def is_running_in_github_actions() -> bool:
     return os.environ.get('GITHUB_ACTIONS', '').lower() == 'true'
-def detect_bootstrap_state(account_id: str, region: str, role_name: str,
-                          access_key_id: Optional[str] = None,
-                          secret_access_key: Optional[str] = None) -> str:
+def detect_infrastructure_state(account_id: str, region: str, role_name: str,
+                                access_key_id: Optional[str] = None,
+                                secret_access_key: Optional[str] = None) -> str:
 
     oidc_token = get_oidc_token()
     if oidc_token:
@@ -350,7 +350,7 @@ class STSClient(AWSClientBase):
             raise ValueError("Account ID not found in STS response")
         return account_id_elem.text
     def assume_role_with_web_identity(self, role_arn: str, web_identity_token: str,
-                                      role_session_name: str = 'bootstrap-session') -> Optional[Dict[str, str]]:
+                                      role_session_name: str = 'auth-session') -> Optional[Dict[str, str]]:
 
         try:
             response = self.make_request('sts', 'AssumeRoleWithWebIdentity', params={
@@ -452,7 +452,7 @@ class IAMClient(AWSClientBase):
                 'AssumeRolePolicyDocument': json.dumps(trust_policy),
                 'Description': 'Role for GitHub Actions workflows',
                 'Tags.member.1.Key': 'ManagedBy',
-                'Tags.member.1.Value': 'bootstrap-script'
+                'Tags.member.1.Value': 'auth-script'
             })
             logging.debug("Role created: %s", response)
             return True
@@ -842,7 +842,7 @@ def create_secret_value(github_token: str, github_org: str, github_repo: str) ->
         "github_token": github_token,
         "github_org": github_org,
         "github_repo": github_repo,
-        "created_by": "bootstrap-script",
+        "created_by": "auth-script",
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     }
 def _setup_authentication_for_create(args: argparse.Namespace, state: str, is_workflow: bool):
@@ -955,7 +955,7 @@ def _store_secret_and_cleanup_step(aws: AWSClientStdlib, args: argparse.Namespac
         return 1
     logging.info("Stored credentials in Secrets Manager")
     print()
-    print("Bootstrap complete")
+    print("Infrastructure setup complete")
     print("OIDC provider created")
     print(f"IAM role created: {args.aws_iam_role_name}")
     print("GitHub PAT stored in Secrets Manager")
@@ -984,7 +984,7 @@ def _store_secret_and_cleanup_step(aws: AWSClientStdlib, args: argparse.Namespac
     return 0
 def create_resources(args: argparse.Namespace) -> int:
     is_workflow = is_running_in_github_actions()
-    state = detect_bootstrap_state(
+    state = detect_infrastructure_state(
         args.aws_account_id,
         args.aws_region,
         args.aws_iam_role_name,
@@ -1001,7 +1001,7 @@ def create_resources(args: argparse.Namespace) -> int:
         session_token=session_token
     ).set_bedrock_model_id(args.bedrock_model_id)
     print()
-    print("GitHub Actions Self-Hosted Runners Bootstrap")
+    print("AWS-GitHub Authentication Infrastructure")
     print("=" * 50)
     print()
     print("Configuration:")
@@ -1102,7 +1102,7 @@ def _delete_oidc_provider_step(aws: AWSClientStdlib, account_id: str) -> int:
     return 0
 def destroy_resources(args: argparse.Namespace) -> int:
     is_workflow = is_running_in_github_actions()
-    state = detect_bootstrap_state(
+    state = detect_infrastructure_state(
         args.aws_account_id,
         args.aws_region,
         args.aws_iam_role_name,
@@ -1121,7 +1121,7 @@ def destroy_resources(args: argparse.Namespace) -> int:
     )
     if not args.force:
         try:
-            confirm = input("Are you sure you want to destroy all bootstrap resources? ([y]/n): ").strip().lower() or 'y'
+            confirm = input("Are you sure you want to destroy all infrastructure resources? ([y]/n): ").strip().lower() or 'y'
             abort = confirm not in ('y', 'yes')
         except KeyboardInterrupt:
             abort = True
@@ -1136,7 +1136,7 @@ def destroy_resources(args: argparse.Namespace) -> int:
     if _delete_oidc_provider_step(aws, args.aws_account_id) != 0:
         return 1
     print()
-    print("All bootstrap resources destroyed")
+    print("All infrastructure resources destroyed")
     print()
     return 0
 def validate_aws_credentials(aws_client: 'AWSClientStdlib') -> None:
@@ -1241,7 +1241,7 @@ def delete_github_secrets(github_token: str, github_org: str, github_repo: str,
     return all_success
 def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
     is_workflow = is_running_in_github_actions()
-    state = detect_bootstrap_state(
+    state = detect_infrastructure_state(
         args.aws_account_id,
         args.aws_region,
         args.aws_iam_role_name,
@@ -1260,14 +1260,14 @@ def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
         return args.aws_access_key_id, args.aws_secret_access_key, None
     logging.error("No credentials available")
     return None, None, None
-def _check_readme_needs_update(bedrock: BedrockClient, bootstrap_code: str, current_readme: str) -> bool:
+def _check_readme_needs_update(bedrock: BedrockClient, source_code: str, current_readme: str) -> bool:
     if not current_readme or not current_readme.strip():
         return True
 
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file needs to be updated based on the source code.
 
 <source_code>
-{bootstrap_code}
+{source_code}
 </source_code>
 
 <current_readme>
@@ -1281,8 +1281,8 @@ CRITICAL ARCHITECTURE REQUIREMENTS TO CHECK:
 - NO boto3 or other AWS SDKs - custom AWS client implementation using urllib and stdlib only
 
 Check if the README has ANY issues, including but not limited to:
-1. Title doesn't match actual infrastructure name (e.g., uses outdated terminology like "bootstrap" when it should be "auth_between_aws_and_github")
-2. Inconsistent or outdated terminology throughout the document
+1. Title doesn't match actual infrastructure name (should be "AWS-GitHub Authentication Infrastructure" not "bootstrap" terminology)
+2. Inconsistent or outdated terminology throughout the document (no "bootstrap" references)
 3. Incorrectly mentions AWS CLI as a requirement or dependency (MAJOR ERROR)
 4. Incorrectly mentions boto3, pip install, or requirements.txt (MAJOR ERROR)
 5. Fails to emphasize the self-contained, dependency-free architecture
@@ -1294,10 +1294,11 @@ Check if the README has ANY issues, including but not limited to:
 Does the README need updating? Respond with ONLY "true" or "false"."""
     response = bedrock.invoke_model(prompt, max_tokens=10)
     return response.strip().lower().startswith('true')
-def _update_readme(bedrock: BedrockClient, bootstrap_code: str) -> str:
-    prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following Python bootstrap script.
+def _update_readme(bedrock: BedrockClient, source_code: str) -> str:
+    prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following Python script that manages AWS-GitHub authentication infrastructure.
+
 <source_code>
-{bootstrap_code}
+{source_code}
 </source_code>
 
 CRITICAL REQUIREMENTS TO EMPHASIZE:
@@ -1308,7 +1309,7 @@ CRITICAL REQUIREMENTS TO EMPHASIZE:
 - This is a key selling point and architectural decision - must be prominently featured
 
 Create a professional README that includes:
-1. Title and brief overview emphasizing the self-contained, dependency-free nature
+1. Title "AWS-GitHub Authentication Infrastructure" emphasizing the self-contained, dependency-free nature
 2. Purpose and what the script does
 3. Requirements section:
    - List ONLY: Python 3.11+
@@ -1337,9 +1338,9 @@ def _read_file_safe(file_path: str, description: str) -> Optional[str]:
         logging.error("Failed to read %s: %s", description, e)
         return None
 def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
-                        bootstrap_code: str, current_readme: str) -> int:
+                        source_code: str, current_readme: str) -> int:
     logging.info("Checking if README needs update via Bedrock...")
-    needs_update = _check_readme_needs_update(bedrock, bootstrap_code, current_readme)
+    needs_update = _check_readme_needs_update(bedrock, source_code, current_readme)
     readme_is_current = not needs_update
     logging.info("README is current" if readme_is_current else "README needs update")
     print(readme_is_current)
@@ -1347,10 +1348,10 @@ def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
         with open(args.output_file, 'a', encoding='utf-8') as f:
             f.write(f'readme_is_current={str(readme_is_current).lower()}\n')
     return 0
-def _handle_readme_update(bedrock: 'BedrockClient', bootstrap_code: str, readme_path: str) -> int:
+def _handle_readme_update(bedrock: 'BedrockClient', source_code: str, readme_path: str) -> int:
     logging.info("Generating updated README via Bedrock...")
     try:
-        new_readme = _update_readme(bedrock, bootstrap_code)
+        new_readme = _update_readme(bedrock, source_code)
         with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(new_readme)
         logging.info("Updated README written to %s", readme_path)
@@ -1369,29 +1370,29 @@ def cmd_readme(args: argparse.Namespace) -> int:
         return 1
     bedrock = BedrockClient(args.aws_region, access_key, secret_key, session_token)
     script_path = os.path.abspath(__file__)
-    bootstrap_code = _read_file_safe(script_path, "bootstrap.py")
-    if bootstrap_code is None:
+    source_code = _read_file_safe(script_path, "auth_between_aws_and_github.py")
+    if source_code is None:
         return 1
     readme_path = os.path.join(os.path.dirname(script_path), 'README.md')
     current_readme = _read_file_safe(readme_path, "README.md") if os.path.exists(readme_path) else ""
     if current_readme is None:
         return 1
     if args.check:
-        return _handle_readme_check(args, bedrock, bootstrap_code, current_readme)
+        return _handle_readme_check(args, bedrock, source_code, current_readme)
     if args.update:
-        return _handle_readme_update(bedrock, bootstrap_code, readme_path)
+        return _handle_readme_update(bedrock, source_code, readme_path)
     logging.error("Either --check or --update must be specified")
     return 1
 def _setup_argparse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description='Bootstrap AWS infrastructure for GitHub Actions self-hosted runners'
+        description='Manage AWS-GitHub authentication infrastructure for GitHub Actions workflows'
     )
     parser.add_argument('-v', '--verbose', action='store_true',
                        help='Enable verbose output (DEBUG level)')
     parser.add_argument('-q', '--quiet', action='store_true',
                        help='Quiet mode, only show errors')
     subparsers = parser.add_subparsers(dest='command', help='Command to execute')
-    create_parser = subparsers.add_parser('create', help='Create bootstrap resources')
+    create_parser = subparsers.add_parser('create', help='Create AWS-GitHub authentication infrastructure')
     create_required = create_parser.add_argument_group('required arguments')
     create_required.add_argument('--aws-access-key-id', required=True,
                                 help='AWS access key ID')
@@ -1413,7 +1414,7 @@ def _setup_argparse() -> argparse.ArgumentParser:
                                 help='AWS Secrets Manager secret name for GitHub PAT')
     create_required.add_argument('--bedrock-model-id', required=True,
                                 help='Bedrock model ID (e.g., us.anthropic.claude-haiku-4-5-20251001-v1:0)')
-    destroy_parser = subparsers.add_parser('destroy', help='Destroy bootstrap resources')
+    destroy_parser = subparsers.add_parser('destroy', help='Destroy AWS-GitHub authentication infrastructure')
     destroy_required = destroy_parser.add_argument_group('required arguments')
     destroy_required.add_argument('--aws-access-key-id', required=True,
                                  help='AWS access key ID')
