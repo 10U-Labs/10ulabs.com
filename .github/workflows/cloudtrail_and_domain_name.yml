@@ -5,7 +5,6 @@ on:
       - main
     paths:
       - 'src/cloudtrail_and_domain_name/**'
-      - 'test/cloudtrail_and_domain_name/**'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
   workflow_dispatch:
     inputs:
@@ -93,7 +92,7 @@ jobs:
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/cloudtrail_and_domain_name/test_unit.py -v
+          pytest src/cloudtrail_and_domain_name/test/test_unit.py -v
   deploying-artifacts:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing-code
@@ -277,7 +276,7 @@ jobs:
       - name: Run pytest integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/cloudtrail_and_domain_name/test_integration.py -v
+          pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
   e2e-testing-infrastructure:
     name: E2E testing
     runs-on: ubuntu-latest
@@ -319,7 +318,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/cloudtrail_and_domain_name/test_e2e.py -v
+          pytest src/cloudtrail_and_domain_name/test/test_e2e.py -v
   determine-readme-update:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest
