@@ -1,17 +1,26 @@
 # AWS-GitHub Authentication Infrastructure
 
-**Self-Contained, Dependency-Free AWS-GitHub OIDC Authentication Manager**
+## Self-Contained, Dependency-Free AWS-GitHub OIDC Authentication Manager
 
-A pure Python standard library implementation for managing AWS-GitHub authentication infrastructure. This script creates and manages the complete OIDC trust relationship between AWS and GitHub Actions, enabling secure, keyless authentication without any external dependencies.
+A pure Python standard library implementation for managing AWS-GitHub
+authentication infrastructure. This script creates and manages the complete
+OIDC trust relationship between AWS and GitHub Actions, enabling secure,
+keyless authentication without any external dependencies.
 
 ## 🚀 Key Features
 
-- **Zero Dependencies**: Uses only Python standard library - no pip, boto3, or AWS CLI required
-- **Self-Contained**: Single file solution with custom AWS API client implementation
-- **Pure Stdlib**: All AWS API calls implemented using urllib and standard cryptographic libraries
-- **OIDC Authentication**: Enables secure, temporary credential access for GitHub Actions
-- **State Management**: Intelligent three-state system (COLD/WARM/DESTROY) with automatic detection
-- **Bedrock Integration**: Built-in documentation generation using AWS Bedrock AI models
+- **Zero Dependencies**: Uses only Python standard library - no pip, boto3,
+  or AWS CLI required
+- **Self-Contained**: Single file solution with custom AWS API client
+  implementation
+- **Pure Stdlib**: All AWS API calls implemented using urllib and standard
+  cryptographic libraries
+- **OIDC Authentication**: Enables secure, temporary credential access for
+  GitHub Actions
+- **State Management**: Intelligent three-state system (COLD/WARM/DESTROY)
+  with automatic detection
+- **Bedrock Integration**: Built-in documentation generation using AWS Bedrock
+  AI models
 
 ## Requirements
 
@@ -25,18 +34,21 @@ A pure Python standard library implementation for managing AWS-GitHub authentica
 The script operates in three distinct states:
 
 ### COLD State
+
 - No infrastructure exists
 - Uses direct AWS credentials (access key/secret key)
 - Creates OIDC provider, IAM role, and stores secrets
 - Transitions to WARM state upon completion
 
 ### WARM State
+
 - Infrastructure exists and is operational
 - Uses OIDC authentication in GitHub Actions workflows
 - Can retrieve stored credentials from AWS Secrets Manager
 - Automatically deletes human credentials to enforce pure OIDC
 
 ### DESTROY State
+
 - Safely removes all created infrastructure
 - Supports both OIDC and direct credential authentication
 - Confirmation prompts prevent accidental deletion
@@ -129,22 +141,25 @@ jobs:
 
 ### Required GitHub Secrets (Initial Setup Only)
 
-```
+```text
 AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
 GH_RUNNER_PAT=ghp_...
 ```
 
-**Note**: These secrets are automatically deleted after infrastructure creation, transitioning to pure OIDC authentication.
+**Note**: These secrets are automatically deleted after infrastructure
+creation, transitioning to pure OIDC authentication.
 
 ## Authentication Methods
 
 ### Direct Credentials (COLD State)
+
 - Uses AWS access key and secret key
 - Required for initial infrastructure creation
 - Automatically phased out after WARM transition
 
 ### OIDC Authentication (WARM State)
+
 - Uses temporary credentials via GitHub's OIDC provider
 - No long-lived credentials stored in GitHub
 - Automatic credential assumption in workflows
@@ -153,7 +168,8 @@ GH_RUNNER_PAT=ghp_...
 
 ### Custom AWS Client Architecture
 
-The script implements a complete AWS API client using only Python standard library:
+The script implements a complete AWS API client using only Python standard
+library:
 
 - **AWSClientBase**: Core AWS API v4 signature implementation
 - **STSClient**: Security Token Service operations
@@ -165,16 +181,28 @@ The script implements a complete AWS API client using only Python standard libra
 
 ```python
 # AWS API Signature v4 Implementation
-def _sign_request(self, method: str, service: str, *, request_data: Dict[str, Any]) -> Dict[str, str]:
+def _sign_request(
+    self,
+    method: str,
+    service: str,
+    *,
+    request_data: Dict[str, Any]
+) -> Dict[str, str]:
     # Pure stdlib implementation of AWS signature process
-    
+    pass
+
 # HTTP Client with Retry Logic
-def _retry_with_backoff(self, req: urllib.request.Request) -> str:
+def _retry_with_backoff(
+    self,
+    req: urllib.request.Request
+) -> str:
     # Exponential backoff with jitter for reliability
-    
+    pass
+
 # OIDC Token Acquisition
 def get_oidc_token() -> Optional[str]:
     # GitHub Actions OIDC token retrieval
+    pass
 ```
 
 ## Configuration
@@ -207,6 +235,7 @@ GitHub Personal Access Token must have these scopes:
 ### Trust Policy Configuration
 
 The IAM role trust policy restricts access to:
+
 - Specific GitHub organization and repository
 - GitHub Actions OIDC provider only
 - Audience validation for AWS STS
@@ -222,26 +251,30 @@ The IAM role trust policy restricts access to:
 
 ### Common Issues
 
-**"Failed to assume role with OIDC"**
-```
+#### Failed to assume role with OIDC
+
+```text
 Cause: OIDC provider or IAM role not properly configured
 Solution: Run create command to ensure infrastructure exists
 ```
 
-**"GitHub PAT missing required scopes"**
-```
+#### GitHub PAT missing required scopes
+
+```text
 Cause: Insufficient GitHub token permissions
 Solution: Create new PAT with admin:org and repo scopes
 ```
 
-**"AWS API error 403"**
-```
+#### AWS API error 403
+
+```text
 Cause: Insufficient AWS permissions
 Solution: Ensure AWS credentials have AdministratorAccess or equivalent
 ```
 
-**"Network timeout errors"**
-```
+#### Network timeout errors
+
+```text
 Cause: Connectivity issues with AWS or GitHub APIs
 Solution: Script includes automatic retry with exponential backoff
 ```
@@ -261,7 +294,8 @@ Check current infrastructure state:
 ```bash
 # The script automatically detects and reports current state
 python auth_between_aws_and_github.py create [args]
-# Output includes: State: COLD/WARM, Mode: Workflow/Local, Auth: OIDC/Direct
+# Output includes: State: COLD/WARM, Mode: Workflow/Local,
+# Auth: OIDC/Direct
 ```
 
 ## Advanced Usage
@@ -295,8 +329,11 @@ python auth_between_aws_and_github.py destroy --force [args]
 
 ## License
 
-This project is provided as-is for AWS-GitHub integration automation. Review and modify according to your organization's security requirements.
+This project is provided as-is for AWS-GitHub integration automation.
+Review and modify according to your organization's security requirements.
 
 ---
 
-**🎯 Result**: A completely self-contained, dependency-free solution for AWS-GitHub OIDC authentication that transitions your workflows from human credentials to fully automated, secure token-based authentication.
+**🎯 Result**: A completely self-contained, dependency-free solution for
+AWS-GitHub OIDC authentication that transitions your workflows from human
+credentials to fully automated, secure token-based authentication.
