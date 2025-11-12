@@ -272,7 +272,7 @@ jobs:
        contains(github.event.head_commit.message, '[post-deployment]')) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
-      readme_is_current: ${{ steps.check.outputs.readme_is_current }}
+      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
       id-token: write
       contents: read
@@ -308,14 +308,14 @@ jobs:
     name: Concluding README.md should not be updated
     runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.readme_is_current == 'true'
+    if: needs.determine-readme-update.outputs.readme_should_be_updated != 'true'
     steps:
       - run: 'true'
   conclude-readme-update:
     name: Concluding README.md should be updated
     runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.readme_is_current != 'true'
+    if: needs.determine-readme-update.outputs.readme_should_be_updated == 'true'
     steps:
       - run: 'true'
   update-readme:

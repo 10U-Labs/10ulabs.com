@@ -35,10 +35,10 @@ def read_source_files() -> str:
 
     return combined
 
-def check_readme_is_current(bedrock_client, source_code: str, current_readme: str, model_id: str, max_tokens: int) -> bool:
+def check_readme_should_be_updated(bedrock_client, source_code: str, current_readme: str, model_id: str, max_tokens: int) -> bool:
     if not current_readme or not current_readme.strip():
-        logging.info("README is empty or missing")
-        return False
+        logging.info("README is empty or missing - should be updated")
+        return True
 
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given AWS CDK infrastructure code.
 
@@ -92,19 +92,17 @@ Do not include any other text or formatting outside the JSON object."""
         answer_text = response['output']['message']['content'][0]['text'].strip()
         try:
             result = json.loads(answer_text)
-            needs_update = bool(result.get('readme_should_be_updated', False))
+            should_be_updated = bool(result.get('readme_should_be_updated', False))
             reasoning = result.get('reasoning', 'No reasoning provided')
             logging.info(f"Bedrock reasoning: {reasoning}")
-            is_current = not needs_update
-            logging.info(f"Bedrock assessment: README is {'current' if is_current else 'not current'}")
-            return is_current
+            logging.info(f"Bedrock assessment: README should {'be updated' if should_be_updated else 'not be updated'}")
+            return should_be_updated
         except json.JSONDecodeError as e:
             logging.warning(f"Failed to parse JSON response from Bedrock: {e}")
             logging.warning(f"Raw response: {answer_text}")
-            needs_update = answer_text.lower().startswith('true')
-            is_current = not needs_update
-            logging.info(f"Bedrock assessment (fallback): README is {'current' if is_current else 'not current'}")
-            return is_current
+            should_be_updated = answer_text.lower().startswith('true')
+            logging.info(f"Bedrock assessment (fallback): README should {'be updated' if should_be_updated else 'not be updated'}")
+            return should_be_updated
     except Exception as e:
         logging.error(f"Failed to check README with Bedrock: {e}")
         sys.exit(1)
@@ -241,16 +239,16 @@ def main():
                 logging.error(f"Failed to read README: {e}")
                 sys.exit(1)
 
-        logging.info("Checking if README is current via Bedrock...")
-        readme_is_current = check_readme_is_current(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
+        logging.info("Checking if README should be updated via Bedrock...")
+        readme_should_be_updated = check_readme_should_be_updated(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
 
-        print(readme_is_current)
+        print(readme_should_be_updated)
 
         if args.output_file:
             try:
                 with open(args.output_file, 'a', encoding='utf-8') as f:
-                    f.write(f'readme_is_current={str(readme_is_current).lower()}\n')
-                logging.info(f"Wrote readme_is_current={readme_is_current} to {args.output_file}")
+                    f.write(f'readme_should_be_updated={str(readme_should_be_updated).lower()}\n')
+                logging.info(f"Wrote readme_should_be_updated={readme_should_be_updated} to {args.output_file}")
             except IOError as e:
                 logging.error(f"Failed to write output file: {e}")
                 sys.exit(1)
