@@ -62,7 +62,7 @@ jobs:
       - name: Performing heavyweight static analysis
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          MYPYPATH=stubs python -m mypy src/cloudtrail_and_domain_name
+          MYPYPATH=src/cloudtrail_and_domain_name/stubs python -m mypy src/cloudtrail_and_domain_name
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest
