@@ -1266,7 +1266,7 @@ def _get_credentials_for_state(args: argparse.Namespace) -> tuple:
         return access_key_id, secret_access_key, None
     logging.error("No credentials available")
     return None, None, None
-def _check_readme_needs_update(bedrock: BedrockClient, source_code: str, current_readme: str) -> bool:
+def _check_readme_needs_update(bedrock: BedrockClient, source_code: str, current_readme: str, max_tokens: int = 200) -> bool:
     if not current_readme or not current_readme.strip():
         return True
 
@@ -1298,9 +1298,9 @@ Check if the README has ANY issues, including but not limited to:
 9. Any other inaccuracies, inconsistencies, or outdated information
 
 Does the README need updating? Respond with ONLY "true" or "false"."""
-    response = bedrock.invoke_model(prompt, max_tokens=10)
+    response = bedrock.invoke_model(prompt, max_tokens=max_tokens)
     return response.strip().lower().startswith('true')
-def _update_readme(bedrock: BedrockClient, source_code: str) -> str:
+def _update_readme(bedrock: BedrockClient, source_code: str, max_tokens: int = 16000) -> str:
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following Python script that manages AWS-GitHub authentication infrastructure.
 
 <source_code>
@@ -1332,7 +1332,7 @@ Create a professional README that includes:
 Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
     try:
-        return bedrock.invoke_model(prompt, max_tokens=16000)
+        return bedrock.invoke_model(prompt, max_tokens=max_tokens)
     except Exception as e:
         logging.error("Failed to generate README via Bedrock: %s", e)
         raise
@@ -1344,9 +1344,9 @@ def _read_file_safe(file_path: str, description: str) -> Optional[str]:
         logging.error("Failed to read %s: %s", description, e)
         return None
 def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
-                        source_code: str, current_readme: str) -> int:
+                        source_code: str, current_readme: str, max_tokens: int) -> int:
     logging.info("Checking if README needs update via Bedrock...")
-    needs_update = _check_readme_needs_update(bedrock, source_code, current_readme)
+    needs_update = _check_readme_needs_update(bedrock, source_code, current_readme, max_tokens)
     readme_is_current = not needs_update
     logging.info("README is current" if readme_is_current else "README needs update")
     print(readme_is_current)
@@ -1354,10 +1354,10 @@ def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
         with open(args.output_file, 'a', encoding='utf-8') as f:
             f.write(f'readme_is_current={str(readme_is_current).lower()}\n')
     return 0
-def _handle_readme_update(bedrock: 'BedrockClient', source_code: str, readme_path: str) -> int:
+def _handle_readme_update(bedrock: 'BedrockClient', source_code: str, readme_path: str, max_tokens: int) -> int:
     logging.info("Generating updated README via Bedrock...")
     try:
-        new_readme = _update_readme(bedrock, source_code)
+        new_readme = _update_readme(bedrock, source_code, max_tokens)
         with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(new_readme)
         logging.info("Updated README written to %s", readme_path)
@@ -1375,6 +1375,8 @@ def cmd_readme(args: argparse.Namespace) -> int:
         logging.error("Failed to obtain AWS credentials")
         return 1
     bedrock = BedrockClient(args.aws_region, access_key, secret_key, session_token)
+    if hasattr(args, 'bedrock_model_id') and args.bedrock_model_id:
+        bedrock.set_model_id(args.bedrock_model_id)
     script_path = os.path.abspath(__file__)
     source_code = _read_file_safe(script_path, "auth_between_aws_and_github.py")
     if source_code is None:
@@ -1383,10 +1385,12 @@ def cmd_readme(args: argparse.Namespace) -> int:
     current_readme = _read_file_safe(readme_path, "README.md") if os.path.exists(readme_path) else ""
     if current_readme is None:
         return 1
+    max_tokens_check = getattr(args, 'max_tokens', 200)
+    max_tokens_generate = getattr(args, 'max_tokens_generate', 16000)
     if args.check:
-        return _handle_readme_check(args, bedrock, source_code, current_readme)
+        return _handle_readme_check(args, bedrock, source_code, current_readme, max_tokens_check)
     if args.update:
-        return _handle_readme_update(bedrock, source_code, readme_path)
+        return _handle_readme_update(bedrock, source_code, readme_path, max_tokens_generate)
     logging.error("Either --check or --update must be specified")
     return 1
 def _setup_argparse() -> argparse.ArgumentParser:
@@ -1461,6 +1465,12 @@ def _setup_argparse() -> argparse.ArgumentParser:
                                 help='AWS access key ID (not needed in GitHub Actions with OIDC)')
     readme_optional.add_argument('--aws-secret-access-key',
                                 help='AWS secret access key (not needed in GitHub Actions with OIDC)')
+    readme_optional.add_argument('--bedrock-model-id',
+                                help='Bedrock model ID for README operations')
+    readme_optional.add_argument('--max-tokens', type=int,
+                                help='Maximum output tokens for README check')
+    readme_optional.add_argument('--max-tokens-generate', type=int,
+                                help='Maximum output tokens for README generation')
     return parser
 def _execute_command(args: argparse.Namespace) -> int:
     command_map = {'create': create_resources, 'destroy': destroy_resources, 'readme': cmd_readme}
