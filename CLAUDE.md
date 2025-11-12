@@ -127,7 +127,7 @@ Run the following pre-deployment checks locally before pushing. **CRITICAL: Use 
 
 ## AWS-GitHub Auth Infrastructure Tests
 
-Run these tests if you modified `src/auth_between_aws_and_github/` or `test/auth_between_aws_and_github/`:
+Run these tests if you modified `src/auth_between_aws_and_github/`:
 
 #### 1. YAML Linting
 ```bash
@@ -151,12 +151,12 @@ mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
 
 #### 4. Unit Tests
 ```bash
-PYTHONPATH=src/bootstrap:$PYTHONPATH pytest test/auth_between_aws_and_github/pre_deployment/test_unit.py -v
+PYTHONPATH=src/bootstrap:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
 ```
 
 #### 5. Integration Tests
 ```bash
-pytest test/auth_between_aws_and_github/pre_deployment/test_integration.py -v
+pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
 ```
 
 **NOTE:** Integration tests may require AWS credentials in environment variables:
@@ -169,7 +169,7 @@ pytest test/auth_between_aws_and_github/pre_deployment/test_integration.py -v
 
 ## CloudTrail and Domain Name Tests
 
-Run these tests if you modified `src/cloudtrail_and_domain_name/` or `test/cloudtrail_and_domain_name/`:
+Run these tests if you modified `src/cloudtrail_and_domain_name/`:
 
 #### 1. YAML Linting
 ```bash
@@ -201,13 +201,13 @@ mypy src/cloudtrail_and_domain_name
 #### 4. Unit Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest test/cloudtrail_and_domain_name/pre_deployment/unit/test_unit.py -v
+python -m pytest src/cloudtrail_and_domain_name/test/test_unit.py -v
 ```
 
 #### 5. Integration Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest test/cloudtrail_and_domain_name/pre_deployment/integration/test_integration.py -v
+python -m pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
 ```
 
 **NOTE:** Integration tests may require AWS credentials in environment variables:

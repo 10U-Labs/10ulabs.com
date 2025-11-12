@@ -5,7 +5,6 @@ on:
       - main
     paths:
       - 'src/gmail_email_provider/**'
-      - 'test/gmail_email_provider/**'
       - '.github/workflows/gmail_email_provider.yml'
   workflow_dispatch:
     inputs:
@@ -93,7 +92,7 @@ jobs:
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/gmail_email_provider/test_unit.py -v
+          pytest src/gmail_email_provider/test/test_unit.py -v
   deploying-artifacts:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing-code
@@ -215,7 +214,7 @@ jobs:
       - name: Run pytest integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/gmail_email_provider/test_integration.py -v
+          pytest src/gmail_email_provider/test/test_integration.py -v
   e2e-testing-infrastructure:
     name: E2E testing
     runs-on: ubuntu-latest
@@ -257,7 +256,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest test/gmail_email_provider/test_e2e.py -v
+          pytest src/gmail_email_provider/test/test_e2e.py -v
   determine-readme-update:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest

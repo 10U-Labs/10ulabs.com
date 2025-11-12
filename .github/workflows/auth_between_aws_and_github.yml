@@ -6,7 +6,6 @@ on:
     paths:
       - 'src/auth_between_aws_and_github/**'
       - '!src/auth_between_aws_and_github/README.md'
-      - 'test/auth_between_aws_and_github/**'
       - '.github/workflows/auth_between_aws_and_github.yml'
   workflow_dispatch:
     inputs:
@@ -298,7 +297,7 @@ jobs:
         run: pip install pytest
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pytest test/bootstrap/post_deployment/test_e2e.py -v
+        run: pytest src/auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would run E2E tests"
@@ -328,7 +327,7 @@ jobs:
         run: pip install pytest
       - name: Run integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pytest test/bootstrap/post_deployment/test_integration.py -v
+        run: pytest src/auth_between_aws_and_github/test/post_deployment/test_integration.py -v
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would run integration tests"
@@ -411,7 +410,7 @@ jobs:
       - name: Running unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          cd test/bootstrap/post_deployment
+          cd src/auth_between_aws_and_github/test/post_deployment
           cat > inputs.yml <<EOF
           account_id: "${{ steps.config.outputs.aws_account_id }}"
           region: "${{ steps.config.outputs.aws_region }}"
@@ -459,7 +458,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        run: pytest test/bootstrap/pre_deployment/test_integration.py -v
+        run: pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would run integration tests"
@@ -520,7 +519,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running unit tests..."
-          PYTHONPATH=src/bootstrap:$PYTHONPATH pytest test/bootstrap/pre_deployment/test_unit.py -v
+          PYTHONPATH=src/bootstrap:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
   update-readme:
     name: Updating README.md
     runs-on: ubuntu-latest
