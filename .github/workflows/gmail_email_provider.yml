@@ -51,7 +51,7 @@ jobs:
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/gmail_email_provider.yml
-      - name: Performing lightweight static analysis
+      - name: Linting Python files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pylint src/gmail_email_provider/stack.py \
