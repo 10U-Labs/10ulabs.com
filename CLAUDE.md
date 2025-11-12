@@ -151,7 +151,7 @@ mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
 
 #### 4. Unit Tests
 ```bash
-PYTHONPATH=src/bootstrap:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
 ```
 
 #### 5. Integration Tests
