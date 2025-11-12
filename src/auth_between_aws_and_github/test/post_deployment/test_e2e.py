@@ -203,30 +203,31 @@ class TestSystemTransitionToOIDC:
 
 
 class TestCompleteRunnerRegistrationWorkflow:
-    
 
-    def test_complete_runner_registration_workflow(self):
-        
-        config = load_config()
 
-        
-        oidc_token = get_github_oidc_token()
-        assert oidc_token
+    @pytest.fixture
+    def config(self):
+        return load_config()
 
-        
-        creds = assume_role_with_oidc(
+    @pytest.fixture
+    def oidc_token(self):
+        return get_github_oidc_token()
+
+    @pytest.fixture
+    def aws_creds(self, config, oidc_token):
+        return assume_role_with_oidc(
             config['aws']['account_id'],
             config['aws']['region'],
             config['aws']['iam_role_name'],
             oidc_token
         )
-        assert creds['access_key_id']
 
-        
+    @pytest.fixture
+    def github_pat(self, config, aws_creds):
         env = os.environ.copy()
-        env['AWS_ACCESS_KEY_ID'] = creds['access_key_id']
-        env['AWS_SECRET_ACCESS_KEY'] = creds['secret_access_key']
-        env['AWS_SESSION_TOKEN'] = creds['session_token']
+        env['AWS_ACCESS_KEY_ID'] = aws_creds['access_key_id']
+        env['AWS_SECRET_ACCESS_KEY'] = aws_creds['secret_access_key']
+        env['AWS_SESSION_TOKEN'] = aws_creds['session_token']
 
         result = subprocess.run(
             ['aws', 'secretsmanager', 'get-secret-value',
@@ -241,10 +242,10 @@ class TestCompleteRunnerRegistrationWorkflow:
         )
 
         secret_data = json.loads(result.stdout)
-        github_pat = secret_data['github_token']
-        assert github_pat
+        return secret_data['github_token']
 
-        
+    @pytest.fixture
+    def runner_registration_response(self, config, github_pat):
         result = subprocess.run(
             ['curl', '-s', '-X', 'POST',
              '-H', 'Accept: application/vnd.github+json',
@@ -255,25 +256,38 @@ class TestCompleteRunnerRegistrationWorkflow:
             text=True,
             check=True
         )
+        return json.loads(result.stdout)
 
-        response = json.loads(result.stdout)
+    def test_oidc_token_obtained(self, oidc_token):
+        assert oidc_token
 
-        
-        assert 'token' in response, "Missing runner registration token"
-        assert response['token'], "Empty runner registration token"
-        assert 'expires_at' in response, "Missing token expiration"
+    def test_aws_credentials_obtained_via_oidc(self, aws_creds):
+        assert aws_creds['access_key_id']
 
-        
+    def test_github_pat_retrieved_from_secrets_manager(self, github_pat):
+        assert github_pat
+
+    def test_runner_registration_response_contains_token(self, runner_registration_response):
+        assert 'token' in runner_registration_response
+
+    def test_runner_registration_token_not_empty(self, runner_registration_response):
+        assert runner_registration_response['token']
+
+    def test_runner_registration_token_has_expiration(self, runner_registration_response):
+        assert 'expires_at' in runner_registration_response
+
+
 
 
 class TestBootstrapIdempotency:
-    
 
-    def test_bootstrap_create_is_idempotent(self):
-        
-        config = load_config()
 
-        
+    @pytest.fixture
+    def config(self):
+        return load_config()
+
+    @pytest.fixture
+    def oidc_creds(self, config):
         oidc_token = get_github_oidc_token()
         creds = assume_role_with_oidc(
             config['aws']['account_id'],
@@ -281,14 +295,14 @@ class TestBootstrapIdempotency:
             config['aws']['iam_role_name'],
             oidc_token
         )
-
         env = os.environ.copy()
         env['AWS_ACCESS_KEY_ID'] = creds['access_key_id']
         env['AWS_SECRET_ACCESS_KEY'] = creds['secret_access_key']
         env['AWS_SESSION_TOKEN'] = creds['session_token']
+        return env
 
-        
-        
+    @pytest.fixture
+    def original_resources(self, config, oidc_creds):
         oidc_result = subprocess.run(
             ['aws', 'iam', 'get-open-id-connect-provider',
              '--open-id-connect-provider-arn',
@@ -298,12 +312,10 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
-        oidc_data = json.loads(oidc_result.stdout)
-        original_oidc_arn = f"arn:aws:iam::{config['aws']['account_id']}:oidc-provider/token.actions.githubusercontent.com"
+        oidc_arn = f"arn:aws:iam::{config['aws']['account_id']}:oidc-provider/token.actions.githubusercontent.com"
 
-        
         role_result = subprocess.run(
             ['aws', 'iam', 'get-role',
              '--role-name', config['aws']['iam_role_name'],
@@ -312,12 +324,11 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
         role_data = json.loads(role_result.stdout)
-        original_role_arn = role_data['Role']['Arn']
+        role_arn = role_data['Role']['Arn']
 
-        
         secret_result = subprocess.run(
             ['aws', 'secretsmanager', 'describe-secret',
              '--secret-id', config['aws']['secrets_manager']['github_pat_secret_name'],
@@ -326,38 +337,39 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
         secret_data = json.loads(secret_result.stdout)
-        original_secret_arn = secret_data['ARN']
+        secret_arn = secret_data['ARN']
 
-        
-        
-        
-        
-        bootstrap_result = subprocess.run(
+        return {
+            'oidc_arn': oidc_arn,
+            'role_arn': role_arn,
+            'secret_arn': secret_arn
+        }
+
+    @pytest.fixture
+    def bootstrap_execution(self, config, oidc_creds, original_resources):
+        return subprocess.run(
             ['python', 'src/auth_between_aws_and_github/auth_between_aws_and_github.py', 'create',
              '--aws-account-id', config['aws']['account_id'],
              '--aws-region', config['aws']['region'],
              '--aws-iam-role-name', config['aws']['iam_role_name'],
-             '--aws-access-key-id', 'dummy',  
-             '--aws-secret-access-key', 'dummy',  
+             '--aws-access-key-id', 'dummy',
+             '--aws-secret-access-key', 'dummy',
              '--github-org', config['github']['org'],
              '--github-repo', config['github']['repo'],
-             '--github-token', 'dummy',  
+             '--github-token', 'dummy',
              '--github-pat-secret-name', config['aws']['secrets_manager']['github_pat_secret_name'],
              '--bedrock-model-id', 'us.anthropic.claude-haiku-4-5-20251001-v1:0'],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
-            env=env
+            env=oidc_creds
         )
 
-        
-        assert bootstrap_result.returncode == 0, f"auth_between_aws_and_github.py create failed:\nSTDOUT:\n{bootstrap_result.stdout}\nSTDERR:\n{bootstrap_result.stderr}"
-
-        
-        
+    @pytest.fixture
+    def resources_after_bootstrap(self, config, oidc_creds, bootstrap_execution):
         oidc_result_after = subprocess.run(
             ['aws', 'iam', 'get-open-id-connect-provider',
              '--open-id-connect-provider-arn',
@@ -367,11 +379,9 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
-        assert oidc_result_after.returncode == 0, "OIDC provider should still exist"
 
-        
         role_result_after = subprocess.run(
             ['aws', 'iam', 'get-role',
              '--role-name', config['aws']['iam_role_name'],
@@ -380,12 +390,10 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
         role_data_after = json.loads(role_result_after.stdout)
-        assert role_data_after['Role']['Arn'] == original_role_arn, "IAM role ARN should be unchanged"
 
-        
         secret_result_after = subprocess.run(
             ['aws', 'secretsmanager', 'describe-secret',
              '--secret-id', config['aws']['secrets_manager']['github_pat_secret_name'],
@@ -394,12 +402,10 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
         secret_data_after = json.loads(secret_result_after.stdout)
-        assert secret_data_after['ARN'] == original_secret_arn, "Secrets Manager secret ARN should be unchanged"
 
-        
         caller_result = subprocess.run(
             ['aws', 'sts', 'get-caller-identity',
              '--region', config['aws']['region'],
@@ -407,9 +413,30 @@ class TestBootstrapIdempotency:
             capture_output=True,
             text=True,
             check=True,
-            env=env
+            env=oidc_creds
         )
         caller_data = json.loads(caller_result.stdout)
-        assert config['aws']['iam_role_name'] in caller_data['Arn'], "OIDC authentication should still work"
 
-        
+        return {
+            'oidc_result': oidc_result_after,
+            'role_arn': role_data_after['Role']['Arn'],
+            'secret_arn': secret_data_after['ARN'],
+            'caller_arn': caller_data['Arn']
+        }
+
+    def test_bootstrap_create_succeeds_when_rerun(self, bootstrap_execution):
+        assert bootstrap_execution.returncode == 0
+
+    def test_oidc_provider_still_exists_after_bootstrap_rerun(self, resources_after_bootstrap):
+        assert resources_after_bootstrap['oidc_result'].returncode == 0
+
+    def test_iam_role_arn_unchanged_after_bootstrap_rerun(self, original_resources, resources_after_bootstrap):
+        assert resources_after_bootstrap['role_arn'] == original_resources['role_arn']
+
+    def test_secrets_manager_secret_arn_unchanged_after_bootstrap_rerun(self, original_resources, resources_after_bootstrap):
+        assert resources_after_bootstrap['secret_arn'] == original_resources['secret_arn']
+
+    def test_oidc_authentication_still_works_after_bootstrap_rerun(self, config, resources_after_bootstrap):
+        assert config['aws']['iam_role_name'] in resources_after_bootstrap['caller_arn']
+
+
