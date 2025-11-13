@@ -6,14 +6,14 @@ from pathlib import Path
 import aws_cdk as cdk
 
 spec = importlib.util.spec_from_file_location(
-    "api_infrastructure",
+    "ec2_runner_infrastructure",
     Path(__file__).parent / "stack.py"
 )
 if spec is None or spec.loader is None:
-    raise RuntimeError("Failed to load api_infrastructure stack module")
-api_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(api_module)
-ApiStack = api_module.ApiStack
+    raise RuntimeError("Failed to load ec2_runner_infrastructure stack module")
+ec2_runner_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(ec2_runner_module)
+EC2RunnerStack = ec2_runner_module.EC2RunnerStack
 
 app = cdk.App()
 
@@ -26,16 +26,16 @@ env = cdk.Environment(
     region=config["aws"]["region"]
 )
 
-api_stack = ApiStack(
+ec2_runner_stack = EC2RunnerStack(
     app,
-    "TenULabsApi",
+    "TenULabsApi-EC2Runner",
     config=config,
     env=env,
-    description="API Gateway and Lambda infrastructure for api.10ulabs.com"
+    description="EC2 Spot Instance runner launcher for GitHub self-hosted runners"
 )
 
 cdk.Tags.of(app).add("ManagedBy", "CDK")
 cdk.Tags.of(app).add("Project", "10UF")
-cdk.Tags.of(app).add("Repository", "10U-Foundation/10ulabs.com")
+cdk.Tags.of(app).add("Repository", "10U-Labs-LLC/10ulabs.com")
 
 app.synth()

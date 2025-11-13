@@ -1,28 +1,24 @@
 {
-  "aws_account_id": 781581267945,
-  "aws_region": "us-east-1",
-  "domain_name": "api.10ulabs.com",
-  "hosted_zone_name": "10ulabs.com",
-  "vpc_name": "github-runners-vpc",
-  "security_group_name": "github-runners-sg",
-  "lambda_function_name": "ec2-spot-runner-api",
-  "api_gateway_name": "ec2-spot-runner-api",
-  "github_token_secret_name": "github-runner/credentials",
+  "aws": {
+    "account_id": 781581267945,
+    "region": "us-east-1"
+  },
+  "domain_names": {
+    "subdomain": "api.10ulabs.com"
+  },
+  "naming": {
+    "lambda_function_name": "TenULabsAmiBuilder"
+  },
   "lambda": {
-    "timeout_seconds": 30,
+    "timeout_seconds": 60,
     "memory_mb": 256
   },
-  "ec2": {
-    "ami_id": "",
-    "instance_types": [
-      "t4g.large",
-      "t4g.medium",
-      "t4g.small",
-      "t4g.micro",
-      "t4g.nano"
-    ],
-    "iam_instance_profile": "GitHubSelfHostedRunnerInstanceProfile",
-    "iam_role_name": "GitHubSelfHostedRunnerEC2Role",
-    "max_price": 0.05
+  "packer": {
+    "builder_ami_id": "ami-0c7217cdde317cfec",
+    "instance_types": ["t4g.large", "t4g.medium", "t4g.small"],
+    "max_price": 0.05,
+    "iam_instance_profile": "PackerEC2InstanceProfile",
+    "iam_role_name": "PackerEC2Role",
+    "config_bucket": "10ulabs-packer-configs"
   }
 }
