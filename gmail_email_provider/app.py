@@ -22,8 +22,8 @@ with open(config_path) as f:
     config = json.load(f)
 
 env = cdk.Environment(
-    account=str(config["aws_account_id"]),
-    region=config["aws_region"]
+    account=str(config["aws"]["account_id"]),
+    region=config["aws"]["region"]
 )
 
 gmail_stack = GmailEmailProviderStack(

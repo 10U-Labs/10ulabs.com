@@ -23,6 +23,10 @@ def test_config_has_aws_region(config):
     assert "region" in config["aws"]
 
 
+def test_config_has_aws_bedrock_key(config):
+    assert "bedrock" in config["aws"]
+
+
 def test_config_has_domain_name(config):
     assert "domain_name" in config
 
