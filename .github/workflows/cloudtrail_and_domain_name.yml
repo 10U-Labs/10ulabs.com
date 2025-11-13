@@ -306,7 +306,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Python files
         run: |
-          pylint cloudtrail_and_domain_name/stack.py cloudtrail_and_domain_name/lambda/handler.py \
+          pylint cloudtrail_and_domain_name/stack.py cloudtrail_and_domain_name/lambda/handler.py cloudtrail_and_domain_name/app.py cloudtrail_and_domain_name/readme.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - if: ${{ github.event.inputs.dry_run != 'true' }}
