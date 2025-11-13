@@ -14,7 +14,7 @@ def config():
 
 @pytest.fixture
 def route53_client(config):
-    return boto3.client('route53', region_name=config['aws_region'])
+    return boto3.client('route53', region_name=config['aws']['region'])
 
 
 @pytest.fixture
