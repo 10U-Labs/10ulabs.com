@@ -104,6 +104,22 @@ Use these flags in commit messages to control workflow behavior:
 - `[post-deployment] Fix E2E DNS resolution tests` - Only runs post-deployment tests
 - `[skip-deploy] Update CDK stack configuration` - Runs all checks but no deployment
 
+### Git Branch Management
+
+**CRITICAL: Delete claude branches immediately after PR merge**
+
+When a pull request is merged, the claude branch MUST be deleted immediately using the GitHub API:
+
+```bash
+curl -s -X DELETE \
+  -H "Authorization: Bearer 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" \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/git/refs/heads/BRANCH_NAME"
+```
+
+**Why:** Keeps repository clean and prevents accumulation of stale branches. Delete branches immediately after merge, not in batches later.
+
 ### Pre-Push Static Analysis and Testing Requirements
 
 **CRITICAL REQUIREMENTS:**
