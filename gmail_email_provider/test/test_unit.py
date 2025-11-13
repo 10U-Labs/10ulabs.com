@@ -66,8 +66,8 @@ def test_stack_creates_txt_record():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -76,8 +76,8 @@ def test_stack_creates_txt_record():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -118,8 +118,8 @@ def test_stack_has_google_verification_output():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -128,8 +128,8 @@ def test_stack_has_google_verification_output():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -166,8 +166,8 @@ def test_stack_has_google_verification_value_output():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -176,8 +176,8 @@ def test_stack_has_google_verification_value_output():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -214,8 +214,8 @@ def test_stack_creates_mx_record():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -224,8 +224,8 @@ def test_stack_creates_mx_record():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -266,8 +266,8 @@ def test_stack_has_gmail_mx_output():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -276,8 +276,8 @@ def test_stack_has_gmail_mx_output():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -314,8 +314,8 @@ def test_stack_txt_record_has_correct_value_format():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -324,8 +324,8 @@ def test_stack_txt_record_has_correct_value_format():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -368,8 +368,8 @@ def test_stack_txt_record_has_correct_ttl():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -378,8 +378,8 @@ def test_stack_txt_record_has_correct_ttl():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -421,8 +421,8 @@ def test_stack_mx_record_has_priority_one():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -431,8 +431,8 @@ def test_stack_mx_record_has_priority_one():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -474,8 +474,8 @@ def test_stack_mx_record_has_correct_ttl():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -484,8 +484,8 @@ def test_stack_mx_record_has_correct_ttl():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -527,8 +527,8 @@ def test_stack_creates_exactly_one_txt_record():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -537,8 +537,8 @@ def test_stack_creates_exactly_one_txt_record():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -574,8 +574,8 @@ def test_stack_creates_exactly_one_mx_record():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -584,8 +584,8 @@ def test_stack_creates_exactly_one_mx_record():
         "TestGmailStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -623,8 +623,8 @@ def test_config_ttl_defaults_to_300():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -633,8 +633,8 @@ def test_config_ttl_defaults_to_300():
         "TestGmailStack",
         config=config_without_ttl,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -678,8 +678,8 @@ def test_stack_raises_error_when_google_verification_missing():
         "TestDomainStack",
         config=domain_config,
         env=cdk.Environment(
-            account=str(domain_config["aws_account_id"]),
-            region=domain_config["aws_region"]
+            account=str(domain_config["aws"]["account_id"]),
+            region=domain_config["aws"]["region"]
         )
     )
 
@@ -689,8 +689,8 @@ def test_stack_raises_error_when_google_verification_missing():
             "TestGmailStack",
             config=config_without_verification,
             env=cdk.Environment(
-                account=str(config["aws_account_id"]),
-                region=config["aws_region"]
+                account=str(config["aws"]["account_id"]),
+                region=config["aws"]["region"]
             )
         )
         assert False

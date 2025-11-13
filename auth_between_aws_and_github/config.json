@@ -55,16 +55,16 @@
   },
   "aws": {
     "account_id": "781581267945",
+    "bedrock": {
+      "max_tokens_check": 4000,
+      "max_tokens_generate": 16000,
+      "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    },
     "iam_role_name": "GitHubActionsRole",
     "region": "us-east-1",
     "secrets_manager": {
       "github_pat_secret_name": "github-runner/credentials"
     }
-  },
-  "bedrock": {
-    "max_tokens_check": 4000,
-    "max_tokens_generate": 16000,
-    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
   },
   "confirm_destroy": false,
   "enabled": true,

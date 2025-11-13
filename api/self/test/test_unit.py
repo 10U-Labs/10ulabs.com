@@ -59,8 +59,8 @@ def test_api_has_lambda_function():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -88,8 +88,8 @@ def test_api_has_api_gateway():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -116,8 +116,8 @@ def test_api_has_certificate():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -144,8 +144,8 @@ def test_api_has_route53_record():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -172,8 +172,8 @@ def test_api_has_url_output():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -201,8 +201,8 @@ def test_api_has_domain_name_output():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -230,8 +230,8 @@ def test_api_has_endpoint_output():
         "TestApiStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
