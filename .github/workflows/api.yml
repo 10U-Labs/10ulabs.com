@@ -2,71 +2,95 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  performing-static-analysis:
-    if: github.event.inputs.dry_run != 'true'
-    name: Performing static analysis
+  concluding-readme-should-not-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated != 'true'
+    name: Concluding README.md should not be updated
+    needs: determining-if-readme-should-be-updated
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
+  concluding-readme-should-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'true'
+    name: Concluding README.md should be updated
+    needs: determining-if-readme-should-be-updated
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
+  determining-if-readme-should-be-updated:
+    if: |
+      always() &&
+      github.event.inputs.dry_run != 'true' &&
+      needs.e2e-testing.result == 'success' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Determining if README.md should be updated
+    needs: e2e-testing
+    outputs:
+      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install linting dependencies
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+      - name: Install boto3
+        run: pip install boto3
+      - name: Check if README needs update
+        id: check
         run: |
-          pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
-      - name: Install project dependencies for linting
-        run: pip install -r api/self/requirements.txt
-      - name: Linting YAML files
-        run: |
-          echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
-      - name: Linting JSON configuration files
-        run: |
-          echo "Validating JSON syntax..."
-          jsonlint -q api/self/config.json
-          jsonlint -q api/self/cdk.json
-      - name: Linting Markdown documentation
-        run: |
-          if [ -f api/self/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 api/self/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
-      - name: Linting Python files
-        run: |
-          pylint api/self/stack.py api/self/lambda/handler.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
-            --fail-under=10.0
-      - name: Static type checking Python files with mypy
-        run: |
-          python -m mypy api/self
-  unit-testing:
-    if: github.event.inputs.dry_run != 'true'
-    name: Unit testing
-    needs: performing-static-analysis
+          python api/self/readme.py \
+            --check \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --output-file "$GITHUB_OUTPUT"
+  e2e-testing:
+    if: |
+      always() &&
+      github.event.inputs.dry_run != 'true' &&
+      needs.integration-testing.result == 'success'
+    name: E2E testing
+    needs: integration-testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Load configuration
+        id: config
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Set up Node.js (required by aws-cdk-lib/jsii)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
-          pip install pytest
-          pip install -r api/self/requirements.txt
-      - name: Run unit tests
+          pip install pytest boto3 requests
+      - name: Run E2E tests
         run: |
-          pytest api/self/test/test_unit.py -v
+          pytest api/self/test/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     if: |
       github.event.inputs.dry_run != 'true' &&
@@ -167,95 +191,71 @@ jobs:
       - name: Run pytest integration tests
         run: |
           pytest api/self/test/test_integration.py -v
-  e2e-testing:
-    if: |
-      always() &&
-      github.event.inputs.dry_run != 'true' &&
-      needs.integration-testing.result == 'success'
-    name: E2E testing
-    needs: integration-testing
+  performing-static-analysis:
+    if: github.event.inputs.dry_run != 'true'
+    name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.config.outputs.region }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
+      - name: Install linting dependencies
         run: |
-          pip install pytest boto3 requests
-      - name: Run E2E tests
+          pip install pylint mypy yamllint
+          npm install -g jsonlint markdownlint-cli2
+      - name: Install project dependencies for linting
+        run: pip install -r api/self/requirements.txt
+      - name: Linting YAML files
         run: |
-          pytest api/self/test/test_e2e.py -v
-  determining-if-readme-should-be-updated:
-    if: |
-      always() &&
-      github.event.inputs.dry_run != 'true' &&
-      needs.e2e-testing.result == 'success' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: Determining if README.md should be updated
-    needs: e2e-testing
-    outputs:
-      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
-    permissions:
-      contents: read
-      id-token: write
+          echo "Running yamllint on workflow files..."
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
+      - name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q api/self/config.json
+          jsonlint -q api/self/cdk.json
+      - name: Linting Markdown documentation
+        run: |
+          if [ -f api/self/README.md ]; then
+            echo "Linting README.md..."
+            markdownlint-cli2 api/self/README.md
+          else
+            echo "No README.md found, skipping markdown linting"
+          fi
+      - name: Linting Python files
+        run: |
+          pylint api/self/stack.py api/self/lambda/handler.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
+            --fail-under=10.0
+      - name: Static type checking Python files with mypy
+        run: |
+          python -m mypy api/self
+  unit-testing:
+    if: github.event.inputs.dry_run != 'true'
+    name: Unit testing
+    needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        uses: actions/setup-node@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.config.outputs.region }}
-      - name: Install boto3
-        run: pip install boto3
-      - name: Check if README needs update
-        id: check
+          node-version: '20'
+      - name: Install Python dependencies
         run: |
-          python api/self/readme.py \
-            --check \
-            --aws-region "${{ steps.config.outputs.region }}" \
-            --output-file "$GITHUB_OUTPUT"
-  concluding-readme-should-not-be-updated:
-    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated != 'true'
-    name: Concluding README.md should not be updated
-    needs: determining-if-readme-should-be-updated
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'true'
-  concluding-readme-should-be-updated:
-    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'true'
-    name: Concluding README.md should be updated
-    needs: determining-if-readme-should-be-updated
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'true'
+          pip install pytest
+          pip install -r api/self/requirements.txt
+      - name: Run unit tests
+        run: |
+          pytest api/self/test/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
