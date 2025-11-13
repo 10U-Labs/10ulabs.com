@@ -20,7 +20,7 @@ on:
       - main
     paths:
       - 'src/github_self_hosted_runners/config.json'
-      - 'src/api/collections/ami_for_ec2_runners/**'
+      - 'api/collections/ami_for_ec2_runners/**'
       - '.github/workflows/build-ami-for-github_self_hosted_runners.yml'
 
 concurrency:
@@ -142,12 +142,12 @@ jobs:
 
       - name: Initialize Packer
         run: |
-          cd src/api/collections/ami_for_ec2_runners
+          cd api/collections/ami_for_ec2_runners
           packer init template.pkr.hcl
 
       - name: Validate Packer template
         run: |
-          cd src/api/collections/ami_for_ec2_runners
+          cd api/collections/ami_for_ec2_runners
           packer validate \
             -var="debian_version=${{ steps.config.outputs.debian_version }}" \
             -var="architecture=${{ steps.config.outputs.architecture }}" \
@@ -161,7 +161,7 @@ jobs:
       - name: Build AMI with Packer
         id: build
         run: |
-          cd src/api/collections/ami_for_ec2_runners
+          cd api/collections/ami_for_ec2_runners
 
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
@@ -619,7 +619,7 @@ jobs:
           INSTANCE_TYPE: ${{ steps.config.outputs.instance_type }}
           SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
         run: |
-          cd src/api/collections/ami_for_ec2_runners/test
+          cd api/collections/ami_for_ec2_runners/test
           pytest test_ami_validation.py -v \
             --ami-id=$AMI_ID \
             --instance-id=$INSTANCE_ID \
@@ -806,7 +806,7 @@ jobs:
           INSTANCE_TYPE: ${{ steps.launch.outputs.instance_type }}
           SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
         run: |
-          cd src/api/collections/ami_for_ec2_runners/test
+          cd api/collections/ami_for_ec2_runners/test
           pytest test_ami_validation.py -v \
             --ami-id=$AMI_ID \
             --instance-id=$INSTANCE_ID \

@@ -4,8 +4,8 @@ on:
     branches:
       - main
     paths:
-      - 'src/auth_between_aws_and_github/**'
-      - '!src/auth_between_aws_and_github/README.md'
+      - 'auth_between_aws_and_github/**'
+      - '!auth_between_aws_and_github/README.md'
       - '.github/workflows/auth_between_aws_and_github.yml'
   workflow_dispatch:
     inputs:
@@ -71,17 +71,17 @@ jobs:
       - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          enabled=$(jq -r '.enabled' src/auth_between_aws_and_github/config.json)
-          confirm_destroy=$(jq -r '.confirm_destroy' src/auth_between_aws_and_github/config.json)
-          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
-          github_org=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
-          github_repo=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
-          bedrock_model_id=$(jq -r '.bedrock.model_id' src/auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_check=$(jq -r '.bedrock.max_tokens_check' src/auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_generate=$(jq -r '.bedrock.max_tokens_generate' src/auth_between_aws_and_github/config.json)
+          enabled=$(jq -r '.enabled' auth_between_aws_and_github/config.json)
+          confirm_destroy=$(jq -r '.confirm_destroy' auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' auth_between_aws_and_github/config.json)
+          github_org=$(jq -r '.github.org' auth_between_aws_and_github/config.json)
+          github_repo=$(jq -r '.github.repo' auth_between_aws_and_github/config.json)
+          bedrock_model_id=$(jq -r '.bedrock.model_id' auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_check=$(jq -r '.bedrock.max_tokens_check' auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_generate=$(jq -r '.bedrock.max_tokens_generate' auth_between_aws_and_github/config.json)
           echo "enabled=$enabled" >> $GITHUB_OUTPUT
           echo "confirm_destroy=$confirm_destroy" >> $GITHUB_OUTPUT
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
@@ -157,12 +157,12 @@ jobs:
       - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          bedrock_model_id=$(jq -r '.bedrock.model_id' src/auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_check=$(jq -r '.bedrock.max_tokens_check' src/auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_generate=$(jq -r '.bedrock.max_tokens_generate' src/auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
+          bedrock_model_id=$(jq -r '.bedrock.model_id' auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_check=$(jq -r '.bedrock.max_tokens_check' auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_generate=$(jq -r '.bedrock.max_tokens_generate' auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -181,7 +181,7 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
+          python auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
@@ -207,13 +207,13 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Destroying auth_between_aws_and_github infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          AWS_REGION=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          GITHUB_ORG=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
-          GITHUB_REPO=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
-          ./src/auth_between_aws_and_github/auth_between_aws_and_github.py destroy \
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          AWS_REGION=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
+          GITHUB_ORG=$(jq -r '.github.org' auth_between_aws_and_github/config.json)
+          GITHUB_REPO=$(jq -r '.github.repo' auth_between_aws_and_github/config.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' auth_between_aws_and_github/config.json)
+          ./auth_between_aws_and_github/auth_between_aws_and_github.py destroy \
             --aws-account-id "$AWS_ACCOUNT_ID" \
             --aws-region "$AWS_REGION" \
             --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
@@ -264,14 +264,14 @@ jobs:
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
         run: |
           echo "Creating auth_between_aws_and_github infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          AWS_REGION=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          GITHUB_ORG=$(jq -r '.github.org' src/auth_between_aws_and_github/config.json)
-          GITHUB_REPO=$(jq -r '.github.repo' src/auth_between_aws_and_github/config.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
-          BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' src/auth_between_aws_and_github/config.json)
-          ./src/auth_between_aws_and_github/auth_between_aws_and_github.py create \
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          AWS_REGION=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
+          GITHUB_ORG=$(jq -r '.github.org' auth_between_aws_and_github/config.json)
+          GITHUB_REPO=$(jq -r '.github.repo' auth_between_aws_and_github/config.json)
+          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' auth_between_aws_and_github/config.json)
+          BEDROCK_MODEL_ID=$(jq -r '.bedrock.model_id' auth_between_aws_and_github/config.json)
+          ./auth_between_aws_and_github/auth_between_aws_and_github.py create \
             --aws-account-id "$AWS_ACCOUNT_ID" \
             --aws-region "$AWS_REGION" \
             --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
@@ -296,9 +296,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -311,7 +311,7 @@ jobs:
         run: pip install pytest
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pytest src/auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
+        run: pytest auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would run E2E tests"
@@ -326,9 +326,9 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -341,7 +341,7 @@ jobs:
         run: pip install pytest
       - name: Run integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pytest src/auth_between_aws_and_github/test/post_deployment/test_integration.py -v
+        run: pytest auth_between_aws_and_github/test/post_deployment/test_integration.py -v
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would run integration tests"
@@ -363,8 +363,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           echo "Verifying infrastructure destroyed..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          AWS_REGION=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          AWS_REGION=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
           set +e
           aws iam get-open-id-connect-provider \
             --open-id-connect-provider-arn "arn:aws:iam::${AWS_ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com" \
@@ -400,7 +400,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        run: pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
+        run: pytest auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
       - name: Dry run
         if: ${{ github.event.inputs.dry_run == 'true' }}
         run: echo "DRY RUN - Would run integration tests"
@@ -434,26 +434,26 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Validating JSON syntax in config.json..."
-          jsonlint -q src/auth_between_aws_and_github/config.json
+          jsonlint -q auth_between_aws_and_github/config.json
       - name: Linting Markdown documentation
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          if [ -f src/auth_between_aws_and_github/README.md ]; then
+          if [ -f auth_between_aws_and_github/README.md ]; then
             echo "Linting README.md..."
-            markdownlint-cli2 src/auth_between_aws_and_github/README.md
+            markdownlint-cli2 auth_between_aws_and_github/README.md
           else
             echo "No README.md found, skipping markdown linting"
           fi
       - name: Linting Python files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
+          pylint auth_between_aws_and_github/auth_between_aws_and_github.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
+          mypy auth_between_aws_and_github/auth_between_aws_and_github.py
   unit-testing-code:
     name: Unit testing code
     runs-on: ubuntu-latest
@@ -477,7 +477,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running unit tests..."
-          PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+          PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
   update-readme:
     name: Updating README.md
     runs-on: ubuntu-latest
@@ -491,12 +491,12 @@ jobs:
       - name: Read auth_between_aws_and_github config
         id: config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          bedrock_model_id=$(jq -r '.bedrock.model_id' src/auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_check=$(jq -r '.bedrock.max_tokens_check' src/auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_generate=$(jq -r '.bedrock.max_tokens_generate' src/auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
+          bedrock_model_id=$(jq -r '.bedrock.model_id' auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_check=$(jq -r '.bedrock.max_tokens_check' auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_generate=$(jq -r '.bedrock.max_tokens_generate' auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -514,7 +514,7 @@ jobs:
           aws-region: ${{ steps.config.outputs.aws_region }}
       - name: Update README
         run: |
-          python src/auth_between_aws_and_github/auth_between_aws_and_github.py readme \
+          python auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --aws-iam-role-name "${{ steps.config.outputs.aws_iam_role_name }}" \
@@ -525,6 +525,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/auth_between_aws_and_github/README.md
+          git add auth_between_aws_and_github/README.md
           git diff --staged --quiet || git commit -m "Update auth_between_aws_and_github README via Bedrock"
           git push

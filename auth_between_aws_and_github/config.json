@@ -39,7 +39,7 @@
       "",
       "========== LOCAL EXECUTION (No GitHub Secrets needed) ==========",
       "To run LOCALLY:",
-      "  1. Run: ./src/auth_between_aws_and_github/auth_between_aws_and_github.py create \\",
+      "  1. Run: ./auth_between_aws_and_github/auth_between_aws_and_github.py create \\",
       "       --aws-account-id 781581267945 \\",
       "       --aws-region us-east-1 \\",
       "       --aws-iam-role-name GitHubActionsRole \\",
