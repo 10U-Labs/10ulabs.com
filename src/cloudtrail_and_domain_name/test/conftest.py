@@ -65,3 +65,9 @@ def hosted_zone(route53_client, config):
         if z['Name'] == f"{domain_name}.":
             return z
     return None
+
+
+@pytest.fixture(autouse=True)
+def inject_config_into_unittest_methods(request, config):
+    if request.instance is not None:
+        request.instance.config = config
