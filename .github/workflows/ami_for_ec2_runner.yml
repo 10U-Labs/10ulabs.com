@@ -619,7 +619,7 @@ jobs:
           INSTANCE_TYPE: ${{ steps.config.outputs.instance_type }}
           SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
         run: |
-          cd src/github_self_hosted_runners/test/ami
+          cd src/api/collections/ami_for_ec2_runners/test
           pytest test_ami_validation.py -v \
             --ami-id=$AMI_ID \
             --instance-id=$INSTANCE_ID \
@@ -806,7 +806,7 @@ jobs:
           INSTANCE_TYPE: ${{ steps.launch.outputs.instance_type }}
           SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
         run: |
-          cd src/github_self_hosted_runners/test/ami
+          cd src/api/collections/ami_for_ec2_runners/test
           pytest test_ami_validation.py -v \
             --ami-id=$AMI_ID \
             --instance-id=$INSTANCE_ID \

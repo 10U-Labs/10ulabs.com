@@ -7,8 +7,8 @@ on:
       - main
     paths:
       - 'src/github_self_hosted_runners/config.json'
-      - 'src/github_self_hosted_runners/fargate_runner/**'
-      - 'src/github_self_hosted_runners/docker_image_builder/**'
+      - 'src/api/collections/docker_runner/**'
+      - 'src/api/collections/image_for_docker_runners/**'
       - '.github/workflows/build_docker_image_for_github_self_hosted_runners.yml'
 
 concurrency:
@@ -47,7 +47,7 @@ jobs:
 
       - name: Build and push Docker image (native ARM64, no emulation!)
         run: |
-          cd src/github_self_hosted_runners/fargate_runner
+          cd src/api/collections/docker_runner
 
           BUILD_TAG="${{ github.run_number }}-$(git rev-parse --short HEAD)"
           ECR_URL="${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
