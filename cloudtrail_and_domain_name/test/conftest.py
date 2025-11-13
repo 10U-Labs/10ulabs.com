@@ -3,8 +3,8 @@ from pathlib import Path
 import boto3
 import pytest
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
-CONFIG_FILE = REPO_ROOT / 'src' / 'cloudtrail_and_domain_name' / 'config.json'
+REPO_ROOT = Path(__file__).parent.parent.parent
+CONFIG_FILE = REPO_ROOT / 'cloudtrail_and_domain_name' / 'config.json'
 
 
 def load_config():
