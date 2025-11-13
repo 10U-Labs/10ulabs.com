@@ -140,7 +140,7 @@ Format the README in clean, professional markdown that complies with all markdow
 - Use proper heading levels (# ## ### ####), never use bold text as headings
 - Add language specifiers to all code blocks (```bash, ```python, ```json, etc.)
 - Wrap bare URLs in angle brackets (<https://example.com>)
-- End file with exactly one newline character
+- CRITICAL: The file MUST end with exactly one newline character after the last line of content (MD047)
 - Use proper table formatting with spaces around pipes (| Column 1 | Column 2 |)
 
 Be comprehensive but concise. Use code blocks for examples.
