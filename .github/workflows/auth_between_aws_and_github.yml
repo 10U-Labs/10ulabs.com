@@ -10,7 +10,7 @@ jobs:
     steps:
       - run: 'true'
   conclude-infrastructure-must-exist:
-    if: needs.determine-infrastructure-action.outputs.should_create == 'true'
+    if: needs.determine-infrastructure-action.outputs.must_exist == 'true'
     name: Concluding infrastructure must exist
     needs: determine-infrastructure-action
     runs-on: ubuntu-latest
@@ -42,7 +42,7 @@ jobs:
       github_pat_secret_name: ${{ steps.config.outputs.github_pat_secret_name }}
       github_repo: ${{ steps.config.outputs.github_repo }}
       has_credentials: ${{ steps.decision.outputs.has_credentials }}
-      should_create: ${{ steps.decision.outputs.should_create }}
+      must_exist: ${{ steps.decision.outputs.must_exist }}
       should_destroy: ${{ steps.decision.outputs.should_destroy }}
       state: ${{ steps.state.outputs.state }}
     runs-on: ubuntu-latest
@@ -113,11 +113,11 @@ jobs:
             echo "has_credentials=false" >> $GITHUB_OUTPUT
           fi
           if [ "$ENABLED" == "false" ] && [ "$CONFIRM_DESTROY" == "true" ]; then
-            echo "should_create=false" >> $GITHUB_OUTPUT
+            echo "must_exist=false" >> $GITHUB_OUTPUT
             echo "should_destroy=true" >> $GITHUB_OUTPUT
             echo "Decision: DESTROY infrastructure"
           else
-            echo "should_create=true" >> $GITHUB_OUTPUT
+            echo "must_exist=true" >> $GITHUB_OUTPUT
             echo "should_destroy=false" >> $GITHUB_OUTPUT
             echo "Decision: CREATE or UPDATE infrastructure (state: $STATE)"
             echo "Note: auth_between_aws_and_github.py create is idempotent - creates new or updates existing resources"
