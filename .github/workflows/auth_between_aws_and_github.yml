@@ -1,75 +1,56 @@
-name: Ensuring appropriate bilateral authorizations between AWS and GitHub
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'auth_between_aws_and_github/**'
-      - '!auth_between_aws_and_github/README.md'
-      - '.github/workflows/auth_between_aws_and_github.yml'
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run mode (show structure without executing)'
-        required: false
-        type: boolean
-        default: true
 concurrency:
-  group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
-permissions:
-  contents: read
-  id-token: write
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   conclude-infrastructure-destroy:
-    name: Concluding infrastructure must be destroyed
-    runs-on: ubuntu-latest
-    needs: determine-infrastructure-action
     if: needs.determine-infrastructure-action.outputs.should_destroy == 'true'
+    name: Concluding infrastructure must be destroyed
+    needs: determine-infrastructure-action
+    runs-on: ubuntu-latest
     steps:
       - run: 'true'
   conclude-infrastructure-must-exist:
+    if: needs.determine-infrastructure-action.outputs.must_exist == 'true'
     name: Concluding infrastructure must exist
-    runs-on: ubuntu-latest
     needs: determine-infrastructure-action
-    if: needs.determine-infrastructure-action.outputs.should_create == 'true'
+    runs-on: ubuntu-latest
     steps:
       - run: 'true'
   conclude-readme-skip:
+    if: needs.determine-readme-update.outputs.readme_should_be_updated == 'false'
     name: Concluding README.md should not be updated
-    runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.readme_is_current == 'true'
+    runs-on: ubuntu-latest
     steps:
       - run: 'true'
   conclude-readme-update:
+    if: needs.determine-readme-update.outputs.readme_should_be_updated == 'true'
     name: Concluding README.md should be updated
-    runs-on: ubuntu-latest
     needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.readme_is_current != 'true'
+    runs-on: ubuntu-latest
     steps:
       - run: 'true'
   determine-infrastructure-action:
     name: Determining if infrastructure should exist or be destroyed
-    runs-on: ubuntu-latest
     outputs:
-      should_create: ${{ steps.decision.outputs.should_create }}
-      should_destroy: ${{ steps.decision.outputs.should_destroy }}
-      has_credentials: ${{ steps.decision.outputs.has_credentials }}
-      state: ${{ steps.state.outputs.state }}
-      enabled: ${{ steps.config.outputs.enabled }}
-      confirm_destroy: ${{ steps.config.outputs.confirm_destroy }}
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
-      aws_region: ${{ steps.config.outputs.aws_region }}
       aws_iam_role_name: ${{ steps.config.outputs.aws_iam_role_name }}
-      github_pat_secret_name: ${{ steps.config.outputs.github_pat_secret_name }}
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      confirm_destroy: ${{ steps.config.outputs.confirm_destroy }}
+      enabled: ${{ steps.config.outputs.enabled }}
       github_org: ${{ steps.config.outputs.github_org }}
+      github_pat_secret_name: ${{ steps.config.outputs.github_pat_secret_name }}
       github_repo: ${{ steps.config.outputs.github_repo }}
+      has_credentials: ${{ steps.decision.outputs.has_credentials }}
+      must_exist: ${{ steps.decision.outputs.must_exist }}
+      should_destroy: ${{ steps.decision.outputs.should_destroy }}
+      state: ${{ steps.state.outputs.state }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read auth_between_aws_and_github config
-        id: config
+      - id: config
+        name: Read auth_between_aws_and_github config
         run: |
           enabled=$(jq -r '.enabled' auth_between_aws_and_github/config.json)
           confirm_destroy=$(jq -r '.confirm_destroy' auth_between_aws_and_github/config.json)
@@ -93,11 +74,11 @@ jobs:
           echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT
           echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT
           echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT
-      - name: Detect auth_between_aws_and_github state
-        id: state
-        env:
+      - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        id: state
+        name: Detect auth_between_aws_and_github state
         run: |
           if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
             echo "state=warm" >> $GITHUB_OUTPUT
@@ -117,11 +98,11 @@ jobs:
             echo "state=cold" >> $GITHUB_OUTPUT
             echo "Bootstrap state: COLD (no infrastructure, direct credentials required)"
           fi
-      - name: Make decision
-        id: decision
-        env:
+      - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        id: decision
+        name: Make decision
         run: |
           STATE="${{ steps.state.outputs.state }}"
           ENABLED="${{ steps.config.outputs.enabled }}"
@@ -132,30 +113,29 @@ jobs:
             echo "has_credentials=false" >> $GITHUB_OUTPUT
           fi
           if [ "$ENABLED" == "false" ] && [ "$CONFIRM_DESTROY" == "true" ]; then
-            echo "should_create=false" >> $GITHUB_OUTPUT
+            echo "must_exist=false" >> $GITHUB_OUTPUT
             echo "should_destroy=true" >> $GITHUB_OUTPUT
             echo "Decision: DESTROY infrastructure"
           else
-            echo "should_create=true" >> $GITHUB_OUTPUT
+            echo "must_exist=true" >> $GITHUB_OUTPUT
             echo "should_destroy=false" >> $GITHUB_OUTPUT
             echo "Decision: CREATE or UPDATE infrastructure (state: $STATE)"
             echo "Note: auth_between_aws_and_github.py create is idempotent - creates new or updates existing resources"
           fi
   determine-readme-update:
     name: Determining if README.md should be updated
-    runs-on: ubuntu-latest
     needs: e2e-testing-infrastructure
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     outputs:
-      readme_is_current: ${{ steps.check.outputs.readme_is_current }}
+      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read auth_between_aws_and_github config
-        id: config
+      - id: config
+        name: Read auth_between_aws_and_github config
         run: |
           aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
           aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
@@ -176,10 +156,10 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
           aws-region: ${{ steps.config.outputs.aws_region }}
-      - name: Check if README needs update
-        id: check
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - id: check
+        name: Check if README needs update
         run: |
           python auth_between_aws_and_github/auth_between_aws_and_github.py readme \
             --aws-account-id "${{ steps.config.outputs.aws_account_id }}" \
@@ -191,8 +171,8 @@ jobs:
             --output-file "$GITHUB_OUTPUT"
   destroy:
     name: Destroying infrastructure
-    runs-on: ubuntu-latest
     needs: conclude-infrastructure-destroy
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -200,11 +180,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Destroy auth_between_aws_and_github infrastructure
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        env:
+      - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Destroy auth_between_aws_and_github infrastructure
         run: |
           echo "Destroying auth_between_aws_and_github infrastructure..."
           AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
@@ -223,13 +203,43 @@ jobs:
             --aws-access-key-id "${AWS_ACCESS_KEY_ID:-}" \
             --aws-secret-access-key "${AWS_SECRET_ACCESS_KEY:-}" \
             --force
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: Dry run
         run: echo "DRY RUN - Would destroy auth_between_aws_and_github infrastructure"
+  e2e-testing-infrastructure:
+    name: E2E testing infrastructure
+    needs: integration-testing-infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Read auth_between_aws_and_github config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install pytest
+        run: pip install pytest
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Run E2E tests
+        run: pytest auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: Dry run
+        run: echo "DRY RUN - Would run E2E tests"
   ensure-infrastructure-exists:
     name: Ensuring infrastructure exists in defined state
-    runs-on: ubuntu-latest
     needs: integration-testing-code
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -237,11 +247,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Check credentials
-        env:
+      - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        name: Check credentials
         run: |
           echo "Checking available credentials..."
           if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
@@ -256,12 +266,12 @@ jobs:
           fi
           echo ""
           echo "Note: auth_between_aws_and_github.py will detect state and validate credentials accordingly"
-      - name: Create auth_between_aws_and_github infrastructure
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        env:
+      - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Create auth_between_aws_and_github infrastructure
         run: |
           echo "Creating auth_between_aws_and_github infrastructure..."
           AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
@@ -282,49 +292,46 @@ jobs:
             --aws-secret-access-key "$AWS_SECRET_ACCESS_KEY" \
             --github-token "$GH_RUNNER_PAT" \
             --bedrock-model-id "$BEDROCK_MODEL_ID"
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: Dry run
         run: echo "DRY RUN - Would create auth_between_aws_and_github infrastructure"
-  e2e-testing-infrastructure:
-    name: E2E testing infrastructure
+  integration-testing-code:
+    name: Integration testing code
+    needs: unit-testing-code
     runs-on: ubuntu-latest
-    needs: integration-testing-infrastructure
     steps:
-      - name: Checkout code
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Read auth_between_aws_and_github config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
-        run: |
-          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
-          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
-      - name: Set up Python
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install pytest
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install dependencies
         run: pip install pytest
-      - name: Run E2E tests
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: us-east-1
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pytest auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run E2E tests"
+        name: Run integration tests
+        run: pytest auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: Dry run
+        run: echo "DRY RUN - Would run integration tests"
   integration-testing-infrastructure:
     name: Integration testing infrastructure
-    runs-on: ubuntu-latest
     needs: ensure-infrastructure-exists
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read auth_between_aws_and_github config
+      - id: config
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
+        name: Read auth_between_aws_and_github config
         run: |
           aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
           aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
@@ -336,31 +343,81 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install pytest
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install pytest
         run: pip install pytest
-      - name: Run integration tests
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Run integration tests
         run: pytest auth_between_aws_and_github/test/post_deployment/test_integration.py -v
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: Dry run
         run: echo "DRY RUN - Would run integration tests"
+  performing-static-analysis:
+    name: Performing static analysis
+    needs: conclude-infrastructure-must-exist
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip static analysis
+        run: echo "DRY RUN - Would run pylint and mypy static analysis"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint
+          npm install -g jsonlint markdownlint-cli2
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/auth_between_aws_and_github.yml
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax in config.json..."
+          jsonlint -q auth_between_aws_and_github/config.json
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting Markdown documentation
+        run: |
+          if [ -f auth_between_aws_and_github/README.md ]; then
+            echo "Linting README.md..."
+            markdownlint-cli2 auth_between_aws_and_github/README.md
+          else
+            echo "No README.md found, skipping markdown linting"
+          fi
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting Python files
+        run: |
+          pylint auth_between_aws_and_github/auth_between_aws_and_github.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Static type checking Python files with mypy
+        run: |
+          mypy auth_between_aws_and_github/auth_between_aws_and_github.py
   smoke-testing-infrastructure-was-destroyed:
     name: Smoke testing infrastructure was destroyed
-    runs-on: ubuntu-latest
     needs: destroy
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: Dry run
         run: echo "DRY RUN - Would verify OIDC provider no longer exists"
-      - name: Verify infrastructure destroyed
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        env:
+      - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Verify infrastructure destroyed
         run: |
           echo "Verifying infrastructure destroyed..."
           AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
@@ -377,119 +434,42 @@ jobs:
           fi
           echo "PASSED: Infrastructure successfully destroyed"
           echo "System returned to COLD state"
-  integration-testing-code:
-    name: Integration testing code
-    runs-on: ubuntu-latest
-    needs: unit-testing-code
-    steps:
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install pytest
-      - name: Run integration tests
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-1
-          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        run: pytest auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
-      - name: Dry run
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run integration tests"
-  performing-static-analysis:
-    name: Performing static analysis
-    runs-on: ubuntu-latest
-    needs: conclude-infrastructure-must-exist
-    steps:
-      - name: DRY RUN - Skip static analysis
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run pylint and mypy static analysis"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install linting dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
-      - name: Linting YAML files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/auth_between_aws_and_github.yml
-      - name: Linting JSON configuration files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          echo "Validating JSON syntax in config.json..."
-          jsonlint -q auth_between_aws_and_github/config.json
-      - name: Linting Markdown documentation
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          if [ -f auth_between_aws_and_github/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 auth_between_aws_and_github/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
-      - name: Linting Python files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pylint auth_between_aws_and_github/auth_between_aws_and_github.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-under=10.0
-      - name: Static type checking Python files with mypy
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          mypy auth_between_aws_and_github/auth_between_aws_and_github.py
   unit-testing-code:
     name: Unit testing code
-    runs-on: ubuntu-latest
     needs: performing-static-analysis
+    runs-on: ubuntu-latest
     steps:
-      - name: DRY RUN - Skip unit tests
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip unit tests
         run: echo "DRY RUN - Would run unit tests"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install dependencies
         run: pip install pytest
-      - name: Functional unit testing
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Functional unit testing
         run: |
           echo "Running unit tests..."
           PYTHONPATH=auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
   update-readme:
     name: Updating README.md
-    runs-on: ubuntu-latest
     needs: conclude-readme-update
     permissions:
-      id-token: write
       contents: write
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Read auth_between_aws_and_github config
-        id: config
+      - id: config
+        name: Read auth_between_aws_and_github config
         run: |
           aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
           aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
@@ -510,8 +490,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
           aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
       - name: Update README
         run: |
           python auth_between_aws_and_github/auth_between_aws_and_github.py readme \
@@ -528,3 +508,22 @@ jobs:
           git add auth_between_aws_and_github/README.md
           git diff --staged --quiet || git commit -m "Update auth_between_aws_and_github README via Bedrock"
           git push
+name: Ensuring appropriate bilateral authorizations between AWS and GitHub
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'auth_between_aws_and_github/**'
+      - '!auth_between_aws_and_github/README.md'
+      - '.github/workflows/auth_between_aws_and_github.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: true
+        description: 'Dry run mode (show structure without executing)'
+        required: false
+        type: boolean
+permissions:
+  contents: read
+  id-token: write
