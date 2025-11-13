@@ -17,8 +17,8 @@ DomainStack = domain_module.DomainStack
 
 app = cdk.App()
 
-config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
-with open(config_path) as f:
+config_path = Path(__file__).parent / "config.json"
+with open(config_path, encoding='utf-8') as f:
     config = json.load(f)
 
 env = cdk.Environment(

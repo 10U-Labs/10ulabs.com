@@ -285,7 +285,7 @@ jobs:
         name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
-          npm install -g markdownlint-cli2
+          npm install -g jsonlint markdownlint-cli2
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install project dependencies for linting
         run: pip install -r cloudtrail_and_domain_name/requirements.txt
@@ -294,6 +294,12 @@ jobs:
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/cloudtrail_and_domain_name.yml
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q cloudtrail_and_domain_name/config.json
+          jsonlint -q cloudtrail_and_domain_name/cdk.json
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Markdown documentation
         run: |
