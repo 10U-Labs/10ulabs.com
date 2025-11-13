@@ -4,14 +4,14 @@ concurrency:
 jobs:
   conclude-readme-skip:
     if: needs.determine-readme-update.outputs.readme_should_be_updated != 'true'
-    name: Concluding README.md should not be updated
+    name: Conclude README Skip
     needs: determine-readme-update
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
   conclude-readme-update:
     if: needs.determine-readme-update.outputs.readme_should_be_updated == 'true'
-    name: Concluding README.md should be updated
+    name: Conclude README Update
     needs: determine-readme-update
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +25,7 @@ jobs:
         !contains(github.event.head_commit.message, '[skip deploy]')
       )) &&
       !contains(github.event.head_commit.message, '[post-deployment]')
-    name: Ensuring infrastructure is in desired state
+    name: Deploy Artifacts
     needs: unit-testing-code
     runs-on: ubuntu-latest
     steps:
@@ -102,7 +102,7 @@ jobs:
       (needs.e2e-testing-infrastructure.result == 'success' ||
        contains(github.event.head_commit.message, '[post-deployment]')) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
-    name: Determining if README.md should be updated
+    name: Determine README Update
     needs: e2e-testing-infrastructure
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
@@ -143,7 +143,7 @@ jobs:
       always() &&
       (needs.integration-testing-infrastructure.result == 'success' ||
        contains(github.event.head_commit.message, '[post-deployment]'))
-    name: E2E testing
+    name: E2E Test Infrastructure
     needs: integration-testing-infrastructure
     runs-on: ubuntu-latest
     steps:
@@ -185,7 +185,7 @@ jobs:
       always() &&
       (needs.deploying-artifacts.result == 'success' ||
        contains(github.event.head_commit.message, '[post-deployment]'))
-    name: Integration testing
+    name: Integration Test Infrastructure
     needs: deploying-artifacts
     runs-on: ubuntu-latest
     steps:
@@ -225,7 +225,7 @@ jobs:
   performing-static-analysis:
     if: |
       !contains(github.event.head_commit.message, '[post-deployment]')
-    name: Performing static analysis
+    name: Perform Static Analysis
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -280,7 +280,7 @@ jobs:
   unit-testing-code:
     if: |
       !contains(github.event.head_commit.message, '[post-deployment]')
-    name: Unit testing
+    name: Unit Test Code
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
@@ -310,7 +310,7 @@ jobs:
         run: |
           pytest gmail_email_provider/test/test_unit.py -v
   update-readme:
-    name: Updating README.md
+    name: Update README
     needs: conclude-readme-update
     permissions:
       contents: write
@@ -363,9 +363,6 @@ on:
     paths:
       - 'gmail_email_provider/**'
       - '.github/workflows/gmail_email_provider.yml'
-  repository_dispatch:
-    types:
-      - domain_name_has_been_registered_successfully
   workflow_dispatch:
     inputs:
       dry_run:
