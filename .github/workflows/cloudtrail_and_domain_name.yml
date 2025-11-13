@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
-  deploying-artifacts:
+  ensure-infrastructure:
     if: |
       github.event.inputs.dry_run != 'true' &&
       github.ref == 'refs/heads/main'
     name: Ensuring infrastructure is in desired state
-    needs: unit-testing-code
+    needs: unit-tests
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -155,10 +155,10 @@ jobs:
           cat domain-outputs.json | jq '.'
   determine-readme-update:
     if: |
-      needs.e2e-testing-infrastructure.result == 'success' &&
+      needs.e2e-tests.result == 'success' &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Determining if README.md should be updated
-    needs: e2e-testing-infrastructure
+    needs: e2e-tests
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
@@ -209,10 +209,10 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{"event_type":"domain_name_has_been_registered_successfully"}'
-  e2e-testing-infrastructure:
-    if: needs.integration-testing-infrastructure.result == 'success'
+  e2e-tests:
+    if: needs.integration-tests.result == 'success'
     name: E2E testing
-    needs: integration-testing-infrastructure
+    needs: integration-tests
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -248,10 +248,10 @@ jobs:
         name: Run E2E tests
         run: |
           pytest cloudtrail_and_domain_name/test/test_e2e.py -v
-  integration-testing-infrastructure:
-    if: needs.deploying-artifacts.result == 'success'
+  integration-tests:
+    if: needs.ensure-infrastructure.result == 'success'
     name: Integration testing
-    needs: deploying-artifacts
+    needs: ensure-infrastructure
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -287,7 +287,7 @@ jobs:
         name: Run pytest integration tests
         run: |
           pytest cloudtrail_and_domain_name/test/test_integration.py -v
-  performing-static-analysis:
+  static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -334,9 +334,9 @@ jobs:
         name: Static type checking Python files with mypy
         run: |
           python -m mypy cloudtrail_and_domain_name
-  unit-testing-code:
+  unit-tests:
     name: Unit testing
-    needs: performing-static-analysis
+    needs: static-analysis
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
