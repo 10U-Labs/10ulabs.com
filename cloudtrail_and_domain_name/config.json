@@ -1,6 +1,8 @@
 {
-  "aws_account_id": 781581267945,
-  "aws_region": "us-east-1",
+  "aws": {
+    "account_id": 781581267945,
+    "region": "us-east-1"
+  },
   "bedrock": {
     "max_tokens_check": 4000,
     "max_tokens_generate": 16000,

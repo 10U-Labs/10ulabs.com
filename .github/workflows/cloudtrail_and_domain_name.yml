@@ -34,8 +34,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -168,8 +168,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -205,8 +205,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -243,8 +243,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -364,8 +364,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python

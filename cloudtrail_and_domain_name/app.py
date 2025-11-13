@@ -22,8 +22,8 @@ with open(config_path, encoding='utf-8') as f:
     config = json.load(f)
 
 env = cdk.Environment(
-    account=str(config["aws_account_id"]),
-    region=config["aws_region"]
+    account=str(config["aws"]["account_id"]),
+    region=config["aws"]["region"]
 )
 
 domain_stack = DomainStack(
