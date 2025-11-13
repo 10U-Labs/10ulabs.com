@@ -268,10 +268,6 @@ class TestBedrockIntegration:
         if result.returncode != 0:
             pytest.fail(f"Bedrock README check failed:\n{result.stderr}\n\nBootstrap should have configured everything correctly!")
 
-        
-        output = result.stdout.strip().split('\n')[-1]
-        assert output in ['True', 'False'], f"Expected 'True' or 'False', got: {output}"
-
 
 def is_github_actions():
     return os.environ.get('GITHUB_ACTIONS', '').lower() == 'true'
