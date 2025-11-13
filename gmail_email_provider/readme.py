@@ -243,10 +243,16 @@ def main():
         logging.error("Failed to create Bedrock client: %s", e)
         sys.exit(1)
 
+    config_dict = {
+        'bedrock_model_id': bedrock_model_id,
+        'max_tokens_check': max_tokens_check,
+        'max_tokens_generate': max_tokens_generate
+    }
+
     if args.check:
-        handle_check(args, bedrock_client, source_code, readme_path, bedrock_model_id, max_tokens_check)
+        handle_check(args, bedrock_client, source_code, readme_path, config_dict)
     elif args.update:
-        handle_update(bedrock_client, source_code, readme_path, bedrock_model_id, max_tokens_generate)
+        handle_update(bedrock_client, source_code, readme_path, config_dict)
 
 if __name__ == '__main__':
     main()
