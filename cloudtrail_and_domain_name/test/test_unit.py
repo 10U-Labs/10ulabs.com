@@ -11,12 +11,16 @@ def test_config_file_exists_in_correct_location(config):
     assert config_path.exists(), f"Config file not found at {config_path}"
 
 
+def test_config_has_aws_key(config):
+    assert "aws" in config
+
+
 def test_config_has_aws_account_id(config):
-    assert "aws_account_id" in config
+    assert "account_id" in config["aws"]
 
 
 def test_config_has_aws_region(config):
-    assert "aws_region" in config
+    assert "region" in config["aws"]
 
 
 def test_config_has_domain_name(config):
@@ -39,8 +43,8 @@ def test_hosted_zone_has_id_output(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -66,8 +70,8 @@ def test_hosted_zone_has_name_output(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -93,8 +97,8 @@ def test_hosted_zone_exports_name_servers(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -118,8 +122,8 @@ def test_domain_registration_lambda_has_python_runtime(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -144,8 +148,8 @@ def test_domain_registration_lambda_has_correct_handler(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -170,8 +174,8 @@ def test_domain_registration_lambda_has_timeout(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -191,7 +195,7 @@ def test_domain_registration_lambda_has_description(config):
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
-    stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+    stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws"]["account_id"]), region=config["aws"]["region"]))
     template = Template.from_stack(stack)
     from aws_cdk.assertions import Match
     template.has_resource_properties(
@@ -215,8 +219,8 @@ def test_custom_resource_for_domain_registration_count(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -236,8 +240,8 @@ def test_custom_resource_has_domain_name_property(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -1833,8 +1837,8 @@ def test_cloudtrail_s3_bucket_exists(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -1859,8 +1863,8 @@ def test_cloudtrail_s3_bucket_has_encryption(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -1894,8 +1898,8 @@ def test_cloudtrail_s3_bucket_blocks_public_acls(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -1922,8 +1926,8 @@ def test_cloudtrail_s3_bucket_blocks_public_policy(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -1950,8 +1954,8 @@ def test_cloudtrail_s3_bucket_ignores_public_acls(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -1978,8 +1982,8 @@ def test_cloudtrail_s3_bucket_restricts_public_buckets(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -2009,8 +2013,8 @@ def test_cloudtrail_s3_bucket_with_logging_exists(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2042,8 +2046,8 @@ def test_cloudtrail_s3_bucket_versioning_disabled(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2070,7 +2074,7 @@ def test_cloudtrail_s3_bucket_has_auto_delete(config):
     domain_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(domain_module)
     DomainStack = domain_module.DomainStack
-    stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws_account_id"]), region=config["aws_region"]))
+    stack = DomainStack(app, "TestStack", config=config, env=cdk.Environment(account=str(config["aws"]["account_id"]), region=config["aws"]["region"]))
     template = Template.from_stack(stack)
     template.has_resource_properties(
         "AWS::S3::Bucket",
@@ -2103,8 +2107,8 @@ def test_cloudtrail_log_group_exists(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2129,8 +2133,8 @@ def test_cloudtrail_log_group_has_retention(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2160,8 +2164,8 @@ def test_cloudtrail_trail_exists(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2186,8 +2190,8 @@ def test_cloudtrail_trail_is_logging(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2217,8 +2221,8 @@ def test_cloudtrail_trail_is_multi_region(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2248,8 +2252,8 @@ def test_cloudtrail_trail_includes_global_events(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2275,8 +2279,8 @@ def test_cloudtrail_trail_logs_all_read_write_events(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -2305,8 +2309,8 @@ def test_cloudtrail_trail_includes_management_events(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
     template = Template.from_stack(stack)
@@ -2339,8 +2343,8 @@ def test_cloudtrail_trail_sends_to_cloudwatch_logs(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2371,8 +2375,8 @@ def test_cloudtrail_trail_exists_for_dependency(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2401,8 +2405,8 @@ def test_domain_registration_depends_on_cloudtrail(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2438,7 +2442,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:CheckDomainAvailability"])}]}})
 
@@ -2451,7 +2455,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:GetDomainDetail"])}]}})
 
@@ -2464,7 +2468,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:GetOperationDetail"])}]}})
 
@@ -2477,7 +2481,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53domains:RegisterDomain"])}]}})
 
@@ -2490,7 +2494,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53:ListHostedZonesByName"])}]}})
 
@@ -2503,7 +2507,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53:GetHostedZone"])}]}})
 
@@ -2516,7 +2520,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["route53:CreateHostedZone"])}]}})
 
@@ -2529,7 +2533,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["account:GetContactInformation"])}]}})
 
@@ -2542,7 +2546,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["account:GetAlternateContact"])}]}})
 
@@ -2555,7 +2559,7 @@ class TestLambdaIAMPermissions(unittest.TestCase):
         domain_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(domain_module)
         DomainStack = domain_module.DomainStack
-        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws_account_id"]), region=self.config["aws_region"]))
+        stack = DomainStack(app, "TestStack", config=self.config, env=cdk.Environment(account=str(self.config["aws"]["account_id"]), region=self.config["aws"]["region"]))
         template = Template.from_stack(stack)
         template.has_resource_properties("AWS::IAM::Policy", {"PolicyDocument": {"Statement": [{"Action": Match.array_with(["organizations:DescribeOrganization"])}]}})
 
@@ -2575,8 +2579,8 @@ def test_stack_synthesizes_correctly(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2600,8 +2604,8 @@ def test_stack_exports_required_outputs(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2629,8 +2633,8 @@ def test_hosted_zone_has_id_output_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2654,8 +2658,8 @@ def test_hosted_zone_has_name_output_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2679,8 +2683,8 @@ def test_hosted_zone_has_nameservers_output_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2704,8 +2708,8 @@ def test_cloudtrail_resources_synthesize(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2731,8 +2735,8 @@ def test_cloudtrail_has_exactly_one_trail_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2756,8 +2760,8 @@ def test_cloudtrail_is_multi_region_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2783,8 +2787,8 @@ def test_cloudtrail_includes_global_service_events_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2810,8 +2814,8 @@ def test_cloudtrail_trail_exists_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2835,8 +2839,8 @@ def test_domain_registration_custom_resource_exists_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
@@ -2860,8 +2864,8 @@ def test_domain_registration_depends_on_cloudtrail_in_template(config):
         "TestDomainStack",
         config=config,
         env=cdk.Environment(
-            account=str(config["aws_account_id"]),
-            region=config["aws_region"]
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
         )
     )
 
