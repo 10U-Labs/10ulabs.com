@@ -66,7 +66,7 @@ def test_hosted_zone_can_create_record(route53_client, config):
 
 
 def test_hosted_zone_id_export_exists(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
 
     domain_name = config['domain_name']
     normalized_domain = domain_name.replace('.', '-')
@@ -83,7 +83,7 @@ def test_hosted_zone_id_export_exists(config):
 
 
 def test_hosted_zone_name_export_exists(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
 
     domain_name = config['domain_name']
     normalized_domain = domain_name.replace('.', '-')
@@ -499,7 +499,7 @@ def test_access_log_bucket_has_expiration_lifecycle_rule(s3_client, cloudtrail_c
 
 
 def test_lambda_function_exists(config):
-    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    lambda_client = boto3.client('lambda', region_name=config['aws']['region'])
     
     functions = lambda_client.list_functions()
     domain_handler_exists = any(
@@ -510,8 +510,8 @@ def test_lambda_function_exists(config):
 
 
 def test_lambda_has_route53domains_permissions(config):
-    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
-    iam_client = boto3.client('iam', region_name=config['aws_region'])
+    lambda_client = boto3.client('lambda', region_name=config['aws']['region'])
+    iam_client = boto3.client('iam', region_name=config['aws']['region'])
     
     functions = lambda_client.list_functions()
     domain_func = None
@@ -537,7 +537,7 @@ def test_lambda_has_route53domains_permissions(config):
 
 
 def test_lambda_timeout_is_900_seconds(config):
-    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    lambda_client = boto3.client('lambda', region_name=config['aws']['region'])
     
     functions = lambda_client.list_functions()
     domain_func = None
@@ -550,7 +550,7 @@ def test_lambda_timeout_is_900_seconds(config):
 
 
 def test_lambda_runtime_is_python_3_11(config):
-    lambda_client = boto3.client('lambda', region_name=config['aws_region'])
+    lambda_client = boto3.client('lambda', region_name=config['aws']['region'])
     
     functions = lambda_client.list_functions()
     domain_func = None
@@ -610,7 +610,7 @@ def test_domain_nameservers_match_hosted_zone(route53_client, config):
 
 
 def test_domain_name_stack_output_value(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
     
     stacks = cf_client.describe_stacks()
     domain_stack = None
@@ -625,7 +625,7 @@ def test_domain_name_stack_output_value(config):
 
 
 def test_nameservers_stack_output_exists(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
     
     stacks = cf_client.describe_stacks()
     domain_stack = None
@@ -640,7 +640,7 @@ def test_nameservers_stack_output_exists(config):
 
 
 def test_registration_status_stack_output_exists(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
     
     stacks = cf_client.describe_stacks()
     domain_stack = None
