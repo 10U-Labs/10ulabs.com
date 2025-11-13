@@ -86,19 +86,6 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 - Never use EC2 for application hosting when serverless alternatives exist
 - Benefits of serverless: no server management, automatic scaling, pay-per-use pricing, built-in high availability
 
-### Branch and PR Strategy
-- **Create PRs to main** - After pushing to your claude/ branch, create a pull request
-- **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
-- **Clean up remote branches** - Delete remote claude/ branches after merging (local branch is irrelevant)
-- When creating PRs, use descriptive titles and comprehensive summaries
-
-### PR Creation Workflow
-After completing work, committing, and running ALL required tests (pre-deployment AND post-deployment):
-1. Push commits to the claude/ branch
-2. Create pull request to main with descriptive title and comprehensive summary
-3. Immediately merge the PR and delete the remote branch
-4. CI/CD will run full post-deployment test suite after merge (including tests requiring deployed infrastructure)
-
 ### Commit Message Flags
 
 Use these flags in commit messages to control workflow behavior:

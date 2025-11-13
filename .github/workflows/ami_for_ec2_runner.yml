@@ -20,7 +20,7 @@ on:
       - main
     paths:
       - 'src/github_self_hosted_runners/config.json'
-      - 'src/github_self_hosted_runners/ami_builder/**'
+      - 'src/api/collections/ami_for_ec2_runners/**'
       - '.github/workflows/build-ami-for-github_self_hosted_runners.yml'
 
 concurrency:
@@ -142,12 +142,12 @@ jobs:
 
       - name: Initialize Packer
         run: |
-          cd src/github_self_hosted_runners/ami_builder
+          cd src/api/collections/ami_for_ec2_runners
           packer init template.pkr.hcl
 
       - name: Validate Packer template
         run: |
-          cd src/github_self_hosted_runners/ami_builder
+          cd src/api/collections/ami_for_ec2_runners
           packer validate \
             -var="debian_version=${{ steps.config.outputs.debian_version }}" \
             -var="architecture=${{ steps.config.outputs.architecture }}" \
@@ -161,7 +161,7 @@ jobs:
       - name: Build AMI with Packer
         id: build
         run: |
-          cd src/github_self_hosted_runners/ami_builder
+          cd src/api/collections/ami_for_ec2_runners
 
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"

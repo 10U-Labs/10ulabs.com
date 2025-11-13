@@ -53,7 +53,7 @@ class EC2SpotRunnerAPIStack(Stack):
             function_name=config["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_11,
             handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset("src/api/collections/ec2_spot_instance_based_runners"),
+            code=lambda_.Code.from_asset("src/api/collections/ami_for_ec2_runners"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
