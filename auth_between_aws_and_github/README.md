@@ -1,10 +1,17 @@
 # AWS-GitHub Authentication Infrastructure
 
-A self-contained Python script that manages AWS-GitHub authentication infrastructure for GitHub Actions workflows. Built with **zero external dependencies** - uses only Python standard library for maximum portability and security.
+A self-contained Python script that manages AWS-GitHub authentication
+infrastructure for GitHub Actions workflows. Built with **zero external
+dependencies** - uses only Python standard library for maximum portability
+and security.
 
 ## Overview
 
-This script automates the setup and management of AWS-GitHub OIDC authentication, enabling GitHub Actions workflows to securely access AWS resources without storing long-term credentials. The implementation uses **pure Python stdlib** with custom AWS API clients - no AWS CLI, boto3, or pip packages required.
+This script automates the setup and management of AWS-GitHub OIDC
+authentication, enabling GitHub Actions workflows to securely access AWS
+resources without storing long-term credentials. The implementation uses
+**pure Python stdlib** with custom AWS API clients - no AWS CLI, boto3,
+or pip packages required.
 
 ### Key Features
 
@@ -28,18 +35,21 @@ This script automates the setup and management of AWS-GitHub OIDC authentication
 The script operates in three distinct states:
 
 ### COLD State
+
 - **Condition**: No existing AWS infrastructure
 - **Authentication**: Direct AWS credentials (Access Key + Secret)
 - **Actions**: Creates OIDC provider, IAM role, and stores GitHub PAT
 - **Transition**: Moves to WARM state after successful setup
 
 ### WARM State
+
 - **Condition**: Infrastructure exists and operational
 - **Authentication**: OIDC tokens (no long-term credentials needed)
 - **Actions**: Uses existing infrastructure, retrieves secrets from AWS
 - **Benefit**: Pure OIDC automation without human credentials
 
 ### DESTROY State
+
 - **Condition**: Cleanup mode
 - **Authentication**: OIDC (if available) or direct credentials
 - **Actions**: Removes all created AWS resources
@@ -127,7 +137,8 @@ The script automatically detects its execution environment:
 
 ### Pure Python stdlib Architecture
 
-This script implements a complete AWS API client library using only Python standard library components:
+This script implements a complete AWS API client library using only
+Python standard library components:
 
 - **HTTP Requests**: `urllib.request` for all API calls
 - **Authentication**: Custom AWS Signature Version 4 implementation
@@ -196,19 +207,22 @@ The trust policy restricts access to specific repository contexts:
 ### Common Issues
 
 #### AWS Authentication Errors
-```
+
+```text
 Error: STS access denied
 Solution: Verify AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 ```
 
 #### GitHub PAT Validation
-```
+
+```text
 Error: GitHub PAT missing required scopes
 Solution: Create new PAT with admin:org and repo scopes
 ```
 
 #### OIDC Role Assumption
-```
+
+```text
 Error: Failed to assume role with OIDC
 Solution: Check trust policy and GitHub Actions id-token permissions
 ```
@@ -231,7 +245,7 @@ If infrastructure creation is interrupted:
 
 ### Bedrock Access Issues
 
-```
+```text
 Error: AWS account not authorized for Bedrock
 Solution: Create AWS support case for Bedrock model access
 URL: https://console.aws.amazon.com/support/home
@@ -255,7 +269,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup AWS-GitHub Authentication
         run: |
           python auth_between_aws_and_github.py create \
