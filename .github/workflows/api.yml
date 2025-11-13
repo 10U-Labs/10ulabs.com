@@ -31,8 +31,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
+          REGION=$(jq -r '.aws.region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -63,8 +63,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
+          REGION=$(jq -r '.aws.region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -92,8 +92,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
+          REGION=$(jq -r '.aws.region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -156,8 +156,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
+          REGION=$(jq -r '.aws.region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -256,8 +256,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
-          REGION=$(jq -r '.aws_region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
+          REGION=$(jq -r '.aws.region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
