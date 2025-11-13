@@ -71,7 +71,7 @@ jobs:
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy src/gmail_email_provider
+          python -m mypy gmail_email_provider
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest
@@ -156,15 +156,15 @@ jobs:
       - name: CDK Bootstrap (if needed)
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cd src/gmail_email_provider && cdk diff GmailEmailProvider
+        run: cd gmail_email_provider && cdk diff GmailEmailProvider
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cd src/gmail_email_provider && cdk deploy GmailEmailProvider \
+          cd gmail_email_provider && cdk deploy GmailEmailProvider \
             --require-approval never \
             --outputs-file ../../gmail-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then

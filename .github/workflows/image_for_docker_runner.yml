@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/github_self_hosted_runners/config.json'
+      - 'api/collections/ami_for_ec2_runners/config.json'
       - 'api/collections/docker_runner/**'
       - 'api/collections/image_for_docker_runners/**'
       - '.github/workflows/build_docker_image_for_github_self_hosted_runners.yml'
@@ -29,11 +29,11 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          RUNNER_VERSION=$(jq -r '.github.runner_version' src/github_self_hosted_runners/config.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' src/github_self_hosted_runners/config.json)
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' src/github_self_hosted_runners/config.json)
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/github_self_hosted_runners/config.json)
-          REGION=$(jq -r '.aws.region' src/github_self_hosted_runners/config.json)
+          RUNNER_VERSION=$(jq -r '.github.runner_version' api/collections/ami_for_ec2_runners/config.json)
+          ARCHITECTURE=$(jq -r '.base_os.architecture' api/collections/ami_for_ec2_runners/config.json)
+          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/collections/ami_for_ec2_runners/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/collections/ami_for_ec2_runners/config.json)
+          REGION=$(jq -r '.aws.region' api/collections/ami_for_ec2_runners/config.json)
 
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
@@ -198,10 +198,10 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/github_self_hosted_runners/config.json)
-          REGION=$(jq -r '.aws.region' src/github_self_hosted_runners/config.json)
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' src/github_self_hosted_runners/config.json)
-          VPC_NAME=$(jq -r '.naming.vpc_name' src/github_self_hosted_runners/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/collections/ami_for_ec2_runners/config.json)
+          REGION=$(jq -r '.aws.region' api/collections/ami_for_ec2_runners/config.json)
+          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/collections/ami_for_ec2_runners/config.json)
+          VPC_NAME=$(jq -r '.naming.vpc_name' api/collections/ami_for_ec2_runners/config.json)
 
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT

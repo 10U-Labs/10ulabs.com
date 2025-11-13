@@ -477,7 +477,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running unit tests..."
-          PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+          PYTHONPATH=auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
   update-readme:
     name: Updating README.md
     runs-on: ubuntu-latest

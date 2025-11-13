@@ -71,7 +71,7 @@ jobs:
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy src/cloudtrail_and_domain_name
+          python -m mypy cloudtrail_and_domain_name
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest
@@ -156,15 +156,15 @@ jobs:
       - name: CDK Bootstrap (if needed)
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          cd src/cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cd src/cloudtrail_and_domain_name && cdk diff TenULabsDomainName
+        run: cd cloudtrail_and_domain_name && cdk diff TenULabsDomainName
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cd src/cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
+          cd cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
             --require-approval never \
             --outputs-file ../../domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
