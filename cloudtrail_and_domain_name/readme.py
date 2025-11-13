@@ -139,7 +139,17 @@ Create a professional README that includes:
 
 IMPORTANT: Do NOT include a "License" section. The repository already has a LICENSE.md file, so the README must not duplicate licensing information.
 
-Format the README in clean, professional markdown. Be comprehensive but concise. Use code blocks for examples.
+Format the README in clean, professional markdown that complies with all markdownlint rules:
+- Keep all lines under 80 characters
+- Always add blank lines before and after lists
+- Always add blank lines before and after code blocks
+- Use proper heading levels (# ## ### ####), never use bold text as headings
+- Add language specifiers to all code blocks (```bash, ```python, ```json, etc.)
+- Wrap bare URLs in angle brackets (<https://example.com>)
+- End file with exactly one newline character
+- Use proper table formatting with spaces around pipes (| Column 1 | Column 2 |)
+
+Be comprehensive but concise. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
 
     try:
