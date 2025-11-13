@@ -397,9 +397,6 @@ on:
     paths:
       - 'cloudtrail_and_domain_name/**'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
-  repository_dispatch:
-    types:
-      - bilateral_authorizations_between_aws_and_github_have_been_established
   workflow_dispatch:
     inputs:
       dry_run:
