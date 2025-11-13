@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
-BOOTSTRAP_SCRIPT = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
+BOOTSTRAP_SCRIPT = REPO_ROOT / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
 TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
 TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
 TEST_ROLE_NAME = 'GitHubActionsBootstrapCITest'
