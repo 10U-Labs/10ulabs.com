@@ -5,8 +5,6 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     steps:
       - name: DRY RUN - Skip static analysis
         if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -55,8 +53,6 @@ jobs:
     name: Unit testing
     runs-on: ubuntu-latest
     needs: performing-static-analysis
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     steps:
       - name: DRY RUN - Skip unit tests
         if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -89,12 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'push' || (
-        !contains(github.event.head_commit.message, '[skip-deploy]') &&
-        !contains(github.event.head_commit.message, '[skip deploy]')
-      )) &&
-      !contains(github.event.head_commit.message, '[post-deployment]')
+      github.ref == 'refs/heads/main'
     steps:
       - name: DRY RUN - Skip deployment
         if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -174,8 +165,7 @@ jobs:
     needs: deploying-artifacts
     if: |
       always() &&
-      (needs.deploying-artifacts.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
+      needs.deploying-artifacts.result == 'success'
     steps:
       - name: DRY RUN - Skip integration tests
         if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -216,8 +206,7 @@ jobs:
     needs: integration-testing-infrastructure
     if: |
       always() &&
-      (needs.integration-testing-infrastructure.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
+      needs.integration-testing-infrastructure.result == 'success'
     steps:
       - name: DRY RUN - Skip E2E tests
         if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -258,8 +247,7 @@ jobs:
     needs: e2e-testing-infrastructure
     if: |
       always() &&
-      (needs.e2e-testing-infrastructure.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]')) &&
+      needs.e2e-testing-infrastructure.result == 'success' &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
@@ -354,33 +342,14 @@ jobs:
             git commit -m "Update api README.md [skip ci]"
             git push
           fi
-  dispatch-success-event:
-    name: Dispatching success event
-    runs-on: ubuntu-latest
-    needs: [update-readme, conclude-readme-skip]
-    if: |
-      always() &&
-      (needs.update-readme.result == 'success' || needs.conclude-readme-skip.result == 'success')
-    steps:
-      - name: Dispatch api_is_ready_for_collections event
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d '{"event_type":"api_is_ready_for_collections"}'
 name: Ensuring API infrastructure exists and is properly configured
 on:
   push:
     branches:
       - main
     paths:
-      - 'api/**'
+      - 'api/self/**'
       - '.github/workflows/api.yml'
-  repository_dispatch:
-    types:
-      - domain_name_has_been_registered_successfully
   workflow_dispatch:
     inputs:
       dry_run:
