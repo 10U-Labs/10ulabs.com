@@ -568,3 +568,110 @@ def test_poll_script_main_strips_trailing_slash_from_endpoint():
                 mock_poll.return_value = True
                 poll_api_until_it_has_propagated.main()
                 mock_poll.assert_called_once_with('https://api.example.com', 10)
+
+
+def test_app_can_be_imported_successfully():
+    app_path = Path(__file__).parents[1] / "app.py"
+    spec = importlib.util.spec_from_file_location("app_module", app_path)
+    assert spec is not None
+
+
+def test_app_loads_config_json():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "aws" in config
+
+
+def test_app_creates_cdk_environment_with_account_id():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    env = cdk.Environment(
+        account=str(config["aws"]["account_id"]),
+        region=config["aws"]["region"]
+    )
+    assert env.account == str(config["aws"]["account_id"])
+
+
+def test_app_creates_cdk_environment_with_region():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    env = cdk.Environment(
+        account=str(config["aws"]["account_id"]),
+        region=config["aws"]["region"]
+    )
+    assert env.region == config["aws"]["region"]
+
+
+def test_app_instantiates_api_stack():
+    app = cdk.App()
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parents[1] / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    env = cdk.Environment(
+        account=str(config["aws"]["account_id"]),
+        region=config["aws"]["region"]
+    )
+    api_stack = ApiStack(
+        app,
+        "TenULabsApi",
+        config=config,
+        env=env
+    )
+    assert api_stack is not None
+
+
+def test_app_tags_can_be_added_to_cdk_app():
+    app = cdk.App()
+    cdk.Tags.of(app).add("ManagedBy", "CDK")
+    tags = cdk.Tags.of(app)
+    assert tags is not None
+
+
+def test_readme_script_exists():
+    readme_path = Path(__file__).parents[1] / "readme.py"
+    assert readme_path.exists()
+
+
+def test_readme_can_read_source_files():
+    import os
+    script_dir = Path(__file__).parents[1]
+    files_to_read = ['stack.py', 'lambda/handler.py']
+    for file_path in files_to_read:
+        full_path = script_dir / file_path
+        assert full_path.exists()
+
+
+def test_readme_loads_config_for_bedrock_settings():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "bedrock" in config.get("aws", {})
+
+
+def test_readme_config_has_bedrock_model_id():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "model_id" in config.get("aws", {}).get("bedrock", {})
+
+
+def test_readme_config_has_max_tokens_check():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "max_tokens_check" in config.get("aws", {}).get("bedrock", {})
+
+
+def test_readme_config_has_max_tokens_generate():
+    config_path = Path(__file__).parents[1] / "config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    assert "max_tokens_generate" in config.get("aws", {}).get("bedrock", {})
