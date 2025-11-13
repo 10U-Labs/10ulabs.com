@@ -338,7 +338,7 @@ class ApiStack(Stack):
 
         CfnOutput(
             self, "ExecutionRoleArn",
-            value=self.task_definition.execution_role.role_arn,
+            value=self.task_definition.execution_role.role_arn if self.task_definition.execution_role else "",
             description="Execution role ARN for Fargate runners",
             export_name="TenULabsApi-ExecutionRoleArn"
         )

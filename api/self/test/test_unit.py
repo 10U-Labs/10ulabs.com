@@ -9,46 +9,46 @@ import requests
 
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     assert config_path.exists()
 
 
 def test_config_has_aws_account_id():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-    assert "aws_account_id" in config
+    assert "account_id" in config["aws"]
 
 
 def test_config_has_aws_region():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-    assert "aws_region" in config
+    assert "region" in config["aws"]
 
 
 def test_config_has_subdomain_name():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-    assert "subdomain_name" in config
+    assert "subdomain" in config["domain_names"]
 
 
 def test_config_has_parent_domain():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-    assert "parent_domain" in config
+    assert "parent" in config["domain_names"]
 
 
 def test_api_has_lambda_function():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -73,11 +73,11 @@ def test_api_has_lambda_function():
 def test_api_has_api_gateway():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -101,11 +101,11 @@ def test_api_has_api_gateway():
 def test_api_has_certificate():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -129,11 +129,11 @@ def test_api_has_certificate():
 def test_api_has_route53_record():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -157,11 +157,11 @@ def test_api_has_route53_record():
 def test_api_has_url_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -186,11 +186,11 @@ def test_api_has_url_output():
 def test_api_has_domain_name_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -215,11 +215,11 @@ def test_api_has_domain_name_output():
 def test_api_has_endpoint_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parents[1] / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -241,8 +241,8 @@ def test_api_has_endpoint_output():
     assert "ApiEndpoint" in outputs
 
 
-sys.path.insert(0, str(Path(__file__).parents[2] / "src" / "api" / "lambda"))
-sys.path.insert(0, str(Path(__file__).parents[2] / "src" / "api"))
+sys.path.insert(0, str(Path(__file__).parents[1] / "lambda"))
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 import handler
 import poll_api_until_it_has_propagated
