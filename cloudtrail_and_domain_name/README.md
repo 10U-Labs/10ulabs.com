@@ -108,7 +108,7 @@ registration
 ### CloudFormation Outputs
 
 | Output | Description | Export |
-|--------|-------------|--------|
+| -------- | ------------- | -------- |
 | `DomainName` | Registered domain name | — |
 | `HostedZoneId` | Route 53 Hosted Zone ID | `{domain}-HostedZoneId` |
 | `HostedZoneName` | Hosted Zone name | `{domain}-HostedZoneName` |
