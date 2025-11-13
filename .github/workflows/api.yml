@@ -1,27 +1,6 @@
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
-name: Ensuring API infrastructure exists and is properly configured
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'api/**'
-      - '.github/workflows/api.yml'
-  repository_dispatch:
-    types:
-      - domain_name_has_been_registered_successfully
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        default: false
-        description: 'Dry run mode (skip deployment, just test)'
-        required: false
-        type: boolean
-permissions:
-  contents: read
-  id-token: write
 jobs:
   performing-static-analysis:
     name: Performing static analysis
@@ -391,3 +370,24 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{"event_type":"api_is_ready_for_collections"}'
+name: Ensuring API infrastructure exists and is properly configured
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+      - '.github/workflows/api.yml'
+  repository_dispatch:
+    types:
+      - domain_name_has_been_registered_successfully
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: 'Dry run mode (skip deployment, just test)'
+        required: false
+        type: boolean
+permissions:
+  contents: read
+  id-token: write
