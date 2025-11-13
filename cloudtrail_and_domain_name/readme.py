@@ -28,7 +28,7 @@ def read_source_files() -> str:
             with open(full_path, 'r', encoding='utf-8') as f:
                 source_files[file_path] = f.read()
         except IOError as e:
-            logging.error(f"Failed to read {file_path}: {e}")
+            logging.error("Failed to read %s: %s", file_path, e)
             sys.exit(1)
 
     combined = ""
@@ -96,17 +96,19 @@ Do not include any other text or formatting outside the JSON object."""
             result = json.loads(answer_text)
             should_be_updated = bool(result.get('readme_should_be_updated', False))
             reasoning = result.get('reasoning', 'No reasoning provided')
-            logging.info(f"Bedrock reasoning: {reasoning}")
-            logging.info(f"Bedrock assessment: README should {'be updated' if should_be_updated else 'not be updated'}")
+            logging.info("Bedrock reasoning: %s", reasoning)
+            status = 'be updated' if should_be_updated else 'not be updated'
+            logging.info("Bedrock assessment: README should %s", status)
             return should_be_updated
         except json.JSONDecodeError as e:
-            logging.warning(f"Failed to parse JSON response from Bedrock: {e}")
-            logging.warning(f"Raw response: {answer_text}")
+            logging.warning("Failed to parse JSON response from Bedrock: %s", e)
+            logging.warning("Raw response: %s", answer_text)
             should_be_updated = answer_text.lower().startswith('true')
-            logging.info(f"Bedrock assessment (fallback): README should {'be updated' if should_be_updated else 'not be updated'}")
+            status = 'be updated' if should_be_updated else 'not be updated'
+            logging.info("Bedrock assessment (fallback): README should %s", status)
             return should_be_updated
-    except Exception as e:
-        logging.error(f"Failed to check README with Bedrock: {e}")
+    except (boto3.exceptions.Boto3Error, KeyError, ValueError) as e:
+        logging.error("Failed to check README with Bedrock: %s", e)
         sys.exit(1)
 
 def generate_readme(bedrock_client, source_code: str, model_id: str, max_tokens: int) -> str:
@@ -155,8 +157,65 @@ Generate ONLY the README content, starting with the title. Do not include any pr
         readme_content = response['output']['message']['content'][0]['text']
         logging.info("Generated new README content")
         return readme_content
-    except Exception as e:
-        logging.error(f"Failed to generate README with Bedrock: {e}")
+    except (boto3.exceptions.Boto3Error, KeyError, ValueError) as e:
+        logging.error("Failed to generate README with Bedrock: %s", e)
+        sys.exit(1)
+
+def load_config_and_settings(args):
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, 'config.json')
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except IOError as e:
+        logging.error("Failed to read config.json: %s", e)
+        sys.exit(1)
+
+    bedrock_model_id = args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
+    max_tokens_check = int(args.max_tokens_check or config.get('bedrock', {}).get('max_tokens_check', 200))
+    max_tokens_generate = int(args.max_tokens_generate or config.get('bedrock', {}).get('max_tokens_generate', 16000))
+
+    return script_dir, bedrock_model_id, max_tokens_check, max_tokens_generate
+
+def handle_check_command(bedrock_client, source_code, readme_path, bedrock_config, *, output_file=None):
+    current_readme = ""
+    if os.path.exists(readme_path):
+        try:
+            with open(readme_path, 'r', encoding='utf-8') as f:
+                current_readme = f.read()
+        except IOError as e:
+            logging.error("Failed to read README: %s", e)
+            sys.exit(1)
+
+    logging.info("Checking if README should be updated via Bedrock...")
+    readme_should_be_updated = check_readme_should_be_updated(
+        bedrock_client, source_code, current_readme,
+        bedrock_config['model_id'], bedrock_config['max_tokens']
+    )
+
+    print(readme_should_be_updated)
+
+    if output_file:
+        try:
+            with open(output_file, 'a', encoding='utf-8') as f:
+                f.write(f'readme_should_be_updated={str(readme_should_be_updated).lower()}\n')
+            logging.info("Wrote readme_should_be_updated=%s to %s", readme_should_be_updated, output_file)
+        except IOError as e:
+            logging.error("Failed to write output file: %s", e)
+            sys.exit(1)
+
+def handle_update_command(bedrock_client, source_code, readme_path, bedrock_config):
+    logging.info("Generating updated README via Bedrock...")
+    new_readme = generate_readme(bedrock_client, source_code, bedrock_config['model_id'], bedrock_config['max_tokens'])
+
+    try:
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(new_readme)
+        logging.info("Updated README written to %s", readme_path)
+        print(f"README updated successfully: {readme_path}")
+    except IOError as e:
+        logging.error("Failed to write README: %s", e)
         sys.exit(1)
 
 def main():
@@ -199,20 +258,6 @@ def main():
 
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, 'config.json')
-
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-    except IOError as e:
-        logging.error(f"Failed to read config.json: {e}")
-        sys.exit(1)
-
-    bedrock_model_id = args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
-    max_tokens_check = int(args.max_tokens_check or config.get('bedrock', {}).get('max_tokens_check', 200))
-    max_tokens_generate = int(args.max_tokens_generate or config.get('bedrock', {}).get('max_tokens_generate', 16000))
-
     if not args.check and not args.update:
         logging.error("Either --check or --update must be specified")
         sys.exit(1)
@@ -221,6 +266,7 @@ def main():
         logging.error("Cannot specify both --check and --update")
         sys.exit(1)
 
+    script_dir, bedrock_model_id, max_tokens_check, max_tokens_generate = load_config_and_settings(args)
     readme_path = os.path.join(script_dir, 'README.md')
 
     logging.info("Reading source files...")
@@ -229,46 +275,16 @@ def main():
     logging.info("Initializing Bedrock client...")
     try:
         bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
-    except Exception as e:
-        logging.error(f"Failed to create Bedrock client: {e}")
+    except boto3.exceptions.Boto3Error as e:
+        logging.error("Failed to create Bedrock client: %s", e)
         sys.exit(1)
 
     if args.check:
-        current_readme = ""
-        if os.path.exists(readme_path):
-            try:
-                with open(readme_path, 'r', encoding='utf-8') as f:
-                    current_readme = f.read()
-            except IOError as e:
-                logging.error(f"Failed to read README: {e}")
-                sys.exit(1)
-
-        logging.info("Checking if README should be updated via Bedrock...")
-        readme_should_be_updated = check_readme_should_be_updated(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
-
-        print(readme_should_be_updated)
-
-        if args.output_file:
-            try:
-                with open(args.output_file, 'a', encoding='utf-8') as f:
-                    f.write(f'readme_should_be_updated={str(readme_should_be_updated).lower()}\n')
-                logging.info(f"Wrote readme_should_be_updated={readme_should_be_updated} to {args.output_file}")
-            except IOError as e:
-                logging.error(f"Failed to write output file: {e}")
-                sys.exit(1)
-
+        bedrock_config = {'model_id': bedrock_model_id, 'max_tokens': max_tokens_check}
+        handle_check_command(bedrock_client, source_code, readme_path, bedrock_config, output_file=args.output_file)
     elif args.update:
-        logging.info("Generating updated README via Bedrock...")
-        new_readme = generate_readme(bedrock_client, source_code, bedrock_model_id, max_tokens_generate)
-
-        try:
-            with open(readme_path, 'w', encoding='utf-8') as f:
-                f.write(new_readme)
-            logging.info(f"Updated README written to {readme_path}")
-            print(f"README updated successfully: {readme_path}")
-        except IOError as e:
-            logging.error(f"Failed to write README: {e}")
-            sys.exit(1)
+        bedrock_config = {'model_id': bedrock_model_id, 'max_tokens': max_tokens_generate}
+        handle_update_command(bedrock_client, source_code, readme_path, bedrock_config)
 
 if __name__ == '__main__':
     main()
