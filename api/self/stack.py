@@ -190,98 +190,13 @@ class ApiStack(Stack):
             log_retention=logs.RetentionDays.ONE_WEEK
         )
 
-        webhook_router = lambda_.Function(
-            self, "WebhookRouter",
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            handler="webhook_runner_launcher.lambda_handler",
-            code=lambda_.Code.from_asset("api/collections/runners"),
-            timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
-            memory_size=config["lambda"]["memory_mb"],
-            environment={
-                "ECS_CLUSTER": self.cluster.cluster_name,
-                "TASK_DEFINITION": self.task_definition.task_definition_arn,
-                "SUBNETS": ",".join([subnet.subnet_id for subnet in self.vpc.public_subnets]),
-                "SECURITY_GROUPS": runner_sg.security_group_id,
-                "WEBHOOK_SECRET": self.webhook_secret.secret_name,
-                "GITHUB_TOKEN_SECRET_NAME": config["naming"]["github_token_secret_name"],
-                "GITHUB_REPO": config["github"]["repo"],
-                "RUNNER_LABELS": ",".join(config["aws"]["fargate_runners"]["runner_labels"]),
-                "EC2_AMI_ID": "ami-placeholder",
-                "EC2_INSTANCE_TYPES": ",".join(config["aws"]["ec2_runners"]["spot_instance_types"]),
-                "EC2_IAM_INSTANCE_PROFILE": "GitHubSelfHostedRunnerInstanceProfile",
-                "API_ENDPOINT": f"https://{subdomain_name}"
-            },
-            log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Routes GitHub webhook events to appropriate runner launcher"
-        )
-
-        webhook_router.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["ecs:RunTask"],
-                resources=[self.task_definition.task_definition_arn],
-                conditions={
-                    "ArnEquals": {
-                        "ecs:cluster": self.cluster.cluster_arn
-                    }
-                }
-            )
-        )
-
-        task_role = self.task_definition.task_role
-        execution_role = self.task_definition.execution_role
-        assert task_role is not None
-        assert execution_role is not None
-
-        webhook_router.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["iam:PassRole"],
-                resources=[
-                    task_role.role_arn,
-                    execution_role.role_arn
-                ],
-                conditions={
-                    "StringLike": {
-                        "iam:PassedToService": "ecs-tasks.amazonaws.com"
-                    }
-                }
-            )
-        )
-
-        webhook_router.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "ec2:RunInstances",
-                    "ec2:TerminateInstances",
-                    "ec2:CreateTags",
-                    "ec2:DescribeInstances",
-                    "ec2:DescribeImages"
-                ],
-                resources=["*"]
-            )
-        )
-
-        webhook_router.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["iam:PassRole"],
-                resources=["arn:aws:iam::*:role/GitHubSelfHostedRunnerEC2Role"],
-                conditions={
-                    "StringEquals": {
-                        "iam:PassedToService": "ec2.amazonaws.com"
-                    }
-                }
-            )
-        )
-
-        self.webhook_secret.grant_read(webhook_router)
-        github_token_secret.grant_read(webhook_router)
-
         api_log_group = logs.LogGroup(
             self, "ApiGatewayAccessLogs",
             retention=logs.RetentionDays.ONE_MONTH,
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        api = apigw.LambdaRestApi(
+        self.api = apigw.LambdaRestApi(
             self, "TenULabsApi",
             handler=api_handler,
             proxy=False,
@@ -301,95 +216,164 @@ class ApiStack(Stack):
             )
         )
 
-        api.root.add_resource("health").add_method("GET", apigw.LambdaIntegration(api_handler))
+        self.api.root.add_resource("health").add_method("GET", apigw.LambdaIntegration(api_handler))
 
-        v1 = api.root.add_resource("v1")
+        self.v1 = self.api.root.add_resource("v1")
 
-        v1.add_resource("echo").add_method(
+        self.v1.add_resource("echo").add_method(
             "POST", apigw.LambdaIntegration(api_handler)
-        )
-
-        v1.add_resource("runners").add_method(
-            "POST", apigw.LambdaIntegration(webhook_router)
-        )
-
-        v1.add_resource("ec2-runner").add_method(
-            "POST", apigw.LambdaIntegration(webhook_router)
-        )
-
-        v1.add_resource("docker-runner").add_method(
-            "POST", apigw.LambdaIntegration(webhook_router)
         )
 
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
             record_name=subdomain_name,
-            target=route53.RecordTarget.from_alias(targets.ApiGateway(api))
+            target=route53.RecordTarget.from_alias(targets.ApiGateway(self.api))
         )
 
         CfnOutput(
             self, "ApiUrl",
-            value=api.url,
-            description=f"API Gateway URL for {subdomain_name}"
+            value=self.api.url,
+            description=f"API Gateway URL for {subdomain_name}",
+            export_name="TenULabsApi-Url"
         )
 
         CfnOutput(
             self, "ApiDomainName",
             value=subdomain_name,
-            description="Custom domain name for API"
+            description="Custom domain name for API",
+            export_name="TenULabsApi-DomainName"
         )
 
         CfnOutput(
             self, "ApiEndpoint",
             value=f"https://{subdomain_name}",
-            description="API endpoint URL"
+            description="API endpoint URL",
+            export_name="TenULabsApi-Endpoint"
+        )
+
+        CfnOutput(
+            self, "ApiGatewayRestApiId",
+            value=self.api.rest_api_id,
+            description="API Gateway REST API ID for route additions",
+            export_name="TenULabsApi-RestApiId"
+        )
+
+        CfnOutput(
+            self, "ApiGatewayRootResourceId",
+            value=self.api.rest_api_root_resource_id,
+            description="API Gateway root resource ID",
+            export_name="TenULabsApi-RootResourceId"
+        )
+
+        CfnOutput(
+            self, "ApiGatewayV1ResourceId",
+            value=self.v1.resource_id,
+            description="API Gateway /v1 resource ID for adding versioned routes",
+            export_name="TenULabsApi-V1ResourceId"
         )
 
         CfnOutput(
             self, "VpcId",
             value=self.vpc.vpc_id,
-            description="VPC ID for API and GitHub self-hosted runners"
+            description="VPC ID for API and GitHub self-hosted runners",
+            export_name="TenULabsApi-VpcId"
+        )
+
+        CfnOutput(
+            self, "VpcPublicSubnetIds",
+            value=",".join([subnet.subnet_id for subnet in self.vpc.public_subnets]),
+            description="Comma-separated list of public subnet IDs",
+            export_name="TenULabsApi-PublicSubnetIds"
+        )
+
+        CfnOutput(
+            self, "RunnerSecurityGroupId",
+            value=runner_sg.security_group_id,
+            description="Security group ID for runners",
+            export_name="TenULabsApi-RunnerSecurityGroupId"
         )
 
         CfnOutput(
             self, "EcrRepositoryUri",
             value=self.ecr_repository.repository_uri,
-            description="ECR repository URI for self-hosted runner Docker images"
+            description="ECR repository URI for self-hosted runner Docker images",
+            export_name="TenULabsApi-EcrRepositoryUri"
         )
 
         CfnOutput(
             self, "EcrRepositoryName",
             value=self.ecr_repository.repository_name,
-            description="ECR repository name for self-hosted runners"
+            description="ECR repository name for self-hosted runners",
+            export_name="TenULabsApi-EcrRepositoryName"
         )
 
         CfnOutput(
             self, "ClusterName",
             value=self.cluster.cluster_name,
-            description="ECS cluster name for GitHub self-hosted runners"
+            description="ECS cluster name for GitHub self-hosted runners",
+            export_name="TenULabsApi-ClusterName"
         )
 
         CfnOutput(
-            self, "WebhookUrl",
-            value=f"https://{subdomain_name}/v1/runners",
-            description="GitHub webhook URL - configure this in your repository settings"
+            self, "ClusterArn",
+            value=self.cluster.cluster_arn,
+            description="ECS cluster ARN for GitHub self-hosted runners",
+            export_name="TenULabsApi-ClusterArn"
+        )
+
+        CfnOutput(
+            self, "TaskDefinitionArn",
+            value=self.task_definition.task_definition_arn,
+            description="Fargate task definition ARN for runners",
+            export_name="TenULabsApi-TaskDefinitionArn"
+        )
+
+        CfnOutput(
+            self, "TaskRoleArn",
+            value=self.task_definition.task_role.role_arn,
+            description="Task role ARN for Fargate runners",
+            export_name="TenULabsApi-TaskRoleArn"
+        )
+
+        CfnOutput(
+            self, "ExecutionRoleArn",
+            value=self.task_definition.execution_role.role_arn,
+            description="Execution role ARN for Fargate runners",
+            export_name="TenULabsApi-ExecutionRoleArn"
+        )
+
+        CfnOutput(
+            self, "WebhookSecretName",
+            value=self.webhook_secret.secret_name,
+            description="Webhook secret name in Secrets Manager",
+            export_name="TenULabsApi-WebhookSecretName"
         )
 
         CfnOutput(
             self, "WebhookSecretArn",
             value=self.webhook_secret.secret_arn,
-            description="ARN of the webhook secret - retrieve value to configure GitHub webhook"
+            description="ARN of the webhook secret",
+            export_name="TenULabsApi-WebhookSecretArn"
         )
 
         CfnOutput(
-            self, "EC2RunnerEndpoint",
-            value=f"https://{subdomain_name}/v1/ec2-runner",
-            description="EC2 Spot runner launcher endpoint"
+            self, "GitHubTokenSecretName",
+            value=config["naming"]["github_token_secret_name"],
+            description="GitHub token secret name in Secrets Manager",
+            export_name="TenULabsApi-GitHubTokenSecretName"
         )
 
         CfnOutput(
-            self, "DockerRunnerEndpoint",
-            value=f"https://{subdomain_name}/v1/docker-runner",
-            description="Fargate Spot runner launcher endpoint"
+            self, "EC2RunnerRoleName",
+            value=ec2_runner_role.role_name,
+            description="EC2 runner IAM role name",
+            export_name="TenULabsApi-EC2RunnerRoleName"
+        )
+
+        CfnOutput(
+            self, "EC2InstanceProfileName",
+            value="GitHubSelfHostedRunnerInstanceProfile",
+            description="EC2 instance profile name for runners",
+            export_name="TenULabsApi-EC2InstanceProfileName"
         )
