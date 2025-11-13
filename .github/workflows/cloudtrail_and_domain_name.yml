@@ -154,9 +154,6 @@ jobs:
           echo "Stack Outputs:"
           cat domain-outputs.json | jq '.'
   determine-readme-update:
-    if: |
-      needs.e2e-tests.result == 'success' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Determining if README.md should be updated
     needs: e2e-tests
     outputs:
