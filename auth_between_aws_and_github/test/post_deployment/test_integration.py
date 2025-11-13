@@ -251,7 +251,7 @@ class TestBedrockIntegration:
 
 
         result = subprocess.run(
-            ['python', str(REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'), 'readme',
+            ['python', str(REPO_ROOT / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'), 'readme',
              '--aws-account-id', config['aws']['account_id'],
              '--aws-region', config['aws']['region'],
              '--aws-iam-role-name', config['aws']['iam_role_name'],
@@ -288,7 +288,7 @@ def get_aws_credentials_from_auth_module():
 
     if is_github_actions():
         try:
-            config_path = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'config.json'
+            config_path = REPO_ROOT / 'auth_between_aws_and_github' / 'config.json'
             with open(config_path) as f:
                 config = json.load(f)
 
@@ -297,7 +297,7 @@ def get_aws_credentials_from_auth_module():
             region = config['aws']['region']
 
             import sys
-            sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+            sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
             import auth_between_aws_and_github as bootstrap
 
             temp_creds = bootstrap.assume_role_with_oidc(account_id, region, role_name)
@@ -333,14 +333,14 @@ def get_github_pat_from_auth_module():
 
             access_key, secret_key, session_token, region = creds
 
-            config_path = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'config.json'
+            config_path = REPO_ROOT / 'auth_between_aws_and_github' / 'config.json'
             with open(config_path) as f:
                 config = json.load(f)
 
             secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
 
             import sys
-            sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+            sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
             import auth_between_aws_and_github as bootstrap
 
             secret_data = bootstrap.get_secret_from_secrets_manager(
@@ -371,7 +371,7 @@ class TestAuthModuleAWSAPIIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.STSClient(region, access_key, secret_key, session_token)
@@ -384,7 +384,7 @@ class TestAuthModuleAWSAPIIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -398,7 +398,7 @@ class TestAuthModuleAWSAPIIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -413,7 +413,7 @@ class TestAuthModuleAWSAPIIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -429,7 +429,7 @@ class TestAuthModuleAWSStateDetectionIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -444,7 +444,7 @@ class TestAuthModuleAWSStateDetectionIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -458,7 +458,7 @@ class TestAuthModuleAWSStateDetectionIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -472,7 +472,7 @@ class TestAuthModuleAWSStateDetectionIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -486,7 +486,7 @@ class TestAuthModuleAWSStateDetectionIntegration:
         access_key, secret_key, session_token, region = creds
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         client = bootstrap.AWSClientStdlib(region, access_key, secret_key, session_token)
@@ -503,7 +503,7 @@ class TestAuthModuleGitHubAPIIntegration:
         assert github_token is not None, "GitHub PAT should be available"
 
         import sys
-        sys.path.insert(0, str(REPO_ROOT / 'src' / 'auth_between_aws_and_github'))
+        sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
         import auth_between_aws_and_github as bootstrap
 
         bootstrap.validate_github_pat(github_token)

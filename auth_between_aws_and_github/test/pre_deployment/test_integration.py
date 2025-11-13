@@ -5,27 +5,10 @@ from pathlib import Path
 
 import pytest
 
-
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
-BOOTSTRAP_SCRIPT = REPO_ROOT / 'src' / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
-TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
-TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
-TEST_ROLE_NAME = 'GitHubActionsBootstrapCITest'
-TEST_GITHUB_ORG = '10U-Foundation'
-TEST_GITHUB_REPO = '10ulabs.com'
-
-
-def run_command(cmd, check=True, capture_output=True):
-    result = subprocess.run(
-        cmd,
-        shell=True if isinstance(cmd, str) else False,
-        capture_output=capture_output,
-        text=True,
-        check=False
-    )
-    if check and result.returncode != 0:
-        raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
-    return result
+from conftest import (
+    REPO_ROOT, BOOTSTRAP_SCRIPT, TEST_ACCOUNT_ID, TEST_REGION,
+    TEST_ROLE_NAME, TEST_GITHUB_ORG, TEST_GITHUB_REPO, run_command
+)
 
 
 class TestUserInteraction:
