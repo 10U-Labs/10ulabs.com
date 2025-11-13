@@ -1,0 +1,9 @@
+{
+  "naming": {
+    "lambda_function_name": "TenULabsDockerRunnerLauncher"
+  },
+  "lambda": {
+    "timeout_seconds": 30,
+    "memory_mb": 256
+  }
+}

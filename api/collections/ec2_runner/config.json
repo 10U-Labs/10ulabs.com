@@ -1,0 +1,14 @@
+{
+  "naming": {
+    "lambda_function_name": "TenULabsEC2RunnerLauncher"
+  },
+  "lambda": {
+    "timeout_seconds": 30,
+    "memory_mb": 256
+  },
+  "ec2": {
+    "ami_id": "",
+    "instance_types": ["t4g.large", "t4g.medium", "t4g.small"],
+    "max_price": 0.05
+  }
+}
