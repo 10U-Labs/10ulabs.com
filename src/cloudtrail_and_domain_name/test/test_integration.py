@@ -1,22 +1,6 @@
 """Post-deployment integration tests for domain hosted zone"""
-import json
-from pathlib import Path
 import boto3
 import pytest
-
-
-@pytest.fixture
-def config():
-    """Load domain config"""
-    config_path = Path(__file__).parents[3] / "config" / "cloudtrail_and_domain_name.json"
-    with open(config_path) as f:
-        return json.load(f)
-
-
-@pytest.fixture
-def route53_client(config):
-    """Create Route53 client"""
-    return boto3.client('route53', region_name=config['aws_region'])
 
 
 def test_hosted_zone_exists(route53_client, config):
@@ -155,24 +139,6 @@ def test_hosted_zone_is_public(route53_client, config):
             break
 
     assert zone['Config']['PrivateZone'] == False, "Hosted zone should be public"
-
-
-@pytest.fixture
-def cloudtrail_client(config):
-    """Create CloudTrail client"""
-    return boto3.client('cloudtrail', region_name=config['aws_region'])
-
-
-@pytest.fixture
-def s3_client(config):
-    """Create S3 client"""
-    return boto3.client('s3', region_name=config['aws_region'])
-
-
-@pytest.fixture
-def logs_client(config):
-    """Create CloudWatch Logs client"""
-    return boto3.client('logs', region_name=config['aws_region'])
 
 
 def test_cloudtrail_trail_exists(cloudtrail_client):
@@ -374,16 +340,6 @@ def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
         limit=1
     )
     assert len(streams['logStreams']) > 0, "CloudTrail should have created log streams in CloudWatch Logs"
-
-
-@pytest.fixture
-def hosted_zone(route53_client, config):
-    domain_name = config['domain_name']
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            return z
-    return None
 
 
 def test_hosted_zone_fixture_returns_zone(hosted_zone, config):
