@@ -1,13 +1,14 @@
 from __future__ import print_function
+from typing import Any, Optional
 import urllib3
 import json
 
-SUCCESS = "SUCCESS"
-FAILED = "FAILED"
+SUCCESS: str = "SUCCESS"
+FAILED: str = "FAILED"
 
 http = urllib3.PoolManager()
 
-def send(event, context, responseStatus, responseData, physicalResourceId=None, noEcho=False, reason=None):
+def send(event: dict, context: Any, responseStatus: str, responseData: dict, physicalResourceId: Optional[str] = None, noEcho: bool = False, reason: Optional[str] = None) -> None:
     responseUrl = event['ResponseURL']
     print(responseUrl)
 
