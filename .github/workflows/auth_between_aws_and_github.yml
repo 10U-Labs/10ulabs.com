@@ -123,7 +123,6 @@ jobs:
             echo "Note: auth_between_aws_and_github.py create is idempotent - creates new or updates existing resources"
           fi
   determine-readme-update:
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     name: Determining if README.md should be updated
     needs: e2e-testing-infrastructure
     outputs:
