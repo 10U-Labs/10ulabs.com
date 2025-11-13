@@ -7,14 +7,14 @@ import pytest
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         return json.load(f)
 
 
 @pytest.fixture
 def route53_client(config):
-    return boto3.client('route53', region_name=config['aws_region'])
+    return boto3.client('route53', region_name=config['aws']['region'])
 
 
 def test_google_verification_record_resolves_via_public_dns(route53_client, config):
