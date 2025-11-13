@@ -6,56 +6,56 @@ from aws_cdk.assertions import Template
 
 
 def test_config_file_exists():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     assert config_path.exists()
 
 
 def test_config_has_domain_name():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
     assert "domain_name" in config
 
 
 def test_config_has_google_site_verification():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
     assert "google_site_verification" in config
 
 
 def test_config_has_aws_account_id():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-    assert "aws_account_id" in config
+    assert "aws" in config and "account_id" in config["aws"]
 
 
 def test_config_has_aws_region():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
-    assert "aws_region" in config
+    assert "aws" in config and "region" in config["aws"]
 
 
 def test_stack_creates_txt_record():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -93,21 +93,21 @@ def test_stack_creates_txt_record():
 def test_stack_has_google_verification_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -141,21 +141,21 @@ def test_stack_has_google_verification_output():
 def test_stack_has_google_verification_value_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -189,21 +189,21 @@ def test_stack_has_google_verification_value_output():
 def test_stack_creates_mx_record():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -241,21 +241,21 @@ def test_stack_creates_mx_record():
 def test_stack_has_gmail_mx_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -289,21 +289,21 @@ def test_stack_has_gmail_mx_output():
 def test_stack_txt_record_has_correct_value_format():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -343,21 +343,21 @@ def test_stack_txt_record_has_correct_value_format():
 def test_stack_txt_record_has_correct_ttl():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -396,21 +396,21 @@ def test_stack_txt_record_has_correct_ttl():
 def test_stack_mx_record_has_priority_one():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -449,21 +449,21 @@ def test_stack_mx_record_has_priority_one():
 def test_stack_mx_record_has_correct_ttl():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -502,21 +502,21 @@ def test_stack_mx_record_has_correct_ttl():
 def test_stack_creates_exactly_one_txt_record():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -549,21 +549,21 @@ def test_stack_creates_exactly_one_txt_record():
 def test_stack_creates_exactly_one_mx_record():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -596,23 +596,23 @@ def test_stack_creates_exactly_one_mx_record():
 def test_config_ttl_defaults_to_300():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     config_without_ttl = {k: v for k, v in config.items() if k != "ttl"}
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
@@ -651,23 +651,23 @@ def test_config_ttl_defaults_to_300():
 def test_stack_raises_error_when_google_verification_missing():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         config = json.load(f)
 
     config_without_verification = {k: v for k, v in config.items() if k != "google_site_verification"}
 
-    stack_path = Path(__file__).parents[2] / "src" / "gmail_email_provider" / "stack.py"
+    stack_path = Path(__file__).parents[2] / "gmail_email_provider" / "stack.py"
     spec = importlib.util.spec_from_file_location("gmail_stack", stack_path)
     gmail_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(gmail_module)
     GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
 
-    domain_config_path = Path(__file__).parents[2] / "config" / "cloudtrail_and_domain_name.json"
+    domain_config_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "config.json"
     with open(domain_config_path) as f:
         domain_config = json.load(f)
 
-    domain_stack_path = Path(__file__).parents[2] / "src" / "cloudtrail_and_domain_name" / "stack.py"
+    domain_stack_path = Path(__file__).parents[2] / "cloudtrail_and_domain_name" / "stack.py"
     domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
     domain_module = importlib.util.module_from_spec(domain_spec)
     domain_spec.loader.exec_module(domain_module)
