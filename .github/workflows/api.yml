@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/api/**'
+      - 'api/**'
       - '.github/workflows/api.yml'
   workflow_dispatch:
     inputs:
@@ -47,7 +47,7 @@ jobs:
           npm install -g markdownlint-cli2
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r src/api/self/requirements.txt
+        run: pip install -r api/self/requirements.txt
       - name: Linting YAML files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
@@ -56,22 +56,22 @@ jobs:
       - name: Linting Markdown documentation
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          if [ -f src/api/self/README.md ]; then
+          if [ -f api/self/README.md ]; then
             echo "Linting README.md..."
-            markdownlint-cli2 src/api/self/README.md
+            markdownlint-cli2 api/self/README.md
           else
             echo "No README.md found, skipping markdown linting"
           fi
       - name: Linting Python files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/api/self/stack.py src/api/self/lambda/handler.py \
+          pylint api/self/stack.py api/self/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy src/api/self
+          python -m mypy api/self
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest
@@ -99,11 +99,11 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest
-          pip install -r src/api/self/requirements.txt
+          pip install -r api/self/requirements.txt
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest src/api/self/test/test_unit.py -v
+          pytest api/self/test/test_unit.py -v
   deploying-artifacts:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing-code
@@ -127,8 +127,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws_region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -152,19 +152,19 @@ jobs:
         run: npm install -g aws-cdk
       - name: Install dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r src/api/self/requirements.txt
+        run: pip install -r api/self/requirements.txt
       - name: CDK Bootstrap (if needed)
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          cd src/api/self && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd api/self && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cd src/api/self && cdk diff TenULabsApi
+        run: cd api/self && cdk diff TenULabsApi
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cd src/api/self && cdk deploy TenULabsApi \
+          cd api/self && cdk deploy TenULabsApi \
             --require-approval never \
             --outputs-file ../../api-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
@@ -188,7 +188,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
         run: |
           API_ENDPOINT=$(jq -r '.TenULabsApi.ApiEndpoint' api-outputs.json)
-          python src/api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
+          python api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing-infrastructure:
     name: Integration testing
     runs-on: ubuntu-latest
@@ -208,8 +208,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws_region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -230,7 +230,7 @@ jobs:
       - name: Run pytest integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest src/api/self/test/test_integration.py -v
+          pytest api/self/test/test_integration.py -v
   e2e-testing-infrastructure:
     name: E2E testing
     runs-on: ubuntu-latest
@@ -250,8 +250,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws_region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -272,7 +272,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest src/api/self/test/test_e2e.py -v
+          pytest api/self/test/test_e2e.py -v
   determine-readme-update:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest
@@ -293,8 +293,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws_region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -311,7 +311,7 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python src/api/self/readme.py \
+          python api/self/readme.py \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
@@ -344,8 +344,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws_region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
+          REGION=$(jq -r '.aws_region' api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -361,14 +361,14 @@ jobs:
         run: pip install boto3
       - name: Update README with Bedrock
         run: |
-          python src/api/self/readme.py \
+          python api/self/readme.py \
             --update \
             --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add src/api/self/README.md
+          git add api/self/README.md
           if git diff --cached --quiet; then
             echo "No changes to README.md"
           else

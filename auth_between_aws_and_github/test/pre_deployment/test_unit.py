@@ -3108,7 +3108,7 @@ class ImportBlocker:
 
 sys.meta_path.insert(0, ImportBlocker())
 
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 print("imports_without_boto3=True")
@@ -3134,7 +3134,7 @@ class ImportBlocker:
 
 sys.meta_path.insert(0, ImportBlocker())
 
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 print("imports_without_awscli=True")
@@ -3145,7 +3145,7 @@ print("imports_without_awscli=True")
     def test_all_imports_are_stdlib(self):
         test_script = """
 import sys
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 imported_modules = set(sys.modules.keys())
@@ -3169,7 +3169,7 @@ class TestAWSSignatureValidation:
     def test_sts_request_uses_correct_api_version(self):
         test_script = """
 import sys
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
@@ -3189,7 +3189,7 @@ print("sts_signature_valid=True")
     def test_iam_request_uses_correct_api_version(self):
         test_script = """
 import sys
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
@@ -3209,7 +3209,7 @@ print("iam_signature_valid=True")
     def test_secrets_manager_request_uses_json_format(self):
         test_script = """
 import sys
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')
@@ -3228,7 +3228,7 @@ print("secrets_signature_valid=True")
     def test_request_includes_required_aws_signature_headers(self):
         test_script = """
 import sys
-sys.path.insert(0, 'src/auth_between_aws_and_github')
+sys.path.insert(0, 'auth_between_aws_and_github')
 import auth_between_aws_and_github as bootstrap
 
 client = bootstrap.AWSClientBase('us-east-1', 'AKIATEST', 'test')

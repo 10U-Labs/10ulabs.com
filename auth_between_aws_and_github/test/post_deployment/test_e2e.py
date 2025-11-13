@@ -208,7 +208,7 @@ class TestBootstrapIdempotency:
     @pytest.fixture
     def bootstrap_execution(self, config, oidc_creds, original_resources):
         return subprocess.run(
-            ['python', 'src/auth_between_aws_and_github/auth_between_aws_and_github.py', 'create',
+            ['python', 'auth_between_aws_and_github/auth_between_aws_and_github.py', 'create',
              '--aws-account-id', config['aws']['account_id'],
              '--aws-region', config['aws']['region'],
              '--aws-iam-role-name', config['aws']['iam_role_name'],
