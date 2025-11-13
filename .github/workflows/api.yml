@@ -17,11 +17,6 @@ jobs:
     steps:
       - run: 'true'
   determining-if-readme-should-be-updated:
-    if: |
-      always() &&
-      github.event.inputs.dry_run != 'true' &&
-      needs.e2e-testing.result == 'success' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Determining if README.md should be updated
     needs: e2e-testing
     outputs:
@@ -59,10 +54,6 @@ jobs:
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
   e2e-testing:
-    if: |
-      always() &&
-      github.event.inputs.dry_run != 'true' &&
-      needs.integration-testing.result == 'success'
     name: E2E testing
     needs: integration-testing
     runs-on: ubuntu-latest
@@ -92,9 +83,6 @@ jobs:
         run: |
           pytest api/self/test/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
-    if: |
-      github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main'
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
     runs-on: ubuntu-latest
@@ -159,10 +147,6 @@ jobs:
           API_ENDPOINT=$(jq -r '.TenULabsApi.ApiEndpoint' api-outputs.json)
           python api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing:
-    if: |
-      always() &&
-      github.event.inputs.dry_run != 'true' &&
-      needs.ensuring-infrastructure-in-desired-state.result == 'success'
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
@@ -192,7 +176,9 @@ jobs:
         run: |
           pytest api/self/test/test_integration.py -v
   performing-static-analysis:
-    if: github.event.inputs.dry_run != 'true'
+    if: |
+      github.event.inputs.dry_run != 'true' &&
+      github.ref == 'refs/heads/main'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -234,7 +220,6 @@ jobs:
         run: |
           python -m mypy api/self
   unit-testing:
-    if: github.event.inputs.dry_run != 'true'
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
