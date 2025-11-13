@@ -1,10 +1,10 @@
 {
-  "domain_name": "10ulabs.com",
   "aws_account_id": 781581267945,
   "aws_region": "us-east-1",
   "bedrock": {
-    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
-    "max_tokens_check": 200,
-    "max_tokens_generate": 16000
-  }
+    "max_tokens_check": 4000,
+    "max_tokens_generate": 16000,
+    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+  },
+  "domain_name": "10ulabs.com"
 }
