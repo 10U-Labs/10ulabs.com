@@ -1374,7 +1374,7 @@ def _handle_readme_check(args: argparse.Namespace, bedrock: 'BedrockClient',
     logging.info("Checking if README needs update via Bedrock...")
     needs_update = _check_readme_needs_update(bedrock, source_code, current_readme, max_tokens)
     readme_should_be_updated = needs_update
-    logging.info("README is current" if not readme_should_be_updated else "README needs update")
+    logging.info("README should be updated" if readme_should_be_updated else "README should not be updated")
     print(readme_should_be_updated)
     if args.output_file:
         with open(args.output_file, 'a', encoding='utf-8') as f:
