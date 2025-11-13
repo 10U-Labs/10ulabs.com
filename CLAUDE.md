@@ -86,19 +86,6 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 - Never use EC2 for application hosting when serverless alternatives exist
 - Benefits of serverless: no server management, automatic scaling, pay-per-use pricing, built-in high availability
 
-### Branch and PR Strategy
-- **Create PRs to main** - After pushing to your claude/ branch, create a pull request
-- **Merge immediately** - Do NOT wait for CI checks to pass; merge the PR immediately after creation
-- **Clean up remote branches** - Delete remote claude/ branches after merging (local branch is irrelevant)
-- When creating PRs, use descriptive titles and comprehensive summaries
-
-### PR Creation Workflow
-After completing work, committing, and running ALL required tests (pre-deployment AND post-deployment):
-1. Push commits to the claude/ branch
-2. Create pull request to main with descriptive title and comprehensive summary
-3. Immediately merge the PR and delete the remote branch
-4. CI/CD will run full post-deployment test suite after merge (including tests requiring deployed infrastructure)
-
 ### Commit Message Flags
 
 Use these flags in commit messages to control workflow behavior:
@@ -138,7 +125,7 @@ Use these flags in commit messages to control workflow behavior:
 
 ## AWS-GitHub Auth Infrastructure Tests
 
-Run these tests if you modified `src/auth_between_aws_and_github/`:
+Run these tests if you modified `/auth_between_aws_and_github/`:
 
 #### 1. YAML Linting
 ```bash
@@ -147,12 +134,12 @@ yamllint .github/workflows/auth_between_aws_and_github.yml
 
 #### 2. JSON Configuration Linting
 ```bash
-jsonlint -q src/auth_between_aws_and_github/config.json
+jsonlint -q /auth_between_aws_and_github/config.json
 ```
 
 #### 3. Markdown Documentation Linting (if README exists)
 ```bash
-markdownlint-cli2 src/auth_between_aws_and_github/README.md
+markdownlint-cli2 /auth_between_aws_and_github/README.md
 ```
 
 **NOTE:** This will only run if README.md exists. All default markdownlint rules are enforced.
@@ -160,7 +147,7 @@ markdownlint-cli2 src/auth_between_aws_and_github/README.md
 #### 4. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
-pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
+pylint /auth_between_aws_and_github/auth_between_aws_and_github.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```
@@ -169,12 +156,12 @@ pylint src/auth_between_aws_and_github/auth_between_aws_and_github.py \
 
 #### 5. Python Static Type Checking (Mypy)
 ```bash
-mypy src/auth_between_aws_and_github/auth_between_aws_and_github.py
+mypy /auth_between_aws_and_github/auth_between_aws_and_github.py
 ```
 
 #### 6. Unit Tests
 ```bash
-PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest src/auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+PYTHONPATH=/auth_between_aws_and_github:$PYTHONPATH pytest /auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
 ```
 
 #### 7. Integration Tests
@@ -189,7 +176,7 @@ echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
 
 Run integration tests (uses environment variables automatically):
 ```bash
-pytest src/auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
+pytest /auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
 ```
 
 **Required environment variables:**
@@ -213,7 +200,7 @@ echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
 
 Run post-deployment integration tests (uses environment variables automatically):
 ```bash
-pytest src/auth_between_aws_and_github/test/post_deployment/test_integration.py -v
+pytest /auth_between_aws_and_github/test/post_deployment/test_integration.py -v
 ```
 
 **Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute (typically 10-15 tests pass, 50+ skipped).
@@ -222,7 +209,7 @@ pytest src/auth_between_aws_and_github/test/post_deployment/test_integration.py 
 
 Run post-deployment E2E tests (uses environment variables automatically):
 ```bash
-pytest src/auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
+pytest /auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
 ```
 
 **Note:** Most E2E tests require WARM state and will be skipped locally. This is expected.
@@ -231,7 +218,7 @@ pytest src/auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
 
 ## CloudTrail and Domain Name Tests
 
-Run these tests if you modified `src/cloudtrail_and_domain_name/`:
+Run these tests if you modified `/cloudtrail_and_domain_name/`:
 
 #### 1. YAML Linting
 ```bash
@@ -242,7 +229,7 @@ yamllint .github/workflows/cloudtrail_and_domain_name.yml
 **Use the exact workflow command with all the same flags:**
 ```bash
 pip install -q pylint
-pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/lambda/handler.py \
+pylint /cloudtrail_and_domain_name/stack.py /cloudtrail_and_domain_name/lambda/handler.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```
@@ -252,18 +239,18 @@ pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/la
 #### 3. Python Static Type Checking (Mypy)
 **First install dependencies:**
 ```bash
-pip install -q -r src/cloudtrail_and_domain_name/requirements.txt
+pip install -q -r /cloudtrail_and_domain_name/requirements.txt
 ```
 
 **Then run mypy:**
 ```bash
-mypy src/cloudtrail_and_domain_name
+mypy /cloudtrail_and_domain_name
 ```
 
 #### 4. Unit Tests
 **Requires CDK dependencies installed (see step 3):**
 ```bash
-python -m pytest src/cloudtrail_and_domain_name/test/test_unit.py -v
+python -m pytest /cloudtrail_and_domain_name/test/test_unit.py -v
 ```
 
 #### 5. Integration Tests
@@ -279,7 +266,7 @@ echo "AWS_REGION: $AWS_REGION"
 
 Run integration tests (uses environment variables automatically):
 ```bash
-python -m pytest src/cloudtrail_and_domain_name/test/test_integration.py -v
+python -m pytest /cloudtrail_and_domain_name/test/test_integration.py -v
 ```
 
 **Required environment variables:**

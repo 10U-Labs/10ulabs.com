@@ -4,7 +4,7 @@ on:
     branches:
       - main
     paths:
-      - 'src/gmail_email_provider/**'
+      - 'gmail_email_provider/**'
       - '.github/workflows/gmail_email_provider.yml'
   workflow_dispatch:
     inputs:
@@ -47,7 +47,7 @@ jobs:
           npm install -g markdownlint-cli2
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r src/gmail_email_provider/requirements.txt
+        run: pip install -r gmail_email_provider/requirements.txt
       - name: Linting YAML files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
@@ -56,22 +56,22 @@ jobs:
       - name: Linting Markdown documentation
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          if [ -f src/gmail_email_provider/README.md ]; then
+          if [ -f gmail_email_provider/README.md ]; then
             echo "Linting README.md..."
-            markdownlint-cli2 src/gmail_email_provider/README.md
+            markdownlint-cli2 gmail_email_provider/README.md
           else
             echo "No README.md found, skipping markdown linting"
           fi
       - name: Linting Python files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint src/gmail_email_provider/stack.py \
+          pylint gmail_email_provider/stack.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy src/gmail_email_provider
+          python -m mypy gmail_email_provider
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest
@@ -99,11 +99,11 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest
-          pip install -r src/gmail_email_provider/requirements.txt
+          pip install -r gmail_email_provider/requirements.txt
       - name: Run unit tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest src/gmail_email_provider/test/test_unit.py -v
+          pytest gmail_email_provider/test/test_unit.py -v
   deploying-artifacts:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing-code
@@ -127,8 +127,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -152,19 +152,19 @@ jobs:
         run: npm install -g aws-cdk
       - name: Install dependencies
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r src/gmail_email_provider/requirements.txt
+        run: pip install -r gmail_email_provider/requirements.txt
       - name: CDK Bootstrap (if needed)
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: cd src/gmail_email_provider && cdk diff GmailEmailProvider
+        run: cd gmail_email_provider && cdk diff GmailEmailProvider
       - name: CDK Deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
-          cd src/gmail_email_provider && cdk deploy GmailEmailProvider \
+          cd gmail_email_provider && cdk deploy GmailEmailProvider \
             --require-approval never \
             --outputs-file ../../gmail-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
@@ -203,8 +203,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -225,7 +225,7 @@ jobs:
       - name: Run pytest integration tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest src/gmail_email_provider/test/test_integration.py -v
+          pytest gmail_email_provider/test/test_integration.py -v
   e2e-testing-infrastructure:
     name: E2E testing
     runs-on: ubuntu-latest
@@ -245,8 +245,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -267,7 +267,7 @@ jobs:
       - name: Run E2E tests
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pytest src/gmail_email_provider/test/test_e2e.py -v
+          pytest gmail_email_provider/test/test_e2e.py -v
   determine-readme-update:
     name: Determining if README.md should be updated
     runs-on: ubuntu-latest
@@ -288,8 +288,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -306,7 +306,7 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python src/gmail_email_provider/readme.py \
+          python gmail_email_provider/readme.py \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
@@ -339,8 +339,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' src/gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -356,14 +356,14 @@ jobs:
         run: pip install boto3
       - name: Update README with Bedrock
         run: |
-          python src/gmail_email_provider/readme.py \
+          python gmail_email_provider/readme.py \
             --update \
             --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add src/gmail_email_provider/README.md
+          git add gmail_email_provider/README.md
           if git diff --cached --quiet; then
             echo "No changes to README.md"
           else

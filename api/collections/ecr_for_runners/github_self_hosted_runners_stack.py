@@ -150,7 +150,7 @@ class GitHubSelfHostedRunnersStack(Stack):
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_11,
             handler="webhook_runner_launcher.lambda_handler",
-            code=lambda_.Code.from_asset("src/github_self_hosted_runners/infrastructure"),
+            code=lambda_.Code.from_asset("api/collections/ecr_for_runners"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
