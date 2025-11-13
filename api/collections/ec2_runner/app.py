@@ -17,15 +17,9 @@ EC2RunnerStack = ec2_runner_module.EC2RunnerStack
 
 app = cdk.App()
 
-parent_config_path = Path(__file__).parent.parent.parent / "self" / "config.json"
-with open(parent_config_path) as f:
-    parent_config = json.load(f)
-
-collection_config_path = Path(__file__).parent / "config.json"
-with open(collection_config_path) as f:
-    collection_config = json.load(f)
-
-config = {**parent_config, **collection_config}
+config_path = Path(__file__).parent / "config.json"
+with open(config_path) as f:
+    config = json.load(f)
 
 env = cdk.Environment(
     account=str(config["aws"]["account_id"]),
