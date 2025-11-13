@@ -6,29 +6,29 @@ import pytest
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         return json.load(f)
 
 
 @pytest.fixture
 def apigw_client(config):
-    return boto3.client('apigateway', region_name=config['aws_region'])
+    return boto3.client('apigateway', region_name=config['aws']['region'])
 
 
 @pytest.fixture
 def lambda_client(config):
-    return boto3.client('lambda', region_name=config['aws_region'])
+    return boto3.client('lambda', region_name=config['aws']['region'])
 
 
 @pytest.fixture
 def cloudformation_client(config):
-    return boto3.client('cloudformation', region_name=config['aws_region'])
+    return boto3.client('cloudformation', region_name=config['aws']['region'])
 
 
 @pytest.fixture
 def acm_client(config):
-    return boto3.client('acm', region_name=config['aws_region'])
+    return boto3.client('acm', region_name=config['aws']['region'])
 
 
 def test_api_gateway_exists(apigw_client):
@@ -46,7 +46,7 @@ def test_lambda_function_exists(lambda_client):
 
 def test_api_has_custom_domain_name(apigw_client, config):
     domain_names = apigw_client.get_domain_names()
-    subdomain = config['subdomain_name']
+    subdomain = config['domain_names']['subdomain']
     domain_name_values = [d['domainName'] for d in domain_names['items']]
     assert subdomain in domain_name_values
 
@@ -146,7 +146,7 @@ def test_api_gateway_echo_has_post_method(apigw_client):
 
 
 def test_certificate_exists_for_subdomain(acm_client, config):
-    subdomain = config['subdomain_name']
+    subdomain = config['domain_names']['subdomain']
     certificates = acm_client.list_certificates()
 
     cert_arns = [
@@ -158,7 +158,7 @@ def test_certificate_exists_for_subdomain(acm_client, config):
 
 
 def test_certificate_status_is_issued(acm_client, config):
-    subdomain = config['subdomain_name']
+    subdomain = config['domain_names']['subdomain']
     certificates = acm_client.list_certificates()
 
     cert_arn = None

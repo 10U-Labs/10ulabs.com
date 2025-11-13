@@ -7,14 +7,14 @@ import pytest
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parents[2] / "config" / "api.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         return json.load(f)
 
 
 @pytest.fixture
 def cloudformation_client(config):
-    return boto3.client('cloudformation', region_name=config['aws_region'])
+    return boto3.client('cloudformation', region_name=config['aws']['region'])
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ def api_endpoint(cloudformation_client, config):
         if output['OutputKey'] == 'ApiEndpoint':
             return output['OutputValue']
 
-    subdomain = config['subdomain_name']
+    subdomain = config['domain_names']['subdomain']
     return f"https://{subdomain}"
 
 
