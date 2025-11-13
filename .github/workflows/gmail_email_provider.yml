@@ -17,11 +17,6 @@ jobs:
     steps:
       - run: 'true'
   determining-if-readme-should-be-updated:
-    if: |
-      always() &&
-      (needs.e2e-testing.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]')) &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Determining if README.md should be updated
     needs: e2e-testing
     outputs:
@@ -36,8 +31,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -59,10 +54,6 @@ jobs:
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
   e2e-testing:
-    if: |
-      always() &&
-      (needs.integration-testing.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
     name: E2E testing
     needs: integration-testing
     runs-on: ubuntu-latest
@@ -77,8 +68,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -103,12 +94,7 @@ jobs:
   ensuring-infrastructure-in-desired-state:
     if: |
       github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'push' || (
-        !contains(github.event.head_commit.message, '[skip-deploy]') &&
-        !contains(github.event.head_commit.message, '[skip deploy]')
-      )) &&
-      !contains(github.event.head_commit.message, '[post-deployment]')
+      github.ref == 'refs/heads/main'
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
     runs-on: ubuntu-latest
@@ -123,8 +109,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -183,8 +169,7 @@ jobs:
   integration-testing:
     if: |
       always() &&
-      (needs.ensuring-infrastructure-in-desired-state.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
+      needs.ensuring-infrastructure-in-desired-state.result == 'success'
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
@@ -199,8 +184,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -223,8 +208,6 @@ jobs:
         run: |
           pytest gmail_email_provider/test/test_integration.py -v
   performing-static-analysis:
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -278,8 +261,6 @@ jobs:
         run: |
           python -m mypy gmail_email_provider --exclude gmail_email_provider/test
   unit-testing:
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
@@ -324,8 +305,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws_region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
