@@ -2949,7 +2949,7 @@ class TestReadmeCommand:
 
         auth_between_aws_and_github.cmd_readme(args)
 
-        assert output_file.read_text() == 'readme_is_current=false\n'
+        assert output_file.read_text() == 'readme_should_be_updated=true\n'
 
     @patch('auth_between_aws_and_github._check_readme_needs_update')
     @patch('auth_between_aws_and_github.BedrockClient')
@@ -3005,7 +3005,7 @@ class TestReadmeCommand:
 
         auth_between_aws_and_github.cmd_readme(args)
 
-        assert output_file.read_text() == 'readme_is_current=true\n'
+        assert output_file.read_text() == 'readme_should_be_updated=false\n'
 
 
 class TestArgumentValidation:
