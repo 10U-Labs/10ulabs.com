@@ -146,16 +146,16 @@ hosted_zone_name = Fn.import_value(f"{export_prefix}-HostedZoneName")
 
 ### Required Parameters
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `domain_name` | string | Your domain name | `example.com` |
-| `google_site_verification` | string | Verification code | `abc123def456` |
+| Parameter                   | Type   | Description       | Example          |
+|-----------------------------|--------|-------------------|------------------|
+| `domain_name`               | string | Your domain name  | `example.com`    |
+| `google_site_verification`  | string | Verification code | `abc123def456`   |
 
 ### Optional Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `ttl` | integer | 300 | DNS record TTL in seconds |
+| Parameter | Type    | Default | Description                |
+|-----------|---------|---------|----------------------------|
+| `ttl`     | integer | 300     | DNS record TTL in seconds  |
 
 ### Getting Google Site Verification Code
 
