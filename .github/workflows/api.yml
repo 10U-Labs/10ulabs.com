@@ -3,32 +3,42 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   performing-static-analysis:
-    if: github.event.inputs.dry_run != 'true'
+    if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
+      - name: DRY RUN - Skip static analysis
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run pylint and mypy static analysis"
       - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/checkout@v4
       - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install linting dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pylint mypy yamllint
           npm install -g jsonlint markdownlint-cli2
       - name: Install project dependencies for linting
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: pip install -r api/self/requirements.txt
       - name: Linting YAML files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
       - name: Linting JSON configuration files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           echo "Validating JSON syntax..."
           jsonlint -q api/self/config.json
           jsonlint -q api/self/cdk.json
       - name: Linting Markdown documentation
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           if [ -f api/self/README.md ]; then
             echo "Linting README.md..."
@@ -37,47 +47,59 @@ jobs:
             echo "No README.md found, skipping markdown linting"
           fi
       - name: Linting Python files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pylint api/self/stack.py api/self/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           python -m mypy api/self
   unit-testing:
-    if: github.event.inputs.dry_run != 'true'
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
+      - name: DRY RUN - Skip unit tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run unit tests with pytest"
       - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/checkout@v4
       - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install Python dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest
           pip install -r api/self/requirements.txt
       - name: Run unit tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pytest api/self/test/test_unit.py -v
   ensuring-infrastructure-in-desired-state:
-    if: |
-      github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main'
+    if: github.event.inputs.dry_run != 'true'
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
     runs-on: ubuntu-latest
     steps:
+      - name: DRY RUN - Skip deployment
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would deploy API infrastructure with CDK"
       - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/checkout@v4
       - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
           ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
@@ -85,28 +107,36 @@ jobs:
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
       - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Set up Node.js
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install CDK
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: npm install -g aws-cdk
       - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: pip install -r api/self/requirements.txt
       - name: CDK Bootstrap (if needed)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           cd api/self && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: cd api/self && cdk diff TenULabsApi
       - name: CDK Deploy
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         id: deploy
         run: |
           cd api/self && cdk deploy TenULabsApi \
@@ -118,34 +148,38 @@ jobs:
             echo "deployment_failed=false" >> $GITHUB_OUTPUT
           fi
       - name: Fail if deployment failed
-        if: steps.deploy.outputs.deployment_failed == 'true'
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
       - name: Display outputs
-        if: steps.deploy.outputs.deployment_failed != 'true'
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
         run: |
           echo "API infrastructure deployed successfully"
           echo ""
           echo "Stack Outputs:"
           cat api-outputs.json | jq '.'
       - name: Validate API propagation
-        if: steps.deploy.outputs.deployment_failed != 'true'
+        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
         run: |
           API_ENDPOINT=$(jq -r '.TenULabsApi.ApiEndpoint' api-outputs.json)
           python api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing:
     if: |
       always() &&
-      github.event.inputs.dry_run != 'true' &&
       needs.ensuring-infrastructure-in-desired-state.result == 'success'
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
+      - name: DRY RUN - Skip integration tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run integration tests with pytest"
       - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/checkout@v4
       - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
           ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
@@ -153,32 +187,40 @@ jobs:
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
       - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install Python dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest boto3
       - name: Run pytest integration tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pytest api/self/test/test_integration.py -v
   e2e-testing:
     if: |
       always() &&
-      github.event.inputs.dry_run != 'true' &&
       needs.integration-testing.result == 'success'
     name: E2E testing
     needs: integration-testing
     runs-on: ubuntu-latest
     steps:
+      - name: DRY RUN - Skip E2E tests
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: echo "DRY RUN - Would run E2E tests"
       - name: Checkout code
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/checkout@v4
       - name: Load configuration
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         id: config
         run: |
           ACCOUNT_ID=$(jq -r '.aws_account_id' api/self/config.json)
@@ -186,26 +228,29 @@ jobs:
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
       - name: Set up Python
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pytest boto3 requests
       - name: Run E2E tests
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pytest api/self/test/test_e2e.py -v
   determining-if-readme-should-be-updated:
     if: |
       always() &&
-      github.event.inputs.dry_run != 'true' &&
       needs.e2e-testing.result == 'success' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
+      github.event_name == 'push'
     name: Determining if README.md should be updated
     needs: e2e-testing
     outputs:
