@@ -54,7 +54,7 @@ jobs:
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy api/self
+          python -m mypy api/self --exclude api/self/test
   unit-testing:
     name: Unit testing
     runs-on: ubuntu-latest

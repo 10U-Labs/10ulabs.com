@@ -1,36 +1,3 @@
-import json
-from pathlib import Path
-import boto3
-import pytest
-
-
-@pytest.fixture
-def config():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        return json.load(f)
-
-
-@pytest.fixture
-def apigw_client(config):
-    return boto3.client('apigateway', region_name=config['aws']['region'])
-
-
-@pytest.fixture
-def lambda_client(config):
-    return boto3.client('lambda', region_name=config['aws']['region'])
-
-
-@pytest.fixture
-def cloudformation_client(config):
-    return boto3.client('cloudformation', region_name=config['aws']['region'])
-
-
-@pytest.fixture
-def acm_client(config):
-    return boto3.client('acm', region_name=config['aws']['region'])
-
-
 def test_api_gateway_exists(apigw_client):
     apis = apigw_client.get_rest_apis()
     api_names = [api['name'] for api in apis['items']]
