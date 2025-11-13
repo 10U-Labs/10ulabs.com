@@ -194,8 +194,6 @@ def handle_check_command(bedrock_client, source_code, readme_path, bedrock_confi
         bedrock_config['model_id'], bedrock_config['max_tokens']
     )
 
-    print(readme_should_be_updated)
-
     if output_file:
         try:
             with open(output_file, 'a', encoding='utf-8') as f:

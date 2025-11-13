@@ -242,8 +242,6 @@ def main():
         logging.info("Checking if README should be updated via Bedrock...")
         readme_should_be_updated = check_readme_should_be_updated(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
 
-        print(readme_should_be_updated)
-
         if args.output_file:
             try:
                 with open(args.output_file, 'a', encoding='utf-8') as f:
