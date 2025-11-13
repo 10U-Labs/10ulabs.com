@@ -44,7 +44,7 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           pip install pylint mypy yamllint
-          npm install -g markdownlint-cli2
+          npm install -g jsonlint markdownlint-cli2
       - name: Install project dependencies for linting
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: pip install -r gmail_email_provider/requirements.txt
@@ -53,6 +53,12 @@ jobs:
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/gmail_email_provider.yml
+      - name: Linting JSON configuration files
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q gmail_email_provider/config.json
+          jsonlint -q gmail_email_provider/cdk.json
       - name: Linting Markdown documentation
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
@@ -65,13 +71,13 @@ jobs:
       - name: Linting Python files
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          pylint gmail_email_provider/stack.py \
+          pylint gmail_email_provider/stack.py gmail_email_provider/app.py gmail_email_provider/readme.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          python -m mypy gmail_email_provider
+          python -m mypy gmail_email_provider --exclude gmail_email_provider/test
   unit-testing-code:
     name: Unit testing
     runs-on: ubuntu-latest

@@ -6,14 +6,14 @@ import pytest
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parents[2] / "config" / "gmail_email_provider.json"
+    config_path = Path(__file__).parents[1] / "config.json"
     with open(config_path) as f:
         return json.load(f)
 
 
 @pytest.fixture
 def route53_client(config):
-    return boto3.client('route53', region_name=config['aws_region'])
+    return boto3.client('route53', region_name=config['aws']['region'])
 
 
 def test_google_verification_txt_record_exists(route53_client, config):
@@ -97,7 +97,7 @@ def test_google_verification_txt_record_has_ttl(route53_client, config):
 
 
 def test_cloudformation_stack_exists(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
 
     stacks = cf_client.describe_stacks()
     gmail_stack = None
@@ -110,7 +110,7 @@ def test_cloudformation_stack_exists(config):
 
 
 def test_cloudformation_stack_is_not_in_failed_state(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
 
     stacks = cf_client.describe_stacks()
     gmail_stack = None
@@ -124,7 +124,7 @@ def test_cloudformation_stack_is_not_in_failed_state(config):
 
 
 def test_stack_has_google_verification_output(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
 
     stacks = cf_client.describe_stacks()
     gmail_stack = None
@@ -319,7 +319,7 @@ def test_mx_record_priority_equals_one(route53_client, config):
 
 
 def test_cloudformation_outputs_have_correct_values(config):
-    cf_client = boto3.client('cloudformation', region_name=config['aws_region'])
+    cf_client = boto3.client('cloudformation', region_name=config['aws']['region'])
 
     stacks = cf_client.describe_stacks()
     gmail_stack = None
