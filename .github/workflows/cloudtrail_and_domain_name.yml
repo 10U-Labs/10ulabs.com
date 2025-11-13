@@ -2,26 +2,101 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  conclude-readme-skip:
-    if: needs.determine-readme-update.outputs.readme_should_be_updated != 'true'
+  concluding-readme-should-not-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated != 'true'
     name: Concluding README.md should not be updated
-    needs: determine-readme-update
+    needs: determining-if-readme-should-be-updated
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
-  conclude-readme-update:
-    if: needs.determine-readme-update.outputs.readme_should_be_updated == 'true'
+  concluding-readme-should-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'true'
     name: Concluding README.md should be updated
-    needs: determine-readme-update
+    needs: determining-if-readme-should-be-updated
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
-  ensure-infrastructure:
+  determining-if-readme-should-be-updated:
+    name: Determining if README.md should be updated
+    needs: e2e-testing
+    outputs:
+      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Install boto3
+        run: pip install boto3
+      - id: check
+        name: Check if README needs update
+        run: |
+          python cloudtrail_and_domain_name/readme.py \
+            --check \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --output-file "$GITHUB_OUTPUT"
+  e2e-testing:
+    name: E2E testing
+    needs: integration-testing
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip E2E tests
+        run: echo "DRY RUN - Would run E2E tests"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install dependencies
+        run: |
+          pip install pytest boto3 dnspython
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Run E2E tests
+        run: |
+          pytest cloudtrail_and_domain_name/test/test_e2e.py -v
+  ensuring-infrastructure-in-desired-state:
     if: |
       github.event.inputs.dry_run != 'true' &&
       github.ref == 'refs/heads/main'
     name: Ensuring infrastructure is in desired state
-    needs: unit-tests
+    needs: unit-testing
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -153,84 +228,9 @@ jobs:
           echo ""
           echo "Stack Outputs:"
           cat domain-outputs.json | jq '.'
-  determine-readme-update:
-    name: Determining if README.md should be updated
-    needs: e2e-tests
-    outputs:
-      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Install boto3
-        run: pip install boto3
-      - id: check
-        name: Check if README needs update
-        run: |
-          python cloudtrail_and_domain_name/readme.py \
-            --check \
-            --aws-region "${{ steps.config.outputs.region }}" \
-            --output-file "$GITHUB_OUTPUT"
-  e2e-tests:
-    name: E2E testing
-    needs: integration-tests
-    runs-on: ubuntu-latest
-    steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip E2E tests
-        run: echo "DRY RUN - Would run E2E tests"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
-        run: |
-          pip install pytest boto3 dnspython
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run E2E tests
-        run: |
-          pytest cloudtrail_and_domain_name/test/test_e2e.py -v
-  integration-tests:
+  integration-testing:
     name: Integration testing
-    needs: ensure-infrastructure
+    needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -266,7 +266,7 @@ jobs:
         name: Run pytest integration tests
         run: |
           pytest cloudtrail_and_domain_name/test/test_integration.py -v
-  static-analysis:
+  performing-static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -319,9 +319,9 @@ jobs:
         name: Static type checking Python files with mypy
         run: |
           python -m mypy cloudtrail_and_domain_name --exclude cloudtrail_and_domain_name/test
-  unit-tests:
+  unit-testing:
     name: Unit testing
-    needs: static-analysis
+    needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -349,9 +349,9 @@ jobs:
         name: Run unit tests
         run: |
           pytest cloudtrail_and_domain_name/test/test_unit.py -v
-  update-readme:
+  updating-readme:
     name: Updating README.md
-    needs: conclude-readme-update
+    needs: concluding-readme-should-be-updated
     permissions:
       contents: write
       id-token: write
