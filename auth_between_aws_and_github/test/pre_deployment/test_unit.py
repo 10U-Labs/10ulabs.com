@@ -11,31 +11,14 @@ from unittest.mock import Mock, patch, MagicMock, call
 
 import pytest
 
+from conftest import (
+    REPO_ROOT, BOOTSTRAP_SCRIPT, TEST_ACCOUNT_ID, TEST_REGION,
+    TEST_ROLE_NAME, TEST_GITHUB_ORG, TEST_GITHUB_REPO, run_command
+)
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / 'auth_between_aws_and_github'))
 
 import auth_between_aws_and_github
-
-BOOTSTRAP_SCRIPT = REPO_ROOT / 'auth_between_aws_and_github' / 'auth_between_aws_and_github.py'
-TEST_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '781581267945')
-TEST_REGION = os.environ.get('AWS_REGION', 'us-east-1')
-TEST_ROLE_NAME = 'GitHubActionsBootstrapCITest'
-TEST_GITHUB_ORG = '10U-Foundation'
-TEST_GITHUB_REPO = '10ulabs.com'
-
-
-def run_command(cmd, check=True, capture_output=True):
-    result = subprocess.run(
-        cmd,
-        shell=True if isinstance(cmd, str) else False,
-        capture_output=capture_output,
-        text=True,
-        check=False
-    )
-    if check and result.returncode != 0:
-        raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
-    return result
 
 
 class TestHelperFunctions:
