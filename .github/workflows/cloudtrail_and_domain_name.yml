@@ -19,12 +19,7 @@ jobs:
   deploying-artifacts:
     if: |
       github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'push' || (
-        !contains(github.event.head_commit.message, '[skip-deploy]') &&
-        !contains(github.event.head_commit.message, '[skip deploy]')
-      )) &&
-      !contains(github.event.head_commit.message, '[post-deployment]')
+      github.ref == 'refs/heads/main'
     name: Ensuring infrastructure is in desired state
     needs: unit-testing-code
     runs-on: ubuntu-latest
@@ -160,9 +155,7 @@ jobs:
           cat domain-outputs.json | jq '.'
   determine-readme-update:
     if: |
-      always() &&
-      (needs.e2e-testing-infrastructure.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]')) &&
+      needs.e2e-testing-infrastructure.result == 'success' &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Determining if README.md should be updated
     needs: e2e-testing-infrastructure
@@ -217,10 +210,7 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{"event_type":"domain_name_has_been_registered_successfully"}'
   e2e-testing-infrastructure:
-    if: |
-      always() &&
-      (needs.integration-testing-infrastructure.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
+    if: needs.integration-testing-infrastructure.result == 'success'
     name: E2E testing
     needs: integration-testing-infrastructure
     runs-on: ubuntu-latest
@@ -259,10 +249,7 @@ jobs:
         run: |
           pytest cloudtrail_and_domain_name/test/test_e2e.py -v
   integration-testing-infrastructure:
-    if: |
-      always() &&
-      (needs.deploying-artifacts.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
+    if: needs.deploying-artifacts.result == 'success'
     name: Integration testing
     needs: deploying-artifacts
     runs-on: ubuntu-latest
@@ -301,8 +288,6 @@ jobs:
         run: |
           pytest cloudtrail_and_domain_name/test/test_integration.py -v
   performing-static-analysis:
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -350,8 +335,6 @@ jobs:
         run: |
           python -m mypy cloudtrail_and_domain_name
   unit-testing-code:
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
