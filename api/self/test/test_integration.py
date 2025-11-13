@@ -136,3 +136,132 @@ def test_certificate_status_is_issued(acm_client, config):
 
     cert_details = acm_client.describe_certificate(CertificateArn=cert_arn)
     assert cert_details['Certificate']['Status'] == 'ISSUED'
+
+
+def test_lambda_function_can_be_invoked(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    response = lambda_client.invoke(
+        FunctionName=api_handler,
+        InvocationType='RequestResponse',
+        Payload='{"path": "/health", "httpMethod": "GET"}'
+    )
+    assert response['StatusCode'] == 200
+
+
+def test_lambda_function_returns_valid_response(lambda_client):
+    import json
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    response = lambda_client.invoke(
+        FunctionName=api_handler,
+        InvocationType='RequestResponse',
+        Payload='{"path": "/health", "httpMethod": "GET"}'
+    )
+    payload = json.loads(response['Payload'].read())
+    assert 'statusCode' in payload
+
+
+def test_lambda_function_has_cloudwatch_log_group(lambda_client):
+    import boto3
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    logs_client = boto3.client('logs', region_name=lambda_client.meta.region_name)
+    log_groups = logs_client.describe_log_groups(logGroupNamePrefix=f'/aws/lambda/{api_handler}')
+    assert len(log_groups['logGroups']) > 0
+
+
+def test_lambda_function_has_execution_role(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    function_config = lambda_client.get_function_configuration(FunctionName=api_handler)
+    assert 'Role' in function_config
+
+
+def test_lambda_function_has_correct_runtime(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    function_config = lambda_client.get_function_configuration(FunctionName=api_handler)
+    assert function_config['Runtime'].startswith('python3')
+
+
+def test_lambda_function_has_timeout_configured(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    function_config = lambda_client.get_function_configuration(FunctionName=api_handler)
+    assert function_config['Timeout'] > 0
+
+
+def test_lambda_function_has_memory_configured(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    api_handler = [name for name in function_names if 'ApiHandler' in name][0]
+    function_config = lambda_client.get_function_configuration(FunctionName=api_handler)
+    assert function_config['MemorySize'] > 0
+
+
+def test_poll_api_can_connect_to_real_endpoint():
+    import requests
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+    import poll_api_until_it_has_propagated
+    result = poll_api_until_it_has_propagated.poll_until_propagated(
+        'https://httpbin.org/status/404',
+        max_attempts=1
+    )
+    assert result is True
+
+
+def test_poll_api_handles_network_errors():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+    import poll_api_until_it_has_propagated
+    result = poll_api_until_it_has_propagated.poll_until_propagated(
+        'https://invalid-domain-that-does-not-exist-12345.com',
+        max_attempts=1
+    )
+    assert result is False
+
+
+def test_poll_api_handles_ssl_endpoints():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+    import poll_api_until_it_has_propagated
+    result = poll_api_until_it_has_propagated.poll_until_propagated(
+        'https://httpbin.org/status/404',
+        max_attempts=1
+    )
+    assert result is True
+
+
+def test_poll_api_handles_connection_timeout():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+    import poll_api_until_it_has_propagated
+    result = poll_api_until_it_has_propagated.poll_until_propagated(
+        'https://httpbin.org/delay/20',
+        max_attempts=1
+    )
+    assert result is False
+
+
+def test_poll_api_retries_on_non_404_status():
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[1]))
+    import poll_api_until_it_has_propagated
+    result = poll_api_until_it_has_propagated.poll_until_propagated(
+        'https://httpbin.org/status/500',
+        max_attempts=2
+    )
+    assert result is False
