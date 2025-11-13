@@ -1,113 +1,22 @@
-name: Ensuring CloudTrail and domain name exist and are properly configured
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'cloudtrail_and_domain_name/**'
-      - '.github/workflows/cloudtrail_and_domain_name.yml'
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run mode (skip deployment, just test)'
-        required: false
-        type: boolean
-        default: false
-  repository_dispatch:
-    types:
-      - bilateral_authorizations_between_aws_and_github_have_been_established
 concurrency:
-  group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
-permissions:
-  id-token: write
-  contents: read
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  performing-static-analysis:
-    name: Performing static analysis
+  conclude-readme-skip:
+    if: needs.determine-readme-update.outputs.readme_should_be_updated != 'true'
+    name: Concluding README.md should not be updated
+    needs: determine-readme-update
     runs-on: ubuntu-latest
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     steps:
-      - name: DRY RUN - Skip static analysis
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run pylint and mypy static analysis"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install linting dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pylint mypy yamllint
-          npm install -g markdownlint-cli2
-      - name: Install project dependencies for linting
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: pip install -r cloudtrail_and_domain_name/requirements.txt
-      - name: Linting YAML files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/cloudtrail_and_domain_name.yml
-      - name: Linting Markdown documentation
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          if [ -f cloudtrail_and_domain_name/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 cloudtrail_and_domain_name/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
-      - name: Linting Python files
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pylint cloudtrail_and_domain_name/stack.py cloudtrail_and_domain_name/lambda/handler.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-under=10.0
-      - name: Static type checking Python files with mypy
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          python -m mypy cloudtrail_and_domain_name
-  unit-testing-code:
-    name: Unit testing
+      - run: 'true'
+  conclude-readme-update:
+    if: needs.determine-readme-update.outputs.readme_should_be_updated == 'true'
+    name: Concluding README.md should be updated
+    needs: determine-readme-update
     runs-on: ubuntu-latest
-    needs: performing-static-analysis
-    if: |
-      !contains(github.event.head_commit.message, '[post-deployment]')
     steps:
-      - name: DRY RUN - Skip unit tests
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run unit tests with pytest"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Set up Node.js (required by aws-cdk-lib/jsii)
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install Python dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pytest
-          pip install -r cloudtrail_and_domain_name/requirements.txt
-      - name: Run unit tests
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pytest cloudtrail_and_domain_name/test/test_unit.py -v
+      - run: 'true'
   deploying-artifacts:
-    name: Ensuring infrastructure is in desired state
-    needs: unit-testing-code
-    runs-on: ubuntu-latest
     if: |
       github.event.inputs.dry_run != 'true' &&
       github.ref == 'refs/heads/main' &&
@@ -116,53 +25,56 @@ jobs:
         !contains(github.event.head_commit.message, '[skip deploy]')
       )) &&
       !contains(github.event.head_commit.message, '[post-deployment]')
+    name: Ensuring infrastructure is in desired state
+    needs: unit-testing-code
+    runs-on: ubuntu-latest
     steps:
-      - name: DRY RUN - Skip deployment
-        if: ${{ github.event.inputs.dry_run == 'true' }}
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip deployment
         run: echo "DRY RUN - Would deploy domain infrastructure with CDK"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration
+      - id: config
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
+        name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
           REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Set up Node.js
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install CDK
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install CDK
         run: npm install -g aws-cdk
-      - name: Install dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install dependencies
         run: pip install -r cloudtrail_and_domain_name/requirements.txt
-      - name: CDK Bootstrap (if needed)
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: CDK Bootstrap (if needed)
         run: |
           cd cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
-      - name: CDK Diff
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: CDK Diff
         run: cd cloudtrail_and_domain_name && cdk diff TenULabsDomainName
-      - name: CDK Deploy
+      - id: deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: deploy
+        name: CDK Deploy
         run: |
           cd cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
             --require-approval never \
@@ -172,8 +84,8 @@ jobs:
           else
             echo "deployment_failed=false" >> $GITHUB_OUTPUT
           fi
-      - name: Fetch CloudWatch Logs
-        if: ${{ github.event.inputs.dry_run != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Fetch CloudWatch Logs
         run: |
           echo "Fetching CloudWatch logs from Lambda execution..."
           echo "Searching for TenULabsDomainName DomainRegistration Lambda log groups..."
@@ -234,121 +146,37 @@ jobs:
             --output text 2>/dev/null || echo "Could not fetch logs"
           echo "=========================================="
           echo ""
-      - name: Fail if deployment failed
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
+        name: Fail if deployment failed
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
-      - name: Display outputs
-        if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
+      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
+        name: Display outputs
         run: |
           echo "Domain infrastructure deployed successfully"
           echo ""
           echo "Stack Outputs:"
           cat domain-outputs.json | jq '.'
-  integration-testing-infrastructure:
-    name: Integration testing
-    runs-on: ubuntu-latest
-    needs: deploying-artifacts
-    if: |
-      always() &&
-      (needs.deploying-artifacts.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
-    steps:
-      - name: DRY RUN - Skip integration tests
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run integration tests with pytest"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Load configuration
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.config.outputs.region }}
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Python dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pytest boto3
-      - name: Run pytest integration tests
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pytest cloudtrail_and_domain_name/test/test_integration.py -v
-  e2e-testing-infrastructure:
-    name: E2E testing
-    runs-on: ubuntu-latest
-    needs: integration-testing-infrastructure
-    if: |
-      always() &&
-      (needs.integration-testing-infrastructure.result == 'success' ||
-       contains(github.event.head_commit.message, '[post-deployment]'))
-    steps:
-      - name: DRY RUN - Skip E2E tests
-        if: ${{ github.event.inputs.dry_run == 'true' }}
-        run: echo "DRY RUN - Would run E2E tests"
-      - name: Checkout code
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/checkout@v4
-      - name: Load configuration
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.config.outputs.region }}
-      - name: Set up Python
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pip install pytest boto3 dnspython
-      - name: Run E2E tests
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        run: |
-          pytest cloudtrail_and_domain_name/test/test_e2e.py -v
   determine-readme-update:
-    name: Determining if README.md should be updated
-    runs-on: ubuntu-latest
-    needs: e2e-testing-infrastructure
     if: |
       always() &&
       (needs.e2e-testing-infrastructure.result == 'success' ||
        contains(github.event.head_commit.message, '[post-deployment]')) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
+    name: Determining if README.md should be updated
+    needs: e2e-testing-infrastructure
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration
-        id: config
+      - id: config
+        name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
           REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
@@ -361,45 +189,212 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - name: Install boto3
         run: pip install boto3
-      - name: Check if README needs update
-        id: check
+      - id: check
+        name: Check if README needs update
         run: |
           python cloudtrail_and_domain_name/readme.py \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
-  conclude-readme-skip:
-    name: Concluding README.md should not be updated
+  dispatch-success-event:
+    if: |
+      always() &&
+      (needs.update-readme.result == 'success' || needs.conclude-readme-skip.result == 'success')
+    name: Dispatching success event
+    needs: [update-readme, conclude-readme-skip]
     runs-on: ubuntu-latest
-    needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.readme_should_be_updated != 'true'
     steps:
-      - run: 'true'
-  conclude-readme-update:
-    name: Concluding README.md should be updated
+      - name: Dispatch domain_name_has_been_registered_successfully event
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{"event_type":"domain_name_has_been_registered_successfully"}'
+  e2e-testing-infrastructure:
+    if: |
+      always() &&
+      (needs.integration-testing-infrastructure.result == 'success' ||
+       contains(github.event.head_commit.message, '[post-deployment]'))
+    name: E2E testing
+    needs: integration-testing-infrastructure
     runs-on: ubuntu-latest
-    needs: determine-readme-update
-    if: needs.determine-readme-update.outputs.readme_should_be_updated == 'true'
     steps:
-      - run: 'true'
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip E2E tests
+        run: echo "DRY RUN - Would run E2E tests"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install dependencies
+        run: |
+          pip install pytest boto3 dnspython
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Run E2E tests
+        run: |
+          pytest cloudtrail_and_domain_name/test/test_e2e.py -v
+  integration-testing-infrastructure:
+    if: |
+      always() &&
+      (needs.deploying-artifacts.result == 'success' ||
+       contains(github.event.head_commit.message, '[post-deployment]'))
+    name: Integration testing
+    needs: deploying-artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip integration tests
+        run: echo "DRY RUN - Would run integration tests with pytest"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install Python dependencies
+        run: |
+          pip install pytest boto3
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Run pytest integration tests
+        run: |
+          pytest cloudtrail_and_domain_name/test/test_integration.py -v
+  performing-static-analysis:
+    if: |
+      !contains(github.event.head_commit.message, '[post-deployment]')
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip static analysis
+        run: echo "DRY RUN - Would run pylint and mypy static analysis"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint
+          npm install -g markdownlint-cli2
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install project dependencies for linting
+        run: pip install -r cloudtrail_and_domain_name/requirements.txt
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/cloudtrail_and_domain_name.yml
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting Markdown documentation
+        run: |
+          if [ -f cloudtrail_and_domain_name/README.md ]; then
+            echo "Linting README.md..."
+            markdownlint-cli2 cloudtrail_and_domain_name/README.md
+          else
+            echo "No README.md found, skipping markdown linting"
+          fi
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Linting Python files
+        run: |
+          pylint cloudtrail_and_domain_name/stack.py cloudtrail_and_domain_name/lambda/handler.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Static type checking Python files with mypy
+        run: |
+          python -m mypy cloudtrail_and_domain_name
+  unit-testing-code:
+    if: |
+      !contains(github.event.head_commit.message, '[post-deployment]')
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip unit tests
+        run: echo "DRY RUN - Would run unit tests with pytest"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Set up Node.js (required by aws-cdk-lib/jsii)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install Python dependencies
+        run: |
+          pip install pytest
+          pip install -r cloudtrail_and_domain_name/requirements.txt
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Run unit tests
+        run: |
+          pytest cloudtrail_and_domain_name/test/test_unit.py -v
   update-readme:
     name: Updating README.md
-    runs-on: ubuntu-latest
     needs: conclude-readme-update
     permissions:
-      id-token: write
       contents: write
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Load configuration
-        id: config
+      - id: config
+        name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws_account_id' cloudtrail_and_domain_name/config.json)
           REGION=$(jq -r '.aws_region' cloudtrail_and_domain_name/config.json)
@@ -412,8 +407,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
@@ -432,19 +427,24 @@ jobs:
             git commit -m "Update cloudtrail_and_domain_name README.md [skip ci]"
             git push
           fi
-  dispatch-success-event:
-    name: Dispatching success event
-    runs-on: ubuntu-latest
-    needs: [update-readme, conclude-readme-skip]
-    if: |
-      always() &&
-      (needs.update-readme.result == 'success' || needs.conclude-readme-skip.result == 'success')
-    steps:
-      - name: Dispatch domain_name_has_been_registered_successfully event
-        run: |
-          curl -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d '{"event_type":"domain_name_has_been_registered_successfully"}'
+name: Ensuring CloudTrail and domain name exist and are properly configured
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'cloudtrail_and_domain_name/**'
+      - '.github/workflows/cloudtrail_and_domain_name.yml'
+  repository_dispatch:
+    types:
+      - bilateral_authorizations_between_aws_and_github_have_been_established
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: 'Dry run mode (skip deployment, just test)'
+        required: false
+        type: boolean
+permissions:
+  contents: read
+  id-token: write
