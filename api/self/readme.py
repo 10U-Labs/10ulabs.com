@@ -149,15 +149,26 @@ Format the README in clean, professional markdown that complies with all markdow
 
 CRITICAL INSTRUCTIONS:
 1. Generate the README content first
-2. Before outputting, verify EACH requirement above using this checklist:
-   - [ ] All lines are under 80 characters
-   - [ ] Blank lines before and after all lists
-   - [ ] Blank lines before and after all code blocks
+2. Before outputting, verify EACH requirement using this checklist:
+
+   FACTUAL ACCURACY (verify against source code):
+   - [ ] Prerequisites match actual dependencies (check requirements.txt)
+   - [ ] NO mention of AWS CLI (uses boto3, not awscli)
+   - [ ] Correct: AWS CDK CLI, Python, Node.js, AWS credentials
+   - [ ] API endpoints match handler.py implementation
+   - [ ] Resource descriptions match stack.py definitions
+   - [ ] Configuration examples match config.json structure
+
+   FORMATTING (markdownlint compliance):
+   - [ ] All lines under 80 characters
+   - [ ] Blank lines before/after lists
+   - [ ] Blank lines before/after code blocks
    - [ ] All headings use # syntax (not bold)
    - [ ] All code blocks have language specifiers
-   - [ ] All bare URLs are wrapped in angle brackets
-   - [ ] File ends with exactly one newline character
+   - [ ] All bare URLs wrapped in angle brackets
+   - [ ] File ends with exactly one newline
    - [ ] No License section included
+
 3. If any check fails, fix the issue before outputting
 4. Output ONLY the final README content (no checklist, no explanation)
 
