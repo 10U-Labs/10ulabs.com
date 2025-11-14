@@ -1,5 +1,8 @@
+import json
+import time
 from aws_cdk import (
     Stack,
+    SecretValue,
     aws_iam as iam,
     aws_secretsmanager as secretsmanager,
 )
@@ -41,11 +44,29 @@ class AuthBetweenAwsAndGithubStack(Stack):
             ]
         )
 
-        secret = secretsmanager.Secret(
-            self, 'GitHubPATSecret',
-            secret_name=secret_name,
-            description=f'GitHub PAT for {github_org}/{github_repo} authentication'
-        )
+        github_token = self.node.try_get_context('github_token')
+
+        if github_token:
+            secret_value = {
+                "auth_method": "classic-pat",
+                "github_token": github_token,
+                "github_org": github_org,
+                "github_repo": github_repo,
+                "created_by": "cdk-deploy",
+                "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            }
+            secret = secretsmanager.Secret(
+                self, 'GitHubPATSecret',
+                secret_name=secret_name,
+                description=f'GitHub PAT for {github_org}/{github_repo} authentication',
+                secret_string_value=SecretValue.unsafe_plain_text(json.dumps(secret_value))
+            )
+        else:
+            secret = secretsmanager.Secret(
+                self, 'GitHubPATSecret',
+                secret_name=secret_name,
+                description=f'GitHub PAT for {github_org}/{github_repo} authentication'
+            )
 
         self.role_arn = role.role_arn
         self.secret_arn = secret.secret_arn
