@@ -147,6 +147,20 @@ Format the README in clean, professional markdown that complies with all markdow
 - End file with exactly one newline character
 - Use proper table formatting with spaces around pipes (| Column 1 | Column 2 |)
 
+CRITICAL INSTRUCTIONS:
+1. Generate the README content first
+2. Before outputting, verify EACH requirement above using this checklist:
+   - [ ] All lines are under 80 characters
+   - [ ] Blank lines before and after all lists
+   - [ ] Blank lines before and after all code blocks
+   - [ ] All headings use # syntax (not bold)
+   - [ ] All code blocks have language specifiers
+   - [ ] All bare URLs are wrapped in angle brackets
+   - [ ] File ends with exactly one newline character
+   - [ ] No License section included
+3. If any check fails, fix the issue before outputting
+4. Output ONLY the final README content (no checklist, no explanation)
+
 Be specific about what each resource does and why it exists. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
 
@@ -163,6 +177,11 @@ Generate ONLY the README content, starting with the title. Do not include any pr
         )
 
         readme_content = response['output']['message']['content'][0]['text']
+
+        if not readme_content.endswith('\n'):
+            readme_content += '\n'
+            logging.info("Added missing trailing newline to README")
+
         logging.info("Successfully generated README with Bedrock")
         return readme_content
     except (KeyError, IndexError, TypeError) as e:
