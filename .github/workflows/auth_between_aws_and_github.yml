@@ -93,52 +93,39 @@ jobs:
           fi
           echo ""
           echo "Note: CDK will deploy infrastructure and update secret accordingly"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install AWS CDK CLI
+      - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: pip install -r auth_between_aws_and_github/requirements.txt
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Deploy auth_between_aws_and_github infrastructure
         run: |
           echo "Deploying auth_between_aws_and_github infrastructure..."
           cd auth_between_aws_and_github
           cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: Dry run
-        run: echo "DRY RUN - Would deploy auth_between_aws_and_github infrastructure via CDK"
   integration-testing-code:
     name: Integration testing code
     needs: unit-testing-code
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install pytest
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_REGION: us-east-1
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run integration tests
         run: pytest auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: Dry run
-        run: echo "DRY RUN - Would run integration tests"
   integration-testing-infrastructure:
     name: Integration testing infrastructure
     needs: ensuring-infrastructure-exists-in-defined-state
@@ -146,29 +133,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Read auth_between_aws_and_github config
-        run: |
-          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
-          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install pytest
+      - name: Install pytest
         run: pip install pytest
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run integration tests
+      - name: Run integration tests
         run: pytest auth_between_aws_and_github/test/post_deployment/test_integration.py -v
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: Dry run
-        run: echo "DRY RUN - Would run integration tests"
   performing-static-analysis:
     if: github.event.inputs.dry_run != 'true' && github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -210,22 +182,15 @@ jobs:
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip unit tests
-        run: echo "DRY RUN - Would run unit tests"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install pytest
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Functional unit testing
+      - name: Functional unit testing
         run: |
           echo "Running unit tests..."
           PYTHONPATH=auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
