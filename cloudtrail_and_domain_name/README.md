@@ -154,9 +154,10 @@ Information
 ### Software Requirements
 
 - Python 3.8 or higher
-- AWS CDK CLI (v2.x)
-- AWS CLI configured with appropriate credentials
-- Boto3 SDK (included with AWS CDK)
+- AWS CDK CLI v2.x (`npm install -g aws-cdk`)
+- Node.js 20.x (required by AWS CDK)
+- AWS credentials configured (environment variables or ~/.aws/credentials)
+- Boto3 SDK (included in requirements.txt)
 
 ### Installation
 
