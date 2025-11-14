@@ -64,7 +64,7 @@ jobs:
             --output-file "$GITHUB_OUTPUT"
   ensuring-infrastructure-exists-in-defined-state:
     name: Ensuring infrastructure exists in defined state
-    needs: performing-static-analysis
+    needs: unit-testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -162,10 +162,28 @@ jobs:
       - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/auth_between_aws_and_github
-      - name: Test CDK stack synthesis
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
         run: |
-          cd src/auth_between_aws_and_github
-          pytest ../../test/auth_between_aws_and_github/test_unit.py -v
+          pip install pytest
+          pip install -r src/auth_between_aws_and_github/requirements.txt
+      - name: Run unit tests
+        run: |
+          pytest test/auth_between_aws_and_github/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
