@@ -171,7 +171,7 @@ jobs:
           python-version: '3.11'
       - name: Install Python dependencies
         run: |
-          pip install pytest boto3
+          pip install pytest boto3 requests
       - name: Run pytest integration tests
         run: |
           pytest api/self/test/test_integration.py -v
