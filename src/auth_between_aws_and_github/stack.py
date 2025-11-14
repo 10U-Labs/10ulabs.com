@@ -13,12 +13,11 @@ class AuthBetweenAwsAndGithubStack(Stack):
         github_repo = config['github']['repo']
         role_name = config['aws']['iam_role_name']
         secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
+        account_id = config['aws']['account_id']
 
-        provider = iam.OpenIdConnectProvider(
+        provider = iam.OpenIdConnectProvider.from_open_id_connect_provider_arn(
             self, 'GitHubOIDCProvider',
-            url='https://token.actions.githubusercontent.com',
-            client_ids=['sts.amazonaws.com'],
-            thumbprints=['6938fd4d98bab03faadb97b34396831e3780aea1']
+            open_id_connect_provider_arn=f'arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com'
         )
 
         role = iam.Role(
