@@ -174,45 +174,40 @@ jobs:
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip static analysis
-        run: echo "DRY RUN - Would run pylint and mypy static analysis"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install linting dependencies
+      - name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
           npm install -g jsonlint
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install project dependencies for linting
+      - name: Install project dependencies for linting
         run: pip install -r auth_between_aws_and_github/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting YAML files
+      - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/auth_between_aws_and_github.yml
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting JSON configuration files
+      - name: Linting JSON configuration files
         run: |
-          echo "Validating JSON syntax in config.json..."
+          echo "Validating JSON syntax..."
           jsonlint -q auth_between_aws_and_github/config.json
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Python files
+          jsonlint -q auth_between_aws_and_github/cdk.json
+      - name: Linting Python files
         run: |
-          pylint auth_between_aws_and_github/auth_between_aws_and_github.py \
+          pylint auth_between_aws_and_github/stack.py \
+            auth_between_aws_and_github/app.py \
+            auth_between_aws_and_github/readme.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Static type checking Python files with mypy
+      - name: Static type checking Python files with mypy
         run: |
-          mypy auth_between_aws_and_github/auth_between_aws_and_github.py
+          mypy auth_between_aws_and_github/stack.py \
+            auth_between_aws_and_github/app.py \
+            auth_between_aws_and_github/readme.py \
+            --ignore-missing-imports
   unit-testing-code:
     name: Unit testing code
     needs: performing-static-analysis
