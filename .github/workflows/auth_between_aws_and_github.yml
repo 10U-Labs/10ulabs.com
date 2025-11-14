@@ -142,7 +142,11 @@ jobs:
       - name: Run integration tests
         run: pytest auth_between_aws_and_github/test/post_deployment/test_integration.py -v
   performing-static-analysis:
-    if: github.event.inputs.dry_run != 'true' && github.ref == 'refs/heads/main'
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
