@@ -141,6 +141,7 @@ Format the README in clean, professional markdown that complies with all markdow
 - Keep all lines under 80 characters
 - Always add blank lines before and after lists
 - Always add blank lines before and after code blocks
+- Indent code blocks with 3 spaces when inside ordered/unordered lists
 - Use proper heading levels (# ## ### ####), never use bold text as headings
 - Add language specifiers to all code blocks (```bash, ```python, ```json, etc.)
 - Wrap bare URLs in angle brackets (<https://example.com>)
@@ -163,6 +164,7 @@ CRITICAL INSTRUCTIONS:
    - [ ] All lines under 80 characters
    - [ ] Blank lines before/after lists
    - [ ] Blank lines before/after code blocks
+   - [ ] Code blocks indented with 3 spaces when inside lists
    - [ ] All headings use # syntax (not bold)
    - [ ] All code blocks have language specifiers
    - [ ] All bare URLs wrapped in angle brackets
