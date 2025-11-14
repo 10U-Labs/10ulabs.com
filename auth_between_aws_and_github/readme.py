@@ -202,6 +202,16 @@ Generate ONLY the README content, starting with the title. Do not include any pr
         logging.error("Failed to generate README with Bedrock: %s", e)
         sys.exit(1)
 
+def load_config():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(script_dir, 'config.json')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f), script_dir
+    except IOError as e:
+        logging.error("Failed to read config.json: %s", e)
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(description='Generate or check README for auth infrastructure')
     parser.add_argument('--check', action='store_true', help='Check if README is current')
@@ -213,15 +223,7 @@ def main():
     parser.add_argument('--max-tokens-generate', type=int, help='Max tokens for README generation')
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, 'config.json')
-
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-    except IOError as e:
-        logging.error("Failed to read config.json: %s", e)
-        sys.exit(1)
+    config, script_dir = load_config()
 
     bedrock_model_id = args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
     max_tokens_check = int(args.max_tokens_check or config.get('aws', {}).get('bedrock', {}).get('max_tokens_check', 200))

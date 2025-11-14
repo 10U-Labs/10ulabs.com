@@ -155,17 +155,29 @@ def create_secret_value(github_token: str, github_org: str, github_repo: str) ->
 
 def setup_aws_clients(region: str, access_key_id: str, secret_access_key: str,
                      session_token: Optional[str] = None) -> tuple:
-    kwargs = {
-        'region_name': region,
-        'aws_access_key_id': access_key_id,
-        'aws_secret_access_key': secret_access_key
-    }
     if session_token:
-        kwargs['aws_session_token'] = session_token
-
-    iam_client = boto3.client('iam', **kwargs)
-    secrets_client = boto3.client('secretsmanager', **kwargs)
-    bedrock_client = boto3.client('bedrock', **kwargs)
+        iam_client = boto3.client('iam', region_name=region,
+                                 aws_access_key_id=access_key_id,
+                                 aws_secret_access_key=secret_access_key,
+                                 aws_session_token=session_token)
+        secrets_client = boto3.client('secretsmanager', region_name=region,
+                                     aws_access_key_id=access_key_id,
+                                     aws_secret_access_key=secret_access_key,
+                                     aws_session_token=session_token)
+        bedrock_client = boto3.client('bedrock', region_name=region,
+                                     aws_access_key_id=access_key_id,
+                                     aws_secret_access_key=secret_access_key,
+                                     aws_session_token=session_token)
+    else:
+        iam_client = boto3.client('iam', region_name=region,
+                                 aws_access_key_id=access_key_id,
+                                 aws_secret_access_key=secret_access_key)
+        secrets_client = boto3.client('secretsmanager', region_name=region,
+                                     aws_access_key_id=access_key_id,
+                                     aws_secret_access_key=secret_access_key)
+        bedrock_client = boto3.client('bedrock', region_name=region,
+                                     aws_access_key_id=access_key_id,
+                                     aws_secret_access_key=secret_access_key)
 
     return iam_client, secrets_client, bedrock_client
 
