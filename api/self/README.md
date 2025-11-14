@@ -1,95 +1,70 @@
 # 10U Labs API Infrastructure
 
-A serverless AWS infrastructure stack that creates a REST API with Lambda backend,
-custom domain support, and integrated GitHub self-hosted runner infrastructure.
+A serverless API infrastructure built with AWS CDK that creates a REST API with
+Lambda backend, custom domain, SSL certificate, and comprehensive monitoring.
 
 ## Overview
 
-This AWS CDK stack deploys a complete serverless API solution with the following
-key components:
-
-- **API Gateway REST API** with custom domain and SSL/TLS certificate
-- **Lambda function** handling API requests with CORS support
-- **Route53 DNS** configuration for custom subdomain
-- **CloudWatch logging** for API access and Lambda execution
-- **ECS Fargate infrastructure** for GitHub self-hosted runners
-- **VPC and networking** components for secure container execution
+This infrastructure creates a production-ready serverless API using AWS API
+Gateway and Lambda functions. The API is deployed with a custom domain name,
+SSL/TLS encryption, CORS support, and comprehensive logging for monitoring
+and debugging.
 
 ## Key Features
 
-- ✅ **Serverless Architecture** - No server management required
-- ✅ **Custom Domain** - Professional API endpoints with SSL/TLS
-- ✅ **CORS Enabled** - Ready for web application integration
-- ✅ **Access Logging** - Complete request/response logging
-- ✅ **Health Monitoring** - Built-in health check endpoint
-- ✅ **Scalable** - Automatic scaling based on demand
-- ✅ **Secure** - SSL/TLS encryption and IAM-based access control
+- **Serverless Architecture**: Built on AWS Lambda and API Gateway for
+  automatic scaling and cost optimization
+- **Custom Domain**: SSL-enabled custom domain with automatic certificate
+  management
+- **CORS Enabled**: Cross-origin resource sharing configured for web
+  applications
+- **Comprehensive Logging**: CloudWatch integration for API Gateway access
+  logs and Lambda function logs
+- **Health Monitoring**: Built-in health check endpoint for service monitoring
+- **Versioned API**: Structured with `/v1` prefix for API versioning
 
-## Resources Created
+## AWS Resources Created
 
-### API Gateway Components
+### Core API Infrastructure
 
-- **REST API** (`TenULabsApi`) - Main API Gateway with custom domain
-- **Custom Domain** - SSL/TLS certificate from ACM with Route53 validation
-- **API Stages** - Production stage with access logging enabled
-- **CORS Configuration** - Cross-origin resource sharing for all origins
+- **API Gateway REST API**: Main API endpoint with custom domain configuration
+- **Lambda Function**: Python 3.11 runtime handling all API requests
+- **ACM Certificate**: SSL/TLS certificate for HTTPS encryption
+- **Route53 A Record**: DNS alias record pointing to the API Gateway
+- **CloudWatch Log Groups**: Separate log groups for API access logs and
+  Lambda execution logs
 
-### Lambda Function
+### Supporting Infrastructure
 
-- **API Handler** (`ApiHandler`) - Python 3.11 runtime with 30-second timeout
-- **CloudWatch Logs** - One week retention for Lambda execution logs
-- **IAM Role** - Automatically created with basic execution permissions
-
-### Networking & DNS
-
-- **Route53 A Record** - Alias record pointing to API Gateway
-- **ACM Certificate** - Automatic SSL/TLS certificate with DNS validation
-- **VPC** - Custom VPC with public subnets for runner infrastructure
-
-### Infrastructure Support
-
-- **ECS Cluster** - Container orchestration for GitHub runners
-- **ECR Repository** - Docker image storage with lifecycle policies
-- **Secrets Manager** - Secure storage for GitHub tokens and webhook secrets
-- **IAM Roles** - Service roles for EC2 and Fargate runners
-
-### Monitoring & Logging
-
-- **API Gateway Access Logs** - One month retention in CloudWatch
-- **Lambda Function Logs** - One week retention for execution logs
-- **Container Insights** - ECS cluster monitoring enabled
+- **VPC**: Isolated network environment for additional services
+- **ECR Repository**: Container registry for GitHub runner images
+- **ECS Cluster**: Container orchestration for self-hosted GitHub runners
+- **IAM Roles**: Service roles for EC2 instances and container tasks
+- **Secrets Manager**: Secure storage for GitHub tokens and webhook secrets
+- **Security Groups**: Network access controls for container services
 
 ## Prerequisites
 
-Before deploying this infrastructure, ensure you have:
-
-1. **AWS CLI** configured with appropriate permissions
-2. **AWS CDK** installed and bootstrapped in your target region
-3. **Parent Domain** hosted zone already exists in Route53
-4. **GitHub Token** stored in AWS Secrets Manager
-5. **Python 3.11+** for local development
+- AWS CDK v2.x installed and configured
+- Python 3.8 or higher
+- AWS CLI configured with appropriate permissions
+- Existing Route53 hosted zone for the parent domain
+- GitHub token stored in AWS Secrets Manager
 
 ### Required AWS Permissions
 
-Your deployment role needs permissions for:
-
-- API Gateway (create/modify REST APIs)
-- Lambda (create/update functions)
-- Route53 (create DNS records)
-- ACM (request/validate certificates)
-- CloudWatch Logs (create log groups)
-- ECS/Fargate (create clusters and task definitions)
-- ECR (create repositories)
-- Secrets Manager (create/read secrets)
-- IAM (create roles and policies)
+- Route53 (DNS management)
+- Certificate Manager (SSL certificates)
+- API Gateway (API creation and management)
+- Lambda (function deployment)
+- CloudWatch Logs (logging configuration)
+- IAM (role and policy management)
 
 ## API Endpoints
 
-### Health Check Endpoint
+### GET /health
 
-```http
-GET /health
-```
+Health check endpoint that returns the service status.
 
 **Response:**
 
@@ -101,15 +76,16 @@ GET /health
 }
 ```
 
-### Echo Endpoint
+### POST /v1/echo
 
-```http
-POST /v1/echo
-Content-Type: application/json
+Echo endpoint that returns the submitted JSON payload.
 
+**Request Body:**
+
+```json
 {
   "message": "Hello, World!",
-  "timestamp": "2024-01-01T00:00:00Z"
+  "data": ["any", "json", "structure"]
 }
 ```
 
@@ -119,23 +95,15 @@ Content-Type: application/json
 {
   "echo": {
     "message": "Hello, World!",
-    "timestamp": "2024-01-01T00:00:00Z"
+    "data": ["any", "json", "structure"]
   },
-  "received_at": "aws-request-id-here"
+  "received_at": "request-id-from-lambda-context"
 }
 ```
 
-### Error Handling
-
-All endpoints return appropriate HTTP status codes:
-
-- **200** - Success
-- **400** - Bad Request (invalid JSON)
-- **404** - Not Found (undefined endpoints)
-
 ## Configuration
 
-The stack expects a configuration dictionary with the following structure:
+The stack requires a configuration dictionary with the following structure:
 
 ```python
 config = {
@@ -144,117 +112,127 @@ config = {
         "subdomain": "api.example.com"
     },
     "naming": {
-        "vpc_name": "10ulabs-vpc",
-        "cluster_name": "github-runners",
-        "github_token_secret_name": "github-token"
+        "vpc_name": "api-vpc",
+        "cluster_name": "runners-cluster",
+        "task_family": "github-runner",
+        "container_name": "runner",
+        "log_stream_prefix": "runner",
+        "github_token_secret_name": "github-token",
+        "webhook_secret_name": "github-webhook-secret"
     },
     "aws": {
         "vpc": {
             "cidr": "10.0.0.0/16",
             "max_azs": 2,
-            "nat_gateways": 1
+            "nat_gateways": 1,
+            "subnet_configuration": {
+                "public_subnet_cidr_mask": 24
+            }
         }
+    },
+    "github": {
+        "repo": "organization/repository"
     }
 }
 ```
 
 ## Deployment Instructions
 
-### 1. Install Dependencies
+### 1. Clone and Setup
 
 ```bash
-pip install aws-cdk-lib constructs
+git clone <repository-url>
+cd <repository-directory>
+pip install -r requirements.txt
 ```
 
-### 2. Set Up Configuration
+### 2. Configure Environment
 
-Create your configuration file with appropriate domain names and settings.
+Create your configuration file or update the existing configuration with your
+domain names and GitHub repository details.
 
-### 3. Deploy the Stack
+### 3. Deploy Infrastructure
 
 ```bash
+# Bootstrap CDK (first time only)
+cdk bootstrap
+
+# Deploy the stack
 cdk deploy ApiStack
 ```
 
 ### 4. Verify Deployment
 
-After deployment completes, test the health endpoint:
+After deployment completes, test the API endpoints:
 
 ```bash
-curl https://your-subdomain.example.com/health
+# Health check
+curl https://api.yourdomain.com/health
+
+# Echo endpoint
+curl -X POST https://api.yourdomain.com/v1/echo \
+  -H "Content-Type: application/json" \
+  -d '{"test": "message"}'
 ```
 
 ## Testing the API
 
-### Using curl
+### Local Testing
 
-Test the health endpoint:
+Use the AWS CLI to test Lambda functions locally:
 
 ```bash
-curl -X GET https://your-api-domain.com/health
+aws lambda invoke --function-name <function-name> \
+  --payload '{"path":"/health","httpMethod":"GET"}' \
+  response.json
 ```
 
-Test the echo endpoint:
+### Integration Testing
+
+Test the deployed API using curl or your preferred HTTP client:
 
 ```bash
-curl -X POST https://your-api-domain.com/v1/echo \
+# Test health endpoint
+curl -v https://api.yourdomain.com/health
+
+# Test echo endpoint with sample data
+curl -X POST https://api.yourdomain.com/v1/echo \
   -H "Content-Type: application/json" \
-  -d '{"test": "data"}'
-```
+  -d '{"timestamp": "2024-01-01T00:00:00Z", "message": "test"}'
 
-### Using Python
-
-```python
-import requests
-import json
-
-# Health check
-response = requests.get('https://your-api-domain.com/health')
-print(response.json())
-
-# Echo test
-data = {"message": "Hello from Python"}
-response = requests.post(
-    'https://your-api-domain.com/v1/echo',
-    json=data
-)
-print(response.json())
+# Test CORS preflight
+curl -X OPTIONS https://api.yourdomain.com/v1/echo \
+  -H "Origin: https://example.com" \
+  -H "Access-Control-Request-Method: POST"
 ```
 
 ## Architecture Notes
 
 ### Serverless Design
 
-The API uses a serverless architecture with the following benefits:
-
-- **No server management** - AWS handles all underlying infrastructure
-- **Automatic scaling** - Scales from zero to handle any load
-- **Pay-per-request** - Only pay for actual API calls
-- **High availability** - Built-in redundancy and failover
+The API uses a serverless architecture with automatic scaling based on
+request volume. Lambda functions are stateless and handle requests
+independently, ensuring high availability and cost efficiency.
 
 ### Security Features
 
-- **SSL/TLS Encryption** - All traffic encrypted in transit
-- **IAM Integration** - Fine-grained access control capabilities
-- **VPC Isolation** - Runner infrastructure isolated in private network
-- **Secrets Management** - Sensitive data stored securely
+- **HTTPS Only**: All API traffic is encrypted using SSL/TLS certificates
+- **CORS Configuration**: Cross-origin requests are properly handled
+- **IAM Integration**: Fine-grained permissions for AWS service access
+- **VPC Isolation**: Supporting services run in an isolated network
 
-### Monitoring & Observability
+### Monitoring and Logging
 
-- **CloudWatch Integration** - Automatic metrics and logging
-- **Access Logs** - Complete request/response audit trail
-- **Custom Metrics** - API Gateway and Lambda metrics available
-- **Alerting Ready** - Easy to set up CloudWatch alarms
+- **CloudWatch Integration**: All API requests and Lambda executions are logged
+- **Access Logging**: Detailed request/response logging for debugging
+- **Health Monitoring**: Built-in health check for service monitoring
+- **Log Retention**: Configurable retention periods for cost optimization
 
-## Stack Outputs
+### Extensibility
 
-The stack exports several values for use by other stacks:
+The infrastructure is designed for easy extension:
 
-- **API URL** - Direct API Gateway URL
-- **Custom Domain** - Your custom domain name
-- **VPC ID** - For runner infrastructure integration
-- **ECS Cluster ARN** - For GitHub runner deployment
-- **Security Group IDs** - For network access configuration
-
-These outputs enable modular deployment and integration with other
-infrastructure components.
+- **Versioned Routes**: `/v1` prefix allows for API evolution
+- **Modular Lambda**: Single handler can route to multiple functions
+- **Export Values**: Stack outputs enable integration with other stacks
+- **Resource Tagging**: Consistent tagging for resource management
