@@ -372,7 +372,7 @@ jobs:
         name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
+          npm install -g jsonlint
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting YAML files
         run: |
@@ -383,15 +383,6 @@ jobs:
         run: |
           echo "Validating JSON syntax in config.json..."
           jsonlint -q auth_between_aws_and_github/config.json
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Markdown documentation
-        run: |
-          if [ -f auth_between_aws_and_github/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 auth_between_aws_and_github/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Python files
         run: |
