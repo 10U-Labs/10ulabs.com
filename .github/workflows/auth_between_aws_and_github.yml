@@ -83,11 +83,23 @@ jobs:
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
           echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
+      - name: Try OIDC authentication
+        id: oidc-auth
+        continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - name: Check authentication method
+        id: auth-check
+        run: |
+          if aws sts get-caller-identity &>/dev/null; then
+            echo "✓ OIDC authentication successful"
+            echo "using_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ OIDC authentication failed, will use static credentials"
+            echo "using_oidc=false" >> $GITHUB_OUTPUT
+          fi
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -96,8 +108,9 @@ jobs:
         run: npm install -g aws-cdk
       - name: Install Python dependencies
         run: pip install -r src/auth_between_aws_and_github/requirements.txt
-      - name: Retrieve GitHub PAT from Secrets Manager
-        id: get-pat
+      - name: Retrieve GitHub PAT from Secrets Manager (if using OIDC)
+        if: steps.auth-check.outputs.using_oidc == 'true'
+        id: get-pat-oidc
         run: |
           github_pat=$(aws secretsmanager get-secret-value \
             --secret-id "${{ steps.config.outputs.github_pat_secret_name }}" \
@@ -105,11 +118,22 @@ jobs:
             --output text | jq -r '.personal_access_token')
           echo "::add-mask::$github_pat"
           echo "github_pat=$github_pat" >> $GITHUB_OUTPUT
-      - name: Deploy auth_between_aws_and_github infrastructure
+      - name: Deploy with OIDC credentials
+        if: steps.auth-check.outputs.using_oidc == 'true'
         run: |
-          echo "Deploying auth_between_aws_and_github infrastructure..."
+          echo "Deploying with OIDC authentication..."
           cd src/auth_between_aws_and_github
-          cdk deploy --require-approval never -c github_token="${{ steps.get-pat.outputs.github_pat }}"
+          cdk deploy --require-approval never -c github_token="${{ steps.get-pat-oidc.outputs.github_pat }}"
+      - name: Deploy with static credentials
+        if: steps.auth-check.outputs.using_oidc == 'false'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        run: |
+          echo "Deploying with static credentials..."
+          cd src/auth_between_aws_and_github
+          cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-exists-in-defined-state
