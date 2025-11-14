@@ -11,11 +11,6 @@ class AuthBetweenAwsAndGithubStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: dict, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
-        github_org = config['github']['org']
-        github_repo = config['github']['repo']
-        role_name = config['aws']['iam_role_name']
-        secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
-
         oidc_lambda_role = iam.Role(
             self, 'OIDCProviderLambdaRole',
             assumed_by=iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -39,7 +34,11 @@ class AuthBetweenAwsAndGithubStack(Stack):
             }
         )
 
-        oidc_provider_lambda_code = '''
+        oidc_provider_lambda = lambda_.Function(
+            self, 'OIDCProviderLambda',
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            handler='index.handler',
+            code=lambda_.Code.from_inline('''
 import boto3
 import cfnresponse
 
@@ -78,13 +77,7 @@ def handler(event, context):
     except Exception as e:
         print(f"Error: {str(e)}")
         cfnresponse.send(event, context, cfnresponse.FAILED, {}, str(e))
-'''
-
-        oidc_provider_lambda = lambda_.Function(
-            self, 'OIDCProviderLambda',
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            handler='index.handler',
-            code=lambda_.Code.from_inline(oidc_provider_lambda_code),
+'''),
             role=oidc_lambda_role
         )
 
@@ -102,7 +95,7 @@ def handler(event, context):
 
         role = iam.Role(
             self, 'GitHubActionsRole',
-            role_name=role_name,
+            role_name=config['aws']['iam_role_name'],
             assumed_by=iam.WebIdentityPrincipal(
                 provider_arn,
                 conditions={
@@ -111,7 +104,7 @@ def handler(event, context):
                     },
                     'StringLike': {
                         'token.actions.githubusercontent.com:sub':
-                            f'repo:{github_org}/{github_repo}:*'
+                            f"repo:{config['github']['org']}/{config['github']['repo']}:*"
                     }
                 }
             ),
@@ -122,7 +115,7 @@ def handler(event, context):
 
         secret = secretsmanager.Secret.from_secret_name_v2(
             self, 'GitHubPATSecret',
-            secret_name=secret_name
+            secret_name=config['aws']['secrets_manager']['github_pat_secret_name']
         )
 
         self.role_arn = role.role_arn
