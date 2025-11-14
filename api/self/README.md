@@ -1,70 +1,74 @@
 # 10U Labs API Infrastructure
 
-A serverless API infrastructure built with AWS CDK that creates a REST API with
-Lambda backend, custom domain, SSL certificate, and comprehensive monitoring.
+A serverless API infrastructure built with AWS CDK that deploys a REST API
+using API Gateway and Lambda, with custom domain support and GitHub
+self-hosted runner capabilities.
 
 ## Overview
 
-This infrastructure creates a production-ready serverless API using AWS API
-Gateway and Lambda functions. The API is deployed with a custom domain name,
-SSL/TLS encryption, CORS support, and comprehensive logging for monitoring
-and debugging.
+This infrastructure creates a production-ready serverless API with custom
+domain support, SSL/TLS encryption, and comprehensive logging. The stack
+also provisions resources for GitHub self-hosted runners using both ECS
+Fargate and EC2 instances.
 
 ## Key Features
 
-- **Serverless Architecture**: Built on AWS Lambda and API Gateway for
-  automatic scaling and cost optimization
-- **Custom Domain**: SSL-enabled custom domain with automatic certificate
-  management
-- **CORS Enabled**: Cross-origin resource sharing configured for web
-  applications
-- **Comprehensive Logging**: CloudWatch integration for API Gateway access
-  logs and Lambda function logs
-- **Health Monitoring**: Built-in health check endpoint for service monitoring
-- **Versioned API**: Structured with `/v1` prefix for API versioning
+- **Serverless Architecture**: API Gateway + Lambda for scalable,
+  cost-effective API hosting
+- **Custom Domain**: SSL/TLS certificate with Route53 DNS configuration
+- **CORS Enabled**: Cross-origin resource sharing for web applications
+- **Comprehensive Logging**: CloudWatch logs for API access and Lambda
+  execution
+- **GitHub Integration**: Self-hosted runner infrastructure with ECR
+  repository and ECS cluster
+- **Security**: IAM roles, security groups, and secrets management
 
-## AWS Resources Created
+## Resources Created
 
 ### Core API Infrastructure
 
-- **API Gateway REST API**: Main API endpoint with custom domain configuration
-- **Lambda Function**: Python 3.11 runtime handling all API requests
-- **ACM Certificate**: SSL/TLS certificate for HTTPS encryption
-- **Route53 A Record**: DNS alias record pointing to the API Gateway
-- **CloudWatch Log Groups**: Separate log groups for API access logs and
-  Lambda execution logs
+- **API Gateway REST API**: Main API endpoint with custom domain support
+- **Lambda Function**: Python 3.11 runtime handling API requests
+- **ACM Certificate**: SSL/TLS certificate for HTTPS endpoints
+- **Route53 A Record**: DNS alias record pointing to API Gateway
+- **CloudWatch Log Groups**: API access logs and Lambda execution logs
 
-### Supporting Infrastructure
+### GitHub Runner Infrastructure
 
-- **VPC**: Isolated network environment for additional services
-- **ECR Repository**: Container registry for GitHub runner images
-- **ECS Cluster**: Container orchestration for self-hosted GitHub runners
-- **IAM Roles**: Service roles for EC2 instances and container tasks
-- **Secrets Manager**: Secure storage for GitHub tokens and webhook secrets
-- **Security Groups**: Network access controls for container services
+- **VPC**: Isolated network with public subnets for runner instances
+- **ECS Cluster**: Fargate cluster for containerized GitHub runners
+- **ECR Repository**: Docker image storage for runner containers
+- **ECS Task Definition**: Fargate task configuration with GitHub token
+- **IAM Roles**: EC2 instance profile and task execution roles
+- **Security Groups**: Network access control for runner instances
+- **Secrets Manager**: GitHub token and webhook secret storage
 
 ## Prerequisites
 
-- AWS CDK v2.x installed and configured
-- Python 3.8 or higher
 - AWS CLI configured with appropriate permissions
-- Existing Route53 hosted zone for the parent domain
-- GitHub token stored in AWS Secrets Manager
+- AWS CDK v2 installed (`npm install -g aws-cdk`)
+- Python 3.8+ with pip
+- A Route53 hosted zone for your parent domain
+- GitHub personal access token stored in AWS Secrets Manager
 
-### Required AWS Permissions
+## Required AWS Permissions
 
-- Route53 (DNS management)
-- Certificate Manager (SSL certificates)
-- API Gateway (API creation and management)
-- Lambda (function deployment)
-- CloudWatch Logs (logging configuration)
-- IAM (role and policy management)
+Your AWS credentials need permissions for:
+
+- API Gateway (create, update, delete)
+- Lambda (create, update, delete functions)
+- IAM (create roles and policies)
+- Route53 (create DNS records)
+- Certificate Manager (request certificates)
+- CloudWatch Logs (create log groups)
+- VPC, ECS, ECR (for runner infrastructure)
+- Secrets Manager (create and read secrets)
 
 ## API Endpoints
 
 ### GET /health
 
-Health check endpoint that returns the service status.
+Health check endpoint returning service status.
 
 **Response:**
 
@@ -78,14 +82,14 @@ Health check endpoint that returns the service status.
 
 ### POST /v1/echo
 
-Echo endpoint that returns the submitted JSON payload.
+Echo endpoint that returns the posted JSON data.
 
 **Request Body:**
 
 ```json
 {
   "message": "Hello, World!",
-  "data": ["any", "json", "structure"]
+  "timestamp": "2024-01-01T00:00:00Z"
 }
 ```
 
@@ -95,9 +99,9 @@ Echo endpoint that returns the submitted JSON payload.
 {
   "echo": {
     "message": "Hello, World!",
-    "data": ["any", "json", "structure"]
+    "timestamp": "2024-01-01T00:00:00Z"
   },
-  "received_at": "request-id-from-lambda-context"
+  "received_at": "aws-request-id-here"
 }
 ```
 
@@ -112,11 +116,8 @@ config = {
         "subdomain": "api.example.com"
     },
     "naming": {
-        "vpc_name": "api-vpc",
-        "cluster_name": "runners-cluster",
-        "task_family": "github-runner",
-        "container_name": "runner",
-        "log_stream_prefix": "runner",
+        "vpc_name": "10ulabs-vpc",
+        "cluster_name": "github-runners",
         "github_token_secret_name": "github-token",
         "webhook_secret_name": "github-webhook-secret"
     },
@@ -124,115 +125,119 @@ config = {
         "vpc": {
             "cidr": "10.0.0.0/16",
             "max_azs": 2,
-            "nat_gateways": 1,
-            "subnet_configuration": {
-                "public_subnet_cidr_mask": 24
-            }
+            "nat_gateways": 0
         }
     },
     "github": {
-        "repo": "organization/repository"
+        "repo": "owner/repository"
     }
 }
 ```
 
 ## Deployment Instructions
 
-### 1. Clone and Setup
+1. **Clone the repository and install dependencies:**
 
 ```bash
 git clone <repository-url>
-cd <repository-directory>
+cd <repository-name>
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
-
-Create your configuration file or update the existing configuration with your
-domain names and GitHub repository details.
-
-### 3. Deploy Infrastructure
+2. **Create your configuration file:**
 
 ```bash
-# Bootstrap CDK (first time only)
-cdk bootstrap
+cp config.example.py config.py
+# Edit config.py with your domain and settings
+```
 
-# Deploy the stack
+3. **Bootstrap CDK (if first time in this AWS account/region):**
+
+```bash
+cdk bootstrap
+```
+
+4. **Store GitHub token in Secrets Manager:**
+
+```bash
+aws secretsmanager create-secret \
+  --name "github-token" \
+  --description "GitHub personal access token" \
+  --secret-string "your-github-token-here"
+```
+
+5. **Deploy the stack:**
+
+```bash
 cdk deploy ApiStack
 ```
 
-### 4. Verify Deployment
+6. **Note the outputs:**
 
-After deployment completes, test the API endpoints:
+The deployment will output important values including:
 
-```bash
-# Health check
-curl https://api.yourdomain.com/health
-
-# Echo endpoint
-curl -X POST https://api.yourdomain.com/v1/echo \
-  -H "Content-Type: application/json" \
-  -d '{"test": "message"}'
-```
+- API Gateway URL
+- Custom domain name
+- VPC and subnet IDs
+- ECR repository URI
 
 ## Testing the API
 
-### Local Testing
-
-Use the AWS CLI to test Lambda functions locally:
-
-```bash
-aws lambda invoke --function-name <function-name> \
-  --payload '{"path":"/health","httpMethod":"GET"}' \
-  response.json
-```
-
-### Integration Testing
-
-Test the deployed API using curl or your preferred HTTP client:
+After deployment, test the endpoints:
 
 ```bash
 # Test health endpoint
-curl -v https://api.yourdomain.com/health
+curl https://api.example.com/health
 
-# Test echo endpoint with sample data
-curl -X POST https://api.yourdomain.com/v1/echo \
+# Test echo endpoint
+curl -X POST https://api.example.com/v1/echo \
   -H "Content-Type: application/json" \
-  -d '{"timestamp": "2024-01-01T00:00:00Z", "message": "test"}'
-
-# Test CORS preflight
-curl -X OPTIONS https://api.yourdomain.com/v1/echo \
-  -H "Origin: https://example.com" \
-  -H "Access-Control-Request-Method: POST"
+  -d '{"message": "Hello from API!"}'
 ```
 
 ## Architecture Notes
 
 ### Serverless Design
 
-The API uses a serverless architecture with automatic scaling based on
-request volume. Lambda functions are stateless and handle requests
-independently, ensuring high availability and cost efficiency.
+The API uses a serverless architecture with API Gateway handling HTTP
+requests and routing them to a single Lambda function. This approach
+provides:
+
+- **Auto-scaling**: Handles traffic spikes automatically
+- **Cost efficiency**: Pay only for actual requests
+- **Zero maintenance**: No server management required
 
 ### Security Features
 
-- **HTTPS Only**: All API traffic is encrypted using SSL/TLS certificates
-- **CORS Configuration**: Cross-origin requests are properly handled
-- **IAM Integration**: Fine-grained permissions for AWS service access
-- **VPC Isolation**: Supporting services run in an isolated network
+- **HTTPS Only**: All traffic encrypted with ACM certificate
+- **CORS Enabled**: Configured for cross-origin web requests
+- **IAM Integration**: API Gateway uses IAM for authentication (when enabled)
+- **VPC Isolation**: Runner infrastructure isolated in dedicated VPC
 
 ### Monitoring and Logging
 
-- **CloudWatch Integration**: All API requests and Lambda executions are logged
-- **Access Logging**: Detailed request/response logging for debugging
-- **Health Monitoring**: Built-in health check for service monitoring
-- **Log Retention**: Configurable retention periods for cost optimization
+- **API Access Logs**: All requests logged to CloudWatch
+- **Lambda Execution Logs**: Function execution details and errors
+- **Retention Policies**: Automatic log cleanup (1 week to 1 month)
 
-### Extensibility
+### GitHub Runner Integration
 
-The infrastructure is designed for easy extension:
+The infrastructure supports both Fargate and EC2 based GitHub self-hosted
+runners:
 
-- **Versioned Routes**: `/v1` prefix allows for API evolution
-- **Modular Lambda**: Single handler can route to multiple functions
-- **Export Values**: Stack outputs enable integration with other stacks
-- **Resource Tagging**: Consistent tagging for resource management
+- **Fargate Runners**: Containerized, fully managed compute
+- **EC2 Runners**: Traditional instances with custom AMIs
+- **Shared Resources**: VPC, security groups, and secrets
+
+## Outputs and Integration
+
+The stack exports numerous CloudFormation outputs for integration with
+other stacks:
+
+- API Gateway IDs for adding new routes
+- VPC and subnet IDs for additional resources
+- Security group IDs for network access
+- ECR repository details for container builds
+
+These exports enable modular infrastructure deployment and cross-stack
+resource sharing.
