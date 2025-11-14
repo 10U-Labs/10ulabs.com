@@ -31,8 +31,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
-          REGION=$(jq -r '.aws.region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
+          REGION=$(jq -r '.aws.region' src/api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -49,7 +49,8 @@ jobs:
       - name: Check if README needs update
         id: check
         run: |
-          python api/self/readme.py \
+          python scripts/readme.py \
+            --project-dir src/api/self \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
@@ -63,8 +64,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
-          REGION=$(jq -r '.aws.region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
+          REGION=$(jq -r '.aws.region' src/api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -81,7 +82,7 @@ jobs:
           pip install pytest boto3 requests
       - name: Run E2E tests
         run: |
-          pytest api/self/test/test_e2e.py -v
+          pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -92,8 +93,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
-          REGION=$(jq -r '.aws.region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
+          REGION=$(jq -r '.aws.region' src/api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -112,16 +113,16 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
       - name: Install dependencies
-        run: pip install -r api/self/requirements.txt
+        run: pip install -r src/api/self/requirements.txt
       - name: CDK Bootstrap (if needed)
         run: |
-          cd api/self && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd src/api/self && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
-        run: cd api/self && cdk diff TenULabsApi
+        run: cd src/api/self && cdk diff TenULabsApi
       - name: CDK Deploy
         id: deploy
         run: |
-          cd api/self && cdk deploy TenULabsApi \
+          cd src/api/self && cdk deploy TenULabsApi \
             --require-approval never \
             --outputs-file ../../api-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
@@ -145,7 +146,7 @@ jobs:
         if: steps.deploy.outputs.deployment_failed != 'true'
         run: |
           API_ENDPOINT=$(jq -r '.TenULabsApi.ApiEndpoint' api-outputs.json)
-          python api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
+          python src/api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
@@ -156,8 +157,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
-          REGION=$(jq -r '.aws.region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
+          REGION=$(jq -r '.aws.region' src/api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -174,11 +175,13 @@ jobs:
           pip install pytest boto3 requests
       - name: Run pytest integration tests
         run: |
-          pytest api/self/test/test_integration.py -v
+          pytest test/api/test_integration.py -v
   performing-static-analysis:
     if: |
-      github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -193,7 +196,7 @@ jobs:
           pip install pylint mypy yamllint
           npm install -g jsonlint
       - name: Install project dependencies for linting
-        run: pip install -r api/self/requirements.txt
+        run: pip install -r src/api/self/requirements.txt
       - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
@@ -201,16 +204,16 @@ jobs:
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q api/self/config.json
-          jsonlint -q api/self/cdk.json
+          jsonlint -q src/api/self/config.json
+          jsonlint -q src/api/self/cdk.json
       - name: Linting Python files
         run: |
-          pylint api/self/stack.py api/self/lambda/handler.py \
+          pylint src/api/self/stack.py src/api/self/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy api/self --exclude api/self/test
+          python -m mypy src/api/self
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -229,10 +232,10 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install pytest
-          pip install -r api/self/requirements.txt
+          pip install -r src/api/self/requirements.txt
       - name: Run unit tests
         run: |
-          pytest api/self/test/test_unit.py -v
+          pytest test/api/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -248,8 +251,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/self/config.json)
-          REGION=$(jq -r '.aws.region' api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
+          REGION=$(jq -r '.aws.region' src/api/self/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -265,14 +268,15 @@ jobs:
         run: pip install boto3
       - name: Update README with Bedrock
         run: |
-          python api/self/readme.py \
+          python scripts/readme.py \
+            --project-dir src/api/self \
             --update \
             --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add api/self/README.md
+          git add src/api/self/README.md
           if git diff --cached --quiet; then
             echo "No changes to README.md"
           else
@@ -285,13 +289,15 @@ on:
     branches:
       - main
     paths:
-      - 'api/self/**'
+      - 'src/api/self/**'
+      - 'test/api/**'
+      - 'scripts/readme.py'
       - '.github/workflows/api.yml'
   workflow_dispatch:
     inputs:
       dry_run:
-        default: false
-        description: 'Dry run mode (skip deployment, just test)'
+        default: true
+        description: 'Dry run mode (show structure without executing)'
         required: false
         type: boolean
 permissions:

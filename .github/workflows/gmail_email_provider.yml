@@ -31,8 +31,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -68,8 +68,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -90,7 +90,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run E2E tests
         run: |
-          pytest gmail_email_provider/test/test_e2e.py -v
+          pytest test/gmail_email_provider/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -106,8 +106,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -131,19 +131,19 @@ jobs:
         run: npm install -g aws-cdk
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install dependencies
-        run: pip install -r gmail_email_provider/requirements.txt
+        run: pip install -r src/gmail_email_provider/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Bootstrap (if needed)
         run: |
-          cd gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Diff
-        run: cd gmail_email_provider && cdk diff GmailEmailProvider
+        run: cd src/gmail_email_provider && cdk diff GmailEmailProvider
       - id: deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Deploy
         run: |
-          cd gmail_email_provider && cdk deploy GmailEmailProvider \
+          cd src/gmail_email_provider && cdk deploy GmailEmailProvider \
             --require-approval never \
             --outputs-file ../../gmail-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
@@ -178,8 +178,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -200,7 +200,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run pytest integration tests
         run: |
-          pytest gmail_email_provider/test/test_integration.py -v
+          pytest test/gmail_email_provider/test_integration.py -v
   performing-static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
@@ -223,7 +223,7 @@ jobs:
           npm install -g jsonlint
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install project dependencies for linting
-        run: pip install -r gmail_email_provider/requirements.txt
+        run: pip install -r src/gmail_email_provider/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting YAML files
         run: |
@@ -233,7 +233,7 @@ jobs:
         name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q gmail_email_provider/config.json
+          jsonlint -q src/gmail_email_provider/config.json
           jsonlint -q gmail_email_provider/cdk.json
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Python files
@@ -270,11 +270,11 @@ jobs:
         name: Install Python dependencies
         run: |
           pip install pytest
-          pip install -r gmail_email_provider/requirements.txt
+          pip install -r src/gmail_email_provider/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run unit tests
         run: |
-          pytest gmail_email_provider/test/test_unit.py -v
+          pytest test/gmail_email_provider/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -290,8 +290,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' gmail_email_provider/config.json)
-          REGION=$(jq -r '.aws.region' gmail_email_provider/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json)
+          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python

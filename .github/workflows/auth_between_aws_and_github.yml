@@ -18,7 +18,7 @@ jobs:
       - run: 'true'
   determining-if-readme-should-be-updated:
     name: Determining if README.md should be updated
-    needs: integration-testing-infrastructure
+    needs: integration-testing
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
@@ -31,12 +31,12 @@ jobs:
       - id: config
         name: Read auth_between_aws_and_github config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
-          bedrock_model_id=$(jq -r '.aws.bedrock.model_id' auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_check=$(jq -r '.aws.bedrock.max_tokens_check' auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_generate=$(jq -r '.aws.bedrock.max_tokens_generate' auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          bedrock_model_id=$(jq -r '.aws.bedrock.model_id' src/auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_check=$(jq -r '.aws.bedrock.max_tokens_check' src/auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_generate=$(jq -r '.aws.bedrock.max_tokens_generate' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -57,13 +57,14 @@ jobs:
       - id: check
         name: Check if README needs update
         run: |
-          python auth_between_aws_and_github/readme.py \
+          python scripts/readme.py \
+            --project-dir src/auth_between_aws_and_github \
             --check \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --output-file "$GITHUB_OUTPUT"
   ensuring-infrastructure-exists-in-defined-state:
     name: Ensuring infrastructure exists in defined state
-    needs: integration-testing-code
+    needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -73,7 +74,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install boto3
-        run: pip install -r auth_between_aws_and_github/requirements.txt
+        run: pip install -r src/auth_between_aws_and_github/requirements.txt
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -96,7 +97,7 @@ jobs:
       - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
       - name: Install Python dependencies
-        run: pip install -r auth_between_aws_and_github/requirements.txt
+        run: pip install -r src/auth_between_aws_and_github/requirements.txt
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -104,30 +105,10 @@ jobs:
         name: Deploy auth_between_aws_and_github infrastructure
         run: |
           echo "Deploying auth_between_aws_and_github infrastructure..."
-          cd auth_between_aws_and_github
+          cd src/auth_between_aws_and_github
           cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
-  integration-testing-code:
-    name: Integration testing code
-    needs: unit-testing-code
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install pytest
-      - env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-1
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        name: Run integration tests
-        run: pytest auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
-  integration-testing-infrastructure:
-    name: Integration testing infrastructure
+  integration-testing:
+    name: Integration testing
     needs: ensuring-infrastructure-exists-in-defined-state
     runs-on: ubuntu-latest
     steps:
@@ -140,7 +121,7 @@ jobs:
       - name: Install pytest
         run: pip install pytest
       - name: Run integration tests
-        run: pytest auth_between_aws_and_github/test/post_deployment/test_integration.py -v
+        run: pytest test/auth_between_aws_and_github/test_integration.py -v
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -161,7 +142,7 @@ jobs:
           pip install pylint mypy yamllint
           npm install -g jsonlint
       - name: Install project dependencies for linting
-        run: pip install -r auth_between_aws_and_github/requirements.txt
+        run: pip install -r src/auth_between_aws_and_github/requirements.txt
       - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
@@ -169,35 +150,22 @@ jobs:
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q auth_between_aws_and_github/config.json
-          jsonlint -q auth_between_aws_and_github/cdk.json
+          jsonlint -q src/auth_between_aws_and_github/config.json
+          jsonlint -q src/auth_between_aws_and_github/cdk.json
       - name: Linting Python files
         run: |
-          pylint auth_between_aws_and_github/stack.py \
-            auth_between_aws_and_github/app.py \
+          pylint src/auth_between_aws_and_github/stack.py \
+            src/auth_between_aws_and_github/app.py \
             auth_between_aws_and_github/readme.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy auth_between_aws_and_github --exclude auth_between_aws_and_github/test
-  unit-testing-code:
-    name: Unit testing code
-    needs: performing-static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install pytest
-      - name: Functional unit testing
+          python -m mypy src/auth_between_aws_and_github
+      - name: Test CDK stack synthesis
         run: |
-          echo "Running unit tests..."
-          PYTHONPATH=auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+          cd src/auth_between_aws_and_github
+          pytest ../../test/auth_between_aws_and_github/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -211,12 +179,12 @@ jobs:
       - id: config
         name: Read auth_between_aws_and_github config
         run: |
-          aws_account_id=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
-          aws_region=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
-          aws_iam_role_name=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
-          bedrock_model_id=$(jq -r '.aws.bedrock.model_id' auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_check=$(jq -r '.aws.bedrock.max_tokens_check' auth_between_aws_and_github/config.json)
-          bedrock_max_tokens_generate=$(jq -r '.aws.bedrock.max_tokens_generate' auth_between_aws_and_github/config.json)
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          bedrock_model_id=$(jq -r '.aws.bedrock.model_id' src/auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_check=$(jq -r '.aws.bedrock.max_tokens_check' src/auth_between_aws_and_github/config.json)
+          bedrock_max_tokens_generate=$(jq -r '.aws.bedrock.max_tokens_generate' src/auth_between_aws_and_github/config.json)
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
@@ -236,14 +204,15 @@ jobs:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
       - name: Update README
         run: |
-          python auth_between_aws_and_github/readme.py \
+          python scripts/readme.py \
+            --project-dir src/auth_between_aws_and_github \
             --update \
             --aws-region "${{ steps.config.outputs.aws_region }}"
       - name: Commit and push README
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add auth_between_aws_and_github/README.md
+          git add src/auth_between_aws_and_github/README.md
           git diff --staged --quiet || git commit -m "Update auth_between_aws_and_github README via Bedrock"
           git push
 name: Ensuring appropriate bilateral authorizations between AWS and GitHub
@@ -252,8 +221,10 @@ on:
     branches:
       - main
     paths:
-      - 'auth_between_aws_and_github/**'
-      - '!auth_between_aws_and_github/README.md'
+      - 'src/auth_between_aws_and_github/**'
+      - '!src/auth_between_aws_and_github/README.md'
+      - 'test/auth_between_aws_and_github/**'
+      - 'scripts/readme.py'
       - '.github/workflows/auth_between_aws_and_github.yml'
   workflow_dispatch:
     inputs:
