@@ -63,7 +63,7 @@ jobs:
             --output-file "$GITHUB_OUTPUT"
   ensuring-infrastructure-exists-in-defined-state:
     name: Ensuring infrastructure exists in defined state
-    needs: integration-testing-code
+    needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -106,26 +106,6 @@ jobs:
           echo "Deploying auth_between_aws_and_github infrastructure..."
           cd auth_between_aws_and_github
           cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
-  integration-testing-code:
-    name: Integration testing code
-    needs: unit-testing-code
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install pytest
-      - env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_REGION: us-east-1
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        name: Run integration tests
-        run: pytest auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
   integration-testing-infrastructure:
     name: Integration testing infrastructure
     needs: ensuring-infrastructure-exists-in-defined-state
@@ -181,23 +161,10 @@ jobs:
       - name: Static type checking Python files with mypy
         run: |
           python -m mypy auth_between_aws_and_github --exclude auth_between_aws_and_github/test
-  unit-testing-code:
-    name: Unit testing code
-    needs: performing-static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install pytest
-      - name: Functional unit testing
+      - name: Test CDK stack synthesis
         run: |
-          echo "Running unit tests..."
-          PYTHONPATH=auth_between_aws_and_github:$PYTHONPATH pytest auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+          cd auth_between_aws_and_github
+          pytest test/test_stack.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
