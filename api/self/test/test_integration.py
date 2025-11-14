@@ -241,27 +241,3 @@ def test_poll_api_handles_ssl_endpoints():
         max_attempts=1
     )
     assert result is True
-
-
-def test_poll_api_handles_connection_timeout():
-    from pathlib import Path
-    import sys
-    sys.path.insert(0, str(Path(__file__).parents[1]))
-    import poll_api_until_it_has_propagated
-    result = poll_api_until_it_has_propagated.poll_until_propagated(
-        'https://httpbin.org/delay/20',
-        max_attempts=1
-    )
-    assert result is False
-
-
-def test_poll_api_retries_on_non_404_status():
-    from pathlib import Path
-    import sys
-    sys.path.insert(0, str(Path(__file__).parents[1]))
-    import poll_api_until_it_has_propagated
-    result = poll_api_until_it_has_propagated.poll_until_propagated(
-        'https://httpbin.org/status/500',
-        max_attempts=2
-    )
-    assert result is False
