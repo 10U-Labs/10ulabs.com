@@ -1,11 +1,10 @@
 import json
+import importlib.util
 from pathlib import Path
 
 import aws_cdk as cdk
 from aws_cdk.assertions import Template, Match
 import pytest
-
-from stack import AuthBetweenAwsAndGithubStack
 
 
 @pytest.fixture
@@ -17,6 +16,12 @@ def config():
 
 @pytest.fixture
 def template(config):
+    stack_path = Path(__file__).parent.parent.parent / 'src' / 'auth_between_aws_and_github' / 'stack.py'
+    spec = importlib.util.spec_from_file_location("auth_stack", stack_path)
+    auth_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(auth_module)
+    AuthBetweenAwsAndGithubStack = auth_module.AuthBetweenAwsAndGithubStack
+
     app = cdk.App()
     stack = AuthBetweenAwsAndGithubStack(
         app,
