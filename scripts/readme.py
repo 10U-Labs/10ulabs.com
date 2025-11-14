@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import sys
+import glob
 import boto3
 
 logging.basicConfig(
@@ -12,21 +13,41 @@ logging.basicConfig(
     stream=sys.stderr
 )
 
-def read_source_files() -> str:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    source_files = {}
+def find_source_files(project_dir: str) -> list:
+    source_files = []
 
-    files_to_read = [
-        'auth_between_aws_and_github.py'
+    patterns = [
+        os.path.join(project_dir, '*.py'),
+        os.path.join(project_dir, 'lambda', '*.py'),
+        os.path.join(project_dir, 'lambda', '*', '*.py'),
     ]
 
-    for file_path in files_to_read:
-        full_path = os.path.join(script_dir, file_path)
+    for pattern in patterns:
+        source_files.extend(glob.glob(pattern))
+
+    excluded_names = ['readme.py', 'conftest.py', 'test_']
+    source_files = [
+        f for f in source_files
+        if not any(excluded in os.path.basename(f) for excluded in excluded_names)
+    ]
+
+    return sorted(source_files)
+
+def read_source_files(project_dir: str) -> str:
+    source_files_paths = find_source_files(project_dir)
+
+    if not source_files_paths:
+        logging.warning("No source files found in %s", project_dir)
+        return ""
+
+    source_files = {}
+    for full_path in source_files_paths:
         try:
             with open(full_path, 'r', encoding='utf-8') as f:
-                source_files[file_path] = f.read()
+                rel_path = os.path.relpath(full_path, project_dir)
+                source_files[rel_path] = f.read()
         except IOError as e:
-            logging.error("Failed to read %s: %s", file_path, e)
+            logging.error("Failed to read %s: %s", full_path, e)
             sys.exit(1)
 
     combined = ""
@@ -40,7 +61,7 @@ def check_readme_should_be_updated(bedrock_client, source_code: str, current_rea
         logging.info("README is empty or missing - should be updated")
         return True
 
-    prompt = f"""You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given AWS-GitHub authentication infrastructure code.
+    prompt = f"""You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given infrastructure code.
 
 <source_code>
 {source_code}
@@ -53,12 +74,12 @@ def check_readme_should_be_updated(bedrock_client, source_code: str, current_rea
 Check if the README has ANY issues, including but not limited to:
 1. Title doesn't match actual infrastructure name
 2. Inconsistent or outdated terminology throughout the document
-3. Inaccurately describes the infrastructure components (OIDC provider, IAM role, Secrets Manager, trust policies)
-4. Missing or incorrect documentation of authentication flow (OIDC vs direct credentials)
+3. Inaccurately describes the infrastructure components
+4. Missing or incorrect documentation of authentication flow
 5. Incorrect usage instructions or command examples
-6. Missing key resources created (OIDC provider, GitHubActionsRole, GitHub PAT secret)
+6. Missing key resources created
 7. Outdated command examples or file paths
-8. Missing or incorrect prerequisites (Python, AWS credentials, GitHub PAT)
+8. Missing or incorrect prerequisites
 9. Contains a "License" section (MAJOR ERROR - repository has LICENSE.md, README must not duplicate licensing)
 10. Any other inaccuracies, inconsistencies, or outdated information
 
@@ -110,7 +131,7 @@ Do not include any other text or formatting outside the JSON object."""
         sys.exit(1)
 
 def generate_readme(bedrock_client, source_code: str, model_id: str, max_tokens: int) -> str:
-    prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following Python script that manages AWS-GitHub authentication infrastructure using OIDC.
+    prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following infrastructure code.
 
 <source_code>
 {source_code}
@@ -118,21 +139,18 @@ def generate_readme(bedrock_client, source_code: str, model_id: str, max_tokens:
 
 Create a professional README that includes:
 1. Title and overview of what this infrastructure does
-2. Purpose and key features (OIDC-based authentication for GitHub Actions)
-3. Resources created:
-   - AWS IAM OIDC Identity Provider for GitHub
-   - IAM Role (GitHubActionsRole) with trust policy for specific GitHub org/repo
-   - IAM policies attached to the role (AdministratorAccess, SecretsManagerReadWrite)
-   - AWS Secrets Manager secret containing GitHub PAT and metadata
-4. Prerequisites and requirements
-5. Configuration details (config.json structure)
+2. Purpose and key features
+3. Resources created (analyze the code to identify all AWS resources)
+4. Prerequisites and requirements (check dependencies from requirements.txt or imports)
+5. Configuration details (config.json structure if present)
 6. Usage instructions:
-   - Running the create command
-   - How GitHub Actions workflows use OIDC to assume the role
+   - Installation steps
+   - Running the infrastructure (CDK deploy, scripts, etc.)
+   - How to use the deployed resources
 7. Architecture overview:
-   - How OIDC authentication works between GitHub Actions and AWS
-   - Trust policy configuration
-   - Credential flow (OIDC vs direct AWS credentials for bootstrap)
+   - How the components interact
+   - Authentication and authorization flows
+   - Data flows and integrations
 8. Security considerations
 9. Troubleshooting tips
 
@@ -154,12 +172,10 @@ CRITICAL INSTRUCTIONS:
 2. Before outputting, verify EACH requirement using this checklist:
 
    FACTUAL ACCURACY (verify against source code):
-   - [ ] Prerequisites match actual dependencies (check requirements.txt)
-   - [ ] Correct: boto3, Python 3.11+, AWS credentials, GitHub PAT
-   - [ ] Resource descriptions match implementation (OIDC provider, IAM role, policies, secret)
-   - [ ] Authentication flow accurately described (OIDC-based GitHub Actions authentication)
-   - [ ] Configuration examples match config.json structure
-   - [ ] Trust policy format matches implementation
+   - [ ] Prerequisites match actual dependencies
+   - [ ] Resource descriptions match implementation
+   - [ ] Configuration examples match actual config structure
+   - [ ] Usage instructions are accurate and complete
 
    FORMATTING (markdownlint compliance):
    - [ ] All lines under 80 characters
@@ -202,20 +218,20 @@ Generate ONLY the README content, starting with the title. Do not include any pr
         logging.error("Failed to generate README with Bedrock: %s", e)
         sys.exit(1)
 
-def load_config():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, 'config.json')
+def load_config(project_dir: str):
+    config_path = os.path.join(project_dir, 'config.json')
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f), script_dir
+            return json.load(f)
     except IOError as e:
         logging.error("Failed to read config.json: %s", e)
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate or check README for auth infrastructure')
+    parser = argparse.ArgumentParser(description='Generate or check README for infrastructure projects')
     parser.add_argument('--check', action='store_true', help='Check if README is current')
     parser.add_argument('--update', action='store_true', help='Update README')
+    parser.add_argument('--project-dir', required=True, help='Project directory path')
     parser.add_argument('--aws-region', required=True, help='AWS region')
     parser.add_argument('--output-file', help='Output file for check result (for GitHub Actions)')
     parser.add_argument('--bedrock-model-id', help='Bedrock model ID to use')
@@ -223,7 +239,12 @@ def main():
     parser.add_argument('--max-tokens-generate', type=int, help='Max tokens for README generation')
     args = parser.parse_args()
 
-    config, script_dir = load_config()
+    project_dir = os.path.abspath(args.project_dir)
+    if not os.path.isdir(project_dir):
+        logging.error("Project directory does not exist: %s", project_dir)
+        sys.exit(1)
+
+    config = load_config(project_dir)
 
     bedrock_model_id = args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
     max_tokens_check = int(args.max_tokens_check or config.get('aws', {}).get('bedrock', {}).get('max_tokens_check', 200))
@@ -234,8 +255,8 @@ def main():
         sys.exit(1)
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
-    source_code = read_source_files()
-    readme_path = os.path.join(script_dir, 'README.md')
+    source_code = read_source_files(project_dir)
+    readme_path = os.path.join(project_dir, 'README.md')
 
     if args.check:
         try:

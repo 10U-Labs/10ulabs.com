@@ -31,8 +31,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -68,8 +68,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -90,7 +90,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run E2E tests
         run: |
-          pytest cloudtrail_and_domain_name/test/test_e2e.py -v
+          pytest test/cloudtrail_and_domain_name/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     if: |
       github.event.inputs.dry_run != 'true' &&
@@ -109,8 +109,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -134,19 +134,19 @@ jobs:
         run: npm install -g aws-cdk
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install dependencies
-        run: pip install -r cloudtrail_and_domain_name/requirements.txt
+        run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Bootstrap (if needed)
         run: |
-          cd cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd src/cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Diff
-        run: cd cloudtrail_and_domain_name && cdk diff TenULabsDomainName
+        run: cd src/cloudtrail_and_domain_name && cdk diff TenULabsDomainName
       - id: deploy
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Deploy
         run: |
-          cd cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
+          cd src/cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
             --require-approval never \
             --outputs-file ../../domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
@@ -243,8 +243,8 @@ jobs:
         if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -265,7 +265,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run pytest integration tests
         run: |
-          pytest cloudtrail_and_domain_name/test/test_integration.py -v
+          pytest test/cloudtrail_and_domain_name/test_integration.py -v
   performing-static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
@@ -288,7 +288,7 @@ jobs:
           npm install -g jsonlint
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install project dependencies for linting
-        run: pip install -r cloudtrail_and_domain_name/requirements.txt
+        run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting YAML files
         run: |
@@ -298,7 +298,7 @@ jobs:
         name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q cloudtrail_and_domain_name/config.json
+          jsonlint -q src/cloudtrail_and_domain_name/config.json
           jsonlint -q cloudtrail_and_domain_name/cdk.json
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Python files
@@ -335,11 +335,11 @@ jobs:
         name: Install Python dependencies
         run: |
           pip install pytest
-          pip install -r cloudtrail_and_domain_name/requirements.txt
+          pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run unit tests
         run: |
-          pytest cloudtrail_and_domain_name/test/test_unit.py -v
+          pytest test/cloudtrail_and_domain_name/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -355,8 +355,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' cloudtrail_and_domain_name/config.json)
-          REGION=$(jq -r '.aws.region' cloudtrail_and_domain_name/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
