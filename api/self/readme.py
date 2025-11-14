@@ -204,7 +204,7 @@ def main():
             with open(args.output_file, 'a', encoding='utf-8') as f:
                 f.write(f"readme_should_be_updated={'true' if should_be_updated else 'false'}\n")
 
-        sys.exit(1 if should_be_updated else 0)
+        sys.exit(0)
 
     elif args.update:
         new_readme = generate_readme(bedrock_client, source_code, bedrock_model_id, max_tokens_generate)
