@@ -217,7 +217,7 @@ jobs:
           pip install -r src/auth_between_aws_and_github/requirements.txt
       - name: Run unit tests
         run: |
-          pytest test/auth_between_aws_and_github/test_unit.py -v
+          PYTHONPATH=src/auth_between_aws_and_github:$PYTHONPATH pytest test/auth_between_aws_and_github/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
