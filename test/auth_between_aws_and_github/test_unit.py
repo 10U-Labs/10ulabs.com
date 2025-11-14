@@ -3,7 +3,7 @@ import importlib.util
 from pathlib import Path
 
 import aws_cdk as cdk
-from aws_cdk.assertions import Template, Match
+from aws_cdk.assertions import Template, Match, Capture
 import pytest
 
 
@@ -15,7 +15,7 @@ def config():
 
 
 @pytest.fixture
-def template(config):
+def stack(config):
     stack_path = Path(__file__).parent.parent.parent / 'src' / 'auth_between_aws_and_github' / 'stack.py'
     spec = importlib.util.spec_from_file_location("auth_stack", stack_path)
     auth_module = importlib.util.module_from_spec(spec)
@@ -23,7 +23,7 @@ def template(config):
     AuthBetweenAwsAndGithubStack = auth_module.AuthBetweenAwsAndGithubStack
 
     app = cdk.App()
-    stack = AuthBetweenAwsAndGithubStack(
+    return AuthBetweenAwsAndGithubStack(
         app,
         'AuthBetweenAwsAndGithub',
         config=config,
@@ -32,6 +32,10 @@ def template(config):
             region=config['aws']['region']
         )
     )
+
+
+@pytest.fixture
+def template(stack):
     return Template.from_stack(stack)
 
 
