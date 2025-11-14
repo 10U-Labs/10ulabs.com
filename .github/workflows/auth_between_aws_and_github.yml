@@ -160,10 +160,27 @@ jobs:
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-exists-in-defined-state
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
