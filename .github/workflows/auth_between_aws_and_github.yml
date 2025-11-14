@@ -113,7 +113,7 @@ jobs:
         run: |
           echo "Deploying auth_between_aws_and_github infrastructure..."
           cd auth_between_aws_and_github
-          python3 deploy.py --github-token "$GH_RUNNER_PAT"
+          cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
       - if: ${{ github.event.inputs.dry_run == 'true' }}
         name: Dry run
         run: echo "DRY RUN - Would deploy auth_between_aws_and_github infrastructure via CDK"
