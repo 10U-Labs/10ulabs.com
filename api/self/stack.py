@@ -224,6 +224,10 @@ class ApiStack(Stack):
             "POST", apigw.LambdaIntegration(api_handler)
         )
 
+        self.api.root.add_resource("{proxy+}").add_method(
+            "ANY", apigw.LambdaIntegration(api_handler)
+        )
+
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
