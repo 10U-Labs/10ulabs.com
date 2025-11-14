@@ -197,10 +197,6 @@ jobs:
           npm install -g jsonlint
       - name: Install project dependencies for linting
         run: pip install -r src/api/self/requirements.txt
-      - name: Linting YAML files
-        run: |
-          echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
@@ -214,6 +210,10 @@ jobs:
       - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/api/self
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
