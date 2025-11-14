@@ -16,32 +16,35 @@ Infrastructure projects follow a consistent pattern:
 
 ## Existing Projects Following This Pattern
 
-- `cloudtrail_and_domain_name/` - CloudTrail logging and domain registration
-- `gmail_email_provider/` - Gmail SMTP configuration via SES
-- `api/self/` - API Gateway + Lambda REST API
+- `src/api/self/` - API Gateway + Lambda REST API
+- `src/cloudtrail_and_domain_name/` - CloudTrail logging and domain registration
+- `src/gmail_email_provider/` - Gmail SMTP configuration via SES
 
-Note: `auth_between_aws_and_github/` is unique and does NOT follow this
-pattern (no CDK, different structure).
+Note: `src/auth_between_aws_and_github/` is unique and does NOT follow this
+pattern (uses CDK but has different structure and testing requirements).
 
 ## Directory Structure
 
 ```text
-<project_name>/
+src/<project_name>/
 ├── README.md                    # AI-generated, auto-updated
 ├── app.py                       # CDK app entry point
 ├── stack.py                     # CDK stack definition
 ├── config.json                  # Project configuration
 ├── cdk.json                     # CDK configuration
 ├── requirements.txt             # Python dependencies
-├── readme.py                    # README generation script
 ├── lambda/                      # Lambda code (if applicable)
 │   └── handler.py
-├── test/                        # Test directory
-│   ├── conftest.py             # pytest fixtures
-│   ├── test_unit.py            # Unit tests
-│   ├── test_integration.py     # Integration tests
-│   └── test_e2e.py             # End-to-end tests
 └── <optional_scripts>.py        # Project-specific utilities
+
+test/<project_name>/
+├── conftest.py                  # pytest fixtures
+├── test_unit.py                 # Unit tests
+├── test_integration.py          # Integration tests
+└── test_e2e.py                  # End-to-end tests
+
+scripts/
+└── readme.py                    # README generation script (shared)
 ```
 
 ## Required Files
@@ -180,26 +183,7 @@ class <StackName>(cdk.Stack):
 - NO comments in code (per CLAUDE.md coding standards)
 - NO docstrings (per CLAUDE.md coding standards)
 
-### 6. readme.py
-
-Script to generate and check README using AWS Bedrock.
-
-**Copy from existing project** (api/self/readme.py is the most recent).
-
-**Key functions:**
-
-- `read_source_files()` - Reads source files to include in context
-- `check_readme_should_be_updated()` - Checks if README needs updating
-- `generate_readme()` - Generates new README with Bedrock
-- `main()` - CLI with `--check` and `--update` flags
-
-**Prompt engineering requirements:**
-
-- Include CRITICAL INSTRUCTIONS with verification checklist
-- Add post-processing to ensure trailing newline
-- Follow markdownlint rules (see api/self/readme.py lines 140-162)
-
-### 7. lambda/handler.py (if applicable)
+### 6. lambda/handler.py (if applicable)
 
 Lambda function handler.
 
@@ -220,7 +204,7 @@ def handler(event, context):
     }
 ```
 
-### 8. test/conftest.py
+### 7. test/conftest.py
 
 pytest fixtures shared across tests.
 
@@ -250,7 +234,7 @@ def lambda_client(aws_region):
 # Add more fixtures as needed
 ```
 
-### 9. test/test_unit.py
+### 8. test/test_unit.py
 
 Unit tests - test code in isolation without AWS resources.
 
@@ -273,7 +257,7 @@ def test_config_has_aws_account_id(config):
     assert 'account_id' in config['aws']
 ```
 
-### 10. test/test_integration.py
+### 9. test/test_integration.py
 
 Integration tests - test deployed AWS resources.
 
@@ -294,7 +278,7 @@ def test_lambda_function_exists(lambda_client):
     assert len(matching) > 0
 ```
 
-### 11. test/test_e2e.py
+### 10. test/test_e2e.py
 
 End-to-end tests - test live API endpoints and workflows.
 
@@ -304,6 +288,32 @@ End-to-end tests - test live API endpoints and workflows.
 - Tests actual API endpoints
 - Verifies end-to-end functionality
 - May require deployed infrastructure (WARM state)
+
+### 11. scripts/readme.py (Shared)
+
+**IMPORTANT:** This file is shared across ALL projects in `scripts/readme.py`.
+
+Script to generate and check README using AWS Bedrock. Each project uses this same script.
+
+**Usage:**
+
+```bash
+# Check if README needs update
+python scripts/readme.py --check --project-dir src/<project_name> --aws-region us-east-1
+
+# Generate/update README
+python scripts/readme.py --update --project-dir src/<project_name> --aws-region us-east-1
+```
+
+**Key features:**
+
+- Reads source files and requirements.txt for context
+- Checks if README needs updating
+- Generates new README with AWS Bedrock
+- Includes factual accuracy checklist to prevent AI hallucination
+- Enforces markdownlint rules
+
+**DO NOT copy this file per-project** - use the shared version in `scripts/`.
 
 ## GitHub Actions Workflow
 
@@ -730,17 +740,20 @@ bucket = s3.Bucket(
 
 ## Creating a New Project
 
-1. Create project directory: `<project_name>/`
-2. Copy structure from existing project (e.g., `api/self/`)
+1. Create project directory: `src/<project_name>/`
+2. Copy structure from existing project (e.g., `src/api/self/`)
 3. Update `config.json` with project-specific configuration
 4. Update `stack.py` with infrastructure resources
 5. Update `app.py` to use correct stack name
-6. Copy `readme.py` from `api/self/` (most recent version)
-7. Create `lambda/handler.py` if needed
-8. Create test files: `test_unit.py`, `test_integration.py`, `test_e2e.py`
+6. Create `lambda/handler.py` if needed
+7. Create test directory: `test/<project_name>/`
+8. Create test files: `test_unit.py`, `test_integration.py`, `test_e2e.py`, `conftest.py`
 9. Create GitHub workflow: `.github/workflows/<project_name>.yml`
-10. Run static analysis and tests locally (per CLAUDE.md pre-push checklist)
-11. Commit and push to trigger workflow
+10. Update CLAUDE.md with test commands for your project
+11. Run static analysis and tests locally (per CLAUDE.md pre-push checklist)
+12. Commit and push to trigger workflow
+
+**Note:** Use `scripts/readme.py` (shared across all projects) for README generation.
 
 ## LLM-Assisted Project Generation
 
