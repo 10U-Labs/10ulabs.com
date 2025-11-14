@@ -80,41 +80,51 @@ class TestIAMRoleConstruct:
             'GitHubRepo': config['github']['repo']
         })
 
-    def test_iam_role_custom_resource_depends_on_oidc_provider(self, template):
+    def test_oidc_custom_resource_exists(self, template):
         resources = template.to_json()['Resources']
         custom_resources = {k: v for k, v in resources.items()
                           if v.get('Type') == 'AWS::CloudFormation::CustomResource'}
 
         oidc_cr = None
-        role_cr = None
-
         for key, resource in custom_resources.items():
             props = resource.get('Properties', {})
             if 'Url' in props:
                 oidc_cr = key
-            elif 'RoleName' in props:
-                role_cr = key
+                break
 
         assert oidc_cr is not None
+
+    def test_iam_role_custom_resource_exists(self, template):
+        resources = template.to_json()['Resources']
+        custom_resources = {k: v for k, v in resources.items()
+                          if v.get('Type') == 'AWS::CloudFormation::CustomResource'}
+
+        role_cr = None
+        for key, resource in custom_resources.items():
+            props = resource.get('Properties', {})
+            if 'RoleName' in props:
+                role_cr = key
+                break
+
         assert role_cr is not None
 
 
 class TestComponentIntegration:
 
-    def test_lambda_functions_are_created_before_custom_resources(self, template):
+    def test_has_two_lambda_functions(self, template):
         resources = template.to_json()['Resources']
-
         lambda_functions = [k for k, v in resources.items()
                           if v.get('Type') == 'AWS::Lambda::Function']
+        assert len(lambda_functions) == 2
+
+    def test_has_two_custom_resources(self, template):
+        resources = template.to_json()['Resources']
         custom_resources = [k for k, v in resources.items()
                           if v.get('Type') == 'AWS::CloudFormation::CustomResource']
-
-        assert len(lambda_functions) == 2
         assert len(custom_resources) == 2
 
-    def test_custom_resources_reference_lambda_functions(self, template):
+    def test_custom_resources_count_matches_lambda_functions(self, template):
         resources = template.to_json()['Resources']
-
         lambda_function_refs = set()
         for key, resource in resources.items():
             if resource.get('Type') == 'AWS::Lambda::Function':
@@ -129,15 +139,29 @@ class TestComponentIntegration:
                     custom_resource_service_tokens.append(lambda_ref)
 
         assert len(custom_resource_service_tokens) == 2
-        for token in custom_resource_service_tokens:
-            assert token in lambda_function_refs
+
+    def test_all_custom_resources_reference_valid_lambda_functions(self, template):
+        resources = template.to_json()['Resources']
+        lambda_function_refs = set()
+        for key, resource in resources.items():
+            if resource.get('Type') == 'AWS::Lambda::Function':
+                lambda_function_refs.add(key)
+
+        custom_resource_service_tokens = []
+        for key, resource in resources.items():
+            if resource.get('Type') == 'AWS::CloudFormation::CustomResource':
+                service_token = resource.get('Properties', {}).get('ServiceToken', {})
+                if 'Fn::GetAtt' in service_token:
+                    lambda_ref = service_token['Fn::GetAtt'][0]
+                    custom_resource_service_tokens.append(lambda_ref)
+
+        all_valid = all(token in lambda_function_refs for token in custom_resource_service_tokens)
+        assert all_valid
 
     def test_secrets_manager_secret_is_imported_not_created(self, template):
         resources = template.to_json()['Resources']
-
         secrets = [v for v in resources.values()
                   if v.get('Type') == 'AWS::SecretsManager::Secret']
-
         assert len(secrets) == 0
 
     def test_stack_outputs_include_role_arn(self, stack):
@@ -152,73 +176,102 @@ class TestComponentIntegration:
 
 class TestConfigurationPropagation:
 
-    def test_config_values_propagate_to_custom_resources(self, template, config):
+    def test_role_name_propagates_to_custom_resource(self, template, config):
         capture_role_name = Capture()
-        capture_org = Capture()
-        capture_repo = Capture()
-
         template.has_resource_properties('AWS::CloudFormation::CustomResource', {
-            'RoleName': capture_role_name,
-            'GitHubOrg': capture_org,
+            'RoleName': capture_role_name
+        })
+        assert capture_role_name.as_string() == config['aws']['iam_role_name']
+
+    def test_github_org_propagates_to_custom_resource(self, template, config):
+        capture_org = Capture()
+        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
+            'GitHubOrg': capture_org
+        })
+        assert capture_org.as_string() == config['github']['org']
+
+    def test_github_repo_propagates_to_custom_resource(self, template, config):
+        capture_repo = Capture()
+        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
             'GitHubRepo': capture_repo
         })
-
-        assert capture_role_name.as_string() == config['aws']['iam_role_name']
-        assert capture_org.as_string() == config['github']['org']
         assert capture_repo.as_string() == config['github']['repo']
 
     def test_github_thumbprint_is_hardcoded(self, template):
         capture_thumbprints = Capture()
-
         template.has_resource_properties('AWS::CloudFormation::CustomResource', {
             'Thumbprints': capture_thumbprints
         })
-
         thumbprints = capture_thumbprints.as_array()
         assert '6938fd4d98bab03faadb97b34396831e3780aea1' in thumbprints
 
     def test_oidc_audience_is_sts(self, template):
         capture_client_ids = Capture()
-
         template.has_resource_properties('AWS::CloudFormation::CustomResource', {
             'ClientIds': capture_client_ids
         })
-
         client_ids = capture_client_ids.as_array()
         assert 'sts.amazonaws.com' in client_ids
 
 
 class TestResourceNaming:
 
-    def test_custom_resources_have_logical_names(self, template):
+    def test_has_two_custom_resources_with_names(self, template):
         resources = template.to_json()['Resources']
-
         custom_resource_keys = [k for k, v in resources.items()
                                if v.get('Type') == 'AWS::CloudFormation::CustomResource']
-
         assert len(custom_resource_keys) == 2
-        for key in custom_resource_keys:
-            assert len(key) > 0
-            assert key[0].isupper()
 
-    def test_lambda_functions_have_logical_names(self, template):
+    def test_custom_resource_names_are_not_empty(self, template):
         resources = template.to_json()['Resources']
+        custom_resource_keys = [k for k, v in resources.items()
+                               if v.get('Type') == 'AWS::CloudFormation::CustomResource']
+        all_non_empty = all(len(key) > 0 for key in custom_resource_keys)
+        assert all_non_empty
 
+    def test_custom_resource_names_start_uppercase(self, template):
+        resources = template.to_json()['Resources']
+        custom_resource_keys = [k for k, v in resources.items()
+                               if v.get('Type') == 'AWS::CloudFormation::CustomResource']
+        all_uppercase = all(key[0].isupper() for key in custom_resource_keys)
+        assert all_uppercase
+
+    def test_has_two_lambda_functions_with_names(self, template):
+        resources = template.to_json()['Resources']
         lambda_keys = [k for k, v in resources.items()
                       if v.get('Type') == 'AWS::Lambda::Function']
-
         assert len(lambda_keys) == 2
-        for key in lambda_keys:
-            assert len(key) > 0
-            assert key[0].isupper()
 
-    def test_iam_roles_have_logical_names(self, template):
+    def test_lambda_function_names_are_not_empty(self, template):
         resources = template.to_json()['Resources']
+        lambda_keys = [k for k, v in resources.items()
+                      if v.get('Type') == 'AWS::Lambda::Function']
+        all_non_empty = all(len(key) > 0 for key in lambda_keys)
+        assert all_non_empty
 
+    def test_lambda_function_names_start_uppercase(self, template):
+        resources = template.to_json()['Resources']
+        lambda_keys = [k for k, v in resources.items()
+                      if v.get('Type') == 'AWS::Lambda::Function']
+        all_uppercase = all(key[0].isupper() for key in lambda_keys)
+        assert all_uppercase
+
+    def test_has_two_iam_roles_with_names(self, template):
+        resources = template.to_json()['Resources']
         role_keys = [k for k, v in resources.items()
                     if v.get('Type') == 'AWS::IAM::Role']
-
         assert len(role_keys) == 2
-        for key in role_keys:
-            assert len(key) > 0
-            assert key[0].isupper()
+
+    def test_iam_role_names_are_not_empty(self, template):
+        resources = template.to_json()['Resources']
+        role_keys = [k for k, v in resources.items()
+                    if v.get('Type') == 'AWS::IAM::Role']
+        all_non_empty = all(len(key) > 0 for key in role_keys)
+        assert all_non_empty
+
+    def test_iam_role_names_start_uppercase(self, template):
+        resources = template.to_json()['Resources']
+        role_keys = [k for k, v in resources.items()
+                    if v.get('Type') == 'AWS::IAM::Role']
+        all_uppercase = all(key[0].isupper() for key in role_keys)
+        assert all_uppercase

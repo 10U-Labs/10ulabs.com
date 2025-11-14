@@ -182,9 +182,13 @@ def test_lambda_roles_have_lambda_service_principal(template):
     })
 
 
-def test_config_has_secrets_manager_secret_name(config):
+def test_config_secrets_manager_secret_name_exists(config):
     secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
     assert secret_name is not None
+
+
+def test_config_secrets_manager_secret_name_not_empty(config):
+    secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
     assert len(secret_name) > 0
 
 
@@ -235,12 +239,19 @@ def test_account_id_is_string(config):
     assert isinstance(config['aws']['account_id'], str)
 
 
-def test_account_id_is_12_digits(config):
+def test_account_id_has_12_characters(config):
     assert len(config['aws']['account_id']) == 12
+
+
+def test_account_id_is_all_digits(config):
     assert config['aws']['account_id'].isdigit()
 
 
-def test_region_is_valid_format(config):
+def test_region_contains_hyphen(config):
     region = config['aws']['region']
     assert '-' in region
+
+
+def test_region_minimum_length(config):
+    region = config['aws']['region']
     assert len(region) >= 9
