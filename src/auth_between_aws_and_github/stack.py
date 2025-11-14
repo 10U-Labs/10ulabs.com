@@ -93,31 +93,141 @@ def handler(event, context):
 
         provider_arn = oidc_provider_resource.get_att_string('Arn')
 
-        role = iam.Role(
-            self, 'GitHubActionsRole',
-            role_name=config['aws']['iam_role_name'],
-            assumed_by=iam.WebIdentityPrincipal(
-                provider_arn,
-                conditions={
-                    'StringEquals': {
-                        'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+        iam_role_lambda_role = iam.Role(
+            self, 'IAMRoleLambdaRole',
+            assumed_by=iam.ServicePrincipal('lambda.amazonaws.com'),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name('service-role/AWSLambdaBasicExecutionRole')
+            ],
+            inline_policies={
+                'IAMRoleManagement': iam.PolicyDocument(
+                    statements=[
+                        iam.PolicyStatement(
+                            actions=[
+                                'iam:CreateRole',
+                                'iam:GetRole',
+                                'iam:DeleteRole',
+                                'iam:AttachRolePolicy',
+                                'iam:DetachRolePolicy',
+                                'iam:PutRolePolicy',
+                                'iam:DeleteRolePolicy',
+                                'iam:UpdateAssumeRolePolicy'
+                            ],
+                            resources=['*']
+                        )
+                    ]
+                )
+            }
+        )
+
+        iam_role_lambda = lambda_.Function(
+            self, 'IAMRoleLambda',
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            handler='index.handler',
+            code=lambda_.Code.from_inline('''
+import boto3
+import cfnresponse
+import json
+
+iam = boto3.client('iam')
+
+def handler(event, context):
+    try:
+        request_type = event['RequestType']
+        role_name = event['ResourceProperties']['RoleName']
+        provider_arn = event['ResourceProperties']['ProviderArn']
+        github_org = event['ResourceProperties']['GitHubOrg']
+        github_repo = event['ResourceProperties']['GitHubRepo']
+
+        account_id = context.invoked_function_arn.split(':')[4]
+        role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
+
+        trust_policy = {
+            "Version": "2012-10-17",
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Federated": provider_arn},
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                    "StringEquals": {
+                        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                     },
-                    'StringLike': {
-                        'token.actions.githubusercontent.com:sub':
-                            f"repo:{config['github']['org']}/{config['github']['repo']}:*"
+                    "StringLike": {
+                        "token.actions.githubusercontent.com:sub": f"repo:{github_org}/{github_repo}:*"
                     }
                 }
-            ),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name('AdministratorAccess')
-            ]
+            }]
+        }
+
+        if request_type == 'Create':
+            try:
+                existing_role = iam.get_role(RoleName=role_name)
+                print(f"IAM role already exists: {role_arn}")
+                iam.update_assume_role_policy(
+                    RoleName=role_name,
+                    PolicyDocument=json.dumps(trust_policy)
+                )
+                print(f"Updated trust policy for existing role")
+            except iam.exceptions.NoSuchEntityException:
+                iam.create_role(
+                    RoleName=role_name,
+                    AssumeRolePolicyDocument=json.dumps(trust_policy),
+                    Description=f"GitHub Actions role for {github_org}/{github_repo}"
+                )
+                print(f"Created IAM role: {role_arn}")
+
+            try:
+                iam.attach_role_policy(
+                    RoleName=role_name,
+                    PolicyArn='arn:aws:iam::aws:policy/AdministratorAccess'
+                )
+                print(f"Attached AdministratorAccess policy")
+            except Exception as e:
+                if 'already attached' not in str(e).lower():
+                    raise
+                print(f"AdministratorAccess policy already attached")
+
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Arn': role_arn}, role_arn)
+
+        elif request_type == 'Update':
+            try:
+                iam.update_assume_role_policy(
+                    RoleName=role_name,
+                    PolicyDocument=json.dumps(trust_policy)
+                )
+                print(f"Updated trust policy")
+            except Exception as e:
+                print(f"Update warning: {str(e)}")
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {'Arn': role_arn}, role_arn)
+
+        elif request_type == 'Delete':
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        cfnresponse.send(event, context, cfnresponse.FAILED, {}, str(e))
+'''),
+            role=iam_role_lambda_role
         )
+
+        iam_role_resource = CustomResource(
+            self, 'GitHubActionsRole',
+            service_token=iam_role_lambda.function_arn,
+            properties={
+                'RoleName': config['aws']['iam_role_name'],
+                'ProviderArn': provider_arn,
+                'GitHubOrg': config['github']['org'],
+                'GitHubRepo': config['github']['repo']
+            }
+        )
+
+        role_arn = iam_role_resource.get_att_string('Arn')
 
         secret = secretsmanager.Secret.from_secret_name_v2(
             self, 'GitHubPATSecret',
             secret_name=config['aws']['secrets_manager']['github_pat_secret_name']
         )
 
-        self.role_arn = role.role_arn
+        self.role_arn = role_arn
         self.secret_arn = secret.secret_arn
         self.provider_arn = provider_arn
