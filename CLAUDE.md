@@ -179,18 +179,25 @@ pylint src/auth_between_aws_and_github/stack.py \
 **IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
 
 #### 5. Python Static Type Checking (Mypy)
+**First install dependencies:**
+```bash
+pip install -r src/auth_between_aws_and_github/requirements.txt
+```
+
+**Then run mypy:**
 ```bash
 mypy src/auth_between_aws_and_github
 ```
 
 #### 6. Unit Tests
+**Requires CDK dependencies installed (see step 5):**
 ```bash
 pytest test/auth_between_aws_and_github/test_unit.py -v
 ```
 
 #### 7. Integration Tests
 
-**IMPORTANT:** Integration tests require AWS credentials in environment variables. Check credentials first:
+**IMPORTANT:** Requires CDK dependencies (see step 5), deployed infrastructure, and AWS credentials in environment variables. Check credentials first:
 ```bash
 echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
 echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
@@ -212,7 +219,7 @@ pytest test/auth_between_aws_and_github/test_integration.py -v
 
 #### 8. E2E Tests
 
-**IMPORTANT:** Run E2E tests with environment credentials.
+**IMPORTANT:** Requires CDK dependencies (see step 5), deployed infrastructure, and AWS credentials in environment variables.
 
 Check credentials are available:
 ```bash
