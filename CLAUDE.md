@@ -141,7 +141,7 @@ curl -s -X DELETE \
 
 ## AWS-GitHub Auth Infrastructure Tests
 
-Run these tests if you modified `/auth_between_aws_and_github/`:
+Run these tests if you modified `src/auth_between_aws_and_github/`:
 
 #### 1. YAML Linting
 ```bash
@@ -150,12 +150,12 @@ yamllint .github/workflows/auth_between_aws_and_github.yml
 
 #### 2. JSON Configuration Linting
 ```bash
-jsonlint -q /auth_between_aws_and_github/config.json
+jsonlint -q src/auth_between_aws_and_github/config.json
 ```
 
 #### 3. Markdown Documentation Linting (if README exists)
 ```bash
-markdownlint-cli2 /auth_between_aws_and_github/README.md
+markdownlint-cli2 src/auth_between_aws_and_github/README.md
 ```
 
 **NOTE:** This will only run if README.md exists. All default markdownlint rules are enforced.
@@ -163,7 +163,7 @@ markdownlint-cli2 /auth_between_aws_and_github/README.md
 #### 4. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
-pylint /auth_between_aws_and_github/auth_between_aws_and_github.py \
+pylint src/auth_between_aws_and_github/stack.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
   --fail-under=10.0
 ```
@@ -172,12 +172,12 @@ pylint /auth_between_aws_and_github/auth_between_aws_and_github.py \
 
 #### 5. Python Static Type Checking (Mypy)
 ```bash
-mypy /auth_between_aws_and_github/auth_between_aws_and_github.py
+mypy src/auth_between_aws_and_github
 ```
 
 #### 6. Unit Tests
 ```bash
-PYTHONPATH=/auth_between_aws_and_github:$PYTHONPATH pytest /auth_between_aws_and_github/test/pre_deployment/test_unit.py -v
+pytest test/auth_between_aws_and_github/test_unit.py -v
 ```
 
 #### 7. Integration Tests
@@ -192,7 +192,7 @@ echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
 
 Run integration tests (uses environment variables automatically):
 ```bash
-pytest /auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
+pytest test/auth_between_aws_and_github/test_integration.py -v
 ```
 
 **Required environment variables:**
@@ -202,9 +202,9 @@ pytest /auth_between_aws_and_github/test/pre_deployment/test_integration.py -v
 - `AWS_REGION` - AWS region (e.g., us-east-1)
 - `GITHUB_PAT` - GitHub Personal Access Token
 
-#### 8. Post-Deployment Integration Tests
+#### 8. E2E Tests
 
-**IMPORTANT:** Run as many post-deployment tests as possible with environment credentials.
+**IMPORTANT:** Run E2E tests with environment credentials.
 
 Check credentials are available:
 ```bash
@@ -214,64 +214,59 @@ echo "AWS_REGION: $AWS_REGION"
 echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
 ```
 
-Run post-deployment integration tests (uses environment variables automatically):
+Run E2E tests (uses environment variables automatically):
 ```bash
-pytest /auth_between_aws_and_github/test/post_deployment/test_integration.py -v
+pytest test/auth_between_aws_and_github/test_e2e.py -v
 ```
 
-**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute (typically 10-15 tests pass, 50+ skipped).
-
-#### 9. Post-Deployment E2E Tests
-
-Run post-deployment E2E tests (uses environment variables automatically):
-```bash
-pytest /auth_between_aws_and_github/test/post_deployment/test_e2e.py -v
-```
-
-**Note:** Most E2E tests require WARM state and will be skipped locally. This is expected.
+**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute.
 
 ---
 
 ## CloudTrail and Domain Name Tests
 
-Run these tests if you modified `/cloudtrail_and_domain_name/`:
+Run these tests if you modified `src/cloudtrail_and_domain_name/`:
 
 #### 1. YAML Linting
 ```bash
 yamllint .github/workflows/cloudtrail_and_domain_name.yml
 ```
 
-#### 2. Python Code Linting (Pylint)
+#### 2. JSON Configuration Linting
+```bash
+jsonlint -q src/cloudtrail_and_domain_name/config.json
+```
+
+#### 3. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
-pip install -q pylint
-pylint /cloudtrail_and_domain_name/stack.py /cloudtrail_and_domain_name/lambda/handler.py \
-  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+pylint src/cloudtrail_and_domain_name/stack.py \
+  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
   --fail-under=10.0
 ```
 
 **IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
 
-#### 3. Python Static Type Checking (Mypy)
+#### 4. Python Static Type Checking (Mypy)
 **First install dependencies:**
 ```bash
-pip install -q -r /cloudtrail_and_domain_name/requirements.txt
+pip install -r src/cloudtrail_and_domain_name/requirements.txt
 ```
 
 **Then run mypy:**
 ```bash
-mypy /cloudtrail_and_domain_name
+mypy src/cloudtrail_and_domain_name
 ```
 
-#### 4. Unit Tests
-**Requires CDK dependencies installed (see step 3):**
+#### 5. Unit Tests
+**Requires CDK dependencies installed (see step 4):**
 ```bash
-python -m pytest /cloudtrail_and_domain_name/test/test_unit.py -v
+pytest test/cloudtrail_and_domain_name/test_unit.py -v
 ```
 
-#### 5. Integration Tests
+#### 6. Integration Tests
 
-**IMPORTANT:** Requires CDK dependencies (see step 3) and AWS credentials in environment variables.
+**IMPORTANT:** Requires CDK dependencies (see step 4) and AWS credentials in environment variables.
 
 Check credentials first:
 ```bash
@@ -282,7 +277,7 @@ echo "AWS_REGION: $AWS_REGION"
 
 Run integration tests (uses environment variables automatically):
 ```bash
-python -m pytest /cloudtrail_and_domain_name/test/test_integration.py -v
+pytest test/cloudtrail_and_domain_name/test_integration.py -v
 ```
 
 **Required environment variables:**
@@ -290,6 +285,192 @@ python -m pytest /cloudtrail_and_domain_name/test/test_integration.py -v
 - `AWS_SECRET_ACCESS_KEY` - AWS secret key
 - `AWS_SESSION_TOKEN` - (optional) AWS session token if using temporary credentials
 - `AWS_REGION` - AWS region (e.g., us-east-1)
+
+#### 7. E2E Tests
+
+**IMPORTANT:** Run E2E tests with environment credentials.
+
+Check credentials are available:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+```
+
+Run E2E tests (uses environment variables automatically):
+```bash
+pytest test/cloudtrail_and_domain_name/test_e2e.py -v
+```
+
+**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute.
+
+---
+
+## API Infrastructure Tests
+
+Run these tests if you modified `src/api/self/`:
+
+#### 1. YAML Linting
+```bash
+yamllint .github/workflows/api.yml
+```
+
+#### 2. JSON Configuration Linting
+```bash
+jsonlint -q src/api/self/config.json
+jsonlint -q src/api/self/cdk.json
+```
+
+#### 3. Python Code Linting (Pylint)
+**Use the exact workflow command with all the same flags:**
+```bash
+pylint src/api/self/stack.py src/api/self/lambda/handler.py \
+  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
+  --fail-under=10.0
+```
+
+**IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
+
+#### 4. Python Static Type Checking (Mypy)
+**First install dependencies:**
+```bash
+pip install -r src/api/self/requirements.txt
+```
+
+**Then run mypy:**
+```bash
+mypy src/api/self
+```
+
+#### 5. Unit Tests
+**Requires CDK dependencies installed (see step 4):**
+```bash
+pytest test/api/test_unit.py -v
+```
+
+#### 6. Integration Tests
+
+**IMPORTANT:** Requires CDK dependencies (see step 4) and AWS credentials in environment variables.
+
+Check credentials first:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+```
+
+Run integration tests (uses environment variables automatically):
+```bash
+pytest test/api/test_integration.py -v
+```
+
+**Required environment variables:**
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_SESSION_TOKEN` - (optional) AWS session token if using temporary credentials
+- `AWS_REGION` - AWS region (e.g., us-east-1)
+
+#### 7. E2E Tests
+
+**IMPORTANT:** Run E2E tests with environment credentials.
+
+Check credentials are available:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+```
+
+Run E2E tests (uses environment variables automatically):
+```bash
+pytest test/api/test_e2e.py -v
+```
+
+**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute.
+
+---
+
+## Gmail Email Provider Tests
+
+Run these tests if you modified `src/gmail_email_provider/`:
+
+#### 1. YAML Linting
+```bash
+yamllint .github/workflows/gmail_email_provider.yml
+```
+
+#### 2. JSON Configuration Linting
+```bash
+jsonlint -q src/gmail_email_provider/config.json
+jsonlint -q src/gmail_email_provider/cdk.json
+```
+
+#### 3. Python Code Linting (Pylint)
+**Use the exact workflow command with all the same flags:**
+```bash
+pylint src/gmail_email_provider/stack.py src/gmail_email_provider/app.py scripts/readme.py \
+  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+  --fail-under=10.0
+```
+
+**IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
+
+#### 4. Python Static Type Checking (Mypy)
+**First install dependencies:**
+```bash
+pip install -r src/gmail_email_provider/requirements.txt
+```
+
+**Then run mypy:**
+```bash
+mypy src/gmail_email_provider
+```
+
+#### 5. Unit Tests
+**Requires CDK dependencies installed (see step 4):**
+```bash
+pytest test/gmail_email_provider/test_unit.py -v
+```
+
+#### 6. Integration Tests
+
+**IMPORTANT:** Requires CDK dependencies (see step 4) and AWS credentials in environment variables.
+
+Check credentials first:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+```
+
+Run integration tests (uses environment variables automatically):
+```bash
+pytest test/gmail_email_provider/test_integration.py -v
+```
+
+**Required environment variables:**
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_SESSION_TOKEN` - (optional) AWS session token if using temporary credentials
+- `AWS_REGION` - AWS region (e.g., us-east-1)
+
+#### 7. E2E Tests
+
+**IMPORTANT:** Run E2E tests with environment credentials.
+
+Check credentials are available:
+```bash
+echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
+echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
+echo "AWS_REGION: $AWS_REGION"
+```
+
+Run E2E tests (uses environment variables automatically):
+```bash
+pytest test/gmail_email_provider/test_e2e.py -v
+```
+
+**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute.
 
 ---
 
