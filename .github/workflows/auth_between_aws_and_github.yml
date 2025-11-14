@@ -204,10 +204,7 @@ jobs:
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          mypy auth_between_aws_and_github/stack.py \
-            auth_between_aws_and_github/app.py \
-            auth_between_aws_and_github/readme.py \
-            --ignore-missing-imports
+          python -m mypy auth_between_aws_and_github --exclude auth_between_aws_and_github/test
   unit-testing-code:
     name: Unit testing code
     needs: performing-static-analysis
