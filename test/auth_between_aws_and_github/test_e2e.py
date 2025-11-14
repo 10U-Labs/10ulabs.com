@@ -1,15 +1,13 @@
-#!/usr/bin/env python3
 import json
 import os
 import subprocess
 
 import pytest
 
-from conftest import REPO_ROOT, CONFIG_FILE, load_config
+from conftest import load_config
 
 
 def get_github_oidc_token():
-    
     token_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL')
     token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
 
@@ -34,7 +32,6 @@ def get_github_oidc_token():
 
 
 def assume_role_with_oidc(account_id, region, role_name, oidc_token):
-    
     role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
 
     result = subprocess.run(
@@ -59,8 +56,7 @@ def assume_role_with_oidc(account_id, region, role_name, oidc_token):
     }
 
 
-class TestCompleteRunnerRegistrationWorkflow:
-
+class TestCompleteOIDCWorkflow:
 
     @pytest.fixture
     def config(self):
@@ -101,8 +97,36 @@ class TestCompleteRunnerRegistrationWorkflow:
         secret_data = json.loads(result.stdout)
         return secret_data['github_token']
 
-    @pytest.fixture
-    def runner_registration_response(self, config, github_pat):
+    def test_complete_oidc_to_github_workflow(self, config, oidc_token, aws_creds, github_pat):
+        assert oidc_token is not None
+        assert len(oidc_token) > 0
+        assert aws_creds['access_key_id'] is not None
+        assert aws_creds['secret_access_key'] is not None
+        assert aws_creds['session_token'] is not None
+        assert github_pat is not None
+        assert github_pat.startswith('ghp_')
+
+    def test_assumed_role_has_correct_identity(self, config, aws_creds):
+        env = os.environ.copy()
+        env['AWS_ACCESS_KEY_ID'] = aws_creds['access_key_id']
+        env['AWS_SECRET_ACCESS_KEY'] = aws_creds['secret_access_key']
+        env['AWS_SESSION_TOKEN'] = aws_creds['session_token']
+
+        result = subprocess.run(
+            ['aws', 'sts', 'get-caller-identity',
+             '--region', config['aws']['region'],
+             '--output', 'json'],
+            capture_output=True,
+            text=True,
+            check=True,
+            env=env
+        )
+
+        identity = json.loads(result.stdout)
+        assert config['aws']['iam_role_name'] in identity['Arn']
+        assert 'assumed-role' in identity['Arn']
+
+    def test_github_api_access_works(self, config, github_pat):
         result = subprocess.run(
             ['curl', '-s', '-X', 'POST',
              '-H', 'Accept: application/vnd.github+json',
@@ -113,26 +137,9 @@ class TestCompleteRunnerRegistrationWorkflow:
             text=True,
             check=True
         )
-        return json.loads(result.stdout)
 
-    def test_oidc_token_obtained(self, oidc_token):
-        assert oidc_token
-
-    def test_aws_credentials_obtained_via_oidc(self, aws_creds):
-        assert aws_creds['access_key_id']
-
-    def test_github_pat_retrieved_from_secrets_manager(self, github_pat):
-        assert github_pat
-
-    def test_runner_registration_response_contains_token(self, runner_registration_response):
-        assert 'token' in runner_registration_response
-
-    def test_runner_registration_token_not_empty(self, runner_registration_response):
-        assert runner_registration_response['token']
-
-    def test_runner_registration_token_has_expiration(self, runner_registration_response):
-        assert 'expires_at' in runner_registration_response
-
-
-
-
+        response = json.loads(result.stdout)
+        assert 'token' in response
+        assert response['token'] is not None
+        assert len(response['token']) > 0
+        assert 'expires_at' in response
