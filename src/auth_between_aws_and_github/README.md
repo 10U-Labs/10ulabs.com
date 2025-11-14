@@ -49,9 +49,11 @@ through web identity federation.
 ### Required Software
 
 - Python 3.8 or later
-- AWS CLI configured with appropriate permissions
+- Node.js/npm (for AWS CDK)
 - AWS CDK v2 installed (`npm install -g aws-cdk`)
 - Git
+
+**Note**: AWS CLI is NOT required. AWS CDK uses boto3 (AWS SDK for Python) directly.
 
 ### Required AWS Permissions
 
@@ -115,12 +117,21 @@ cd aws-github-oidc-auth
 pip install aws-cdk-lib constructs
 ```
 
-### Step 3: Configure AWS CLI
+### Step 3: Configure AWS Credentials
+
+Ensure AWS credentials are available via one of these methods:
 
 ```bash
-aws configure
-# or use existing AWS credentials/profile
+# Option 1: Environment variables
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_DEFAULT_REGION=us-east-1
+
+# Option 2: AWS profile
 export AWS_PROFILE=your-profile
+
+# Option 3: IAM role (if running on EC2/ECS/Lambda)
+# Credentials automatically provided by instance metadata
 ```
 
 ### Step 4: Create Configuration
