@@ -39,12 +39,16 @@ def test_stack_synthesizes_without_errors(template):
     assert template is not None
 
 
-def test_imports_existing_oidc_provider(template):
-    template.resource_count_is('Custom::AWSCDKOpenIdConnectProvider', 0)
+def test_creates_oidc_custom_resource_lambda(template):
+    template.resource_count_is('AWS::Lambda::Function', 1)
 
 
-def test_creates_github_actions_role(template):
-    template.resource_count_is('AWS::IAM::Role', 1)
+def test_creates_custom_resource_for_oidc(template):
+    template.resource_count_is('AWS::CloudFormation::CustomResource', 1)
+
+
+def test_creates_iam_roles(template):
+    template.resource_count_is('AWS::IAM::Role', 2)
 
 
 def test_iam_role_has_web_identity_trust_policy(template):
@@ -102,4 +106,4 @@ def test_iam_role_has_administrator_access_policy(template):
 
 def test_stack_creates_core_resources(template):
     resources = template.to_json()['Resources']
-    assert len(resources) >= 1
+    assert len(resources) >= 4
