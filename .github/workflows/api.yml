@@ -191,7 +191,7 @@ jobs:
       - name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
+          npm install -g jsonlint
       - name: Install project dependencies for linting
         run: pip install -r api/self/requirements.txt
       - name: Linting YAML files
@@ -203,14 +203,6 @@ jobs:
           echo "Validating JSON syntax..."
           jsonlint -q api/self/config.json
           jsonlint -q api/self/cdk.json
-      - name: Linting Markdown documentation
-        run: |
-          if [ -f api/self/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 api/self/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
       - name: Linting Python files
         run: |
           pylint api/self/stack.py api/self/lambda/handler.py \

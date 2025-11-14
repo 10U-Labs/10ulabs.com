@@ -143,13 +143,40 @@ Format the README in clean, professional markdown that complies with all markdow
 - Keep all lines under 80 characters
 - Always add blank lines before and after lists
 - Always add blank lines before and after code blocks
+- Indent code blocks with 3 spaces when inside ordered/unordered lists
 - Use proper heading levels (# ## ### ####), never use bold text as headings
 - Add language specifiers to all code blocks (```bash, ```python, ```json, etc.)
 - Wrap bare URLs in angle brackets (<https://example.com>)
 - End file with exactly one newline character
 - Use proper table formatting with spaces around pipes (| Column 1 | Column 2 |)
 
-Be comprehensive but concise. Use code blocks for examples.
+CRITICAL INSTRUCTIONS:
+1. Generate the README content first
+2. Before outputting, verify EACH requirement using this checklist:
+
+   FACTUAL ACCURACY (verify against source code):
+   - [ ] Prerequisites match actual dependencies (check requirements.txt)
+   - [ ] NO mention of AWS CLI (uses boto3, not awscli)
+   - [ ] Correct: AWS CDK CLI, Python, Node.js, AWS credentials
+   - [ ] Resource descriptions match stack.py definitions
+   - [ ] Lambda handler implementation matches handler.py
+   - [ ] Configuration examples match config.json structure
+
+   FORMATTING (markdownlint compliance):
+   - [ ] All lines under 80 characters
+   - [ ] Blank lines before/after lists
+   - [ ] Blank lines before/after code blocks
+   - [ ] Code blocks indented with 3 spaces when inside lists
+   - [ ] All headings use # syntax (not bold)
+   - [ ] All code blocks have language specifiers
+   - [ ] All bare URLs wrapped in angle brackets
+   - [ ] File ends with exactly one newline
+   - [ ] No License section included
+
+3. If any check fails, fix the issue before outputting
+4. Output ONLY the final README content (no checklist, no explanation)
+
+Be specific about what each resource does and why it exists. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
 
     try:

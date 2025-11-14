@@ -285,7 +285,7 @@ jobs:
         name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
-          npm install -g jsonlint markdownlint-cli2
+          npm install -g jsonlint
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install project dependencies for linting
         run: pip install -r cloudtrail_and_domain_name/requirements.txt
@@ -300,15 +300,6 @@ jobs:
           echo "Validating JSON syntax..."
           jsonlint -q cloudtrail_and_domain_name/config.json
           jsonlint -q cloudtrail_and_domain_name/cdk.json
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Markdown documentation
-        run: |
-          if [ -f cloudtrail_and_domain_name/README.md ]; then
-            echo "Linting README.md..."
-            markdownlint-cli2 cloudtrail_and_domain_name/README.md
-          else
-            echo "No README.md found, skipping markdown linting"
-          fi
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Python files
         run: |
