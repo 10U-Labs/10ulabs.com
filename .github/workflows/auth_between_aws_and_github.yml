@@ -97,34 +97,26 @@ jobs:
             echo "ℹ No GitHub PAT (will retrieve from Secrets Manager via OIDC if infrastructure exists)"
           fi
           echo ""
-          echo "Note: auth_between_aws_and_github.py will detect state and validate credentials accordingly"
+          echo "Note: CDK will deploy infrastructure and update secret accordingly"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Install Python dependencies
+        run: pip install -r auth_between_aws_and_github/requirements.txt
       - env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
         if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Create auth_between_aws_and_github infrastructure
+        name: Deploy auth_between_aws_and_github infrastructure
         run: |
-          echo "Creating auth_between_aws_and_github infrastructure..."
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' auth_between_aws_and_github/config.json)
-          AWS_REGION=$(jq -r '.aws.region' auth_between_aws_and_github/config.json)
-          AWS_IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' auth_between_aws_and_github/config.json)
-          GITHUB_ORG=$(jq -r '.github.org' auth_between_aws_and_github/config.json)
-          GITHUB_REPO=$(jq -r '.github.repo' auth_between_aws_and_github/config.json)
-          GITHUB_PAT_SECRET_NAME=$(jq -r '.aws.secrets_manager.github_pat_secret_name' auth_between_aws_and_github/config.json)
-          ./auth_between_aws_and_github/auth_between_aws_and_github.py \
-            --aws-account-id "$AWS_ACCOUNT_ID" \
-            --aws-region "$AWS_REGION" \
-            --aws-iam-role-name "$AWS_IAM_ROLE_NAME" \
-            --github-org "$GITHUB_ORG" \
-            --github-repo "$GITHUB_REPO" \
-            --github-pat-secret-name "$GITHUB_PAT_SECRET_NAME" \
-            --aws-access-key-id "$AWS_ACCESS_KEY_ID" \
-            --aws-secret-access-key "$AWS_SECRET_ACCESS_KEY" \
-            --github-token "$GH_RUNNER_PAT"
+          echo "Deploying auth_between_aws_and_github infrastructure..."
+          cd auth_between_aws_and_github
+          python3 deploy.py --github-token "$GH_RUNNER_PAT"
       - if: ${{ github.event.inputs.dry_run == 'true' }}
         name: Dry run
-        run: echo "DRY RUN - Would create auth_between_aws_and_github infrastructure"
+        run: echo "DRY RUN - Would deploy auth_between_aws_and_github infrastructure via CDK"
   integration-testing-code:
     name: Integration testing code
     needs: unit-testing-code
