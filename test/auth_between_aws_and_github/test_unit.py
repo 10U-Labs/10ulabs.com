@@ -255,3 +255,17 @@ def test_region_contains_hyphen(config):
 def test_region_minimum_length(config):
     region = config['aws']['region']
     assert len(region) >= 9
+
+
+def test_oidc_lambda_has_handler_index_handler(template):
+    template.has_resource_properties('AWS::Lambda::Function', {
+        'Handler': 'index.handler'
+    })
+
+
+def test_iam_role_lambda_has_handler_index_handler(template):
+    resources = template.to_json()['Resources']
+    lambda_functions = [r for r in resources.values()
+                       if r.get('Type') == 'AWS::Lambda::Function']
+    handlers = [func['Properties']['Handler'] for func in lambda_functions]
+    assert all(h == 'index.handler' for h in handlers)
