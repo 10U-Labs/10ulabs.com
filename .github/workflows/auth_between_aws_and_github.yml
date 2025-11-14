@@ -65,48 +65,51 @@ jobs:
   ensuring-infrastructure-exists-in-defined-state:
     name: Ensuring infrastructure exists in defined state
     needs: unit-testing
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: |
+          aws_account_id=$(jq -r '.aws.account_id' src/auth_between_aws_and_github/config.json)
+          aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json)
+          aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
+          github_pat_secret_name=$(jq -r '.aws.secrets_manager.github_pat_secret_name' src/auth_between_aws_and_github/config.json)
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+          echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install boto3
-        run: pip install -r src/auth_between_aws_and_github/requirements.txt
-      - env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        name: Check credentials
-        run: |
-          echo "Checking available credentials..."
-          if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "✓ AWS credentials available"
-          else
-            echo "ℹ No AWS credentials (will use OIDC if infrastructure exists)"
-          fi
-          if [ -n "$GH_RUNNER_PAT" ]; then
-            echo "✓ GitHub PAT available"
-          else
-            echo "ℹ No GitHub PAT (will retrieve from Secrets Manager via OIDC if infrastructure exists)"
-          fi
-          echo ""
-          echo "Note: CDK will deploy infrastructure and update secret accordingly"
       - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
       - name: Install Python dependencies
         run: pip install -r src/auth_between_aws_and_github/requirements.txt
-      - env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-        name: Deploy auth_between_aws_and_github infrastructure
+      - name: Retrieve GitHub PAT from Secrets Manager
+        id: get-pat
+        run: |
+          github_pat=$(aws secretsmanager get-secret-value \
+            --secret-id "${{ steps.config.outputs.github_pat_secret_name }}" \
+            --query 'SecretString' \
+            --output text | jq -r '.personal_access_token')
+          echo "::add-mask::$github_pat"
+          echo "github_pat=$github_pat" >> $GITHUB_OUTPUT
+      - name: Deploy auth_between_aws_and_github infrastructure
         run: |
           echo "Deploying auth_between_aws_and_github infrastructure..."
           cd src/auth_between_aws_and_github
-          cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
+          cdk deploy --require-approval never -c github_token="${{ steps.get-pat.outputs.github_pat }}"
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-exists-in-defined-state
