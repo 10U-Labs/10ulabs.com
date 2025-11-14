@@ -48,7 +48,6 @@ jobs:
         run: pip install boto3
       - name: Check if README needs update
         id: check
-        continue-on-error: true
         run: |
           python api/self/readme.py \
             --check \
