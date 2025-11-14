@@ -1,308 +1,330 @@
-# AWS-GitHub Authentication Infrastructure
+# AWS-GitHub OIDC Authentication Infrastructure
 
-A self-contained Python script that manages AWS-GitHub authentication
-infrastructure for GitHub Actions workflows. Built with **zero external
-dependencies** - uses only Python standard library for maximum portability
-and security.
+This CDK infrastructure automates the setup of OpenID Connect (OIDC)
+authentication between AWS and GitHub Actions, enabling secure, keyless
+authentication for CI/CD workflows without storing long-lived AWS credentials
+in GitHub secrets.
 
 ## Overview
 
-This script automates the setup and management of AWS-GitHub OIDC
-authentication, enabling GitHub Actions workflows to securely access AWS
-resources without storing long-term credentials. The implementation uses
-**pure Python stdlib** with custom AWS API clients - no AWS CLI, boto3,
-or pip packages required.
+This project creates the necessary AWS resources to establish trust between
+GitHub Actions and AWS using OIDC federation. It eliminates the need to
+store AWS access keys in GitHub secrets by leveraging temporary credentials
+through web identity federation.
 
-### Key Features
+## Key Features
 
-- **🔒 Zero Dependencies**: Pure Python stdlib implementation - no external packages
-- **🚀 Self-Contained**: Single executable script with built-in AWS API clients
-- **🔄 State-Aware**: Intelligent detection of existing infrastructure
-- **🤖 AI-Powered**: Bedrock integration for documentation automation
-- **🛡️ Security-First**: OIDC-based authentication with automatic credential cleanup
+- **Keyless Authentication**: No AWS access keys stored in GitHub
+- **Automated Setup**: Complete OIDC provider and IAM role configuration
+- **Secure by Design**: Uses temporary credentials with assumed roles
+- **Repository-Specific**: IAM roles scoped to specific GitHub repositories
+- **Custom Resource Management**: Lambda-based custom resources for
+  fine-grained control
 
-## Requirements
+## Resources Created
 
-- **Python 3.11+** (standard library only)
-- **No AWS CLI required** - uses pure Python stdlib
-- AWS account with appropriate permissions
-- GitHub repository with Actions enabled
+### AWS Resources
 
-**No external dependencies, pip install, or requirements.txt needed.**
+| Resource Type | Name/Purpose | Description |
+|---------------|--------------|-------------|
+| **OIDC Provider** | GitHub Actions OIDC | Establishes trust with GitHub's token service |
+| **IAM Role** | GitHub Actions Execution Role | Role assumed by GitHub Actions workflows |
+| **Lambda Function** | OIDC Provider Manager | Creates/manages the OIDC provider |
+| **Lambda Function** | IAM Role Manager | Creates/manages the GitHub Actions IAM role |
+| **IAM Role** | OIDC Lambda Execution Role | Execution role for OIDC provider Lambda |
+| **IAM Role** | IAM Lambda Execution Role | Execution role for IAM role manager Lambda |
+| **Custom Resource** | GitHubOIDCProvider | Custom resource for OIDC provider lifecycle |
+| **Custom Resource** | GitHubActionsRole | Custom resource for IAM role lifecycle |
+| **Secrets Manager Secret** | GitHub PAT Secret | Reference to existing GitHub PAT secret |
 
-## Architecture
+### Key Configurations
 
-The script operates in three distinct states:
+- **OIDC Provider URL**: `https://token.actions.githubusercontent.com`
+- **Audience**: `sts.amazonaws.com`
+- **Thumbprint**: `6938fd4d98bab03faadb97b34396831e3780aea1`
+- **Permissions**: AdministratorAccess (configurable)
 
-### COLD State
+## Prerequisites
 
-- **Condition**: No existing AWS infrastructure
-- **Authentication**: Direct AWS credentials (Access Key + Secret)
-- **Actions**: Creates OIDC provider, IAM role, and stores GitHub PAT
-- **Transition**: Moves to WARM state after successful setup
+### Required Software
 
-### WARM State
+- Python 3.8 or later
+- AWS CLI configured with appropriate permissions
+- AWS CDK v2 installed (`npm install -g aws-cdk`)
+- Git
 
-- **Condition**: Infrastructure exists and operational
-- **Authentication**: OIDC tokens (no long-term credentials needed)
-- **Actions**: Uses existing infrastructure, retrieves secrets from AWS
-- **Benefit**: Pure OIDC automation without human credentials
+### Required AWS Permissions
 
-### DESTROY State
+The deploying user/role needs permissions for:
 
-- **Condition**: Cleanup mode
-- **Authentication**: OIDC (if available) or direct credentials
-- **Actions**: Removes all created AWS resources
-- **Result**: Returns to COLD state
+- IAM role and policy management
+- Lambda function management
+- CloudFormation stack operations
+- Secrets Manager access
 
-## Usage
+### Required Dependencies
 
-### Initial Setup (COLD → WARM)
-
-```bash
-python auth_between_aws_and_github.py create \
-  --aws-account-id 123456789012 \
-  --aws-region us-east-1 \
-  --aws-access-key-id AKIA... \
-  --aws-secret-access-key ... \
-  --aws-iam-role-name GitHubActionsRole \
-  --github-org your-org \
-  --github-repo your-repo \
-  --github-token ghp_... \
-  --github-pat-secret-name github-runner-credentials \
-  --bedrock-model-id us.anthropic.claude-haiku-4-5-20251001-v1:0
-```
-
-### Infrastructure Cleanup
-
-```bash
-python auth_between_aws_and_github.py destroy \
-  --aws-account-id 123456789012 \
-  --aws-region us-east-1 \
-  --aws-access-key-id AKIA... \
-  --aws-secret-access-key ... \
-  --aws-iam-role-name GitHubActionsRole \
-  --github-org your-org \
-  --github-repo your-repo \
-  --github-pat-secret-name github-runner-credentials
-```
-
-### README Management
-
-```bash
-# Check if README needs update
-python auth_between_aws_and_github.py readme \
-  --aws-account-id 123456789012 \
-  --aws-region us-east-1 \
-  --aws-iam-role-name GitHubActionsRole \
-  --check
-
-# Update README content
-python auth_between_aws_and_github.py readme \
-  --aws-account-id 123456789012 \
-  --aws-region us-east-1 \
-  --aws-iam-role-name GitHubActionsRole \
-  --update
+```python
+aws-cdk-lib>=2.0.0
+constructs>=10.0.0
 ```
 
 ## Configuration
 
-### Required AWS Permissions
-
-The script requires AWS credentials with the following permissions:
-
-- **IAM**: Full access for OIDC provider and role management
-- **STS**: AssumeRole capabilities
-- **Secrets Manager**: Create, read, update, delete secrets
-- **Bedrock**: Model access for AI features
-
-**Recommended**: Use `AdministratorAccess` policy during initial setup.
-
-### GitHub Requirements
-
-- **Repository**: Must have GitHub Actions enabled
-- **PAT Scopes**: Classic Personal Access Token with:
-  - `admin:org` - For runner registration
-  - `repo` - For managing repository secrets
-
-### Environment Detection
-
-The script automatically detects its execution environment:
-
-- **GitHub Actions**: Uses OIDC tokens when available
-- **Local Execution**: Falls back to direct credential authentication
-- **State Detection**: Automatically determines COLD/WARM state
-
-## Implementation Details
-
-### Pure Python stdlib Architecture
-
-This script implements a complete AWS API client library using only
-Python standard library components:
-
-- **HTTP Requests**: `urllib.request` for all API calls
-- **Authentication**: Custom AWS Signature Version 4 implementation
-- **JSON/XML Parsing**: Built-in `json` and `xml.etree.ElementTree`
-- **Cryptography**: `hmac` and `hashlib` for request signing
-- **No External Dependencies**: Zero pip packages or requirements.txt
-
-### AWS Service Clients
-
-Custom implementations for:
-
-- **STS Client**: AssumeRoleWithWebIdentity, GetCallerIdentity
-- **IAM Client**: OIDC provider and role management
-- **Secrets Manager Client**: Secure credential storage
-- **Bedrock Client**: AI model integration with auto-provisioning
-
-### Error Handling
-
-- **Retry Logic**: Exponential backoff for transient failures
-- **HTTP Error Wrapping**: Detailed error messages with response context
-- **State Recovery**: Graceful handling of partial infrastructure states
-- **Network Resilience**: Timeout handling and connection management
-
-## Security Considerations
-
-### Credential Management
-
-- **Temporary Credentials**: OIDC tokens expire automatically
-- **Secret Rotation**: GitHub PAT stored securely in AWS Secrets Manager
-- **Least Privilege**: IAM roles follow principle of minimal permissions
-- **Audit Trail**: All AWS API calls logged with CloudTrail integration
-
-### OIDC Trust Relationship
-
-The trust policy restricts access to specific repository contexts:
+Create a `config.json` file in the project root:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {
-      "Federated": "arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com"
-    },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-      },
-      "StringLike": {
-        "token.actions.githubusercontent.com:sub": "repo:ORG/REPO:*"
-      }
+  "aws": {
+    "account_id": "123456789012",
+    "region": "us-east-1",
+    "iam_role_name": "GitHubActionsRole",
+    "secrets_manager": {
+      "github_pat_secret_name": "github-pat-secret"
     }
-  }]
+  },
+  "github": {
+    "org": "your-github-org",
+    "repo": "your-repository-name"
+  }
 }
 ```
 
-### Bedrock Model Access
+### Configuration Parameters
 
-- **Anthropic Models**: Automatic access provisioning with compliance forms
-- **Non-Anthropic Models**: Available by default in most regions
-- **Usage Monitoring**: Built-in token limits and cost controls
+- **aws.account_id**: Your AWS account ID
+- **aws.region**: AWS region for deployment
+- **aws.iam_role_name**: Name for the GitHub Actions IAM role
+- **aws.secrets_manager.github_pat_secret_name**: Name of existing GitHub PAT
+  secret in Secrets Manager
+- **github.org**: GitHub organization name
+- **github.repo**: GitHub repository name
+
+## Installation and Deployment
+
+### Step 1: Clone and Setup
+
+```bash
+git clone <repository-url>
+cd aws-github-oidc-auth
+```
+
+### Step 2: Install Dependencies
+
+```bash
+pip install aws-cdk-lib constructs
+```
+
+### Step 3: Configure AWS CLI
+
+```bash
+aws configure
+# or use existing AWS credentials/profile
+export AWS_PROFILE=your-profile
+```
+
+### Step 4: Create Configuration
+
+```bash
+cp config.json.example config.json
+# Edit config.json with your values
+```
+
+### Step 5: Deploy Infrastructure
+
+```bash
+# Bootstrap CDK (first time only)
+cdk bootstrap
+
+# Deploy the stack
+cdk deploy
+```
+
+### Step 6: Verify Deployment
+
+```bash
+# List the created resources
+aws iam list-open-id-connect-providers
+aws iam get-role --role-name GitHubActionsRole
+```
+
+## Usage in GitHub Actions
+
+After deployment, configure your GitHub Actions workflow:
+
+```yaml
+name: Deploy to AWS
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::ACCOUNT-ID:role/GitHubActionsRole
+          aws-region: us-east-1
+      
+      - name: Test AWS Access
+        run: aws sts get-caller-identity
+```
+
+## Architecture Overview
+
+### Authentication Flow
+
+1. **GitHub Actions Workflow Triggers**: Workflow starts with `id-token: write`
+   permission
+2. **Token Request**: GitHub Actions requests OIDC token from GitHub's token
+   service
+3. **AWS STS Call**: Workflow calls `sts:AssumeRoleWithWebIdentity` with the
+   OIDC token
+4. **Token Validation**: AWS validates token against registered OIDC provider
+5. **Role Assumption**: If valid, AWS returns temporary credentials for the
+   specified IAM role
+6. **AWS API Access**: Workflow uses temporary credentials for AWS operations
+
+### Component Interaction
+
+```text
+GitHub Actions → OIDC Token → AWS STS → Temporary Credentials → AWS Services
+```
+
+### Trust Relationship
+
+The IAM role trusts GitHub's OIDC provider with conditions:
+
+- **Audience**: Must be `sts.amazonaws.com`
+- **Subject**: Must match `repo:ORG/REPO:*` pattern
+- **Provider**: Must be GitHub's token service
+
+## Security Considerations
+
+### Security Best Practices
+
+- **Least Privilege**: Consider replacing `AdministratorAccess` with
+  specific permissions
+- **Repository Scoping**: Roles are scoped to specific GitHub repositories
+- **Temporary Credentials**: No long-lived credentials stored in GitHub
+- **Audience Validation**: OIDC tokens validated for correct audience
+
+### Recommended Security Enhancements
+
+1. **Custom IAM Policies**: Replace `AdministratorAccess` with specific
+   permissions:
+
+   ```python
+   # In the Lambda function, replace AdministratorAccess with:
+   custom_policy = {
+       "Version": "2012-10-17",
+       "Statement": [{
+           "Effect": "Allow",
+           "Action": [
+               "s3:GetObject",
+               "s3:PutObject",
+               "cloudformation:*"
+           ],
+           "Resource": "*"
+       }]
+   }
+   ```
+
+2. **Branch Conditions**: Restrict to specific branches:
+
+   ```json
+   "StringLike": {
+     "token.actions.githubusercontent.com:sub": "repo:org/repo:ref:refs/heads/main"
+   }
+   ```
+
+3. **Time-based Conditions**: Add time restrictions if needed
+4. **IP Restrictions**: Consider IP-based conditions for additional security
+
+### Secrets Management
+
+- GitHub PAT secret must exist in AWS Secrets Manager before deployment
+- Secret ARN is exposed as stack output for reference
+- Rotate GitHub PATs regularly
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### AWS Authentication Errors
+#### 1. OIDC Provider Already Exists
 
-```text
-Error: STS access denied
-Solution: Verify AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-```
+**Error**: `EntityAlreadyExistsException`
 
-#### GitHub PAT Validation
+**Solution**: The Lambda function handles existing providers gracefully.
+Redeploy if needed.
 
-```text
-Error: GitHub PAT missing required scopes
-Solution: Create new PAT with admin:org and repo scopes
-```
+#### 2. Permission Denied During Deployment
 
-#### OIDC Role Assumption
+**Error**: `AccessDeniedException`
 
-```text
-Error: Failed to assume role with OIDC
-Solution: Check trust policy and GitHub Actions id-token permissions
-```
-
-### Debug Mode
-
-Enable verbose logging for detailed troubleshooting:
+**Solution**: Ensure deploying user has IAM permissions:
 
 ```bash
-python auth_between_aws_and_github.py create --verbose [other-args]
+aws iam attach-user-policy --user-name YOUR_USER \
+  --policy-arn arn:aws:iam::aws:policy/IAMFullAccess
 ```
 
-### State Recovery
+#### 3. GitHub Actions Role Assumption Fails
 
-If infrastructure creation is interrupted:
+**Error**: `Not authorized to perform sts:AssumeRoleWithWebIdentity`
 
-1. **Check current state**: Script auto-detects existing resources
-2. **Resume setup**: Re-run create command (idempotent operations)
-3. **Manual cleanup**: Use destroy command if needed
+**Solutions**:
 
-### Bedrock Access Issues
+- Verify `id-token: write` permission in workflow
+- Check repository name matches configuration
+- Ensure OIDC provider exists and is configured correctly
 
-```text
-Error: AWS account not authorized for Bedrock
-Solution: Create AWS support case for Bedrock model access
-URL: https://console.aws.amazon.com/support/home
-```
+#### 4. Configuration File Not Found
 
-## Examples
+**Error**: `FileNotFoundError: config.json`
 
-### GitHub Actions Workflow
+**Solution**: Create `config.json` in the same directory as `app.py`
 
-```yaml
-name: AWS Infrastructure Setup
-on:
-  workflow_dispatch:
-
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup AWS-GitHub Authentication
-        run: |
-          python auth_between_aws_and_github.py create \
-            --aws-account-id ${{ secrets.AWS_ACCOUNT_ID }} \
-            --aws-region us-east-1 \
-            --aws-access-key-id ${{ secrets.AWS_ACCESS_KEY_ID }} \
-            --aws-secret-access-key ${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-            --aws-iam-role-name GitHubActionsRole \
-            --github-org ${{ github.repository_owner }} \
-            --github-repo ${{ github.event.repository.name }} \
-            --github-token ${{ secrets.GH_RUNNER_PAT }} \
-            --github-pat-secret-name github-runner-credentials \
-            --bedrock-model-id us.anthropic.claude-haiku-4-5-20251001-v1:0
-```
-
-### Local Development
+### Debugging Commands
 
 ```bash
-# Export credentials
-export AWS_ACCESS_KEY_ID=AKIA...
-export AWS_SECRET_ACCESS_KEY=...
-export GH_RUNNER_PAT=ghp_...
+# Check OIDC provider
+aws iam get-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com
 
-# Run setup
-python auth_between_aws_and_github.py create \
-  --aws-account-id $(aws sts get-caller-identity --query Account --output text) \
-  --aws-region us-east-1 \
-  --aws-access-key-id $AWS_ACCESS_KEY_ID \
-  --aws-secret-access-key $AWS_SECRET_ACCESS_KEY \
-  --aws-iam-role-name GitHubActionsRole \
-  --github-org your-org \
-  --github-repo your-repo \
-  --github-token $GH_RUNNER_PAT \
-  --github-pat-secret-name github-runner-credentials \
-  --bedrock-model-id us.anthropic.claude-haiku-4-5-20251001-v1:0
+# Check IAM role
+aws iam get-role --role-name GitHubActionsRole
+
+# Test role assumption (from GitHub Actions)
+aws sts get-caller-identity
+
+# View CloudFormation events
+aws cloudformation describe-stack-events --stack-name AuthBetweenAwsAndGithub
 ```
+
+### Log Analysis
+
+- **Lambda Logs**: Check CloudWatch logs for custom resource Lambdas
+- **CloudFormation Events**: Monitor stack deployment progress
+- **GitHub Actions Logs**: Review workflow execution logs for authentication
+  issues
+
+## Cleanup
+
+To remove all created resources:
+
+```bash
+cdk destroy
+```
+
+**Note**: Custom resources may require manual cleanup if Lambda functions
+fail during deletion.
