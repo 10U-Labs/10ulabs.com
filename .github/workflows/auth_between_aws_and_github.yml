@@ -168,8 +168,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install pytest
-        run: pip install pytest
+      - name: Install dependencies
+        run: pip install pytest boto3
       - name: Run integration tests
         run: pytest test/auth_between_aws_and_github/test_integration.py -v
   e2e-testing:
