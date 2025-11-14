@@ -23,7 +23,7 @@ jobs:
       - run: 'true'
   determining-if-readme-should-be-updated:
     name: Determining if README.md should be updated
-    needs: e2e-testing-infrastructure
+    needs: integration-testing-infrastructure
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
