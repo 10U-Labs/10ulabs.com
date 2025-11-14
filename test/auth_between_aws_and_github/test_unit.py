@@ -10,7 +10,7 @@ from stack import AuthBetweenAwsAndGithubStack
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parent.parent / 'config.json'
+    config_path = Path(__file__).parent.parent.parent / 'src' / 'auth_between_aws_and_github' / 'config.json'
     with open(config_path) as f:
         return json.load(f)
 
