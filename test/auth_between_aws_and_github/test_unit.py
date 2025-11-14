@@ -112,19 +112,6 @@ def test_iam_role_has_administrator_access_policy(template):
     })
 
 
-def test_creates_secrets_manager_secret(template):
-    template.resource_count_is('AWS::SecretsManager::Secret', 1)
-
-
-def test_secrets_manager_secret_has_description(template, config):
-    github_org = config['github']['org']
-    github_repo = config['github']['repo']
-
-    template.has_resource_properties('AWS::SecretsManager::Secret', {
-        'Description': f'GitHub PAT for {github_org}/{github_repo} authentication'
-    })
-
-
 def test_stack_creates_core_resources(template):
     resources = template.to_json()['Resources']
     assert len(resources) >= 3

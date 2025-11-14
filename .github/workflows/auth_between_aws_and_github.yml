@@ -108,32 +108,55 @@ jobs:
         run: npm install -g aws-cdk
       - name: Install Python dependencies
         run: pip install -r src/auth_between_aws_and_github/requirements.txt
-      - name: Retrieve GitHub PAT from Secrets Manager (if using OIDC)
-        if: steps.auth-check.outputs.using_oidc == 'true'
-        id: get-pat-oidc
-        run: |
-          github_pat=$(aws secretsmanager get-secret-value \
-            --secret-id "${{ steps.config.outputs.github_pat_secret_name }}" \
-            --query 'SecretString' \
-            --output text | jq -r '.personal_access_token')
-          echo "::add-mask::$github_pat"
-          echo "github_pat=$github_pat" >> $GITHUB_OUTPUT
-      - name: Deploy with OIDC credentials
-        if: steps.auth-check.outputs.using_oidc == 'true'
-        run: |
-          echo "Deploying with OIDC authentication..."
-          cd src/auth_between_aws_and_github
-          cdk deploy --require-approval never -c github_token="${{ steps.get-pat-oidc.outputs.github_pat }}"
-      - name: Deploy with static credentials
+      - name: Ensure secret exists with GitHub PAT (if using static credentials)
         if: steps.auth-check.outputs.using_oidc == 'false'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
         run: |
+          SECRET_NAME="${{ steps.config.outputs.github_pat_secret_name }}"
+          GITHUB_ORG="${{ github.repository_owner }}"
+          GITHUB_REPO="${{ github.event.repository.name }}"
+
+          SECRET_VALUE=$(cat <<EOF
+          {
+            "personal_access_token": "$GH_RUNNER_PAT",
+            "github_org": "$GITHUB_ORG",
+            "github_repo": "$GITHUB_REPO",
+            "created_by": "github-actions",
+            "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+          )
+
+          if aws secretsmanager describe-secret --secret-id "$SECRET_NAME" &>/dev/null; then
+            echo "Secret exists, updating..."
+            aws secretsmanager put-secret-value \
+              --secret-id "$SECRET_NAME" \
+              --secret-string "$SECRET_VALUE"
+          else
+            echo "Secret does not exist, creating..."
+            aws secretsmanager create-secret \
+              --name "$SECRET_NAME" \
+              --description "GitHub PAT for $GITHUB_ORG/$GITHUB_REPO authentication" \
+              --secret-string "$SECRET_VALUE"
+          fi
+      - name: Deploy with OIDC credentials
+        if: steps.auth-check.outputs.using_oidc == 'true'
+        run: |
+          echo "Deploying with OIDC authentication..."
+          cd src/auth_between_aws_and_github
+          cdk deploy --require-approval never
+      - name: Deploy with static credentials
+        if: steps.auth-check.outputs.using_oidc == 'false'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
           echo "Deploying with static credentials..."
           cd src/auth_between_aws_and_github
-          cdk deploy --require-approval never -c github_token="$GH_RUNNER_PAT"
+          cdk deploy --require-approval never
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-exists-in-defined-state
