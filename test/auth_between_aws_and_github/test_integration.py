@@ -222,3 +222,76 @@ class TestResourceNaming:
         for key in role_keys:
             assert len(key) > 0
             assert key[0].isupper()
+
+
+class TestLambdaRolePermissions:
+
+    def test_oidc_lambda_role_has_inline_policy_oidc_provider_management(self, template):
+        template.has_resource_properties('AWS::IAM::Role', {
+            'Policies': Match.array_with([
+                Match.object_like({
+                    'PolicyName': 'OIDCProviderManagement'
+                })
+            ])
+        })
+
+    def test_oidc_lambda_role_inline_policy_has_required_oidc_actions(self, template):
+        resources = template.to_json()['Resources']
+        oidc_role = None
+        for key, resource in resources.items():
+            if resource.get('Type') == 'AWS::IAM::Role':
+                policies = resource.get('Properties', {}).get('Policies', [])
+                for policy in policies:
+                    if policy.get('PolicyName') == 'OIDCProviderManagement':
+                        oidc_role = policy
+                        break
+
+        required_actions = {
+            'iam:CreateOpenIDConnectProvider',
+            'iam:GetOpenIDConnectProvider',
+            'iam:DeleteOpenIDConnectProvider',
+            'iam:ListOpenIDConnectProviders'
+        }
+
+        policy_actions = set()
+        for statement in oidc_role['PolicyDocument']['Statement']:
+            policy_actions.update(statement.get('Action', []))
+
+        assert required_actions.issubset(policy_actions)
+
+    def test_iam_role_lambda_role_has_inline_policy_iam_role_management(self, template):
+        template.has_resource_properties('AWS::IAM::Role', {
+            'Policies': Match.array_with([
+                Match.object_like({
+                    'PolicyName': 'IAMRoleManagement'
+                })
+            ])
+        })
+
+    def test_iam_role_lambda_role_inline_policy_has_required_iam_actions(self, template):
+        resources = template.to_json()['Resources']
+        iam_role = None
+        for key, resource in resources.items():
+            if resource.get('Type') == 'AWS::IAM::Role':
+                policies = resource.get('Properties', {}).get('Policies', [])
+                for policy in policies:
+                    if policy.get('PolicyName') == 'IAMRoleManagement':
+                        iam_role = policy
+                        break
+
+        required_actions = {
+            'iam:CreateRole',
+            'iam:GetRole',
+            'iam:DeleteRole',
+            'iam:AttachRolePolicy',
+            'iam:DetachRolePolicy',
+            'iam:PutRolePolicy',
+            'iam:DeleteRolePolicy',
+            'iam:UpdateAssumeRolePolicy'
+        }
+
+        policy_actions = set()
+        for statement in iam_role['PolicyDocument']['Statement']:
+            policy_actions.update(statement.get('Action', []))
+
+        assert required_actions.issubset(policy_actions)
