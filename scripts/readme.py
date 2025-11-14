@@ -56,6 +56,18 @@ def read_source_files(project_dir: str) -> str:
 
     return combined
 
+def read_requirements_file(project_dir: str) -> str:
+    requirements_path = os.path.join(project_dir, 'requirements.txt')
+    try:
+        with open(requirements_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        logging.warning("requirements.txt not found in %s", project_dir)
+        return ""
+    except IOError as e:
+        logging.error("Failed to read requirements.txt: %s", e)
+        return ""
+
 def check_readme_should_be_updated(bedrock_client, source_code: str, current_readme: str, model_id: str, max_tokens: int) -> bool:
     if not current_readme or not current_readme.strip():
         logging.info("README is empty or missing - should be updated")
@@ -130,18 +142,29 @@ Do not include any other text or formatting outside the JSON object."""
         logging.error("Failed to check README with Bedrock: %s", e)
         sys.exit(1)
 
-def generate_readme(bedrock_client, source_code: str, model_id: str, max_tokens: int) -> str:
+def generate_readme(bedrock_client, source_code: str, requirements: str, model_id: str, max_tokens: int) -> str:
+    requirements_section = f"""
+<requirements_txt>
+{requirements}
+</requirements_txt>
+""" if requirements else ""
+
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following infrastructure code.
 
 <source_code>
 {source_code}
 </source_code>
-
+{requirements_section}
 Create a professional README that includes:
 1. Title and overview of what this infrastructure does
 2. Purpose and key features
 3. Resources created (analyze the code to identify all AWS resources)
-4. Prerequisites and requirements (check dependencies from requirements.txt or imports)
+4. Prerequisites and requirements:
+   - CRITICAL: Use ONLY dependencies listed in <requirements_txt> - DO NOT invent or assume additional dependencies
+   - If AWS CLI is NOT in requirements.txt, DO NOT list it as a requirement
+   - AWS CDK uses boto3 (Python SDK), NOT the AWS CLI tool
+   - List Python packages from requirements.txt
+   - List system dependencies needed to run those packages (e.g., Node.js for AWS CDK)
 5. Configuration details (config.json structure if present)
 6. Usage instructions:
    - Installation steps
@@ -171,10 +194,13 @@ CRITICAL INSTRUCTIONS:
 1. Generate the README content first
 2. Before outputting, verify EACH requirement using this checklist:
 
-   FACTUAL ACCURACY (verify against source code):
-   - [ ] Prerequisites match actual dependencies
-   - [ ] Resource descriptions match implementation
-   - [ ] Configuration examples match actual config structure
+   FACTUAL ACCURACY (verify against source code and requirements.txt):
+   - [ ] Prerequisites list ONLY dependencies from requirements.txt - NO invented dependencies
+   - [ ] AWS CLI is NOT listed as requirement (AWS CDK uses boto3, not AWS CLI)
+   - [ ] Python packages match requirements.txt exactly
+   - [ ] System dependencies (Node.js, Git) are accurate for the packages used
+   - [ ] Resource descriptions match implementation in source code
+   - [ ] Configuration examples match actual config structure in code
    - [ ] Usage instructions are accurate and complete
 
    FORMATTING (markdownlint compliance):
@@ -256,6 +282,7 @@ def main():
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     source_code = read_source_files(project_dir)
+    requirements = read_requirements_file(project_dir)
     readme_path = os.path.join(project_dir, 'README.md')
 
     if args.check:
@@ -274,7 +301,7 @@ def main():
         sys.exit(0)
 
     elif args.update:
-        new_readme = generate_readme(bedrock_client, source_code, bedrock_model_id, max_tokens_generate)
+        new_readme = generate_readme(bedrock_client, source_code, requirements, bedrock_model_id, max_tokens_generate)
 
         with open(readme_path, 'w', encoding='utf-8') as f:
             f.write(new_readme)
