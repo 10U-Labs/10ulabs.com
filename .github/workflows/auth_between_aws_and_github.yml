@@ -2,11 +2,6 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  conclude-infrastructure-must-exist:
-    name: Concluding infrastructure must exist
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'true'
   concluding-readme-should-not-be-updated:
     if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'false'
     name: Concluding README.md should not be updated
@@ -175,8 +170,8 @@ jobs:
         name: Dry run
         run: echo "DRY RUN - Would run integration tests"
   performing-static-analysis:
+    if: github.event.inputs.dry_run != 'true' && github.ref == 'refs/heads/main'
     name: Performing static analysis
-    needs: conclude-infrastructure-must-exist
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
