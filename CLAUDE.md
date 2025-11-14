@@ -90,19 +90,27 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 
 Use these flags in commit messages to control workflow behavior:
 
-**`[post-deployment]`** - Skip all pre-deployment steps, run only post-deployment tests
-- Skips: Static analysis, unit tests, integration tests, building, deployment
-- Runs: Post-deployment integration tests, E2E tests
-- Use when: Testing changes to post-deployment test files only
+**`[dry run]`** - Run all checks but skip actual deployment (same as skip-deploy)
+- Runs: Static analysis, unit tests, integration tests, building
+- Skips: Deployment step only
+- Use when: Testing changes without deploying to AWS
+- **CRITICAL**: When creating a PR for testing, include `[dry run]` in commit message or PR title
 
 **`[skip-deploy]`** or **`[skip deploy]`** - Run all checks but skip actual deployment
 - Runs: Static analysis, unit tests, integration tests, building
 - Skips: Deployment step only
 - Use when: Testing changes that don't need deployment
+- Note: Same behavior as `[dry run]`
+
+**`[post-deployment]`** - Skip all pre-deployment steps, run only E2E tests
+- Skips: Static analysis, unit tests, integration tests, building, deployment
+- Runs: E2E tests only
+- Use when: Testing changes to E2E test files only
 
 **Examples:**
-- `[post-deployment] Fix E2E DNS resolution tests` - Only runs post-deployment tests
+- `[dry run] Add idempotency to IAM role creation` - Runs all checks but no deployment
 - `[skip-deploy] Update CDK stack configuration` - Runs all checks but no deployment
+- `[post-deployment] Fix E2E DNS resolution tests` - Only runs E2E tests
 
 ### Git Branch Management
 
@@ -128,14 +136,14 @@ curl -s -X DELETE \
 3. **Use environment variables for credentials** - AWS credentials and tokens should come from environment variables
 4. **All checks must pass before pushing** - If any check fails (even pre-existing issues), understand why before pushing
 5. **Report pre-existing failures** - If checks fail on code you didn't modify, document this in commit message
-6. **Run post-deployment tests** - Run as many post-deployment tests as possible with environment credentials before pushing
+6. **Run all tests locally** - Run unit tests, integration tests, and E2E tests with environment credentials before pushing
 
 **Static analysis includes:** YAML linting, JSON linting, Markdown linting, Pylint, Mypy
-**Tests include:** Unit tests, pre-deployment integration tests, post-deployment integration tests, E2E tests
+**Tests include:** Unit tests, integration tests, E2E tests
 
 **Run ALL checks listed below for the infrastructure you're working on, not just checks for files you modified.**
 
-**Post-deployment tests:** Some tests require deployed infrastructure (WARM state) and will be skipped locally. Run all post-deployment tests that can execute with just AWS credentials from environment variables. This catches issues early before the CI/CD pipeline runs.
+**Note on E2E tests:** Some tests require deployed infrastructure (WARM state) and will be skipped locally. Run all tests with AWS credentials from environment variables - tests that can execute will run, others will skip. This catches issues early before the CI/CD pipeline runs.
 
 ---
 
@@ -486,10 +494,9 @@ pytest test/gmail_email_provider/test_e2e.py -v
 - [ ] Mypy passes with no errors
 
 **Tests:**
-- [ ] All relevant pre-deployment unit tests pass
-- [ ] All relevant pre-deployment integration tests pass (with environment variable credentials)
-- [ ] All relevant post-deployment integration tests pass (with environment variable credentials)
-- [ ] All relevant post-deployment E2E tests pass (with environment variable credentials)
+- [ ] All relevant unit tests pass
+- [ ] All relevant integration tests pass (with environment variable credentials)
+- [ ] All relevant E2E tests pass (with environment variable credentials, some may skip if WARM state not available)
 
 **General:**
 - [ ] Code changes are committed with clear, descriptive messages
