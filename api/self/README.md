@@ -138,43 +138,43 @@ config = {
 
 1. **Clone the repository and install dependencies:**
 
-```bash
-git clone <repository-url>
-cd <repository-name>
-pip install -r requirements.txt
-```
+   ```bash
+   git clone <repository-url>
+   cd <repository-name>
+   pip install -r requirements.txt
+   ```
 
 2. **Create your configuration file:**
 
-```bash
-cp config.example.py config.py
-# Edit config.py with your domain and settings
-```
+   ```bash
+   cp config.example.py config.py
+   # Edit config.py with your domain and settings
+   ```
 
 3. **Bootstrap CDK (if first time in this AWS account/region):**
 
-```bash
-cdk bootstrap
-```
+   ```bash
+   cdk bootstrap
+   ```
 
 4. **Store GitHub token in Secrets Manager:**
 
-```bash
-aws secretsmanager create-secret \
-  --name "github-token" \
-  --description "GitHub personal access token" \
-  --secret-string "your-github-token-here"
-```
+   ```bash
+   aws secretsmanager create-secret \
+     --name "github-token" \
+     --description "GitHub personal access token" \
+     --secret-string "your-github-token-here"
+   ```
 
 5. **Deploy the stack:**
 
-```bash
-cdk deploy ApiStack
-```
+   ```bash
+   cdk deploy ApiStack
+   ```
 
 6. **Note the outputs:**
 
-The deployment will output important values including:
+   The deployment will output important values including:
 
 - API Gateway URL
 - Custom domain name
