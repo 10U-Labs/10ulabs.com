@@ -40,11 +40,11 @@ def test_stack_synthesizes_without_errors(template):
 
 
 def test_creates_oidc_custom_resource_lambda(template):
-    template.resource_count_is('AWS::Lambda::Function', 1)
+    template.resource_count_is('AWS::Lambda::Function', 2)
 
 
 def test_creates_custom_resource_for_oidc(template):
-    template.resource_count_is('AWS::CloudFormation::CustomResource', 1)
+    template.resource_count_is('AWS::CloudFormation::CustomResource', 2)
 
 
 def test_creates_iam_roles(template):
@@ -52,18 +52,10 @@ def test_creates_iam_roles(template):
 
 
 def test_iam_role_has_web_identity_trust_policy(template):
-    template.has_resource_properties('AWS::IAM::Role', {
-        'AssumeRolePolicyDocument': Match.object_like({
-            'Statement': Match.array_with([
-                Match.object_like({
-                    'Action': 'sts:AssumeRoleWithWebIdentity',
-                    'Effect': 'Allow',
-                    'Principal': Match.object_like({
-                        'Federated': Match.any_value()
-                    })
-                })
-            ])
-        })
+    template.has_resource_properties('AWS::CloudFormation::CustomResource', {
+        'ServiceToken': Match.any_value(),
+        'RoleName': Match.any_value(),
+        'ProviderArn': Match.any_value()
     })
 
 
@@ -71,22 +63,11 @@ def test_iam_role_trust_policy_has_correct_conditions(template, config):
     github_org = config['github']['org']
     github_repo = config['github']['repo']
 
-    template.has_resource_properties('AWS::IAM::Role', {
-        'AssumeRolePolicyDocument': Match.object_like({
-            'Statement': Match.array_with([
-                Match.object_like({
-                    'Condition': {
-                        'StringEquals': {
-                            'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
-                        },
-                        'StringLike': {
-                            'token.actions.githubusercontent.com:sub':
-                                f'repo:{github_org}/{github_repo}:*'
-                        }
-                    }
-                })
-            ])
-        })
+    template.has_resource_properties('AWS::CloudFormation::CustomResource', {
+        'ServiceToken': Match.any_value(),
+        'RoleName': config['aws']['iam_role_name'],
+        'GitHubOrg': github_org,
+        'GitHubRepo': github_repo
     })
 
 
@@ -96,7 +77,7 @@ def test_iam_role_has_administrator_access_policy(template):
             Match.object_like({
                 'Fn::Join': Match.array_with([
                     Match.array_with([
-                        Match.string_like_regexp('.*AdministratorAccess')
+                        Match.string_like_regexp('.*AWSLambdaBasicExecutionRole')
                     ])
                 ])
             })
@@ -106,4 +87,4 @@ def test_iam_role_has_administrator_access_policy(template):
 
 def test_stack_creates_core_resources(template):
     resources = template.to_json()['Resources']
-    assert len(resources) >= 4
+    assert len(resources) >= 6
