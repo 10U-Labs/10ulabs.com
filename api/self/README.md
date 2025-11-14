@@ -1,74 +1,77 @@
 # 10U Labs API Infrastructure
 
-A serverless API infrastructure built with AWS CDK that deploys a REST API
-using API Gateway and Lambda, with custom domain support and GitHub
-self-hosted runner capabilities.
+A serverless AWS CDK infrastructure that creates a REST API with Lambda backend,
+featuring custom domain support, SSL/TLS certificates, and comprehensive
+logging. The infrastructure also includes components for GitHub self-hosted
+runners using ECS Fargate and EC2.
 
 ## Overview
 
-This infrastructure creates a production-ready serverless API with custom
-domain support, SSL/TLS encryption, and comprehensive logging. The stack
-also provisions resources for GitHub self-hosted runners using both ECS
-Fargate and EC2 instances.
+This CDK stack deploys a production-ready API Gateway REST API with Lambda
+functions, custom domain configuration, and integrated logging. The API
+provides health check and echo endpoints with CORS support enabled.
 
 ## Key Features
 
-- **Serverless Architecture**: API Gateway + Lambda for scalable,
-  cost-effective API hosting
-- **Custom Domain**: SSL/TLS certificate with Route53 DNS configuration
+- **Serverless Architecture**: Lambda-based API handlers with API Gateway
+- **Custom Domain**: SSL/TLS enabled subdomain with Route53 integration
+- **Comprehensive Logging**: CloudWatch logs for API Gateway and Lambda
 - **CORS Enabled**: Cross-origin resource sharing for web applications
-- **Comprehensive Logging**: CloudWatch logs for API access and Lambda
-  execution
-- **GitHub Integration**: Self-hosted runner infrastructure with ECR
-  repository and ECS cluster
+- **Infrastructure as Code**: Fully defined using AWS CDK Python
+- **Container Support**: ECS Fargate cluster for GitHub self-hosted runners
 - **Security**: IAM roles, security groups, and secrets management
 
 ## Resources Created
 
 ### Core API Infrastructure
 
-- **API Gateway REST API**: Main API endpoint with custom domain support
-- **Lambda Function**: Python 3.11 runtime handling API requests
-- **ACM Certificate**: SSL/TLS certificate for HTTPS endpoints
-- **Route53 A Record**: DNS alias record pointing to API Gateway
-- **CloudWatch Log Groups**: API access logs and Lambda execution logs
+- **API Gateway REST API**: RESTful API with custom domain and SSL
+- **Lambda Function**: Python 3.11 runtime with API request handling
+- **ACM Certificate**: SSL/TLS certificate for secure HTTPS connections
+- **Route53 A Record**: DNS alias record for custom subdomain
+- **CloudWatch Log Groups**: Access logs and Lambda execution logs
 
-### GitHub Runner Infrastructure
+### Supporting Infrastructure
 
-- **VPC**: Isolated network with public subnets for runner instances
-- **ECS Cluster**: Fargate cluster for containerized GitHub runners
-- **ECR Repository**: Docker image storage for runner containers
-- **ECS Task Definition**: Fargate task configuration with GitHub token
-- **IAM Roles**: EC2 instance profile and task execution roles
-- **Security Groups**: Network access control for runner instances
-- **Secrets Manager**: GitHub token and webhook secret storage
+- **VPC**: Isolated network with public subnets for containerized workloads
+- **ECS Cluster**: Fargate cluster for running GitHub self-hosted runners
+- **ECR Repository**: Container registry for runner Docker images
+- **IAM Roles**: Service roles for EC2 and ECS tasks
+- **Secrets Manager**: Secure storage for GitHub tokens and webhook secrets
+- **Security Groups**: Network access controls for runner instances
 
 ## Prerequisites
 
-- AWS CLI configured with appropriate permissions
-- AWS CDK v2 installed (`npm install -g aws-cdk`)
-- Python 3.8+ with pip
-- A Route53 hosted zone for your parent domain
-- GitHub personal access token stored in AWS Secrets Manager
+Before deploying this infrastructure, ensure you have:
 
-## Required AWS Permissions
+- **AWS Account**: With appropriate permissions for CDK deployment
+- **AWS Credentials**: Configured via AWS CLI or environment variables
+- **Node.js**: Version 14.x or later for AWS CDK CLI
+- **Python**: Version 3.8 or later with pip
+- **AWS CDK CLI**: Installed globally (`npm install -g aws-cdk`)
+- **Parent Domain**: Existing Route53 hosted zone for domain validation
 
-Your AWS credentials need permissions for:
+### Required Python Dependencies
 
-- API Gateway (create, update, delete)
-- Lambda (create, update, delete functions)
-- IAM (create roles and policies)
-- Route53 (create DNS records)
-- Certificate Manager (request certificates)
-- CloudWatch Logs (create log groups)
-- VPC, ECS, ECR (for runner infrastructure)
-- Secrets Manager (create and read secrets)
+```bash
+pip install aws-cdk-lib constructs
+```
 
 ## API Endpoints
 
-### GET /health
+The API provides the following endpoints:
 
-Health check endpoint returning service status.
+| Method | Path | Description | Response |
+|--------|------|-------------|----------|
+| GET | `/health` | Health check endpoint | Service status |
+| POST | `/v1/echo` | Echo request body | Echoed JSON data |
+| ANY | `/{proxy+}` | Catch-all route | 404 Not Found |
+
+### Health Check Endpoint
+
+```bash
+curl https://your-subdomain.example.com/health
+```
 
 **Response:**
 
@@ -80,17 +83,12 @@ Health check endpoint returning service status.
 }
 ```
 
-### POST /v1/echo
+### Echo Endpoint
 
-Echo endpoint that returns the posted JSON data.
-
-**Request Body:**
-
-```json
-{
-  "message": "Hello, World!",
-  "timestamp": "2024-01-01T00:00:00Z"
-}
+```bash
+curl -X POST https://your-subdomain.example.com/v1/echo \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello World"}'
 ```
 
 **Response:**
@@ -98,16 +96,15 @@ Echo endpoint that returns the posted JSON data.
 ```json
 {
   "echo": {
-    "message": "Hello, World!",
-    "timestamp": "2024-01-01T00:00:00Z"
+    "message": "Hello World"
   },
-  "received_at": "aws-request-id-here"
+  "received_at": "request-id-12345"
 }
 ```
 
 ## Configuration
 
-The stack requires a configuration dictionary with the following structure:
+The stack requires a configuration dictionary with domain and AWS settings:
 
 ```python
 config = {
@@ -115,129 +112,150 @@ config = {
         "parent": "example.com",
         "subdomain": "api.example.com"
     },
-    "naming": {
-        "vpc_name": "10ulabs-vpc",
-        "cluster_name": "github-runners",
-        "github_token_secret_name": "github-token",
-        "webhook_secret_name": "github-webhook-secret"
-    },
     "aws": {
         "vpc": {
             "cidr": "10.0.0.0/16",
             "max_azs": 2,
-            "nat_gateways": 0
+            "nat_gateways": 1,
+            "subnet_configuration": {
+                "public_subnet_cidr_mask": 24
+            }
+        },
+        "fargate_runners": {
+            "ecr_repository": "github-runners",
+            "cpu": "256",
+            "memory": "512",
+            "runner_labels": ["fargate", "linux"]
         }
     },
+    "naming": {
+        "vpc_name": "10ulabs-vpc",
+        "cluster_name": "github-runners",
+        "task_family": "github-runner",
+        "container_name": "runner",
+        "log_stream_prefix": "runner",
+        "github_token_secret_name": "github-token",
+        "webhook_secret_name": "webhook-secret"
+    },
     "github": {
-        "repo": "owner/repository"
+        "repo": "organization/repository"
     }
 }
 ```
 
 ## Deployment Instructions
 
-1. **Clone the repository and install dependencies:**
+1. **Clone the repository and navigate to the project directory:**
 
    ```bash
    git clone <repository-url>
-   cd <repository-name>
+   cd <project-directory>
+   ```
+
+2. **Install Python dependencies:**
+
+   ```bash
    pip install -r requirements.txt
    ```
 
-2. **Create your configuration file:**
-
-   ```bash
-   cp config.example.py config.py
-   # Edit config.py with your domain and settings
-   ```
-
-3. **Bootstrap CDK (if first time in this AWS account/region):**
+3. **Bootstrap CDK (first time only):**
 
    ```bash
    cdk bootstrap
    ```
 
-4. **Store GitHub token in Secrets Manager:**
+4. **Create GitHub token secret in AWS Secrets Manager:**
 
    ```bash
    aws secretsmanager create-secret \
      --name "github-token" \
-     --description "GitHub personal access token" \
-     --secret-string "your-github-token-here"
+     --description "GitHub personal access token for runners" \
+     --secret-string "your-github-token"
    ```
 
 5. **Deploy the stack:**
 
    ```bash
-   cdk deploy ApiStack
+   cdk deploy
    ```
 
-6. **Note the outputs:**
+6. **Verify deployment:**
 
-   The deployment will output important values including:
-
-- API Gateway URL
-- Custom domain name
-- VPC and subnet IDs
-- ECR repository URI
+   ```bash
+   curl https://your-subdomain.example.com/health
+   ```
 
 ## Testing the API
 
-After deployment, test the endpoints:
+### Manual Testing
+
+Test the health endpoint:
 
 ```bash
-# Test health endpoint
-curl https://api.example.com/health
+curl -v https://your-subdomain.example.com/health
+```
 
-# Test echo endpoint
-curl -X POST https://api.example.com/v1/echo \
+Test the echo endpoint:
+
+```bash
+curl -X POST https://your-subdomain.example.com/v1/echo \
   -H "Content-Type: application/json" \
-  -d '{"message": "Hello from API!"}'
+  -d '{"test": "data", "timestamp": "2024-01-01T00:00:00Z"}'
+```
+
+### Error Handling
+
+Test invalid JSON:
+
+```bash
+curl -X POST https://your-subdomain.example.com/v1/echo \
+  -H "Content-Type: application/json" \
+  -d 'invalid-json'
+```
+
+Test non-existent endpoint:
+
+```bash
+curl https://your-subdomain.example.com/nonexistent
 ```
 
 ## Architecture Notes
 
 ### Serverless Design
 
-The API uses a serverless architecture with API Gateway handling HTTP
-requests and routing them to a single Lambda function. This approach
-provides:
-
-- **Auto-scaling**: Handles traffic spikes automatically
-- **Cost efficiency**: Pay only for actual requests
-- **Zero maintenance**: No server management required
+- **Lambda Functions**: Handle API requests with automatic scaling
+- **API Gateway**: Manages routing, throttling, and request/response
+- **Event-Driven**: Pay-per-request pricing model
 
 ### Security Features
 
-- **HTTPS Only**: All traffic encrypted with ACM certificate
-- **CORS Enabled**: Configured for cross-origin web requests
-- **IAM Integration**: API Gateway uses IAM for authentication (when enabled)
-- **VPC Isolation**: Runner infrastructure isolated in dedicated VPC
+- **SSL/TLS**: End-to-end encryption with ACM certificates
+- **CORS**: Configured for cross-origin web application support
+- **IAM Roles**: Least-privilege access for all services
+- **VPC Isolation**: Network segmentation for containerized workloads
 
 ### Monitoring and Logging
 
-- **API Access Logs**: All requests logged to CloudWatch
-- **Lambda Execution Logs**: Function execution details and errors
-- **Retention Policies**: Automatic log cleanup (1 week to 1 month)
+- **Access Logs**: API Gateway request/response logging in CLF format
+- **Lambda Logs**: Function execution logs with configurable retention
+- **CloudWatch Integration**: Metrics and alarms for operational monitoring
 
-### GitHub Runner Integration
+### Scalability
 
-The infrastructure supports both Fargate and EC2 based GitHub self-hosted
-runners:
+- **Auto Scaling**: Lambda functions scale automatically with demand
+- **Multi-AZ**: VPC spans multiple availability zones for resilience
+- **Container Orchestration**: ECS Fargate for scalable runner instances
 
-- **Fargate Runners**: Containerized, fully managed compute
-- **EC2 Runners**: Traditional instances with custom AMIs
-- **Shared Resources**: VPC, security groups, and secrets
+## Outputs
 
-## Outputs and Integration
+The stack exports the following values for use by other stacks:
 
-The stack exports numerous CloudFormation outputs for integration with
-other stacks:
+- API Gateway URL and domain information
+- VPC and subnet identifiers
+- ECS cluster and task definition ARNs
+- ECR repository details
+- IAM role names and ARNs
+- Secrets Manager secret names
 
-- API Gateway IDs for adding new routes
-- VPC and subnet IDs for additional resources
-- Security group IDs for network access
-- ECR repository details for container builds
-
-These exports enable modular infrastructure deployment and cross-stack
-resource sharing.
+These outputs enable integration with additional infrastructure components
+and facilitate modular CDK stack composition.
