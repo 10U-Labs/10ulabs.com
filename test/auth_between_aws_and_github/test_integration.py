@@ -26,7 +26,7 @@ class TestDeployedOIDCProvider:
             OpenIDConnectProviderArn=provider_arn
         )
 
-        assert response['Url'] == 'https://token.actions.githubusercontent.com'
+        assert response['Url'] == 'token.actions.githubusercontent.com'
 
     def test_oidc_provider_has_correct_thumbprint(self, iam_client, config):
         account_id = config['aws']['account_id']
