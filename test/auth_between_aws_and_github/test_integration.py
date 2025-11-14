@@ -1,9 +1,6 @@
 import json
-import importlib.util
+import boto3
 from pathlib import Path
-
-import aws_cdk as cdk
-from aws_cdk.assertions import Template, Match, Capture
 import pytest
 
 
@@ -15,283 +12,107 @@ def config():
 
 
 @pytest.fixture
-def stack(config):
-    stack_path = Path(__file__).parent.parent.parent / 'src' / 'auth_between_aws_and_github' / 'stack.py'
-    spec = importlib.util.spec_from_file_location("auth_stack", stack_path)
-    auth_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(auth_module)
-    AuthBetweenAwsAndGithubStack = auth_module.AuthBetweenAwsAndGithubStack
+def iam_client(config):
+    return boto3.client('iam', region_name=config['aws']['region'])
 
-    app = cdk.App()
-    return AuthBetweenAwsAndGithubStack(
-        app,
-        'AuthBetweenAwsAndGithub',
-        config=config,
-        env=cdk.Environment(
-            account=config['aws']['account_id'],
-            region=config['aws']['region']
+
+class TestDeployedOIDCProvider:
+
+    def test_oidc_provider_exists_in_aws(self, iam_client, config):
+        account_id = config['aws']['account_id']
+        provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
+
+        response = iam_client.get_open_id_connect_provider(
+            OpenIDConnectProviderArn=provider_arn
         )
-    )
+
+        assert response['Url'] == 'https://token.actions.githubusercontent.com'
+
+    def test_oidc_provider_has_correct_thumbprint(self, iam_client, config):
+        account_id = config['aws']['account_id']
+        provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
+
+        response = iam_client.get_open_id_connect_provider(
+            OpenIDConnectProviderArn=provider_arn
+        )
+
+        assert '6938fd4d98bab03faadb97b34396831e3780aea1' in response['ThumbprintList']
+
+    def test_oidc_provider_has_correct_client_id(self, iam_client, config):
+        account_id = config['aws']['account_id']
+        provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
+
+        response = iam_client.get_open_id_connect_provider(
+            OpenIDConnectProviderArn=provider_arn
+        )
+
+        assert 'sts.amazonaws.com' in response['ClientIDList']
 
 
-@pytest.fixture
-def template(stack):
-    return Template.from_stack(stack)
+class TestDeployedIAMRole:
 
+    def test_iam_role_exists_in_aws(self, iam_client, config):
+        role_name = config['aws']['iam_role_name']
 
-class TestOIDCProviderConstruct:
+        response = iam_client.get_role(RoleName=role_name)
 
-    def test_oidc_provider_lambda_has_correct_permissions(self, template):
-        template.has_resource_properties('AWS::IAM::Role', {
-            'AssumeRolePolicyDocument': Match.object_like({
-                'Statement': Match.array_with([
-                    Match.object_like({
-                        'Principal': Match.object_like({
-                            'Service': 'lambda.amazonaws.com'
-                        })
-                    })
-                ])
-            }),
-            'ManagedPolicyArns': Match.array_with([
-                Match.object_like({
-                    'Fn::Join': Match.array_with([
-                        Match.array_with([
-                            Match.string_like_regexp('.*AWSLambdaBasicExecutionRole')
-                        ])
-                    ])
-                })
-            ])
-        })
+        assert response['Role']['RoleName'] == role_name
 
-    def test_oidc_custom_resource_receives_correct_properties(self, template):
-        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
-            'Url': 'https://token.actions.githubusercontent.com',
-            'ClientIds': ['sts.amazonaws.com'],
-            'Thumbprints': ['6938fd4d98bab03faadb97b34396831e3780aea1']
-        })
+    def test_iam_role_trust_policy_has_federated_principal(self, iam_client, config):
+        role_name = config['aws']['iam_role_name']
+        account_id = config['aws']['account_id']
+        expected_provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
 
+        response = iam_client.get_role(RoleName=role_name)
+        trust_policy = response['Role']['AssumeRolePolicyDocument']
 
-class TestIAMRoleConstruct:
+        federated_principals = [
+            stmt['Principal'].get('Federated')
+            for stmt in trust_policy['Statement']
+            if 'Federated' in stmt.get('Principal', {})
+        ]
 
-    def test_iam_role_custom_resource_receives_config_values(self, template, config):
-        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
-            'RoleName': config['aws']['iam_role_name'],
-            'GitHubOrg': config['github']['org'],
-            'GitHubRepo': config['github']['repo']
-        })
+        assert expected_provider_arn in federated_principals
 
-    def test_iam_role_custom_resource_depends_on_oidc_provider(self, template):
-        resources = template.to_json()['Resources']
-        custom_resources = {k: v for k, v in resources.items()
-                          if v.get('Type') == 'AWS::CloudFormation::CustomResource'}
+    def test_iam_role_trust_policy_has_correct_audience_condition(self, iam_client, config):
+        role_name = config['aws']['iam_role_name']
 
-        oidc_cr = None
-        role_cr = None
+        response = iam_client.get_role(RoleName=role_name)
+        trust_policy = response['Role']['AssumeRolePolicyDocument']
 
-        for key, resource in custom_resources.items():
-            props = resource.get('Properties', {})
-            if 'Url' in props:
-                oidc_cr = key
-            elif 'RoleName' in props:
-                role_cr = key
+        has_aud_condition = False
+        for stmt in trust_policy['Statement']:
+            condition = stmt.get('Condition', {})
+            string_equals = condition.get('StringEquals', {})
+            if 'token.actions.githubusercontent.com:aud' in string_equals:
+                assert string_equals['token.actions.githubusercontent.com:aud'] == 'sts.amazonaws.com'
+                has_aud_condition = True
 
-        assert oidc_cr is not None
-        assert role_cr is not None
+        assert has_aud_condition
 
+    def test_iam_role_trust_policy_has_correct_subject_condition(self, iam_client, config):
+        role_name = config['aws']['iam_role_name']
+        github_org = config['github']['org']
+        github_repo = config['github']['repo']
+        expected_pattern = f"repo:{github_org}/{github_repo}:*"
 
-class TestComponentIntegration:
+        response = iam_client.get_role(RoleName=role_name)
+        trust_policy = response['Role']['AssumeRolePolicyDocument']
 
-    def test_lambda_functions_are_created_before_custom_resources(self, template):
-        resources = template.to_json()['Resources']
+        has_sub_condition = False
+        for stmt in trust_policy['Statement']:
+            condition = stmt.get('Condition', {})
+            string_like = condition.get('StringLike', {})
+            if 'token.actions.githubusercontent.com:sub' in string_like:
+                assert string_like['token.actions.githubusercontent.com:sub'] == expected_pattern
+                has_sub_condition = True
 
-        lambda_functions = [k for k, v in resources.items()
-                          if v.get('Type') == 'AWS::Lambda::Function']
-        custom_resources = [k for k, v in resources.items()
-                          if v.get('Type') == 'AWS::CloudFormation::CustomResource']
+        assert has_sub_condition
 
-        assert len(lambda_functions) == 2
-        assert len(custom_resources) == 2
+    def test_iam_role_has_administrator_access_policy(self, iam_client, config):
+        role_name = config['aws']['iam_role_name']
 
-    def test_custom_resources_reference_lambda_functions(self, template):
-        resources = template.to_json()['Resources']
+        response = iam_client.list_attached_role_policies(RoleName=role_name)
 
-        lambda_function_refs = set()
-        for key, resource in resources.items():
-            if resource.get('Type') == 'AWS::Lambda::Function':
-                lambda_function_refs.add(key)
-
-        custom_resource_service_tokens = []
-        for key, resource in resources.items():
-            if resource.get('Type') == 'AWS::CloudFormation::CustomResource':
-                service_token = resource.get('Properties', {}).get('ServiceToken', {})
-                if 'Fn::GetAtt' in service_token:
-                    lambda_ref = service_token['Fn::GetAtt'][0]
-                    custom_resource_service_tokens.append(lambda_ref)
-
-        assert len(custom_resource_service_tokens) == 2
-        for token in custom_resource_service_tokens:
-            assert token in lambda_function_refs
-
-    def test_secrets_manager_secret_is_imported_not_created(self, template):
-        resources = template.to_json()['Resources']
-
-        secrets = [v for v in resources.values()
-                  if v.get('Type') == 'AWS::SecretsManager::Secret']
-
-        assert len(secrets) == 0
-
-    def test_stack_outputs_include_role_arn(self, stack):
-        assert hasattr(stack, 'role_arn')
-
-    def test_stack_outputs_include_secret_arn(self, stack):
-        assert hasattr(stack, 'secret_arn')
-
-    def test_stack_outputs_include_provider_arn(self, stack):
-        assert hasattr(stack, 'provider_arn')
-
-
-class TestConfigurationPropagation:
-
-    def test_config_values_propagate_to_custom_resources(self, template, config):
-        capture_role_name = Capture()
-        capture_org = Capture()
-        capture_repo = Capture()
-
-        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
-            'RoleName': capture_role_name,
-            'GitHubOrg': capture_org,
-            'GitHubRepo': capture_repo
-        })
-
-        assert capture_role_name.as_string() == config['aws']['iam_role_name']
-        assert capture_org.as_string() == config['github']['org']
-        assert capture_repo.as_string() == config['github']['repo']
-
-    def test_github_thumbprint_is_hardcoded(self, template):
-        capture_thumbprints = Capture()
-
-        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
-            'Thumbprints': capture_thumbprints
-        })
-
-        thumbprints = capture_thumbprints.as_array()
-        assert '6938fd4d98bab03faadb97b34396831e3780aea1' in thumbprints
-
-    def test_oidc_audience_is_sts(self, template):
-        capture_client_ids = Capture()
-
-        template.has_resource_properties('AWS::CloudFormation::CustomResource', {
-            'ClientIds': capture_client_ids
-        })
-
-        client_ids = capture_client_ids.as_array()
-        assert 'sts.amazonaws.com' in client_ids
-
-
-class TestResourceNaming:
-
-    def test_custom_resources_have_logical_names(self, template):
-        resources = template.to_json()['Resources']
-
-        custom_resource_keys = [k for k, v in resources.items()
-                               if v.get('Type') == 'AWS::CloudFormation::CustomResource']
-
-        assert len(custom_resource_keys) == 2
-        for key in custom_resource_keys:
-            assert len(key) > 0
-            assert key[0].isupper()
-
-    def test_lambda_functions_have_logical_names(self, template):
-        resources = template.to_json()['Resources']
-
-        lambda_keys = [k for k, v in resources.items()
-                      if v.get('Type') == 'AWS::Lambda::Function']
-
-        assert len(lambda_keys) == 2
-        for key in lambda_keys:
-            assert len(key) > 0
-            assert key[0].isupper()
-
-    def test_iam_roles_have_logical_names(self, template):
-        resources = template.to_json()['Resources']
-
-        role_keys = [k for k, v in resources.items()
-                    if v.get('Type') == 'AWS::IAM::Role']
-
-        assert len(role_keys) == 2
-        for key in role_keys:
-            assert len(key) > 0
-            assert key[0].isupper()
-
-
-class TestLambdaRolePermissions:
-
-    def test_oidc_lambda_role_has_inline_policy_oidc_provider_management(self, template):
-        template.has_resource_properties('AWS::IAM::Role', {
-            'Policies': Match.array_with([
-                Match.object_like({
-                    'PolicyName': 'OIDCProviderManagement'
-                })
-            ])
-        })
-
-    def test_oidc_lambda_role_inline_policy_has_required_oidc_actions(self, template):
-        resources = template.to_json()['Resources']
-        oidc_role = None
-        for key, resource in resources.items():
-            if resource.get('Type') == 'AWS::IAM::Role':
-                policies = resource.get('Properties', {}).get('Policies', [])
-                for policy in policies:
-                    if policy.get('PolicyName') == 'OIDCProviderManagement':
-                        oidc_role = policy
-                        break
-
-        required_actions = {
-            'iam:CreateOpenIDConnectProvider',
-            'iam:GetOpenIDConnectProvider',
-            'iam:DeleteOpenIDConnectProvider',
-            'iam:ListOpenIDConnectProviders'
-        }
-
-        policy_actions = set()
-        for statement in oidc_role['PolicyDocument']['Statement']:
-            policy_actions.update(statement.get('Action', []))
-
-        assert required_actions.issubset(policy_actions)
-
-    def test_iam_role_lambda_role_has_inline_policy_iam_role_management(self, template):
-        template.has_resource_properties('AWS::IAM::Role', {
-            'Policies': Match.array_with([
-                Match.object_like({
-                    'PolicyName': 'IAMRoleManagement'
-                })
-            ])
-        })
-
-    def test_iam_role_lambda_role_inline_policy_has_required_iam_actions(self, template):
-        resources = template.to_json()['Resources']
-        iam_role = None
-        for key, resource in resources.items():
-            if resource.get('Type') == 'AWS::IAM::Role':
-                policies = resource.get('Properties', {}).get('Policies', [])
-                for policy in policies:
-                    if policy.get('PolicyName') == 'IAMRoleManagement':
-                        iam_role = policy
-                        break
-
-        required_actions = {
-            'iam:CreateRole',
-            'iam:GetRole',
-            'iam:DeleteRole',
-            'iam:AttachRolePolicy',
-            'iam:DetachRolePolicy',
-            'iam:PutRolePolicy',
-            'iam:DeleteRolePolicy',
-            'iam:UpdateAssumeRolePolicy'
-        }
-
-        policy_actions = set()
-        for statement in iam_role['PolicyDocument']['Statement']:
-            policy_actions.update(statement.get('Action', []))
-
-        assert required_actions.issubset(policy_actions)
+        policy_arns = [p['PolicyArn'] for p in response['AttachedPolicies']]
+        assert 'arn:aws:iam::aws:policy/AdministratorAccess' in policy_arns
