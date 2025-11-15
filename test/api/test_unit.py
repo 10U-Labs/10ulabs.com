@@ -3,9 +3,9 @@ import sys
 from pathlib import Path
 import importlib.util
 from unittest.mock import Mock, patch
+import yaml
 import aws_cdk as cdk
 from aws_cdk.assertions import Template
-import requests
 
 
 def test_config_file_exists_in_correct_location():
@@ -640,3 +640,339 @@ def test_readme_config_has_max_tokens_generate():
     with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     assert "max_tokens_generate" in config.get("aws", {}).get("bedrock", {})
+
+
+def test_lambda_handler_docs_endpoint_returns_200_status_code():
+    event = {'path': '/', 'httpMethod': 'GET'}
+    context = Mock()
+    response = docs.handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_docs_endpoint_returns_html_content_type():
+    event = {'path': '/', 'httpMethod': 'GET'}
+    context = Mock()
+    response = docs.handler(event, context)
+    assert response['headers']['Content-Type'] == 'text/html'
+
+
+def test_lambda_handler_docs_endpoint_returns_cors_header():
+    event = {'path': '/', 'httpMethod': 'GET'}
+    context = Mock()
+    response = docs.handler(event, context)
+    assert response['headers']['Access-Control-Allow-Origin'] == '*'
+
+
+def test_lambda_handler_docs_endpoint_body_contains_html():
+    event = {'path': '/', 'httpMethod': 'GET'}
+    context = Mock()
+    response = docs.handler(event, context)
+    assert '<html' in response['body'].lower()
+
+
+def test_lambda_handler_docs_endpoint_body_contains_swagger():
+    event = {'path': '/', 'httpMethod': 'GET'}
+    context = Mock()
+    response = docs.handler(event, context)
+    assert 'swagger' in response['body'].lower()
+
+
+def test_api_has_vpc():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::EC2::VPC", 1)
+
+
+def test_api_has_ecr_repository():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::ECR::Repository", 1)
+
+
+def test_api_has_ecs_cluster():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::ECS::Cluster", 1)
+
+
+def test_api_has_cloudfront_distribution():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::CloudFront::Distribution", 1)
+
+
+def test_api_has_waf_web_acl():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::WAFv2::WebACL", 1)
+
+
+def test_validate_root_endpoint_returns_true_on_success():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.text = '<html>swagger</html>'
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_root_endpoint('https://api.example.com')
+        assert success is True
+
+
+def test_validate_root_endpoint_returns_false_on_403():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 403
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_root_endpoint('https://api.example.com')
+        assert success is False
+
+
+def test_validate_root_endpoint_returns_message_on_403():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 403
+        mock_get.return_value = mock_response
+        _success, message = poll_api_until_it_has_propagated.validate_root_endpoint('https://api.example.com')
+        assert 'WAF' in message or '403' in message
+
+
+def test_validate_health_endpoint_returns_true_on_success():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'status': 'healthy'}
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_health_endpoint('https://api.example.com')
+        assert success is True
+
+
+def test_validate_health_endpoint_returns_false_on_wrong_status():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'status': 'unhealthy'}
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_health_endpoint('https://api.example.com')
+        assert success is False
+
+
+def test_validate_health_endpoint_returns_false_on_missing_status():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {}
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_health_endpoint('https://api.example.com')
+        assert success is False
+
+
+def test_validate_echo_endpoint_returns_true_on_success():
+    with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'echo': {'test': 'data'}, 'received_at': '2024-01-01'}
+        mock_post.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_echo_endpoint('https://api.example.com')
+        assert success is True
+
+
+def test_validate_echo_endpoint_returns_false_on_wrong_status():
+    with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+        mock_response = Mock()
+        mock_response.status_code = 500
+        mock_post.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_echo_endpoint('https://api.example.com')
+        assert success is False
+
+
+def test_validate_echo_endpoint_returns_false_on_missing_echo_field():
+    with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'received_at': '2024-01-01'}
+        mock_post.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_echo_endpoint('https://api.example.com')
+        assert success is False
+
+
+def test_validate_invalid_endpoint_returns_true_on_404():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_invalid_endpoint('https://api.example.com')
+        assert success is True
+
+
+def test_validate_invalid_endpoint_returns_false_on_200():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+        success, _message = poll_api_until_it_has_propagated.validate_invalid_endpoint('https://api.example.com')
+        assert success is False
+
+
+def test_validate_invalid_endpoint_returns_message_on_non_404():
+    with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+        _success, message = poll_api_until_it_has_propagated.validate_invalid_endpoint('https://api.example.com')
+        assert '404' in message
+
+
+def test_openapi_spec_file_exists():
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
+    assert openapi_path.exists()
+
+
+def test_openapi_spec_has_paths():
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
+    with open(openapi_path, encoding='utf-8') as f:
+        spec = yaml.safe_load(f)
+    assert 'paths' in spec
+
+
+def test_openapi_spec_has_root_path():
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
+    with open(openapi_path, encoding='utf-8') as f:
+        spec = yaml.safe_load(f)
+    assert '/' in spec['paths']
+
+
+def test_openapi_spec_has_health_path():
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
+    with open(openapi_path, encoding='utf-8') as f:
+        spec = yaml.safe_load(f)
+    assert '/health' in spec['paths']
+
+
+def test_openapi_spec_has_echo_path():
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
+    with open(openapi_path, encoding='utf-8') as f:
+        spec = yaml.safe_load(f)
+    assert '/v1/echo' in spec['paths']
+
+
+def test_api_has_three_lambda_functions():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    resources = template.find_resources("AWS::Lambda::Function")
+    assert len(resources) >= 3
+
+
+def test_health_endpoint_handler_file_exists():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
+    assert handler_path.exists()
+
+
+def test_echo_endpoint_handler_file_exists():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "echo" / "handler.py"
+    assert handler_path.exists()
+
+
+def test_docs_endpoint_handler_file_exists():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "root" / "handler.py"
+    assert handler_path.exists()
