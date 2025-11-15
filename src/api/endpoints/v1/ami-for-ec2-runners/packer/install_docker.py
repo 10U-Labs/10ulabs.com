@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
-from pathlib import Path
 
 
 def run_command(cmd, check=True):
@@ -36,7 +35,7 @@ def main():
     arch = arch_result.stdout.strip()
 
     codename = None
-    with open('/etc/os-release', 'r') as f:
+    with open('/etc/os-release', 'r', encoding='utf-8') as f:
         for line in f:
             if line.startswith('VERSION_CODENAME='):
                 codename = line.split('=')[1].strip().strip('"')
@@ -49,12 +48,13 @@ def main():
     print(f"Adding Docker repository for {arch} / {codename}...")
     repo_line = f'deb [arch={arch} signed-by={gpg_path}] https://download.docker.com/linux/debian {codename} stable\n'
 
-    with open('/tmp/docker.list', 'w') as f:
+    with open('/tmp/docker.list', 'w', encoding='utf-8') as f:
         f.write(repo_line)
 
-    subprocess.run([
-        'sudo', 'tee', '/etc/apt/sources.list.d/docker.list'
-    ], stdin=open('/tmp/docker.list'), stdout=subprocess.DEVNULL, check=True)
+    with open('/tmp/docker.list', encoding='utf-8') as docker_list_file:
+        subprocess.run([
+            'sudo', 'tee', '/etc/apt/sources.list.d/docker.list'
+        ], stdin=docker_list_file, stdout=subprocess.DEVNULL, check=True)
 
     print("Installing Docker packages...")
     run_command(['sudo', 'apt-get', 'update'])

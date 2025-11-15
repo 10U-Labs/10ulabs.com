@@ -196,7 +196,7 @@ jobs:
           jsonlint -q src/api/infrastructure/cdk.json
       - name: Linting Python files
         run: |
-          pylint src/api/infrastructure/stack.py src/api/infrastructure/app.py src/api/endpoints/root/handler.py src/api/endpoints/health/handler.py src/api/endpoints/v1/echo/handler.py src/api/infrastructure/poll_api_until_it_has_propagated.py \
+          find src/api -name "*.py" -type f | xargs pylint \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -205,7 +205,8 @@ jobs:
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/api/infrastructure scripts/readme.py
+          find src/api -name "*.py" -type f -exec python -m mypy {} \;
+          python -m mypy scripts/readme.py
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis

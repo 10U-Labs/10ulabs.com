@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import argparse
-import os
-import shutil
 import subprocess
 import sys
-import tarfile
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -27,7 +25,7 @@ def main():
     print(f"Downloading from {download_url}...")
     try:
         urllib.request.urlretrieve(download_url, tarball_path)
-    except Exception as e:
+    except (urllib.error.URLError, OSError) as e:
         print(f"ERROR: Failed to download runner: {e}")
         sys.exit(1)
 

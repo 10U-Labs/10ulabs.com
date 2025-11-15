@@ -1,8 +1,9 @@
 import json
 import logging
 import os
+from typing import Dict, Any
 import boto3
-from typing import Dict, Any, Optional
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -11,7 +12,7 @@ ec2 = boto3.client('ec2')
 ssm = boto3.client('ssm')
 
 
-def launch_packer_builder(config: Dict[str, Any]) -> Dict[str, Any]:
+def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
     subnet_ids = os.environ['SUBNETS'].split(',')
     security_group_id = os.environ['SECURITY_GROUPS']
     instance_types = os.environ.get('PACKER_INSTANCE_TYPES', 't4g.large,t4g.medium,t4g.small').split(',')
@@ -79,15 +80,15 @@ aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region {os.environ.get
                     ]
                 }]
             )
-            logger.info(f"Launched Packer builder instance in subnet {subnet_id}")
+            logger.info("Launched Packer builder instance in subnet %s", subnet_id)
             break
-        except Exception as e:
+        except ClientError as e:
             error_msg = str(e)
             if 'InsufficientInstanceCapacity' in error_msg:
-                logger.warning(f"No capacity in subnet {subnet_id}, trying next AZ...")
+                logger.warning("No capacity in subnet %s, trying next AZ...", subnet_id)
                 last_error = e
                 continue
-            logger.error(f"Error launching Packer builder: {e}")
+            logger.error("Error launching Packer builder: %s", e)
             return {
                 'success': False,
                 'error': str(e)
@@ -95,19 +96,19 @@ aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region {os.environ.get
 
     if response and response['Instances']:
         instance_id = response['Instances'][0]['InstanceId']
-        logger.info(f"✅ Launched Packer builder: {instance_id}")
+        logger.info("✅ Launched Packer builder: %s", instance_id)
         return {
             'success': True,
             'instance_id': instance_id,
             'message': 'AMI build started'
         }
-    else:
-        error_detail = str(last_error) if last_error else 'No instances launched'
-        logger.error(f"❌ Failed to launch Packer builder: {error_detail}")
-        return {
-            'success': False,
-            'error': error_detail
-        }
+
+    error_detail = str(last_error) if last_error else 'No instances launched'
+    logger.error("❌ Failed to launch Packer builder: %s", error_detail)
+    return {
+        'success': False,
+        'error': error_detail
+    }
 
 
 def list_amis() -> Dict[str, Any]:
@@ -132,14 +133,14 @@ def list_amis() -> Dict[str, Any]:
 
         amis.sort(key=lambda x: x['creation_date'], reverse=True)
 
-        logger.info(f"Listed {len(amis)} AMIs")
+        logger.info("Listed %s AMIs", len(amis))
         return {
             'success': True,
             'amis': amis,
             'count': len(amis)
         }
-    except Exception as e:
-        logger.error(f"Error listing AMIs: {e}")
+    except ClientError as e:
+        logger.error("Error listing AMIs: %s", e)
         return {
             'success': False,
             'error': str(e)
@@ -161,14 +162,14 @@ def deregister_ami(ami_id: str) -> Dict[str, Any]:
                 snapshot_ids.append(mapping['Ebs']['SnapshotId'])
 
         ec2.deregister_image(ImageId=ami_id)
-        logger.info(f"Deregistered AMI: {ami_id}")
+        logger.info("Deregistered AMI: %s", ami_id)
 
         for snapshot_id in snapshot_ids:
             try:
                 ec2.delete_snapshot(SnapshotId=snapshot_id)
-                logger.info(f"Deleted snapshot: {snapshot_id}")
-            except Exception as e:
-                logger.warning(f"Failed to delete snapshot {snapshot_id}: {e}")
+                logger.info("Deleted snapshot: %s", snapshot_id)
+            except ClientError as e:
+                logger.warning("Failed to delete snapshot %s: %s", snapshot_id, e)
 
         return {
             'success': True,
@@ -176,103 +177,95 @@ def deregister_ami(ami_id: str) -> Dict[str, Any]:
             'deleted_snapshots': snapshot_ids,
             'message': f'AMI {ami_id} deregistered successfully'
         }
-    except Exception as e:
-        logger.error(f"Error deregistering AMI {ami_id}: {e}")
+    except ClientError as e:
+        logger.error("Error deregistering AMI %s: %s", ami_id, e)
         return {
             'success': False,
             'error': str(e)
         }
 
 
-def lambda_handler(event, context):
-    logger.info(f"Received API request: {json.dumps(event)}")
-
-    http_method = event.get('httpMethod', '')
-    path = event.get('path', '')
-
-    if http_method == 'POST':
-        try:
-            if isinstance(event.get('body'), str):
-                body = json.loads(event['body'])
-            else:
-                body = event.get('body', {})
-
-            result = launch_packer_builder(body)
-
-            if result['success']:
-                return {
-                    'statusCode': 200,
-                    'headers': {'Content-Type': 'application/json'},
-                    'body': json.dumps(result)
-                }
-            else:
-                return {
-                    'statusCode': 500,
-                    'headers': {'Content-Type': 'application/json'},
-                    'body': json.dumps(result)
-                }
-        except Exception as e:
-            logger.error(f"Error handling POST request: {e}", exc_info=True)
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({
-                    'success': False,
-                    'error': 'Internal server error',
-                    'details': str(e)
-                })
-            }
-
-    elif http_method == 'GET':
-        result = list_amis()
-
-        if result['success']:
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps(result)
-            }
+def _handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        if isinstance(event.get('body'), str):
+            body = json.loads(event['body'])
         else:
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps(result)
-            }
+            body = event.get('body', {})
 
-    elif http_method == 'DELETE':
-        path_params = event.get('pathParameters', {})
-        ami_id = path_params.get('ami_id')
+        result = launch_packer_builder(body)
 
-        if not ami_id:
-            return {
-                'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({
-                    'success': False,
-                    'error': 'Missing required path parameter: ami_id'
-                })
-            }
-
-        result = deregister_ami(ami_id)
-
-        if result['success']:
-            return {
-                'statusCode': 200,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps(result)
-            }
-        else:
-            return {
-                'statusCode': 500,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps(result)
-            }
-
-    else:
+        status_code = 200 if result['success'] else 500
         return {
-            'statusCode': 405,
+            'statusCode': status_code,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps(result)
+        }
+    except (ValueError, KeyError) as e:
+        logger.error("Error handling POST request: %s", e, exc_info=True)
+        return {
+            'statusCode': 500,
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({
-                'error': 'Method not allowed'
+                'success': False,
+                'error': 'Internal server error',
+                'details': str(e)
             })
         }
+
+
+def _handle_get() -> Dict[str, Any]:
+    result = list_amis()
+
+    status_code = 200 if result['success'] else 500
+    return {
+        'statusCode': status_code,
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps(result)
+    }
+
+
+def _handle_delete(event: Dict[str, Any]) -> Dict[str, Any]:
+    path_params = event.get('pathParameters', {})
+    ami_id = path_params.get('ami_id')
+
+    if not ami_id:
+        return {
+            'statusCode': 400,
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
+                'success': False,
+                'error': 'Missing required path parameter: ami_id'
+            })
+        }
+
+    result = deregister_ami(ami_id)
+
+    status_code = 200 if result['success'] else 500
+    return {
+        'statusCode': status_code,
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps(result)
+    }
+
+
+def lambda_handler(event, _context):
+    logger.info("Received API request: %s", json.dumps(event))
+
+    http_method = event.get('httpMethod', '')
+
+    if http_method == 'POST':
+        return _handle_post(event)
+
+    if http_method == 'GET':
+        return _handle_get()
+
+    if http_method == 'DELETE':
+        return _handle_delete(event)
+
+    return {
+        'statusCode': 405,
+        'headers': {'Content-Type': 'application/json'},
+        'body': json.dumps({
+            'error': 'Method not allowed'
+        })
+    }
