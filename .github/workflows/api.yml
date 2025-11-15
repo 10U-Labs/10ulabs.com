@@ -273,7 +273,19 @@ jobs:
             echo "No changes to README.md"
           else
             git commit -m "Update api README.md [skip ci]"
-            git push
+
+            for i in {1..5}; do
+              if git push; then
+                echo "Successfully pushed README update"
+                exit 0
+              fi
+              echo "Push failed (attempt $i/5), pulling and retrying..."
+              git pull --rebase origin main
+              sleep $((2 ** i))
+            done
+
+            echo "Failed to push after 5 attempts"
+            exit 1
           fi
 name: Ensuring API infrastructure exists and is properly configured
 on:
