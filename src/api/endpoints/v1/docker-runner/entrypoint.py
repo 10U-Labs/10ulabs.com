@@ -5,6 +5,7 @@ import signal
 import socket
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 
 
@@ -26,7 +27,7 @@ def get_registration_token(github_token, repo):
             if not token or token == 'null':
                 return None
             return token
-    except Exception as e:
+    except (urllib.error.URLError, ValueError) as e:
         print(f"Error getting registration token: {e}")
         return None
 
@@ -51,7 +52,6 @@ def main():
         sys.exit(1)
 
     runner_labels = os.environ.get('RUNNER_LABELS', 'fargate,general')
-    runner_group = os.environ.get('RUNNER_GROUP', 'default')
     runner_name = os.environ.get('RUNNER_NAME', f'fargate-runner-{socket.gethostname()}')
 
     print("Registering GitHub Actions runner...")
@@ -64,7 +64,7 @@ def main():
         print("Error: Failed to get registration token")
         sys.exit(1)
 
-    def signal_handler(signum, frame):
+    def signal_handler(_signum, _frame):
         cleanup_runner(registration_token)
         sys.exit(0)
 

@@ -10,7 +10,6 @@ This script:
 Run after infrastructure is deployed to enable webhook-triggered runners.
 """
 
-import json
 import subprocess
 import sys
 

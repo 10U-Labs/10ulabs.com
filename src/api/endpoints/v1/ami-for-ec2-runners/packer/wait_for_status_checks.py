@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 
@@ -31,7 +32,7 @@ def main():
         token = get_imds_token()
         instance_id = get_metadata(token, 'instance-id')
         region = get_metadata(token, 'placement/region')
-    except Exception as e:
+    except (urllib.error.URLError, OSError) as e:
         print(f"Error getting instance metadata: {e}")
         sys.exit(1)
 
