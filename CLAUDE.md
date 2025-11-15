@@ -86,6 +86,25 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 - Never use EC2 for application hosting when serverless alternatives exist
 - Benefits of serverless: no server management, automatic scaling, pay-per-use pricing, built-in high availability
 
+**CRITICAL: FUNCTIONS MUST HAVE SINGLE RETURN STATEMENT**
+- Each function must have exactly ONE return statement at the end of the function
+- Initialize result variables at the beginning of the function
+- Use error accumulation pattern: assign to result variable, then return at end
+- Example:
+```python
+def validate_endpoint(url: str) -> tuple[bool, str]:
+    result = (False, "Unknown error")
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            result = (False, f"Got {response.status_code}")
+        else:
+            result = (True, "Success")
+    except Exception as e:
+        result = (False, f"Error: {e}")
+    return result
+```
+
 ### Commit Message Flags
 
 Use these flags in commit messages to control workflow behavior:
