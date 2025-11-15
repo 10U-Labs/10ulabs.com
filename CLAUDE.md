@@ -339,7 +339,7 @@ jsonlint -q src/api/self/cdk.json
 #### 3. Python Code Linting (Pylint)
 **Use the exact workflow command with all the same flags:**
 ```bash
-pylint src/api/self/stack.py src/api/self/lambda/handler.py \
+pylint src/api/self/stack.py src/api/self/app.py src/api/self/lambda/handler.py src/api/self/poll_api_until_it_has_propagated.py \
   --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
   --fail-under=10.0
 ```
