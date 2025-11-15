@@ -506,7 +506,7 @@ def test_poll_until_propagated_does_not_sleep_after_final_attempt():
 
 def test_poll_script_main_exits_with_zero_on_success():
     with patch('poll_api_until_it_has_propagated.poll_until_propagated') as mock_poll:
-        with patch('sys.argv', ['script', 'https://api.example.com']):
+        with patch('sys.argv', ['script', '--api-endpoint', 'https://api.example.com']):
             with patch('sys.exit') as mock_exit:
                 mock_poll.return_value = True
                 poll_api_until_it_has_propagated.main()
@@ -515,7 +515,7 @@ def test_poll_script_main_exits_with_zero_on_success():
 
 def test_poll_script_main_exits_with_one_on_failure():
     with patch('poll_api_until_it_has_propagated.poll_until_propagated') as mock_poll:
-        with patch('sys.argv', ['script', 'https://api.example.com']):
+        with patch('sys.argv', ['script', '--api-endpoint', 'https://api.example.com']):
             with patch('sys.exit') as mock_exit:
                 mock_poll.return_value = False
                 poll_api_until_it_has_propagated.main()
@@ -524,7 +524,7 @@ def test_poll_script_main_exits_with_one_on_failure():
 
 def test_poll_script_main_strips_trailing_slash_from_endpoint():
     with patch('poll_api_until_it_has_propagated.poll_until_propagated') as mock_poll:
-        with patch('sys.argv', ['script', 'https://api.example.com/']):
+        with patch('sys.argv', ['script', '--api-endpoint', 'https://api.example.com/']):
             with patch('sys.exit'):
                 mock_poll.return_value = True
                 poll_api_until_it_has_propagated.main()
