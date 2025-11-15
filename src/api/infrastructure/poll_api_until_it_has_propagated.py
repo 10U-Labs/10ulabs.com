@@ -9,19 +9,17 @@ def validate_root_endpoint(api_endpoint: str) -> tuple[bool, str]:
     try:
         response = requests.get(f"{api_endpoint}/", timeout=10, allow_redirects=True)
 
+        error = None
         if response.status_code == 403:
-            return False, f"Root endpoint returned 403 Forbidden - likely WAF blocking or CloudFront not ready"
+            error = "Root endpoint returned 403 Forbidden - likely WAF blocking or CloudFront not ready"
+        elif response.status_code != 200:
+            error = f"Root endpoint returned {response.status_code}, expected 200"
+        elif 'text/html' not in response.headers.get('Content-Type', ''):
+            error = f"Root endpoint returned wrong content type: {response.headers.get('Content-Type')}"
+        elif 'swagger' not in response.text.lower():
+            error = "Root endpoint doesn't contain Swagger UI"
 
-        if response.status_code != 200:
-            return False, f"Root endpoint returned {response.status_code}, expected 200"
-
-        if 'text/html' not in response.headers.get('Content-Type', ''):
-            return False, f"Root endpoint returned wrong content type: {response.headers.get('Content-Type')}"
-
-        if 'swagger' not in response.text.lower():
-            return False, "Root endpoint doesn't contain Swagger UI"
-
-        return True, "Root endpoint (Swagger UI) working correctly"
+        return (False, error) if error else (True, "Root endpoint (Swagger UI) working correctly")
 
     except requests.exceptions.RequestException as e:
         return False, f"Root endpoint request failed: {e}"
@@ -31,25 +29,24 @@ def validate_health_endpoint(api_endpoint: str) -> tuple[bool, str]:
     try:
         response = requests.get(f"{api_endpoint}/health", timeout=10, allow_redirects=True)
 
+        error = None
         if response.status_code == 403:
-            return False, f"Health endpoint returned 403 Forbidden - likely WAF blocking"
+            error = "Health endpoint returned 403 Forbidden - likely WAF blocking"
+        elif response.status_code != 200:
+            error = f"Health endpoint returned {response.status_code}, expected 200"
+        elif 'application/json' not in response.headers.get('Content-Type', ''):
+            error = f"Health endpoint returned wrong content type: {response.headers.get('Content-Type')}"
+        else:
+            try:
+                body = response.json()
+                if body.get('status') != 'healthy':
+                    error = f"Health endpoint returned unexpected status: {body.get('status')}"
+                elif body.get('service') != '10U Labs API':
+                    error = f"Health endpoint returned unexpected service: {body.get('service')}"
+            except json.JSONDecodeError:
+                error = "Health endpoint returned invalid JSON"
 
-        if response.status_code != 200:
-            return False, f"Health endpoint returned {response.status_code}, expected 200"
-
-        if 'application/json' not in response.headers.get('Content-Type', ''):
-            return False, f"Health endpoint returned wrong content type: {response.headers.get('Content-Type')}"
-
-        try:
-            body = response.json()
-            if body.get('status') != 'healthy':
-                return False, f"Health endpoint returned unexpected status: {body.get('status')}"
-            if body.get('service') != '10U Labs API':
-                return False, f"Health endpoint returned unexpected service: {body.get('service')}"
-        except json.JSONDecodeError:
-            return False, "Health endpoint returned invalid JSON"
-
-        return True, "Health endpoint working correctly"
+        return (False, error) if error else (True, "Health endpoint working correctly")
 
     except requests.exceptions.RequestException as e:
         return False, f"Health endpoint request failed: {e}"
@@ -65,27 +62,26 @@ def validate_echo_endpoint(api_endpoint: str) -> tuple[bool, str]:
             allow_redirects=True
         )
 
+        error = None
         if response.status_code == 403:
-            return False, f"Echo endpoint returned 403 Forbidden - likely WAF blocking"
+            error = "Echo endpoint returned 403 Forbidden - likely WAF blocking"
+        elif response.status_code != 200:
+            error = f"Echo endpoint returned {response.status_code}, expected 200"
+        elif 'application/json' not in response.headers.get('Content-Type', ''):
+            error = f"Echo endpoint returned wrong content type: {response.headers.get('Content-Type')}"
+        else:
+            try:
+                body = response.json()
+                if 'echo' not in body:
+                    error = "Echo endpoint didn't return 'echo' field"
+                elif body['echo'] != test_payload:
+                    error = f"Echo endpoint didn't echo payload correctly: {body['echo']}"
+                elif 'received_at' not in body:
+                    error = "Echo endpoint didn't return 'received_at' field"
+            except json.JSONDecodeError:
+                error = "Echo endpoint returned invalid JSON"
 
-        if response.status_code != 200:
-            return False, f"Echo endpoint returned {response.status_code}, expected 200"
-
-        if 'application/json' not in response.headers.get('Content-Type', ''):
-            return False, f"Echo endpoint returned wrong content type: {response.headers.get('Content-Type')}"
-
-        try:
-            body = response.json()
-            if 'echo' not in body:
-                return False, "Echo endpoint didn't return 'echo' field"
-            if body['echo'] != test_payload:
-                return False, f"Echo endpoint didn't echo payload correctly: {body['echo']}"
-            if 'received_at' not in body:
-                return False, "Echo endpoint didn't return 'received_at' field"
-        except json.JSONDecodeError:
-            return False, "Echo endpoint returned invalid JSON"
-
-        return True, "Echo endpoint working correctly"
+        return (False, error) if error else (True, "Echo endpoint working correctly")
 
     except requests.exceptions.RequestException as e:
         return False, f"Echo endpoint request failed: {e}"
@@ -95,13 +91,13 @@ def validate_invalid_endpoint(api_endpoint: str) -> tuple[bool, str]:
     try:
         response = requests.get(f"{api_endpoint}/invalid", timeout=10, allow_redirects=True)
 
+        error = None
         if response.status_code == 403:
-            return False, f"Invalid endpoint returned 403 instead of 404 - WAF may be misconfigured"
+            error = "Invalid endpoint returned 403 instead of 404 - WAF may be misconfigured"
+        elif response.status_code != 404:
+            error = f"Invalid endpoint returned {response.status_code}, expected 404"
 
-        if response.status_code != 404:
-            return False, f"Invalid endpoint returned {response.status_code}, expected 404"
-
-        return True, "Invalid endpoint correctly returns 404"
+        return (False, error) if error else (True, "Invalid endpoint correctly returns 404")
 
     except requests.exceptions.RequestException as e:
         return False, f"Invalid endpoint request failed: {e}"
