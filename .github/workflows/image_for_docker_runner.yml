@@ -6,9 +6,9 @@ on:
     branches:
       - main
     paths:
-      - 'api/collections/ami_for_ec2_runners/config.json'
-      - 'api/collections/docker_runner/**'
-      - 'api/collections/image_for_docker_runners/**'
+      - 'api/resources/ami_for_ec2_runners/config.json'
+      - 'api/resources/docker_runner/**'
+      - 'api/resources/image_for_docker_runners/**'
       - '.github/workflows/build_docker_image_for_github_self_hosted_runners.yml'
 
 concurrency:
@@ -29,11 +29,11 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          RUNNER_VERSION=$(jq -r '.github.runner_version' api/collections/ami_for_ec2_runners/config.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' api/collections/ami_for_ec2_runners/config.json)
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/collections/ami_for_ec2_runners/config.json)
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/collections/ami_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' api/collections/ami_for_ec2_runners/config.json)
+          RUNNER_VERSION=$(jq -r '.github.runner_version' api/resources/ami_for_ec2_runners/config.json)
+          ARCHITECTURE=$(jq -r '.base_os.architecture' api/resources/ami_for_ec2_runners/config.json)
+          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
+          REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
 
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
@@ -47,7 +47,7 @@ jobs:
 
       - name: Build and push Docker image (native ARM64, no emulation!)
         run: |
-          cd api/collections/docker_runner
+          cd api/resources/docker_runner
 
           BUILD_TAG="${{ github.run_number }}-$(git rev-parse --short HEAD)"
           ECR_URL="${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
@@ -198,10 +198,10 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/collections/ami_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' api/collections/ami_for_ec2_runners/config.json)
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/collections/ami_for_ec2_runners/config.json)
-          VPC_NAME=$(jq -r '.naming.vpc_name' api/collections/ami_for_ec2_runners/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
+          REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
+          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
+          VPC_NAME=$(jq -r '.naming.vpc_name' api/resources/ami_for_ec2_runners/config.json)
 
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
