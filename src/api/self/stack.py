@@ -1,6 +1,8 @@
 import os
 from typing import Dict, Any
 
+import yaml
+
 from aws_cdk import (
     Stack,
     CfnOutput,
@@ -19,6 +21,9 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_iam as iam,
     aws_secretsmanager as secretsmanager,
+    aws_cloudfront as cloudfront,
+    aws_cloudfront_origins as origins,
+    aws_wafv2 as wafv2,
 )
 from constructs import Construct
 
@@ -180,14 +185,52 @@ class ApiStack(Stack):
 
         lambda_dir = os.path.join(os.path.dirname(__file__), "lambda")
 
-        api_handler = lambda_.Function(
-            self, "ApiHandler",
+        docs_handler = lambda_.Function(
+            self, "DocsHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
-            handler="handler.handler",
+            handler="docs.handler",
             code=lambda_.Code.from_asset(lambda_dir),
-            timeout=Duration.seconds(30),
-            description="API handler for 10U Labs API",
+            timeout=Duration.seconds(10),
+            description="Serves OpenAPI documentation at api.10ulabs.com/",
             log_retention=logs.RetentionDays.ONE_WEEK
+        )
+
+        health_handler = lambda_.Function(
+            self, "HealthHandler",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            handler="health.handler",
+            code=lambda_.Code.from_asset(lambda_dir),
+            timeout=Duration.seconds(10),
+            description="Health check endpoint for API",
+            log_retention=logs.RetentionDays.ONE_WEEK
+        )
+
+        echo_handler = lambda_.Function(
+            self, "EchoHandler",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            handler="echo.handler",
+            code=lambda_.Code.from_asset(lambda_dir),
+            timeout=Duration.seconds(10),
+            description="Echo endpoint for testing",
+            log_retention=logs.RetentionDays.ONE_WEEK
+        )
+
+        openapi_spec_path = os.path.join(os.path.dirname(__file__), "openapi.yaml")
+        with open(openapi_spec_path, 'r', encoding='utf-8') as f:
+            openapi_spec = yaml.safe_load(f)
+
+        openapi_spec_str = yaml.dump(openapi_spec)
+        openapi_spec_str = openapi_spec_str.replace(
+            '${DocsHandlerArn}',
+            f'arn:aws:apigateway:{config["aws"]["region"]}:lambda:path/2015-03-31/functions/{docs_handler.function_arn}/invocations'
+        )
+        openapi_spec_str = openapi_spec_str.replace(
+            '${HealthHandlerArn}',
+            f'arn:aws:apigateway:{config["aws"]["region"]}:lambda:path/2015-03-31/functions/{health_handler.function_arn}/invocations'
+        )
+        openapi_spec_str = openapi_spec_str.replace(
+            '${EchoHandlerArn}',
+            f'arn:aws:apigateway:{config["aws"]["region"]}:lambda:path/2015-03-31/functions/{echo_handler.function_arn}/invocations'
         )
 
         api_log_group = logs.LogGroup(
@@ -196,10 +239,9 @@ class ApiStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        self.api = apigw.LambdaRestApi(
+        self.api = apigw.SpecRestApi(
             self, "TenULabsApi",
-            handler=api_handler,
-            proxy=False,
+            api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),
             domain_name=apigw.DomainNameOptions(
                 domain_name=subdomain_name,
                 certificate=certificate
@@ -209,30 +251,135 @@ class ApiStack(Stack):
                 logging_level=apigw.MethodLoggingLevel.INFO,
                 access_log_destination=apigw.LogGroupLogDestination(api_log_group),
                 access_log_format=apigw.AccessLogFormat.clf()
-            ),
-            default_cors_preflight_options=apigw.CorsOptions(
-                allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=apigw.Cors.ALL_METHODS
             )
         )
 
-        self.api.root.add_resource("health").add_method("GET", apigw.LambdaIntegration(api_handler))
-
-        self.v1 = self.api.root.add_resource("v1")
-
-        self.v1.add_resource("echo").add_method(
-            "POST", apigw.LambdaIntegration(api_handler)
+        docs_handler.add_permission(
+            "ApiGatewayInvoke",
+            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
+            source_arn=f"arn:aws:execute-api:{config['aws']['region']}:{config['aws']['account_id']}:{self.api.rest_api_id}/*/*/"
         )
 
-        self.api.root.add_resource("{proxy+}").add_method(
-            "ANY", apigw.LambdaIntegration(api_handler)
+        health_handler.add_permission(
+            "ApiGatewayInvoke",
+            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
+            source_arn=f"arn:aws:execute-api:{config['aws']['region']}:{config['aws']['account_id']}:{self.api.rest_api_id}/*/GET/health"
+        )
+
+        echo_handler.add_permission(
+            "ApiGatewayInvoke",
+            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
+            source_arn=f"arn:aws:execute-api:{config['aws']['region']}:{config['aws']['account_id']}:{self.api.rest_api_id}/*/POST/v1/echo"
+        )
+
+        web_acl = wafv2.CfnWebACL(
+            self, "ApiWafWebAcl",
+            scope="CLOUDFRONT",
+            default_action=wafv2.CfnWebACL.DefaultActionProperty(
+                allow={}
+            ),
+            visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                cloud_watch_metrics_enabled=True,
+                metric_name="ApiWafMetrics",
+                sampled_requests_enabled=True
+            ),
+            rules=[
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWS-AWSManagedRulesCommonRuleSet",
+                    priority=1,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(
+                        none={}
+                    ),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesCommonRuleSet"
+                        )
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="AWSManagedRulesCommonRuleSetMetric",
+                        sampled_requests_enabled=True
+                    )
+                ),
+                wafv2.CfnWebACL.RuleProperty(
+                    name="AWS-AWSManagedRulesKnownBadInputsRuleSet",
+                    priority=2,
+                    override_action=wafv2.CfnWebACL.OverrideActionProperty(
+                        none={}
+                    ),
+                    statement=wafv2.CfnWebACL.StatementProperty(
+                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
+                            vendor_name="AWS",
+                            name="AWSManagedRulesKnownBadInputsRuleSet"
+                        )
+                    ),
+                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
+                        cloud_watch_metrics_enabled=True,
+                        metric_name="AWSManagedRulesKnownBadInputsRuleSetMetric",
+                        sampled_requests_enabled=True
+                    )
+                )
+            ]
+        )
+
+        cf_cache_policy = cloudfront.CachePolicy(
+            self, "ApiDocsCachePolicy",
+            cache_policy_name="ApiDocsCachePolicy",
+            default_ttl=Duration.hours(24),
+            min_ttl=Duration.minutes(1),
+            max_ttl=Duration.days(365),
+            cookie_behavior=cloudfront.CacheCookieBehavior.none(),
+            header_behavior=cloudfront.CacheHeaderBehavior.none(),
+            query_string_behavior=cloudfront.CacheQueryStringBehavior.none(),
+            enable_accept_encoding_gzip=True,
+            enable_accept_encoding_brotli=True
+        )
+
+        cf_distribution = cloudfront.Distribution(
+            self, "ApiDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.HttpOrigin(
+                    subdomain_name,
+                    protocol_policy=cloudfront.OriginPrototocolPolicy.HTTPS_ONLY
+                ),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                cache_policy=cf_cache_policy,
+                origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+            ),
+            additional_behaviors={
+                "/health": cloudfront.BehaviorOptions(
+                    origin=origins.HttpOrigin(
+                        subdomain_name,
+                        protocol_policy=cloudfront.OriginPrototocolPolicy.HTTPS_ONLY
+                    ),
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                    cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                ),
+                "/v1/*": cloudfront.BehaviorOptions(
+                    origin=origins.HttpOrigin(
+                        subdomain_name,
+                        protocol_policy=cloudfront.OriginPrototocolPolicy.HTTPS_ONLY
+                    ),
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                    cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                )
+            },
+            domain_names=[subdomain_name],
+            certificate=certificate,
+            web_acl_id=web_acl.attr_arn
         )
 
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
             record_name=subdomain_name,
-            target=route53.RecordTarget.from_alias(targets.ApiGateway(self.api))
+            target=route53.RecordTarget.from_alias(targets.CloudFrontTarget(cf_distribution))
         )
 
         CfnOutput(
@@ -268,13 +415,6 @@ class ApiStack(Stack):
             value=self.api.rest_api_root_resource_id,
             description="API Gateway root resource ID",
             export_name="TenULabsApi-RootResourceId"
-        )
-
-        CfnOutput(
-            self, "ApiGatewayV1ResourceId",
-            value=self.v1.resource_id,
-            description="API Gateway /v1 resource ID for adding versioned routes",
-            export_name="TenULabsApi-V1ResourceId"
         )
 
         CfnOutput(

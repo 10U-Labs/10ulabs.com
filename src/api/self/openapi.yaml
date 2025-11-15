@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: 10U Labs API
+  description: API for 10U Labs services
+  version: 1.0.0
+  contact:
+    name: 10U Labs
+    url: https://10ulabs.com
+servers:
+  - url: https://api.10ulabs.com
+    description: Production API
+paths:
+  /:
+    get:
+      summary: API Documentation
+      description: Serves the interactive OpenAPI documentation (Swagger UI)
+      operationId: getDocs
+      tags:
+        - Documentation
+      responses:
+        '200':
+          description: HTML page with API documentation
+          content:
+            text/html:
+              schema:
+                type: string
+      x-amazon-apigateway-integration:
+        uri: ${DocsHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /health:
+    get:
+      summary: Health Check
+      description: Returns the health status of the API
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                  - version
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: 10U Labs API
+                  version:
+                    type: string
+                    example: 1.0.0
+      x-amazon-apigateway-integration:
+        uri: ${HealthHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/echo:
+    post:
+      summary: Echo Endpoint
+      description: Echoes back the request body
+      operationId: echo
+      tags:
+        - Utilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Any JSON object to echo back
+            examples:
+              simple:
+                summary: Simple echo example
+                value:
+                  message: Hello World
+              complex:
+                summary: Complex object
+                value:
+                  user: john_doe
+                  data:
+                    items: [1, 2, 3]
+                    nested:
+                      field: value
+      responses:
+        '200':
+          description: Successfully echoed the request
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - echo
+                  - received_at
+                properties:
+                  echo:
+                    type: object
+                    description: The echoed request body
+                  received_at:
+                    type: string
+                    description: AWS request ID
+                    example: 1234-5678-90ab-cdef
+        '400':
+          description: Invalid JSON in request body
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: string
+                    example: Invalid JSON
+      x-amazon-apigateway-integration:
+        uri: ${EchoHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+components:
+  schemas: {}
+tags:
+  - name: Documentation
+    description: API documentation endpoints
+  - name: Health
+    description: Health check endpoints
+  - name: Utilities
+    description: Utility endpoints

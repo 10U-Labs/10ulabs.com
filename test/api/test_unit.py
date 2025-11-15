@@ -232,35 +232,37 @@ def test_api_has_endpoint_output():
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self" / "lambda"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self"))
 
-import handler
+import health
+import echo
+import docs
 import poll_api_until_it_has_propagated
 
 
 def test_lambda_handler_health_endpoint_returns_200_status_code():
     event = {'path': '/health', 'httpMethod': 'GET'}
     context = Mock()
-    response = handler.handler(event, context)
+    response = health.handler(event, context)
     assert response['statusCode'] == 200
 
 
 def test_lambda_handler_health_endpoint_returns_json_content_type():
     event = {'path': '/health', 'httpMethod': 'GET'}
     context = Mock()
-    response = handler.handler(event, context)
+    response = health.handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
 def test_lambda_handler_health_endpoint_returns_cors_header():
     event = {'path': '/health', 'httpMethod': 'GET'}
     context = Mock()
-    response = handler.handler(event, context)
+    response = health.handler(event, context)
     assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
 
 def test_lambda_handler_health_endpoint_body_contains_status():
     event = {'path': '/health', 'httpMethod': 'GET'}
     context = Mock()
-    response = handler.handler(event, context)
+    response = health.handler(event, context)
     body = json.loads(response['body'])
     assert 'status' in body
 
@@ -268,7 +270,7 @@ def test_lambda_handler_health_endpoint_body_contains_status():
 def test_lambda_handler_health_endpoint_status_is_healthy():
     event = {'path': '/health', 'httpMethod': 'GET'}
     context = Mock()
-    response = handler.handler(event, context)
+    response = health.handler(event, context)
     body = json.loads(response['body'])
     assert body['status'] == 'healthy'
 
@@ -281,7 +283,7 @@ def test_lambda_handler_echo_endpoint_returns_200_status_code():
     }
     context = Mock()
     context.aws_request_id = 'test-request-id'
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     assert response['statusCode'] == 200
 
 
@@ -293,7 +295,7 @@ def test_lambda_handler_echo_endpoint_returns_json_content_type():
     }
     context = Mock()
     context.aws_request_id = 'test-request-id'
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
@@ -305,7 +307,7 @@ def test_lambda_handler_echo_endpoint_returns_cors_header():
     }
     context = Mock()
     context.aws_request_id = 'test-request-id'
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     assert response['headers']['Access-Control-Allow-Origin'] == '*'
 
 
@@ -318,7 +320,7 @@ def test_lambda_handler_echo_endpoint_echoes_input_data():
     }
     context = Mock()
     context.aws_request_id = 'test-request-id'
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     body = json.loads(response['body'])
     assert body['echo'] == payload
 
@@ -331,7 +333,7 @@ def test_lambda_handler_echo_endpoint_includes_received_at():
     }
     context = Mock()
     context.aws_request_id = 'test-request-id'
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     body = json.loads(response['body'])
     assert 'received_at' in body
 
@@ -343,7 +345,7 @@ def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400():
         'body': 'invalid json'
     }
     context = Mock()
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     assert response['statusCode'] == 400
 
 
@@ -354,7 +356,7 @@ def test_lambda_handler_echo_endpoint_with_invalid_json_returns_error_message():
         'body': 'invalid json'
     }
     context = Mock()
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     body = json.loads(response['body'])
     assert 'error' in body
 
@@ -366,45 +368,9 @@ def test_lambda_handler_echo_endpoint_with_invalid_json_error_is_invalid_json():
         'body': 'invalid json'
     }
     context = Mock()
-    response = handler.handler(event, context)
+    response = echo.handler(event, context)
     body = json.loads(response['body'])
     assert body['error'] == 'Invalid JSON'
-
-
-def test_lambda_handler_invalid_path_returns_404():
-    event = {'path': '/invalid', 'httpMethod': 'GET'}
-    context = Mock()
-    response = handler.handler(event, context)
-    assert response['statusCode'] == 404
-
-
-def test_lambda_handler_invalid_path_returns_json_content_type():
-    event = {'path': '/invalid', 'httpMethod': 'GET'}
-    context = Mock()
-    response = handler.handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
-
-
-def test_lambda_handler_invalid_path_returns_cors_header():
-    event = {'path': '/invalid', 'httpMethod': 'GET'}
-    context = Mock()
-    response = handler.handler(event, context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
-
-
-def test_lambda_handler_invalid_path_returns_error_body():
-    event = {'path': '/invalid', 'httpMethod': 'GET'}
-    context = Mock()
-    response = handler.handler(event, context)
-    body = json.loads(response['body'])
-    assert 'error' in body
-
-
-def test_lambda_handler_wrong_http_method_returns_404():
-    event = {'path': '/health', 'httpMethod': 'POST'}
-    context = Mock()
-    response = handler.handler(event, context)
-    assert response['statusCode'] == 404
 
 
 def test_poll_until_propagated_returns_true_on_first_success():

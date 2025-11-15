@@ -12,7 +12,7 @@ from aws_cdk import (
 from constructs import Construct
 
 
-class EC2RunnerStack(Stack):
+class DockerRunnerStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
@@ -20,59 +20,52 @@ class EC2RunnerStack(Stack):
         v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
         vpc_public_subnet_ids = Fn.import_value("TenULabsApi-PublicSubnetIds")
         runner_sg_id = Fn.import_value("TenULabsApi-RunnerSecurityGroupId")
+        cluster_arn = Fn.import_value("TenULabsApi-ClusterArn")
+        task_definition_arn = Fn.import_value("TenULabsApi-TaskDefinitionArn")
         github_token_secret_name = Fn.import_value("TenULabsApi-GitHubTokenSecretName")
-        ec2_instance_profile_name = Fn.import_value("TenULabsApi-EC2InstanceProfileName")
-        ec2_runner_role_name = Fn.import_value("TenULabsApi-EC2RunnerRoleName")
 
-        ec2_runner_lambda = lambda_.Function(
-            self, "EC2RunnerHandler",
+        docker_runner_lambda = lambda_.Function(
+            self, "DockerRunnerHandler",
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_11,
             handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset("api/collections/ec2_runner"),
+            code=lambda_.Code.from_asset("api/resources/docker_runner"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
                 "SUBNETS": vpc_public_subnet_ids,
                 "SECURITY_GROUPS": runner_sg_id,
-                "EC2_AMI_ID": config["ec2"]["ami_id"],
-                "EC2_INSTANCE_TYPES": ",".join(config["ec2"]["instance_types"]),
-                "EC2_IAM_INSTANCE_PROFILE": ec2_instance_profile_name,
-                "EC2_MAX_PRICE": str(config["ec2"]["max_price"]),
+                "ECS_CLUSTER": cluster_arn,
+                "TASK_DEFINITION": task_definition_arn,
                 "GITHUB_TOKEN_SECRET_NAME": github_token_secret_name,
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Lambda handler for launching EC2 spot instance GitHub runners"
+            description="Lambda handler for launching Fargate spot GitHub runners"
         )
 
-        ec2_runner_lambda.add_to_role_policy(
+        docker_runner_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    "ec2:RunInstances",
-                    "ec2:TerminateInstances",
-                    "ec2:CreateTags",
-                    "ec2:DescribeInstances",
-                    "ec2:DescribeImages",
-                    "ec2:DescribeSubnets",
-                    "ec2:DescribeSecurityGroups"
+                    "ecs:RunTask",
+                    "ecs:DescribeTasks",
+                    "ecs:ListTasks",
+                    "ecs:StopTask"
                 ],
                 resources=["*"]
             )
         )
 
-        ec2_runner_lambda.add_to_role_policy(
+        docker_runner_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["iam:PassRole"],
-                resources=[f"arn:aws:iam::{config['aws']['account_id']}:role/{ec2_runner_role_name}"],
-                conditions={
-                    "StringEquals": {
-                        "iam:PassedToService": "ec2.amazonaws.com"
-                    }
-                }
+                resources=[
+                    Fn.import_value("TenULabsApi-TaskRoleArn"),
+                    Fn.import_value("TenULabsApi-ExecutionRoleArn")
+                ]
             )
         )
 
-        ec2_runner_lambda.add_to_role_policy(
+        docker_runner_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["secretsmanager:GetSecretValue"],
                 resources=[f"arn:aws:secretsmanager:{config['aws']['region']}:{config['aws']['account_id']}:secret:{github_token_secret_name}-*"]
@@ -92,20 +85,20 @@ class EC2RunnerStack(Stack):
             path="/v1"
         )
 
-        ec2_runner_resource = v1_resource.add_resource("ec2-runner")
-        ec2_runner_resource.add_method(
+        docker_runner_resource = v1_resource.add_resource("docker-runner")
+        docker_runner_resource.add_method(
             "POST",
-            apigw.LambdaIntegration(ec2_runner_lambda)
+            apigw.LambdaIntegration(docker_runner_lambda)
         )
 
         CfnOutput(
-            self, "EC2RunnerEndpoint",
-            value=f"https://{config['domain_names']['subdomain']}/v1/ec2-runner",
-            description="API endpoint for launching EC2 spot runners"
+            self, "DockerRunnerEndpoint",
+            value=f"https://{config['domain_names']['subdomain']}/v1/docker-runner",
+            description="API endpoint for launching Fargate spot runners"
         )
 
         CfnOutput(
-            self, "EC2RunnerLambdaName",
-            value=ec2_runner_lambda.function_name,
-            description="Lambda function name for EC2 runner handler"
+            self, "DockerRunnerLambdaName",
+            value=docker_runner_lambda.function_name,
+            description="Lambda function name for Docker runner handler"
         )
