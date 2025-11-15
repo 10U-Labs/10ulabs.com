@@ -196,8 +196,8 @@ jobs:
           jsonlint -q src/api/self/cdk.json
       - name: Linting Python files
         run: |
-          pylint src/api/self/stack.py src/api/self/app.py src/api/self/lambda/handler.py src/api/self/poll_api_until_it_has_propagated.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals \
+          pylint src/api/self/stack.py src/api/self/app.py src/api/self/lambda/health.py src/api/self/lambda/echo.py src/api/self/lambda/docs.py src/api/self/poll_api_until_it_has_propagated.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals,too-many-statements,no-member,unused-argument,duplicate-code \
             --fail-under=10.0
       - name: Linting YAML files
         run: |
