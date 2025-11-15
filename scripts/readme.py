@@ -3,9 +3,12 @@ import argparse
 import json
 import logging
 import os
+import random
 import sys
+import time
 import glob
 import boto3
+from botocore.exceptions import ClientError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +39,34 @@ def split_text_by_words(text: str, max_length: int = 1000) -> list:
         chunks.append(current_chunk)
 
     return chunks
+
+def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list, max_retries: int = 5) -> dict:
+    initial_jitter = random.uniform(5, 30)
+    logging.info("Waiting %.2fs before Bedrock call to avoid thundering herd", initial_jitter)
+    time.sleep(initial_jitter)
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = bedrock_client.converse(
+                modelId=bedrock_config['model_id'],
+                messages=messages,
+                inferenceConfig={'maxTokens': bedrock_config['max_tokens']}
+            )
+            logging.info("Bedrock call succeeded on attempt %d", attempt)
+            return response
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ThrottlingException':
+                if attempt == max_retries:
+                    logging.error("Bedrock throttled after %d attempts", max_retries)
+                    raise
+                wait_time = (2 ** attempt) + random.uniform(0, 1)
+                logging.warning("Bedrock throttled, retrying in %.2fs (attempt %d/%d)",
+                               wait_time, attempt, max_retries)
+                time.sleep(wait_time)
+            else:
+                raise
+
+    raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
 def find_all_project_files(project_dir: str) -> list:
     all_files = []
@@ -139,16 +170,11 @@ or
 Do not include any other text or formatting outside the JSON object."""
 
     try:
-        response = bedrock_client.converse(
-            modelId=bedrock_config['model_id'],
-            messages=[{
-                'role': 'user',
-                'content': [{'text': prompt}]
-            }],
-            inferenceConfig={
-                'maxTokens': bedrock_config['max_tokens']
-            }
-        )
+        messages = [{
+            'role': 'user',
+            'content': [{'text': prompt}]
+        }]
+        response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
 
         answer_text = response['output']['message']['content'][0]['text'].strip()
         try:
@@ -245,16 +271,11 @@ Be specific about what each resource does and why it exists. Use code blocks for
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
 
     try:
-        response = bedrock_client.converse(
-            modelId=bedrock_config['model_id'],
-            messages=[{
-                'role': 'user',
-                'content': [{'text': prompt}]
-            }],
-            inferenceConfig={
-                'maxTokens': bedrock_config['max_tokens']
-            }
-        )
+        messages = [{
+            'role': 'user',
+            'content': [{'text': prompt}]
+        }]
+        response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
 
         readme_content = response['output']['message']['content'][0]['text']
 
