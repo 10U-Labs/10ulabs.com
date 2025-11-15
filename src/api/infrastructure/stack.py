@@ -25,29 +25,42 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_wafv2 as wafv2,
 )
+from aws_cdk.aws_cloudfront import OriginProtocolPolicy
 from constructs import Construct
 
 
 class ApiStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
+        self.config = config
+
+        self._create_vpc()
+        self._create_ecr_and_ecs()
+        secrets_and_security = self._create_secrets_and_security()
+        self._create_fargate_task(secrets_and_security[0])
+        ec2_runner_role = self._create_ec2_runner_role()
 
         parent_domain = config["domain_names"]["parent"]
-        subdomain_name = config["domain_names"]["subdomain"]
-        normalized_parent_domain = parent_domain.replace('.', '-')
+        subdomain = config["domain_names"]["subdomain"]
+        cert_info = self._create_certificate(parent_domain, subdomain, parent_domain.replace('.', '-'))
 
-        max_azs = config["aws"]["vpc"].get("max_azs", 99)
+        self._create_api_gateway(subdomain, cert_info[1], self._create_lambda_functions())
+        cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf())
+        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role))
+
+    def _create_vpc(self):
+        max_azs = self.config["aws"]["vpc"].get("max_azs", 99)
         self.vpc = ec2.Vpc(
             self, "RunnerVpc",
-            vpc_name=config["naming"]["vpc_name"],
-            ip_addresses=ec2.IpAddresses.cidr(config["aws"]["vpc"]["cidr"]),
+            vpc_name=self.config["naming"]["vpc_name"],
+            ip_addresses=ec2.IpAddresses.cidr(self.config["aws"]["vpc"]["cidr"]),
             max_azs=max_azs,
-            nat_gateways=config["aws"]["vpc"]["nat_gateways"],
+            nat_gateways=self.config["aws"]["vpc"]["nat_gateways"],
             subnet_configuration=[
                 ec2.SubnetConfiguration(
                     name="Public",
                     subnet_type=ec2.SubnetType.PUBLIC,
-                    cidr_mask=config["aws"]["vpc"]["subnet_configuration"]["public_subnet_cidr_mask"],
+                    cidr_mask=self.config["aws"]["vpc"]["subnet_configuration"]["public_subnet_cidr_mask"],
                     map_public_ip_on_launch=True
                 )
             ],
@@ -56,9 +69,10 @@ class ApiStack(Stack):
         )
         Tags.of(self.vpc).add("Purpose", "10ulabs-api-and-runners")
 
+    def _create_ecr_and_ecs(self):
         self.ecr_repository = ecr.Repository(
             self, "RunnerEcrRepository",
-            repository_name=config["aws"]["fargate_runners"]["ecr_repository"],
+            repository_name=self.config["aws"]["fargate_runners"]["ecr_repository"],
             removal_policy=RemovalPolicy.DESTROY,
             empty_on_delete=True,
             image_scan_on_push=True,
@@ -70,22 +84,21 @@ class ApiStack(Stack):
                 )
             ]
         )
-
         self.cluster = ecs.Cluster(
             self, "RunnerCluster",
-            cluster_name=config["naming"]["cluster_name"],
+            cluster_name=self.config["naming"]["cluster_name"],
             vpc=self.vpc,
             container_insights=True
         )
 
+    def _create_secrets_and_security(self):
         github_token_secret = secretsmanager.Secret.from_secret_name_v2(
             self, "GitHubToken",
-            secret_name=config["naming"]["github_token_secret_name"]
+            secret_name=self.config["naming"]["github_token_secret_name"]
         )
-
         self.webhook_secret = secretsmanager.Secret(
             self, "WebhookSecret",
-            secret_name=config["naming"]["webhook_secret_name"],
+            secret_name=self.config["naming"]["webhook_secret_name"],
             description="GitHub webhook secret for signature verification",
             generate_secret_string=secretsmanager.SecretStringGenerator(
                 exclude_punctuation=True,
@@ -93,36 +106,44 @@ class ApiStack(Stack):
             ),
             removal_policy=RemovalPolicy.DESTROY
         )
+        runner_sg = ec2.SecurityGroup(
+            self, "SelfHostedRunnerSecurityGroup",
+            vpc=self.vpc,
+            description="Security group for GitHub self-hosted runner Fargate tasks",
+            allow_all_outbound=True
+        )
+        return github_token_secret, runner_sg
 
+    def _create_fargate_task(self, github_token_secret):
         self.task_definition = ecs.FargateTaskDefinition(
             self, "RunnerTaskDefinition",
-            family=config["naming"]["task_family"],
-            cpu=int(config["aws"]["fargate_runners"]["cpu"]),
-            memory_limit_mib=int(config["aws"]["fargate_runners"]["memory"]),
+            family=self.config["naming"]["task_family"],
+            cpu=int(self.config["aws"]["fargate_runners"]["cpu"]),
+            memory_limit_mib=int(self.config["aws"]["fargate_runners"]["memory"]),
         )
-
         self.task_definition.add_container(
             "runner",
-            container_name=config["naming"]["container_name"],
+            container_name=self.config["naming"]["container_name"],
             image=ecs.ContainerImage.from_ecr_repository(
                 self.ecr_repository,
                 tag="latest"
             ),
             logging=ecs.LogDriver.aws_logs(
-                stream_prefix=config["naming"]["log_stream_prefix"],
+                stream_prefix=self.config["naming"]["log_stream_prefix"],
                 log_retention=logs.RetentionDays.ONE_WEEK
             ),
             secrets={
                 "GITHUB_TOKEN": ecs.Secret.from_secrets_manager(github_token_secret)
             },
             environment={
-                "GITHUB_REPO": config["github"]["repo"],
-                "RUNNER_LABELS": ",".join(config["aws"]["fargate_runners"]["runner_labels"]),
+                "GITHUB_REPO": self.config["github"]["repo"],
+                "RUNNER_LABELS": ",".join(self.config["aws"]["fargate_runners"]["runner_labels"]),
                 "EPHEMERAL": "true",
                 "RUNNER_NAME_PREFIX": "fargate_runner"
             }
         )
 
+    def _create_ec2_runner_role(self):
         ec2_runner_role = iam.Role(
             self, "EC2SelfHostedRunnerRole",
             role_name="GitHubSelfHostedRunnerEC2Role",
@@ -156,33 +177,28 @@ class ApiStack(Stack):
                 )
             }
         )
-
         ec2_instance_profile = iam.CfnInstanceProfile(
             self, "EC2SelfHostedRunnerInstanceProfile",
             instance_profile_name="GitHubSelfHostedRunnerInstanceProfile",
             roles=[ec2_runner_role.role_name]
         )
         ec2_instance_profile.node.add_dependency(ec2_runner_role)
+        return ec2_runner_role
 
-        runner_sg = ec2.SecurityGroup(
-            self, "SelfHostedRunnerSecurityGroup",
-            vpc=self.vpc,
-            description="Security group for GitHub self-hosted runner Fargate tasks",
-            allow_all_outbound=True
-        )
-
+    def _create_certificate(self, parent_domain, subdomain_name, normalized_parent_domain):
         parent_zone = route53.HostedZone.from_hosted_zone_attributes(
             self, "ParentHostedZone",
             hosted_zone_id=Fn.import_value(f"{normalized_parent_domain}-HostedZoneId"),
             zone_name=parent_domain
         )
-
         certificate = acm.Certificate(
             self, "ApiCertificate",
             domain_name=subdomain_name,
             validation=acm.CertificateValidation.from_dns(parent_zone)
         )
+        return parent_zone, certificate
 
+    def _create_lambda_functions(self):
         root_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "root")
         health_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "health")
         echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
@@ -196,7 +212,6 @@ class ApiStack(Stack):
             description="Serves OpenAPI documentation at api.10ulabs.com/",
             log_retention=logs.RetentionDays.ONE_WEEK
         )
-
         health_handler = lambda_.Function(
             self, "HealthHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
@@ -206,7 +221,6 @@ class ApiStack(Stack):
             description="Health check endpoint for API",
             log_retention=logs.RetentionDays.ONE_WEEK
         )
-
         echo_handler = lambda_.Function(
             self, "EchoHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
@@ -216,7 +230,10 @@ class ApiStack(Stack):
             description="Echo endpoint for testing",
             log_retention=logs.RetentionDays.ONE_WEEK
         )
+        return docs_handler, health_handler, echo_handler
 
+    def _create_api_gateway(self, subdomain_name, certificate, handlers):
+        docs_handler, health_handler, echo_handler = handlers
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yaml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
             openapi_spec = yaml.safe_load(f)
@@ -224,15 +241,15 @@ class ApiStack(Stack):
         openapi_spec_str = yaml.dump(openapi_spec)
         openapi_spec_str = openapi_spec_str.replace(
             '${DocsHandlerArn}',
-            f'arn:aws:apigateway:{config["aws"]["region"]}:lambda:path/2015-03-31/functions/{docs_handler.function_arn}/invocations'
+            f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{docs_handler.function_arn}/invocations'
         )
         openapi_spec_str = openapi_spec_str.replace(
             '${HealthHandlerArn}',
-            f'arn:aws:apigateway:{config["aws"]["region"]}:lambda:path/2015-03-31/functions/{health_handler.function_arn}/invocations'
+            f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{health_handler.function_arn}/invocations'
         )
         openapi_spec_str = openapi_spec_str.replace(
             '${EchoHandlerArn}',
-            f'arn:aws:apigateway:{config["aws"]["region"]}:lambda:path/2015-03-31/functions/{echo_handler.function_arn}/invocations'
+            f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{echo_handler.function_arn}/invocations'
         )
 
         api_log_group = logs.LogGroup(
@@ -240,7 +257,6 @@ class ApiStack(Stack):
             retention=logs.RetentionDays.ONE_MONTH,
             removal_policy=RemovalPolicy.DESTROY
         )
-
         self.api = apigw.SpecRestApi(
             self, "TenULabsApi",
             api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),
@@ -255,26 +271,24 @@ class ApiStack(Stack):
                 access_log_format=apigw.AccessLogFormat.clf()
             )
         )
-
         docs_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"arn:aws:execute-api:{config['aws']['region']}:{config['aws']['account_id']}:{self.api.rest_api_id}/*/*/"
+            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/*/"
         )
-
         health_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"arn:aws:execute-api:{config['aws']['region']}:{config['aws']['account_id']}:{self.api.rest_api_id}/*/GET/health"
+            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/GET/health"
         )
-
         echo_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"arn:aws:execute-api:{config['aws']['region']}:{config['aws']['account_id']}:{self.api.rest_api_id}/*/POST/v1/echo"
+            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/POST/v1/echo"
         )
 
-        web_acl = wafv2.CfnWebACL(
+    def _create_waf(self):
+        return wafv2.CfnWebACL(
             self, "ApiWafWebAcl",
             scope="CLOUDFRONT",
             default_action=wafv2.CfnWebACL.DefaultActionProperty(
@@ -325,6 +339,7 @@ class ApiStack(Stack):
             ]
         )
 
+    def _create_cloudfront(self, subdomain_name, certificate, web_acl):
         cf_cache_policy = cloudfront.CachePolicy(
             self, "ApiDocsCachePolicy",
             cache_policy_name="ApiDocsCachePolicy",
@@ -337,13 +352,12 @@ class ApiStack(Stack):
             enable_accept_encoding_gzip=True,
             enable_accept_encoding_brotli=True
         )
-
-        cf_distribution = cloudfront.Distribution(
+        return cloudfront.Distribution(
             self, "ApiDistribution",
             default_behavior=cloudfront.BehaviorOptions(
                 origin=origins.HttpOrigin(
                     subdomain_name,
-                    protocol_policy=cloudfront.OriginPrototocolPolicy.HTTPS_ONLY
+                    protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
                 ),
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
@@ -354,7 +368,7 @@ class ApiStack(Stack):
                 "/health": cloudfront.BehaviorOptions(
                     origin=origins.HttpOrigin(
                         subdomain_name,
-                        protocol_policy=cloudfront.OriginPrototocolPolicy.HTTPS_ONLY
+                        protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
                     ),
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
@@ -364,7 +378,7 @@ class ApiStack(Stack):
                 "/v1/*": cloudfront.BehaviorOptions(
                     origin=origins.HttpOrigin(
                         subdomain_name,
-                        protocol_policy=cloudfront.OriginPrototocolPolicy.HTTPS_ONLY
+                        protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
                     ),
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
@@ -377,6 +391,8 @@ class ApiStack(Stack):
             web_acl_id=web_acl.attr_arn
         )
 
+    def _create_dns_and_outputs(self, parent_zone, subdomain_name, cf_distribution, resources):
+        runner_sg, ec2_runner_role = resources
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
@@ -505,7 +521,7 @@ class ApiStack(Stack):
 
         CfnOutput(
             self, "GitHubTokenSecretName",
-            value=config["naming"]["github_token_secret_name"],
+            value=self.config["naming"]["github_token_secret_name"],
             description="GitHub token secret name in Secrets Manager",
             export_name="TenULabsApi-GitHubTokenSecretName"
         )
