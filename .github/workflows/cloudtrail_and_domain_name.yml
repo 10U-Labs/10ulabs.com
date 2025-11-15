@@ -396,6 +396,7 @@ on:
     paths:
       - 'src/cloudtrail_and_domain_name/**'
       - 'test/cloudtrail_and_domain_name/**'
+      - 'scripts/readme.py'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
   workflow_dispatch:
     inputs:
