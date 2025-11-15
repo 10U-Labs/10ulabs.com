@@ -202,21 +202,22 @@ class ApiStack(Stack):
         return parent_zone, certificate
 
     def _create_lambda_functions(self):
-        root_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "root")
+        api_dir = os.path.join(os.path.dirname(__file__), "..")
         health_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "health")
         echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
-
         docs_handler = lambda_.Function(
             self, "DocsHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
-            handler="handler.handler",
+            handler="endpoints/root/handler.handler",
             code=lambda_.Code.from_asset(
-                root_endpoint_dir,
+                api_dir,
                 bundling=BundlingOptions(
                     image=DockerImage.from_registry("public.ecr.aws/sam/build-python3.11"),
                     command=[
                         "bash", "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp -au . /asset-output"
+                        "pip install -r endpoints/root/requirements.txt -t /asset-output && "
+                        "cp -r endpoints /asset-output/ && "
+                        "cp openapi.yaml /asset-output/"
                     ]
                 )
             ),
