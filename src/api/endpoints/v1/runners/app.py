@@ -18,7 +18,7 @@ RunnersStack = runners_module.RunnersStack
 app = cdk.App()
 
 config_path = Path(__file__).parent / "config.json"
-with open(config_path) as f:
+with open(config_path, encoding='utf-8') as f:
     config = json.load(f)
 
 env = cdk.Environment(

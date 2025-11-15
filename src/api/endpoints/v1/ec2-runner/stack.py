@@ -13,18 +13,13 @@ from constructs import Construct
 
 
 class EC2RunnerStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
-        super().__init__(scope, construct_id, **kwargs)
-
-        rest_api_id = Fn.import_value("TenULabsApi-RestApiId")
-        v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
+    def _create_lambda_function(self, config: Dict[str, Any]) -> lambda_.Function:
         vpc_public_subnet_ids = Fn.import_value("TenULabsApi-PublicSubnetIds")
         runner_sg_id = Fn.import_value("TenULabsApi-RunnerSecurityGroupId")
         github_token_secret_name = Fn.import_value("TenULabsApi-GitHubTokenSecretName")
         ec2_instance_profile_name = Fn.import_value("TenULabsApi-EC2InstanceProfileName")
-        ec2_runner_role_name = Fn.import_value("TenULabsApi-EC2RunnerRoleName")
 
-        ec2_runner_lambda = lambda_.Function(
+        return lambda_.Function(
             self, "EC2RunnerHandler",
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_11,
@@ -44,6 +39,10 @@ class EC2RunnerStack(Stack):
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="Lambda handler for launching EC2 spot instance GitHub runners"
         )
+
+    def _configure_lambda_permissions(self, ec2_runner_lambda: lambda_.Function, config: Dict[str, Any]) -> None:
+        github_token_secret_name = Fn.import_value("TenULabsApi-GitHubTokenSecretName")
+        ec2_runner_role_name = Fn.import_value("TenULabsApi-EC2RunnerRoleName")
 
         ec2_runner_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -79,6 +78,10 @@ class EC2RunnerStack(Stack):
             )
         )
 
+    def _create_api_resources(self, ec2_runner_lambda: lambda_.Function) -> apigw.Resource:
+        rest_api_id = Fn.import_value("TenULabsApi-RestApiId")
+        v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
+
         rest_api = apigw.RestApi.from_rest_api_attributes(
             self, "ImportedApi",
             rest_api_id=rest_api_id,
@@ -97,6 +100,14 @@ class EC2RunnerStack(Stack):
             "POST",
             apigw.LambdaIntegration(ec2_runner_lambda)
         )
+        return ec2_runner_resource
+
+    def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
+        super().__init__(scope, construct_id, **kwargs)
+
+        ec2_runner_lambda = self._create_lambda_function(config)
+        self._configure_lambda_permissions(ec2_runner_lambda, config)
+        self._create_api_resources(ec2_runner_lambda)
 
         CfnOutput(
             self, "EC2RunnerEndpoint",
