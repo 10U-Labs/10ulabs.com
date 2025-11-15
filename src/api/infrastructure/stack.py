@@ -1,4 +1,5 @@
 import os
+import hashlib
 from typing import Dict, Any
 
 import yaml
@@ -252,6 +253,8 @@ class ApiStack(Stack):
             f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{echo_handler.function_arn}/invocations'
         )
 
+        spec_hash = hashlib.md5(openapi_spec_str.encode('utf-8')).hexdigest()[:8]
+
         api_log_group = logs.LogGroup(
             self, "ApiGatewayAccessLogs",
             retention=logs.RetentionDays.ONE_MONTH,
@@ -264,13 +267,24 @@ class ApiStack(Stack):
                 domain_name=subdomain_name,
                 certificate=certificate
             ),
-            deploy_options=apigw.StageOptions(
-                stage_name="prod",
-                logging_level=apigw.MethodLoggingLevel.INFO,
-                access_log_destination=apigw.LogGroupLogDestination(api_log_group),
-                access_log_format=apigw.AccessLogFormat.clf()
-            )
+            deploy=False
         )
+
+        deployment = apigw.Deployment(
+            self, f"ApiDeployment{spec_hash}",
+            api=self.api
+        )
+
+        stage = apigw.Stage(
+            self, "ProdStage",
+            deployment=deployment,
+            stage_name="prod",
+            logging_level=apigw.MethodLoggingLevel.INFO,
+            access_log_destination=apigw.LogGroupLogDestination(api_log_group),
+            access_log_format=apigw.AccessLogFormat.clf()
+        )
+
+        self.api.deployment_stage = stage
         docs_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
