@@ -224,7 +224,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install pytest
-          pip install -r src/api/self/requirements.txt
+          pip install -r src/api/infrastructure/requirements.txt
       - name: Run unit tests
         run: |
           pytest test/api/test_unit.py -v
