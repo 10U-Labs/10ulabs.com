@@ -1,10 +1,18 @@
 import json
 from pathlib import Path
+import sys
 import boto3
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 CONFIG_FILE = REPO_ROOT / 'src' / 'cloudtrail_and_domain_name' / 'config.json'
+
+stub_path = Path(__file__).parent
+handler_path = REPO_ROOT / "src" / "cloudtrail_and_domain_name" / "lambda"
+if str(stub_path) not in sys.path:
+    sys.path.insert(0, str(stub_path))
+if str(handler_path) not in sys.path:
+    sys.path.insert(0, str(handler_path))
 
 
 def load_config():
