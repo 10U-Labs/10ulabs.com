@@ -797,6 +797,7 @@ def test_validate_root_endpoint_returns_true_on_success():
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.text = '<html>swagger</html>'
+        mock_response.headers.get.return_value = 'text/html; charset=utf-8'
         mock_get.return_value = mock_response
         success, _message = poll_api_until_it_has_propagated.validate_root_endpoint('https://api.example.com')
         assert success is True
@@ -824,7 +825,8 @@ def test_validate_health_endpoint_returns_true_on_success():
     with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {'status': 'healthy'}
+        mock_response.json.return_value = {'status': 'healthy', 'service': '10U Labs API'}
+        mock_response.headers.get.return_value = 'application/json'
         mock_get.return_value = mock_response
         success, _message = poll_api_until_it_has_propagated.validate_health_endpoint('https://api.example.com')
         assert success is True
@@ -835,6 +837,7 @@ def test_validate_health_endpoint_returns_false_on_wrong_status():
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'status': 'unhealthy'}
+        mock_response.headers.get.return_value = 'application/json'
         mock_get.return_value = mock_response
         success, _message = poll_api_until_it_has_propagated.validate_health_endpoint('https://api.example.com')
         assert success is False
@@ -845,19 +848,23 @@ def test_validate_health_endpoint_returns_false_on_missing_status():
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {}
+        mock_response.headers.get.return_value = 'application/json'
         mock_get.return_value = mock_response
         success, _message = poll_api_until_it_has_propagated.validate_health_endpoint('https://api.example.com')
         assert success is False
 
 
 def test_validate_echo_endpoint_returns_true_on_success():
-    with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {'echo': {'test': 'data'}, 'received_at': '2024-01-01'}
-        mock_post.return_value = mock_response
-        success, _message = poll_api_until_it_has_propagated.validate_echo_endpoint('https://api.example.com')
-        assert success is True
+    with patch('poll_api_until_it_has_propagated.time.time') as mock_time:
+        with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+            mock_time.return_value = 1234567890.0
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {'echo': {'test': 'validation', 'timestamp': 1234567890.0}, 'received_at': '2024-01-01'}
+            mock_response.headers.get.return_value = 'application/json'
+            mock_post.return_value = mock_response
+            success, _message = poll_api_until_it_has_propagated.validate_echo_endpoint('https://api.example.com')
+            assert success is True
 
 
 def test_validate_echo_endpoint_returns_false_on_wrong_status():
@@ -874,6 +881,7 @@ def test_validate_echo_endpoint_returns_false_on_missing_echo_field():
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {'received_at': '2024-01-01'}
+        mock_response.headers.get.return_value = 'application/json'
         mock_post.return_value = mock_response
         success, _message = poll_api_until_it_has_propagated.validate_echo_endpoint('https://api.example.com')
         assert success is False
@@ -976,3 +984,76 @@ def test_echo_endpoint_handler_file_exists():
 def test_docs_endpoint_handler_file_exists():
     handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "root" / "handler.py"
     assert handler_path.exists()
+
+
+def test_api_has_explicit_deployment_construct():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    resources = template.find_resources("AWS::ApiGateway::Deployment")
+    assert len(resources) >= 1
+
+
+def test_api_has_explicit_stage_construct():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    resources = template.find_resources("AWS::ApiGateway::Stage")
+    assert len(resources) >= 1
+
+
+def test_api_stage_name_is_prod():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    stages = template.find_resources("AWS::ApiGateway::Stage")
+    stage_name = list(stages.values())[0]["Properties"]["StageName"]
+    assert stage_name == "prod"
