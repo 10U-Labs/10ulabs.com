@@ -150,22 +150,19 @@ Do not include any other text or formatting outside the JSON object."""
         try:
             result = json.loads(answer_text)
             should_be_updated = bool(result.get('readme_should_be_updated', False))
-            reasoning = result.get('reasoning', 'No reasoning provided')
-            reasoning_chunks = split_text_by_words(reasoning, max_length=1000)
+            reasoning_chunks = split_text_by_words(result.get('reasoning', 'No reasoning provided'), max_length=1000)
             if len(reasoning_chunks) == 1:
                 logging.info("Bedrock reasoning: %s", reasoning_chunks[0])
             else:
                 for i, chunk in enumerate(reasoning_chunks, 1):
                     logging.info("Bedrock reasoning (part %d/%d): %s", i, len(reasoning_chunks), chunk)
-            status = 'be updated' if should_be_updated else 'not be updated'
-            logging.info("Bedrock assessment: README should %s", status)
+            logging.info("Bedrock assessment: README should %s", 'be updated' if should_be_updated else 'not be updated')
             return should_be_updated
         except json.JSONDecodeError as e:
             logging.warning("Failed to parse JSON response from Bedrock: %s", e)
             logging.warning("Raw response: %s", answer_text)
             should_be_updated = answer_text.lower().startswith('true')
-            status = 'be updated (fallback)' if should_be_updated else 'not be updated (fallback)'
-            logging.info("Bedrock assessment: README should %s", status)
+            logging.info("Bedrock assessment: README should %s", 'be updated (fallback)' if should_be_updated else 'not be updated (fallback)')
             return should_be_updated
     except (KeyError, IndexError, TypeError) as e:
         logging.error("Failed to check README with Bedrock: %s", e)

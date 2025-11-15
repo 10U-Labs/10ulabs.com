@@ -327,7 +327,9 @@ on:
     branches:
       - main
     paths:
-      - 'gmail_email_provider/**'
+      - 'src/gmail_email_provider/**'
+      - 'test/gmail_email_provider/**'
+      - 'scripts/readme.py'
       - '.github/workflows/gmail_email_provider.yml'
   workflow_dispatch:
     inputs:
