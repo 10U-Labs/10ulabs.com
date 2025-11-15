@@ -1,4 +1,14 @@
+import sys
+from pathlib import Path
 import requests
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure"))
+import poll_api_until_it_has_propagated
+
+
+def test_api_propagated_and_accessible(api_endpoint):
+    result = poll_api_until_it_has_propagated.poll_until_propagated(api_endpoint, max_attempts=11)
+    assert result is True
 
 
 def test_health_endpoint_returns_200(api_endpoint):
