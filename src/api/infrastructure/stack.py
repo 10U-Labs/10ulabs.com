@@ -276,7 +276,7 @@ class ApiStack(Stack):
         )
 
         stage = apigw.Stage(
-            self, "ProdStage",
+            self, f"ProdStage{spec_hash}",
             deployment=deployment,
             stage_name="prod",
             logging_level=apigw.MethodLoggingLevel.INFO,
