@@ -13,6 +13,30 @@ logging.basicConfig(
     stream=sys.stderr
 )
 
+def split_text_by_words(text: str, max_length: int = 1000) -> list:
+    if len(text) <= max_length:
+        return [text]
+
+    chunks = []
+    current_chunk = ""
+
+    words = text.split()
+    for word in words:
+        if len(current_chunk) + len(word) + 1 <= max_length:
+            if current_chunk:
+                current_chunk += " " + word
+            else:
+                current_chunk = word
+        else:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = word
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
+
 def find_source_files(project_dir: str) -> list:
     source_files = []
 
@@ -127,7 +151,12 @@ Do not include any other text or formatting outside the JSON object."""
             result = json.loads(answer_text)
             should_be_updated = bool(result.get('readme_should_be_updated', False))
             reasoning = result.get('reasoning', 'No reasoning provided')
-            logging.info("Bedrock reasoning: %s", reasoning)
+            reasoning_chunks = split_text_by_words(reasoning, max_length=1000)
+            if len(reasoning_chunks) == 1:
+                logging.info("Bedrock reasoning: %s", reasoning_chunks[0])
+            else:
+                for i, chunk in enumerate(reasoning_chunks, 1):
+                    logging.info("Bedrock reasoning (part %d/%d): %s", i, len(reasoning_chunks), chunk)
             status = 'be updated' if should_be_updated else 'not be updated'
             logging.info("Bedrock assessment: README should %s", status)
             return should_be_updated
