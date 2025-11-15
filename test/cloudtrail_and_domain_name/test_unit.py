@@ -310,13 +310,6 @@ def test_lambda_handler_contains_master_account_email(config):
 
 import unittest
 from unittest.mock import Mock, patch
-import sys
-
-# Add stub (cfnresponse stub) and handler to path
-stub_path = Path(__file__).parent
-handler_path = Path(__file__).parent.parent.parent / "src" / "cloudtrail_and_domain_name" / "lambda"
-sys.path.insert(0, str(stub_path))
-sys.path.insert(0, str(handler_path))
 import handler as lambda_handler
 
 
