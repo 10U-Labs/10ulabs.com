@@ -116,7 +116,7 @@ def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
     ]
 
     for attempt in range(max_attempts):
-        print(f"\n=== Attempt {attempt + 1}/{max_attempts} ===")
+        print(f"\n=== Attempt {attempt + 1}/{max_attempts} ===", flush=True)
 
         all_passed = True
         results = []
@@ -124,26 +124,26 @@ def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
         for name, validator in endpoints:
             success, message = validator(api_endpoint)
             status = "✓" if success else "✗"
-            print(f"{status} {name}: {message}")
+            print(f"{status} {name}: {message}", flush=True)
             results.append((name, success, message))
 
             if not success:
                 all_passed = False
 
         if all_passed:
-            print(f"\n✓ All endpoints validated successfully after {attempt + 1} attempts")
+            print(f"\n✓ All endpoints validated successfully after {attempt + 1} attempts", flush=True)
             return True
 
         if attempt < max_attempts - 1:
             wait_time = min(2 ** attempt, 60)
-            print(f"\nWaiting {wait_time} seconds before retry...")
+            print(f"\nWaiting {wait_time} seconds before retry...", flush=True)
             time.sleep(wait_time)
 
-    print(f"\n✗ API validation failed after {max_attempts} attempts")
-    print("\nFailed endpoints:")
+    print(f"\n✗ API validation failed after {max_attempts} attempts", flush=True)
+    print("\nFailed endpoints:", flush=True)
     for name, success, message in results:
         if not success:
-            print(f"  - {name}: {message}")
+            print(f"  - {name}: {message}", flush=True)
 
     return False
 
@@ -156,8 +156,8 @@ def main():
 
     api_endpoint = args.api_endpoint.rstrip('/')
 
-    print(f"Validating API endpoint: {api_endpoint}")
-    print("Testing all endpoints: /, /health, /v1/echo, /invalid")
+    print(f"Validating API endpoint: {api_endpoint}", flush=True)
+    print("Testing all endpoints: /, /health, /v1/echo, /invalid", flush=True)
 
     success = poll_until_propagated(api_endpoint, args.max_attempts)
 
