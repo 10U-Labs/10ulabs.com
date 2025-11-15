@@ -37,71 +37,63 @@ def split_text_by_words(text: str, max_length: int = 1000) -> list:
 
     return chunks
 
-def find_source_files(project_dir: str) -> list:
-    source_files = []
+def find_all_project_files(project_dir: str) -> list:
+    all_files = []
 
     patterns = [
         os.path.join(project_dir, '*.py'),
+        os.path.join(project_dir, '*.json'),
+        os.path.join(project_dir, '*.txt'),
+        os.path.join(project_dir, '*.yaml'),
+        os.path.join(project_dir, '*.yml'),
         os.path.join(project_dir, 'lambda', '*.py'),
         os.path.join(project_dir, 'lambda', '*', '*.py'),
     ]
 
     for pattern in patterns:
-        source_files.extend(glob.glob(pattern))
+        all_files.extend(glob.glob(pattern))
 
-    excluded_names = ['readme.py', 'conftest.py', 'test_']
-    source_files = [
-        f for f in source_files
+    excluded_names = ['readme.py', 'conftest.py', 'test_', 'README.md']
+    all_files = [
+        f for f in all_files
         if not any(excluded in os.path.basename(f) for excluded in excluded_names)
     ]
 
-    return sorted(source_files)
+    return sorted(all_files)
 
-def read_source_files(project_dir: str) -> str:
-    source_files_paths = find_source_files(project_dir)
+def read_all_project_files(project_dir: str) -> str:
+    all_file_paths = find_all_project_files(project_dir)
 
-    if not source_files_paths:
-        logging.warning("No source files found in %s", project_dir)
+    if not all_file_paths:
+        logging.warning("No files found in %s", project_dir)
         return ""
 
-    source_files = {}
-    for full_path in source_files_paths:
+    all_files = {}
+    for full_path in all_file_paths:
         try:
             with open(full_path, 'r', encoding='utf-8') as f:
                 rel_path = os.path.relpath(full_path, project_dir)
-                source_files[rel_path] = f.read()
+                all_files[rel_path] = f.read()
         except IOError as e:
             logging.error("Failed to read %s: %s", full_path, e)
             sys.exit(1)
 
     combined = ""
-    for file_path, content in source_files.items():
+    for file_path, content in all_files.items():
         combined += f"\n\n{'='*60}\nFile: {file_path}\n{'='*60}\n{content}"
 
     return combined
 
-def read_requirements_file(project_dir: str) -> str:
-    requirements_path = os.path.join(project_dir, 'requirements.txt')
-    try:
-        with open(requirements_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        logging.warning("requirements.txt not found in %s", project_dir)
-        return ""
-    except IOError as e:
-        logging.error("Failed to read requirements.txt: %s", e)
-        return ""
-
-def check_readme_should_be_updated(bedrock_client, source_code: str, current_readme: str, model_id: str, max_tokens: int) -> bool:
+def check_readme_should_be_updated(bedrock_client, project_files: str, current_readme: str, bedrock_config: dict) -> bool:
     if not current_readme or not current_readme.strip():
         logging.info("README is empty or missing - should be updated")
         return True
 
     prompt = f"""You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given infrastructure code.
 
-<source_code>
-{source_code}
-</source_code>
+<project_files>
+{project_files}
+</project_files>
 
 <current_readme>
 {current_readme}
@@ -136,13 +128,13 @@ Do not include any other text or formatting outside the JSON object."""
 
     try:
         response = bedrock_client.converse(
-            modelId=model_id,
+            modelId=bedrock_config['model_id'],
             messages=[{
                 'role': 'user',
                 'content': [{'text': prompt}]
             }],
             inferenceConfig={
-                'maxTokens': max_tokens
+                'maxTokens': bedrock_config['max_tokens']
             }
         )
 
@@ -168,30 +160,24 @@ Do not include any other text or formatting outside the JSON object."""
         logging.error("Failed to check README with Bedrock: %s", e)
         sys.exit(1)
 
-def generate_readme(bedrock_client, source_code: str, requirements: str, model_id: str, max_tokens: int) -> str:
-    requirements_section = f"""
-<requirements_txt>
-{requirements}
-</requirements_txt>
-""" if requirements else ""
-
+def generate_readme(bedrock_client, project_files: str, bedrock_config: dict) -> str:
     prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following infrastructure code.
 
-<source_code>
-{source_code}
-</source_code>
-{requirements_section}
+<project_files>
+{project_files}
+</project_files>
+
 Create a professional README that includes:
 1. Title and overview of what this infrastructure does
 2. Purpose and key features
 3. Resources created (analyze the code to identify all AWS resources)
 4. Prerequisites and requirements:
-   - CRITICAL: Use ONLY dependencies listed in <requirements_txt> - DO NOT invent or assume additional dependencies
+   - CRITICAL: Use ONLY dependencies found in requirements.txt file from project_files - DO NOT invent or assume additional dependencies
    - If AWS CLI is NOT in requirements.txt, DO NOT list it as a requirement
    - AWS CDK uses boto3 (Python SDK), NOT the AWS CLI tool
    - List Python packages from requirements.txt
    - List system dependencies needed to run those packages (e.g., Node.js for AWS CDK)
-5. Configuration details (config.json structure if present)
+5. Configuration details (analyze config.json and cdk.json files from project_files)
 6. Usage instructions:
    - Installation steps
    - Running the infrastructure (CDK deploy, scripts, etc.)
@@ -220,13 +206,13 @@ CRITICAL INSTRUCTIONS:
 1. Generate the README content first
 2. Before outputting, verify EACH requirement using this checklist:
 
-   FACTUAL ACCURACY (verify against source code and requirements.txt):
-   - [ ] Prerequisites list ONLY dependencies from requirements.txt - NO invented dependencies
+   FACTUAL ACCURACY (verify against project_files):
+   - [ ] Prerequisites list ONLY dependencies from requirements.txt in project_files - NO invented dependencies
    - [ ] AWS CLI is NOT listed as requirement (AWS CDK uses boto3, not AWS CLI)
    - [ ] Python packages match requirements.txt exactly
    - [ ] System dependencies (Node.js, Git) are accurate for the packages used
-   - [ ] Resource descriptions match implementation in source code
-   - [ ] Configuration examples match actual config structure in code
+   - [ ] Resource descriptions match implementation in Python files
+   - [ ] Configuration examples match actual config.json and cdk.json files
    - [ ] Usage instructions are accurate and complete
 
    FORMATTING (markdownlint compliance):
@@ -248,13 +234,13 @@ Generate ONLY the README content, starting with the title. Do not include any pr
 
     try:
         response = bedrock_client.converse(
-            modelId=model_id,
+            modelId=bedrock_config['model_id'],
             messages=[{
                 'role': 'user',
                 'content': [{'text': prompt}]
             }],
             inferenceConfig={
-                'maxTokens': max_tokens
+                'maxTokens': bedrock_config['max_tokens']
             }
         )
 
@@ -298,27 +284,25 @@ def main():
 
     config = load_config(project_dir)
 
-    bedrock_model_id = args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0')
-    max_tokens_check = int(args.max_tokens_check or config.get('aws', {}).get('bedrock', {}).get('max_tokens_check', 200))
-    max_tokens_generate = int(args.max_tokens_generate or config.get('aws', {}).get('bedrock', {}).get('max_tokens_generate', 16000))
-
     if not args.check and not args.update:
         logging.error("Must specify either --check or --update")
         sys.exit(1)
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
-    source_code = read_source_files(project_dir)
-    requirements = read_requirements_file(project_dir)
-    readme_path = os.path.join(project_dir, 'README.md')
+    project_files = read_all_project_files(project_dir)
 
     if args.check:
         try:
-            with open(readme_path, 'r', encoding='utf-8') as f:
+            with open(os.path.join(project_dir, 'README.md'), 'r', encoding='utf-8') as f:
                 current_readme = f.read()
         except FileNotFoundError:
             current_readme = ""
 
-        should_be_updated = check_readme_should_be_updated(bedrock_client, source_code, current_readme, bedrock_model_id, max_tokens_check)
+        bedrock_config = {
+            'model_id': args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
+            'max_tokens': int(args.max_tokens_check or config.get('aws', {}).get('bedrock', {}).get('max_tokens_check', 200))
+        }
+        should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config)
 
         if args.output_file:
             with open(args.output_file, 'a', encoding='utf-8') as f:
@@ -327,12 +311,16 @@ def main():
         sys.exit(0)
 
     elif args.update:
-        new_readme = generate_readme(bedrock_client, source_code, requirements, bedrock_model_id, max_tokens_generate)
+        bedrock_config = {
+            'model_id': args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
+            'max_tokens': int(args.max_tokens_generate or config.get('aws', {}).get('bedrock', {}).get('max_tokens_generate', 16000))
+        }
+        new_readme = generate_readme(bedrock_client, project_files, bedrock_config)
 
-        with open(readme_path, 'w', encoding='utf-8') as f:
+        with open(os.path.join(project_dir, 'README.md'), 'w', encoding='utf-8') as f:
             f.write(new_readme)
 
-        logging.info("README updated at %s", readme_path)
+        logging.info("README updated at %s", os.path.join(project_dir, 'README.md'))
         sys.exit(0)
 
 if __name__ == '__main__':

@@ -245,7 +245,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/gmail_email_provider
+          python -m mypy src/gmail_email_provider scripts/readme.py
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
