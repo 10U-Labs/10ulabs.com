@@ -135,7 +135,7 @@ def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
             return True
 
         if attempt < max_attempts - 1:
-            wait_time = min(2 ** attempt, 60)
+            wait_time = 2 ** attempt
             print(f"\nWaiting {wait_time} seconds before retry...", flush=True)
             time.sleep(wait_time)
 
