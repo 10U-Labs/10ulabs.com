@@ -385,67 +385,84 @@ def test_lambda_handler_echo_endpoint_with_invalid_json_error_is_invalid_json():
 
 def test_poll_until_propagated_returns_true_on_first_success():
     with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
-        mock_response = Mock()
-        mock_response.status_code = 404
-        mock_get.return_value = mock_response
+        with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+            mock_root_resp = Mock(status_code=200, headers={'Content-Type': 'text/html'}, text='<html>Swagger UI</html>')
+            mock_health_resp = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+            mock_health_resp.json.return_value = {'status': 'healthy', 'service': '10U Labs API'}
+            mock_invalid_resp = Mock(status_code=404)
+            mock_get.side_effect = [mock_root_resp, mock_health_resp, mock_invalid_resp]
 
-        result = poll_api_until_it_has_propagated.poll_until_propagated(
-            'https://api.example.com',
-            max_attempts=5
-        )
-        assert result is True
+            mock_echo_resp = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+            mock_echo_resp.json.return_value = {'echo': {'test': 'validation'}, 'received_at': 'req-123'}
+            mock_post.return_value = mock_echo_resp
+
+            result = poll_api_until_it_has_propagated.poll_until_propagated('https://api.example.com', max_attempts=5)
+            assert result is True
 
 
 def test_poll_until_propagated_calls_correct_endpoint():
     with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
-        mock_response = Mock()
-        mock_response.status_code = 404
-        mock_get.return_value = mock_response
+        with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+            mock_root_resp = Mock(status_code=200, headers={'Content-Type': 'text/html'}, text='<html>Swagger UI</html>')
+            mock_health_resp = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+            mock_health_resp.json.return_value = {'status': 'healthy', 'service': '10U Labs API'}
+            mock_invalid_resp = Mock(status_code=404)
+            mock_get.side_effect = [mock_root_resp, mock_health_resp, mock_invalid_resp]
 
-        poll_api_until_it_has_propagated.poll_until_propagated(
-            'https://api.example.com',
-            max_attempts=1
-        )
-        mock_get.assert_called_once_with(
-            'https://api.example.com/invalid',
-            timeout=10,
-            allow_redirects=True
-        )
+            mock_echo_resp = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+            mock_echo_resp.json.return_value = {'echo': {}, 'received_at': 'req-123'}
+            mock_post.return_value = mock_echo_resp
+
+            poll_api_until_it_has_propagated.poll_until_propagated('https://api.example.com', max_attempts=1)
+            assert mock_get.call_count == 3
+            assert any('https://api.example.com/' == str(call[0][0]) for call in mock_get.call_args_list)
+            assert any('https://api.example.com/health' == str(call[0][0]) for call in mock_get.call_args_list)
+            assert any('https://api.example.com/invalid' == str(call[0][0]) for call in mock_get.call_args_list)
 
 
 def test_poll_until_propagated_retries_on_wrong_status_code():
     with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
-        with patch('poll_api_until_it_has_propagated.time.sleep'):
-            mock_response_403 = Mock()
-            mock_response_403.status_code = 403
-            mock_response_404 = Mock()
-            mock_response_404.status_code = 404
+        with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+            with patch('poll_api_until_it_has_propagated.time.sleep'):
+                mock_fail_resp = Mock(status_code=403)
+                mock_root_ok = Mock(status_code=200, headers={'Content-Type': 'text/html'}, text='<html>Swagger UI</html>')
+                mock_health_ok = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+                mock_health_ok.json.return_value = {'status': 'healthy', 'service': '10U Labs API'}
+                mock_invalid_ok = Mock(status_code=404)
 
-            mock_get.side_effect = [mock_response_403, mock_response_404]
+                mock_get.side_effect = [mock_fail_resp, mock_fail_resp, mock_fail_resp,
+                                       mock_root_ok, mock_health_ok, mock_invalid_ok]
 
-            result = poll_api_until_it_has_propagated.poll_until_propagated(
-                'https://api.example.com',
-                max_attempts=5
-            )
-            assert result is True
+                mock_echo_ok = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+                mock_echo_ok.json.return_value = {'echo': {}, 'received_at': 'req-123'}
+                mock_post.return_value = mock_echo_ok
+
+                result = poll_api_until_it_has_propagated.poll_until_propagated('https://api.example.com', max_attempts=5)
+                assert result is True
 
 
 def test_poll_until_propagated_retries_on_request_exception():
     with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
-        with patch('poll_api_until_it_has_propagated.time.sleep'):
-            mock_response = Mock()
-            mock_response.status_code = 404
+        with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+            with patch('poll_api_until_it_has_propagated.time.sleep'):
+                mock_root_ok = Mock(status_code=200, headers={'Content-Type': 'text/html'}, text='<html>Swagger UI</html>')
+                mock_health_ok = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+                mock_health_ok.json.return_value = {'status': 'healthy', 'service': '10U Labs API'}
+                mock_invalid_ok = Mock(status_code=404)
 
-            mock_get.side_effect = [
-                requests.exceptions.RequestException('Network error'),
-                mock_response
-            ]
+                mock_get.side_effect = [
+                    requests.exceptions.RequestException('Network error'),
+                    requests.exceptions.RequestException('Network error'),
+                    requests.exceptions.RequestException('Network error'),
+                    mock_root_ok, mock_health_ok, mock_invalid_ok
+                ]
 
-            result = poll_api_until_it_has_propagated.poll_until_propagated(
-                'https://api.example.com',
-                max_attempts=5
-            )
-            assert result is True
+                mock_echo_ok = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+                mock_echo_ok.json.return_value = {'echo': {}, 'received_at': 'req-123'}
+                mock_post.return_value = mock_echo_ok
+
+                result = poll_api_until_it_has_propagated.poll_until_propagated('https://api.example.com', max_attempts=5)
+                assert result is True
 
 
 def test_poll_until_propagated_returns_false_after_max_attempts():
@@ -481,16 +498,20 @@ def test_poll_until_propagated_uses_exponential_backoff():
 
 def test_poll_until_propagated_does_not_sleep_on_success():
     with patch('poll_api_until_it_has_propagated.requests.get') as mock_get:
-        with patch('poll_api_until_it_has_propagated.time.sleep') as mock_sleep:
-            mock_response = Mock()
-            mock_response.status_code = 404
-            mock_get.return_value = mock_response
+        with patch('poll_api_until_it_has_propagated.requests.post') as mock_post:
+            with patch('poll_api_until_it_has_propagated.time.sleep') as mock_sleep:
+                mock_root_resp = Mock(status_code=200, headers={'Content-Type': 'text/html'}, text='<html>Swagger UI</html>')
+                mock_health_resp = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+                mock_health_resp.json.return_value = {'status': 'healthy', 'service': '10U Labs API'}
+                mock_invalid_resp = Mock(status_code=404)
+                mock_get.side_effect = [mock_root_resp, mock_health_resp, mock_invalid_resp]
 
-            poll_api_until_it_has_propagated.poll_until_propagated(
-                'https://api.example.com',
-                max_attempts=5
-            )
-            assert mock_sleep.call_count == 0
+                mock_echo_resp = Mock(status_code=200, headers={'Content-Type': 'application/json'})
+                mock_echo_resp.json.return_value = {'echo': {}, 'received_at': 'req-123'}
+                mock_post.return_value = mock_echo_resp
+
+                poll_api_until_it_has_propagated.poll_until_propagated('https://api.example.com', max_attempts=5)
+                assert mock_sleep.call_count == 0
 
 
 def test_poll_until_propagated_does_not_sleep_after_final_attempt():
@@ -531,7 +552,7 @@ def test_poll_script_main_strips_trailing_slash_from_endpoint():
             with patch('sys.exit'):
                 mock_poll.return_value = True
                 poll_api_until_it_has_propagated.main()
-                mock_poll.assert_called_once_with('https://api.example.com', 10)
+                mock_poll.assert_called_once_with('https://api.example.com', 20)
 
 
 def test_app_can_be_imported_successfully():
