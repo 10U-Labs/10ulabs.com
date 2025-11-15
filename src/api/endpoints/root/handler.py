@@ -2,7 +2,7 @@ import os
 import yaml
 
 
-def handler(event, context):
+def handler(_event, _context):
     openapi_spec_path = os.path.join(os.path.dirname(__file__), '..', 'openapi.yaml')
 
     with open(openapi_spec_path, 'r', encoding='utf-8') as f:
