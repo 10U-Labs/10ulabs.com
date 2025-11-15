@@ -123,8 +123,7 @@ jobs:
         id: deploy
         run: |
           cd src/api/self && cdk deploy TenULabsApi \
-            --require-approval never \
-            --outputs-file ../../api-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
+            --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
             echo "deployment_failed=true" >> $GITHUB_OUTPUT
           else
@@ -135,17 +134,10 @@ jobs:
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
-      - name: Display outputs
-        if: steps.deploy.outputs.deployment_failed != 'true'
-        run: |
-          echo "API infrastructure deployed successfully"
-          echo ""
-          echo "Stack Outputs:"
-          cat api-outputs.json | jq '.'
       - name: Validate API propagation
         if: steps.deploy.outputs.deployment_failed != 'true'
         run: |
-          API_ENDPOINT=$(jq -r '.TenULabsApi.ApiEndpoint' api-outputs.json)
+          API_ENDPOINT="https://$(jq -r '.domain_names.subdomain' src/api/self/config.json)"
           python src/api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing:
     name: Integration testing
