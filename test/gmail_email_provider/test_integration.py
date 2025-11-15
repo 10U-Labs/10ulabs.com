@@ -1,14 +1,5 @@
-import json
-from pathlib import Path
 import boto3
 import pytest
-
-
-@pytest.fixture
-def config():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        return json.load(f)
 
 
 @pytest.fixture
