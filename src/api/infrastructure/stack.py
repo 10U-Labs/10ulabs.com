@@ -272,17 +272,20 @@ class ApiStack(Stack):
 
         deployment = apigw.Deployment(
             self, f"ApiDeployment{spec_hash}",
-            api=self.api
+            api=self.api,
+            description=f"Deployment for spec hash {spec_hash}"
         )
 
         stage = apigw.Stage(
-            self, f"ProdStage{spec_hash}",
+            self, "ProdStage",
             deployment=deployment,
             stage_name="prod",
             logging_level=apigw.MethodLoggingLevel.INFO,
             access_log_destination=apigw.LogGroupLogDestination(api_log_group),
             access_log_format=apigw.AccessLogFormat.clf()
         )
+
+        stage.node.add_dependency(deployment)
 
         self.api.deployment_stage = stage
         docs_handler.add_permission(
