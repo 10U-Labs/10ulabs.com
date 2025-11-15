@@ -528,7 +528,7 @@ def test_poll_script_main_strips_trailing_slash_from_endpoint():
             with patch('sys.exit'):
                 mock_poll.return_value = True
                 poll_api_until_it_has_propagated.main()
-                mock_poll.assert_called_once_with('https://api.example.com', 20)
+                mock_poll.assert_called_once_with('https://api.example.com', 11)
 
 
 def test_app_can_be_imported_successfully():

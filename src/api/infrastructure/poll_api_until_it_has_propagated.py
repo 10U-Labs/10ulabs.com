@@ -107,7 +107,7 @@ def validate_invalid_endpoint(api_endpoint: str) -> tuple[bool, str]:
     return result
 
 
-def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
+def poll_until_propagated(api_endpoint: str, max_attempts: int = 11) -> bool:
     endpoints = [
         ("Root (Swagger UI)", validate_root_endpoint),
         ("Health", validate_health_endpoint),
@@ -151,7 +151,7 @@ def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--api-endpoint', required=True, help='API endpoint URL to validate')
-    parser.add_argument('--max-attempts', type=int, default=20, help='Maximum polling attempts')
+    parser.add_argument('--max-attempts', type=int, default=11, help='Maximum polling attempts')
     args = parser.parse_args()
 
     api_endpoint = args.api_endpoint.rstrip('/')
