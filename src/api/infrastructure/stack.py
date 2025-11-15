@@ -299,44 +299,7 @@ class ApiStack(Stack):
                 metric_name="ApiWafMetrics",
                 sampled_requests_enabled=True
             ),
-            rules=[
-                wafv2.CfnWebACL.RuleProperty(
-                    name="AWS-AWSManagedRulesCommonRuleSet",
-                    priority=1,
-                    override_action=wafv2.CfnWebACL.OverrideActionProperty(
-                        count={}
-                    ),
-                    statement=wafv2.CfnWebACL.StatementProperty(
-                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
-                            vendor_name="AWS",
-                            name="AWSManagedRulesCommonRuleSet"
-                        )
-                    ),
-                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
-                        cloud_watch_metrics_enabled=True,
-                        metric_name="AWSManagedRulesCommonRuleSetMetric",
-                        sampled_requests_enabled=True
-                    )
-                ),
-                wafv2.CfnWebACL.RuleProperty(
-                    name="AWS-AWSManagedRulesKnownBadInputsRuleSet",
-                    priority=2,
-                    override_action=wafv2.CfnWebACL.OverrideActionProperty(
-                        count={}
-                    ),
-                    statement=wafv2.CfnWebACL.StatementProperty(
-                        managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
-                            vendor_name="AWS",
-                            name="AWSManagedRulesKnownBadInputsRuleSet"
-                        )
-                    ),
-                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
-                        cloud_watch_metrics_enabled=True,
-                        metric_name="AWSManagedRulesKnownBadInputsRuleSetMetric",
-                        sampled_requests_enabled=True
-                    )
-                )
-            ]
+            rules=[]
         )
 
     def _create_cloudfront(self, subdomain_name, certificate, web_acl):
