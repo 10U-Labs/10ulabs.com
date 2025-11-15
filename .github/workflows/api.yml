@@ -138,7 +138,7 @@ jobs:
         if: steps.deploy.outputs.deployment_failed != 'true'
         run: |
           API_ENDPOINT="https://$(jq -r '.domain_names.subdomain' src/api/infrastructure/config.json)"
-          python src/api/infrastructure/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
+          python src/api/infrastructure/poll_api_until_it_has_propagated.py --api-endpoint "$API_ENDPOINT"
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state

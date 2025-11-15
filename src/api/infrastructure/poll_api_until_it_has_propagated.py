@@ -6,6 +6,7 @@ import requests
 
 
 def validate_root_endpoint(api_endpoint: str) -> tuple[bool, str]:
+    result = (False, "Unknown error")
     try:
         response = requests.get(f"{api_endpoint}/", timeout=10, allow_redirects=True)
 
@@ -19,13 +20,14 @@ def validate_root_endpoint(api_endpoint: str) -> tuple[bool, str]:
         elif 'swagger' not in response.text.lower():
             error = "Root endpoint doesn't contain Swagger UI"
 
-        return (False, error) if error else (True, "Root endpoint (Swagger UI) working correctly")
-
+        result = (False, error) if error else (True, "Root endpoint (Swagger UI) working correctly")
     except requests.exceptions.RequestException as e:
-        return False, f"Root endpoint request failed: {e}"
+        result = (False, f"Root endpoint request failed: {e}")
+    return result
 
 
 def validate_health_endpoint(api_endpoint: str) -> tuple[bool, str]:
+    result = (False, "Unknown error")
     try:
         response = requests.get(f"{api_endpoint}/health", timeout=10, allow_redirects=True)
 
@@ -46,13 +48,14 @@ def validate_health_endpoint(api_endpoint: str) -> tuple[bool, str]:
             except json.JSONDecodeError:
                 error = "Health endpoint returned invalid JSON"
 
-        return (False, error) if error else (True, "Health endpoint working correctly")
-
+        result = (False, error) if error else (True, "Health endpoint working correctly")
     except requests.exceptions.RequestException as e:
-        return False, f"Health endpoint request failed: {e}"
+        result = (False, f"Health endpoint request failed: {e}")
+    return result
 
 
 def validate_echo_endpoint(api_endpoint: str) -> tuple[bool, str]:
+    result = (False, "Unknown error")
     try:
         test_payload = {'test': 'validation', 'timestamp': time.time()}
         response = requests.post(
@@ -81,13 +84,14 @@ def validate_echo_endpoint(api_endpoint: str) -> tuple[bool, str]:
             except json.JSONDecodeError:
                 error = "Echo endpoint returned invalid JSON"
 
-        return (False, error) if error else (True, "Echo endpoint working correctly")
-
+        result = (False, error) if error else (True, "Echo endpoint working correctly")
     except requests.exceptions.RequestException as e:
-        return False, f"Echo endpoint request failed: {e}"
+        result = (False, f"Echo endpoint request failed: {e}")
+    return result
 
 
 def validate_invalid_endpoint(api_endpoint: str) -> tuple[bool, str]:
+    result = (False, "Unknown error")
     try:
         response = requests.get(f"{api_endpoint}/invalid", timeout=10, allow_redirects=True)
 
@@ -97,10 +101,10 @@ def validate_invalid_endpoint(api_endpoint: str) -> tuple[bool, str]:
         elif response.status_code != 404:
             error = f"Invalid endpoint returned {response.status_code}, expected 404"
 
-        return (False, error) if error else (True, "Invalid endpoint correctly returns 404")
-
+        result = (False, error) if error else (True, "Invalid endpoint correctly returns 404")
     except requests.exceptions.RequestException as e:
-        return False, f"Invalid endpoint request failed: {e}"
+        result = (False, f"Invalid endpoint request failed: {e}")
+    return result
 
 
 def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
@@ -112,7 +116,7 @@ def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
     ]
 
     for attempt in range(max_attempts):
-        print(f"\n=== Attempt {attempt + 1}/{max_attempts} ===")
+        print(f"\n=== Attempt {attempt + 1}/{max_attempts} ===", flush=True)
 
         all_passed = True
         results = []
@@ -120,40 +124,40 @@ def poll_until_propagated(api_endpoint: str, max_attempts: int = 20) -> bool:
         for name, validator in endpoints:
             success, message = validator(api_endpoint)
             status = "✓" if success else "✗"
-            print(f"{status} {name}: {message}")
+            print(f"{status} {name}: {message}", flush=True)
             results.append((name, success, message))
 
             if not success:
                 all_passed = False
 
         if all_passed:
-            print(f"\n✓ All endpoints validated successfully after {attempt + 1} attempts")
+            print(f"\n✓ All endpoints validated successfully after {attempt + 1} attempts", flush=True)
             return True
 
         if attempt < max_attempts - 1:
-            wait_time = min(2 ** attempt, 60)
-            print(f"\nWaiting {wait_time} seconds before retry...")
+            wait_time = 2 ** attempt
+            print(f"\nWaiting {wait_time} seconds before retry...", flush=True)
             time.sleep(wait_time)
 
-    print(f"\n✗ API validation failed after {max_attempts} attempts")
-    print("\nFailed endpoints:")
+    print(f"\n✗ API validation failed after {max_attempts} attempts", flush=True)
+    print("\nFailed endpoints:", flush=True)
     for name, success, message in results:
         if not success:
-            print(f"  - {name}: {message}")
+            print(f"  - {name}: {message}", flush=True)
 
     return False
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('api_endpoint', help='API endpoint URL to validate')
+    parser.add_argument('--api-endpoint', required=True, help='API endpoint URL to validate')
     parser.add_argument('--max-attempts', type=int, default=20, help='Maximum polling attempts')
     args = parser.parse_args()
 
     api_endpoint = args.api_endpoint.rstrip('/')
 
-    print(f"Validating API endpoint: {api_endpoint}")
-    print("Testing all endpoints: /, /health, /v1/echo, /invalid")
+    print(f"Validating API endpoint: {api_endpoint}", flush=True)
+    print("Testing all endpoints: /, /health, /v1/echo, /invalid", flush=True)
 
     success = poll_until_propagated(api_endpoint, args.max_attempts)
 

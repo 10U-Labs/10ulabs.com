@@ -304,7 +304,7 @@ class ApiStack(Stack):
                     name="AWS-AWSManagedRulesCommonRuleSet",
                     priority=1,
                     override_action=wafv2.CfnWebACL.OverrideActionProperty(
-                        none={}
+                        count={}
                     ),
                     statement=wafv2.CfnWebACL.StatementProperty(
                         managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
@@ -322,7 +322,7 @@ class ApiStack(Stack):
                     name="AWS-AWSManagedRulesKnownBadInputsRuleSet",
                     priority=2,
                     override_action=wafv2.CfnWebACL.OverrideActionProperty(
-                        none={}
+                        count={}
                     ),
                     statement=wafv2.CfnWebACL.StatementProperty(
                         managed_rule_group_statement=wafv2.CfnWebACL.ManagedRuleGroupStatementProperty(
