@@ -11,6 +11,8 @@ from aws_cdk import (
     RemovalPolicy,
     Fn,
     Tags,
+    BundlingOptions,
+    DockerImage,
     aws_route53 as route53,
     aws_route53_targets as targets,
     aws_apigateway as apigw,
@@ -208,7 +210,16 @@ class ApiStack(Stack):
             self, "DocsHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
             handler="handler.handler",
-            code=lambda_.Code.from_asset(root_endpoint_dir),
+            code=lambda_.Code.from_asset(
+                root_endpoint_dir,
+                bundling=BundlingOptions(
+                    image=DockerImage.from_registry("public.ecr.aws/sam/build-python3.11"),
+                    command=[
+                        "bash", "-c",
+                        "pip install -r requirements.txt -t /asset-output && cp -au . /asset-output"
+                    ]
+                )
+            ),
             timeout=Duration.seconds(10),
             description="Serves OpenAPI documentation at api.10ulabs.com/",
             log_retention=logs.RetentionDays.ONE_WEEK
