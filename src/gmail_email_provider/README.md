@@ -1,76 +1,89 @@
 # Gmail Email Provider Infrastructure
 
-This AWS CDK infrastructure sets up DNS configuration for Gmail email
-services on the 10ulabs.com domain. It creates the necessary Route 53
-DNS records to enable Gmail as the email provider, including MX records
-for mail routing and Google site verification records.
+This AWS CDK infrastructure project configures DNS records for using Gmail as
+the email provider for a domain. It sets up the necessary MX records and Google
+site verification to enable Gmail email services for the specified domain.
 
-## Purpose and Key Features
+## Overview
 
-- **Gmail Integration**: Configures DNS records to route email through
-  Gmail's SMTP servers
-- **Domain Verification**: Sets up Google site verification for domain
-  ownership confirmation
-- **DNS Management**: Manages Route 53 records for email services
-- **Infrastructure as Code**: Uses AWS CDK for reproducible deployments
+This infrastructure automatically creates and manages DNS records required to
+configure Gmail as the email provider for your domain. The stack deploys Route
+53 DNS records including MX records for Gmail email routing and Google site
+verification TXT records for domain ownership verification.
 
-## Resources Created
+## Key Features
 
-This infrastructure creates the following AWS resources:
+- **Gmail MX Record Configuration**: Automatically configures MX records to
+  route email through Gmail's SMTP servers
+- **Google Site Verification**: Sets up TXT records for Google domain
+  ownership verification
+- **Configurable TTL**: Allows customization of DNS record time-to-live values
+- **Cross-Stack Integration**: Imports existing hosted zone from another stack
+- **AWS CDK Best Practices**: Uses Infrastructure as Code with proper tagging
+  and outputs
 
-### Route 53 Records
+## AWS Resources Created
 
-- **MX Record**: Routes email traffic to `smtp.google.com` with priority 1
-- **TXT Record**: Google site verification record for domain ownership
+This stack creates the following AWS resources:
 
-### CloudFormation Outputs
+- **Route53 TXT Record**: Google site verification record for domain ownership
+- **Route53 MX Record**: Gmail mail exchange record pointing to
+  `smtp.google.com` with priority 1
+- **CloudFormation Outputs**: Provides record names and values for reference
 
-- **GoogleVerificationRecord**: Domain name of the verification record
-- **GoogleVerificationValue**: The complete verification string
-- **GmailMxRecordOutput**: Domain name of the MX record
-
-## Prerequisites and Requirements
+## Prerequisites
 
 ### System Dependencies
 
-- **Python 3.8+**: Required for AWS CDK Python applications
-- **Node.js 18+**: Required by AWS CDK CLI
-- **Git**: For cloning and version control
+- **Python 3.8 or higher**: Required for AWS CDK Python support
+- **Node.js 18 or higher**: Required for AWS CDK CLI
+- **Git**: For version control and repository management
 
 ### Python Dependencies
 
 Install the required Python packages from `requirements.txt`:
 
-```txt
-aws-cdk-lib==2.150.0
-constructs>=10.0.0,<11.0.0
-boto3>=1.34.0
-boto3-stubs[route53,route53domains,account,organizations]>=1.34.0
+```bash
+pip install -r requirements.txt
 ```
 
-### AWS Prerequisites
+The project requires these specific packages:
+
+- `aws-cdk-lib==2.150.0`: AWS CDK core library
+- `constructs>=10.0.0,<11.0.0`: CDK constructs framework
+- `boto3>=1.34.0`: AWS SDK for Python
+- `boto3-stubs[route53,route53domains,account,organizations]>=1.34.0`: Type
+  stubs for development
+
+### AWS Configuration
 
 - **AWS Account**: Valid AWS account with appropriate permissions
-- **Route 53 Hosted Zone**: Pre-existing hosted zone for the domain
-- **Cross-Stack References**: The hosted zone must export:
-  - `{domain-name}-HostedZoneId`
-  - `{domain-name}-HostedZoneName`
+- **AWS Credentials**: Configured via IAM user, role, or AWS SSO
+- **Route53 Permissions**: Ability to create and manage DNS records
+- **Existing Hosted Zone**: A Route53 hosted zone must already exist and
+  export its ID and name
+
+### Pre-existing Infrastructure
+
+This stack requires an existing Route53 hosted zone that exports the following
+CloudFormation values:
+
+- `{domain-name}-HostedZoneId`: The hosted zone ID
+- `{domain-name}-HostedZoneName`: The hosted zone name
+
+Where `{domain-name}` has dots replaced with hyphens (e.g.,
+`10ulabs-com-HostedZoneId`).
 
 ## Configuration
 
 ### config.json
 
-The main configuration file contains:
+The main configuration file defines deployment parameters:
 
 ```json
 {
   "aws": {
     "account_id": 781581267945,
-    "bedrock": {
-      "max_tokens_check": 4000,
-      "max_tokens_generate": 16000,
-      "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
-    },
     "region": "us-east-1"
   },
   "domain_name": "10ulabs.com",
@@ -81,30 +94,22 @@ The main configuration file contains:
 
 #### Configuration Parameters
 
-| Parameter | Description | Required |
-| --------- | ----------- | -------- |
-| `aws.account_id` | AWS account ID for deployment | Yes |
-| `aws.region` | AWS region for resources | Yes |
-| `domain_name` | Domain name for email configuration | Yes |
-| `google_site_verification` | Google verification token | Yes |
-| `ttl` | DNS record TTL in seconds | No (default: 300) |
+- **aws.account_id**: Target AWS account ID for deployment
+- **aws.region**: AWS region for resource deployment
+- **domain_name**: Domain name to configure Gmail for
+- **google_site_verification**: Google site verification token
+- **ttl**: DNS record time-to-live in seconds (default: 300)
 
 ### cdk.json
 
-CDK configuration with feature flags and context settings:
+CDK configuration file with deployment settings:
 
 ```json
 {
   "app": "python3 app.py",
   "watch": {
     "include": ["**"],
-    "exclude": [
-      "README.md",
-      "cdk*.json",
-      "**/__pycache__",
-      "**/.pytest_cache",
-      ".git"
-    ]
+    "exclude": ["README.md", "cdk*.json", "**/__pycache__"]
   }
 }
 ```
@@ -120,171 +125,186 @@ CDK configuration with feature flags and context settings:
    cd gmail-email-provider
    ```
 
-2. **Install Python dependencies**:
+2. **Install dependencies**:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Install AWS CDK CLI**:
+3. **Install AWS CDK CLI** (if not already installed):
 
    ```bash
    npm install -g aws-cdk
    ```
 
-4. **Configure AWS credentials**:
+### Configuration Setup
+
+1. **Update config.json** with your domain details:
 
    ```bash
-   aws configure
-   # or use environment variables, IAM roles, etc.
+   cp config.json.example config.json
+   # Edit config.json with your values
    ```
+
+2. **Obtain Google site verification token**:
+   - Visit Google Search Console
+   - Add your domain property
+   - Choose "HTML tag" verification method
+   - Copy the verification token from the meta tag
 
 ### Deployment
 
 1. **Bootstrap CDK** (first time only):
 
    ```bash
-   cdk bootstrap aws://781581267945/us-east-1
+   cdk bootstrap
    ```
 
-2. **Review the deployment**:
-
-   ```bash
-   cdk diff
-   ```
-
-3. **Deploy the infrastructure**:
+2. **Deploy the stack**:
 
    ```bash
    cdk deploy
    ```
 
-4. **View outputs**:
+3. **Review changes** before deployment:
 
    ```bash
-   cdk output
+   cdk diff
    ```
 
 ### Verification
 
-After deployment, verify the DNS records:
+After deployment, verify the DNS records are created:
 
 1. **Check MX record**:
 
    ```bash
-   dig MX 10ulabs.com
+   nslookup -type=MX yourdomain.com
    ```
 
 2. **Check TXT record**:
 
    ```bash
-   dig TXT 10ulabs.com
+   nslookup -type=TXT yourdomain.com
    ```
 
 3. **Verify in Google Search Console**:
-   - Add the domain to Google Search Console
-   - Use the DNS verification method
-   - Confirm ownership using the created TXT record
+   - Return to Google Search Console
+   - Click "Verify" for your domain property
 
 ## Architecture Overview
 
 ### Component Interaction
 
 ```text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Gmail SMTP    │    │   Route 53      │    │  Domain Owners  │
-│   Servers       │◄───┤   DNS Records   ├───►│  & Email Users  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐
-                       │ Google Site     │
-                       │ Verification    │
-                       └─────────────────┘
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   CDK Stack     │────│   Route53 Zone   │────│  Gmail SMTP     │
+│                 │    │                  │    │                 │
+│ - MX Record     │    │ - DNS Records    │    │ - Email Routing │
+│ - TXT Record    │    │ - Domain Config  │    │ - Mail Delivery │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
 ```
 
-### DNS Flow
+### Data Flow
 
-1. **Email Routing**: MX record directs email to `smtp.google.com`
-2. **Domain Verification**: TXT record proves domain ownership to Google
-3. **Cross-Stack Integration**: Imports hosted zone from existing stack
+1. **Configuration Loading**: App reads config.json for deployment parameters
+2. **Stack Initialization**: CDK creates stack with imported hosted zone
+3. **Record Creation**: DNS records are created in Route53
+4. **Email Routing**: Gmail SMTP servers handle email for the domain
+5. **Verification**: Google verifies domain ownership via TXT record
 
-### Dependencies
+### Integration Points
 
-- **Hosted Zone Stack**: Must exist before deployment
-- **Export Values**: Required for cross-stack references
-- **DNS Propagation**: Records may take time to propagate globally
+- **Cross-Stack References**: Imports hosted zone from existing infrastructure
+- **CloudFormation Outputs**: Provides record details for other stacks
+- **Tag Inheritance**: Applies project-wide tags to all resources
 
 ## Security Considerations
 
 ### DNS Security
 
-- **Record Integrity**: Use short TTL during initial setup for quick changes
-- **Access Control**: Limit Route 53 permissions to authorized users only
-- **Monitoring**: Monitor DNS changes through CloudTrail
+- **Record Validation**: Ensures proper MX record configuration
+- **TTL Management**: Configurable TTL values for cache control
+- **Zone Protection**: Uses existing hosted zone with proper access controls
 
-### Configuration Security
+### Access Control
 
-- **Sensitive Data**: Google verification token is public but domain-specific
-- **Account ID**: Exposed in config but required for CDK deployment
-- **Cross-Stack References**: Ensure source stack exports are secure
+- **IAM Permissions**: Requires Route53 DNS management permissions
+- **Account Isolation**: Deploys to specific AWS account only
+- **Resource Tagging**: Enables cost allocation and access tracking
 
 ### Best Practices
 
-- **Version Control**: Keep configuration in version control
-- **Environment Separation**: Use different configs for different environments
-- **Regular Audits**: Review DNS records and permissions regularly
+- **Configuration Management**: Sensitive values should be stored securely
+- **Version Control**: Track infrastructure changes through Git
+- **Least Privilege**: Grant minimum required AWS permissions
 
 ## Troubleshooting
 
 ### Common Issues
 
-**ImportValue Error**:
+#### Deployment Failures
+
+**Error**: `HostedZoneId not found in exports`
 
 ```text
-Export {domain-name}-HostedZoneId cannot be found
+Solution: Ensure the source hosted zone stack exports the required values:
+- {domain-name}-HostedZoneId
+- {domain-name}-HostedZoneName
 ```
 
-- **Solution**: Ensure the hosted zone stack is deployed first
-- **Check**: Verify export names match the expected format
+**Error**: `Invalid google_site_verification token`
 
-**DNS Propagation Delays**:
+```text
+Solution: Verify the token is correct from Google Search Console:
+1. Go to Search Console property settings
+2. Copy the exact verification token
+3. Update config.json with the new token
+```
 
-- **Wait Time**: DNS changes can take up to 48 hours to propagate
-- **Check Tools**: Use online DNS checkers from different locations
-- **TTL Impact**: Lower TTL values propagate faster but increase query load
+#### DNS Propagation
 
-**Google Verification Fails**:
+**Issue**: DNS records not resolving immediately
 
-- **Record Check**: Verify TXT record exists and has correct value
-- **Format**: Ensure format is exactly `google-site-verification=TOKEN`
-- **Propagation**: Wait for DNS propagation before verifying in Google
+```bash
+# Check DNS propagation
+dig MX yourdomain.com @8.8.8.8
+dig TXT yourdomain.com @8.8.8.8
 
-### Debugging Commands
+# Wait for TTL expiration (default 300 seconds)
+```
 
-1. **Check stack status**:
+#### Permission Issues
 
-   ```bash
-   cdk ls
-   cdk diff
-   ```
+**Error**: `Access Denied` during deployment
 
-2. **View CloudFormation events**:
+```text
+Required IAM permissions:
+- route53:ChangeResourceRecordSets
+- route53:GetHostedZone
+- route53:ListResourceRecordSets
+- cloudformation:CreateStack
+- cloudformation:UpdateStack
+```
 
-   ```bash
-   aws cloudformation describe-stack-events \
-     --stack-name GmailEmailProvider
-   ```
+### Debug Commands
 
-3. **Test DNS resolution**:
+```bash
+# View stack resources
+cdk list
 
-   ```bash
-   nslookup -type=MX 10ulabs.com
-   nslookup -type=TXT 10ulabs.com
-   ```
+# Show generated CloudFormation
+cdk synth
 
-4. **Validate configuration**:
+# Compare deployed vs local changes
+cdk diff
 
-   ```bash
-   python3 -c "import json; print(json.load(open('config.json')))"
-   ```
+# View deployment logs
+cdk deploy --verbose
+```
+
+### Support Resources
+
+- AWS CDK Documentation: <https://docs.aws.amazon.com/cdk/>
+- Route53 DNS Records: <https://docs.aws.amazon.com/route53/latest/developerguide/>
+- Google Search Console: <https://search.google.com/search-console/>
