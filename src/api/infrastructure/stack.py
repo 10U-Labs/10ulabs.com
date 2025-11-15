@@ -278,7 +278,7 @@ class ApiStack(Stack):
         stage = apigw.Stage(
             self, "ProdStage",
             deployment=deployment,
-            stage_name="prod",
+            stage_name="prodv2",
             logging_level=apigw.MethodLoggingLevel.INFO,
             access_log_destination=apigw.LogGroupLogDestination(api_log_group),
             access_log_format=apigw.AccessLogFormat.clf()

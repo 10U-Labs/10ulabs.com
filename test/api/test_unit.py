@@ -1034,7 +1034,7 @@ def test_api_has_explicit_stage_construct():
     assert len(resources) >= 1
 
 
-def test_api_stage_name_is_prod():
+def test_api_stage_name_is_prodv2():
     app = cdk.App()
     config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     with open(config_path, encoding='utf-8') as f:
@@ -1056,4 +1056,4 @@ def test_api_stage_name_is_prod():
     template = Template.from_stack(stack)
     stages = template.find_resources("AWS::ApiGateway::Stage")
     stage_name = list(stages.values())[0]["Properties"]["StageName"]
-    assert stage_name == "prod"
+    assert stage_name == "prodv2"
