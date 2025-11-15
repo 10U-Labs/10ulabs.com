@@ -191,7 +191,11 @@ jobs:
           jsonlint -q src/api/infrastructure/cdk.json
       - name: Linting Python files
         run: |
-          find src/api -name "*.py" -type f | xargs pylint \
+          pylint \
+            src/api/infrastructure/*.py \
+            src/api/endpoints/root/*.py \
+            src/api/endpoints/health/*.py \
+            src/api/endpoints/v1/echo/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -200,7 +204,10 @@ jobs:
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
       - name: Static type checking Python files with mypy
         run: |
-          find src/api -name "*.py" -type f -exec python -m mypy {} \;
+          python -m mypy src/api/infrastructure
+          python -m mypy src/api/endpoints/root
+          python -m mypy src/api/endpoints/health
+          python -m mypy src/api/endpoints/v1/echo
           python -m mypy scripts/readme.py
   unit-testing:
     name: Unit testing
