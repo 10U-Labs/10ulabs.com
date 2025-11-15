@@ -49,7 +49,8 @@ jobs:
       - id: check
         name: Check if README needs update
         run: |
-          python cloudtrail_and_domain_name/readme.py \
+          python scripts/readme.py \
+            --project-dir src/cloudtrail_and_domain_name \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
@@ -372,14 +373,15 @@ jobs:
         run: pip install boto3
       - name: Update README with Bedrock
         run: |
-          python cloudtrail_and_domain_name/readme.py \
+          python scripts/readme.py \
+            --project-dir src/cloudtrail_and_domain_name \
             --update \
             --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add cloudtrail_and_domain_name/README.md
+          git add src/cloudtrail_and_domain_name/README.md
           if git diff --cached --quiet; then
             echo "No changes to README.md"
           else
