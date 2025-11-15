@@ -333,7 +333,19 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/auth_between_aws_and_github/README.md
           git diff --staged --quiet || git commit -m "Update auth_between_aws_and_github README via Bedrock"
-          git push
+
+          for i in {1..5}; do
+            if git push; then
+              echo "Successfully pushed README update"
+              exit 0
+            fi
+            echo "Push failed (attempt $i/5), pulling and retrying..."
+            git pull --rebase origin main
+            sleep $((2 ** i))
+          done
+
+          echo "Failed to push after 5 attempts"
+          exit 1
 name: Ensuring appropriate bilateral authorizations between AWS and GitHub
 on:
   push:
