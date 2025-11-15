@@ -392,7 +392,8 @@ on:
     branches:
       - main
     paths:
-      - 'cloudtrail_and_domain_name/**'
+      - 'src/cloudtrail_and_domain_name/**'
+      - 'test/cloudtrail_and_domain_name/**'
       - '.github/workflows/cloudtrail_and_domain_name.yml'
   workflow_dispatch:
     inputs:
