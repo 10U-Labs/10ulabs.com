@@ -31,8 +31,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws.region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json)
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -50,7 +50,7 @@ jobs:
         id: check
         run: |
           python scripts/readme.py \
-            --project-dir src/api/self \
+            --project-dir src/api/infrastructure \
             --check \
             --aws-region "${{ steps.config.outputs.region }}" \
             --output-file "$GITHUB_OUTPUT"
@@ -64,8 +64,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws.region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json)
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -93,8 +93,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws.region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json)
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -113,16 +113,16 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
       - name: Install dependencies
-        run: pip install -r src/api/self/requirements.txt
+        run: pip install -r src/api/infrastructure/requirements.txt
       - name: CDK Bootstrap (if needed)
         run: |
-          cd src/api/self && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+          cd src/api/infrastructure && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
-        run: cd src/api/self && cdk diff TenULabsApi
+        run: cd src/api/infrastructure && cdk diff TenULabsApi
       - name: CDK Deploy
         id: deploy
         run: |
-          cd src/api/self && cdk deploy TenULabsApi \
+          cd src/api/infrastructure && cdk deploy TenULabsApi \
             --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
             echo "deployment_failed=true" >> $GITHUB_OUTPUT
@@ -137,8 +137,8 @@ jobs:
       - name: Validate API propagation
         if: steps.deploy.outputs.deployment_failed != 'true'
         run: |
-          API_ENDPOINT="https://$(jq -r '.domain_names.subdomain' src/api/self/config.json)"
-          python src/api/self/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
+          API_ENDPOINT="https://$(jq -r '.domain_names.subdomain' src/api/infrastructure/config.json)"
+          python src/api/infrastructure/poll_api_until_it_has_propagated.py "$API_ENDPOINT"
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
@@ -149,8 +149,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws.region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json)
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
@@ -188,15 +188,15 @@ jobs:
           pip install pylint mypy yamllint
           npm install -g jsonlint
       - name: Install project dependencies for linting
-        run: pip install -r src/api/self/requirements.txt
+        run: pip install -r src/api/infrastructure/requirements.txt
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q src/api/self/config.json
-          jsonlint -q src/api/self/cdk.json
+          jsonlint -q src/api/infrastructure/config.json
+          jsonlint -q src/api/infrastructure/cdk.json
       - name: Linting Python files
         run: |
-          pylint src/api/self/stack.py src/api/self/app.py src/api/self/lambda/health.py src/api/self/lambda/echo.py src/api/self/lambda/docs.py src/api/self/poll_api_until_it_has_propagated.py \
+          pylint src/api/infrastructure/stack.py src/api/infrastructure/app.py src/api/endpoints/root/handler.py src/api/endpoints/health/handler.py src/api/endpoints/v1/echo/handler.py src/api/infrastructure/poll_api_until_it_has_propagated.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,too-many-locals,too-many-statements,no-member,unused-argument,duplicate-code \
             --fail-under=10.0
       - name: Linting YAML files
@@ -205,7 +205,7 @@ jobs:
           yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/api/self scripts/readme.py
+          python -m mypy src/api/infrastructure scripts/readme.py
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -243,8 +243,8 @@ jobs:
       - name: Load configuration
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/self/config.json)
-          REGION=$(jq -r '.aws.region' src/api/self/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json)
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Set up Python
@@ -261,14 +261,14 @@ jobs:
       - name: Update README with Bedrock
         run: |
           python scripts/readme.py \
-            --project-dir src/api/self \
+            --project-dir src/api/infrastructure \
             --update \
             --aws-region "${{ steps.config.outputs.region }}"
       - name: Commit and push README if changed
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add src/api/self/README.md
+          git add src/api/infrastructure/README.md
           if git diff --cached --quiet; then
             echo "No changes to README.md"
           else
@@ -293,7 +293,9 @@ on:
     branches:
       - main
     paths:
-      - 'src/api/self/**'
+      - 'src/api/infrastructure/**'
+      - 'src/api/endpoints/**'
+      - 'src/api/openapi.yaml'
       - 'test/api/**'
       - 'scripts/readme.py'
       - '.github/workflows/api.yml'

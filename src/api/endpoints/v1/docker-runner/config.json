@@ -1,0 +1,16 @@
+{
+  "aws": {
+    "account_id": 781581267945,
+    "region": "us-east-1"
+  },
+  "domain_names": {
+    "subdomain": "api.10ulabs.com"
+  },
+  "naming": {
+    "lambda_function_name": "TenULabsDockerRunnerLauncher"
+  },
+  "lambda": {
+    "timeout_seconds": 30,
+    "memory_mb": 256
+  }
+}
