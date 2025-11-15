@@ -310,7 +310,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/cloudtrail_and_domain_name
+          python -m mypy src/cloudtrail_and_domain_name scripts/readme.py
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
