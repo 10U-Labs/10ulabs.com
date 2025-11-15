@@ -1,30 +1,4 @@
-import json
-from pathlib import Path
-import boto3
 import dns.resolver
-import pytest
-
-
-@pytest.fixture
-def config():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        return json.load(f)
-
-
-@pytest.fixture
-def route53_client(config):
-    return boto3.client('route53', region_name=config['aws']['region'])
-
-
-@pytest.fixture
-def hosted_zone(route53_client, config):
-    domain_name = config['domain_name']
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            return z
-    return None
 
 
 def test_each_nameserver_resolves_soa(route53_client, hosted_zone, config):
