@@ -6,8 +6,8 @@ import pytest
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         return json.load(f)
 
 

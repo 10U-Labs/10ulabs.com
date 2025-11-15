@@ -210,7 +210,7 @@ def test_poll_api_can_connect_to_real_endpoint():
     import requests
     from pathlib import Path
     import sys
-    sys.path.insert(0, str(Path(__file__).parents[1]))
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self"))
     import poll_api_until_it_has_propagated
     result = poll_api_until_it_has_propagated.poll_until_propagated(
         'https://httpbin.org/status/404',
@@ -222,7 +222,7 @@ def test_poll_api_can_connect_to_real_endpoint():
 def test_poll_api_handles_network_errors():
     from pathlib import Path
     import sys
-    sys.path.insert(0, str(Path(__file__).parents[1]))
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self"))
     import poll_api_until_it_has_propagated
     result = poll_api_until_it_has_propagated.poll_until_propagated(
         'https://invalid-domain-that-does-not-exist-12345.com',
@@ -234,7 +234,7 @@ def test_poll_api_handles_network_errors():
 def test_poll_api_handles_ssl_endpoints():
     from pathlib import Path
     import sys
-    sys.path.insert(0, str(Path(__file__).parents[1]))
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self"))
     import poll_api_until_it_has_propagated
     result = poll_api_until_it_has_propagated.poll_until_propagated(
         'https://httpbin.org/status/404',

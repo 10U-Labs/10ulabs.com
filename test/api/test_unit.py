@@ -9,46 +9,34 @@ import requests
 
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parents[1] / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
     assert config_path.exists()
 
 
-def test_config_has_aws_account_id():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        config = json.load(f)
+def test_config_has_aws_account_id(config):
     assert "account_id" in config["aws"]
 
 
-def test_config_has_aws_region():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        config = json.load(f)
+def test_config_has_aws_region(config):
     assert "region" in config["aws"]
 
 
-def test_config_has_subdomain_name():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        config = json.load(f)
+def test_config_has_subdomain_name(config):
     assert "subdomain" in config["domain_names"]
 
 
-def test_config_has_parent_domain():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
-        config = json.load(f)
+def test_config_has_parent_domain(config):
     assert "parent" in config["domain_names"]
 
 
 def test_api_has_lambda_function():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -73,11 +61,11 @@ def test_api_has_lambda_function():
 def test_api_has_api_gateway():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -101,11 +89,11 @@ def test_api_has_api_gateway():
 def test_api_has_certificate():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -129,11 +117,11 @@ def test_api_has_certificate():
 def test_api_has_route53_record():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -157,11 +145,11 @@ def test_api_has_route53_record():
 def test_api_has_url_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -186,11 +174,11 @@ def test_api_has_url_output():
 def test_api_has_domain_name_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -215,11 +203,11 @@ def test_api_has_domain_name_output():
 def test_api_has_endpoint_output():
     app = cdk.App()
 
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
 
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -241,8 +229,8 @@ def test_api_has_endpoint_output():
     assert "ApiEndpoint" in outputs
 
 
-sys.path.insert(0, str(Path(__file__).parents[1] / "lambda"))
-sys.path.insert(0, str(Path(__file__).parents[1]))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self" / "lambda"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "self"))
 
 import handler
 import poll_api_until_it_has_propagated
@@ -571,21 +559,21 @@ def test_poll_script_main_strips_trailing_slash_from_endpoint():
 
 
 def test_app_can_be_imported_successfully():
-    app_path = Path(__file__).parents[1] / "app.py"
+    app_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "app.py"
     spec = importlib.util.spec_from_file_location("app_module", app_path)
     assert spec is not None
 
 
 def test_app_loads_config_json():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     assert "aws" in config
 
 
 def test_app_creates_cdk_environment_with_account_id():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     env = cdk.Environment(
         account=str(config["aws"]["account_id"]),
@@ -595,8 +583,8 @@ def test_app_creates_cdk_environment_with_account_id():
 
 
 def test_app_creates_cdk_environment_with_region():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     env = cdk.Environment(
         account=str(config["aws"]["account_id"]),
@@ -607,10 +595,10 @@ def test_app_creates_cdk_environment_with_region():
 
 def test_app_instantiates_api_stack():
     app = cdk.App()
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
-    stack_path = Path(__file__).parents[1] / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -636,13 +624,13 @@ def test_app_tags_can_be_added_to_cdk_app():
 
 
 def test_readme_script_exists():
-    readme_path = Path(__file__).parents[1] / "readme.py"
+    readme_path = Path(__file__).parent.parent.parent / "scripts" / "readme.py"
     assert readme_path.exists()
 
 
 def test_readme_can_read_source_files():
     import os
-    script_dir = Path(__file__).parents[1]
+    script_dir = Path(__file__).parent.parent.parent / "src" / "api" / "self"
     files_to_read = ['stack.py', 'lambda/handler.py']
     for file_path in files_to_read:
         full_path = script_dir / file_path
@@ -650,28 +638,28 @@ def test_readme_can_read_source_files():
 
 
 def test_readme_loads_config_for_bedrock_settings():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     assert "bedrock" in config.get("aws", {})
 
 
 def test_readme_config_has_bedrock_model_id():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     assert "model_id" in config.get("aws", {}).get("bedrock", {})
 
 
 def test_readme_config_has_max_tokens_check():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     assert "max_tokens_check" in config.get("aws", {}).get("bedrock", {})
 
 
 def test_readme_config_has_max_tokens_generate():
-    config_path = Path(__file__).parents[1] / "config.json"
-    with open(config_path) as f:
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "self" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
         config = json.load(f)
     assert "max_tokens_generate" in config.get("aws", {}).get("bedrock", {})
