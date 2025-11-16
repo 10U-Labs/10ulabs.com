@@ -25,7 +25,8 @@
 ```bash
 curl -s -H "Authorization: Bearer <paste-the-actual-pat-value-here>" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_ID"
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/\
+WORKFLOW_ID"
 ```
 
 **DO NOT use environment variable expansion like `$GITHUB_PAT` in curl
@@ -33,27 +34,31 @@ commands** - it may not expand correctly in some contexts.
 
 ## Troubleshooting Workflow Failures
 
-### CRITICAL: When troubleshooting failed GitHub Actions workflows, ALWAYS check logs first
+### CRITICAL: Always check logs first
+
+When troubleshooting failed GitHub Actions workflows, ALWAYS check logs first
 
 1. Get the workflow run ID from the user or GitHub UI
-2. Use the GitHub API to fetch the workflow logs:
+1. Use the GitHub API to fetch the workflow logs:
 
 ```bash
 PAT=$(echo $GITHUB_PAT)
 curl -s -H "Authorization: Bearer $PAT" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/\
+WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
 ```
 
-3. Identify the failed job and fetch its logs:
+1. Identify the failed job and fetch its logs:
 
 ```bash
 curl -s -L -H "Authorization: Bearer $PAT" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/JOB_ID/logs" > /tmp/logs.txt
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/\
+JOB_ID/logs" > /tmp/logs.txt
 ```
 
-4. Search for errors in the logs:
+1. Search for errors in the logs:
 
 ```bash
 grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
@@ -161,7 +166,8 @@ curl -s -X DELETE \
   -H "Authorization: Bearer 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" \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/git/refs/heads/BRANCH_NAME"
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/git/refs/heads/\
+BRANCH_NAME"
 ```
 
 **Why:** Keeps repository clean and prevents accumulation of stale branches.
@@ -174,16 +180,16 @@ Delete branches immediately after merge, not in batches later.
 1. **Run ALL static analysis AND tests for the infrastructure you're working
    on** - Run EVERY check that the workflow runs, regardless of which specific
    files you modified
-2. **Use the EXACT commands from GitHub workflows** - Do NOT use generic
+1. **Use the EXACT commands from GitHub workflows** - Do NOT use generic
    commands like `pylint .` or `pytest`. Copy commands verbatim including all
    flags and config
-3. **Use environment variables for credentials** - AWS credentials and tokens
+1. **Use environment variables for credentials** - AWS credentials and tokens
    should come from environment variables
-4. **All checks must pass before pushing** - If any check fails (even
+1. **All checks must pass before pushing** - If any check fails (even
    pre-existing issues), understand why before pushing
-5. **Report pre-existing failures** - If checks fail on code you didn't
+1. **Report pre-existing failures** - If checks fail on code you didn't
    modify, document this in commit message
-6. **Run all tests locally** - Run unit tests, integration tests, and E2E
+1. **Run all tests locally** - Run unit tests, integration tests, and E2E
    tests with environment credentials before pushing
 
 **Static analysis includes:** YAML linting, JSON linting, Pylint, Mypy
