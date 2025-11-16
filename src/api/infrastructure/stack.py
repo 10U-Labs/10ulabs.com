@@ -218,7 +218,7 @@ class ApiStack(Stack):
         api_dir = os.path.join(os.path.dirname(__file__), "..")
         s3deploy.BucketDeployment(
             self, "DeployApiDocs",
-            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yaml", "!index.html"])],
+            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yaml", "!index.html", "!404.html"])],
             destination_bucket=docs_bucket,
             prune=False
         )
@@ -347,6 +347,14 @@ class ApiStack(Stack):
         distribution = cloudfront.Distribution(
             self, "ApiDistribution",
             comment="API Gateway + S3 docs distribution",
+            error_responses=[
+                cloudfront.ErrorResponse(
+                    http_status=403,
+                    response_http_status=404,
+                    response_page_path="/404.html",
+                    ttl=Duration.seconds(10)
+                )
+            ],
             default_behavior=cloudfront.BehaviorOptions(
                 origin=s3_origin,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
