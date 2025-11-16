@@ -337,9 +337,14 @@ def main():
         }
         should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config)
 
+        result_value = 'true' if should_be_updated else 'false'
         if args.output_file:
+            logging.info("Writing output to file: %s", args.output_file)
             with open(args.output_file, 'a', encoding='utf-8') as f:
-                f.write(f"readme_should_be_updated={'true' if should_be_updated else 'false'}\n")
+                f.write(f"readme_should_be_updated={result_value}\n")
+            logging.info("Successfully wrote readme_should_be_updated=%s", result_value)
+        else:
+            logging.warning("No output file specified, result: readme_should_be_updated=%s", result_value)
 
         sys.exit(0)
 

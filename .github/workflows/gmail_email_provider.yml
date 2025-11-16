@@ -297,7 +297,7 @@ jobs:
     - name: Commit and push README if changed
       run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/gmail_email_provider/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update gmail_email_provider README.md [skip ci]\"\n  for i in {1..5};\
         \ do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
-name: Configuring Gmail as email provider
+name: Ensuring DNS allows Gmail to be email provider
 on:
   push:
     branches:
