@@ -361,14 +361,14 @@ class ApiStack(Stack):
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
-                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
                 ),
                 "/v1/*": cloudfront.BehaviorOptions(
                     origin=api_origin,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
-                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
                 )
             },
             domain_names=[subdomain_name],
