@@ -1030,6 +1030,60 @@ def test_cloudfront_default_behavior_uses_s3():
     assert default_root_object == "index.html"
 
 
+def test_cloudfront_health_behavior_does_not_forward_host_header():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    health_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/health"][0]
+    assert health_behavior["OriginRequestPolicyId"] == "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+
+
+def test_cloudfront_v1_behavior_does_not_forward_host_header():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    v1_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/v1/*"][0]
+    assert v1_behavior["OriginRequestPolicyId"] == "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+
+
 def test_waf_web_acl_exists():
     app = cdk.App()
     config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
