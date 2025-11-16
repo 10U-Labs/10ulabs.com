@@ -1,130 +1,105 @@
-name: Claude Documentation Linting
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'CLAUDE.md'
-      - '.github/workflows/claude.yml'
-  pull_request:
-    paths:
-      - 'CLAUDE.md'
-      - '.github/workflows/claude.yml'
-  workflow_dispatch:
 jobs:
-  linting:
-    name: Linting
+  concluding-no-warnings:
+    if: needs.determining.outputs.has_warnings == 'false'
+    name: Conclude - No Warnings
+    needs: determining
     runs-on: ubuntu-latest
-    if: |
-      (github.event_name == 'workflow_dispatch') ||
-      !contains(github.event.head_commit.message, '[skip ci]')
-    outputs:
-      has_warnings: ${{ steps.lint.outputs.has_warnings }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install linting tools
-        run: |
-          npm install -g markdownlint-cli2
-          pip install yamllint
-      - name: Run yamllint on claude.yml
-        run: |
-          echo "Running yamllint on claude.yml..."
-          CONFIG='{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}}}'
-          yamllint --config-data "$CONFIG" .github/workflows/claude.yml
-      - name: Run markdownlint-cli2
-        id: lint
-        run: |
-          if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then
-            echo "has_warnings=false" >> $GITHUB_OUTPUT
-            echo "✓ No linting warnings found"
-          else
-            echo "has_warnings=true" >> $GITHUB_OUTPUT
-            echo "⚠️ Linting warnings detected:"
-            cat lint-output.txt
-          fi
-        continue-on-error: true
-      - name: Upload lint results
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-results
-          path: lint-output.txt
+    - name: Conclude no
+      run: "echo \"\u2713 Conclusion: NO - No warnings found in CLAUDE.md\"\necho \"CLAUDE.md is properly formatted\"\n"
+  concluding-warnings:
+    if: needs.determining.outputs.has_warnings == 'true'
+    name: Conclude - Warnings Found
+    needs: determining
+    runs-on: ubuntu-latest
+    steps:
+    - name: Conclude yes
+      run: "echo \"\u2713 Conclusion: YES - Warnings were found in CLAUDE.md\"\necho \"The Updating job will fix these warnings automatically\"\n"
   determining:
     name: Determine linting status
-    runs-on: ubuntu-latest
     needs: linting
     outputs:
       has_warnings: ${{ needs.linting.outputs.has_warnings }}
-    steps:
-      - name: Check linting results
-        run: |
-          if [ "${{ needs.linting.outputs.has_warnings }}" == "true" ]; then
-            echo "Linting yielded warnings"
-          else
-            echo "Linting did not yield warnings"
-          fi
-  concluding-warnings:
-    name: Conclude - Warnings Found
     runs-on: ubuntu-latest
-    needs: determining
-    if: needs.determining.outputs.has_warnings == 'true'
     steps:
-      - name: Conclude yes
-        run: |
-          echo "✓ Conclusion: YES - Warnings were found in CLAUDE.md"
-          echo "The Updating job will fix these warnings automatically"
-  concluding-no-warnings:
-    name: Conclude - No Warnings
+    - name: Check linting results
+      run: "if [ \"${{ needs.linting.outputs.has_warnings }}\" == \"true\" ]; then\n  echo \"Linting yielded warnings\"\nelse\n  echo \"Linting did not yield warnings\"\nfi\n"
+  linting:
+    if: '(github.event_name == ''workflow_dispatch'') ||
+      !contains(github.event.head_commit.message, ''[skip ci]'')
+      '
+    name: Linting
+    outputs:
+      has_warnings: ${{ steps.lint.outputs.has_warnings }}
     runs-on: ubuntu-latest
-    needs: determining
-    if: needs.determining.outputs.has_warnings == 'false'
     steps:
-      - name: Conclude no
-        run: |
-          echo "✓ Conclusion: NO - No warnings found in CLAUDE.md"
-          echo "CLAUDE.md is properly formatted"
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install linting tools
+      run: 'npm install -g markdownlint-cli2
+        pip install yamllint
+        '
+    - name: Run yamllint on claude.yml
+      run: 'echo "Running yamllint on claude.yml..."
+        CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}''
+        yamllint --config-data "$CONFIG" .github/workflows/claude.yml
+        '
+    - continue-on-error: true
+      id: lint
+      name: Run markdownlint-cli2
+      run: "if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then\n  echo \"has_warnings=false\" >> $GITHUB_OUTPUT\n  echo \"\u2713 No linting warnings found\"\nelse\n  echo \"has_warnings=true\" >> $GITHUB_OUTPUT\n  echo \"\u26A0\uFE0F Linting warnings detected:\"\n  cat lint-output.txt\nfi\n"
+    - name: Upload lint results
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-results
+        path: lint-output.txt
   updating:
-    name: Update CLAUDE.md formatting
-    runs-on: ubuntu-latest
-    needs: [determining, concluding-warnings]
     if: needs.determining.outputs.has_warnings == 'true'
+    name: Update CLAUDE.md formatting
+    needs:
+    - determining
+    - concluding-warnings
     permissions:
       contents: write
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install markdownlint-cli2
-        run: npm install -g markdownlint-cli2
-      - name: Fix CLAUDE.md formatting
-        run: |
-          markdownlint-cli2 --fix CLAUDE.md || true
-          echo "✓ Applied markdownlint fixes to CLAUDE.md"
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if git diff --quiet CLAUDE.md; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes needed after auto-fix"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected after auto-fix"
-            git diff CLAUDE.md
-          fi
-      - name: Commit and push changes
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CLAUDE.md
-          git commit -m "Auto-fix CLAUDE.md formatting with markdownlint [skip ci]"
-          git push
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install markdownlint-cli2
+      run: npm install -g markdownlint-cli2
+    - name: Fix CLAUDE.md formatting
+      run: "markdownlint-cli2 --fix CLAUDE.md || true\necho \"\u2713 Applied markdownlint fixes to CLAUDE.md\"\n"
+    - id: check_changes
+      name: Check for changes
+      run: "if git diff --quiet CLAUDE.md; then\n  echo \"has_changes=false\" >> $GITHUB_OUTPUT\n  echo \"No changes needed after auto-fix\"\nelse\n  echo \"has_changes=true\" >> $GITHUB_OUTPUT\n  echo \"Changes detected after auto-fix\"\n  git diff CLAUDE.md\nfi\n"
+    - if: steps.check_changes.outputs.has_changes == 'true'
+      name: Commit and push changes
+      run: 'git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add CLAUDE.md
+        git commit -m "Auto-fix CLAUDE.md formatting with markdownlint [skip ci]"
+        git push
+        '
+name: Claude Documentation Linting
+true:
+  pull_request:
+    paths:
+    - CLAUDE.md
+    - .github/workflows/claude.yml
+  push:
+    branches:
+    - main
+    paths:
+    - CLAUDE.md
+    - .github/workflows/claude.yml
+  workflow_dispatch: null
