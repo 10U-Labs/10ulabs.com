@@ -34,14 +34,14 @@ jobs:
         aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
         aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
         bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_check=$(jq -r ''.aws.bedrock.max_tokens_check'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_generate=$(jq -r ''.aws.bedrock.max_tokens_generate'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_reasoning=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_generation=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/auth_between_aws_and_github/config.json);
         echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
         echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
         echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
         echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
         '
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -56,7 +56,7 @@ jobs:
         role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
     - id: check
       name: Check if README needs update
-      run: "python scripts/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+      run: "python scripts/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.bedrock_model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.bedrock_max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.bedrock_max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -257,14 +257,14 @@ jobs:
         aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
         aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
         bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_check=$(jq -r ''.aws.bedrock.max_tokens_check'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_generate=$(jq -r ''.aws.bedrock.max_tokens_generate'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_reasoning=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_generation=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/auth_between_aws_and_github/config.json);
         echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
         echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
         echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
         echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
         '
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -278,7 +278,7 @@ jobs:
         aws-region: ${{ steps.config.outputs.aws_region }}
         role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
     - name: Update README
-      run: "python scripts/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --update \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\"\n"
+      run: "python scripts/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --update \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.bedrock_model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.bedrock_max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.bedrock_max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
     - name: Commit and push README
       run: "git config user.name \"github-actions[bot]\"\ngit config user.email \"github-actions[bot]@users.noreply.github.com\"\ngit add src/auth_between_aws_and_github/README.md\ngit diff --staged --quiet || git commit -m \"Update auth_between_aws_and_github README via Bedrock\"\nfor i in {1..5}; do\n\
         \  if git push; then\n    echo \"Successfully pushed README update\"\n    exit 0\n  fi\n  echo \"Push failed (attempt $i/5), pulling and retrying...\"\n  git pull --rebase origin main\n  sleep $((2 ** i))\ndone\necho \"Failed to push after 5 attempts\"\nexit 1\n"
