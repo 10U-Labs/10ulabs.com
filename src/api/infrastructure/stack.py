@@ -11,8 +11,6 @@ from aws_cdk import (
     RemovalPolicy,
     Fn,
     Tags,
-    BundlingOptions,
-    DockerImage,
     aws_route53 as route53,
     aws_route53_targets as targets,
     aws_apigateway as apigw,
