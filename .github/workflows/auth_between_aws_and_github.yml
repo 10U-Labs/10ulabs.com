@@ -8,14 +8,14 @@ jobs:
     needs: determining-if-readme-should-be-updated
     runs-on: ubuntu-latest
     steps:
-    - run: 'true'
+      - run: 'true'
   concluding-readme-should-not-be-updated:
     if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'false'
     name: Concluding README.md should not be updated
     needs: determining-if-readme-should-be-updated
     runs-on: ubuntu-latest
     steps:
-    - run: 'true'
+      - run: 'true'
   determining-if-readme-should-be-updated:
     name: Determining if README.md should be updated
     needs: e2e-testing
@@ -26,37 +26,37 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - id: config
-      name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
-        bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_reasoning=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_generation=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/auth_between_aws_and_github/config.json);
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
-        echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
-        '
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install boto3
-      run: pip install boto3
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ steps.config.outputs.aws_region }}
-        role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
-    - id: check
-      name: Check if README needs update
-      run: "python scripts/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.bedrock_model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.bedrock_max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.bedrock_max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+          aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+          aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+          bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
+          bedrock_max_tokens_reasoning=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/auth_between_aws_and_github/config.json);
+          bedrock_max_tokens_generation=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/auth_between_aws_and_github/config.json);
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+          echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
+          echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
+          echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
+          '
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install boto3
+        run: pip install boto3
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - id: check
+        name: Check if README needs update
+        run: "python scripts/readme/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.bedrock_model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.bedrock_max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.bedrock_max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -65,32 +65,32 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - id: config
-      name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
-        '
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ steps.config.outputs.aws_region }}
-        role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: 'pip install pytest boto3
-        '
-    - name: Run E2E tests
-      run: 'pytest test/auth_between_aws_and_github/test_e2e.py -v
-        '
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+          aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+          aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+          '
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: 'pip install pytest boto3
+          '
+      - name: Run E2E tests
+        run: 'pytest test/auth_between_aws_and_github/test_e2e.py -v
+          '
   ensuring-infrastructure-exists-in-defined-state:
     name: Ensuring infrastructure exists in defined state
     needs: unit-testing
@@ -99,62 +99,62 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - id: config
-      name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
-        github_pat_secret_name=$(jq -r ''.aws.secrets_manager.github_pat_secret_name'' src/auth_between_aws_and_github/config.json);
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
-        echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT;
-        '
-    - continue-on-error: true
-      id: oidc-auth
-      name: Try OIDC authentication
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ steps.config.outputs.aws_region }}
-        role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
-    - id: auth-check
-      name: Check authentication method
-      run: "if aws sts get-caller-identity &>/dev/null; then\n  echo \"\u2713 OIDC authentication successful\"\n  echo \"using_oidc=true\" >> $GITHUB_OUTPUT\nelse\n  echo \"\u2139 OIDC authentication failed, will use static credentials\"\n  echo \"using_oidc=false\" >> $GITHUB_OUTPUT\nfi\n"
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install AWS CDK CLI
-      run: npm install -g aws-cdk
-    - name: Install Python dependencies
-      run: pip install -r src/auth_between_aws_and_github/requirements.txt
-    - env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
-      if: steps.auth-check.outputs.using_oidc == 'false'
-      name: Ensure secret exists with GitHub PAT (if using static credentials)
-      run: "SECRET_NAME=\"${{ steps.config.outputs.github_pat_secret_name }}\"\nGITHUB_ORG=\"${{ github.repository_owner }}\"\nGITHUB_REPO=\"${{ github.event.repository.name }}\"\nSECRET_VALUE=$(cat <<EOF\n{\n  \"personal_access_token\": \"$GH_RUNNER_PAT\",\n  \"github_org\": \"$GITHUB_ORG\",\n  \"github_repo\"\
-        : \"$GITHUB_REPO\",\n  \"created_by\": \"github-actions\",\n  \"created_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"\n}\nEOF\n)\nif aws secretsmanager describe-secret --secret-id \"$SECRET_NAME\" &>/dev/null; then\n  echo \"Secret exists, updating...\"\n  aws secretsmanager put-secret-value \\\n \
-        \   --secret-id \"$SECRET_NAME\" \\\n    --secret-string \"$SECRET_VALUE\"\nelse\n  echo \"Secret does not exist, creating...\"\n  aws secretsmanager create-secret \\\n    --name \"$SECRET_NAME\" \\\n    --description \"GitHub PAT for $GITHUB_ORG/$GITHUB_REPO authentication\" \\\n    --secret-string\
-        \ \"$SECRET_VALUE\"\nfi\n"
-    - if: steps.auth-check.outputs.using_oidc == 'true'
-      name: Deploy with OIDC credentials
-      run: 'echo "Deploying with OIDC authentication..."
-        cd src/auth_between_aws_and_github
-        cdk deploy --require-approval never
-        '
-    - env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      if: steps.auth-check.outputs.using_oidc == 'false'
-      name: Deploy with static credentials
-      run: 'echo "Deploying with static credentials..."
-        cd src/auth_between_aws_and_github
-        cdk deploy --require-approval never
-        '
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+          aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+          aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+          github_pat_secret_name=$(jq -r ''.aws.secrets_manager.github_pat_secret_name'' src/auth_between_aws_and_github/config.json);
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+          echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT;
+          '
+      - continue-on-error: true
+        id: oidc-auth
+        name: Try OIDC authentication
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - id: auth-check
+        name: Check authentication method
+        run: "if aws sts get-caller-identity &>/dev/null; then\n  echo \"\u2713 OIDC authentication successful\"\n  echo \"using_oidc=true\" >> $GITHUB_OUTPUT\nelse\n  echo \"\u2139 OIDC authentication failed, will use static credentials\"\n  echo \"using_oidc=false\" >> $GITHUB_OUTPUT\nfi\n"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+      - name: Install Python dependencies
+        run: pip install -r src/auth_between_aws_and_github/requirements.txt
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GH_RUNNER_PAT: ${{ secrets.GH_RUNNER_PAT }}
+        if: steps.auth-check.outputs.using_oidc == 'false'
+        name: Ensure secret exists with GitHub PAT (if using static credentials)
+        run: "SECRET_NAME=\"${{ steps.config.outputs.github_pat_secret_name }}\"\nGITHUB_ORG=\"${{ github.repository_owner }}\"\nGITHUB_REPO=\"${{ github.event.repository.name }}\"\nSECRET_VALUE=$(cat <<EOF\n{\n  \"personal_access_token\": \"$GH_RUNNER_PAT\",\n  \"github_org\": \"$GITHUB_ORG\",\n  \"github_repo\"\
+          : \"$GITHUB_REPO\",\n  \"created_by\": \"github-actions\",\n  \"created_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"\n}\nEOF\n)\nif aws secretsmanager describe-secret --secret-id \"$SECRET_NAME\" &>/dev/null; then\n  echo \"Secret exists, updating...\"\n  aws secretsmanager put-secret-value \\\n \
+          \   --secret-id \"$SECRET_NAME\" \\\n    --secret-string \"$SECRET_VALUE\"\nelse\n  echo \"Secret does not exist, creating...\"\n  aws secretsmanager create-secret \\\n    --name \"$SECRET_NAME\" \\\n    --description \"GitHub PAT for $GITHUB_ORG/$GITHUB_REPO authentication\" \\\n    --secret-string\
+          \ \"$SECRET_VALUE\"\nfi\n"
+      - if: steps.auth-check.outputs.using_oidc == 'true'
+        name: Deploy with OIDC credentials
+        run: 'echo "Deploying with OIDC authentication..."
+          cd src/auth_between_aws_and_github
+          cdk deploy --require-approval never
+          '
+      - env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        if: steps.auth-check.outputs.using_oidc == 'false'
+        name: Deploy with static credentials
+        run: 'echo "Deploying with static credentials..."
+          cd src/auth_between_aws_and_github
+          cdk deploy --require-approval never
+          '
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-exists-in-defined-state
@@ -163,84 +163,84 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - id: config
-      name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
-        '
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ steps.config.outputs.aws_region }}
-        role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: pip install pytest boto3
-    - name: Run integration tests
-      run: pytest test/auth_between_aws_and_github/test_integration.py -v
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+          aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+          aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+          '
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pytest boto3
+      - name: Run integration tests
+        run: pytest test/auth_between_aws_and_github/test_integration.py -v
   performing-static-analysis:
     if: "github.ref == 'refs/heads/main' && (\n  (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||\n  (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')\n)\n"
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install linting dependencies
-      run: 'pip install pylint mypy yamllint &&
-        npm install -g jsonlint
-        '
-    - name: Install project dependencies for linting
-      run: pip install -r src/auth_between_aws_and_github/requirements.txt
-    - name: Linting JSON configuration files
-      run: 'echo "Validating JSON syntax..."
-        jsonlint -q src/auth_between_aws_and_github/config.json
-        jsonlint -q src/auth_between_aws_and_github/cdk.json
-        '
-    - name: Linting Python files
-      run: "pylint src/auth_between_aws_and_github/stack.py \\\n  src/auth_between_aws_and_github/app.py \\\n  scripts/readme.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
-    - name: Linting YAML files
-      run: 'echo "Running yamllint on workflow files..."
-        yamllint --config-data ''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'' .github/workflows/auth_between_aws_and_github.yml
-        '
-    - name: Static type checking Python files with mypy
-      run: 'python -m mypy src/auth_between_aws_and_github &&
-        python -m mypy scripts/readme.py
-        '
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install linting dependencies
+        run: 'pip install pylint mypy yamllint &&
+          npm install -g jsonlint
+          '
+      - name: Install project dependencies for linting
+        run: pip install -r src/auth_between_aws_and_github/requirements.txt
+      - name: Linting JSON configuration files
+        run: 'echo "Validating JSON syntax..."
+          jsonlint -q src/auth_between_aws_and_github/config.json
+          jsonlint -q src/auth_between_aws_and_github/cdk.json
+          '
+      - name: Linting Python files
+        run: "pylint src/auth_between_aws_and_github/stack.py \\\n  src/auth_between_aws_and_github/app.py \\\n  scripts/readme/readme.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+      - name: Linting YAML files
+        run: 'echo "Running yamllint on workflow files..."
+          yamllint --config-data ''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'' .github/workflows/auth_between_aws_and_github.yml
+          '
+      - name: Static type checking Python files with mypy
+        run: 'python -m mypy src/auth_between_aws_and_github &&
+          python -m mypy scripts/readme/readme.py
+          '
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Set up Node.js (required by aws-cdk-lib/jsii)
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Install Python dependencies
-      run: 'pip install pytest &&
-        pip install -r src/auth_between_aws_and_github/requirements.txt
-        '
-    - name: Run unit tests
-      run: 'pytest test/auth_between_aws_and_github/test_unit.py -v
-        '
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
+        run: 'pip install pytest &&
+          pip install -r src/auth_between_aws_and_github/requirements.txt
+          '
+      - name: Run unit tests
+        run: 'pytest test/auth_between_aws_and_github/test_unit.py -v
+          '
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -249,50 +249,50 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - id: config
-      name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
-        bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_reasoning=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/auth_between_aws_and_github/config.json);
-        bedrock_max_tokens_generation=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/auth_between_aws_and_github/config.json);
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
-        echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
-        echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
-        '
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install boto3
-      run: pip install boto3
-    - name: Configure AWS credentials via OIDC
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ steps.config.outputs.aws_region }}
-        role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
-    - name: Update README
-      run: "python scripts/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --update \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.bedrock_model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.bedrock_max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.bedrock_max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
-    - name: Commit and push README
-      run: "git config user.name \"github-actions[bot]\"\ngit config user.email \"github-actions[bot]@users.noreply.github.com\"\ngit add src/auth_between_aws_and_github/README.md\ngit diff --staged --quiet || git commit -m \"Update auth_between_aws_and_github README via Bedrock\"\nfor i in {1..5}; do\n\
-        \  if git push; then\n    echo \"Successfully pushed README update\"\n    exit 0\n  fi\n  echo \"Push failed (attempt $i/5), pulling and retrying...\"\n  git pull --rebase origin main\n  sleep $((2 ** i))\ndone\necho \"Failed to push after 5 attempts\"\nexit 1\n"
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Read auth_between_aws_and_github config
+        run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+          aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+          aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+          bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
+          bedrock_max_tokens_reasoning=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/auth_between_aws_and_github/config.json);
+          bedrock_max_tokens_generation=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/auth_between_aws_and_github/config.json);
+          echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+          echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+          echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+          echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
+          echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
+          echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
+          '
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install boto3
+        run: pip install boto3
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.aws_iam_role_name }}
+      - name: Update README
+        run: "python scripts/readme/readme.py \\\n  --project-dir src/auth_between_aws_and_github \\\n  --update \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.aws_region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.bedrock_model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.bedrock_max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.bedrock_max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+      - name: Commit and push README
+        run: "git config user.name \"github-actions[bot]\"\ngit config user.email \"github-actions[bot]@users.noreply.github.com\"\ngit add src/auth_between_aws_and_github/README.md\ngit diff --staged --quiet || git commit -m \"Update auth_between_aws_and_github README via Bedrock\"\nfor i in {1..5}; do\n\
+          \  if git push; then\n    echo \"Successfully pushed README update\"\n    exit 0\n  fi\n  echo \"Push failed (attempt $i/5), pulling and retrying...\"\n  git pull --rebase origin main\n  sleep $((2 ** i))\ndone\necho \"Failed to push after 5 attempts\"\nexit 1\n"
 name: Ensuring appropriate bilateral authorizations between AWS and GitHub
 on:
   push:
     branches:
-    - main
+      - main
     paths:
-    - src/auth_between_aws_and_github/**
-    - '!src/auth_between_aws_and_github/README.md'
-    - test/auth_between_aws_and_github/**
-    - scripts/readme.py
-    - .github/workflows/auth_between_aws_and_github.yml
+      - src/auth_between_aws_and_github/**
+      - '!src/auth_between_aws_and_github/README.md'
+      - test/auth_between_aws_and_github/**
+      - scripts/readme/**
+      - .github/workflows/auth_between_aws_and_github.yml
   workflow_dispatch:
     inputs:
       dry_run:
