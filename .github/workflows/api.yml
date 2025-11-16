@@ -134,6 +134,29 @@ jobs:
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
+      - name: Invalidate CloudFront cache
+        if: steps.deploy.outputs.deployment_failed == 'false'
+        run: |
+          echo "Getting CloudFront distribution ID from stack..."
+          DIST_ID=$(aws cloudformation describe-stack-resources \
+            --stack-name TenULabsApi \
+            --query "StackResources[?ResourceType=='AWS::CloudFront::Distribution'].PhysicalResourceId" \
+            --output text)
+
+          if [ -z "$DIST_ID" ]; then
+            echo "No CloudFront distribution found, skipping invalidation"
+            exit 0
+          fi
+
+          echo "Creating CloudFront invalidation for distribution $DIST_ID..."
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id "$DIST_ID" \
+            --paths "/health" "/v1/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+
+          echo "Invalidation $INVALIDATION_ID created successfully"
+          echo "CloudFront cache will be cleared within 1-2 minutes"
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
