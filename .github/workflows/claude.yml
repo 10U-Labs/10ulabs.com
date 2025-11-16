@@ -39,19 +39,19 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-    - name: Install linting tools
+    - name: Install dependencies
       run: 'npm install -g markdownlint-cli2
         pip install yamllint
         '
-    - name: Run yamllint on claude.yml
+    - continue-on-error: true
+      id: lint
+      name: Linting Markdown files
+      run: "if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then\n  echo \"has_warnings=false\" >> $GITHUB_OUTPUT\n  echo \"\u2713 No linting warnings found\"\nelse\n  echo \"has_warnings=true\" >> $GITHUB_OUTPUT\n  echo \"\u26A0\uFE0F Linting warnings detected:\"\n  cat lint-output.txt\nfi\n"
+    - name: Linting YAML files
       run: 'echo "Running yamllint on claude.yml..."
         CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}''
         yamllint --config-data "$CONFIG" .github/workflows/claude.yml
         '
-    - continue-on-error: true
-      id: lint
-      name: Run markdownlint-cli2
-      run: "if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then\n  echo \"has_warnings=false\" >> $GITHUB_OUTPUT\n  echo \"\u2713 No linting warnings found\"\nelse\n  echo \"has_warnings=true\" >> $GITHUB_OUTPUT\n  echo \"\u26A0\uFE0F Linting warnings detected:\"\n  cat lint-output.txt\nfi\n"
     - name: Upload lint results
       uses: actions/upload-artifact@v4
       with:
