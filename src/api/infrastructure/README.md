@@ -1,113 +1,104 @@
 # 10U Labs API Infrastructure
 
-This AWS CDK project deploys a comprehensive API infrastructure for 10ulabs.com,
-including API Gateway, Lambda functions, CloudFront distribution, and GitHub
-self-hosted runner environments using both ECS Fargate and EC2 instances.
-
-## Overview
-
-The infrastructure creates a production-ready API platform with:
-
-- RESTful API endpoints served through AWS API Gateway
-- Lambda functions for health checks, echo testing, and catch-all routing
-- CloudFront distribution for global content delivery
-- S3-hosted documentation with automatic deployment
-- ECS Fargate and EC2-based GitHub self-hosted runners
-- Comprehensive security with WAF, VPC, and IAM roles
-- SSL/TLS certificates and custom domain configuration
+Comprehensive AWS infrastructure for hosting the 10U Labs API at
+`api.10ulabs.com`, providing REST endpoints, documentation hosting,
+and GitHub self-hosted runner capabilities using AWS CDK.
 
 ## Purpose and Key Features
 
-### Core API Platform
+This infrastructure stack creates a production-ready API platform with:
 
-- **API Gateway**: RESTful API with OpenAPI specification
-- **Lambda Functions**: Serverless compute for API endpoints
-- **CloudFront**: Global CDN with caching and SSL termination
-- **Route 53**: DNS management for custom domain
-
-### GitHub Runner Infrastructure
-
-- **ECS Fargate Runners**: Ephemeral containerized CI/CD runners
-- **EC2 Spot Runners**: Cost-effective compute for larger workloads
-- **ECR Repository**: Container image storage with lifecycle policies
-- **VPC Network**: Isolated networking environment
-
-### Security and Monitoring
-
-- **AWS WAF**: Web application firewall protection
-- **Secrets Manager**: Secure credential storage
-- **CloudWatch Logs**: Centralized logging and monitoring
-- **IAM Roles**: Least-privilege access controls
+- **REST API Gateway**: Custom domain with SSL/TLS termination
+- **Lambda Functions**: Serverless endpoint handlers for health checks,
+  echo testing, and catch-all routing
+- **CloudFront Distribution**: Global CDN for API caching and static
+  documentation hosting
+- **GitHub Self-Hosted Runners**: Both Fargate and EC2-based runners
+  for CI/CD workflows
+- **S3 Documentation**: Automated deployment of OpenAPI documentation
+- **WAF Protection**: Web Application Firewall for security
+- **Route 53 Integration**: DNS management with existing hosted zone
 
 ## Resources Created
 
-### Networking and Compute
+### Core API Infrastructure
 
-- **VPC**: Custom VPC with public subnets across multiple AZs
-- **ECS Cluster**: Container orchestration for GitHub runners
-- **Security Groups**: Network access controls for runner tasks
-- **ECR Repository**: Docker image registry with automatic cleanup
+- **API Gateway REST API**: Main API endpoint with OpenAPI specification
+- **Lambda Functions**:
+  - Health check endpoint (`/health`)
+  - Echo testing endpoint (`/v1/echo`)
+  - Catch-all handler for undefined routes
+- **CloudWatch Log Groups**: API access logs and Lambda execution logs
 
-### API Infrastructure
+### Content Delivery and Storage
 
-- **API Gateway REST API**: RESTful endpoints with OpenAPI spec
-- **Lambda Functions**: Health, echo, and catch-all handlers
-- **CloudFront Distribution**: CDN with multiple origin behaviors
-- **S3 Bucket**: Static documentation hosting
+- **CloudFront Distribution**: Multi-origin distribution serving both
+  API requests and static documentation
+- **S3 Bucket**: Hosts OpenAPI documentation files (`openapi.yaml`,
+  `index.html`, `404.html`)
+- **CloudFront Functions**: URL rewriting for S3 origin routing
 
-### Security and Secrets
+### GitHub Self-Hosted Runners
+
+- **VPC**: Isolated network for runner instances
+- **ECS Fargate Cluster**: Container-based ephemeral runners
+- **ECR Repository**: Docker image storage for runner containers
+- **ECS Task Definition**: Fargate task configuration with GitHub
+  token integration
+- **EC2 IAM Roles**: Instance profiles for EC2-based runners with
+  ECR access and self-termination permissions
+
+### Security and Secrets Management
 
 - **ACM Certificate**: SSL/TLS certificate for custom domain
-- **WAF Web ACL**: Application-layer security rules
-- **Secrets Manager**: GitHub tokens and webhook secrets
-- **IAM Roles**: Service roles for Lambda, ECS, and EC2
+- **AWS Secrets Manager**: GitHub tokens and webhook secrets
+- **WAF Web ACL**: Protection against common web attacks
+- **Security Groups**: Network access control for runner instances
 
 ### DNS and Monitoring
 
-- **Route 53 Records**: DNS alias records for custom domain
-- **CloudWatch Log Groups**: Centralized logging infrastructure
-- **Custom Resources**: CloudFront cache invalidation automation
+- **Route 53 A Record**: DNS alias pointing to CloudFront distribution
+- **CloudWatch Logs**: Centralized logging with retention policies
 
 ## Prerequisites and Requirements
 
 ### Python Dependencies
 
-Install the required packages from `requirements.txt`:
+Install the required Python packages from `requirements.txt`:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Required Packages
+Required packages:
 
-- **aws-cdk-lib==2.150.0**: AWS CDK framework
-- **constructs>=10.0.0,<11.0.0**: CDK constructs library
-- **boto3>=1.34.0**: AWS SDK for Python
-- **boto3-stubs[route53,route53domains,account,organizations]>=1.34.0**: 
-  Type hints for boto3
-- **requests>=2.31.0**: HTTP library for API calls
-- **types-requests>=2.31.0**: Type hints for requests
-- **pyyaml>=6.0.1**: YAML processing for OpenAPI spec
-- **types-pyyaml>=6.0.12**: Type hints for PyYAML
+- `aws-cdk-lib==2.150.0`
+- `constructs>=10.0.0,<11.0.0`
+- `boto3>=1.34.0`
+- `boto3-stubs[route53,route53domains,account,organizations]>=1.34.0`
+- `requests>=2.31.0`
+- `types-requests>=2.31.0`
+- `pyyaml>=6.0.1`
+- `types-pyyaml>=6.0.12`
 
 ### System Dependencies
 
-- **Python 3.11+**: Required runtime for CDK and Lambda functions
-- **Node.js 18+**: Required for AWS CDK CLI installation
-- **Git**: Required for repository management
+- **Node.js**: Required for AWS CDK (version 14.x or later)
+- **Python**: Version 3.8 or later
+- **Git**: For repository operations
 
-### AWS Setup
+### AWS Prerequisites
 
-- Valid AWS account with appropriate permissions
-- AWS credentials configured (via AWS credentials file, environment
-  variables, or IAM roles)
-- Route 53 hosted zone for parent domain (must export HostedZoneId)
+- AWS account with appropriate permissions for CDK deployment
+- Existing Route 53 hosted zone for parent domain (`10ulabs.com`)
+- GitHub organization and repository for self-hosted runners
+- Pre-created GitHub token secret in AWS Secrets Manager
 
 ## Configuration
 
-### Main Configuration (`config.json`)
+### Primary Configuration (`config.json`)
 
-The infrastructure uses a comprehensive configuration file:
+The infrastructure is configured through `config.json`:
 
 ```json
 {
@@ -138,7 +129,7 @@ The infrastructure uses a comprehensive configuration file:
 
 ### CDK Configuration (`cdk.json`)
 
-CDK-specific settings including feature flags and watch mode:
+CDK-specific settings and feature flags:
 
 ```json
 {
@@ -154,233 +145,249 @@ CDK-specific settings including feature flags and watch mode:
 
 Before deployment, create these secrets in AWS Secrets Manager:
 
-- **github-runner/credentials**: GitHub personal access token
-- **api-webhook-secret**: Auto-generated webhook verification secret
+1. **GitHub Token**: `github-runner/credentials` - Personal access
+   token with repo and workflow permissions
+2. **Webhook Secret**: Auto-generated during deployment for GitHub
+   webhook signature verification
 
 ## Usage Instructions
 
 ### Installation
 
-1. **Clone the repository:**
+1. Clone the repository and navigate to the infrastructure directory:
 
    ```bash
    git clone <repository-url>
-   cd <project-directory>
+   cd infrastructure/
    ```
 
-2. **Install Python dependencies:**
+2. Install Python dependencies:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Install AWS CDK CLI:**
+3. Install AWS CDK globally:
 
    ```bash
-   npm install -g aws-cdk@2.150.0
+   npm install -g aws-cdk
    ```
 
-4. **Configure AWS credentials:**
-
-   ```bash
-   # Via AWS credentials file, environment variables, or IAM roles
-   export AWS_PROFILE=your-profile
-   export AWS_REGION=us-east-1
-   ```
+4. Configure AWS credentials (via AWS credentials file, environment
+   variables, or IAM roles)
 
 ### Deployment
 
-1. **Bootstrap CDK (first time only):**
+1. Bootstrap CDK in your AWS account (first time only):
 
    ```bash
-   cdk bootstrap aws://781581267945/us-east-1
+   cdk bootstrap
    ```
 
-2. **Review the changes:**
+2. Deploy the infrastructure:
 
    ```bash
-   cdk diff
+   cdk deploy
    ```
 
-3. **Deploy the infrastructure:**
+3. Confirm the deployment when prompted
 
-   ```bash
-   cdk deploy TenULabsApi
-   ```
-
-4. **Verify deployment:**
-
-   ```bash
-   curl https://api.10ulabs.com/health
-   ```
-
-### Development Workflow
-
-1. **Watch mode for iterative development:**
-
-   ```bash
-   cdk watch
-   ```
-
-2. **Update README documentation:**
-
-   ```bash
-   python scripts/readme.py --update --project-dir . --aws-region us-east-1
-   ```
-
-3. **Check README currency:**
-
-   ```bash
-   python scripts/readme.py --check --project-dir . --aws-region us-east-1
-   ```
-
-### Using Deployed Resources
+### Using the Deployed Resources
 
 #### API Endpoints
 
+Access the API through the custom domain:
+
 - **Health Check**: `GET https://api.10ulabs.com/health`
-- **Echo Service**: `POST https://api.10ulabs.com/v1/echo`
-- **API Documentation**: `https://api.10ulabs.com/`
-- **OpenAPI Spec**: `https://api.10ulabs.com/openapi.yaml`
+- **Echo Endpoint**: `POST https://api.10ulabs.com/v1/echo`
+- **Documentation**: `https://api.10ulabs.com/` (serves OpenAPI docs)
 
-#### GitHub Runners
+#### GitHub Self-Hosted Runners
 
-- **Fargate Runners**: Automatically triggered by webhook events
-- **EC2 Spot Runners**: Cost-effective for longer workflows
-- **Container Registry**: Available at ECR repository URI
+The infrastructure provides two types of runners:
+
+1. **Fargate Runners**: Ephemeral containers with labels
+   `["ephemeral-ecs-fargate-spot"]`
+2. **EC2 Runners**: Spot instances with labels
+   `["ephemeral-ec2-spot-instance"]`
+
+Configure GitHub Actions workflows to use these runners:
+
+```yaml
+jobs:
+  example:
+    runs-on: [self-hosted, ephemeral-ecs-fargate-spot]
+```
+
+#### Documentation Updates
+
+Place documentation files in the project root:
+
+- `openapi.yaml`: OpenAPI specification
+- `index.html`: API documentation homepage
+- `404.html`: Custom error page
+
+Files are automatically deployed to S3 and served via CloudFront.
+
+### Infrastructure Management
+
+View stack outputs:
+
+```bash
+cdk list
+cdk diff
+```
+
+Destroy the infrastructure:
+
+```bash
+cdk destroy
+```
 
 ## Architecture Overview
 
-### Component Interactions
+### Request Flow
 
-1. **CloudFront Distribution** receives all requests to api.10ulabs.com
-2. **S3 Origin** serves static documentation (/, /openapi.yaml, /404.html)
-3. **API Gateway Origin** handles API endpoints (/health, /v1/*)
-4. **Lambda Functions** process API requests and return responses
-5. **Route 53** provides DNS resolution for the custom domain
+1. **DNS Resolution**: Route 53 resolves `api.10ulabs.com` to
+   CloudFront distribution
+2. **CloudFront Routing**: Distribution routes requests based on path:
+   - `/` → S3 origin (documentation)
+   - `/health` → API Gateway origin
+   - `/v1/*` → API Gateway origin
+   - Other paths → API Gateway catch-all
+3. **API Gateway**: Processes API requests and invokes appropriate
+   Lambda functions
+4. **Lambda Execution**: Functions process requests and return responses
 
-### Authentication and Authorization Flows
+### Runner Architecture
 
-#### API Access
+#### Fargate Runners
 
-- Public API endpoints with no authentication required
-- WAF provides application-layer protection
-- CloudFront adds geographic and DDoS protection
+- **ECS Cluster**: Manages containerized runner tasks
+- **Task Definition**: Configures runner containers with GitHub
+  integration
+- **ECR Repository**: Stores custom runner Docker images
+- **Secrets Integration**: Injects GitHub tokens securely
 
-#### GitHub Runner Authentication
+#### EC2 Runners
 
-- **Fargate Tasks**: Use IAM task roles with Secrets Manager access
-- **EC2 Instances**: Use instance profiles with ECR and termination 
-  permissions
-- **GitHub Tokens**: Stored securely in AWS Secrets Manager
+- **IAM Roles**: Provide necessary permissions for ECR access and
+  instance self-termination
+- **Instance Profiles**: Attach roles to EC2 instances
+- **Security Groups**: Control network access
 
-### Data Flows
+### Security Architecture
 
-1. **API Requests**: Client → CloudFront → API Gateway → Lambda → Response
-2. **Documentation**: Client → CloudFront → S3 → Static Content
-3. **Runner Deployment**: Webhook → Lambda → ECS/EC2 → GitHub Registration
-4. **Container Images**: GitHub Actions → ECR → ECS Fargate Tasks
-
-### Integration Points
-
-- **GitHub Webhooks**: Trigger runner provisioning via API Gateway
-- **ECR Integration**: Automatic image pulls for Fargate tasks
-- **Secrets Manager**: Centralized credential management
-- **CloudWatch**: Unified logging and monitoring
+- **WAF**: Filters malicious requests before they reach origins
+- **CloudFront**: Provides DDoS protection and SSL termination
+- **VPC Isolation**: Runners execute in private network segments
+- **Secrets Manager**: Secure storage and rotation of sensitive data
+- **IAM Least Privilege**: Minimal permissions for all components
 
 ## Security Considerations
 
 ### Network Security
 
-- **VPC Isolation**: Runners operate in dedicated VPC with public subnets
-- **Security Groups**: Restrictive ingress rules, allow outbound for updates
-- **No NAT Gateway**: Cost optimization with direct internet access
+- **VPC Isolation**: All runner infrastructure operates within a
+  dedicated VPC
+- **Public Subnets Only**: Cost-optimized configuration without NAT
+  gateways for outbound internet access
+- **Security Groups**: Restrictive ingress rules, permissive egress
+  for GitHub API communication
 
-### Access Controls
+### Access Control
 
-- **IAM Roles**: Least-privilege principles for all services
-- **Secrets Manager**: Encrypted storage for sensitive credentials
-- **Resource-Based Policies**: Fine-grained access to AWS services
+- **IAM Roles**: Separate roles for different components with minimal
+  required permissions
+- **Cross-Service Permissions**: API Gateway can invoke Lambda
+  functions; ECS can pull from ECR
+- **Self-Termination**: EC2 runners can only terminate instances with
+  specific tags
 
-### Application Security
+### Secrets Management
 
-- **WAF Protection**: Application-layer filtering and rate limiting
-- **SSL/TLS Encryption**: End-to-end encryption via ACM certificates
-- **Webhook Verification**: HMAC signature validation for GitHub events
+- **GitHub Tokens**: Stored in AWS Secrets Manager with automatic
+  rotation capabilities
+- **Webhook Signatures**: Auto-generated secrets for GitHub webhook
+  verification
+- **Container Environment**: Secrets injected securely into ECS tasks
 
-### Operational Security
+### SSL/TLS
 
-- **Log Retention**: One week for API logs, one month for access logs
-- **Image Scanning**: ECR vulnerability scanning on push
-- **Automatic Cleanup**: ECR lifecycle rules and S3 object deletion
+- **End-to-End Encryption**: HTTPS enforcement from clients to backend
+  services
+- **Certificate Management**: Automated certificate provisioning and
+  renewal via ACM
+- **HSTS**: HTTP Strict Transport Security headers via CloudFront
 
 ## Troubleshooting
 
-### Common Deployment Issues
+### Common Issues
 
-**CDK Bootstrap Required:**
+#### Certificate Validation Failures
 
-```bash
-# Error: Need to perform AWS CDK bootstrap
-cdk bootstrap aws://ACCOUNT_ID/REGION
-```
+If certificate validation fails during deployment:
 
-**Certificate Validation Timeout:**
+1. Verify the parent hosted zone exists and is accessible
+2. Check that the domain name configuration matches the actual domain
+3. Ensure Route 53 has proper permissions to create validation records
 
-- Verify Route 53 hosted zone exists and is accessible
-- Check DNS propagation with `dig` or `nslookup`
-- Ensure parent domain exports HostedZoneId correctly
+#### API Gateway 403 Errors
 
-**Lambda Permission Errors:**
+For permission denied errors:
 
-```bash
-# Check CloudWatch logs for specific permission issues
-aws logs describe-log-groups --log-group-name-prefix /aws/lambda/
-```
+1. Check Lambda function permissions for API Gateway invocation
+2. Verify the OpenAPI specification ARN placeholders are correctly
+   replaced
+3. Review CloudWatch logs for detailed error messages
 
-### Runtime Issues
+#### Runner Connection Issues
 
-**API Gateway 500 Errors:**
+If GitHub runners fail to connect:
 
-- Check Lambda function logs in CloudWatch
-- Verify Lambda function permissions for API Gateway
-- Test Lambda functions individually in AWS Console
+1. Verify GitHub token permissions include `repo` and `workflow` scopes
+2. Check ECS task logs for authentication errors
+3. Ensure security groups allow outbound HTTPS traffic
+4. Confirm ECR repository contains the runner image
 
-**CloudFront Cache Issues:**
+#### CloudFront Distribution Issues
 
-- Create manual invalidation for updated content:
+For content delivery problems:
 
-   ```bash
-   aws cloudfront create-invalidation \
-     --distribution-id DISTRIBUTION_ID \
-     --paths "/*"
-   ```
-
-**ECS Task Failures:**
-
-- Check ECS service logs in CloudWatch
-- Verify ECR repository contains valid runner images
-- Check IAM task role permissions for Secrets Manager
+1. Check S3 bucket permissions and object existence
+2. Verify CloudFront origin configurations
+3. Create manual invalidations for cached content updates
+4. Review CloudFront access logs for request patterns
 
 ### Debugging Commands
 
-**View CDK context and cached values:**
+Check CDK stack status:
 
 ```bash
-cdk context --clear  # Clear cached context
-cdk ls              # List all stacks
-cdk diff            # Show pending changes
+cdk list --long
 ```
 
-**Check AWS resource status:**
+View detailed differences before deployment:
 
 ```bash
-# API Gateway
-aws apigateway get-rest-apis --query 'items[?name==`TenULabsApi`]'
-
-# ECS Cluster
-aws ecs describe-clusters --clusters TenULabsRunnerCluster
-
-# Route 53 Records
-aws route53 list-resource-record-sets --hosted-zone-id ZONE_ID
+cdk diff
 ```
+
+Access CloudWatch logs:
+
+```bash
+aws logs describe-log-groups --log-group-name-prefix="/aws/lambda/"
+```
+
+Validate ECR repository contents:
+
+```bash
+aws ecr list-images --repository-name github-runner
+```
+
+### Log Locations
+
+- **API Gateway Access Logs**: CloudWatch Logs group created by CDK
+- **Lambda Function Logs**: `/aws/lambda/<function-name>`
+- **ECS Task Logs**: `/aws/ecs/<cluster-name>`
+- **CloudFront Access Logs**: Optional S3 bucket (not configured)
