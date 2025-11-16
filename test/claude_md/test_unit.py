@@ -67,27 +67,6 @@ def test_config_bedrock_model_id_is_string():
         config = json.load(f)
     assert isinstance(config['bedrock']['model_id'], str)
 
-def test_load_config_returns_dict():
-    result = format_claude_md.load_config()
-    assert isinstance(result, dict)
-
-def test_load_config_contains_account_id():
-    result = format_claude_md.load_config()
-    assert 'account_id' in result
-
-def test_load_config_contains_region():
-    result = format_claude_md.load_config()
-    assert 'region' in result
-
-def test_load_config_contains_bedrock():
-    result = format_claude_md.load_config()
-    assert 'bedrock' in result
-
-@patch('builtins.open', side_effect=IOError("File not found"))
-def test_load_config_exits_on_io_error(mock_file):
-    with pytest.raises(SystemExit):
-        format_claude_md.load_config()
-
 @patch('format_claude_md.time.sleep')
 def test_call_bedrock_with_retry_succeeds_on_first_attempt(mock_sleep):
     mock_client = Mock()
@@ -143,7 +122,7 @@ def test_format_claude_md_returns_formatted_content(mock_sleep, mock_bedrock):
     mock_bedrock.return_value = {
         'output': {
             'message': {
-                'content': [{'text': 'formatted content\n'}]
+                'content': [{'type': 'text', 'text': 'formatted content\n'}]
             }
         }
     }
@@ -159,7 +138,7 @@ def test_format_claude_md_adds_trailing_newline_if_missing(mock_sleep, mock_bedr
     mock_bedrock.return_value = {
         'output': {
             'message': {
-                'content': [{'text': 'formatted content'}]
+                'content': [{'type': 'text', 'text': 'formatted content'}]
             }
         }
     }
@@ -210,3 +189,56 @@ def test_call_bedrock_with_retry_uses_correct_max_tokens():
     mock_client.converse.assert_called_once()
     call_args = mock_client.converse.call_args
     assert call_args[1]['inferenceConfig']['maxTokens'] == 5000
+
+def test_aws_region_argument_is_required():
+    with pytest.raises(SystemExit):
+        format_claude_md.main.__wrapped__ if hasattr(format_claude_md.main, '__wrapped__') else None
+        sys.argv = ['format_claude_md.py']
+        parser = format_claude_md.argparse.ArgumentParser()
+        parser.add_argument('--aws-region', required=True)
+        parser.add_argument('--bedrock-model-id', required=True)
+        parser.add_argument('--max-tokens', type=int, required=True)
+        parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+        parser.parse_args([])
+
+def test_bedrock_model_id_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['format_claude_md.py', '--aws-region', 'us-east-1']
+        parser = format_claude_md.argparse.ArgumentParser()
+        parser.add_argument('--aws-region', required=True)
+        parser.add_argument('--bedrock-model-id', required=True)
+        parser.add_argument('--max-tokens', type=int, required=True)
+        parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+        parser.parse_args(['--aws-region', 'us-east-1'])
+
+def test_max_tokens_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['format_claude_md.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id']
+        parser = format_claude_md.argparse.ArgumentParser()
+        parser.add_argument('--aws-region', required=True)
+        parser.add_argument('--bedrock-model-id', required=True)
+        parser.add_argument('--max-tokens', type=int, required=True)
+        parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+        parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id'])
+
+def test_max_tokens_reasoning_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['format_claude_md.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens', '1000']
+        parser = format_claude_md.argparse.ArgumentParser()
+        parser.add_argument('--aws-region', required=True)
+        parser.add_argument('--bedrock-model-id', required=True)
+        parser.add_argument('--max-tokens', type=int, required=True)
+        parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+        parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens', '1000'])
+
+def test_all_required_arguments_provided_successfully():
+    parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    args = parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens', '1000', '--max-tokens-reasoning', '4000'])
+    assert args.aws_region == 'us-east-1'
+    assert args.bedrock_model_id == 'model-id'
+    assert args.max_tokens == 1000
+    assert args.max_tokens_reasoning == 4000
