@@ -1,29 +1,26 @@
 jobs:
-  concluding-no-warnings:
-    if: needs.determining.outputs.claude_md_should_be_updated == 'false'
+  concluding-claude-md-is-already-formatted-properly:
+    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated != 'true'
     name: Concluding CLAUDE.md is formatted properly already
-    needs: determining
+    needs: determining-if-claude-md-should-be-formatted
     runs-on: ubuntu-latest
     steps:
-    - name: Conclude no
-      run: "echo \"\u2713 Conclusion: NO - No warnings found in CLAUDE.md\"\necho \"CLAUDE.md is properly formatted\"\n"
-  concluding-warnings:
-    if: needs.determining.outputs.claude_md_should_be_updated == 'true'
+    - run: 'true'
+  concluding-claude-md-should-be-formatted:
+    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated == 'true'
     name: Concluding CLAUDE.md should be properly formatted
-    needs: determining
+    needs: determining-if-claude-md-should-be-formatted
     runs-on: ubuntu-latest
     steps:
-    - name: Conclude yes
-      run: "echo \"\u2713 Conclusion: YES - Warnings were found in CLAUDE.md\"\necho \"The Updating job will fix these warnings automatically\"\n"
-  determining:
+    - run: 'true'
+  determining-if-claude-md-should-be-formatted:
     name: Determining if CLAUDE.md should be properly formatted
     needs: linting
     outputs:
       claude_md_should_be_updated: ${{ needs.linting.outputs.claude_md_should_be_updated }}
     runs-on: ubuntu-latest
     steps:
-    - name: Check linting results
-      run: "if [ \"${{ needs.linting.outputs.claude_md_should_be_updated }}\" == \"true\" ]; then\n  echo \"Linting yielded warnings\"\nelse\n  echo \"Linting did not yield warnings\"\nfi\n"
+    - run: 'true'
   linting:
     if: '(github.event_name == ''workflow_dispatch'') ||
       !contains(github.event.head_commit.message, ''[skip ci]'')
@@ -57,11 +54,11 @@ jobs:
         name: lint-results
         path: lint-output.txt
   updating:
-    if: needs.determining.outputs.claude_md_should_be_updated == 'true'
+    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated == 'true'
     name: Formatting CLAUDE.md
     needs:
-    - determining
-    - concluding-warnings
+    - determining-if-claude-md-should-be-formatted
+    - concluding-claude-md-should-be-formatted
     permissions:
       contents: write
     runs-on: ubuntu-latest

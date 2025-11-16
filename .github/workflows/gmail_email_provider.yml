@@ -147,10 +147,10 @@ jobs:
         '
     - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
       name: Display outputs
-      run: 'echo "Gmail email provider infrastructure deployed successfully"
-        echo ""
-        echo "Stack Outputs:"
-        cat gmail-outputs.json | jq ''.''
+      run: 'echo "Gmail email provider infrastructure deployed successfully";
+        echo "";
+        echo "Stack Outputs:";
+        cat gmail-outputs.json | jq ''.'';
         '
   integration-testing:
     name: Integration testing
