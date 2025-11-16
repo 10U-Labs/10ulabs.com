@@ -32,8 +32,14 @@ jobs:
       name: Load configuration
       run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
         REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
+        MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/cloudtrail_and_domain_name/config.json);
+        MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/cloudtrail_and_domain_name/config.json);
+        MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/cloudtrail_and_domain_name/config.json);
         echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
         echo "region=$REGION" >> $GITHUB_OUTPUT;
+        echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
+        echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
+        echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
         '
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -48,7 +54,7 @@ jobs:
       run: pip install boto3
     - id: check
       name: Check if README needs update
-      run: "python scripts/readme.py \\\n  --project-dir src/cloudtrail_and_domain_name \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+      run: "python scripts/readme.py \\\n  --project-dir src/cloudtrail_and_domain_name \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -291,8 +297,14 @@ jobs:
       name: Load configuration
       run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
         REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
+        MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/cloudtrail_and_domain_name/config.json);
+        MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/cloudtrail_and_domain_name/config.json);
+        MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/cloudtrail_and_domain_name/config.json);
         echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
         echo "region=$REGION" >> $GITHUB_OUTPUT;
+        echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
+        echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
+        echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
         '
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -306,7 +318,7 @@ jobs:
     - name: Install boto3
       run: pip install boto3
     - name: Update README with Bedrock
-      run: "python scripts/readme.py \\\n  --project-dir src/cloudtrail_and_domain_name \\\n  --update \\\n  --aws-region \"${{ steps.config.outputs.region }}\"\n"
+      run: "python scripts/readme.py \\\n  --project-dir src/cloudtrail_and_domain_name \\\n  --update \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
     - name: Commit and push README if changed
       run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/cloudtrail_and_domain_name/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update cloudtrail_and_domain_name README.md [skip ci]\"\n\
         \  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n\
