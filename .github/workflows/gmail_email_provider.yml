@@ -229,7 +229,8 @@ jobs:
         '
     - if: ${{ github.event.inputs.dry_run != 'true' }}
       name: Static type checking Python files with mypy
-      run: 'python -m mypy src/gmail_email_provider scripts/readme.py
+      run: 'python -m mypy src/gmail_email_provider &&
+        python -m mypy scripts/readme.py
         '
   unit-testing:
     name: Unit testing
@@ -254,7 +255,7 @@ jobs:
         node-version: '20'
     - if: ${{ github.event.inputs.dry_run != 'true' }}
       name: Install Python dependencies
-      run: 'pip install pytest
+      run: 'pip install pytest &&
         pip install -r src/gmail_email_provider/requirements.txt
         '
     - if: ${{ github.event.inputs.dry_run != 'true' }}
