@@ -28,9 +28,14 @@ jobs:
         node-version: '20'
     - name: Install markdownlint-cli2
       run: npm install -g markdownlint-cli2
-    - id: check
+    - continue-on-error: true
+      id: check
       name: Check if CLAUDE.md needs formatting
-      run: 'python scripts/claude_md.py --check --output-file "$GITHUB_OUTPUT"
+      run: 'if markdownlint-cli2 CLAUDE.md; then
+          echo "claude_md_should_be_updated=false" >> $GITHUB_OUTPUT;
+        else
+          echo "claude_md_should_be_updated=true" >> $GITHUB_OUTPUT;
+        fi
         '
   linting:
     if: '(github.event_name == ''workflow_dispatch'') ||
