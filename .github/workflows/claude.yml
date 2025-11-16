@@ -2,6 +2,8 @@ name: Claude Documentation Linting
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'CLAUDE.md'
       - '.github/workflows/claude.yml'
