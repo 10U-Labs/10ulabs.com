@@ -242,7 +242,8 @@ jobs:
         '
     - if: ${{ github.event.inputs.dry_run != 'true' }}
       name: Static type checking Python files with mypy
-      run: 'python -m mypy src/cloudtrail_and_domain_name scripts/readme.py
+      run: 'python -m mypy src/cloudtrail_and_domain_name &&
+        python -m mypy scripts/readme.py
         '
   unit-testing:
     name: Unit testing
@@ -267,7 +268,7 @@ jobs:
         node-version: '20'
     - if: ${{ github.event.inputs.dry_run != 'true' }}
       name: Install Python dependencies
-      run: 'pip install pytest
+      run: 'pip install pytest &&
         pip install -r src/cloudtrail_and_domain_name/requirements.txt
         '
     - if: ${{ github.event.inputs.dry_run != 'true' }}
