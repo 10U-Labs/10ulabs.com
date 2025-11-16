@@ -304,10 +304,10 @@ def main():
     parser.add_argument('--update', action='store_true', help='Update README')
     parser.add_argument('--project-dir', required=True, help='Project directory path')
     parser.add_argument('--aws-region', required=True, help='AWS region')
-    parser.add_argument('--output-file', help='Output file for check result (for GitHub Actions)')
-    parser.add_argument('--bedrock-model-id', help='Bedrock model ID to use')
-    parser.add_argument('--max-tokens-check', type=int, help='Max tokens for README check')
-    parser.add_argument('--max-tokens-generate', type=int, help='Max tokens for README generation')
+    parser.add_argument('--output-file', required=True, help='Output file for check result (for GitHub Actions)')
+    parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
+    parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for README generation')
     args = parser.parse_args()
 
     project_dir = os.path.abspath(args.project_dir)
@@ -332,8 +332,8 @@ def main():
             current_readme = ""
 
         bedrock_config = {
-            'model_id': args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
-            'max_tokens': int(args.max_tokens_check or config.get('aws', {}).get('bedrock', {}).get('max_tokens_check', 200))
+            'model_id': args.bedrock_model_id,
+            'max_tokens': args.max_tokens_reasoning
         }
         should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config)
 
@@ -350,8 +350,8 @@ def main():
 
     elif args.update:
         bedrock_config = {
-            'model_id': args.bedrock_model_id or config.get('aws', {}).get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
-            'max_tokens': int(args.max_tokens_generate or config.get('aws', {}).get('bedrock', {}).get('max_tokens_generate', 16000))
+            'model_id': args.bedrock_model_id,
+            'max_tokens': args.max_tokens_generation
         }
         new_readme = generate_readme(bedrock_client, project_files, bedrock_config)
 
