@@ -54,10 +54,8 @@ jobs:
           yamllint --config-data "$CONFIG" .github/workflows/claude.yml;
           '
   updating:
-    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated == 'true'
     name: Formatting CLAUDE.md
     needs:
-      - determining-if-claude-md-should-be-formatted
       - concluding-claude-md-should-be-formatted
     permissions:
       contents: write
