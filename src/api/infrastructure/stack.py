@@ -49,7 +49,7 @@ class ApiStack(Stack):
         cert_info = self._create_certificate(parent_domain, subdomain, parent_domain.replace('.', '-'))
 
         docs_bucket = self._create_docs_bucket()
-        self._create_api_gateway(subdomain, cert_info[1], self._create_lambda_functions())
+        self._create_api_gateway(self._create_lambda_functions())
         cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
         self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role))
 
@@ -249,7 +249,7 @@ class ApiStack(Stack):
         )
         return health_handler, echo_handler
 
-    def _create_api_gateway(self, subdomain_name, certificate, handlers):
+    def _create_api_gateway(self, handlers):
         health_handler, echo_handler = handlers
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yaml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
@@ -275,10 +275,6 @@ class ApiStack(Stack):
         self.api = apigw.SpecRestApi(
             self, "TenULabsApi",
             api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),
-            domain_name=apigw.DomainNameOptions(
-                domain_name=subdomain_name,
-                certificate=certificate
-            ),
             deploy=False
         )
 
