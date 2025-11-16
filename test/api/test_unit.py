@@ -239,11 +239,6 @@ spec = importlib.util.spec_from_file_location("echo_handler", echo_handler_path)
 echo = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(echo)
 
-docs_handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "root" / "handler.py"
-spec = importlib.util.spec_from_file_location("docs_handler", docs_handler_path)
-docs = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(docs)
-
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure"))
 import poll_api_until_it_has_propagated
 
@@ -642,41 +637,6 @@ def test_readme_config_has_max_tokens_generate():
     assert "max_tokens_generate" in config.get("aws", {}).get("bedrock", {})
 
 
-def test_lambda_handler_docs_endpoint_returns_200_status_code():
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = docs.handler(event, context)
-    assert response['statusCode'] == 200
-
-
-def test_lambda_handler_docs_endpoint_returns_html_content_type():
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = docs.handler(event, context)
-    assert response['headers']['Content-Type'] == 'text/html'
-
-
-def test_lambda_handler_docs_endpoint_returns_cors_header():
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = docs.handler(event, context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
-
-
-def test_lambda_handler_docs_endpoint_body_contains_html():
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = docs.handler(event, context)
-    assert '<html' in response['body'].lower()
-
-
-def test_lambda_handler_docs_endpoint_body_contains_swagger():
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = docs.handler(event, context)
-    assert 'swagger' in response['body'].lower()
-
-
 def test_api_has_vpc():
     app = cdk.App()
     config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
@@ -790,6 +750,30 @@ def test_api_has_waf_web_acl():
     )
     template = Template.from_stack(stack)
     template.resource_count_is("AWS::WAFv2::WebACL", 1)
+
+
+def test_api_has_s3_bucket_for_docs():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    resources = template.find_resources("AWS::S3::Bucket")
+    assert len(resources) >= 1
 
 
 def test_validate_root_endpoint_returns_true_on_success():
@@ -926,13 +910,6 @@ def test_openapi_spec_has_paths():
     assert 'paths' in spec
 
 
-def test_openapi_spec_has_root_path():
-    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
-    with open(openapi_path, encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/' in spec['paths']
-
-
 def test_openapi_spec_has_health_path():
     openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
     with open(openapi_path, encoding='utf-8') as f:
@@ -947,7 +924,7 @@ def test_openapi_spec_has_echo_path():
     assert '/v1/echo' in spec['paths']
 
 
-def test_api_has_three_lambda_functions():
+def test_api_has_two_lambda_functions():
     app = cdk.App()
     config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     with open(config_path, encoding='utf-8') as f:
@@ -968,7 +945,7 @@ def test_api_has_three_lambda_functions():
     )
     template = Template.from_stack(stack)
     resources = template.find_resources("AWS::Lambda::Function")
-    assert len(resources) >= 3
+    assert len(resources) >= 2
 
 
 def test_health_endpoint_handler_file_exists():
@@ -978,11 +955,6 @@ def test_health_endpoint_handler_file_exists():
 
 def test_echo_endpoint_handler_file_exists():
     handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "echo" / "handler.py"
-    assert handler_path.exists()
-
-
-def test_docs_endpoint_handler_file_exists():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "root" / "handler.py"
     assert handler_path.exists()
 
 
@@ -1057,3 +1029,129 @@ def test_api_stage_name_is_prod():
     stages = template.find_resources("AWS::ApiGateway::Stage")
     stage_name = list(stages.values())[0]["Properties"]["StageName"]
     assert stage_name == "prod"
+
+
+def test_s3_bucket_has_versioning_disabled():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    buckets = template.find_resources("AWS::S3::Bucket")
+    bucket = list(buckets.values())[0]
+    versioning_config = bucket.get("Properties", {}).get("VersioningConfiguration", {})
+    status = versioning_config.get("Status", "Suspended")
+    assert status != "Enabled"
+
+
+def test_s3_bucket_has_encryption():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    buckets = template.find_resources("AWS::S3::Bucket")
+    bucket = list(buckets.values())[0]
+    assert "BucketEncryption" in bucket.get("Properties", {})
+
+
+def test_s3_bucket_blocks_public_access():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    buckets = template.find_resources("AWS::S3::Bucket")
+    bucket = list(buckets.values())[0]
+    assert "PublicAccessBlockConfiguration" in bucket.get("Properties", {})
+
+
+def test_api_has_lambda_invoke_permissions():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    permissions = template.find_resources("AWS::Lambda::Permission")
+    assert len(permissions) >= 2
+
+
+def test_lambda_permissions_allow_apigateway_service():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    permissions = template.find_resources("AWS::Lambda::Permission")
+    permission = list(permissions.values())[0]
+    assert permission["Properties"]["Principal"] == "apigateway.amazonaws.com"

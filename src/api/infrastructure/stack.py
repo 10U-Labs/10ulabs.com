@@ -23,6 +23,8 @@ from aws_cdk import (
     aws_ecr as ecr,
     aws_ecs as ecs,
     aws_iam as iam,
+    aws_s3 as s3,
+    aws_s3_deployment as s3deploy,
     aws_secretsmanager as secretsmanager,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
@@ -47,8 +49,9 @@ class ApiStack(Stack):
         subdomain = config["domain_names"]["subdomain"]
         cert_info = self._create_certificate(parent_domain, subdomain, parent_domain.replace('.', '-'))
 
+        docs_bucket = self._create_docs_bucket()
         self._create_api_gateway(subdomain, cert_info[1], self._create_lambda_functions())
-        cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf())
+        cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
         self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role))
 
     def _create_vpc(self):
@@ -201,29 +204,32 @@ class ApiStack(Stack):
         )
         return parent_zone, certificate
 
+    def _create_docs_bucket(self):
+        docs_bucket = s3.Bucket(
+            self, "ApiDocsBucket",
+            bucket_name=self.config['domain_names']['subdomain'],
+            versioned=False,
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            public_read_access=False,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            encryption=s3.BucketEncryption.S3_MANAGED
+        )
+
+        api_dir = os.path.join(os.path.dirname(__file__), "..")
+        s3deploy.BucketDeployment(
+            self, "DeployApiDocs",
+            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yaml", "!index.html"])],
+            destination_bucket=docs_bucket,
+            prune=False
+        )
+
+        return docs_bucket
+
     def _create_lambda_functions(self):
-        root_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "root")
         health_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "health")
         echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
 
-        docs_handler = lambda_.Function(
-            self, "DocsHandler",
-            runtime=lambda_.Runtime.PYTHON_3_11,
-            handler="handler.handler",
-            code=lambda_.Code.from_asset(
-                root_endpoint_dir,
-                bundling=BundlingOptions(
-                    image=DockerImage.from_registry("public.ecr.aws/sam/build-python3.11"),
-                    command=[
-                        "bash", "-c",
-                        "pip install -r requirements.txt -t /asset-output && cp -au . /asset-output"
-                    ]
-                )
-            ),
-            timeout=Duration.seconds(10),
-            description="Serves OpenAPI documentation at api.10ulabs.com/",
-            log_retention=logs.RetentionDays.ONE_WEEK
-        )
         health_handler = lambda_.Function(
             self, "HealthHandler",
             runtime=lambda_.Runtime.PYTHON_3_11,
@@ -242,19 +248,15 @@ class ApiStack(Stack):
             description="Echo endpoint for testing",
             log_retention=logs.RetentionDays.ONE_WEEK
         )
-        return docs_handler, health_handler, echo_handler
+        return health_handler, echo_handler
 
     def _create_api_gateway(self, subdomain_name, certificate, handlers):
-        docs_handler, health_handler, echo_handler = handlers
+        health_handler, echo_handler = handlers
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yaml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
             openapi_spec = yaml.safe_load(f)
 
         openapi_spec_str = yaml.dump(openapi_spec)
-        openapi_spec_str = openapi_spec_str.replace(
-            '${DocsHandlerArn}',
-            f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{docs_handler.function_arn}/invocations'
-        )
         openapi_spec_str = openapi_spec_str.replace(
             '${HealthHandlerArn}',
             f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{health_handler.function_arn}/invocations'
@@ -299,11 +301,6 @@ class ApiStack(Stack):
         stage.node.add_dependency(deployment)
 
         self.api.deployment_stage = stage
-        docs_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/*/"
-        )
         health_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
@@ -330,7 +327,7 @@ class ApiStack(Stack):
             rules=[]
         )
 
-    def _create_cloudfront(self, subdomain_name, certificate, web_acl):
+    def _create_cloudfront(self, subdomain_name, certificate, web_acl, docs_bucket):
         cf_cache_policy = cloudfront.CachePolicy(
             self, "ApiDocsCachePolicy",
             cache_policy_name="ApiDocsCachePolicy",
@@ -343,34 +340,33 @@ class ApiStack(Stack):
             enable_accept_encoding_gzip=True,
             enable_accept_encoding_brotli=True
         )
+
+        s3_origin = origins.S3Origin(docs_bucket)
+        api_origin = origins.HttpOrigin(
+            subdomain_name,
+            protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
+        )
+
         return cloudfront.Distribution(
             self, "ApiDistribution",
             default_behavior=cloudfront.BehaviorOptions(
-                origin=origins.HttpOrigin(
-                    subdomain_name,
-                    protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
-                ),
+                origin=s3_origin,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                 cache_policy=cf_cache_policy,
-                origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN
             ),
+            default_root_object="index.html",
             additional_behaviors={
                 "/health": cloudfront.BehaviorOptions(
-                    origin=origins.HttpOrigin(
-                        subdomain_name,
-                        protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
-                    ),
+                    origin=api_origin,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
                     origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
                 ),
                 "/v1/*": cloudfront.BehaviorOptions(
-                    origin=origins.HttpOrigin(
-                        subdomain_name,
-                        protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
-                    ),
+                    origin=api_origin,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
