@@ -3,6 +3,7 @@
   "region": "us-east-1",
   "bedrock": {
     "max_tokens": 16000,
+    "max_tokens_reasoning": 4000,
     "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
   }
 }
