@@ -176,6 +176,11 @@ def main():
 
     formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config)
 
+    if formatted_content == current_content:
+        logging.warning("Bedrock returned identical content - no formatting changes made")
+    else:
+        logging.info("Bedrock made formatting changes")
+
     with open('CLAUDE.md', 'w', encoding='utf-8') as f:
         f.write(formatted_content)
 

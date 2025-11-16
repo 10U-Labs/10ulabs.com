@@ -130,26 +130,7 @@ jobs:
       - name: Format CLAUDE.md with Bedrock
         run: "python src/claude_md/format_claude_md.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\"\n"
       - name: Commit and push CLAUDE.md formatting
-        run: 'git config user.name "GitHub Actions";
-          git config user.email "actions@github.com";
-          git add CLAUDE.md;
-          if git diff --cached --quiet; then
-            echo "No changes to CLAUDE.md";
-          else
-            git commit -m "Auto-format CLAUDE.md with Bedrock [skip ci]";
-            for i in {1..5}; do
-              if git push; then
-                echo "Successfully pushed CLAUDE.md update";
-                exit 0;
-              fi;
-              echo "Push failed (attempt $i/5), pulling and retrying...";
-              git pull --rebase origin main;
-              sleep $((2 ** i));
-            done;
-            echo "Failed to push after 5 attempts";
-            exit 1;
-          fi
-          '
+        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add CLAUDE.md\nif git diff --cached --quiet; then\n  echo \"No changes to CLAUDE.md\"\nelse\n  git commit -m \"Auto-format CLAUDE.md with Bedrock [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed CLAUDE.md update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
   performing-static-analysis:
     if: '(github.event_name == ''workflow_dispatch'') ||
       !contains(github.event.head_commit.message, ''[skip ci]'')
