@@ -164,7 +164,7 @@ def main():
     parser = argparse.ArgumentParser(description='Format CLAUDE.md to comply with markdownlint rules using Bedrock')
     parser.add_argument('--aws-region', required=True, help='AWS region for Bedrock')
     parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
-    parser.add_argument('--max-tokens', type=int, required=True, help='Max tokens for formatting')
+    parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for formatting')
     parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
     args = parser.parse_args()
 
@@ -178,7 +178,7 @@ def main():
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     bedrock_config = {
         'model_id': args.bedrock_model_id,
-        'max_tokens': args.max_tokens,
+        'max_tokens': args.max_tokens_generation,
         'max_tokens_reasoning': args.max_tokens_reasoning
     }
 
