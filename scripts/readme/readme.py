@@ -127,148 +127,38 @@ def read_all_project_files(project_dir: str) -> str:
 
     return combined
 
-def check_readme_should_be_updated(bedrock_client, project_files: str, current_readme: str, bedrock_config: dict) -> bool:
+def check_readme_should_be_updated(bedrock_client, project_files: str, current_readme: str, bedrock_config: dict, prompt_file: str) -> bool:
+    result = False
     if not current_readme or not current_readme.strip():
         logging.info("README is empty or missing - should be updated")
-        return True
-
-    prompt = f"""You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given infrastructure code.
-
-<project_files>
-{project_files}
-</project_files>
-
-<current_readme>
-{current_readme}
-</current_readme>
-
-Check if the README has ANY issues, including but not limited to:
-1. Title doesn't match actual infrastructure name
-2. Inconsistent or outdated terminology throughout the document
-3. Inaccurately describes the infrastructure components
-4. Missing or incorrect documentation of authentication flow
-5. Incorrect usage instructions or command examples
-6. Missing key resources created
-7. Outdated command examples or file paths
-8. Missing or incorrect prerequisites
-9. Contains a "License" section (MAJOR ERROR - repository has LICENSE.md, README must not duplicate licensing)
-10. Any other inaccuracies, inconsistencies, or outdated information
-
-Respond with ONLY a JSON object in this exact format:
-{{
-  "readme_should_be_updated": true,
-  "reasoning": "Explain your thought process and what issues you found, if any"
-}}
-
-or
-
-{{
-  "readme_should_be_updated": false,
-  "reasoning": "Explain your thought process and confirm the README is current"
-}}
-
-Do not include any other text or formatting outside the JSON object."""
-
-    try:
-        messages = [{
-            'role': 'user',
-            'content': [{'text': prompt}]
-        }]
-        response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
-
-        answer_text = response['output']['message']['content'][0]['text'].strip()
+        result = True
+    else:
+        with open(prompt_file, 'r', encoding='utf-8') as f:
+            prompt = f.read().format(project_files=project_files, current_readme=current_readme)
         try:
-            result = json.loads(answer_text)
-            should_be_updated = bool(result.get('readme_should_be_updated', False))
-            reasoning_chunks = split_text_by_words(result.get('reasoning', 'No reasoning provided'), max_length=1000)
-            if len(reasoning_chunks) == 1:
-                logging.info("Bedrock reasoning: %s", reasoning_chunks[0])
-            else:
-                for i, chunk in enumerate(reasoning_chunks, 1):
-                    logging.info("Bedrock reasoning (part %d/%d): %s", i, len(reasoning_chunks), chunk)
-            logging.info("Bedrock assessment: README should %s", 'be updated' if should_be_updated else 'not be updated')
-            return should_be_updated
-        except json.JSONDecodeError as e:
-            logging.warning("Failed to parse JSON response from Bedrock: %s", e)
-            logging.warning("Raw response: %s", answer_text)
-            should_be_updated = answer_text.lower().startswith('true')
-            logging.info("Bedrock assessment: README should %s", 'be updated (fallback)' if should_be_updated else 'not be updated (fallback)')
-            return should_be_updated
-    except (KeyError, IndexError, TypeError) as e:
-        logging.error("Failed to check README with Bedrock: %s", e)
-        sys.exit(1)
+            response = call_bedrock_with_retry(bedrock_client, bedrock_config, [{'role': 'user', 'content': [{'text': prompt}]}])
+            answer_text = response['output']['message']['content'][0]['text'].strip()
+            try:
+                parsed = json.loads(answer_text)
+                result = bool(parsed.get('readme_should_be_updated', False))
+                for i, chunk in enumerate(split_text_by_words(parsed.get('reasoning', 'No reasoning provided'), max_length=1000), 1):
+                    logging.info("Bedrock reasoning (part %d): %s", i, chunk)
+                logging.info("Bedrock assessment: README should %s", 'be updated' if result else 'not be updated')
+            except json.JSONDecodeError as e:
+                logging.warning("Failed to parse JSON response from Bedrock: %s", e)
+                logging.warning("Raw response: %s", answer_text)
+                result = answer_text.lower().startswith('true')
+                logging.info("Bedrock assessment: README should %s", 'be updated (fallback)' if result else 'not be updated (fallback)')
+        except (KeyError, IndexError, TypeError) as e:
+            logging.error("Failed to check README with Bedrock: %s", e)
+            sys.exit(1)
+    return result
 
-def generate_readme(bedrock_client, project_files: str, bedrock_config: dict) -> str:
-    prompt = f"""You are a technical documentation expert. Generate a comprehensive README.md file for the following infrastructure code.
+def generate_readme(bedrock_client, project_files: str, bedrock_config: dict, prompt_file: str) -> str:
+    with open(prompt_file, 'r', encoding='utf-8') as f:
+        prompt_template = f.read()
 
-<project_files>
-{project_files}
-</project_files>
-
-Create a professional README that includes:
-1. Title and overview of what this infrastructure does
-2. Purpose and key features
-3. Resources created (analyze the code to identify all AWS resources)
-4. Prerequisites and requirements:
-   - CRITICAL: Use ONLY dependencies found in requirements.txt file from project_files - DO NOT invent or assume additional dependencies
-   - If AWS CLI is NOT in requirements.txt, DO NOT list it as a requirement
-   - AWS CDK uses boto3 (Python SDK), NOT the AWS CLI tool
-   - List Python packages from requirements.txt
-   - List system dependencies needed to run those packages (e.g., Node.js for AWS CDK)
-5. Configuration details (analyze config.json and cdk.json files from project_files)
-6. Usage instructions:
-   - Installation steps
-   - Running the infrastructure (CDK deploy, scripts, etc.)
-   - How to use the deployed resources
-7. Architecture overview:
-   - How the components interact
-   - Authentication and authorization flows
-   - Data flows and integrations
-8. Security considerations
-9. Troubleshooting tips
-
-IMPORTANT: Do NOT include a "License" section. The repository already has a LICENSE.md file, so the README must not duplicate licensing information.
-
-Format the README in clean, professional markdown that complies with all markdownlint rules:
-- Keep all lines under 80 characters
-- Always add blank lines before and after lists
-- Always add blank lines before and after code blocks
-- Indent code blocks with 3 spaces when inside ordered/unordered lists
-- Use proper heading levels (# ## ### ####), never use bold text as headings
-- Add language specifiers to all code blocks (```bash, ```python, ```json, etc.)
-- Wrap bare URLs in angle brackets (<https://example.com>)
-- End file with exactly one newline character
-- Use proper table formatting with spaces around pipes (| Column 1 | Column 2 |)
-
-CRITICAL INSTRUCTIONS:
-1. Generate the README content first
-2. Before outputting, verify EACH requirement using this checklist:
-
-   FACTUAL ACCURACY (verify against project_files):
-   - [ ] Prerequisites list ONLY dependencies from requirements.txt in project_files - NO invented dependencies
-   - [ ] AWS CLI is NOT listed as requirement (AWS CDK uses boto3, not AWS CLI)
-   - [ ] Python packages match requirements.txt exactly
-   - [ ] System dependencies (Node.js, Git) are accurate for the packages used
-   - [ ] Resource descriptions match implementation in Python files
-   - [ ] Configuration examples match actual config.json and cdk.json files
-   - [ ] Usage instructions are accurate and complete
-
-   FORMATTING (markdownlint compliance):
-   - [ ] All lines under 80 characters
-   - [ ] Blank lines before/after lists
-   - [ ] Blank lines before/after code blocks
-   - [ ] Code blocks indented with 3 spaces when inside lists
-   - [ ] All headings use # syntax (not bold)
-   - [ ] All code blocks have language specifiers
-   - [ ] All bare URLs wrapped in angle brackets
-   - [ ] File ends with exactly one newline
-   - [ ] No License section included
-
-3. If any check fails, fix the issue before outputting
-4. Output ONLY the final README content (no checklist, no explanation)
-
-Be specific about what each resource does and why it exists. Use code blocks for examples.
-Generate ONLY the README content, starting with the title. Do not include any preamble or explanation."""
+    prompt = prompt_template.format(project_files=project_files)
 
     try:
         messages = [{
@@ -299,33 +189,29 @@ def main():
     parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
     parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
     parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for README generation')
+    parser.add_argument('--prompt-check', required=True, help='Path to check prompt template file')
+    parser.add_argument('--prompt-update', required=True, help='Path to update prompt template file')
     args = parser.parse_args()
-
     project_dir = os.path.abspath(args.project_dir)
     if not os.path.isdir(project_dir):
         logging.error("Project directory does not exist: %s", project_dir)
         sys.exit(1)
-
     if not args.check and not args.update:
         logging.error("Must specify either --check or --update")
         sys.exit(1)
-
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     project_files = read_all_project_files(project_dir)
-
     if args.check:
         try:
             with open(os.path.join(project_dir, 'README.md'), 'r', encoding='utf-8') as f:
                 current_readme = f.read()
         except FileNotFoundError:
             current_readme = ""
-
         bedrock_config = {
             'model_id': args.bedrock_model_id,
             'max_tokens': args.max_tokens_reasoning
         }
-        should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config)
-
+        should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config, args.prompt_check)
         result_value = 'true' if should_be_updated else 'false'
         if args.output_file:
             logging.info("Writing output to file: %s", args.output_file)
@@ -334,19 +220,15 @@ def main():
             logging.info("Successfully wrote readme_should_be_updated=%s", result_value)
         else:
             logging.warning("No output file specified, result: readme_should_be_updated=%s", result_value)
-
         sys.exit(0)
-
     elif args.update:
         bedrock_config = {
             'model_id': args.bedrock_model_id,
             'max_tokens': args.max_tokens_generation
         }
-        new_readme = generate_readme(bedrock_client, project_files, bedrock_config)
-
+        new_readme = generate_readme(bedrock_client, project_files, bedrock_config, args.prompt_update)
         with open(os.path.join(project_dir, 'README.md'), 'w', encoding='utf-8') as f:
             f.write(new_readme)
-
         logging.info("README updated at %s", os.path.join(project_dir, 'README.md'))
         sys.exit(0)
 
