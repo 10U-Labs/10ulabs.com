@@ -355,6 +355,20 @@ class ApiStack(Stack):
             enable_accept_encoding_brotli=True
         )
 
+        url_rewrite_function = cloudfront.Function(
+            self, "RootUrlRewriteFunction",
+            code=cloudfront.FunctionCode.from_inline("""
+function handler(event) {
+    var request = event.request;
+    if (request.uri === '/') {
+        request.uri = '/index.html';
+    }
+    return request;
+}
+            """),
+            comment="Rewrites / to /index.html for S3 origin"
+        )
+
         s3_origin = origins.S3Origin(docs_bucket)
         api_origin = origins.HttpOrigin(
             f"{self.api.rest_api_id}.execute-api.{self.config['aws']['region']}.amazonaws.com",
@@ -379,7 +393,13 @@ class ApiStack(Stack):
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cache_policy=cf_cache_policy,
-                    origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN
+                    origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
+                    function_associations=[
+                        cloudfront.FunctionAssociation(
+                            function=url_rewrite_function,
+                            event_type=cloudfront.FunctionEventType.VIEWER_REQUEST
+                        )
+                    ]
                 ),
                 "/openapi.yaml": cloudfront.BehaviorOptions(
                     origin=s3_origin,
