@@ -1,36 +1,36 @@
 jobs:
   concluding-no-warnings:
-    if: needs.determining.outputs.has_warnings == 'false'
-    name: Conclude - No Warnings
+    if: needs.determining.outputs.claude_md_should_be_updated == 'false'
+    name: Concluding CLAUDE.md is formatted properly already
     needs: determining
     runs-on: ubuntu-latest
     steps:
     - name: Conclude no
       run: "echo \"\u2713 Conclusion: NO - No warnings found in CLAUDE.md\"\necho \"CLAUDE.md is properly formatted\"\n"
   concluding-warnings:
-    if: needs.determining.outputs.has_warnings == 'true'
-    name: Conclude - Warnings Found
+    if: needs.determining.outputs.claude_md_should_be_updated == 'true'
+    name: Concluding CLAUDE.md should be properly formatted
     needs: determining
     runs-on: ubuntu-latest
     steps:
     - name: Conclude yes
       run: "echo \"\u2713 Conclusion: YES - Warnings were found in CLAUDE.md\"\necho \"The Updating job will fix these warnings automatically\"\n"
   determining:
-    name: Determine linting status
+    name: Determining if CLAUDE.md should be properly formatted
     needs: linting
     outputs:
-      has_warnings: ${{ needs.linting.outputs.has_warnings }}
+      claude_md_should_be_updated: ${{ needs.linting.outputs.claude_md_should_be_updated }}
     runs-on: ubuntu-latest
     steps:
     - name: Check linting results
-      run: "if [ \"${{ needs.linting.outputs.has_warnings }}\" == \"true\" ]; then\n  echo \"Linting yielded warnings\"\nelse\n  echo \"Linting did not yield warnings\"\nfi\n"
+      run: "if [ \"${{ needs.linting.outputs.claude_md_should_be_updated }}\" == \"true\" ]; then\n  echo \"Linting yielded warnings\"\nelse\n  echo \"Linting did not yield warnings\"\nfi\n"
   linting:
     if: '(github.event_name == ''workflow_dispatch'') ||
       !contains(github.event.head_commit.message, ''[skip ci]'')
       '
     name: Linting
     outputs:
-      has_warnings: ${{ steps.lint.outputs.has_warnings }}
+      claude_md_should_be_updated: ${{ steps.lint.outputs.claude_md_should_be_updated }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -45,7 +45,7 @@ jobs:
     - continue-on-error: true
       id: lint
       name: Linting Markdown files
-      run: "if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then\n  echo \"has_warnings=false\" >> $GITHUB_OUTPUT\n  echo \"\u2713 No linting warnings found\"\nelse\n  echo \"has_warnings=true\" >> $GITHUB_OUTPUT\n  echo \"\u26A0\uFE0F Linting warnings detected:\"\n  cat lint-output.txt\nfi\n"
+      run: "if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then\n  echo \"claude_md_should_be_updated=false\" >> $GITHUB_OUTPUT\n  echo \"\u2713 No linting warnings found\"\nelse\n  echo \"claude_md_should_be_updated=true\" >> $GITHUB_OUTPUT\n  echo \"\u26A0\uFE0F Linting warnings detected:\"\n  cat lint-output.txt\nfi\n"
     - name: Linting YAML files
       run: 'echo "Running yamllint on claude.yml..."
         CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}''
@@ -57,8 +57,8 @@ jobs:
         name: lint-results
         path: lint-output.txt
   updating:
-    if: needs.determining.outputs.has_warnings == 'true'
-    name: Update CLAUDE.md formatting
+    if: needs.determining.outputs.claude_md_should_be_updated == 'true'
+    name: Formatting CLAUDE.md
     needs:
     - determining
     - concluding-warnings
@@ -89,7 +89,7 @@ jobs:
         git commit -m "Auto-fix CLAUDE.md formatting with markdownlint [skip ci]"
         git push
         '
-name: Claude Documentation Linting
+name: Ensuring CLAUDE.md is properly formatted
 on:
   pull_request:
     paths:

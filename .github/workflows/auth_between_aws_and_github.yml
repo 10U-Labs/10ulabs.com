@@ -30,18 +30,18 @@ jobs:
       uses: actions/checkout@v4
     - id: config
       name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json)
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json)
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json)
-        bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json)
-        bedrock_max_tokens_check=$(jq -r ''.aws.bedrock.max_tokens_check'' src/auth_between_aws_and_github/config.json)
-        bedrock_max_tokens_generate=$(jq -r ''.aws.bedrock.max_tokens_generate'' src/auth_between_aws_and_github/config.json)
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
-        echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT
-        echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT
-        echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT
+      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+        bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_check=$(jq -r ''.aws.bedrock.max_tokens_check'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_generate=$(jq -r ''.aws.bedrock.max_tokens_generate'' src/auth_between_aws_and_github/config.json);
+        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+        echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT;
         '
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -69,12 +69,12 @@ jobs:
       uses: actions/checkout@v4
     - id: config
       name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json)
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json)
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json)
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
         '
     - name: Configure AWS credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
@@ -103,14 +103,14 @@ jobs:
       uses: actions/checkout@v4
     - id: config
       name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json)
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json)
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json)
-        github_pat_secret_name=$(jq -r ''.aws.secrets_manager.github_pat_secret_name'' src/auth_between_aws_and_github/config.json)
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
-        echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT
+      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+        github_pat_secret_name=$(jq -r ''.aws.secrets_manager.github_pat_secret_name'' src/auth_between_aws_and_github/config.json);
+        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+        echo "github_pat_secret_name=$github_pat_secret_name" >> $GITHUB_OUTPUT;
         '
     - continue-on-error: true
       id: oidc-auth
@@ -167,12 +167,12 @@ jobs:
       uses: actions/checkout@v4
     - id: config
       name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json)
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json)
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json)
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
+      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
         '
     - name: Configure AWS credentials via OIDC
       uses: aws-actions/configure-aws-credentials@v4
@@ -253,18 +253,18 @@ jobs:
       uses: actions/checkout@v4
     - id: config
       name: Read auth_between_aws_and_github config
-      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json)
-        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json)
-        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json)
-        bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json)
-        bedrock_max_tokens_check=$(jq -r ''.aws.bedrock.max_tokens_check'' src/auth_between_aws_and_github/config.json)
-        bedrock_max_tokens_generate=$(jq -r ''.aws.bedrock.max_tokens_generate'' src/auth_between_aws_and_github/config.json)
-        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT
-        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT
-        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT
-        echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT
-        echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT
-        echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT
+      run: 'aws_account_id=$(jq -r ''.aws.account_id'' src/auth_between_aws_and_github/config.json);
+        aws_region=$(jq -r ''.aws.region'' src/auth_between_aws_and_github/config.json);
+        aws_iam_role_name=$(jq -r ''.aws.iam_role_name'' src/auth_between_aws_and_github/config.json);
+        bedrock_model_id=$(jq -r ''.aws.bedrock.model_id'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_check=$(jq -r ''.aws.bedrock.max_tokens_check'' src/auth_between_aws_and_github/config.json);
+        bedrock_max_tokens_generate=$(jq -r ''.aws.bedrock.max_tokens_generate'' src/auth_between_aws_and_github/config.json);
+        echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
+        echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
+        echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
+        echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_check=$bedrock_max_tokens_check" >> $GITHUB_OUTPUT;
+        echo "bedrock_max_tokens_generate=$bedrock_max_tokens_generate" >> $GITHUB_OUTPUT;
         '
     - name: Set up Python
       uses: actions/setup-python@v5
