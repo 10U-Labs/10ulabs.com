@@ -341,7 +341,8 @@ class ApiStack(Stack):
 
         s3_origin = origins.S3Origin(docs_bucket)
         api_origin = origins.HttpOrigin(
-            subdomain_name,
+            f"{self.api.rest_api_id}.execute-api.{self.config['aws']['region']}.amazonaws.com",
+            origin_path="/prod",
             protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
         )
 
