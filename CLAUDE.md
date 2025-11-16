@@ -16,7 +16,7 @@
 - The GitHub PAT does not expire and has unlimited validity
 - These two credential sets allow you to debug anything in the project
 
-### CRITICAL: When using the GitHub API via curl
+#### CRITICAL: When using the GitHub API via curl
 
 - Get the PAT value from the environment: `echo $GITHUB_PAT`
 - Pass the literal PAT value directly in the curl command (not the variable)
