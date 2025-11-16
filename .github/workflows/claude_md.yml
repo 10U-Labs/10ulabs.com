@@ -56,11 +56,13 @@ jobs:
           fi
           '
   determining-if-readme-should-be-updated:
-    if: always()
+    if: |
+      needs.formatting-claude-md.result == 'success' ||
+      needs.concluding-claude-md-is-already-formatted-properly.result == 'success'
     name: Determining if README.md should be updated
     needs:
       - concluding-claude-md-is-already-formatted-properly
-      - updating
+      - formatting-claude-md
     outputs:
       readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
     permissions:
@@ -91,61 +93,7 @@ jobs:
       - id: check
         name: Check if README needs update
         run: "python scripts/readme.py \\\n  --project-dir src/claude_md \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
-  performing-static-analysis:
-    if: '(github.event_name == ''workflow_dispatch'') ||
-      !contains(github.event.head_commit.message, ''[skip ci]'')
-      '
-    name: Performing static analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: 'pip install pylint mypy yamllint boto3 &&
-          npm install -g jsonlint
-          '
-      - name: Linting JSON configuration files
-        run: 'echo "Validating JSON syntax...";
-          jsonlint -q src/claude_md/config.json;
-          echo "No errors found - JSON validation passed successfully";
-          '
-      - name: Linting Python files
-        run: "pylint \\\n  src/claude_md/format_claude_md.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
-      - name: Linting YAML files
-        run: 'echo "Running yamllint on claude_md.yml...";
-          CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'';
-          yamllint --config-data "$CONFIG" .github/workflows/claude_md.yml &&
-          echo "No errors found - YAML linting passed successfully"
-          '
-      - name: Static type checking Python files with mypy
-        run: 'python -m mypy src/claude_md/format_claude_md.py
-          '
-  unit-testing:
-    name: Unit testing
-    needs: concluding-claude-md-should-be-formatted
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Python dependencies
-        run: 'pip install pytest boto3
-          '
-      - name: Run unit tests
-        run: 'pytest test/claude_md/test_unit.py -v
-          '
-  updating:
+  formatting-claude-md:
     name: Formatting CLAUDE.md
     needs: unit-testing
     permissions:
@@ -203,6 +151,60 @@ jobs:
             echo "Failed to push after 5 attempts";
             exit 1;
           fi
+          '
+  performing-static-analysis:
+    if: '(github.event_name == ''workflow_dispatch'') ||
+      !contains(github.event.head_commit.message, ''[skip ci]'')
+      '
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: 'pip install pylint mypy yamllint boto3 &&
+          npm install -g jsonlint
+          '
+      - name: Linting JSON configuration files
+        run: 'echo "Validating JSON syntax...";
+          jsonlint -q src/claude_md/config.json;
+          echo "No errors found - JSON validation passed successfully";
+          '
+      - name: Linting Python files
+        run: "pylint \\\n  src/claude_md/format_claude_md.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+      - name: Linting YAML files
+        run: 'echo "Running yamllint on claude_md.yml...";
+          CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'';
+          yamllint --config-data "$CONFIG" .github/workflows/claude_md.yml &&
+          echo "No errors found - YAML linting passed successfully"
+          '
+      - name: Static type checking Python files with mypy
+        run: 'python -m mypy src/claude_md/format_claude_md.py
+          '
+  unit-testing:
+    name: Unit testing
+    needs: concluding-claude-md-should-be-formatted
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python dependencies
+        run: 'pip install pytest boto3
+          '
+      - name: Run unit tests
+        run: 'pytest test/claude_md/test_unit.py -v
           '
   updating-readme:
     name: Updating README.md
