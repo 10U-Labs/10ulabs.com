@@ -118,7 +118,6 @@ jobs:
           SECRET_NAME="${{ steps.config.outputs.github_pat_secret_name }}"
           GITHUB_ORG="${{ github.repository_owner }}"
           GITHUB_REPO="${{ github.event.repository.name }}"
-
           SECRET_VALUE=$(cat <<EOF
           {
             "personal_access_token": "$GH_RUNNER_PAT",
@@ -129,7 +128,6 @@ jobs:
           }
           EOF
           )
-
           if aws secretsmanager describe-secret --secret-id "$SECRET_NAME" &>/dev/null; then
             echo "Secret exists, updating..."
             aws secretsmanager put-secret-value \
@@ -259,7 +257,7 @@ jobs:
       - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/auth_between_aws_and_github.yml
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}}}' .github/workflows/auth_between_aws_and_github.yml
       - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/auth_between_aws_and_github scripts/readme.py
@@ -333,7 +331,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/auth_between_aws_and_github/README.md
           git diff --staged --quiet || git commit -m "Update auth_between_aws_and_github README via Bedrock"
-
           for i in {1..5}; do
             if git push; then
               echo "Successfully pushed README update"
@@ -343,7 +340,6 @@ jobs:
             git pull --rebase origin main
             sleep $((2 ** i))
           done
-
           echo "Failed to push after 5 attempts"
           exit 1
 name: Ensuring appropriate bilateral authorizations between AWS and GitHub
