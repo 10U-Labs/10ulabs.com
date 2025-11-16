@@ -218,7 +218,7 @@ class ApiStack(Stack):
         api_dir = os.path.join(os.path.dirname(__file__), "..")
         s3deploy.BucketDeployment(
             self, "DeployApiDocs",
-            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yaml", "!index.html"])],
+            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yaml", "!index.html", "!404.html"])],
             destination_bucket=docs_bucket,
             prune=False
         )
@@ -228,6 +228,7 @@ class ApiStack(Stack):
     def _create_lambda_functions(self):
         health_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "health")
         echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
+        catchall_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "catchall")
 
         health_handler = lambda_.Function(
             self, "HealthHandler",
@@ -247,10 +248,19 @@ class ApiStack(Stack):
             description="Echo endpoint for testing",
             log_retention=logs.RetentionDays.ONE_WEEK
         )
-        return health_handler, echo_handler
+        catchall_handler = lambda_.Function(
+            self, "CatchAllHandler",
+            runtime=lambda_.Runtime.PYTHON_3_11,
+            handler="handler.handler",
+            code=lambda_.Code.from_asset(catchall_endpoint_dir),
+            timeout=Duration.seconds(10),
+            description="Catch-all handler for undefined routes",
+            log_retention=logs.RetentionDays.ONE_WEEK
+        )
+        return health_handler, echo_handler, catchall_handler
 
     def _create_api_gateway(self, handlers):
-        health_handler, echo_handler = handlers
+        health_handler, echo_handler, catchall_handler = handlers
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yaml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
             openapi_spec = yaml.safe_load(f)
@@ -263,6 +273,10 @@ class ApiStack(Stack):
         openapi_spec_str = openapi_spec_str.replace(
             '${EchoHandlerArn}',
             f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{echo_handler.function_arn}/invocations'
+        )
+        openapi_spec_str = openapi_spec_str.replace(
+            '${CatchAllHandlerArn}',
+            f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{catchall_handler.function_arn}/invocations'
         )
 
         spec_hash = hashlib.md5(openapi_spec_str.encode('utf-8')).hexdigest()[:8]
@@ -306,6 +320,11 @@ class ApiStack(Stack):
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
             source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/POST/v1/echo"
         )
+        catchall_handler.add_permission(
+            "ApiGatewayInvoke",
+            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
+            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/*"
+        )
 
     def _create_waf(self):
         return wafv2.CfnWebACL(
@@ -346,28 +365,49 @@ class ApiStack(Stack):
 
         distribution = cloudfront.Distribution(
             self, "ApiDistribution",
+            comment="API Gateway + S3 docs distribution v2",
             default_behavior=cloudfront.BehaviorOptions(
-                origin=s3_origin,
+                origin=api_origin,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-                cache_policy=cf_cache_policy,
-                origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
             ),
-            default_root_object="index.html",
             additional_behaviors={
+                "/": cloudfront.BehaviorOptions(
+                    origin=s3_origin,
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                    cache_policy=cf_cache_policy,
+                    origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN
+                ),
+                "/openapi.yaml": cloudfront.BehaviorOptions(
+                    origin=s3_origin,
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                    cache_policy=cf_cache_policy,
+                    origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN
+                ),
+                "/404.html": cloudfront.BehaviorOptions(
+                    origin=s3_origin,
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                    cache_policy=cf_cache_policy,
+                    origin_request_policy=cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN
+                ),
                 "/health": cloudfront.BehaviorOptions(
                     origin=api_origin,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
-                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
                 ),
                 "/v1/*": cloudfront.BehaviorOptions(
                     origin=api_origin,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                     cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
-                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER
+                    origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER
                 )
             },
             domain_names=[subdomain_name],
