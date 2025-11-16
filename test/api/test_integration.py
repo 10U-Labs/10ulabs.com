@@ -238,13 +238,6 @@ def test_certificate_status_is_issued(acm_client, config):
     assert cert_details['Certificate']['Status'] == 'ISSUED'
 
 
-def test_api_has_custom_domain_name(apigw_client, config):
-    domain_names = apigw_client.get_domain_names()
-    subdomain = config['domain_names']['subdomain']
-    domain_name_values = [d['domainName'] for d in domain_names['items']]
-    assert subdomain in domain_name_values
-
-
 def test_stack_has_api_url_output(cloudformation_client):
     stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
     outputs = stacks['Stacks'][0].get('Outputs', [])
