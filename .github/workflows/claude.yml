@@ -91,7 +91,7 @@ jobs:
         git push
         '
 name: Claude Documentation Linting
-true:
+on:
   pull_request:
     paths:
     - CLAUDE.md
