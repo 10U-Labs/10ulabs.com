@@ -199,7 +199,7 @@ jobs:
       with:
         python-version: '3.11'
     - name: Install linting dependencies
-      run: 'pip install pylint mypy yamllint
+      run: 'pip install pylint mypy yamllint &&
         npm install -g jsonlint
         '
     - name: Install project dependencies for linting

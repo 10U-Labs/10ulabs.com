@@ -207,7 +207,7 @@ jobs:
         python-version: '3.11'
     - if: ${{ github.event.inputs.dry_run != 'true' }}
       name: Install linting dependencies
-      run: 'pip install pylint mypy yamllint
+      run: 'pip install pylint mypy yamllint &&
         npm install -g jsonlint
         '
     - if: ${{ github.event.inputs.dry_run != 'true' }}
