@@ -32,6 +32,11 @@ def acm_client(config):
 
 
 @pytest.fixture
+def s3_client(config):
+    return boto3.client('s3', region_name=config['aws']['region'])
+
+
+@pytest.fixture
 def api_endpoint(cloudformation_client, config):
     stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
     outputs = stacks['Stacks'][0].get('Outputs', [])
