@@ -14,8 +14,10 @@ jobs:
     steps:
     - run: 'true'
   determining-if-claude-md-should-be-formatted:
+    if: '(github.event_name == ''workflow_dispatch'') ||
+      !contains(github.event.head_commit.message, ''[skip ci]'')
+      '
     name: Determining if CLAUDE.md should be properly formatted
-    needs: linting
     outputs:
       claude_md_should_be_updated: ${{ steps.check.outputs.claude_md_should_be_updated }}
     runs-on: ubuntu-latest
@@ -37,33 +39,17 @@ jobs:
       !contains(github.event.head_commit.message, ''[skip ci]'')
       '
     name: Linting
-    outputs:
-      claude_md_should_be_updated: ${{ steps.lint.outputs.claude_md_should_be_updated }}
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Install dependencies
-      run: 'npm install -g markdownlint-cli2 && pip install yamllint
-        '
-    - continue-on-error: true
-      id: lint
-      name: Linting Markdown files
-      run: "if markdownlint-cli2 CLAUDE.md 2>&1 | tee lint-output.txt; then\n  echo \"claude_md_should_be_updated=false\" >> $GITHUB_OUTPUT\n  echo \"\u2713 No linting warnings found\"\nelse\n  echo \"claude_md_should_be_updated=true\" >> $GITHUB_OUTPUT\n  echo \"\u26A0\uFE0F Linting warnings detected:\"\n  cat lint-output.txt\nfi\n"
+    - name: Install yamllint
+      run: pip install yamllint
     - name: Linting YAML files
-      run: 'echo "Running yamllint on claude.yml..."
-        CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}''
-        yamllint --config-data "$CONFIG" .github/workflows/claude.yml
+      run: 'echo "Running yamllint on claude.yml...";
+        CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'';
+        yamllint --config-data "$CONFIG" .github/workflows/claude.yml;
         '
-    - name: Upload lint results
-      uses: actions/upload-artifact@v4
-      with:
-        name: lint-results
-        path: lint-output.txt
   updating:
     if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated == 'true'
     name: Formatting CLAUDE.md
