@@ -311,7 +311,7 @@ jobs:
         \  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n\
         \  exit 1\nfi\n"
 name: Ensuring CloudTrail and domain name exist and are properly configured
-true:
+on:
   push:
     branches:
     - main
