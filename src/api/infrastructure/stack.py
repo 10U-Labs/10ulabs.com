@@ -344,7 +344,8 @@ class ApiStack(Stack):
         api_origin = origins.HttpOrigin(
             f"{self.api.rest_api_id}.execute-api.{self.config['aws']['region']}.amazonaws.com",
             origin_path="/prod",
-            protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
+            protocol_policy=OriginProtocolPolicy.HTTPS_ONLY,
+            connection_timeout=Duration.seconds(10)
         )
 
         distribution = cloudfront.Distribution(
