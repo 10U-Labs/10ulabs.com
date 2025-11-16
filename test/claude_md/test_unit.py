@@ -122,14 +122,16 @@ def test_format_claude_md_returns_formatted_content(mock_sleep, mock_bedrock):
     mock_bedrock.return_value = {
         'output': {
             'message': {
-                'content': [{'type': 'text', 'text': 'formatted content\n'}]
+                'content': [{'text': 'formatted content\n'}]
             }
         }
     }
     mock_client = Mock()
     current_content = 'original content'
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
-    result = format_claude_md.format_claude_md(mock_client, current_content, bedrock_config)
+
+    with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
+        result = format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
     assert result == 'formatted content\n'
 
 @patch('format_claude_md.call_bedrock_with_retry')
@@ -138,14 +140,16 @@ def test_format_claude_md_adds_trailing_newline_if_missing(mock_sleep, mock_bedr
     mock_bedrock.return_value = {
         'output': {
             'message': {
-                'content': [{'type': 'text', 'text': 'formatted content'}]
+                'content': [{'text': 'formatted content'}]
             }
         }
     }
     mock_client = Mock()
     current_content = 'original content'
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
-    result = format_claude_md.format_claude_md(mock_client, current_content, bedrock_config)
+
+    with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
+        result = format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
     assert result.endswith('\n')
 
 @patch('format_claude_md.call_bedrock_with_retry')
@@ -156,7 +160,8 @@ def test_format_claude_md_exits_on_key_error(mock_sleep, mock_bedrock):
     current_content = 'original content'
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     with pytest.raises(SystemExit):
-        format_claude_md.format_claude_md(mock_client, current_content, bedrock_config)
+        with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
+            format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
 
 def test_format_claude_md_script_exists():
     script_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "format_claude_md.py"
