@@ -205,6 +205,7 @@ jobs:
         run: 'pytest test/claude_md/test_unit.py -v
           '
   updating-readme:
+    if: always() && needs.concluding-readme-should-be-updated.result == 'success'
     name: Updating README.md
     needs: concluding-readme-should-be-updated
     permissions:
