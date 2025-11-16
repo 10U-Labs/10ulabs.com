@@ -54,7 +54,7 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
 def format_claude_md(bedrock_client, current_content: str, bedrock_config: dict) -> str:
-    prompt = f"""You are a technical documentation expert specializing in markdown formatting. Your task is to reformat the following CLAUDE.md file to comply with ALL markdownlint rules from https://github.com/DavidAnson/markdownlint while preserving 100% of the content and meaning.
+    prompt = f"""You are a technical documentation expert specializing in markdown formatting. Your task is to reformat the following CLAUDE.md file to comply with ALL markdownlint rules while preserving 100% of the content and meaning.
 
 <current_claude_md>
 {current_content}
@@ -62,13 +62,13 @@ def format_claude_md(bedrock_client, current_content: str, bedrock_config: dict)
 
 CRITICAL REQUIREMENTS:
 
-1. PRESERVE ALL CONTENT:
+1. CONTENT PRESERVATION:
    - Every single word, instruction, code example, and URL must be preserved
    - Do NOT remove, summarize, or rephrase ANY content
    - Do NOT add new content or explanations
-   - Only change formatting to comply with markdownlint
+   - You MUST make formatting changes to comply with markdownlint - this is REQUIRED
 
-2. COMPLY WITH ALL MARKDOWNLINT RULES (https://github.com/DavidAnson/markdownlint):
+2. FORMATTING CHANGES YOU MUST MAKE:
    - MD001: Heading levels increment by one (no skipping from # to ###)
    - MD003: Heading style consistent (ATX style with #)
    - MD004: Unordered list style consistent
@@ -78,7 +78,7 @@ CRITICAL REQUIREMENTS:
    - MD010: No hard tabs (use spaces)
    - MD011: Reversed link syntax
    - MD012: No multiple consecutive blank lines
-   - MD013: Line length max 80 characters (except code blocks/tables/URLs)
+   - MD013: Line length max 80 characters - BREAK ALL LONG LINES including headings and code blocks
    - MD014: Dollar signs in shell commands only when showing output
    - MD018: Space after hash in headings (# Heading not #Heading)
    - MD019: No multiple spaces after hash in headings
@@ -112,27 +112,34 @@ CRITICAL REQUIREMENTS:
    - MD049: Emphasis style consistent
    - MD050: Strong style consistent
 
-3. SPECIAL HANDLING:
-   - Long lines (MD013): Break at natural boundaries, preserve meaning
-   - Bold emphasis as headings (MD036): Convert to proper heading levels
-   - Bare URLs (MD034): Wrap in angle brackets unless in code blocks
-   - Code blocks (MD040): Add language identifier (bash, python, json, etc.)
-   - Lists (MD032): Ensure blank lines before and after
-   - Code in lists: Indent with 3 spaces per list level
+3. REQUIRED CHANGES FOR COMMON VIOLATIONS:
 
-VERIFICATION CHECKLIST (must verify before outputting):
+   MD013 (long lines) - BREAK ALL LINES over 80 chars - NO EXCEPTIONS:
+   - Long headings: Shorten the heading text or move details to first paragraph
+     Before: "### CRITICAL: When troubleshooting failed workflows, ALWAYS check logs first"
+     After: "### CRITICAL: Always check logs first\n\nWhen troubleshooting failed workflows..."
+
+   - Long URLs in bash code: Use backslash continuation before line break
+     Before: curl -s "https://api.github.com/repos/owner/repo/very/long/path"
+     After: curl -s \\\n  "https://api.github.com/repos/owner/repo/very/long/path"
+
+   - MD029 (list numbering): Use 1/1/1/1 style - ALL ordered list items numbered "1."
+   - MD036 (bold as headings): Convert bold emphasis to proper heading levels
+   - MD034 (bare URLs): Wrap in angle brackets unless in code blocks
+   - MD040 (code blocks): Add language identifier (bash, python, json, etc.)
+   - MD032 (list spacing): Ensure blank lines before and after lists
+
+VERIFICATION CHECKLIST (verify ALL before outputting):
 - [ ] All original content preserved (every word, URL, example)
-- [ ] All markdownlint rules applied (MD001-MD050)
-- [ ] Lines under 80 chars (except code/tables/long-URLs)
+- [ ] ALL lines under 80 characters - NO EXCEPTIONS
+- [ ] ALL ordered list items numbered "1." (not 1, 2, 3, 4)
 - [ ] Headings have proper levels and spacing
 - [ ] Lists have blank lines before/after
 - [ ] Code blocks have language and blank lines
-- [ ] Bare URLs wrapped in angle brackets
-- [ ] No emphasis used as headings
+- [ ] No bold emphasis used as headings
 - [ ] File ends with single newline
-- [ ] Consistent formatting throughout
 
-Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, explanation, or the checklist itself."""
+Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, explanation, or checklist."""
 
     try:
         messages = [{
@@ -145,6 +152,14 @@ Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, expl
 
         block_keys = [list(block.keys()) for block in content_blocks]
         logging.info("Response contains %d content blocks with keys: %s", len(content_blocks), block_keys)
+
+        reasoning_blocks = [block for block in content_blocks if 'reasoningContent' in block]
+        if reasoning_blocks:
+            reasoning_content = reasoning_blocks[0]['reasoningContent']
+            if isinstance(reasoning_content, str):
+                logging.info("Extended thinking reasoning (first 500 chars): %s", reasoning_content[:500])
+            else:
+                logging.info("Extended thinking reasoning structure: %s", reasoning_content)
 
         text_blocks = [block for block in content_blocks if 'text' in block]
 
