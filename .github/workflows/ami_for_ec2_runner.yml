@@ -1,5 +1,4 @@
 name: Build AMI for Self-Hosted Runner
-
 on:
   workflow_dispatch:
     inputs:
@@ -22,11 +21,9 @@ on:
       - 'api/resources/ami_for_ec2_runners/config.json'
       - 'api/resources/ami_for_ec2_runners/**'
       - '.github/workflows/build-ami-for-github_self_hosted_runners.yml'
-
 concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   build-ami:
     name: Building AMI
@@ -38,44 +35,35 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Install jq
         run: |
           sudo apt-get update && sudo apt-get install -y jq
           
-
       - name: Load configuration from config file
         id: config
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
           REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
           VPC_NAME=$(jq -r '.naming.vpc_name' api/resources/ami_for_ec2_runners/config.json)
-
           BASE_OS=$(jq -r '.base_os.os' api/resources/ami_for_ec2_runners/config.json)
           BASE_OS_VERSION=$(jq -r '.base_os.version' api/resources/ami_for_ec2_runners/config.json)
           ARCHITECTURE=$(jq -r '.base_os.architecture' api/resources/ami_for_ec2_runners/config.json)
-
           if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
             DEBIAN_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
             echo "Resolved Debian stable to version $DEBIAN_VERSION (queried from Debian repository)"
           else
             DEBIAN_VERSION="$BASE_OS_VERSION"
           fi
-
           if [ -n "${{ github.event.inputs.debian_version }}" ]; then
             DEBIAN_VERSION="${{ github.event.inputs.debian_version }}"
             echo "Using Debian version from workflow input: $DEBIAN_VERSION"
           fi
-
           RUNNER_VERSION=$(jq -r '.github.runner_version' api/resources/ami_for_ec2_runners/config.json)
-
           INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' api/resources/ami_for_ec2_runners/config.json)
           SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' api/resources/ami_for_ec2_runners/config.json)
-
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
@@ -84,13 +72,11 @@ jobs:
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
-
       - name: Get VPC info from deployed infrastructure
         id: network
         run: |
@@ -98,24 +84,19 @@ jobs:
             --filters "Name=tag:Name,Values=${{ steps.config.outputs.vpc_name }}" \
             --query 'Vpcs[0].VpcId' \
             --output json --no-cli-pager | jq -r '.')
-
           PRIMARY_INSTANCE_TYPE="${{ steps.config.outputs.instance_type }}"
           echo "Querying AWS for AZs that support instance type: $PRIMARY_INSTANCE_TYPE"
-
           SUPPORTED_AZS=$(aws ec2 describe-instance-type-offerings \
             --location-type availability-zone \
             --filters "Name=instance-type,Values=$PRIMARY_INSTANCE_TYPE" \
             --query 'InstanceTypeOfferings[].Location' \
             --output json --no-cli-pager | jq -r '.[]')
-
           if [ -z "$SUPPORTED_AZS" ]; then
             echo "ERROR: No AZs found supporting instance type $PRIMARY_INSTANCE_TYPE"
             exit 1
           fi
-
           echo "AZs supporting $PRIMARY_INSTANCE_TYPE:"
           echo "$SUPPORTED_AZS"
-
           for AZ in $SUPPORTED_AZS; do
             SUBNET_ID=$(aws ec2 describe-subnets \
               --filters "Name=vpc-id,Values=$VPC_ID" \
@@ -123,7 +104,6 @@ jobs:
                         "Name=availability-zone,Values=$AZ" \
               --query 'Subnets[0].SubnetId' \
               --output text --no-cli-pager)
-
             if [ -n "$SUBNET_ID" ] && [ "$SUBNET_ID" != "None" ]; then
               echo "Found subnet $SUBNET_ID in AZ $AZ"
               echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
@@ -131,20 +111,16 @@ jobs:
               exit 0
             fi
           done
-
           echo "ERROR: No suitable subnet found in any supported AZ"
           exit 1
-
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
-
       - name: Initialize Packer
         run: |
           cd api/resources/ami_for_ec2_runners
           packer init template.pkr.hcl
-
       - name: Validate Packer template
         run: |
           cd api/resources/ami_for_ec2_runners
@@ -157,25 +133,20 @@ jobs:
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
             -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
             template.pkr.hcl
-
       - name: Build AMI with Packer
         id: build
         run: |
           cd api/resources/ami_for_ec2_runners
-
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
           echo "Architecture: ${{ steps.config.outputs.architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
           echo "Instance Type: ${{ steps.config.outputs.instance_type }}"
           echo ""
-
           MAX_ATTEMPTS=3
           ATTEMPT=1
-
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             echo "Build attempt $ATTEMPT of $MAX_ATTEMPTS"
-
             packer build \
               -var="debian_version=${{ steps.config.outputs.debian_version }}" \
               -var="architecture=${{ steps.config.outputs.architecture }}" \
@@ -187,14 +158,11 @@ jobs:
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
-
             BUILD_EXIT_CODE=$?
-
             if [ $BUILD_EXIT_CODE -eq 0 ]; then
               echo "Build succeeded on attempt $ATTEMPT"
               break
             fi
-
             if grep -q "Spot Instance interruption" packer-output.log || \
                grep -q "capacity" packer-output.log || \
                grep -q "fleet request" packer-output.log; then
@@ -211,18 +179,14 @@ jobs:
               exit 1
             fi
           done
-
           AMI_ID=$(grep 'artifact,0,id' packer-output.log | cut -d: -f2 | cut -d, -f1 || echo "")
-
           if [ -z "$AMI_ID" ]; then
             echo "Failed to extract AMI ID from Packer output"
             exit 1
           fi
-
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
           echo ""
           echo "AMI built successfully: $AMI_ID"
-
       - name: Tag AMI
         if: steps.build.outputs.ami_id != ''
         run: |
@@ -230,9 +194,7 @@ jobs:
             --resources ${{ steps.build.outputs.ami_id }} \
             --tags Key=ManagedBy,Value=GitHubActions Key=Repository,Value=${{ github.repository }} Key=Workflow,Value="${{ github.workflow }}" Key=RunId,Value=${{ github.run_id }} \
             --region ${{ steps.config.outputs.region }}
-
           echo "Tagged AMI ${{ steps.build.outputs.ami_id }}"
-
       - name: Output AMI details
         if: steps.build.outputs.ami_id != ''
         run: |
@@ -250,7 +212,6 @@ jobs:
           echo "add it to the config file under docker_builder.custom_ami"
           echo ""
           echo "==================================="
-
   cleanup-old-amis:
     name: Cleaning up Packer build artifacts
     runs-on: ubuntu-latest
@@ -259,64 +220,50 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Load configuration from config file
         id: config
         run: |
           AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
           AWS_REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
           IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' config/auth_between_aws_and_github.json)
-
           AMI_NAME_PREFIX="github-runner-debian-"
-
           echo "ami_name_prefix=$AMI_NAME_PREFIX" >> $GITHUB_OUTPUT
           echo "account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "iam_role_name=$IAM_ROLE_NAME" >> $GITHUB_OUTPUT
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/${{ steps.config.outputs.iam_role_name }}
           aws-region: ${{ steps.config.outputs.region }}
-
       - name: Delete old AMIs (keep latest only)
         run: |
           echo "Finding all AMIs with prefix: ${{ steps.config.outputs.ami_name_prefix }}"
-
           AMIS=$(aws ec2 describe-images \
             --owners self \
             --filters "Name=name,Values=${{ steps.config.outputs.ami_name_prefix }}*" \
             --query 'sort_by(Images, &CreationDate) | reverse(@) | [*].[ImageId,Name,CreationDate]' \
             --output text)
-
           if [ -z "$AMIS" ]; then
             echo "No AMIs found to clean up"
             exit 0
           fi
-
           TOTAL_AMIS=$(echo "$AMIS" | wc -l)
           echo "Found $TOTAL_AMIS AMI(s)"
-
           if [ "$TOTAL_AMIS" -le 1 ]; then
             echo "Only 1 or fewer AMIs exist - keeping all"
             exit 0
           fi
-
           echo "$AMIS" | tail -n +2 | while read AMI_ID AMI_NAME CREATION_DATE; do
             echo "Deleting old AMI: $AMI_ID ($AMI_NAME) created $CREATION_DATE"
-
             SNAPSHOTS=$(aws ec2 describe-images --image-ids $AMI_ID \
               --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' \
               --output text)
-
             aws ec2 deregister-image --image-id $AMI_ID
             echo "✓ Deregistered AMI: $AMI_ID"
-
             for SNAPSHOT_ID in $SNAPSHOTS; do
               if [ -n "$SNAPSHOT_ID" ] && [ "$SNAPSHOT_ID" != "None" ]; then
                 aws ec2 delete-snapshot --snapshot-id $SNAPSHOT_ID
@@ -324,42 +271,33 @@ jobs:
               fi
             done
           done
-
           echo "Cleanup complete - kept latest AMI, deleted $(($TOTAL_AMIS - 1)) old AMI(s)"
-
       - name: Terminate orphaned Packer build instances
         run: |
           echo "Checking for orphaned Packer build instances..."
-
           INSTANCES=$(aws ec2 describe-instances \
             --filters "Name=instance-state-name,Values=running,stopped" \
                       "Name=tag-key,Values=aws:ec2:fleet-id" \
             --query 'Reservations[*].Instances[*].[InstanceId,LaunchTime,State.Name]' \
             --output text)
-
           if [ -z "$INSTANCES" ]; then
             echo "No orphaned build instances found"
             exit 0
           fi
-
           echo "$INSTANCES" | while read INSTANCE_ID LAUNCH_TIME STATE; do
             echo "Terminating orphaned build instance: $INSTANCE_ID (launched $LAUNCH_TIME, state: $STATE)"
             aws ec2 terminate-instances --instance-ids $INSTANCE_ID
             echo "✓ Terminated $INSTANCE_ID"
           done
-
           TERMINATED_COUNT=$(echo "$INSTANCES" | wc -l)
           echo "Terminated $TERMINATED_COUNT orphaned build instance(s)"
-
       - name: Delete orphaned EBS volumes
         run: |
           echo "Checking for orphaned EBS volumes..."
-
           VOLUMES=$(aws ec2 describe-volumes \
             --filters "Name=status,Values=available" \
             --query 'Volumes[?!not_null(Tags[?Key==`aws:ec2:fleet-id`])].VolumeId' \
             --output text)
-
           if [ -z "$VOLUMES" ]; then
             echo "No orphaned volumes found"
           else
@@ -369,16 +307,13 @@ jobs:
               echo "✓ Deleted $VOLUME_ID"
             done
           fi
-
       - name: Delete orphaned security groups
         run: |
           echo "Checking for orphaned Packer security groups..."
-
           SECURITY_GROUPS=$(aws ec2 describe-security-groups \
             --filters "Name=group-name,Values=packer_*" \
             --query 'SecurityGroups[*].GroupId' \
             --output text)
-
           if [ -z "$SECURITY_GROUPS" ]; then
             echo "No orphaned security groups found"
           else
@@ -387,16 +322,13 @@ jobs:
               aws ec2 delete-security-group --group-id $SG_ID || echo "⚠ Failed to delete $SG_ID (may be in use)"
             done
           fi
-
       - name: Delete orphaned SSH key pairs
         run: |
           echo "Checking for orphaned Packer SSH keys..."
-
           KEY_PAIRS=$(aws ec2 describe-key-pairs \
             --filters "Name=key-name,Values=packer_*" \
             --query 'KeyPairs[*].KeyName' \
             --output text)
-
           if [ -z "$KEY_PAIRS" ]; then
             echo "No orphaned key pairs found"
           else
@@ -406,17 +338,14 @@ jobs:
               echo "✓ Deleted $KEY_NAME"
             done
           fi
-
       - name: Delete orphaned network interfaces
         run: |
           echo "Checking for orphaned network interfaces..."
-
           ENIS=$(aws ec2 describe-network-interfaces \
             --filters "Name=status,Values=available" \
                       "Name=tag-key,Values=aws:ec2:fleet-id" \
             --query 'NetworkInterfaces[*].NetworkInterfaceId' \
             --output text)
-
           if [ -z "$ENIS" ]; then
             echo "No orphaned network interfaces found"
           else
@@ -425,7 +354,6 @@ jobs:
               aws ec2 delete-network-interface --network-interface-id $ENI_ID || echo "⚠ Failed to delete $ENI_ID"
             done
           fi
-
   conclude-building-needed:
     name: Concluding building is needed
     needs: determine-mode
@@ -434,7 +362,6 @@ jobs:
     steps:
       - name: Confirm build mode
         run: echo "AMI build will proceed"
-
   conclude-smoke-testing-only:
     name: Concluding only smoke testing was requested
     needs: determine-mode
@@ -443,7 +370,6 @@ jobs:
     steps:
       - name: Confirm smoke test only mode
         run: echo "Using existing AMI ${{ inputs.ami_id }} for smoke testing only"
-
   determine-mode:
     name: Determining if AMI should be built or only smoke tested
     runs-on: ubuntu-latest
@@ -455,7 +381,6 @@ jobs:
           else
             echo "Workflow mode: Building new AMI + smoke testing"
           fi
-
   smoke-test-new-ami:
     name: Smoke testing newly built AMI
     needs: [conclude-building-needed, build-ami]
@@ -464,11 +389,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Load configuration from config file
         id: aws-config
         run: |
@@ -476,13 +399,11 @@ jobs:
           REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.aws-config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.aws-config.outputs.region }}
-
       - name: Get VPC and subnet info
         id: network
         run: |
@@ -490,15 +411,12 @@ jobs:
             --filters "Name=tag:Name,Values=github-runners-vpc" \
             --query 'Vpcs[0].VpcId' \
             --output text --no-cli-pager)
-
           SUBNET_ID=$(aws ec2 describe-subnets \
             --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
             --query 'Subnets[0].SubnetId' \
             --output text --no-cli-pager)
-
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-
       - name: Load AMI validation config
         id: config
         run: |
@@ -506,30 +424,24 @@ jobs:
           SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' api/resources/ami_for_ec2_runners/config.json)
           SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' api/resources/ami_for_ec2_runners/config.json)
           SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' api/resources/ami_for_ec2_runners/config.json)
-
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
           echo "spot_retry_attempts=$SPOT_RETRY_ATTEMPTS" >> $GITHUB_OUTPUT
           echo "spot_retry_delay=$SPOT_RETRY_DELAY" >> $GITHUB_OUTPUT
-
       - name: Launch test instance
         id: launch
         env:
           AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
         run: |
           echo "Smoke testing newly built AMI: $AMI_ID"
-
           INSTANCE_TYPES="${{ steps.config.outputs.spot_instance_types }}"
           MAX_ATTEMPTS=${{ steps.config.outputs.spot_retry_attempts }}
           RETRY_DELAY=${{ steps.config.outputs.spot_retry_delay }}
-
           INSTANCE_ID=""
           for attempt in $(seq 1 $MAX_ATTEMPTS); do
             echo "Attempt $attempt of $MAX_ATTEMPTS"
-
             for instance_type in $INSTANCE_TYPES; do
               echo "Trying spot instance type: $instance_type"
-
               set +e
               INSTANCE_ID=$(aws ec2 run-instances \
                 --image-id $AMI_ID \
@@ -543,7 +455,6 @@ jobs:
                 --output text --no-cli-pager 2>&1)
               EXIT_CODE=$?
               set -e
-
               if [ $EXIT_CODE -eq 0 ] && [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
                 echo "Successfully launched $instance_type spot instance: $INSTANCE_ID"
                 echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
@@ -553,65 +464,52 @@ jobs:
                 echo "Failed to launch $instance_type: $INSTANCE_ID"
               fi
             done
-
             if [ $attempt -lt $MAX_ATTEMPTS ]; then
               echo "No spot capacity available, retrying in ${RETRY_DELAY}s..."
               sleep $RETRY_DELAY
             fi
           done
-
           echo "Failed to launch spot instance after $MAX_ATTEMPTS attempts"
           exit 1
-
       - name: Wait for instance to be ready
         run: |
           echo "Waiting for instance to be running..."
           aws ec2 wait instance-running \
             --instance-ids ${{ steps.launch.outputs.instance_id }}
-
           echo "Waiting for status checks to pass..."
           aws ec2 wait instance-status-ok \
             --instance-ids ${{ steps.launch.outputs.instance_id }}
-
           echo "Instance is ready"
-
       - name: Wait for SSM agent to be online
         run: |
           echo "Waiting for SSM agent..."
           TIMEOUT=300
           ELAPSED=0
           SLEEP_TIME=10
-
           while [ $ELAPSED -lt $TIMEOUT ]; do
             STATUS=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=${{ steps.launch.outputs.instance_id }}" \
               --query 'InstanceInformationList[0].PingStatus' \
               --output text --no-cli-pager 2>/dev/null || echo "NotFound")
-
             if [ "$STATUS" = "Online" ]; then
               echo "SSM agent is online"
               break
             fi
-
             echo "SSM agent status: $STATUS - waiting..."
             sleep $SLEEP_TIME
             ELAPSED=$((ELAPSED + SLEEP_TIME))
           done
-
           if [ $ELAPSED -ge $TIMEOUT ]; then
             echo "Timeout waiting for SSM agent"
             exit 1
           fi
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install test dependencies
         run: |
           pip install pytest boto3
-
       - name: Run validation tests
         env:
           AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
@@ -626,7 +524,6 @@ jobs:
             --instance-type=$INSTANCE_TYPE \
             --subnet-id=$SUBNET_ID \
             --region=${{ steps.aws-config.outputs.region }}
-
       - name: Terminate test instance
         if: always()
         run: |
@@ -635,14 +532,11 @@ jobs:
             aws ec2 terminate-instances \
               --instance-ids ${{ steps.launch.outputs.instance_id }} \
               --no-cli-pager
-
             echo "Waiting for instance to terminate..."
             aws ec2 wait instance-terminated \
               --instance-ids ${{ steps.launch.outputs.instance_id }}
-
             echo "Instance terminated successfully"
           fi
-
   smoke-test-preexisting-ami:
     name: Smoke testing pre-existing AMI
     needs: conclude-smoke-testing-only
@@ -651,11 +545,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Load configuration from config file
         id: aws-config
         run: |
@@ -663,13 +555,11 @@ jobs:
           REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.aws-config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.aws-config.outputs.region }}
-
       - name: Get VPC and subnet info
         id: network
         run: |
@@ -677,15 +567,12 @@ jobs:
             --filters "Name=tag:Name,Values=github-runners-vpc" \
             --query 'Vpcs[0].VpcId' \
             --output text --no-cli-pager)
-
           SUBNET_ID=$(aws ec2 describe-subnets \
             --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
             --query 'Subnets[0].SubnetId' \
             --output text --no-cli-pager)
-
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-
       - name: Load AMI validation config
         id: config
         run: |
@@ -693,30 +580,24 @@ jobs:
           SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' api/resources/ami_for_ec2_runners/config.json)
           SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' api/resources/ami_for_ec2_runners/config.json)
           SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' api/resources/ami_for_ec2_runners/config.json)
-
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
           echo "spot_retry_attempts=$SPOT_RETRY_ATTEMPTS" >> $GITHUB_OUTPUT
           echo "spot_retry_delay=$SPOT_RETRY_DELAY" >> $GITHUB_OUTPUT
-
       - name: Launch test instance
         id: launch
         env:
           AMI_ID: ${{ inputs.skip_build && inputs.ami_id || needs.build-ami.outputs.ami_id }}
         run: |
           echo "Validating AMI: $AMI_ID"
-
           INSTANCE_TYPES="${{ steps.config.outputs.spot_instance_types }}"
           MAX_ATTEMPTS=${{ steps.config.outputs.spot_retry_attempts }}
           RETRY_DELAY=${{ steps.config.outputs.spot_retry_delay }}
-
           INSTANCE_ID=""
           for attempt in $(seq 1 $MAX_ATTEMPTS); do
             echo "Attempt $attempt of $MAX_ATTEMPTS"
-
             for instance_type in $INSTANCE_TYPES; do
               echo "Trying spot instance type: $instance_type"
-
               set +e
               INSTANCE_ID=$(aws ec2 run-instances \
                 --image-id $AMI_ID \
@@ -730,7 +611,6 @@ jobs:
                 --output text --no-cli-pager 2>&1)
               EXIT_CODE=$?
               set -e
-
               if [ $EXIT_CODE -eq 0 ] && [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
                 echo "Successfully launched $instance_type spot instance: $INSTANCE_ID"
                 echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
@@ -740,65 +620,52 @@ jobs:
                 echo "Failed to launch $instance_type: $INSTANCE_ID"
               fi
             done
-
             if [ $attempt -lt $MAX_ATTEMPTS ]; then
               echo "No spot capacity available, retrying in ${RETRY_DELAY}s..."
               sleep $RETRY_DELAY
             fi
           done
-
           echo "Failed to launch spot instance after $MAX_ATTEMPTS attempts"
           exit 1
-
       - name: Wait for instance to be ready
         run: |
           echo "Waiting for instance to be running..."
           aws ec2 wait instance-running \
             --instance-ids ${{ steps.launch.outputs.instance_id }}
-
           echo "Waiting for status checks to pass..."
           aws ec2 wait instance-status-ok \
             --instance-ids ${{ steps.launch.outputs.instance_id }}
-
           echo "Instance is ready"
-
       - name: Wait for SSM agent to be online
         run: |
           echo "Waiting for SSM agent..."
           TIMEOUT=300
           ELAPSED=0
           SLEEP_TIME=10
-
           while [ $ELAPSED -lt $TIMEOUT ]; do
             STATUS=$(aws ssm describe-instance-information \
               --filters "Key=InstanceIds,Values=${{ steps.launch.outputs.instance_id }}" \
               --query 'InstanceInformationList[0].PingStatus' \
               --output text --no-cli-pager 2>/dev/null || echo "NotFound")
-
             if [ "$STATUS" = "Online" ]; then
               echo "SSM agent is online"
               break
             fi
-
             echo "SSM agent status: $STATUS - waiting..."
             sleep $SLEEP_TIME
             ELAPSED=$((ELAPSED + SLEEP_TIME))
           done
-
           if [ $ELAPSED -ge $TIMEOUT ]; then
             echo "Timeout waiting for SSM agent"
             exit 1
           fi
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install test dependencies
         run: |
           pip install pytest boto3
-
       - name: Run validation tests
         env:
           AMI_ID: ${{ inputs.ami_id }}
@@ -813,7 +680,6 @@ jobs:
             --instance-type=$INSTANCE_TYPE \
             --subnet-id=$SUBNET_ID \
             --region=${{ steps.aws-config.outputs.region }}
-
       - name: Terminate test instance
         if: always()
         run: |
@@ -821,6 +687,5 @@ jobs:
             echo "Terminating test instance..."
             aws ec2 terminate-instances \
               --instance-ids ${{ steps.launch.outputs.instance_id }}
-
             echo "Instance termination initiated"
           fi
