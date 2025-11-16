@@ -152,7 +152,14 @@ Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, expl
         }]
         response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
 
-        formatted_content = response['output']['message']['content'][0]['text']
+        content_blocks = response['output']['message']['content']
+        text_blocks = [block for block in content_blocks if block.get('type') == 'text']
+
+        if not text_blocks:
+            logging.error("No text blocks found in Bedrock response")
+            sys.exit(1)
+
+        formatted_content = text_blocks[0]['text']
 
         if not formatted_content.endswith('\n'):
             formatted_content += '\n'

@@ -1,6 +1,6 @@
 jobs:
   concluding-claude-md-is-already-formatted-properly:
-    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_properly_formatted != 'true'
+    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_properly_formatted == 'false'
     name: Concluding CLAUDE.md is already properly formatted
     needs: determining-if-claude-md-should-be-formatted
     runs-on: ubuntu-latest
@@ -21,7 +21,7 @@ jobs:
     steps:
       - run: 'true'
   concluding-readme-should-not-be-updated:
-    if: always() && needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated != 'true'
+    if: always() && needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'false'
     name: Concluding README.md should not be updated
     needs: determining-if-readme-should-be-updated
     runs-on: ubuntu-latest
