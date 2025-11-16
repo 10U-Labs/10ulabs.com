@@ -13,6 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
+  concluding-readme-should-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'true'
+    name: Concluding README.md should be updated
+    needs: determining-if-readme-should-be-updated
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
+  concluding-readme-should-not-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated != 'true'
+    name: Concluding README.md should not be updated
+    needs: determining-if-readme-should-be-updated
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
   determining-if-claude-md-should-be-formatted:
     name: Determining if CLAUDE.md should be properly formatted
     needs: unit-testing
@@ -41,6 +55,42 @@ jobs:
             echo "Setting ''claude_md_should_be_properly_formatted'' to ''true'' for subsequent jobs.";
           fi
           '
+  determining-if-readme-should-be-updated:
+    if: always()
+    name: Determining if README.md should be updated
+    needs:
+      - concluding-claude-md-is-already-formatted-properly
+      - updating
+    outputs:
+      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
+          REGION=$(jq -r ''.region'' src/claude_md/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Install boto3
+        run: pip install boto3
+      - id: check
+        name: Check if README needs update
+        run: "python scripts/readme.py \\\n  --project-dir src/claude_md \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   performing-static-analysis:
     if: '(github.event_name == ''workflow_dispatch'') ||
       !contains(github.event.head_commit.message, ''[skip ci]'')
@@ -58,7 +108,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install linting dependencies
+      - name: Install dependencies
         run: 'pip install pylint mypy yamllint boto3 &&
           npm install -g jsonlint
           '
@@ -110,8 +160,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
-          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
+          REGION=$(jq -r ''.region'' src/claude_md/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           '
@@ -155,7 +205,41 @@ jobs:
             exit 1;
           fi
           '
-name: Ensuring CLAUDE.md is properly formatted
+  updating-readme:
+    name: Updating README.md
+    needs: concluding-readme-should-be-updated
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
+          REGION=$(jq -r ''.region'' src/claude_md/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Install boto3
+        run: pip install boto3
+      - name: Update README with Bedrock
+        run: "python scripts/readme.py \\\n  --project-dir src/claude_md \\\n  --update \\\n  --aws-region \"${{ steps.config.outputs.region }}\"\n"
+      - name: Commit and push README if changed
+        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/claude_md/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update claude_md README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
+name: Ensuring CLAUDE.md is properly formatted and README.md is up to date
 on:
   push:
     branches:
@@ -165,4 +249,6 @@ on:
       - .github/workflows/claude_md.yml
       - src/claude_md/format_claude_md.py
       - src/claude_md/config.json
+      - src/claude_md/**
+      - scripts/readme.py
   workflow_dispatch: null
