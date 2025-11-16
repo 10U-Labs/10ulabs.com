@@ -79,24 +79,26 @@ jobs:
       - name: Fix CLAUDE.md formatting
         run: 'markdownlint-cli2 --fix CLAUDE.md > /dev/null 2>&1 || true
           '
-      - id: check_changes
-        name: Check for changes
-        run: 'if git diff --quiet CLAUDE.md; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT;
-            echo "No changes needed after auto-fix";
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT;
-            echo "Changes detected after auto-fix";
-            git diff CLAUDE.md;
-          fi
-          '
-      - if: steps.check_changes.outputs.has_changes == 'true'
-        name: Commit and push changes
-        run: 'git config user.name "github-actions[bot]";
-          git config user.email "github-actions[bot]@users.noreply.github.com";
+      - name: Commit and push CLAUDE.md formatting
+        run: 'git config user.name "GitHub Actions";
+          git config user.email "actions@github.com";
           git add CLAUDE.md;
-          git commit -m "Auto-fix CLAUDE.md formatting with markdownlint [skip ci]";
-          git push;
+          if git diff --cached --quiet; then
+            echo "No changes to CLAUDE.md";
+          else
+            git commit -m "Auto-fix CLAUDE.md formatting with markdownlint [skip ci]";
+            for i in {1..5}; do
+              if git push; then
+                echo "Successfully pushed CLAUDE.md update";
+                exit 0;
+              fi;
+              echo "Push failed (attempt $i/5), pulling and retrying...";
+              git pull --rebase origin main;
+              sleep $((2 ** i));
+            done;
+            echo "Failed to push after 5 attempts";
+            exit 1;
+          fi
           '
 name: Ensuring CLAUDE.md is properly formatted
 on:
