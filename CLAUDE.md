@@ -25,7 +25,8 @@
 ```bash
 curl -s -H "Authorization: Bearer <paste-the-actual-pat-value-here>" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_ID"
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/\
+WORKFLOW_ID"
 ```
 
 **DO NOT use environment variable expansion like `$GITHUB_PAT` in curl
@@ -45,8 +46,7 @@ PAT=$(echo $GITHUB_PAT)
 curl -s -H "Authorization: Bearer $PAT" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/\
-WORKFLOW_RUN_ID/jobs" \
-  | jq '.jobs[] | {name, conclusion}'
+WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
 ```
 
 1. Identify the failed job and fetch its logs:
@@ -55,8 +55,7 @@ WORKFLOW_RUN_ID/jobs" \
 curl -s -L -H "Authorization: Bearer $PAT" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/\
-JOB_ID/logs" \
-  > /tmp/logs.txt
+JOB_ID/logs" > /tmp/logs.txt
 ```
 
 1. Search for errors in the logs:
@@ -167,7 +166,8 @@ curl -s -X DELETE \
   -H "Authorization: Bearer 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" \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/git/refs/heads/BRANCH_NAME"
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/git/refs/heads/\
+BRANCH_NAME"
 ```
 
 **Why:** Keeps repository clean and prevents accumulation of stale branches.
