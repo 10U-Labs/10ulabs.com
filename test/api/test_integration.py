@@ -298,7 +298,7 @@ def test_s3_bucket_versioning_is_disabled(s3_client, config):
 def test_s3_bucket_has_encryption_enabled(s3_client, config):
     bucket_name = config['domain_names']['subdomain']
     encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
-    assert 'Rules' in encryption
+    assert 'ServerSideEncryptionConfiguration' in encryption
 
 
 def test_cloudfront_distribution_exists(cloudformation_client):
