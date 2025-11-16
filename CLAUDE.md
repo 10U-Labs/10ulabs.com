@@ -63,6 +63,14 @@ grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
 - If comments already exist in the original code, REMOVE THEM
 - Code should have ZERO comments of any kind
 
+**CRITICAL: NEVER CREATE LINTER CONFIGURATION FILES**
+- NEVER create .yamllint, .pylintrc, mypy.ini, .flake8, or any other linter config files
+- NEVER create pyproject.toml sections for linter configuration
+- ALL linter configuration MUST be inline in the GitHub Actions workflow files
+- Linter configs in workflows ensure consistency and prevent hidden configuration drift
+- If a linter check fails, fix the code or update the inline workflow config, never create a config file
+- This rule applies to ALL linters: yamllint, pylint, mypy, flake8, black, isort, etc.
+
 **CRITICAL: S3 BUCKET VERSIONING MUST BE DISABLED**
 - NEVER enable versioning on S3 buckets (`versioned=False`)
 - ALL S3 buckets in all CDK stacks MUST have `versioned=False`
