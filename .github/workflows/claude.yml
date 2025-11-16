@@ -1,13 +1,13 @@
 jobs:
   concluding-claude-md-is-already-formatted-properly:
-    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated != 'true'
+    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_properly_formatted != 'true'
     name: Concluding CLAUDE.md is already properly formatted
     needs: determining-if-claude-md-should-be-formatted
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
   concluding-claude-md-should-be-formatted:
-    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_updated == 'true'
+    if: needs.determining-if-claude-md-should-be-formatted.outputs.claude_md_should_be_properly_formatted == 'true'
     name: Concluding CLAUDE.md should be properly formatted
     needs: determining-if-claude-md-should-be-formatted
     runs-on: ubuntu-latest
@@ -17,7 +17,7 @@ jobs:
     name: Determining if CLAUDE.md should be properly formatted
     needs: linting
     outputs:
-      claude_md_should_be_updated: ${{ steps.check.outputs.claude_md_should_be_updated }}
+      claude_md_should_be_properly_formatted: ${{ steps.check.outputs.claude_md_should_be_properly_formatted }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -32,13 +32,13 @@ jobs:
         id: check
         name: Check if CLAUDE.md needs formatting
         run: 'if markdownlint-cli2 CLAUDE.md; then
-            echo "claude_md_should_be_updated=false" >> $GITHUB_OUTPUT;
+            echo "claude_md_should_be_properly_formatted=false" >> $GITHUB_OUTPUT;
             echo "";
-            echo "Setting ''claude_md_should_be_updated'' to ''false'' for subsequent jobs.";
+            echo "Setting ''claude_md_should_be_properly_formatted'' to ''false'' for subsequent jobs.";
           else
-            echo "claude_md_should_be_updated=true" >> $GITHUB_OUTPUT;
+            echo "claude_md_should_be_properly_formatted=true" >> $GITHUB_OUTPUT;
             echo "";
-            echo "Setting ''claude_md_should_be_updated'' to ''true'' for subsequent jobs.";
+            echo "Setting ''claude_md_should_be_properly_formatted'' to ''true'' for subsequent jobs.";
           fi
           '
   linting:
