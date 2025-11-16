@@ -29,7 +29,7 @@ jobs:
       - run: 'true'
   determining-if-claude-md-should-be-formatted:
     name: Determining if CLAUDE.md should be properly formatted
-    needs: unit-testing
+    needs: performing-static-analysis
     outputs:
       claude_md_should_be_properly_formatted: ${{ steps.check.outputs.claude_md_should_be_properly_formatted }}
     runs-on: ubuntu-latest
@@ -130,7 +130,7 @@ jobs:
           '
   unit-testing:
     name: Unit testing
-    needs: performing-static-analysis
+    needs: concluding-claude-md-should-be-formatted
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -147,8 +147,7 @@ jobs:
           '
   updating:
     name: Formatting CLAUDE.md
-    needs:
-      - concluding-claude-md-should-be-formatted
+    needs: unit-testing
     permissions:
       contents: write
       id-token: write
