@@ -262,6 +262,11 @@ spec = importlib.util.spec_from_file_location("echo_handler", echo_handler_path)
 echo = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(echo)
 
+catchall_handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
+spec = importlib.util.spec_from_file_location("catchall_handler", catchall_handler_path)
+catchall = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(catchall)
+
 
 
 def test_lambda_handler_health_endpoint_returns_200_status_code():
@@ -398,6 +403,52 @@ def test_lambda_handler_echo_endpoint_with_invalid_json_error_is_invalid_json():
     body = json.loads(response['body'])
     assert body['error'] == 'Invalid JSON'
 
+
+def test_lambda_handler_catchall_endpoint_returns_404_status_code():
+    event = {'path': '/invalid', 'httpMethod': 'GET'}
+    context = Mock()
+    response = catchall.handler(event, context)
+    assert response['statusCode'] == 404
+
+
+def test_lambda_handler_catchall_endpoint_returns_json_content_type():
+    event = {'path': '/invalid', 'httpMethod': 'GET'}
+    context = Mock()
+    response = catchall.handler(event, context)
+    assert response['headers']['Content-Type'] == 'application/json'
+
+
+def test_lambda_handler_catchall_endpoint_returns_cors_header():
+    event = {'path': '/invalid', 'httpMethod': 'GET'}
+    context = Mock()
+    response = catchall.handler(event, context)
+    assert response['headers']['Access-Control-Allow-Origin'] == '*'
+
+
+def test_lambda_handler_catchall_endpoint_body_contains_error():
+    event = {'path': '/invalid', 'httpMethod': 'GET'}
+    context = Mock()
+    response = catchall.handler(event, context)
+    body = json.loads(response['body'])
+    assert 'error' in body
+
+
+def test_lambda_handler_catchall_endpoint_error_is_not_found():
+    event = {'path': '/invalid', 'httpMethod': 'GET'}
+    context = Mock()
+    response = catchall.handler(event, context)
+    body = json.loads(response['body'])
+    assert body['error'] == 'Not Found'
+
+
+def test_lambda_handler_catchall_endpoint_includes_path():
+    event = {'path': '/some/random/path', 'httpMethod': 'GET'}
+    context = Mock()
+    response = catchall.handler(event, context)
+    body = json.loads(response['body'])
+    assert body['path'] == '/some/random/path'
+
+
 def test_openapi_spec_file_exists():
     openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
     assert openapi_path.exists()
@@ -424,7 +475,14 @@ def test_openapi_spec_has_echo_path():
     assert '/v1/echo' in spec['paths']
 
 
-def test_api_has_two_lambda_functions():
+def test_openapi_spec_has_catchall_path():
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yaml"
+    with open(openapi_path, encoding='utf-8') as f:
+        spec = yaml.safe_load(f)
+    assert '/{proxy+}' in spec['paths']
+
+
+def test_api_has_three_lambda_functions():
     app = cdk.App()
     config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     with open(config_path, encoding='utf-8') as f:
@@ -445,7 +503,7 @@ def test_api_has_two_lambda_functions():
     )
     template = Template.from_stack(stack)
     resources = template.find_resources("AWS::Lambda::Function")
-    assert len(resources) >= 2
+    assert len(resources) >= 3
 
 
 def test_health_endpoint_handler_file_exists():
@@ -455,6 +513,11 @@ def test_health_endpoint_handler_file_exists():
 
 def test_echo_endpoint_handler_file_exists():
     handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "echo" / "handler.py"
+    assert handler_path.exists()
+
+
+def test_catchall_endpoint_handler_file_exists():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
     assert handler_path.exists()
 
 
@@ -1004,7 +1067,7 @@ def test_cloudfront_has_v1_behavior():
     assert v1_behavior is not None
 
 
-def test_cloudfront_default_behavior_uses_s3():
+def test_cloudfront_default_behavior_routes_to_api_gateway():
     app = cdk.App()
     config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     with open(config_path, encoding='utf-8') as f:
@@ -1026,8 +1089,155 @@ def test_cloudfront_default_behavior_uses_s3():
     template = Template.from_stack(stack)
     distributions = template.find_resources("AWS::CloudFront::Distribution")
     distribution = list(distributions.values())[0]
-    default_root_object = distribution["Properties"]["DistributionConfig"]["DefaultRootObject"]
-    assert default_root_object == "index.html"
+    origins = distribution["Properties"]["DistributionConfig"]["Origins"]
+    api_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::Join" in o["DomainName"]][0]
+    api_origin_id = api_origin["Id"]
+    default_behavior = distribution["Properties"]["DistributionConfig"]["DefaultCacheBehavior"]
+    assert default_behavior["TargetOriginId"] == api_origin_id
+
+
+def test_cloudfront_root_path_routes_to_s3():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    origins = distribution["Properties"]["DistributionConfig"]["Origins"]
+    s3_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::GetAtt" in o["DomainName"]][0]
+    s3_origin_id = s3_origin["Id"]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    root_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/"][0]
+    assert root_behavior["TargetOriginId"] == s3_origin_id
+
+
+def test_cloudfront_openapi_yaml_routes_to_s3():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    origins = distribution["Properties"]["DistributionConfig"]["Origins"]
+    s3_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::GetAtt" in o["DomainName"]][0]
+    s3_origin_id = s3_origin["Id"]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    openapi_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/openapi.yaml"][0]
+    assert openapi_behavior["TargetOriginId"] == s3_origin_id
+
+
+def test_cloudfront_404_html_routes_to_s3():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    origins = distribution["Properties"]["DistributionConfig"]["Origins"]
+    s3_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::GetAtt" in o["DomainName"]][0]
+    s3_origin_id = s3_origin["Id"]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    html_404_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/404.html"][0]
+    assert html_404_behavior["TargetOriginId"] == s3_origin_id
+
+
+def test_cloudfront_health_behavior_does_not_forward_host_header():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    health_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/health"][0]
+    assert health_behavior["OriginRequestPolicyId"] == "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+
+
+def test_cloudfront_v1_behavior_does_not_forward_host_header():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    v1_behavior = [b for b in cache_behaviors if b["PathPattern"] == "/v1/*"][0]
+    assert v1_behavior["OriginRequestPolicyId"] == "b689b0a8-53d0-40ab-baf2-68738e2966ac"
 
 
 def test_waf_web_acl_exists():
