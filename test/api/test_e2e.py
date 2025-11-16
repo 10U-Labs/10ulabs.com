@@ -138,3 +138,44 @@ def test_invalid_endpoint_returns_cors_header(api_endpoint):
 def test_invalid_endpoint_returns_json_content_type(api_endpoint):
     response = requests.get(f"{api_endpoint}/invalid", timeout=10)
     assert response.headers['Content-Type'] == 'application/json'
+
+
+def test_root_endpoint_returns_200(api_endpoint):
+    response = requests.get(api_endpoint, timeout=10)
+    assert response.status_code == 200
+
+
+def test_root_endpoint_returns_html_content_type(api_endpoint):
+    response = requests.get(api_endpoint, timeout=10)
+    assert 'text/html' in response.headers['Content-Type']
+
+
+def test_root_endpoint_contains_redoc_element(api_endpoint):
+    response = requests.get(api_endpoint, timeout=10)
+    assert '<redoc' in response.text.lower()
+
+
+def test_root_endpoint_references_openapi_spec(api_endpoint):
+    response = requests.get(api_endpoint, timeout=10)
+    assert 'openapi.yaml' in response.text
+
+
+def test_openapi_yaml_endpoint_returns_200(api_endpoint):
+    response = requests.get(f"{api_endpoint}/openapi.yaml", timeout=10)
+    assert response.status_code == 200
+
+
+def test_openapi_yaml_returns_yaml_or_text_content_type(api_endpoint):
+    response = requests.get(f"{api_endpoint}/openapi.yaml", timeout=10)
+    content_type = response.headers['Content-Type']
+    assert 'yaml' in content_type or 'text' in content_type or 'octet-stream' in content_type
+
+
+def test_openapi_yaml_contains_paths_section(api_endpoint):
+    response = requests.get(f"{api_endpoint}/openapi.yaml", timeout=10)
+    assert 'paths:' in response.text
+
+
+def test_custom_domain_name_works():
+    response = requests.get('https://api.10ulabs.com/health', timeout=10)
+    assert response.status_code == 200

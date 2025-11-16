@@ -272,3 +272,53 @@ def test_s3_bucket_exists_for_api_docs(s3_client, config):
     buckets = s3_client.list_buckets()
     bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
     assert expected_bucket_name in bucket_names
+
+
+def test_s3_bucket_contains_index_html(s3_client, config):
+    bucket_name = config['domain_names']['subdomain']
+    objects = s3_client.list_objects_v2(Bucket=bucket_name)
+    object_keys = [obj['Key'] for obj in objects.get('Contents', [])]
+    assert 'index.html' in object_keys
+
+
+def test_s3_bucket_contains_openapi_yaml(s3_client, config):
+    bucket_name = config['domain_names']['subdomain']
+    objects = s3_client.list_objects_v2(Bucket=bucket_name)
+    object_keys = [obj['Key'] for obj in objects.get('Contents', [])]
+    assert 'openapi.yaml' in object_keys
+
+
+def test_s3_bucket_versioning_is_disabled(s3_client, config):
+    bucket_name = config['domain_names']['subdomain']
+    versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
+    status = versioning.get('Status', 'Disabled')
+    assert status != 'Enabled'
+
+
+def test_s3_bucket_has_encryption_enabled(s3_client, config):
+    bucket_name = config['domain_names']['subdomain']
+    encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
+    assert 'Rules' in encryption
+
+
+def test_cloudfront_distribution_exists(cloudformation_client):
+    stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
+    stack_resources = cloudformation_client.list_stack_resources(StackName='TenULabsApi')
+    resource_types = [r['ResourceType'] for r in stack_resources['StackResourceSummaries']]
+    assert 'AWS::CloudFront::Distribution' in resource_types
+
+
+def test_api_gateway_can_invoke_health_lambda(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    health_handler = [name for name in function_names if 'HealthHandler' in name][0]
+    policy = lambda_client.get_policy(FunctionName=health_handler)
+    assert 'apigateway.amazonaws.com' in policy['Policy']
+
+
+def test_api_gateway_can_invoke_echo_lambda(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    echo_handler = [name for name in function_names if 'EchoHandler' in name][0]
+    policy = lambda_client.get_policy(FunctionName=echo_handler)
+    assert 'apigateway.amazonaws.com' in policy['Policy']
