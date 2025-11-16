@@ -25,8 +25,8 @@ def load_config():
         sys.exit(1)
 
 def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list, max_retries: int = 5) -> dict:
-    initial_jitter = random.uniform(5, 30)
-    logging.info("Waiting %.2fs before Bedrock call to avoid thundering herd", initial_jitter)
+    initial_jitter = random.randint(5, 30)
+    logging.info("Waiting %ds before Bedrock call to avoid thundering herd", initial_jitter)
     time.sleep(initial_jitter)
 
     for attempt in range(1, max_retries + 1):
@@ -53,7 +53,7 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
 def format_claude_md(bedrock_client, current_content: str, bedrock_config: dict) -> str:
-    prompt = f"""You are a technical documentation expert specializing in markdown formatting. Your task is to reformat the following CLAUDE.md file to comply with ALL markdownlint rules while preserving 100% of the content and meaning.
+    prompt = f"""You are a technical documentation expert specializing in markdown formatting. Your task is to reformat the following CLAUDE.md file to comply with ALL markdownlint rules from https://github.com/DavidAnson/markdownlint while preserving 100% of the content and meaning.
 
 <current_claude_md>
 {current_content}
@@ -67,35 +67,69 @@ CRITICAL REQUIREMENTS:
    - Do NOT add new content or explanations
    - Only change formatting to comply with markdownlint
 
-2. FIX THESE SPECIFIC MARKDOWNLINT ISSUES:
-   - MD013 (line-length): Break long lines to be under 80 characters
-     * For prose: Break at natural sentence boundaries or use word wrapping
-     * For code blocks: Already exempt from line-length, no change needed
-     * For URLs: Wrap in angle brackets if not in code blocks
-   - MD036 (no-emphasis-as-heading): Convert bold emphasis to proper headings
-     * Example: **CRITICAL: FOO** becomes ### CRITICAL: FOO
-     * Maintain appropriate heading levels (##, ###, ####)
+2. COMPLY WITH ALL MARKDOWNLINT RULES (https://github.com/DavidAnson/markdownlint):
+   - MD001: Heading levels increment by one (no skipping from # to ###)
+   - MD003: Heading style consistent (ATX style with #)
+   - MD004: Unordered list style consistent
+   - MD005: List item indentation consistent
+   - MD007: Unordered list indentation (2 spaces per level)
+   - MD009: No trailing spaces
+   - MD010: No hard tabs (use spaces)
+   - MD011: Reversed link syntax
+   - MD012: No multiple consecutive blank lines
+   - MD013: Line length max 80 characters (except code blocks/tables/URLs)
+   - MD014: Dollar signs in shell commands only when showing output
+   - MD018: Space after hash in headings (# Heading not #Heading)
+   - MD019: No multiple spaces after hash in headings
+   - MD022: Headings surrounded by blank lines
+   - MD023: Headings must start at beginning of line
+   - MD024: No multiple headings with same content
+   - MD025: Single H1 heading only
+   - MD026: No trailing punctuation in headings
+   - MD027: No multiple spaces after blockquote symbol
+   - MD028: No blank lines inside blockquote
+   - MD029: Ordered list item prefix (consistent numbering)
+   - MD030: Spaces after list markers
+   - MD031: Fenced code blocks surrounded by blank lines
+   - MD032: Lists surrounded by blank lines
+   - MD033: No inline HTML (use markdown)
+   - MD034: Bare URLs wrapped in angle brackets
+   - MD035: Horizontal rule style consistent
+   - MD036: No emphasis used instead of heading
+   - MD037: No spaces inside emphasis markers
+   - MD038: No spaces inside code span elements
+   - MD039: No spaces inside link text
+   - MD040: Fenced code blocks have language specified
+   - MD041: First line in file should be top-level heading
+   - MD042: No empty links
+   - MD043: Required heading structure
+   - MD044: Proper names capitalized correctly
+   - MD045: Images have alt text
+   - MD046: Code block style consistent (fenced)
+   - MD047: File ends with single newline
+   - MD048: Code fence style consistent
+   - MD049: Emphasis style consistent
+   - MD050: Strong style consistent
 
-3. FORMATTING RULES (markdownlint compliance):
-   - Keep all lines under 80 characters (except code blocks and tables)
-   - Always add blank lines before and after lists
-   - Always add blank lines before and after code blocks
-   - Indent code blocks with 3 spaces when inside ordered/unordered lists
-   - Use proper heading levels (# ## ### ####), never use bold text as headings
-   - Add language specifiers to all code blocks (```bash, ```python, etc.)
-   - Wrap bare URLs in angle brackets (<https://example.com>)
-   - End file with exactly one newline character
-   - Use proper table formatting
+3. SPECIAL HANDLING:
+   - Long lines (MD013): Break at natural boundaries, preserve meaning
+   - Bold emphasis as headings (MD036): Convert to proper heading levels
+   - Bare URLs (MD034): Wrap in angle brackets unless in code blocks
+   - Code blocks (MD040): Add language identifier (bash, python, json, etc.)
+   - Lists (MD032): Ensure blank lines before and after
+   - Code in lists: Indent with 3 spaces per list level
 
 VERIFICATION CHECKLIST (must verify before outputting):
 - [ ] All original content preserved (every word, URL, example)
-- [ ] All lines under 80 characters (except code blocks/tables)
-- [ ] No bold text used as headings (all **CRITICAL:** converted to ###)
-- [ ] Blank lines before/after lists
-- [ ] Blank lines before/after code blocks
-- [ ] Code blocks have language specifiers
+- [ ] All markdownlint rules applied (MD001-MD050)
+- [ ] Lines under 80 chars (except code/tables/long-URLs)
+- [ ] Headings have proper levels and spacing
+- [ ] Lists have blank lines before/after
+- [ ] Code blocks have language and blank lines
 - [ ] Bare URLs wrapped in angle brackets
-- [ ] File ends with exactly one newline
+- [ ] No emphasis used as headings
+- [ ] File ends with single newline
+- [ ] Consistent formatting throughout
 
 Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, explanation, or the checklist itself."""
 

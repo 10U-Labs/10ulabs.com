@@ -41,8 +41,8 @@ def split_text_by_words(text: str, max_length: int = 1000) -> list:
     return chunks
 
 def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list, max_retries: int = 5) -> dict:
-    initial_jitter = random.uniform(5, 30)
-    logging.info("Waiting %.2fs before Bedrock call to avoid thundering herd", initial_jitter)
+    initial_jitter = random.randint(5, 30)
+    logging.info("Waiting %ds before Bedrock call to avoid thundering herd", initial_jitter)
     time.sleep(initial_jitter)
 
     for attempt in range(1, max_retries + 1):

@@ -57,8 +57,10 @@ jobs:
           '
   determining-if-readme-should-be-updated:
     if: |
-      needs.formatting-claude-md.result == 'success' ||
-      needs.concluding-claude-md-is-already-formatted-properly.result == 'success'
+      always() && (
+        needs.formatting-claude-md.result == 'success' ||
+        needs.concluding-claude-md-is-already-formatted-properly.result == 'success'
+      )
     name: Determining if README.md should be updated
     needs:
       - concluding-claude-md-is-already-formatted-properly
