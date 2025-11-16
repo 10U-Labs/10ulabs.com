@@ -15,7 +15,7 @@ jobs:
       - run: 'true'
   determining-if-claude-md-should-be-formatted:
     name: Determining if CLAUDE.md should be properly formatted
-    needs: linting
+    needs: performing-static-analysis
     outputs:
       claude_md_should_be_properly_formatted: ${{ steps.check.outputs.claude_md_should_be_properly_formatted }}
     runs-on: ubuntu-latest
@@ -41,21 +41,25 @@ jobs:
             echo "Setting ''claude_md_should_be_properly_formatted'' to ''true'' for subsequent jobs.";
           fi
           '
-  linting:
+  performing-static-analysis:
     if: '(github.event_name == ''workflow_dispatch'') ||
       !contains(github.event.head_commit.message, ''[skip ci]'')
       '
-    name: Linting
+    name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
       - name: Install linting dependencies
-        run: 'pip install yamllint &&
+        run: 'pip install pylint mypy yamllint boto3 &&
           npm install -g jsonlint
           '
       - name: Linting JSON configuration files
@@ -63,11 +67,33 @@ jobs:
           jsonlint -q src/claude_md/config.json;
           echo "No errors found - JSON validation passed successfully";
           '
+      - name: Linting Python files
+        run: "pylint \\\n  src/claude_md/format_claude_md.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
       - name: Linting YAML files
         run: 'echo "Running yamllint on claude.yml...";
           CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'';
           yamllint --config-data "$CONFIG" .github/workflows/claude.yml &&
           echo "No errors found - YAML linting passed successfully"
+          '
+      - name: Static type checking Python files with mypy
+        run: 'python -m mypy src/claude_md/format_claude_md.py
+          '
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python dependencies
+        run: 'pip install pytest boto3
+          '
+      - name: Run unit tests
+        run: 'pytest test/claude_md/test_unit.py -v
           '
   updating:
     name: Formatting CLAUDE.md
@@ -107,7 +133,7 @@ jobs:
           pip install boto3
           '
       - name: Format CLAUDE.md with Bedrock
-        run: "python scripts/format_claude_md.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\"\n"
+        run: "python src/claude_md/format_claude_md.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\"\n"
       - name: Commit and push CLAUDE.md formatting
         run: 'git config user.name "GitHub Actions";
           git config user.email "actions@github.com";
@@ -137,6 +163,6 @@ on:
     paths:
       - CLAUDE.md
       - .github/workflows/claude.yml
-      - scripts/format_claude_md.py
+      - src/claude_md/format_claude_md.py
       - src/claude_md/config.json
   workflow_dispatch: null
