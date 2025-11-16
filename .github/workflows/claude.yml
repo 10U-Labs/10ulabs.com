@@ -14,10 +14,8 @@ jobs:
     steps:
     - run: 'true'
   determining-if-claude-md-should-be-formatted:
-    if: '(github.event_name == ''workflow_dispatch'') ||
-      !contains(github.event.head_commit.message, ''[skip ci]'')
-      '
     name: Determining if CLAUDE.md should be properly formatted
+    needs: linting
     outputs:
       claude_md_should_be_updated: ${{ steps.check.outputs.claude_md_should_be_updated }}
     runs-on: ubuntu-latest
