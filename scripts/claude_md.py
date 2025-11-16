@@ -18,14 +18,8 @@ def check_claude_md_should_be_updated() -> bool:
         text=True
     )
     should_be_updated = result.returncode != 0
-    if should_be_updated:
-        logging.info("markdownlint-cli2 found formatting issues in CLAUDE.md")
-        if result.stdout:
-            logging.info("Output: %s", result.stdout.strip())
-        if result.stderr:
-            logging.info("Errors: %s", result.stderr.strip())
-    else:
-        logging.info("CLAUDE.md is properly formatted")
+    logging.info("markdownlint-cli2 assessment: CLAUDE.md should %s",
+                 'be updated' if should_be_updated else 'not be updated')
     return should_be_updated
 
 def update_claude_md() -> bool:
@@ -34,10 +28,6 @@ def update_claude_md() -> bool:
         capture_output=True,
         text=True
     )
-    if result.stdout:
-        logging.info("markdownlint-cli2 output: %s", result.stdout.strip())
-    if result.stderr:
-        logging.warning("markdownlint-cli2 errors: %s", result.stderr.strip())
     logging.info("Applied markdownlint fixes to CLAUDE.md")
     return True
 
@@ -58,7 +48,6 @@ def main():
         sys.exit(0)
     elif args.update:
         update_claude_md()
-        logging.info("CLAUDE.md updated")
         sys.exit(0)
 
 if __name__ == '__main__':
