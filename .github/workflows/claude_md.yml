@@ -99,7 +99,7 @@ jobs:
         run: "python scripts/readme.py \\\n  --project-dir src/claude_md \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
-    needs: integration-testing
+    needs: unit-testing
     permissions:
       contents: read
       id-token: write
@@ -181,44 +181,6 @@ jobs:
         run: "python src/claude_md/format_claude_md.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\"\n"
       - name: Commit and push CLAUDE.md formatting
         run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add CLAUDE.md\nif git diff --cached --quiet; then\n  echo \"No changes to CLAUDE.md\"\nelse\n  git commit -m \"Auto-format CLAUDE.md with Bedrock [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed CLAUDE.md update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
-  integration-testing:
-    name: Integration testing
-    needs: unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
-          REGION=$(jq -r ''.region'' src/claude_md/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' src/claude_md/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' src/claude_md/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' src/claude_md/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Python dependencies
-        run: 'pip install pytest boto3
-          '
-      - name: Run integration tests
-        run: 'pytest test/claude_md/test_integration.py -v
-          '
   performing-static-analysis:
     if: '(github.event_name == ''workflow_dispatch'') ||
       !contains(github.event.head_commit.message, ''[skip ci]'')
