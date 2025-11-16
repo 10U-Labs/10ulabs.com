@@ -97,10 +97,6 @@ jobs:
         '
 name: Ensuring CLAUDE.md is properly formatted
 on:
-  pull_request:
-    paths:
-    - CLAUDE.md
-    - .github/workflows/claude.yml
   push:
     branches:
     - main
