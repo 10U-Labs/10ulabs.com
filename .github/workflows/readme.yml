@@ -1,0 +1,44 @@
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  performing-static-analysis:
+    if: '(github.event_name == ''workflow_dispatch'') ||
+      !contains(github.event.head_commit.message, ''[skip ci]'')
+      '
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install linting dependencies
+        run: 'pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
+          '
+      - name: Linting Python files
+        run: "pylint scripts/readme/readme.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+      - name: Linting YAML files
+        run: 'echo "Running yamllint on readme.yml..."
+          yamllint --config-data ''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'' .github/workflows/readme.yml
+          '
+      - name: Static type checking Python files with mypy
+        run: 'python -m mypy scripts/readme/readme.py
+          '
+      - name: Validating prompt files exist
+        run: 'echo "Checking prompt files..."
+          test -f scripts/readme/prompt_check.md || (echo "ERROR: prompt_check.md not found" && exit 1)
+          test -f scripts/readme/prompt_update.md || (echo "ERROR: prompt_update.md not found" && exit 1)
+          echo "All prompt files found"
+          '
+name: Ensuring README script passes static analysis
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/readme/**
+      - .github/workflows/readme.yml
+  workflow_dispatch: null
