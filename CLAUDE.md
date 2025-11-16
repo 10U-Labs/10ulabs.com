@@ -113,32 +113,6 @@ def validate_endpoint(url: str) -> tuple[bool, str]:
     return result
 ```
 
-### Commit Message Flags
-
-Use these flags in commit messages to control workflow behavior:
-
-**`[dry run]`** - Run all checks but skip actual deployment (same as skip-deploy)
-- Runs: Static analysis, unit tests, integration tests, building
-- Skips: Deployment step only
-- Use when: Testing changes without deploying to AWS
-- **CRITICAL**: When creating a PR for testing, include `[dry run]` in commit message or PR title
-
-**`[skip-deploy]`** or **`[skip deploy]`** - Run all checks but skip actual deployment
-- Runs: Static analysis, unit tests, integration tests, building
-- Skips: Deployment step only
-- Use when: Testing changes that don't need deployment
-- Note: Same behavior as `[dry run]`
-
-**`[post-deployment]`** - Skip all pre-deployment steps, run only E2E tests
-- Skips: Static analysis, unit tests, integration tests, building, deployment
-- Runs: E2E tests only
-- Use when: Testing changes to E2E test files only
-
-**Examples:**
-- `[dry run] Add idempotency to IAM role creation` - Runs all checks but no deployment
-- `[skip-deploy] Update CDK stack configuration` - Runs all checks but no deployment
-- `[post-deployment] Fix E2E DNS resolution tests` - Only runs E2E tests
-
 ### Git Branch Management
 
 **CRITICAL: Delete claude branches immediately after PR merge**
@@ -165,103 +139,12 @@ curl -s -X DELETE \
 5. **Report pre-existing failures** - If checks fail on code you didn't modify, document this in commit message
 6. **Run all tests locally** - Run unit tests, integration tests, and E2E tests with environment credentials before pushing
 
-**Static analysis includes:** YAML linting, JSON linting, Markdown linting, Pylint, Mypy
+**Static analysis includes:** YAML linting, JSON linting, Pylint, Mypy
 **Tests include:** Unit tests, integration tests, E2E tests
 
 **Run ALL checks listed below for the infrastructure you're working on, not just checks for files you modified.**
 
 **Note on E2E tests:** Some tests require deployed infrastructure (WARM state) and will be skipped locally. Run all tests with AWS credentials from environment variables - tests that can execute will run, others will skip. This catches issues early before the CI/CD pipeline runs.
-
----
-
-## AWS-GitHub Auth Infrastructure Tests
-
-Run these tests if you modified `src/auth_between_aws_and_github/`:
-
-#### 1. YAML Linting
-```bash
-yamllint .github/workflows/auth_between_aws_and_github.yml
-```
-
-#### 2. JSON Configuration Linting
-```bash
-jsonlint -q src/auth_between_aws_and_github/config.json
-```
-
-#### 3. Markdown Documentation Linting (if README exists)
-```bash
-markdownlint-cli2 src/auth_between_aws_and_github/README.md
-```
-
-**NOTE:** This will only run if README.md exists. All default markdownlint rules are enforced.
-
-#### 4. Python Code Linting (Pylint)
-**Use the exact workflow command with all the same flags:**
-```bash
-pylint src/auth_between_aws_and_github/stack.py \
-  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-  --fail-under=10.0
-```
-
-**IMPORTANT:** Do NOT run `pylint` without these flags. The workflow requires `--fail-under=10.0` with specific disables.
-
-#### 5. Python Static Type Checking (Mypy)
-**First install dependencies:**
-```bash
-pip install -r src/auth_between_aws_and_github/requirements.txt
-```
-
-**Then run mypy:**
-```bash
-mypy src/auth_between_aws_and_github
-```
-
-#### 6. Unit Tests
-**Requires CDK dependencies installed (see step 5):**
-```bash
-pytest test/auth_between_aws_and_github/test_unit.py -v
-```
-
-#### 7. Integration Tests
-
-**IMPORTANT:** Requires CDK dependencies (see step 5), deployed infrastructure, and AWS credentials in environment variables. Check credentials first:
-```bash
-echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
-echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
-echo "AWS_REGION: $AWS_REGION"
-echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
-```
-
-Run integration tests (uses environment variables automatically):
-```bash
-pytest test/auth_between_aws_and_github/test_integration.py -v
-```
-
-**Required environment variables:**
-- `AWS_ACCESS_KEY_ID` - AWS access key
-- `AWS_SECRET_ACCESS_KEY` - AWS secret key
-- `AWS_SESSION_TOKEN` - (optional) AWS session token if using temporary credentials
-- `AWS_REGION` - AWS region (e.g., us-east-1)
-- `GITHUB_PAT` - GitHub Personal Access Token
-
-#### 8. E2E Tests
-
-**IMPORTANT:** Requires CDK dependencies (see step 5), deployed infrastructure, and AWS credentials in environment variables.
-
-Check credentials are available:
-```bash
-echo "AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:0:10}..."
-echo "AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:0:10}..."
-echo "AWS_REGION: $AWS_REGION"
-echo "GITHUB_PAT: ${GITHUB_PAT:0:10}..."
-```
-
-Run E2E tests (uses environment variables automatically):
-```bash
-pytest test/auth_between_aws_and_github/test_e2e.py -v
-```
-
-**Note:** Tests requiring deployed infrastructure (WARM state) will be skipped. Tests that can run with just AWS credentials will execute.
 
 ---
 
@@ -523,7 +406,6 @@ pytest test/gmail_email_provider/test_e2e.py -v
 **Static Analysis:**
 - [ ] All relevant YAML files pass `yamllint`
 - [ ] JSON config files pass `jsonlint` validation
-- [ ] Markdown README passes `markdownlint-cli2` (if applicable)
 - [ ] Pylint passes with `--fail-under=10.0` using exact workflow flags (if applicable)
 - [ ] Mypy passes with no errors
 
