@@ -182,10 +182,10 @@ jobs:
         yamllint --config-data "$CONFIG" .github/workflows/api.yml
         '
     - name: Static type checking Python files with mypy
-      run: 'python -m mypy src/api/infrastructure
-        python -m mypy src/api/endpoints/root
-        python -m mypy src/api/endpoints/health
-        python -m mypy src/api/endpoints/v1/echo
+      run: 'python -m mypy src/api/infrastructure &&
+        python -m mypy src/api/endpoints/root &&
+        python -m mypy src/api/endpoints/health &&
+        python -m mypy src/api/endpoints/v1/echo &&
         python -m mypy scripts/readme.py
         '
   unit-testing:
@@ -204,7 +204,7 @@ jobs:
       with:
         node-version: '20'
     - name: Install Python dependencies
-      run: 'pip install pytest
+      run: 'pip install pytest &&
         pip install -r src/api/infrastructure/requirements.txt
         '
     - name: Run unit tests
