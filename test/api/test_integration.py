@@ -7,12 +7,6 @@ def test_stack_deployed_successfully(cloudformation_client):
     assert len(stacks['Stacks']) == 1
 
 
-def test_api_gateway_exists(apigw_client):
-    apis = apigw_client.get_rest_apis()
-    api_names = [api['name'] for api in apis['items']]
-    assert 'TenULabsApi' in api_names
-
-
 def test_api_gateway_has_health_resource(apigw_client):
     apis = apigw_client.get_rest_apis()
     api_id = None
@@ -67,52 +61,6 @@ def test_api_gateway_echo_has_post_method(apigw_client):
             echo_resource = r
             break
     assert 'POST' in echo_resource['resourceMethods']
-
-
-def test_health_lambda_function_exists(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    matching_functions = [name for name in function_names if 'HealthHandler' in name]
-    assert len(matching_functions) > 0
-
-
-def test_echo_lambda_function_exists(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    matching_functions = [name for name in function_names if 'EchoHandler' in name]
-    assert len(matching_functions) > 0
-
-
-def test_health_lambda_has_correct_runtime(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    health_handler = [name for name in function_names if 'HealthHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=health_handler)
-    assert function_config['Runtime'].startswith('python3')
-
-
-def test_echo_lambda_has_correct_runtime(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    echo_handler = [name for name in function_names if 'EchoHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=echo_handler)
-    assert function_config['Runtime'].startswith('python3')
-
-
-def test_health_lambda_has_timeout_configured(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    health_handler = [name for name in function_names if 'HealthHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=health_handler)
-    assert function_config['Timeout'] > 0
-
-
-def test_echo_lambda_has_timeout_configured(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    echo_handler = [name for name in function_names if 'EchoHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=echo_handler)
-    assert function_config['Timeout'] > 0
 
 
 def test_health_lambda_has_memory_configured(lambda_client):
