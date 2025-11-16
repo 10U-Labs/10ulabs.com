@@ -201,7 +201,7 @@ jobs:
       - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/api.yml
+          yamllint .github/workflows/api.yml
       - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/api/infrastructure
