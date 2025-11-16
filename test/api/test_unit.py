@@ -1546,3 +1546,426 @@ def test_cloudfront_invalidation_targets_v1_path():
     custom_resource = list(custom_resources.values())[0]
     update_config = str(custom_resource["Properties"]["Update"])
     assert '"/v1/*"' in update_config
+
+def test_cloudfront_cache_policy_has_correct_ttl():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    cache_policies = template.find_resources("AWS::CloudFront::CachePolicy")
+    cache_policy = list(cache_policies.values())[0]
+    policy_config = cache_policy["Properties"]["CachePolicyConfig"]
+    assert policy_config["DefaultTTL"] == 86400 and policy_config["MinTTL"] == 60 and policy_config["MaxTTL"] == 31536000
+
+def test_cloudfront_cache_policy_compression_enabled():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    cache_policies = template.find_resources("AWS::CloudFront::CachePolicy")
+    cache_policy = list(cache_policies.values())[0]
+    policy_config = cache_policy["Properties"]["CachePolicyConfig"]
+    assert policy_config["ParametersInCacheKeyAndForwardedToOrigin"]["EnableAcceptEncodingGzip"] is True and policy_config["ParametersInCacheKeyAndForwardedToOrigin"]["EnableAcceptEncodingBrotli"] is True
+
+def test_s3_behaviors_use_custom_cache_policy():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    s3_behaviors = [b for b in cache_behaviors if b["PathPattern"] in ["/", "/openapi.yaml", "/404.html"]]
+    cache_policy_ids = [b.get("CachePolicyId") for b in s3_behaviors]
+    assert len(cache_policy_ids) == 3 and all(policy_id is not None and policy_id != "" for policy_id in cache_policy_ids)
+
+def test_api_behaviors_disable_caching():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    cache_behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    api_behaviors = [b for b in cache_behaviors if b["PathPattern"] in ["/health", "/v1/*"]]
+    cache_policy_ids = [b.get("CachePolicyId") for b in api_behaviors]
+    assert all(policy_id == "4135ea2d-6df8-44a3-9df3-4b5a84be39ad" for policy_id in cache_policy_ids)
+
+def test_api_gateway_spec_contains_health_integration():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    rest_apis = template.find_resources("AWS::ApiGateway::RestApi")
+    rest_api = list(rest_apis.values())[0]
+    body = rest_api["Properties"]["Body"]
+    assert "/health" in body["paths"]
+
+def test_api_gateway_spec_contains_echo_integration():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    rest_apis = template.find_resources("AWS::ApiGateway::RestApi")
+    rest_api = list(rest_apis.values())[0]
+    body = rest_api["Properties"]["Body"]
+    assert "/v1/echo" in body["paths"]
+
+def test_api_gateway_spec_contains_catchall_integration():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    rest_apis = template.find_resources("AWS::ApiGateway::RestApi")
+    rest_api = list(rest_apis.values())[0]
+    body = rest_api["Properties"]["Body"]
+    assert "/{proxy+}" in body["paths"]
+
+def test_api_gateway_integration_points_to_correct_lambda():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    rest_apis = template.find_resources("AWS::ApiGateway::RestApi")
+    rest_api = list(rest_apis.values())[0]
+    body = rest_api["Properties"]["Body"]
+    health_integration = body["paths"]["/health"]["get"]["x-amazon-apigateway-integration"]["uri"]
+    assert isinstance(health_integration, dict) and "Fn::Join" in health_integration
+
+def test_s3_deployment_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("Custom::CDKBucketDeployment", 1)
+
+def test_s3_deployment_points_to_docs_bucket():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    bucket_deployments = template.find_resources("Custom::CDKBucketDeployment")
+    deployment = list(bucket_deployments.values())[0]
+    assert "DestinationBucketName" in deployment["Properties"]
+
+def test_s3_deployment_has_prune_disabled():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    bucket_deployments = template.find_resources("Custom::CDKBucketDeployment")
+    deployment = list(bucket_deployments.values())[0]
+    assert deployment["Properties"]["Prune"] is False
+
+def test_s3_deployment_has_source_asset():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    bucket_deployments = template.find_resources("Custom::CDKBucketDeployment")
+    deployment = list(bucket_deployments.values())[0]
+    assert len(deployment["Properties"]["SourceObjectKeys"]) == 1
+
+def test_lambdas_have_correct_timeout():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    lambdas = template.find_resources("AWS::Lambda::Function")
+    api_lambdas = {name: lamb for name, lamb in lambdas.items() if "Handler" in name and "Custom" not in name and "LogRetention" not in name and "AWS679" not in name}
+    timeouts = [lamb["Properties"]["Timeout"] for lamb in api_lambdas.values()]
+    assert all(timeout == 10 for timeout in timeouts)
+
+def test_lambdas_have_log_retention():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    log_groups = template.find_resources("Custom::LogRetention")
+    retentions = [lg["Properties"]["RetentionInDays"] for lg in log_groups.values()]
+    assert all(retention == 7 for retention in retentions)
+
+def test_lambdas_have_correct_runtime():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    lambdas = template.find_resources("AWS::Lambda::Function")
+    api_lambdas = {name: lamb for name, lamb in lambdas.items() if "Handler" in name and "Custom" not in name and "LogRetention" not in name and "AWS679" not in name}
+    runtimes = [lamb["Properties"]["Runtime"] for lamb in api_lambdas.values()]
+    assert all(runtime == "python3.11" for runtime in runtimes)
+
+def test_cloudfront_function_code_contains_uri_rewrite():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    functions = template.find_resources("AWS::CloudFront::Function")
+    function = list(functions.values())[0]
+    code = function["Properties"]["FunctionCode"]
+    assert "request.uri = '/index.html'" in code
+
+def test_cloudfront_function_rewrites_root_to_index():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    functions = template.find_resources("AWS::CloudFront::Function")
+    function = list(functions.values())[0]
+    code = function["Properties"]["FunctionCode"]
+    assert "request.uri === '/'" in code
