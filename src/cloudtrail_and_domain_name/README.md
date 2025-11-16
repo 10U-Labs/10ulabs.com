@@ -1,98 +1,114 @@
-# 10U Labs Domain Management Infrastructure
+# 10U Labs Domain Infrastructure
 
-This AWS CDK infrastructure project automates the registration and management
-of the 10ulabs.com domain using AWS Route53 and Route53 Domains. It provides
-a complete solution for domain registration with automatic hosted zone creation
-and comprehensive CloudTrail logging for compliance and auditing.
+This AWS CDK infrastructure automatically provisions and manages the
+10ulabs.com domain registration and Route53 hosted zone. It provides a
+complete solution for domain management including registration, DNS
+hosting, and comprehensive audit logging.
 
 ## Purpose and Key Features
 
-- **Automated Domain Registration**: Registers domains through AWS Route53
-  Domains service with automatic contact information retrieval
-- **Hosted Zone Management**: Creates and manages Route53 hosted zones for
-  DNS management
-- **Contact Information Integration**: Automatically uses AWS account contact
-  information for domain registration
-- **Compliance Logging**: Comprehensive CloudTrail logging for all domain
-  and DNS operations
-- **Security**: Privacy protection enabled for all domain contacts
+- **Automated Domain Registration**: Automatically registers the domain
+  if not already registered, using AWS account contact information
+- **Route53 Hosted Zone Management**: Creates and manages DNS hosting
+  for the domain
+- **CloudTrail Audit Logging**: Comprehensive logging of all domain
+  and DNS management activities
+- **Smart Domain Detection**: Handles both new domain registration and
+  existing domain scenarios
+- **Privacy Protection**: Enables WHOIS privacy protection for all
+  domain contacts
+- **Auto-renewal**: Configures automatic domain renewal to prevent
+  expiration
 
 ## Resources Created
 
 This infrastructure creates the following AWS resources:
 
-### Core Domain Resources
-
-- **Custom Lambda Function**: Handles domain registration and hosted zone
-  creation logic
-- **Route53 Hosted Zone**: DNS management for the registered domain
-- **Custom CloudFormation Resource**: Orchestrates domain registration
-  workflow
-
-### Logging and Compliance
-
-- **CloudTrail Trail**: Multi-region trail capturing all API calls
-- **CloudWatch Log Group**: Stores CloudTrail logs with 1-year retention
-- **S3 Bucket (CloudTrail)**: Primary storage for CloudTrail logs
-- **S3 Bucket (Access Logs)**: Stores access logs for CloudTrail bucket
-
-### Security and Lifecycle Management
-
-- **IAM Policies**: Least-privilege permissions for Lambda function
-- **S3 Lifecycle Rules**: Automatic archival to Glacier after 90 days,
-  deletion after 5 years
-- **Encryption**: S3-managed encryption for all storage resources
+- **Route53 Hosted Zone**: DNS hosting for 10ulabs.com domain
+- **Domain Registration**: AWS Route53 domain registration (if needed)
+- **Lambda Function**: Custom resource handler for domain operations
+- **CloudTrail**: Multi-region audit trail for domain activities
+- **S3 Buckets**: 
+  - CloudTrail log storage bucket
+  - Access log bucket for audit trail
+- **CloudWatch Log Group**: CloudTrail log aggregation and retention
+- **IAM Roles/Policies**: Permissions for Lambda domain operations
 
 ## Prerequisites and Requirements
 
 ### System Dependencies
 
-- **Node.js** (v18 or later): Required for AWS CDK framework
-- **Python** (3.11 or later): Runtime for the application and Lambda functions
-- **Git**: For cloning and version control
+- **Node.js** (v14 or later): Required for AWS CDK
+- **Python** (3.11 or later): Runtime for the infrastructure code
+- **Git**: For repository management
 
 ### Python Dependencies
 
-Install the required Python packages listed in `requirements.txt`:
+Install the required Python packages from `requirements.txt`:
 
-```text
-aws-cdk-lib==2.150.0
-constructs>=10.0.0,<11.0.0
-boto3>=1.34.0
-boto3-stubs[route53,route53domains,account,organizations]>=1.34.0
+```bash
+pip install -r requirements.txt
 ```
+
+Required packages:
+
+- `aws-cdk-lib==2.150.0`: AWS CDK core library
+- `constructs>=10.0.0,<11.0.0`: CDK constructs framework
+- `boto3>=1.34.0`: AWS SDK for Python
+- `boto3-stubs[route53,route53domains,account,organizations]>=1.34.0`:
+  Type hints for AWS services
 
 ### AWS Prerequisites
 
-- **AWS Account**: With appropriate permissions for domain registration
-- **AWS Credentials**: Configured for CDK deployment
-- **Account Contact Information**: Complete billing contact details required
-  for domain registration
-- **AWS Organizations** (optional): For automatic email address detection
+- **AWS Account**: Active AWS account with appropriate permissions
+- **Complete Account Contact Information**: Required for domain
+  registration at <https://console.aws.amazon.com/billing/home#/account>
+- **AWS Credentials**: Configured via AWS credentials file, environment
+  variables, or IAM roles
+- **CDK Bootstrap**: Run `cdk bootstrap` in your AWS account/region
 
 ## Configuration
 
-Create a `config.json` file in the project root with the following structure:
+### config.json
+
+The main configuration file defines AWS settings and domain name:
 
 ```json
 {
-  "domain_name": "10ulabs.com",
   "aws": {
-    "account_id": "123456789012",
+    "account_id": 781581267945,
+    "bedrock": {
+      "max_tokens_check": 4000,
+      "max_tokens_generate": 16000,
+      "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    },
     "region": "us-east-1"
+  },
+  "domain_name": "10ulabs.com"
+}
+```
+
+### cdk.json
+
+CDK configuration file with feature flags and watch settings:
+
+```json
+{
+  "app": "python3 app.py",
+  "watch": {
+    "include": ["**"],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/__pycache__",
+      "**/.pytest_cache",
+      ".git"
+    ]
   }
 }
 ```
 
-### Configuration Parameters
-
-| Parameter | Description | Example |
-| --------- | ----------- | ------- |
-| `domain_name` | Domain to register/manage | `"10ulabs.com"` |
-| `aws.account_id` | Target AWS account ID | `"123456789012"` |
-| `aws.region` | AWS region for deployment | `"us-east-1"` |
-
-## Installation and Usage
+## Usage Instructions
 
 ### Installation
 
@@ -103,16 +119,26 @@ Create a `config.json` file in the project root with the following structure:
    cd 10ulabs.com
    ```
 
-2. **Install Python dependencies**:
+2. **Install dependencies**:
 
    ```bash
+   # Install Python dependencies
    pip install -r requirements.txt
+   
+   # Install Node.js dependencies (if package.json exists)
+   npm install
    ```
 
-3. **Install AWS CDK** (if not already installed):
+3. **Configure AWS credentials**:
 
    ```bash
-   npm install -g aws-cdk
+   # Option 1: AWS credentials file
+   aws configure
+   
+   # Option 2: Environment variables
+   export AWS_ACCESS_KEY_ID=your-key
+   export AWS_SECRET_ACCESS_KEY=your-secret
+   export AWS_DEFAULT_REGION=us-east-1
    ```
 
 4. **Bootstrap CDK** (first time only):
@@ -123,183 +149,141 @@ Create a `config.json` file in the project root with the following structure:
 
 ### Deployment
 
-1. **Configure your domain settings** in `config.json`
+1. **Review the deployment plan**:
+
+   ```bash
+   cdk diff
+   ```
 
 2. **Deploy the infrastructure**:
 
    ```bash
-   cdk deploy TenULabsDomainName
+   cdk deploy
    ```
 
-3. **Verify deployment**:
+3. **Monitor the deployment**: The Lambda function will automatically:
+   - Check if domain is already registered
+   - Register domain if needed (takes 5-15 minutes)
+   - Wait for hosted zone creation
+   - Configure nameservers
 
-   ```bash
-   cdk list
-   cdk diff
-   ```
+### Using the Deployed Resources
 
-### Post-Deployment
+After successful deployment, you can:
 
-After successful deployment, the infrastructure outputs:
+1. **Manage DNS records** via Route53 console or CDK
+2. **View domain status** in Route53 Domains console
+3. **Monitor activities** via CloudTrail logs
+4. **Access outputs**:
+   - Hosted Zone ID for cross-stack references
+   - Nameservers for external configuration
+   - Domain registration status
 
-- **Domain Name**: The registered domain
-- **Hosted Zone ID**: For DNS record management
-- **Name Servers**: For external DNS delegation (if needed)
-- **Registration Status**: Current domain status
+### Scripts
+
+The repository includes a comprehensive README generation script:
+
+```bash
+# Check if README needs updating
+python scripts/readme.py --check --project-dir . --aws-region us-east-1
+
+# Update README
+python scripts/readme.py --update --project-dir . --aws-region us-east-1
+```
 
 ## Architecture Overview
 
-### Component Interactions
+### Component Interaction Flow
 
-```text
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   CDK App       │───▶│  Custom Resource │───▶│ Lambda Function │
-│   (app.py)      │    │                  │    │   (handler.py)  │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                                        │
-                        ┌─────────────────────────────────┼─────────────────┐
-                        │                                 ▼                 │
-                        │    ┌─────────────────┐    ┌──────────────┐       │
-                        │    │ Route53 Domains │    │   Route53    │       │
-                        │    │   (Register)    │    │ (Hosted Zone)│       │
-                        │    └─────────────────┘    └──────────────┘       │
-                        │                                                   │
-                        │    ┌─────────────────┐    ┌──────────────┐       │
-                        │    │ Account Service │    │ Organizations │       │
-                        │    │ (Contact Info)  │    │ (Email Info) │       │
-                        │    └─────────────────┘    └──────────────┘       │
-                        └───────────────────────────────────────────────────┘
-                                             │
-                        ┌─────────────────────────────────────────────────────┐
-                        │                CloudTrail                          │
-                        │  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐│
-                        │  │ CloudWatch  │  │      S3      │  │ Access Logs ││
-                        │  │  Log Group  │  │   (Primary)  │  │   Bucket    ││
-                        │  └─────────────┘  └──────────────┘  └─────────────┘│
-                        └─────────────────────────────────────────────────────┘
-```
+1. **CDK App** (`app.py`) loads configuration and initializes the stack
+2. **Domain Stack** (`stack.py`) creates all AWS resources
+3. **Custom Resource** triggers Lambda function for domain operations
+4. **Lambda Handler** (`lambda/handler.py`) performs domain registration
+5. **Route53** hosts DNS records for the domain
+6. **CloudTrail** logs all domain and DNS activities
 
-### Workflow Process
+### Authentication and Authorization
 
-1. **CDK Deployment**: Triggers custom resource creation
-2. **Lambda Execution**: Handles domain registration logic
-3. **Contact Retrieval**: Fetches AWS account contact information
-4. **Domain Registration**: Registers domain with Route53 Domains
-5. **Hosted Zone Creation**: AWS automatically creates hosted zone
-6. **Zone Detection**: Lambda waits for and detects the new hosted zone
-7. **Resource Completion**: Returns hosted zone details to CloudFormation
+- **Lambda Execution Role**: IAM role with permissions for:
+  - Route53 Domains API operations
+  - Route53 hosted zone management
+  - AWS Account contact information access
+  - AWS Organizations API access
+- **Cross-Service Permissions**: CloudTrail service-linked roles for
+  S3 bucket access and CloudWatch Logs
 
-### Authentication Flow
+### Data Flows
 
-- **Lambda Function**: Uses IAM role with specific Route53 and Account
-  permissions
-- **AWS Services**: Authentication via IAM roles and policies
-- **Cross-Region**: Route53 Domains requires us-east-1 region access
+1. **Domain Registration Flow**:
+   ```
+   Custom Resource → Lambda → Route53 Domains API → Domain Registration
+   ```
+
+2. **DNS Management Flow**:
+   ```
+   CDK Stack → Route53 Hosted Zone → DNS Records → Public DNS
+   ```
+
+3. **Audit Flow**:
+   ```
+   AWS API Calls → CloudTrail → S3 Bucket → CloudWatch Logs
+   ```
 
 ## Security Considerations
 
-### Domain Security
-
-- **Privacy Protection**: Enabled for all contact types (admin, registrant,
-  tech, billing)
-- **Contact Information**: Uses AWS account contact details to prevent
-  information leakage
-- **Auto-Renewal**: Enabled to prevent accidental domain expiration
-
-### Infrastructure Security
-
+- **Privacy Protection**: WHOIS privacy enabled for all contacts
+- **Audit Logging**: All domain operations logged via CloudTrail
+- **Secure Storage**: S3 buckets configured with:
+  - Server-side encryption (SSE-S3)
+  - Block public access
+  - SSL enforcement
+  - Access logging
 - **Least Privilege**: Lambda function has minimal required permissions
-- **Encryption**: All S3 buckets use AWS-managed encryption
-- **SSL Enforcement**: Required for all S3 bucket operations
-- **Public Access**: Blocked on all S3 buckets
-
-### Logging and Monitoring
-
-- **CloudTrail**: Captures all API calls for audit compliance
-- **Multi-Region**: Trail covers all AWS regions for comprehensive logging
-- **Retention**: CloudWatch logs retained for 1 year, S3 logs for 5 years
-- **Access Logging**: S3 bucket access separately logged for security analysis
+- **Multi-Region Logging**: CloudTrail captures global service events
+- **Log Retention**: CloudWatch logs retained for 1 year
+- **Lifecycle Management**: S3 objects archived to Glacier after 90 days
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Domain Registration Timeout
+1. **Domain registration timeout**:
+   - Re-run `cdk deploy` after 15-30 minutes
+   - Check CloudTrail logs for registration status
 
-**Symptoms**: CloudFormation stack creation fails with timeout
+2. **Missing account contact information**:
+   - Complete AWS account contact info at billing console
+   - Ensure all required fields are populated
 
-**Solutions**:
+3. **Permission errors**:
+   - Verify IAM permissions for domain operations
+   - Check AWS credentials configuration
 
-   ```bash
-   # Check registration status
-   aws route53domains get-operation-detail --operation-id <operation-id>
-   
-   # Re-deploy after registration completes
-   cdk deploy TenULabsDomainName
-   ```
+4. **Hosted zone not found**:
+   - Wait for AWS to create hosted zone after registration
+   - Check Route53 console for zone creation status
 
-#### Missing Contact Information
-
-**Symptoms**: Registration fails with contact validation errors
-
-**Solutions**:
-
-1. **Update AWS account contact information**:
-   - Visit: <https://console.aws.amazon.com/billing/home#/account>
-   - Complete all required fields
-
-2. **Configure alternate billing contact**:
-
-   ```bash
-   aws account put-alternate-contact \
-     --alternate-contact-type BILLING \
-     --email-address admin@yourcompany.com \
-     --name "Billing Admin" \
-     --phone-number "+1.5551234567"
-   ```
-
-#### Hosted Zone Not Found
-
-**Symptoms**: Domain registered but hosted zone missing
-
-**Cause**: AWS takes time to create hosted zone after registration
-
-**Solution**: Wait 10-15 minutes and re-deploy:
-
-   ```bash
-   cdk deploy TenULabsDomainName
-   ```
-
-#### Permission Errors
-
-**Symptoms**: Access denied errors during deployment
-
-**Required Permissions**:
-
-- `route53domains:*`
-- `route53:*`
-- `account:GetContactInformation`
-- `organizations:DescribeOrganization`
-- `lambda:*`
-- `iam:*`
-- `s3:*`
-- `cloudtrail:*`
-- `logs:*`
-
-### Debug Commands
+### Debugging Commands
 
 ```bash
-# Check stack status
+# View CDK outputs
 cdk list
-cdk diff TenULabsDomainName
-
-# View CloudFormation events
-aws cloudformation describe-stack-events \
-  --stack-name TenULabsDomainName
+cdk synthesize
 
 # Check Lambda logs
-aws logs describe-log-groups --log-group-name-prefix /aws/lambda/
+aws logs describe-log-groups --log-group-name-prefix="/aws/lambda/TenULabs"
 
 # Verify domain status
-aws route53domains get-domain-detail --domain-name 10ulabs.com
+aws route53domains get-domain-detail --domain-name 10ulabs.com --region us-east-1
+
+# Check hosted zone
+aws route53 list-hosted-zones-by-name --dns-name 10ulabs.com
 ```
+
+### Stack Dependencies
+
+The infrastructure includes dependency management to ensure:
+
+- CloudTrail is created before domain operations
+- Hosted zone is available before stack outputs
+- Proper cleanup order during stack deletion
