@@ -29,7 +29,7 @@ jobs:
       - run: 'true'
   determining-if-claude-md-should-be-formatted:
     name: Determining if CLAUDE.md should be properly formatted
-    needs: performing-static-analysis
+    needs: e2e-testing
     outputs:
       claude_md_should_be_properly_formatted: ${{ steps.check.outputs.claude_md_should_be_properly_formatted }}
     runs-on: ubuntu-latest
@@ -99,7 +99,7 @@ jobs:
         run: "python scripts/readme.py \\\n  --project-dir src/claude_md \\\n  --check \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   formatting-claude-md:
     name: Formatting CLAUDE.md
-    needs: unit-testing
+    needs: concluding-claude-md-should-be-formatted
     permissions:
       contents: write
       id-token: write
@@ -182,7 +182,7 @@ jobs:
           '
   unit-testing:
     name: Unit testing
-    needs: concluding-claude-md-should-be-formatted
+    needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -196,6 +196,82 @@ jobs:
           '
       - name: Run unit tests
         run: 'pytest test/claude_md/test_unit.py -v
+          '
+  integration-testing:
+    name: Integration testing
+    needs: unit-testing
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
+          REGION=$(jq -r ''.region'' src/claude_md/config.json);
+          MODEL_ID=$(jq -r ''.bedrock.model_id'' src/claude_md/config.json);
+          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' src/claude_md/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' src/claude_md/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
+          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
+          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
+          '
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python dependencies
+        run: 'pip install pytest boto3
+          '
+      - name: Run integration tests
+        run: 'pytest test/claude_md/test_integration.py -v
+          '
+  e2e-testing:
+    name: E2E testing
+    needs: integration-testing
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
+          REGION=$(jq -r ''.region'' src/claude_md/config.json);
+          MODEL_ID=$(jq -r ''.bedrock.model_id'' src/claude_md/config.json);
+          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' src/claude_md/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' src/claude_md/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
+          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
+          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
+          '
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python dependencies
+        run: 'pip install pytest boto3
+          '
+      - name: Run E2E tests
+        run: 'pytest test/claude_md/test_e2e.py -v
           '
   updating-readme:
     if: always() && needs.concluding-readme-should-be-updated.result == 'success'
@@ -250,4 +326,5 @@ on:
       - src/claude_md/config.json
       - src/claude_md/**
       - scripts/readme.py
+      - test/claude_md/**
   workflow_dispatch: null
