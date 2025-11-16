@@ -121,6 +121,8 @@ Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, expl
 def main():
     parser = argparse.ArgumentParser(description='Format CLAUDE.md to comply with markdownlint rules using Bedrock')
     parser.add_argument('--aws-region', required=True, help='AWS region for Bedrock')
+    parser.add_argument('--bedrock-model-id', help='Bedrock model ID to use')
+    parser.add_argument('--max-tokens', type=int, help='Max tokens for formatting')
     args = parser.parse_args()
 
     config = load_config()
@@ -134,8 +136,8 @@ def main():
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     bedrock_config = {
-        'model_id': config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
-        'max_tokens': int(config.get('bedrock', {}).get('max_tokens', 16000))
+        'model_id': args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
+        'max_tokens': int(args.max_tokens or config.get('bedrock', {}).get('max_tokens', 16000))
     }
 
     formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config)
