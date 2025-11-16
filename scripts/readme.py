@@ -289,15 +289,6 @@ Generate ONLY the README content, starting with the title. Do not include any pr
         logging.error("Failed to generate README with Bedrock: %s", e)
         sys.exit(1)
 
-def load_config(project_dir: str):
-    config_path = os.path.join(project_dir, 'config.json')
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except IOError as e:
-        logging.error("Failed to read config.json: %s", e)
-        sys.exit(1)
-
 def main():
     parser = argparse.ArgumentParser(description='Generate or check README for infrastructure projects')
     parser.add_argument('--check', action='store_true', help='Check if README is current')
@@ -314,8 +305,6 @@ def main():
     if not os.path.isdir(project_dir):
         logging.error("Project directory does not exist: %s", project_dir)
         sys.exit(1)
-
-    config = load_config(project_dir)
 
     if not args.check and not args.update:
         logging.error("Must specify either --check or --update")
