@@ -40,6 +40,7 @@ curl -s -H "Authorization: Bearer $PAT" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
 ```
+
 1. Identify the failed job and fetch its logs:
 
 ```bash
@@ -47,6 +48,7 @@ curl -s -L -H "Authorization: Bearer $PAT" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/JOB_ID/logs" > /tmp/logs.txt
 ```
+
 1. Search for errors in the logs:
 
 ```bash
