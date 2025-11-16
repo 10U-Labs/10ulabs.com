@@ -22,11 +22,11 @@
 - Pass the literal PAT value directly in the curl command (not the variable)
 - Use this format:
 
-   ```bash
-   curl -s -H "Authorization: Bearer <paste-the-actual-pat-value-here>" \
-     -H "Accept: application/vnd.github+json" \
-     "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_ID"
-   ```
+```bash
+curl -s -H "Authorization: Bearer <paste-the-actual-pat-value-here>" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_ID"
+```
 
 **DO NOT use environment variable expansion like `$GITHUB_PAT` in curl
 commands** - it may not expand correctly in some contexts.
@@ -38,26 +38,26 @@ commands** - it may not expand correctly in some contexts.
 1. Get the workflow run ID from the user or GitHub UI
 2. Use the GitHub API to fetch the workflow logs:
 
-   ```bash
-   PAT=$(echo $GITHUB_PAT)
-   curl -s -H "Authorization: Bearer $PAT" \
-     -H "Accept: application/vnd.github+json" \
-     "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
-   ```
+```bash
+PAT=$(echo $GITHUB_PAT)
+curl -s -H "Authorization: Bearer $PAT" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/runs/WORKFLOW_RUN_ID/jobs" | jq '.jobs[] | {name, conclusion}'
+```
 
 3. Identify the failed job and fetch its logs:
 
-   ```bash
-   curl -s -L -H "Authorization: Bearer $PAT" \
-     -H "Accept: application/vnd.github+json" \
-     "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/JOB_ID/logs" > /tmp/logs.txt
-   ```
+```bash
+curl -s -L -H "Authorization: Bearer $PAT" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/10U-Labs-LLC/10ulabs.com/actions/jobs/JOB_ID/logs" > /tmp/logs.txt
+```
 
 4. Search for errors in the logs:
 
-   ```bash
-   grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
-   ```
+```bash
+grep -A 20 -B 5 "FAILED\|ERROR\|Error\|Failed\|Traceback" /tmp/logs.txt
+```
 
 **Do NOT guess at the failure cause - ALWAYS read the actual logs first.**
 
@@ -65,7 +65,7 @@ commands** - it may not expand correctly in some contexts.
 
 ### Coding Standards
 
-### CRITICAL: DO NOT ADD COMMENTS TO CODE
+#### DO NOT ADD COMMENTS TO CODE
 
 - NEVER add inline comments (# comments)
 - NEVER add docstrings ("""...""")
@@ -78,7 +78,7 @@ commands** - it may not expand correctly in some contexts.
 - If comments already exist in the original code, REMOVE THEM
 - Code should have ZERO comments of any kind
 
-### CRITICAL: NEVER CREATE LINTER CONFIGURATION FILES
+#### NEVER CREATE LINTER CONFIGURATION FILES
 
 - NEVER create .yamllint, .pylintrc, mypy.ini, .flake8, or any other linter
   config files
@@ -92,7 +92,7 @@ commands** - it may not expand correctly in some contexts.
 - This rule applies to ALL linters: yamllint, pylint, mypy, flake8, black,
   isort, etc.
 
-### CRITICAL: S3 BUCKET VERSIONING MUST BE DISABLED
+#### S3 BUCKET VERSIONING MUST BE DISABLED
 
 - NEVER enable versioning on S3 buckets (`versioned=False`)
 - ALL S3 buckets in all CDK stacks MUST have `versioned=False`
@@ -103,7 +103,7 @@ commands** - it may not expand correctly in some contexts.
 - Versioning increases costs and complexity without providing value for this
   use case
 
-### CRITICAL: TESTS MUST HAVE ONLY ONE ASSERT
+#### TESTS MUST HAVE ONLY ONE ASSERT
 
 - Each test function must contain exactly ONE assert statement
 - If testing multiple conditions, split into multiple test functions
@@ -116,7 +116,7 @@ commands** - it may not expand correctly in some contexts.
   - `test_bucket_has_encryption`
   - `test_bucket_blocks_public_access`
 
-### CRITICAL: PREFER SERVERLESS ARCHITECTURE
+#### PREFER SERVERLESS ARCHITECTURE
 
 - ALWAYS prefer serverless architecture (Lambda, API Gateway, DynamoDB, S3,
   etc.) for all services
@@ -126,7 +126,7 @@ commands** - it may not expand correctly in some contexts.
 - Benefits of serverless: no server management, automatic scaling, pay-per-use
   pricing, built-in high availability
 
-### CRITICAL: FUNCTIONS MUST HAVE SINGLE RETURN STATEMENT
+#### FUNCTIONS MUST HAVE SINGLE RETURN STATEMENT
 
 - Each function must have exactly ONE return statement at the end of the
   function
@@ -135,23 +135,23 @@ commands** - it may not expand correctly in some contexts.
   end
 - Example:
 
-   ```python
-   def validate_endpoint(url: str) -> tuple[bool, str]:
-       result = (False, "Unknown error")
-       try:
-           response = requests.get(url)
-           if response.status_code != 200:
-               result = (False, f"Got {response.status_code}")
-           else:
-               result = (True, "Success")
-       except Exception as e:
-           result = (False, f"Error: {e}")
-       return result
-   ```
+```python
+def validate_endpoint(url: str) -> tuple[bool, str]:
+    result = (False, "Unknown error")
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            result = (False, f"Got {response.status_code}")
+        else:
+            result = (True, "Success")
+    except Exception as e:
+        result = (False, f"Error: {e}")
+    return result
+```
 
 ### Git Branch Management
 
-### CRITICAL: Delete claude branches immediately after PR merge
+#### Delete claude branches immediately after PR merge
 
 When a pull request is merged, the claude branch MUST be deleted immediately
 using the GitHub API:
@@ -169,7 +169,7 @@ Delete branches immediately after merge, not in batches later.
 
 ### Pre-Push Static Analysis and Testing Requirements
 
-### CRITICAL REQUIREMENTS
+#### CRITICAL REQUIREMENTS
 
 1. **Run ALL static analysis AND tests for the infrastructure you're working
    on** - Run EVERY check that the workflow runs, regardless of which specific
