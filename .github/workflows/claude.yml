@@ -74,7 +74,7 @@ jobs:
     - name: Install markdownlint-cli2
       run: npm install -g markdownlint-cli2
     - name: Fix CLAUDE.md formatting
-      run: 'python scripts/claude_md.py --update
+      run: 'python scripts/format_claude_md.py
         '
     - id: check_changes
       name: Check for changes
