@@ -306,7 +306,7 @@ jobs:
         name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}}}' .github/workflows/cloudtrail_and_domain_name.yml
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 200, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}}}' .github/workflows/cloudtrail_and_domain_name.yml
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Static type checking Python files with mypy
         run: |
@@ -386,7 +386,6 @@ jobs:
             echo "No changes to README.md"
           else
             git commit -m "Update cloudtrail_and_domain_name README.md [skip ci]"
-
             for i in {1..5}; do
               if git push; then
                 echo "Successfully pushed README update"
@@ -396,7 +395,6 @@ jobs:
               git pull --rebase origin main
               sleep $((2 ** i))
             done
-
             echo "Failed to push after 5 attempts"
             exit 1
           fi
