@@ -27,6 +27,7 @@ from aws_cdk import (
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
     aws_wafv2 as wafv2,
+    custom_resources as cr,
 )
 from aws_cdk.aws_cloudfront import OriginProtocolPolicy
 from constructs import Construct
@@ -346,7 +347,7 @@ class ApiStack(Stack):
             protocol_policy=OriginProtocolPolicy.HTTPS_ONLY
         )
 
-        return cloudfront.Distribution(
+        distribution = cloudfront.Distribution(
             self, "ApiDistribution",
             default_behavior=cloudfront.BehaviorOptions(
                 origin=s3_origin,
@@ -376,6 +377,33 @@ class ApiStack(Stack):
             certificate=certificate,
             web_acl_id=web_acl.attr_arn
         )
+
+        cr.AwsCustomResource(
+            self, "CloudFrontInvalidation",
+            on_update=cr.AwsSdkCall(
+                service="CloudFront",
+                action="createInvalidation",
+                parameters={
+                    "DistributionId": distribution.distribution_id,
+                    "InvalidationBatch": {
+                        "Paths": {
+                            "Quantity": 2,
+                            "Items": ["/health", "/v1/*"]
+                        },
+                        "CallerReference": Fn.ref("AWS::StackName") + "-" + Fn.ref("AWS::StackId")
+                    }
+                },
+                physical_resource_id=cr.PhysicalResourceId.of(f"CloudFrontInvalidation-{distribution.distribution_id}")
+            ),
+            policy=cr.AwsCustomResourcePolicy.from_statements([
+                iam.PolicyStatement(
+                    actions=["cloudfront:CreateInvalidation"],
+                    resources=[f"arn:aws:cloudfront::{self.config['aws']['account_id']}:distribution/{distribution.distribution_id}"]
+                )
+            ])
+        )
+
+        return distribution
 
     def _create_dns_and_outputs(self, parent_zone, subdomain_name, cf_distribution, resources):
         runner_sg, ec2_runner_role = resources
