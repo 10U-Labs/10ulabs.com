@@ -13,18 +13,6 @@ def test_api_gateway_exists(apigw_client):
     assert 'TenULabsApi' in api_names
 
 
-def test_api_gateway_has_root_resource(apigw_client):
-    apis = apigw_client.get_rest_apis()
-    api_id = None
-    for api in apis['items']:
-        if api['name'] == 'TenULabsApi':
-            api_id = api['id']
-            break
-    resources = apigw_client.get_resources(restApiId=api_id)
-    resource_paths = [r['path'] for r in resources['items']]
-    assert '/' in resource_paths
-
-
 def test_api_gateway_has_health_resource(apigw_client):
     apis = apigw_client.get_rest_apis()
     api_id = None
@@ -47,22 +35,6 @@ def test_api_gateway_has_v1_echo_resource(apigw_client):
     resources = apigw_client.get_resources(restApiId=api_id)
     resource_paths = [r['path'] for r in resources['items']]
     assert '/v1/echo' in resource_paths
-
-
-def test_api_gateway_root_has_get_method(apigw_client):
-    apis = apigw_client.get_rest_apis()
-    api_id = None
-    for api in apis['items']:
-        if api['name'] == 'TenULabsApi':
-            api_id = api['id']
-            break
-    resources = apigw_client.get_resources(restApiId=api_id)
-    root_resource = None
-    for r in resources['items']:
-        if r['path'] == '/':
-            root_resource = r
-            break
-    assert 'GET' in root_resource['resourceMethods']
 
 
 def test_api_gateway_health_has_get_method(apigw_client):
@@ -97,13 +69,6 @@ def test_api_gateway_echo_has_post_method(apigw_client):
     assert 'POST' in echo_resource['resourceMethods']
 
 
-def test_docs_lambda_function_exists(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    matching_functions = [name for name in function_names if 'DocsHandler' in name]
-    assert len(matching_functions) > 0
-
-
 def test_health_lambda_function_exists(lambda_client):
     functions = lambda_client.list_functions()
     function_names = [fn['FunctionName'] for fn in functions['Functions']]
@@ -116,14 +81,6 @@ def test_echo_lambda_function_exists(lambda_client):
     function_names = [fn['FunctionName'] for fn in functions['Functions']]
     matching_functions = [name for name in function_names if 'EchoHandler' in name]
     assert len(matching_functions) > 0
-
-
-def test_docs_lambda_has_correct_runtime(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=docs_handler)
-    assert function_config['Runtime'].startswith('python3')
 
 
 def test_health_lambda_has_correct_runtime(lambda_client):
@@ -142,14 +99,6 @@ def test_echo_lambda_has_correct_runtime(lambda_client):
     assert function_config['Runtime'].startswith('python3')
 
 
-def test_docs_lambda_has_timeout_configured(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=docs_handler)
-    assert function_config['Timeout'] > 0
-
-
 def test_health_lambda_has_timeout_configured(lambda_client):
     functions = lambda_client.list_functions()
     function_names = [fn['FunctionName'] for fn in functions['Functions']]
@@ -164,14 +113,6 @@ def test_echo_lambda_has_timeout_configured(lambda_client):
     echo_handler = [name for name in function_names if 'EchoHandler' in name][0]
     function_config = lambda_client.get_function_configuration(FunctionName=echo_handler)
     assert function_config['Timeout'] > 0
-
-
-def test_docs_lambda_has_memory_configured(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=docs_handler)
-    assert function_config['MemorySize'] > 0
 
 
 def test_health_lambda_has_memory_configured(lambda_client):
@@ -190,14 +131,6 @@ def test_echo_lambda_has_memory_configured(lambda_client):
     assert function_config['MemorySize'] > 0
 
 
-def test_docs_lambda_has_execution_role(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    function_config = lambda_client.get_function_configuration(FunctionName=docs_handler)
-    assert 'Role' in function_config
-
-
 def test_health_lambda_has_execution_role(lambda_client):
     functions = lambda_client.list_functions()
     function_names = [fn['FunctionName'] for fn in functions['Functions']]
@@ -212,15 +145,6 @@ def test_echo_lambda_has_execution_role(lambda_client):
     echo_handler = [name for name in function_names if 'EchoHandler' in name][0]
     function_config = lambda_client.get_function_configuration(FunctionName=echo_handler)
     assert 'Role' in function_config
-
-
-def test_docs_lambda_has_cloudwatch_log_group(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    logs_client = boto3.client('logs', region_name=lambda_client.meta.region_name)
-    log_groups = logs_client.describe_log_groups(logGroupNamePrefix=f'/aws/lambda/{docs_handler}')
-    assert len(log_groups['logGroups']) > 0
 
 
 def test_health_lambda_has_cloudwatch_log_group(lambda_client):
@@ -239,18 +163,6 @@ def test_echo_lambda_has_cloudwatch_log_group(lambda_client):
     logs_client = boto3.client('logs', region_name=lambda_client.meta.region_name)
     log_groups = logs_client.describe_log_groups(logGroupNamePrefix=f'/aws/lambda/{echo_handler}')
     assert len(log_groups['logGroups']) > 0
-
-
-def test_docs_lambda_can_be_invoked(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    response = lambda_client.invoke(
-        FunctionName=docs_handler,
-        InvocationType='RequestResponse',
-        Payload='{"path": "/", "httpMethod": "GET"}'
-    )
-    assert response['StatusCode'] == 200
 
 
 def test_health_lambda_can_be_invoked(lambda_client):
@@ -275,19 +187,6 @@ def test_echo_lambda_can_be_invoked(lambda_client):
         Payload='{"path": "/v1/echo", "httpMethod": "POST", "body": "{\\"test\\": \\"data\\"}"}'
     )
     assert response['StatusCode'] == 200
-
-
-def test_docs_lambda_returns_valid_response(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [fn['FunctionName'] for fn in functions['Functions']]
-    docs_handler = [name for name in function_names if 'DocsHandler' in name][0]
-    response = lambda_client.invoke(
-        FunctionName=docs_handler,
-        InvocationType='RequestResponse',
-        Payload='{"path": "/", "httpMethod": "GET"}'
-    )
-    payload = json.loads(response['Payload'].read())
-    assert 'statusCode' in payload
 
 
 def test_health_lambda_returns_valid_response(lambda_client):
@@ -365,3 +264,11 @@ def test_stack_has_api_domain_name_output(cloudformation_client):
     outputs = stacks['Stacks'][0].get('Outputs', [])
     output_keys = [o['OutputKey'] for o in outputs]
     assert 'ApiDomainName' in output_keys
+
+
+def test_s3_bucket_exists_for_api_docs(s3_client, config):
+    subdomain = config['domain_names']['subdomain']
+    expected_bucket_name = subdomain
+    buckets = s3_client.list_buckets()
+    bucket_names = [bucket['Name'] for bucket in buckets['Buckets']]
+    assert expected_bucket_name in bucket_names

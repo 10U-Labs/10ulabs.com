@@ -10,24 +10,6 @@ servers:
   - url: https://api.10ulabs.com
     description: Production API
 paths:
-  /:
-    get:
-      summary: API Documentation
-      description: Serves the interactive OpenAPI documentation (Swagger UI)
-      operationId: getDocs
-      tags:
-        - Documentation
-      responses:
-        '200':
-          description: HTML page with API documentation
-          content:
-            text/html:
-              schema:
-                type: string
-      x-amazon-apigateway-integration:
-        uri: ${DocsHandlerArn}
-        httpMethod: POST
-        type: aws_proxy
   /health:
     get:
       summary: Health Check
@@ -124,8 +106,6 @@ paths:
 components:
   schemas: {}
 tags:
-  - name: Documentation
-    description: API documentation endpoints
   - name: Health
     description: Health check endpoints
   - name: Utilities
