@@ -2,6 +2,41 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  concluding-readme-should-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'true'
+    name: Concluding README.md should be updated
+    needs: determining-if-readme-should-be-updated
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
+  concluding-readme-should-not-be-updated:
+    if: needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated != 'true'
+    name: Concluding README.md should not be updated
+    needs: determining-if-readme-should-be-updated
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'true'
+  determining-if-readme-should-be-updated:
+    name: Determining if README.md should be updated
+    needs: e2e-testing
+    outputs:
+      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install boto3
+        run: pip install boto3
+      - id: check
+        name: Check if README needs update
+        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --aws-region us-east-1 \\\n  --bedrock-model-id us.anthropic.claude-3-7-sonnet-20250219-v1:0 \\\n  --max-tokens-reasoning 4096 \\\n  --max-tokens-generation 16384 \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -26,9 +61,23 @@ jobs:
         name: Run E2E tests
         run: 'pytest test/readme/test_e2e.py -v
           '
+  ensuring-infrastructure-in-desired-state:
+    name: Ensuring infrastructure is in desired state
+    needs: unit-testing
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ github.event.inputs.dry_run == 'true' }}
+        name: DRY RUN - Skip deployment
+        run: echo "DRY RUN - Would ensure infrastructure for README script"
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Checkout code
+        uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: No infrastructure to deploy
+        run: echo "README script has no infrastructure - skipping deployment"
   integration-testing:
     name: Integration testing
-    needs: unit-testing
+    needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -112,6 +161,28 @@ jobs:
         name: Run unit tests
         run: 'pytest test/readme/test_unit.py -v
           '
+  updating-readme:
+    name: Updating README.md
+    needs: concluding-readme-should-be-updated
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install boto3
+        run: pip install boto3
+      - name: Update README with Bedrock
+        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --update \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region us-east-1 \\\n  --bedrock-model-id us.anthropic.claude-3-7-sonnet-20250219-v1:0 \\\n  --max-tokens-reasoning 4096 \\\n  --max-tokens-generation 16384 \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+      - name: Commit and push README if changed
+        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add scripts/readme/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update readme README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
 name: Ensuring README script passes static analysis
 on:
   push:
@@ -128,3 +199,6 @@ on:
         description: Dry run mode (skip deployment, just test)
         required: false
         type: boolean
+permissions:
+  contents: read
+  id-token: write
