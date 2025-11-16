@@ -379,23 +379,29 @@ class ApiStack(Stack):
             web_acl_id=web_acl.attr_arn
         )
 
+        invalidation_call = cr.AwsSdkCall(
+            service="CloudFront",
+            action="createInvalidation",
+            parameters={
+                "DistributionId": distribution.distribution_id,
+                "InvalidationBatch": {
+                    "Paths": {
+                        "Quantity": 2,
+                        "Items": ["/health", "/v1/*"]
+                    },
+                    "CallerReference": Fn.join("-", [
+                        Fn.ref("AWS::StackName"),
+                        Fn.select(2, Fn.split("/", Fn.ref("AWS::StackId")))
+                    ])
+                }
+            },
+            physical_resource_id=cr.PhysicalResourceId.of(f"CloudFrontInvalidation-{distribution.distribution_id}")
+        )
+
         cr.AwsCustomResource(
             self, "CloudFrontInvalidation",
-            on_update=cr.AwsSdkCall(
-                service="CloudFront",
-                action="createInvalidation",
-                parameters={
-                    "DistributionId": distribution.distribution_id,
-                    "InvalidationBatch": {
-                        "Paths": {
-                            "Quantity": 2,
-                            "Items": ["/health", "/v1/*"]
-                        },
-                        "CallerReference": Fn.ref("AWS::StackName") + "-" + Fn.ref("AWS::StackId")
-                    }
-                },
-                physical_resource_id=cr.PhysicalResourceId.of(f"CloudFrontInvalidation-{distribution.distribution_id}")
-            ),
+            on_create=invalidation_call,
+            on_update=invalidation_call,
             policy=cr.AwsCustomResourcePolicy.from_statements([
                 iam.PolicyStatement(
                     actions=["cloudfront:CreateInvalidation"],
