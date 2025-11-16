@@ -78,6 +78,23 @@ jobs:
       - name: Static type checking Python files with mypy
         run: 'python -m mypy src/claude_md/format_claude_md.py
           '
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Python dependencies
+        run: 'pip install pytest boto3
+          '
+      - name: Run unit tests
+        run: 'pytest test/claude_md/test_unit.py -v
+          '
   updating:
     name: Formatting CLAUDE.md
     needs:

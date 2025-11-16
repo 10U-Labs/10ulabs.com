@@ -136,8 +136,8 @@ def main():
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     bedrock_config = {
-        'model_id': args.bedrock_model_id or config.get('bedrock', {}).get('model_id', 'us.anthropic.claude-sonnet-4-20250514-v1:0'),
-        'max_tokens': int(args.max_tokens or config.get('bedrock', {}).get('max_tokens', 16000))
+        'model_id': args.bedrock_model_id or config['bedrock']['model_id'],
+        'max_tokens': int(args.max_tokens or config['bedrock']['max_tokens'])
     }
 
     formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config)
