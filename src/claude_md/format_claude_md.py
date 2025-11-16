@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import logging
-import os
 import random
 import sys
 import time
@@ -14,15 +12,6 @@ logging.basicConfig(
     format='%(message)s',
     stream=sys.stderr
 )
-
-def load_config():
-    config_path = os.path.join('src', 'claude_md', 'config.json')
-    try:
-        with open(config_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except IOError as e:
-        logging.error("Failed to read config.json: %s", e)
-        sys.exit(1)
 
 def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list, max_retries: int = 5) -> dict:
     initial_jitter = random.randint(5, 30)
@@ -174,12 +163,10 @@ Output ONLY the reformatted CLAUDE.md content. Do not include any preamble, expl
 def main():
     parser = argparse.ArgumentParser(description='Format CLAUDE.md to comply with markdownlint rules using Bedrock')
     parser.add_argument('--aws-region', required=True, help='AWS region for Bedrock')
-    parser.add_argument('--bedrock-model-id', help='Bedrock model ID to use')
-    parser.add_argument('--max-tokens', type=int, help='Max tokens for formatting')
-    parser.add_argument('--max-tokens-reasoning', type=int, help='Max tokens for extended thinking reasoning')
+    parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
+    parser.add_argument('--max-tokens', type=int, required=True, help='Max tokens for formatting')
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
     args = parser.parse_args()
-
-    config = load_config()
 
     try:
         with open('CLAUDE.md', 'r', encoding='utf-8') as f:
@@ -190,14 +177,10 @@ def main():
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     bedrock_config = {
-        'model_id': args.bedrock_model_id or config['bedrock']['model_id'],
-        'max_tokens': int(args.max_tokens or config['bedrock']['max_tokens'])
+        'model_id': args.bedrock_model_id,
+        'max_tokens': args.max_tokens,
+        'max_tokens_reasoning': args.max_tokens_reasoning
     }
-
-    if args.max_tokens_reasoning or 'max_tokens_reasoning' in config['bedrock']:
-        bedrock_config['max_tokens_reasoning'] = int(
-            args.max_tokens_reasoning or config['bedrock']['max_tokens_reasoning']
-        )
 
     formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config)
 
