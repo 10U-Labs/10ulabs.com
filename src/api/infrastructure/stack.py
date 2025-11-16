@@ -346,6 +346,7 @@ class ApiStack(Stack):
 
         distribution = cloudfront.Distribution(
             self, "ApiDistribution",
+            comment="API Gateway + S3 docs distribution",
             default_behavior=cloudfront.BehaviorOptions(
                 origin=s3_origin,
                 viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
