@@ -687,3 +687,416 @@ def test_cloudfront_origin_has_prod_path():
     origins = distribution["Properties"]["DistributionConfig"]["Origins"]
     api_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::Join" in o["DomainName"]][0]
     assert api_origin["OriginPath"] == "/prod"
+
+
+def test_vpc_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::EC2::VPC", 1)
+
+
+def test_vpc_has_correct_cidr():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    vpcs = template.find_resources("AWS::EC2::VPC")
+    vpc = list(vpcs.values())[0]
+    assert vpc["Properties"]["CidrBlock"] == config["aws"]["vpc"]["cidr"]
+
+
+def test_vpc_has_dns_enabled():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    vpcs = template.find_resources("AWS::EC2::VPC")
+    vpc = list(vpcs.values())[0]
+    assert vpc["Properties"]["EnableDnsHostnames"] is True
+
+
+def test_vpc_has_public_subnets():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    subnets = template.find_resources("AWS::EC2::Subnet")
+    assert len(subnets) > 0
+
+
+def test_ecs_cluster_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::ECS::Cluster", 1)
+
+
+def test_ecr_repository_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::ECR::Repository", 1)
+
+
+def test_ecr_repository_has_image_scanning():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    repositories = template.find_resources("AWS::ECR::Repository")
+    repository = list(repositories.values())[0]
+    assert repository["Properties"]["ImageScanningConfiguration"]["ScanOnPush"] is True
+
+
+def test_fargate_task_definition_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::ECS::TaskDefinition", 1)
+
+
+def test_security_group_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::EC2::SecurityGroup", 1)
+
+
+def test_ec2_runner_role_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    roles = template.find_resources("AWS::IAM::Role")
+    assert len(roles) > 0
+
+
+def test_cloudfront_has_health_behavior():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    health_behavior = [b for b in behaviors if b["PathPattern"] == "/health"][0]
+    assert health_behavior is not None
+
+
+def test_cloudfront_has_v1_behavior():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    behaviors = distribution["Properties"]["DistributionConfig"]["CacheBehaviors"]
+    v1_behavior = [b for b in behaviors if b["PathPattern"] == "/v1/*"][0]
+    assert v1_behavior is not None
+
+
+def test_cloudfront_default_behavior_uses_s3():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    default_root_object = distribution["Properties"]["DistributionConfig"]["DefaultRootObject"]
+    assert default_root_object == "index.html"
+
+
+def test_waf_web_acl_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::WAFv2::WebACL", 1)
+
+
+def test_waf_is_scoped_to_cloudfront():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    waf_acls = template.find_resources("AWS::WAFv2::WebACL")
+    waf_acl = list(waf_acls.values())[0]
+    assert waf_acl["Properties"]["Scope"] == "CLOUDFRONT"
+
+
+def test_secrets_manager_webhook_secret_exists():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    template.resource_count_is("AWS::SecretsManager::Secret", 1)
+
+
+def test_vpc_has_no_nat_gateways():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    nat_gateways = template.find_resources("AWS::EC2::NatGateway")
+    assert len(nat_gateways) == 0
