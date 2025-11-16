@@ -1155,3 +1155,58 @@ def test_lambda_permissions_allow_apigateway_service():
     permissions = template.find_resources("AWS::Lambda::Permission")
     permission = list(permissions.values())[0]
     assert permission["Properties"]["Principal"] == "apigateway.amazonaws.com"
+
+
+def test_cloudfront_origin_uses_api_gateway_execute_api_url():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    origins = distribution["Properties"]["DistributionConfig"]["Origins"]
+    api_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::Join" in o["DomainName"]][0]
+    domain_parts = api_origin["DomainName"]["Fn::Join"][1]
+    assert any("execute-api" in str(part) for part in domain_parts)
+
+
+def test_cloudfront_origin_has_prod_path():
+    app = cdk.App()
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    with open(config_path, encoding='utf-8') as f:
+        config = json.load(f)
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
+    api_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api_module)
+    ApiStack = api_module.ApiStack
+    stack = ApiStack(
+        app,
+        "TestApiStack",
+        config=config,
+        env=cdk.Environment(
+            account=str(config["aws"]["account_id"]),
+            region=config["aws"]["region"]
+        )
+    )
+    template = Template.from_stack(stack)
+    distributions = template.find_resources("AWS::CloudFront::Distribution")
+    distribution = list(distributions.values())[0]
+    origins = distribution["Properties"]["DistributionConfig"]["Origins"]
+    api_origin = [o for o in origins if isinstance(o["DomainName"], dict) and "Fn::Join" in o["DomainName"]][0]
+    assert api_origin["OriginPath"] == "/prod"
