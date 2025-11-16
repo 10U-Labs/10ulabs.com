@@ -50,8 +50,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install yamllint
-        run: pip install yamllint
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install linting dependencies
+        run: 'pip install yamllint &&
+          npm install -g jsonlint
+          '
+      - name: Linting JSON configuration files
+        run: 'echo "Validating JSON syntax...";
+          jsonlint -q src/claude_md/config.json;
+          echo "No errors found - JSON validation passed successfully";
+          '
       - name: Linting YAML files
         run: 'echo "Running yamllint on claude.yml...";
           CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'';
@@ -64,21 +75,39 @@ jobs:
       - concluding-claude-md-should-be-formatted
     permissions:
       contents: write
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
+          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install markdownlint-cli2
-        run: npm install -g markdownlint-cli2
-      - name: Fix CLAUDE.md formatting
-        run: 'markdownlint-cli2 --fix CLAUDE.md > /dev/null 2>&1 || true
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Install dependencies
+        run: 'npm install -g markdownlint-cli2 &&
+          pip install boto3
           '
+      - name: Format CLAUDE.md with Bedrock
+        run: "python scripts/format_claude_md.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\"\n"
       - name: Commit and push CLAUDE.md formatting
         run: 'git config user.name "GitHub Actions";
           git config user.email "actions@github.com";
@@ -86,7 +115,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to CLAUDE.md";
           else
-            git commit -m "Auto-fix CLAUDE.md formatting with markdownlint [skip ci]";
+            git commit -m "Auto-format CLAUDE.md with Bedrock [skip ci]";
             for i in {1..5}; do
               if git push; then
                 echo "Successfully pushed CLAUDE.md update";
@@ -108,4 +137,6 @@ on:
     paths:
       - CLAUDE.md
       - .github/workflows/claude.yml
+      - scripts/format_claude_md.py
+      - src/claude_md/config.json
   workflow_dispatch: null
