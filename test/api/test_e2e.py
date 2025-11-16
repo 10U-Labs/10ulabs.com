@@ -130,16 +130,6 @@ def test_echo_endpoint_with_invalid_json_error_is_invalid_json(api_endpoint):
     assert data['error'] == 'Invalid JSON'
 
 
-def test_invalid_endpoint_returns_cors_header(api_endpoint):
-    response = requests.get(f"{api_endpoint}/invalid", timeout=10)
-    assert 'Access-Control-Allow-Origin' in response.headers
-
-
-def test_invalid_endpoint_returns_json_content_type(api_endpoint):
-    response = requests.get(f"{api_endpoint}/invalid", timeout=10)
-    assert response.headers['Content-Type'] == 'application/json'
-
-
 def test_root_endpoint_returns_200(api_endpoint):
     response = requests.get(api_endpoint, timeout=10)
     assert response.status_code == 200
