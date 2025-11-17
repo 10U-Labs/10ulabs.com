@@ -75,6 +75,7 @@ def find_all_project_files(project_dir: str) -> list:
         os.path.join(project_dir, '*.py'),
         os.path.join(project_dir, '*.json'),
         os.path.join(project_dir, '*.txt'),
+        os.path.join(project_dir, '*.md'),
         os.path.join(project_dir, '*.yaml'),
         os.path.join(project_dir, '*.yml'),
         os.path.join(project_dir, 'lambda', '*.py'),
