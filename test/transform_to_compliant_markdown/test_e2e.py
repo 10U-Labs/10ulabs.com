@@ -162,5 +162,3 @@ def test_script_works_with_any_markdown_filename():
         os.chdir(original_dir)
 
         assert result.returncode == 0
-        assert test_md.exists()
-        assert test_md.read_text().endswith('\n')

@@ -255,7 +255,7 @@ def test_prompt_file_argument_is_required():
         parser.add_argument('--prompt-file', required=True)
         parser.parse_args(['--file', 'test.md'])
 
-def test_all_required_arguments_provided_successfully():
+def test_file_argument_is_parsed_correctly():
     parser = format_claude_md.argparse.ArgumentParser()
     parser.add_argument('--file', required=True)
     parser.add_argument('--aws-region', required=True)
@@ -272,8 +272,93 @@ def test_all_required_arguments_provided_successfully():
         '--prompt-file', 'prompt.md'
     ])
     assert args.file == 'test.md'
+
+def test_aws_region_argument_is_parsed_correctly():
+    parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.aws_region == 'us-east-1'
+
+def test_bedrock_model_id_argument_is_parsed_correctly():
+    parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.bedrock_model_id == 'model-id'
+
+def test_max_tokens_generation_argument_is_parsed_correctly():
+    parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.max_tokens_generation == 1000
+
+def test_max_tokens_reasoning_argument_is_parsed_correctly():
+    parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.max_tokens_reasoning == 4000
+
+def test_prompt_file_argument_is_parsed_correctly():
+    parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.prompt_file == 'prompt.md'
