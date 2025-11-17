@@ -47,7 +47,7 @@ jobs:
         id: check
         name: Check if CLAUDE.md needs formatting
         run: |
-          if markdownlint-cli2 CLAUDE.md; then
+          if markdownlint-cli2 CLAUDE.md > /dev/null 2>&1; then
             echo "claude_md_should_be_properly_formatted=false" >> $GITHUB_OUTPUT;
             echo "";
             echo "Setting ''claude_md_should_be_properly_formatted'' to ''false'' for subsequent jobs.";
