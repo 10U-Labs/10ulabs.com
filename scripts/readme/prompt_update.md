@@ -1,13 +1,13 @@
-You are a technical documentation expert. Generate a comprehensive README.md file for the following infrastructure code.
+You are a technical documentation expert. Generate a comprehensive README.md file for the following files.
 
 <project_files>
 {project_files}
 </project_files>
 
 Create a professional README that includes:
-1. Title and overview of what this infrastructure does
+1. Title and overview of what this project does
 2. Purpose and key features
-3. Resources created (analyze the code to identify all AWS resources)
+3. Main components (analyze the code to identify key components, resources, or functionality)
 4. Prerequisites and requirements:
    - CRITICAL: Use ONLY dependencies found in requirements.txt file from project_files - DO NOT invent or assume additional dependencies
    - If AWS CLI is NOT in requirements.txt, DO NOT list it as a requirement
@@ -17,8 +17,8 @@ Create a professional README that includes:
 5. Configuration details (analyze config.json and cdk.json files from project_files)
 6. Usage instructions:
    - Installation steps
-   - Running the infrastructure (CDK deploy, scripts, etc.)
-   - How to use the deployed resources
+   - Running the project (deployment commands, scripts, execution steps, etc.)
+   - How to use the project or deployed resources
 7. Architecture overview:
    - How the components interact
    - Authentication and authorization flows
@@ -41,14 +41,14 @@ Format the README in clean, professional markdown that complies with all markdow
 
 CRITICAL INSTRUCTIONS:
 1. Generate the README content first
-2. Before outputting, verify EACH requirement using this checklist:
+2. Before outputting, verify UNEQUIVOCALLY that EVERYTHING is factual by checking against project_files:
 
    FACTUAL ACCURACY (verify against project_files):
    - [ ] Prerequisites list ONLY dependencies from requirements.txt in project_files - NO invented dependencies
    - [ ] AWS CLI is NOT listed as requirement (AWS CDK uses boto3, not AWS CLI)
    - [ ] Python packages match requirements.txt exactly
    - [ ] System dependencies (Node.js, Git) are accurate for the packages used
-   - [ ] Resource descriptions match implementation in Python files
+   - [ ] Component descriptions match actual implementation in the files
    - [ ] Configuration examples match actual config.json and cdk.json files
    - [ ] Usage instructions are accurate and complete
 
@@ -66,5 +66,5 @@ CRITICAL INSTRUCTIONS:
 3. If any check fails, fix the issue before outputting
 4. Output ONLY the final README content (no checklist, no explanation)
 
-Be specific about what each resource does and why it exists. Use code blocks for examples.
+Be specific about what each component does and why it exists. Use code blocks for examples.
 Generate ONLY the README content, starting with the title. Do not include any preamble or explanation.
