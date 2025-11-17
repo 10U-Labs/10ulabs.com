@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import pytest
 
@@ -20,3 +21,8 @@ def config_path(script_dir):
 @pytest.fixture
 def prompt_path(script_dir):
     return script_dir / 'prompt.md'
+
+@pytest.fixture
+def config(config_path):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return json.load(f)

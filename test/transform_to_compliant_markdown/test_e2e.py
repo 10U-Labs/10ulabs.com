@@ -38,17 +38,17 @@ def temp_test_md():
         os.chdir(original_dir)
 
 
-def test_script_formats_markdown_with_markdownlint_errors(temp_test_md, script_path, prompt_path):
+def test_script_formats_markdown_with_markdownlint_errors(temp_test_md, script_path, prompt_path, config):
     markdownlint_errors = '{"file.md": [{"lineNumber": 2, "ruleNames": ["MD013"], "ruleDescription": "Line length"}]}'
 
     result = subprocess.run([
         sys.executable,
         str(script_path),
         '--file', 'test.md',
-        '--aws-region', 'us-east-1',
-        '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-        '--max-tokens-reasoning', '4000',
-        '--max-tokens-generation', '16000',
+        '--aws-region', config['region'],
+        '--bedrock-model-id', config['bedrock']['model_id'],
+        '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
+        '--max-tokens-generation', str(config['bedrock']['max_tokens']),
         '--prompt-file', str(prompt_path),
         '--markdownlint-errors', markdownlint_errors
     ], capture_output=True, text=True, cwd=temp_test_md)
@@ -56,30 +56,30 @@ def test_script_formats_markdown_with_markdownlint_errors(temp_test_md, script_p
     assert result.returncode == 0
 
 
-def test_script_formats_markdown_without_markdownlint_errors(temp_test_md, script_path, prompt_path):
+def test_script_formats_markdown_without_markdownlint_errors(temp_test_md, script_path, prompt_path, config):
     result = subprocess.run([
         sys.executable,
         str(script_path),
         '--file', 'test.md',
-        '--aws-region', 'us-east-1',
-        '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-        '--max-tokens-reasoning', '4000',
-        '--max-tokens-generation', '16000',
+        '--aws-region', config['region'],
+        '--bedrock-model-id', config['bedrock']['model_id'],
+        '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
+        '--max-tokens-generation', str(config['bedrock']['max_tokens']),
         '--prompt-file', str(prompt_path)
     ], capture_output=True, text=True, cwd=temp_test_md)
 
     assert result.returncode == 0
 
 
-def test_generated_output_ends_with_newline(temp_test_md, script_path, prompt_path):
+def test_generated_output_ends_with_newline(temp_test_md, script_path, prompt_path, config):
     result = subprocess.run([
         sys.executable,
         str(script_path),
         '--file', 'test.md',
-        '--aws-region', 'us-east-1',
-        '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-        '--max-tokens-reasoning', '4000',
-        '--max-tokens-generation', '16000',
+        '--aws-region', config['region'],
+        '--bedrock-model-id', config['bedrock']['model_id'],
+        '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
+        '--max-tokens-generation', str(config['bedrock']['max_tokens']),
         '--prompt-file', str(prompt_path)
     ], capture_output=True, text=True, cwd=temp_test_md)
 
@@ -89,23 +89,23 @@ def test_generated_output_ends_with_newline(temp_test_md, script_path, prompt_pa
     assert content.endswith('\n')
 
 
-def test_script_exits_with_error_when_file_missing(script_path, prompt_path):
+def test_script_exits_with_error_when_file_missing(script_path, prompt_path, config):
     with tempfile.TemporaryDirectory() as tmpdir:
         result = subprocess.run([
             sys.executable,
             str(script_path),
             '--file', 'nonexistent.md',
-            '--aws-region', 'us-east-1',
-            '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-            '--max-tokens-reasoning', '4000',
-            '--max-tokens-generation', '16000',
+            '--aws-region', config['region'],
+            '--bedrock-model-id', config['bedrock']['model_id'],
+            '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
+            '--max-tokens-generation', str(config['bedrock']['max_tokens']),
             '--prompt-file', str(prompt_path)
         ], capture_output=True, text=True, cwd=tmpdir)
 
         assert result.returncode == 1
 
 
-def test_script_works_with_any_markdown_filename(script_path, prompt_path):
+def test_script_works_with_any_markdown_filename(script_path, prompt_path, config):
     with tempfile.TemporaryDirectory() as tmpdir:
         original_dir = os.getcwd()
         os.chdir(tmpdir)
@@ -117,10 +117,10 @@ def test_script_works_with_any_markdown_filename(script_path, prompt_path):
             sys.executable,
             str(script_path),
             '--file', 'README.md',
-            '--aws-region', 'us-east-1',
-            '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-            '--max-tokens-reasoning', '4000',
-            '--max-tokens-generation', '16000',
+            '--aws-region', config['region'],
+            '--bedrock-model-id', config['bedrock']['model_id'],
+            '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
+            '--max-tokens-generation', str(config['bedrock']['max_tokens']),
             '--prompt-file', str(prompt_path)
         ], capture_output=True, text=True, cwd=tmpdir)
 
