@@ -47,7 +47,7 @@ jobs:
         id: check
         name: Check if CLAUDE.md needs formatting
         run: |
-          if markdownlint-cli2 CLAUDE.md; then
+          if markdownlint-cli2 CLAUDE.md > /dev/null 2>&1; then
             echo "claude_md_should_be_properly_formatted=false" >> $GITHUB_OUTPUT;
             echo "";
             echo "Setting ''claude_md_should_be_properly_formatted'' to ''false'' for subsequent jobs.";
@@ -89,7 +89,7 @@ jobs:
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
           MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -141,7 +141,7 @@ jobs:
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
           MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -267,7 +267,7 @@ jobs:
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
           MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
