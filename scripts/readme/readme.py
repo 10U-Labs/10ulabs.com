@@ -85,7 +85,7 @@ def find_all_project_files(project_dir: str) -> list:
     for pattern in patterns:
         all_files.extend(glob.glob(pattern))
 
-    excluded_names = ['test_', 'README.md']
+    excluded_names = ['README.md']
     all_files = [
         f for f in all_files
         if not any(excluded in os.path.basename(f) for excluded in excluded_names)
