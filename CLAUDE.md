@@ -22,3 +22,5 @@ logs first
 - TESTS MUST HAVE ONLY ONE ASSERT
 - PREFER SERVERLESS ARCHITECTURE
 - FUNCTIONS MUST HAVE SINGLE RETURN STATEMENT
+- If the GitHub CLI is not installed, install it in ~/bin/gh
+- When using most gh commands, add the repository by using the --repo flag
