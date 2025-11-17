@@ -77,7 +77,7 @@ def test_format_markdown_returns_formatted_content(mock_sleep, mock_bedrock):
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
 
     with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
-        result = transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md')
+        result = transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors='')
     assert result == 'formatted content\n'
 
 @patch('transform_to_compliant_markdown.call_bedrock_with_retry')
@@ -95,7 +95,7 @@ def test_format_markdown_adds_trailing_newline_if_missing(mock_sleep, mock_bedro
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
 
     with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
-        result = transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md')
+        result = transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors='')
     assert result.endswith('\n')
 
 @patch('transform_to_compliant_markdown.call_bedrock_with_retry')
@@ -107,7 +107,7 @@ def test_format_markdown_exits_on_key_error(mock_sleep, mock_bedrock):
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     with pytest.raises(SystemExit):
         with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
-            transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md')
+            transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors='')
 
 def test_call_bedrock_with_retry_uses_correct_model_id():
     mock_client = Mock()
@@ -325,7 +325,7 @@ def test_format_markdown_formats_prompt_with_markdownlint_errors(mock_sleep, moc
     markdownlint_errors = '{"test.md": [{"line": 1}]}'
 
     with patch('builtins.open', mock_open(read_data='Content: {current_content}\nErrors: {markdownlint_errors}')):
-        transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors)
+        transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors=markdownlint_errors)
 
     call_args = mock_bedrock.call_args
     prompt = call_args[0][2][0]['content'][0]['text']

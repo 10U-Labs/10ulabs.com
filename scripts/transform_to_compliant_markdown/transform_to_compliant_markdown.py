@@ -53,44 +53,41 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
-def format_markdown(bedrock_client, current_content: str, bedrock_config: dict, prompt_file: str, markdownlint_errors: str = '', file_path: str = 'markdown file') -> str:
+def format_markdown(bedrock_client, current_content: str, bedrock_config: dict, prompt_file: str, *, markdownlint_errors: str = '') -> str:
     with open(prompt_file, 'r', encoding='utf-8') as f:
-        prompt_template = f.read()
-
-    prompt = prompt_template.format(
-        current_content=current_content,
-        markdownlint_errors=markdownlint_errors
-    )
+        prompt = f.read().format(
+            current_content=current_content,
+            markdownlint_errors=markdownlint_errors
+        )
 
     try:
-        messages = [{
+        response = call_bedrock_with_retry(bedrock_client, bedrock_config, [{
             'role': 'user',
             'content': [{'text': prompt}]
-        }]
-        response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
+        }])
 
         content_blocks = response['output']['message']['content']
-
-        block_keys = [list(block.keys()) for block in content_blocks]
-        logging.info("Response contains %d content blocks with keys: %s", len(content_blocks), block_keys)
+        logging.info("Response contains %d content blocks with keys: %s",
+                    len(content_blocks),
+                    [list(block.keys()) for block in content_blocks])
 
         text_blocks = [block for block in content_blocks if 'text' in block]
 
         if not text_blocks:
             logging.error("No text blocks found in Bedrock response")
-            logging.error("Available block keys: %s", block_keys)
+            logging.error("Available block keys: %s", [list(block.keys()) for block in content_blocks])
             sys.exit(1)
 
         formatted_content = text_blocks[0]['text']
 
         if not formatted_content.endswith('\n'):
             formatted_content += '\n'
-            logging.info("Added missing trailing newline to %s", file_path)
+            logging.info("Added missing trailing newline")
 
-        logging.info("Successfully formatted %s with Bedrock", file_path)
+        logging.info("Successfully formatted markdown with Bedrock")
         return formatted_content
     except (KeyError, IndexError, TypeError) as e:
-        logging.error("Failed to format %s with Bedrock: %s", file_path, e)
+        logging.error("Failed to format markdown with Bedrock: %s", e)
         sys.exit(1)
 
 def main():
@@ -118,7 +115,7 @@ def main():
         'max_tokens_reasoning': args.max_tokens_reasoning
     }
 
-    formatted_content = format_markdown(bedrock_client, current_content, bedrock_config, args.prompt_file, args.markdownlint_errors, args.file)
+    formatted_content = format_markdown(bedrock_client, current_content, bedrock_config, args.prompt_file, markdownlint_errors=args.markdownlint_errors)
 
     if formatted_content == current_content:
         logging.warning("Bedrock returned identical content - no formatting changes made")
