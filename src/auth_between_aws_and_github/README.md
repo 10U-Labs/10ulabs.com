@@ -1,38 +1,53 @@
 # AWS-GitHub OIDC Authentication Infrastructure
 
-This AWS CDK infrastructure sets up OpenID Connect (OIDC) authentication
-between AWS and GitHub Actions, enabling secure, keyless authentication for
-CI/CD workflows without storing long-lived AWS credentials in GitHub Secrets.
+This AWS CDK project establishes secure OpenID Connect (OIDC) authentication
+between GitHub Actions and AWS, eliminating the need for long-lived AWS
+access keys in CI/CD pipelines.
 
-## Purpose and Key Features
+## Overview
 
-- **Keyless Authentication**: Eliminates the need for AWS access keys in
-  GitHub Secrets
-- **Enhanced Security**: Uses short-lived tokens with specific repository
-  permissions
-- **Automated Setup**: Deploys complete OIDC infrastructure via AWS CDK
-- **GitHub Integration**: Seamlessly works with GitHub Actions workflows
-- **Custom Lambda Functions**: Handles OIDC provider and IAM role creation
-  with proper error handling
+The infrastructure creates an OIDC identity provider in AWS that trusts
+GitHub's token service, along with an IAM role that GitHub Actions can assume
+using short-lived tokens. This enables secure, keyless authentication for
+automated deployments and AWS operations from GitHub workflows.
 
-## Resources Created
+## Key Features
 
-This infrastructure creates the following AWS resources:
+- **Keyless Authentication**: No AWS access keys stored in GitHub secrets
+- **Short-lived Tokens**: GitHub issues temporary tokens for each workflow run
+- **Automated Setup**: CDK handles OIDC provider and IAM role creation
+- **Repository-scoped Access**: IAM role restricted to specific GitHub
+  repository
+- **Administrator Permissions**: Full AWS access for deployment automation
 
-- **GitHub OIDC Identity Provider**: Enables GitHub Actions to authenticate
-  with AWS using JWT tokens
-- **IAM Role for GitHub Actions**: Role that GitHub Actions can assume with
-  AdministratorAccess permissions
-- **Lambda Functions**: Custom resources for managing OIDC provider and IAM
-  role lifecycle
-- **IAM Roles for Lambda**: Service roles with permissions to manage OIDC
-  providers and IAM roles
-- **Secrets Manager Integration**: References existing GitHub PAT secret for
-  workflow automation
+## Main Components
 
-## Prerequisites and Requirements
+### OIDC Provider Management
+
+- **Custom Lambda Function**: Creates and manages GitHub OIDC provider in AWS
+- **GitHub Token Service**: Configured trust relationship with
+  `token.actions.githubusercontent.com`
+- **SSL Thumbprint Validation**: Uses GitHub's current SSL certificate
+  thumbprint
+
+### IAM Role Creation
+
+- **GitHub Actions Role**: IAM role assumable by GitHub workflows
+- **Trust Policy**: Restricts access to specific GitHub organization and
+  repository
+- **Administrator Access**: Attached AWS managed policy for full permissions
+
+### Secrets Management
+
+- **GitHub PAT Storage**: AWS Secrets Manager integration for GitHub Personal
+  Access Tokens
+- **Secure Retrieval**: Encrypted storage of sensitive GitHub credentials
+
+## Prerequisites
 
 ### Python Dependencies
+
+Install the required Python packages:
 
 ```bash
 pip install -r requirements.txt
@@ -41,34 +56,34 @@ pip install -r requirements.txt
 Required packages from `requirements.txt`:
 
 - `aws-cdk-lib>=2.100.0` - AWS CDK framework
-- `constructs>=10.0.0` - CDK constructs library
+- `constructs>=10.0.0` - CDK construct library
 - `boto3>=1.34.0` - AWS SDK for Python
-- `boto3-stubs[iam,sts,secretsmanager,bedrock-runtime]>=1.34.0` - Type stubs
+- `boto3-stubs[iam,sts,secretsmanager,bedrock-runtime]>=1.34.0` - Type hints
 - `typeguard==2.13.3` - Runtime type checking
 
 ### System Dependencies
 
+- **Python 3.11+**: Required for Lambda runtime compatibility
 - **Node.js 18+**: Required for AWS CDK CLI
-- **Python 3.11+**: Runtime for Lambda functions and CDK application
-- **Git**: For repository operations
+- **Git**: For repository operations and version control
 
-### AWS Prerequisites
+### AWS Setup
 
 - AWS account with appropriate permissions
-- AWS credentials configured (for initial deployment)
-- Secrets Manager secret containing GitHub Personal Access Token
+- IAM user with `AdministratorAccess` policy (for initial deployment)
+- AWS credentials configured (temporary, for bootstrap only)
 
-### GitHub Prerequisites
+### GitHub Setup
 
 - GitHub repository with Actions enabled
 - GitHub Personal Access Token with `admin:org` and `repo` scopes
-- Repository secrets configured (for cold start deployment)
+- Repository access to GitHub Secrets
 
 ## Configuration
 
 ### config.json Structure
 
-The `config.json` file contains all deployment configuration:
+The configuration file defines AWS and GitHub integration parameters:
 
 ```json
 {
@@ -89,60 +104,86 @@ The `config.json` file contains all deployment configuration:
 
 ### CDK Configuration
 
-The `cdk.json` file configures CDK behavior with modern feature flags and
-file watching capabilities for development workflows.
+The `cdk.json` file configures CDK behavior:
 
-## Usage Instructions
+- **App Entry Point**: `python3 app.py`
+- **File Watching**: Monitors changes excluding cache and config files
+- **Feature Flags**: Modern AWS CDK best practices enabled
+- **Context Settings**: Partition support for `aws` and `aws-cn`
 
-### Initial Setup (Cold Start)
+## Installation and Deployment
 
-1. **Create AWS IAM User**:
+### Initial Setup
+
+1. **Clone Repository**
 
    ```bash
-   # Navigate to AWS IAM Console
-   # Create user with AdministratorAccess policy
-   # Generate access key pair
+   git clone <repository-url>
+   cd auth_between_aws_and_github
    ```
 
-2. **Create GitHub Personal Access Token**:
-   - Go to <https://github.com/settings/tokens>
-   - Create Classic PAT with `admin:org` and `repo` scopes
-
-3. **Configure GitHub Secrets**:
+2. **Install Dependencies**
 
    ```bash
-   # Add these secrets to your GitHub repository:
-   # AWS_ACCESS_KEY_ID
-   # AWS_SECRET_ACCESS_KEY  
-   # GH_RUNNER_PAT
-   ```
-
-4. **Deploy Infrastructure**:
-
-   ```bash
-   # Install dependencies
    pip install -r requirements.txt
-   
-   # Deploy stack
+   npm install -g aws-cdk
+   ```
+
+3. **Configure AWS Credentials** (temporary)
+
+   ```bash
+   export AWS_ACCESS_KEY_ID=your_access_key
+   export AWS_SECRET_ACCESS_KEY=your_secret_key
+   export AWS_DEFAULT_REGION=us-east-1
+   ```
+
+4. **Update Configuration**
+
+   Edit `config.json` with your AWS account ID and GitHub details:
+
+   ```json
+   {
+     "aws": {
+       "account_id": "YOUR_ACCOUNT_ID",
+       "region": "YOUR_REGION"
+     },
+     "github": {
+       "org": "YOUR_GITHUB_ORG",
+       "repo": "YOUR_REPOSITORY"
+     }
+   }
+   ```
+
+### Deployment Commands
+
+1. **Bootstrap CDK** (first time only)
+
+   ```bash
+   cdk bootstrap
+   ```
+
+2. **Preview Changes**
+
+   ```bash
+   cdk diff
+   ```
+
+3. **Deploy Infrastructure**
+
+   ```bash
    cdk deploy --require-approval never
    ```
 
-### Local Development Deployment
+4. **Verify Deployment**
 
-```bash
-# Navigate to project directory
-cd auth_between_aws_and_github
+   ```bash
+   aws iam get-role --role-name GitHubActionsRole
+   aws iam list-open-id-connect-providers
+   ```
 
-# Install dependencies
-pip install -r requirements.txt
+### GitHub Actions Integration
 
-# Deploy with GitHub token context
-cdk deploy --require-approval never -c github_token=YOUR_GITHUB_PAT
-```
-
-### Using in GitHub Actions
-
-After deployment, update your GitHub Actions workflows:
+Add the following to your GitHub workflow:
 
 ```yaml
 jobs:
@@ -155,107 +196,115 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::ACCOUNT_ID:role/GitHubActionsRole
           aws-region: us-east-1
       
-      - name: Deploy infrastructure
-        run: |
-          cdk deploy --require-approval never
+      - name: Verify AWS access
+        run: aws sts get-caller-identity
 ```
 
 ## Architecture Overview
 
 ### Authentication Flow
 
-1. **GitHub Actions Trigger**: Workflow runs in specified repository
-2. **OIDC Token Request**: GitHub generates JWT token with repository claims
-3. **AWS STS AssumeRole**: Token exchanged for temporary AWS credentials
-4. **Role Validation**: Trust policy validates repository and organization
-5. **Credential Usage**: Temporary credentials used for AWS operations
+1. **Workflow Trigger**: GitHub Actions workflow starts
+2. **Token Request**: GitHub requests OIDC token from its token service
+3. **Token Validation**: AWS validates token against OIDC provider
+4. **Role Assumption**: GitHub Actions assumes IAM role using validated token
+5. **AWS Operations**: Workflow executes with temporary AWS credentials
 
 ### Component Interactions
 
 ```text
-GitHub Actions → OIDC Provider → IAM Role → AWS Resources
-     ↓              ↓             ↓           ↓
-   JWT Token    Token Validation  Assume    Temporary
-                                  Role      Credentials
+GitHub Actions → GitHub Token Service → AWS OIDC Provider → IAM Role → AWS Services
 ```
 
-### Trust Policy Structure
+### Security Model
 
-The IAM role trust policy restricts access to:
-
-- Specific GitHub organization and repository
-- GitHub Actions audience (`sts.amazonaws.com`)
-- Repository-scoped subject claims (`repo:org/repo:*`)
+- **Identity Federation**: GitHub acts as trusted identity provider
+- **Conditional Access**: IAM policies restrict access to specific repository
+- **Temporal Tokens**: Credentials expire automatically after workflow
+  completion
+- **Audit Trail**: AWS CloudTrail logs all assumed role activities
 
 ## Security Considerations
 
-### Access Controls
+### Access Control
 
-The infrastructure implements several security layers:
+- IAM role trust policy limits access to specific GitHub repository pattern:
+  `repo:ORG/REPO:*`
+- OIDC provider validates GitHub's SSL certificate thumbprint
+- AWS STS tokens have maximum 1-hour lifetime
 
-- **Repository Scoping**: Trust policy limits access to specific repository
-- **Audience Validation**: Ensures tokens are intended for AWS STS
-- **Subject Matching**: Validates repository context in JWT claims
-- **Time-Limited Tokens**: Uses short-lived credentials (1 hour default)
+### Secrets Management
 
-### Best Practices
+- GitHub PAT stored encrypted in AWS Secrets Manager
+- No long-lived AWS credentials in GitHub repository secrets
+- Role permissions follow principle of least privilege (currently
+  Administrator for deployment needs)
 
-- **Least Privilege**: Consider reducing from AdministratorAccess for
-  production workloads
-- **Environment Separation**: Use different roles for dev/staging/production
-- **Audit Logging**: Monitor CloudTrail for role assumption events
-- **Secret Rotation**: Regularly rotate GitHub Personal Access Tokens
+### Monitoring
 
-### Sensitive Data Handling
-
-- GitHub PAT stored in AWS Secrets Manager
-- No long-lived credentials in GitHub repository
-- Lambda functions use service-linked roles with minimal permissions
+- AWS CloudTrail tracks all role assumption events
+- GitHub Actions logs show authentication steps
+- AWS IAM Access Analyzer identifies unused permissions
 
 ## Troubleshooting
 
 ### Common Issues
 
-**OIDC Provider Already Exists**:
+**OIDC Provider Creation Fails**
 
 ```bash
 # Check existing providers
 aws iam list-open-id-connect-providers
+
+# Verify thumbprint
+openssl s_client -connect token.actions.githubusercontent.com:443 \
+  -servername token.actions.githubusercontent.com | \
+  openssl x509 -fingerprint -sha1 -noout
 ```
 
-**Role Assumption Failures**:
+**Role Assumption Denied**
+
+- Verify repository name matches exactly in trust policy
+- Check GitHub workflow has `id-token: write` permission
+- Confirm OIDC provider ARN is correct in role trust relationship
+
+**Lambda Function Errors**
 
 ```bash
-# Verify trust policy
-aws iam get-role --role-name GitHubActionsRole
-```
-
-**Lambda Function Errors**:
-
-```bash
-# Check CloudWatch Logs
+# Check CloudWatch logs
 aws logs describe-log-groups --log-group-name-prefix /aws/lambda/
+
+# View recent errors
+aws logs filter-log-events --log-group-name /aws/lambda/FUNCTION_NAME \
+  --start-time 1640995200000
 ```
 
-### Debugging Steps
-
-1. **Verify Configuration**: Check `config.json` values match your setup
-2. **Check Permissions**: Ensure deployment credentials have IAM permissions
-3. **Review CloudFormation**: Check stack events for deployment issues
-4. **Test Locally**: Use `cdk diff` to preview changes before deployment
-
-### Stack Management
+**CDK Deployment Issues**
 
 ```bash
-# View stack differences
-cdk diff
+# Clear CDK cache
+rm -rf cdk.out/
 
-# Destroy infrastructure (manual only)
-cdk destroy
+# Retry with verbose output
+cdk deploy --verbose
 
-# List all stacks
-cdk list
+# Check CloudFormation events
+aws cloudformation describe-stack-events --stack-name AuthBetweenAwsAndGithub
+```
+
+### Validation Commands
+
+```bash
+# Test role assumption from GitHub Actions
+aws sts assume-role-with-web-identity \
+  --role-arn arn:aws:iam::ACCOUNT:role/GitHubActionsRole \
+  --role-session-name test-session \
+  --web-identity-token $ACTIONS_ID_TOKEN_REQUEST_TOKEN
+
+# Verify OIDC configuration
+aws iam get-open-id-connect-provider \
+  --open-id-connect-provider-arn arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com
 ```
