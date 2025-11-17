@@ -96,7 +96,7 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/claude_md \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir src/claude_md \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   formatting-claude-md:
     name: Formatting CLAUDE.md
     needs: concluding-claude-md-should-be-formatted
@@ -235,7 +235,7 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/claude_md \\\n  --update \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir src/claude_md \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
       - name: Commit and push README if changed
         run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/claude_md/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update claude_md README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
 name: Ensuring CLAUDE.md is properly formatted and README.md is up to date
