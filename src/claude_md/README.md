@@ -1,53 +1,41 @@
 # Claude Markdown Formatter
 
-This project provides an AWS Bedrock-powered tool for automatically formatting
-and linting Markdown documents using Claude AI models. It specifically targets
-formatting `CLAUDE.md` files to comply with markdownlint rules while
-maintaining content quality and readability.
+A Python utility that leverages AWS Bedrock to automatically format Markdown
+files to comply with markdownlint rules using Claude AI models.
 
 ## Overview
 
-The Claude Markdown Formatter leverages AWS Bedrock's Claude Sonnet model to
-intelligently reformat Markdown documents. It includes retry logic for
-handling API throttling, configurable token limits for both generation and
-reasoning, and comprehensive error handling for production use.
+This project provides an automated solution for formatting Markdown content
+using AWS Bedrock's Claude AI models. It reads existing Markdown files,
+processes them through Claude to ensure compliance with markdownlint rules,
+and writes the formatted content back to the file system.
 
 ## Key Features
 
-- **AI-Powered Formatting**: Uses Claude Sonnet 4 via AWS Bedrock for
+- **AI-Powered Formatting**: Uses Claude AI models via AWS Bedrock for
   intelligent Markdown formatting
-- **Markdownlint Compliance**: Ensures output follows standard markdownlint
-  rules
 - **Retry Logic**: Implements exponential backoff with jitter for handling
-  AWS API throttling
-- **Extended Reasoning**: Supports Claude's reasoning capabilities with
-  configurable token budgets
-- **Production Ready**: Comprehensive logging and error handling
+  API throttling
+- **Extended Reasoning**: Supports Claude's extended thinking capabilities
+  for complex formatting decisions
+- **Configurable Parameters**: Flexible configuration for token limits,
+  model selection, and AWS regions
+- **Robust Error Handling**: Comprehensive logging and error recovery
 
-## Prerequisites and Requirements
+## Components
 
-### Python Dependencies
+### Core Module (`format_claude_md.py`)
 
-This project requires Python 3.7+ with the following package:
+The main Python script that handles:
 
-- `boto3` - AWS SDK for Python (Bedrock API access)
+- **Bedrock Integration**: Manages AWS Bedrock API calls with retry logic
+- **Content Processing**: Reads, processes, and writes Markdown files
+- **Configuration Management**: Handles model parameters and AWS settings
+- **Error Recovery**: Implements throttling protection and error handling
 
-### System Dependencies
+### Configuration (`config.json`)
 
-- **Python 3.7+**: Runtime environment for the formatter script
-- **Git**: Version control for project management
-
-### AWS Requirements
-
-- AWS account with Bedrock service access
-- IAM permissions for `bedrock-runtime:InvokeModel`
-- Access to Claude Sonnet 4 model in specified AWS region
-
-## Configuration
-
-The project uses a JSON configuration file to manage AWS and Bedrock settings:
-
-### config.json Structure
+Centralized configuration file containing:
 
 ```json
 {
@@ -61,202 +49,180 @@ The project uses a JSON configuration file to manage AWS and Bedrock settings:
 }
 ```
 
-### Configuration Parameters
+## Prerequisites
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `account_id` | AWS Account ID | 781581267945 |
-| `region` | AWS Region for Bedrock | us-east-1 |
-| `max_tokens` | Maximum tokens for generation | 16000 |
-| `max_tokens_reasoning` | Reasoning budget tokens | 4000 |
-| `model_id` | Claude Sonnet 4 model identifier | Latest version |
+### Python Dependencies
 
-## Installation and Usage
+Based on the code analysis, the following Python packages are required:
 
-### Step 1: Install Dependencies
+- `boto3` - AWS SDK for Python (Bedrock API access)
+- `botocore` - Core functionality for AWS SDK
 
-```bash
-pip install boto3
-```
+### System Requirements
 
-### Step 2: Configure AWS Credentials
+- Python 3.7 or higher
+- AWS credentials configured (via IAM roles, profiles, or environment
+  variables)
+- Access to AWS Bedrock service in your AWS account
+- Appropriate IAM permissions for Bedrock model access
 
-Set up AWS credentials using one of these methods:
+## Configuration
 
-```bash
-# Environment variables
-export AWS_ACCESS_KEY_ID=your_access_key
-export AWS_SECRET_ACCESS_KEY=your_secret_key
+### AWS Bedrock Setup
 
-# Or use AWS credential files
-aws configure
-```
+1. Ensure your AWS account has access to Claude models in Bedrock
+2. Configure appropriate IAM permissions:
 
-### Step 3: Prepare Input Files
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "bedrock:InvokeModel",
+           "bedrock:InvokeModelWithResponseStream"
+         ],
+         "Resource": "arn:aws:bedrock:*:*:foundation-model/anthropic.claude*"
+       }
+     ]
+   }
+   ```
 
-Create a `CLAUDE.md` file in the project directory and a prompt template file
-for formatting instructions.
+### Model Configuration
 
-### Step 4: Run the Formatter
+Edit `config.json` to customize:
+
+- `account_id`: Your AWS account ID
+- `region`: AWS region where Bedrock is available
+- `max_tokens`: Maximum tokens for content generation
+- `max_tokens_reasoning`: Tokens allocated for extended thinking
+- `model_id`: Specific Claude model version to use
+
+## Usage
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone <repository-url>
+   cd claude-markdown-formatter
+   ```
+
+2. Install Python dependencies:
+
+   ```bash
+   pip install boto3 botocore
+   ```
+
+3. Configure AWS credentials using one of these methods:
+
+   ```bash
+   # Using AWS credentials file
+   aws configure
+   
+   # Or set environment variables
+   export AWS_ACCESS_KEY_ID=your_access_key
+   export AWS_SECRET_ACCESS_KEY=your_secret_key
+   export AWS_DEFAULT_REGION=us-east-1
+   ```
+
+### Running the Formatter
+
+Execute the script with required parameters:
 
 ```bash
 python3 format_claude_md.py \
   --aws-region us-east-1 \
-  --bedrock-model-id "us.anthropic.claude-sonnet-4-20250514-v1:0" \
+  --bedrock-model-id us.anthropic.claude-sonnet-4-20250514-v1:0 \
   --max-tokens-generation 16000 \
   --max-tokens-reasoning 4000 \
   --prompt-file prompt_template.txt
 ```
 
-### Command Line Arguments
+### Required Files
 
-- `--aws-region`: AWS region where Bedrock is available
-- `--bedrock-model-id`: Specific Claude model version to use
-- `--max-tokens-generation`: Token limit for content generation
-- `--max-tokens-reasoning`: Token budget for extended thinking
-- `--prompt-file`: Path to formatting instruction template
+- `CLAUDE.md`: The Markdown file to be formatted (must exist)
+- Prompt template file: Contains formatting instructions for Claude
 
-## Architecture Overview
-
-### Component Interaction Flow
-
-```text
-[CLAUDE.md] → [format_claude_md.py] → [AWS Bedrock] → [Formatted CLAUDE.md]
-                       ↓
-                [config.json] ← [prompt_template.txt]
-```
-
-### Processing Pipeline
-
-1. **Input Validation**: Script reads existing `CLAUDE.md` and validates
-   configuration
-2. **Prompt Construction**: Combines content with formatting instructions
-   from template
-3. **Bedrock API Call**: Sends formatted request to Claude Sonnet model
-4. **Retry Logic**: Handles throttling with exponential backoff (5-30s
-   initial jitter)
-5. **Response Processing**: Extracts formatted content from API response
-6. **Output Generation**: Writes corrected Markdown back to `CLAUDE.md`
-
-### Authentication Flow
-
-- Uses standard AWS credential chain (environment → credentials file → IAM
-  roles)
-- Requires `bedrock-runtime:InvokeModel` permission for specified model
-- Regional endpoint routing based on configuration
+## Architecture
 
 ### Data Flow
 
-1. Local `CLAUDE.md` content is read into memory
-2. Content is embedded in prompt template with formatting instructions
-3. Request payload includes model configuration and reasoning settings
-4. AWS Bedrock processes request using Claude Sonnet 4 reasoning
-5. Formatted response replaces original file content
+1. **Input Processing**: Script reads existing `CLAUDE.md` file
+2. **Template Loading**: Loads prompt template with formatting instructions
+3. **Bedrock Request**: Sends content and prompt to Claude via AWS Bedrock
+4. **Response Processing**: Extracts formatted content from API response
+5. **Output Generation**: Writes formatted content back to `CLAUDE.md`
+
+### Authentication Flow
+
+- Uses boto3 SDK for AWS authentication
+- Supports multiple credential sources (IAM roles, profiles, environment
+  variables)
+- Automatically handles credential refresh and token management
+
+### Retry Mechanism
+
+- Implements exponential backoff for throttling errors
+- Uses random jitter to prevent thundering herd problems
+- Configurable retry attempts (default: 5 attempts)
 
 ## Security Considerations
 
-### AWS Permissions
+### Access Control
 
-Grant minimal required IAM permissions:
+- Use IAM roles with minimal required permissions
+- Restrict Bedrock access to specific model ARNs
+- Consider using AWS STS for temporary credentials
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "bedrock:InvokeModel",
-      "Resource": "arn:aws:bedrock:us-east-1::foundation-model/us.anthropic.claude-sonnet-4-*"
-    }
-  ]
-}
-```
+### Data Privacy
 
-### Data Protection
-
-- **Content Privacy**: Markdown content is sent to AWS Bedrock for processing
-- **Credential Security**: Never commit AWS credentials to version control
-- **Regional Compliance**: Use appropriate AWS regions for data residency
-- **Logging**: Sensitive content is not logged; only metadata and errors
+- Markdown content is sent to AWS Bedrock for processing
+- Ensure compliance with data residency requirements
+- Review AWS Bedrock data handling policies
 
 ### Network Security
 
-- All communication uses HTTPS/TLS encryption
-- Bedrock API calls go through AWS backbone network
-- No external dependencies beyond AWS services
+- All API calls use HTTPS encryption
+- Consider using VPC endpoints for enhanced security
+- Implement network-level access controls as needed
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+### Common Issues
 
-#### Bedrock Throttling
+**Bedrock Throttling**:
 
-**Symptom**: `ThrottlingException` errors in logs
+- Increase initial jitter delay
+- Reduce concurrent requests
+- Check service quotas in AWS console
 
-**Solution**: The script includes automatic retry with exponential backoff.
-For persistent issues, consider:
+**Authentication Errors**:
 
-```bash
-# Increase initial jitter delay in script
-# Or space out multiple runs
-```
+- Verify AWS credentials are properly configured
+- Check IAM permissions for Bedrock access
+- Ensure correct AWS region is specified
 
-#### Missing Dependencies
+**Model Access Denied**:
 
-**Symptom**: `ModuleNotFoundError: No module named 'boto3'`
+- Verify model availability in your AWS region
+- Check if Claude models are enabled in Bedrock console
+- Confirm model ID format matches AWS specifications
 
-**Solution**: Install required Python packages:
+**File Not Found**:
 
-```bash
-pip install boto3
-```
+- Ensure `CLAUDE.md` exists in working directory
+- Verify prompt template file path is correct
+- Check file permissions for read/write access
 
-#### Authentication Errors
+### Debugging
 
-**Symptom**: `NoCredentialsError` or `AccessDenied`
-
-**Solutions**:
-
-```bash
-# Check AWS credentials
-aws sts get-caller-identity
-
-# Verify IAM permissions for Bedrock
-aws iam simulate-principal-policy --policy-source-arn YOUR_ARN \
-  --action-names bedrock:InvokeModel
-```
-
-#### Model Access Issues
-
-**Symptom**: `ValidationException` for model ID
-
-**Solution**: Verify model availability in your region:
-
-- Check AWS Bedrock console for enabled models
-- Ensure Claude Sonnet 4 access is granted
-- Confirm model ID matches available versions
-
-#### File Not Found Errors
-
-**Symptom**: `FileNotFoundError: CLAUDE.md not found`
-
-**Solution**: Ensure input file exists:
-
-```bash
-# Create empty file if needed
-touch CLAUDE.md
-
-# Or check current directory
-ls -la *.md
-```
-
-### Debug Mode
-
-Enable detailed logging by modifying the script:
+Enable detailed logging by modifying the logging level:
 
 ```python
 logging.basicConfig(level=logging.DEBUG)
 ```
 
-This provides additional information about API requests and responses for
-troubleshooting complex issues.
+Monitor AWS CloudTrail for Bedrock API call details and error analysis.
