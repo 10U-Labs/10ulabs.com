@@ -118,11 +118,7 @@ jobs:
           '
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Validating prompt files exist
-        run: 'echo "Checking prompt files..."
-          test -f scripts/readme/prompt_check.md || (echo "ERROR: prompt_check.md not found" && exit 1)
-          test -f scripts/readme/prompt_update.md || (echo "ERROR: prompt_update.md not found" && exit 1)
-          echo "All prompt files found"
-          '
+        run: "echo \"Checking prompt files...\"\ntest -f scripts/readme/prompt_check.md || (echo \"ERROR: prompt_check.md not found\" && exit 1)\ntest -f scripts/readme/prompt_update.md || (echo \"ERROR: prompt_update.md not found\" && exit 1)\necho \"All prompt files found\"\n"
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
