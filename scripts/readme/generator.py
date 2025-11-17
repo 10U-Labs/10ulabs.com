@@ -7,6 +7,7 @@ import random
 import sys
 import time
 import glob
+from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 
@@ -68,7 +69,7 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
-def find_all_project_files(project_dir: str, test_dir: str = None) -> list:
+def find_all_project_files(project_dir: str, test_dir: Optional[str] = None) -> list:
     all_files = []
 
     patterns = [
@@ -99,7 +100,7 @@ def find_all_project_files(project_dir: str, test_dir: str = None) -> list:
 
     return sorted(all_files)
 
-def read_all_project_files(project_dir: str, test_dir: str = None) -> str:
+def read_all_project_files(project_dir: str, test_dir: Optional[str] = None) -> str:
     all_file_paths = find_all_project_files(project_dir, test_dir)
 
     if not all_file_paths:
@@ -174,6 +175,45 @@ def generate_readme(bedrock_client, project_files: str, bedrock_config: dict, pr
         logging.error("Failed to generate README with Bedrock: %s", e)
         sys.exit(1)
 
+def validate_directories(args):
+    project_dir = os.path.abspath(args.project_dir)
+    if not os.path.isdir(project_dir):
+        logging.error("Project directory does not exist: %s", project_dir)
+        sys.exit(1)
+    test_dir = None
+    if args.test_dir:
+        test_dir = os.path.abspath(args.test_dir)
+        if not os.path.isdir(test_dir):
+            logging.error("Test directory does not exist: %s", test_dir)
+            sys.exit(1)
+    return project_dir, test_dir
+
+def handle_check_mode(bedrock_client, project_files, project_dir, args):
+    try:
+        with open(os.path.join(project_dir, 'README.md'), 'r', encoding='utf-8') as f:
+            current_readme = f.read()
+    except FileNotFoundError:
+        current_readme = ""
+    bedrock_config = {'model_id': args.bedrock_model_id, 'max_tokens': args.max_tokens_reasoning}
+    should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config, args.prompt_check)
+    result_value = 'true' if should_be_updated else 'false'
+    if args.output_file:
+        logging.info("Writing output to file: %s", args.output_file)
+        with open(args.output_file, 'a', encoding='utf-8') as f:
+            f.write(f"readme_should_be_updated={result_value}\n")
+        logging.info("Successfully wrote readme_should_be_updated=%s", result_value)
+    else:
+        logging.warning("No output file specified, result: readme_should_be_updated=%s", result_value)
+    return 0
+
+def handle_update_mode(bedrock_client, project_files, project_dir, args):
+    bedrock_config = {'model_id': args.bedrock_model_id, 'max_tokens': args.max_tokens_generation}
+    new_readme = generate_readme(bedrock_client, project_files, bedrock_config, args.prompt_update)
+    with open(os.path.join(project_dir, 'README.md'), 'w', encoding='utf-8') as f:
+        f.write(new_readme)
+    logging.info("README updated at %s", os.path.join(project_dir, 'README.md'))
+    return 0
+
 def main():
     parser = argparse.ArgumentParser(description='Generate or check README for infrastructure projects')
     parser.add_argument('--check', action='store_true', help='Check if README is current')
@@ -188,51 +228,15 @@ def main():
     parser.add_argument('--prompt-update', required=True, help='Path to update prompt template file')
     parser.add_argument('--test-dir', help='Optional test directory to include')
     args = parser.parse_args()
-    project_dir = os.path.abspath(args.project_dir)
-    if not os.path.isdir(project_dir):
-        logging.error("Project directory does not exist: %s", project_dir)
-        sys.exit(1)
-    test_dir = None
-    if args.test_dir:
-        test_dir = os.path.abspath(args.test_dir)
-        if not os.path.isdir(test_dir):
-            logging.error("Test directory does not exist: %s", test_dir)
-            sys.exit(1)
     if not args.check and not args.update:
         logging.error("Must specify either --check or --update")
         sys.exit(1)
+    project_dir, test_dir = validate_directories(args)
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     project_files = read_all_project_files(project_dir, test_dir)
     if args.check:
-        try:
-            with open(os.path.join(project_dir, 'README.md'), 'r', encoding='utf-8') as f:
-                current_readme = f.read()
-        except FileNotFoundError:
-            current_readme = ""
-        bedrock_config = {
-            'model_id': args.bedrock_model_id,
-            'max_tokens': args.max_tokens_reasoning
-        }
-        should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config, args.prompt_check)
-        result_value = 'true' if should_be_updated else 'false'
-        if args.output_file:
-            logging.info("Writing output to file: %s", args.output_file)
-            with open(args.output_file, 'a', encoding='utf-8') as f:
-                f.write(f"readme_should_be_updated={result_value}\n")
-            logging.info("Successfully wrote readme_should_be_updated=%s", result_value)
-        else:
-            logging.warning("No output file specified, result: readme_should_be_updated=%s", result_value)
-        sys.exit(0)
-    elif args.update:
-        bedrock_config = {
-            'model_id': args.bedrock_model_id,
-            'max_tokens': args.max_tokens_generation
-        }
-        new_readme = generate_readme(bedrock_client, project_files, bedrock_config, args.prompt_update)
-        with open(os.path.join(project_dir, 'README.md'), 'w', encoding='utf-8') as f:
-            f.write(new_readme)
-        logging.info("README updated at %s", os.path.join(project_dir, 'README.md'))
-        sys.exit(0)
+        sys.exit(handle_check_mode(bedrock_client, project_files, project_dir, args))
+    sys.exit(handle_update_mode(bedrock_client, project_files, project_dir, args))
 
 if __name__ == '__main__':
     main()
