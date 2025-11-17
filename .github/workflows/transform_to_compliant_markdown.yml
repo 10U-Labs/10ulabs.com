@@ -174,8 +174,8 @@ jobs:
           jsonlint -q scripts/transform_to_compliant_markdown/config.json
       - name: Linting markdown files
         run: |
-          echo "Running markdownlint on CLAUDE.md..."
-          markdownlint-cli2 CLAUDE.md || true
+          echo "Running markdownlint on prompt.md..."
+          markdownlint-cli2 scripts/transform_to_compliant_markdown/prompt.md
       - name: Linting Python files
         run: |
           pylint scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \
