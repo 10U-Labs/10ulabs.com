@@ -30,17 +30,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
-          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -54,7 +54,18 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/transform_to_compliant_markdown \\\n  --test-dir test/transform_to_compliant_markdown \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: |
+          python scripts/readme/readme.py \
+            --project-dir scripts/transform_to_compliant_markdown \
+            --test-dir test/transform_to_compliant_markdown \
+            --check \
+            --prompt-check scripts/readme/prompt_check.md \
+            --prompt-update scripts/readme/prompt_update.md \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
+            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -67,17 +78,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
-          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -105,17 +116,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
-          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -157,16 +168,23 @@ jobs:
         run: 'pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
           '
       - name: Linting Python files
-        run: "pylint scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+        run: |
+          pylint scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
       - name: Linting YAML files
-        run: 'echo "Running yamllint on transform_to_compliant_markdown.yml..."
-          yamllint --config-data ''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'' .github/workflows/transform_to_compliant_markdown.yml
-          '
+        run: |
+          echo "Running yamllint on transform_to_compliant_markdown.yml..."
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/transform_to_compliant_markdown.yml
       - name: Static type checking Python files with mypy
         run: 'python -m mypy scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py
           '
       - name: Validating prompt files exist
-        run: "echo \"Checking prompt files...\"\ntest -f scripts/readme/prompt_check.md || (echo \"ERROR: prompt_check.md not found\" && exit 1)\ntest -f scripts/readme/prompt_update.md || (echo \"ERROR: prompt_update.md not found\" && exit 1)\necho \"All prompt files found\"\n"
+        run: |
+          echo "Checking prompt files..."
+          test -f scripts/readme/prompt_check.md || (echo "ERROR: prompt_check.md not found" && exit 1)
+          test -f scripts/readme/prompt_update.md || (echo "ERROR: prompt_update.md not found" && exit 1)
+          echo "All prompt files found"
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -198,17 +216,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
-          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -221,9 +239,39 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/transform_to_compliant_markdown \\\n  --test-dir test/transform_to_compliant_markdown \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: |
+          python scripts/readme/readme.py \
+            --project-dir scripts/transform_to_compliant_markdown \
+            --test-dir test/transform_to_compliant_markdown \
+            --update \
+            --prompt-check scripts/readme/prompt_check.md \
+            --prompt-update scripts/readme/prompt_update.md \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
+            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README if changed
-        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add scripts/transform_to_compliant_markdown/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update transform_to_compliant_markdown README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add scripts/transform_to_compliant_markdown/README.md
+          if git diff --cached --quiet; then
+            echo "No changes to README.md"
+          else
+            git commit -m "Update transform_to_compliant_markdown README.md [skip ci]"
+            for i in {1..5}; do
+              if git push; then
+                echo "Successfully pushed README update"
+                exit 0
+              fi
+              echo "Push failed (attempt $i/5), pulling and retrying..."
+              git pull --rebase origin main
+              sleep $((2 ** i))
+            done
+            echo "Failed to push after 5 attempts"
+            exit 1
+          fi
 name: Ensure transform_to_compliant_markdown script works properly
 on:
   push:
