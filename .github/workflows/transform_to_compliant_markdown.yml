@@ -160,8 +160,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Install linting dependencies
-        run: pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
+        run: |
+          pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
+          npm install -g jsonlint markdownlint-cli2
+      - name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q scripts/transform_to_compliant_markdown/config.json
+      - name: Linting markdown files
+        run: |
+          echo "Running markdownlint on CLAUDE.md..."
+          markdownlint-cli2 CLAUDE.md || true
       - name: Linting Python files
         run: |
           pylint scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \
