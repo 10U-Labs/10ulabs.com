@@ -247,6 +247,5 @@ on:
       - CLAUDE.md
       - .github/workflows/claude_md.yml
       - src/claude_md/**
-      - scripts/readme/**
       - test/claude_md/**
   workflow_dispatch: null
