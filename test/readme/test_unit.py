@@ -1,10 +1,23 @@
 import json
 import os
+import sys
+import importlib.util
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import pytest
 
+readme_path = Path(__file__).parent.parent.parent / "scripts" / "readme" / "readme.py"
+spec = importlib.util.spec_from_file_location("readme", readme_path)
+readme = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(readme)
+sys.modules['readme'] = readme
+
+split_text_by_words = readme.split_text_by_words
+find_all_project_files = readme.find_all_project_files
+read_all_project_files = readme.read_all_project_files
+check_readme_should_be_updated = readme.check_readme_should_be_updated
+generate_readme = readme.generate_readme
 
 def test_split_text_by_words_returns_single_chunk_for_short_text():
     text = "Hello world"
