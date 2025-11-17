@@ -40,6 +40,9 @@ jobs:
   e2e-testing:
     name: E2E testing
     needs: integration-testing
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -48,6 +51,12 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::010526260440:role/GitHubActionsRole
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Set up Python
         uses: actions/setup-python@v5
@@ -64,6 +73,9 @@ jobs:
   integration-testing:
     name: Integration testing
     needs: unit-testing
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -72,6 +84,12 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::010526260440:role/GitHubActionsRole
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Set up Python
         uses: actions/setup-python@v5
