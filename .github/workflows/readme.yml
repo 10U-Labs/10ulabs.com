@@ -28,10 +28,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID="010526260440";
+          REGION="us-east-1";
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - name: Install boto3
         run: pip install boto3
       - id: check
@@ -45,29 +57,28 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip E2E tests
-        run: echo "DRY RUN - Would run E2E tests"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID="010526260440";
+          REGION="us-east-1";
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::010526260440:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: 'pip install pytest boto3
           '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run E2E tests
+      - name: Run E2E tests
         run: 'pytest test/readme/test_e2e.py -v
           '
   integration-testing:
@@ -78,87 +89,70 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip integration tests
-        run: echo "DRY RUN - Would run integration tests with pytest"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID="010526260440";
+          REGION="us-east-1";
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::010526260440:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: 'pip install pytest boto3
           '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run pytest integration tests
+      - name: Run pytest integration tests
         run: 'pytest test/readme/test_integration.py -v
           '
   performing-static-analysis:
+    if: "github.ref == 'refs/heads/main' && (\n  (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||\n  (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')\n)\n"
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip static analysis
-        run: echo "DRY RUN - Would run pylint, mypy, and yamllint static analysis"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install linting dependencies
+      - name: Install linting dependencies
         run: 'pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
           '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Python files
+      - name: Linting Python files
         run: "pylint scripts/readme/readme.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting YAML files
+      - name: Linting YAML files
         run: 'echo "Running yamllint on readme.yml..."
           yamllint --config-data ''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'' .github/workflows/readme.yml
           '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Static type checking Python files with mypy
+      - name: Static type checking Python files with mypy
         run: 'python -m mypy scripts/readme/readme.py
           '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Validating prompt files exist
+      - name: Validating prompt files exist
         run: "echo \"Checking prompt files...\"\ntest -f scripts/readme/prompt_check.md || (echo \"ERROR: prompt_check.md not found\" && exit 1)\ntest -f scripts/readme/prompt_update.md || (echo \"ERROR: prompt_update.md not found\" && exit 1)\necho \"All prompt files found\"\n"
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip unit tests
-        run: echo "DRY RUN - Would run unit tests with pytest"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: 'pip install pytest boto3 boto3-stubs[bedrock-runtime]
           '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run unit tests
+      - name: Run unit tests
         run: 'pytest test/readme/test_unit.py -v
           '
   updating-readme:
@@ -173,10 +167,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - id: config
+        name: Load configuration
+        run: 'ACCOUNT_ID="010526260440";
+          REGION="us-east-1";
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          '
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
