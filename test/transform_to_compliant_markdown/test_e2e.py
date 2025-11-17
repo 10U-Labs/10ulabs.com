@@ -47,6 +47,7 @@ def test_script_formats_claude_md_with_markdownlint_errors(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
@@ -65,6 +66,7 @@ def test_script_formats_claude_md_without_markdownlint_errors(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
@@ -82,6 +84,7 @@ def test_generated_output_ends_with_newline(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
@@ -103,6 +106,7 @@ def test_script_exits_with_error_when_claude_md_missing():
         result = subprocess.run([
             sys.executable,
             str(script_path),
+            '--file', 'CLAUDE.md',
             '--aws-region', 'us-east-1',
             '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
             '--max-tokens-reasoning', '4000',
@@ -113,20 +117,28 @@ def test_script_exits_with_error_when_claude_md_missing():
         assert result.returncode == 1
 
 
-def test_end_to_end_bedrock_integration(temp_claude_md):
-    script_path = Path(__file__).parent.parent.parent / 'scripts' / 'transform_to_compliant_markdown' / 'transform_to_compliant_markdown.py'
-    prompt_path = Path(__file__).parent.parent.parent / 'scripts' / 'transform_to_compliant_markdown' / 'prompt.md'
+def test_script_works_with_any_markdown_filename():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        original_dir = os.getcwd()
+        os.chdir(tmpdir)
 
-    result = subprocess.run([
-        sys.executable,
-        str(script_path),
-        '--aws-region', 'us-east-1',
-        '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
-        '--max-tokens-reasoning', '4000',
-        '--max-tokens-generation', '16000',
-        '--prompt-file', str(prompt_path)
-    ], capture_output=True, text=True, cwd=temp_claude_md)
+        test_md = Path(tmpdir) / 'README.md'
+        test_md.write_text('# Test\nThis is a test markdown file.\n')
 
-    assert result.returncode == 0
-    claude_md = Path(temp_claude_md) / 'CLAUDE.md'
-    assert claude_md.exists()
+        script_path = Path(__file__).parent.parent.parent / 'scripts' / 'transform_to_compliant_markdown' / 'transform_to_compliant_markdown.py'
+        prompt_path = Path(__file__).parent.parent.parent / 'scripts' / 'transform_to_compliant_markdown' / 'prompt.md'
+
+        result = subprocess.run([
+            sys.executable,
+            str(script_path),
+            '--file', 'README.md',
+            '--aws-region', 'us-east-1',
+            '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+            '--max-tokens-reasoning', '4000',
+            '--max-tokens-generation', '16000',
+            '--prompt-file', str(prompt_path)
+        ], capture_output=True, text=True, cwd=tmpdir)
+
+        os.chdir(original_dir)
+
+        assert result.returncode == 0
