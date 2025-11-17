@@ -61,23 +61,9 @@ jobs:
         name: Run E2E tests
         run: 'pytest test/readme/test_e2e.py -v
           '
-  ensuring-infrastructure-in-desired-state:
-    name: Ensuring infrastructure is in desired state
-    needs: unit-testing
-    runs-on: ubuntu-latest
-    steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip deployment
-        run: echo "DRY RUN - Would ensure infrastructure for README script"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
-        uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: No infrastructure to deploy
-        run: echo "README script has no infrastructure - skipping deployment"
   integration-testing:
     name: Integration testing
-    needs: ensuring-infrastructure-in-desired-state
+    needs: unit-testing
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
