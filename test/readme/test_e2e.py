@@ -4,7 +4,22 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from botocore.exceptions import NoCredentialsError, ClientError
 import pytest
+
+
+def check_aws_credentials():
+    try:
+        client = boto3.client('bedrock-runtime', region_name='us-east-1')
+        return True
+    except (NoCredentialsError, ClientError):
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not check_aws_credentials(),
+    reason="AWS credentials not available via OIDC"
+)
 
 
 @pytest.fixture
@@ -42,6 +57,7 @@ def test_check_workflow_writes_output_file_when_readme_missing(test_project_dir)
         '--output-file', output_path
     ], capture_output=True, text=True)
 
+    assert result.returncode == 0
     content = Path(output_path).read_text()
     os.unlink(output_path)
 
@@ -70,6 +86,7 @@ def test_update_workflow_creates_readme_file(test_project_dir):
         '--output-file', output_path
     ], capture_output=True, text=True)
 
+    assert result.returncode == 0
     readme_path = Path(test_project_dir) / 'README.md'
     os.unlink(output_path)
 
@@ -84,7 +101,7 @@ def test_generated_readme_contains_markdown(test_project_dir):
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as output_file:
         output_path = output_file.name
 
-    subprocess.run([
+    result = subprocess.run([
         sys.executable,
         str(script_path),
         '--update',
@@ -98,6 +115,7 @@ def test_generated_readme_contains_markdown(test_project_dir):
         '--output-file', output_path
     ], capture_output=True, text=True)
 
+    assert result.returncode == 0
     readme_path = Path(test_project_dir) / 'README.md'
     content = readme_path.read_text()
     os.unlink(output_path)
@@ -113,7 +131,7 @@ def test_generated_readme_ends_with_newline(test_project_dir):
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as output_file:
         output_path = output_file.name
 
-    subprocess.run([
+    result = subprocess.run([
         sys.executable,
         str(script_path),
         '--update',
@@ -127,6 +145,7 @@ def test_generated_readme_ends_with_newline(test_project_dir):
         '--output-file', output_path
     ], capture_output=True, text=True)
 
+    assert result.returncode == 0
     readme_path = Path(test_project_dir) / 'README.md'
     content = readme_path.read_text()
     os.unlink(output_path)
