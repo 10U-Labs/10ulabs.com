@@ -172,7 +172,7 @@ jobs:
         run: |
           echo "Validating JSON syntax..."
           jsonlint -q scripts/transform_to_compliant_markdown/config.json
-      - name: Linting markdown files
+      - name: Linting Markdown files
         run: |
           echo "Running markdownlint on prompt.md..."
           markdownlint-cli2 scripts/transform_to_compliant_markdown/prompt.md
