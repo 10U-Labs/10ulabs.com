@@ -13,20 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'true'
-  concluding-readme-should-be-updated:
-    if: always() && needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'true'
-    name: Concluding README.md should be updated
-    needs: determining-if-readme-should-be-updated
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'true'
-  concluding-readme-should-not-be-updated:
-    if: always() && needs.determining-if-readme-should-be-updated.outputs.readme_should_be_updated == 'false'
-    name: Concluding README.md should not be updated
-    needs: determining-if-readme-should-be-updated
-    runs-on: ubuntu-latest
-    steps:
-      - run: 'true'
   determining-if-claude-md-should-be-formatted:
     name: Determining if CLAUDE.md should be properly formatted
     needs: unit-testing
@@ -64,62 +50,6 @@ jobs:
           echo "errors<<EOF" >> $GITHUB_OUTPUT
           echo "$ERRORS" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-  determining-if-readme-should-be-updated:
-    if: |
-      always() &&
-      (needs.formatting-claude-md.result == 'success' ||
-       needs.concluding-claude-md-is-already-formatted-properly.result == 'success')
-    name: Determining if README.md should be updated
-    needs:
-      - concluding-claude-md-is-already-formatted-properly
-      - formatting-claude-md
-    outputs:
-      readme_should_be_updated: ${{ steps.check.outputs.readme_should_be_updated }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
-          REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
-          MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Install boto3
-        run: pip install boto3
-      - id: check
-        name: Check if README needs update
-        run: |
-          python scripts/readme/readme.py \
-            --project-dir scripts/transform_to_compliant_markdown \
-            --test-dir test/transform_to_compliant_markdown \
-            --check \
-            --prompt-check scripts/readme/prompt_check.md \
-            --prompt-update scripts/readme/prompt_update.md \
-            --aws-region "${{ steps.config.outputs.region }}" \
-            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
-            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
-            --output-file "$GITHUB_OUTPUT"
   formatting-claude-md:
     name: Formatting CLAUDE.md
     needs:
@@ -247,77 +177,7 @@ jobs:
       - name: Run unit tests
         run: |
           pytest test/transform_to_compliant_markdown/test_unit.py -v
-  updating-readme:
-    if: always() && needs.concluding-readme-should-be-updated.result == 'success'
-    name: Updating README.md
-    needs: concluding-readme-should-be-updated
-    permissions:
-      contents: write
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
-          REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
-          MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Install boto3
-        run: pip install boto3
-      - name: Update README with Bedrock
-        run: |
-          python scripts/readme/readme.py \
-            --project-dir scripts/transform_to_compliant_markdown \
-            --update \
-            --prompt-check scripts/readme/prompt_check.md \
-            --prompt-update scripts/readme/prompt_update.md \
-            --aws-region "${{ steps.config.outputs.region }}" \
-            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
-            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
-            --output-file "$GITHUB_OUTPUT"
-      - name: Commit and push README if changed
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add scripts/transform_to_compliant_markdown/README.md
-          if git diff --cached --quiet; then
-            echo "No changes to README.md"
-          else
-            git commit -m "Update claude_md README.md [skip ci]"
-            for i in {1..5}; do
-              if git push; then
-                echo "Successfully pushed README update"
-                exit 0
-              fi
-              echo "Push failed (attempt $i/5), pulling and retrying..."
-              git pull --rebase origin main
-              sleep $((2 ** i))
-            done
-            echo "Failed to push after 5 attempts"
-            exit 1
-          fi
-name: Ensuring CLAUDE.md is properly formatted and README.md is up to date
+name: Ensuring CLAUDE.md is properly formatted
 on:
   push:
     branches:
