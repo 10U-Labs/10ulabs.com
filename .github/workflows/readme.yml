@@ -40,6 +40,9 @@ jobs:
   e2e-testing:
     name: E2E testing
     needs: integration-testing
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -48,6 +51,12 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::010526260440:role/GitHubActionsRole
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Set up Python
         uses: actions/setup-python@v5
@@ -64,6 +73,9 @@ jobs:
   integration-testing:
     name: Integration testing
     needs: unit-testing
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-latest
     steps:
       - if: ${{ github.event.inputs.dry_run == 'true' }}
@@ -72,6 +84,12 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
+      - if: ${{ github.event.inputs.dry_run != 'true' }}
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::010526260440:role/GitHubActionsRole
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Set up Python
         uses: actions/setup-python@v5
@@ -165,7 +183,7 @@ jobs:
         run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --update \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region us-east-1 \\\n  --bedrock-model-id us.anthropic.claude-3-7-sonnet-20250219-v1:0 \\\n  --max-tokens-reasoning 4096 \\\n  --max-tokens-generation 16384 \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
       - name: Commit and push README if changed
         run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add scripts/readme/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update readme README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
-name: Ensuring README script passes static analysis
+name: Ensure readme script works properly
 on:
   push:
     branches:
