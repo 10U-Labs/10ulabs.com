@@ -1,21 +1,9 @@
 import json
 import os
 import tempfile
-import sys
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import pytest
-
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'scripts' / 'readme'))
-from readme import (
-    split_text_by_words,
-    find_all_project_files,
-    read_all_project_files,
-    check_readme_should_be_updated,
-    generate_readme,
-    call_bedrock_with_retry
-)
 
 
 def test_split_text_by_words_returns_single_chunk_for_short_text():
