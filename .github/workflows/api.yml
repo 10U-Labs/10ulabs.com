@@ -30,17 +30,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
-          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/api/infrastructure/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/api/infrastructure/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/api/infrastructure/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/api/infrastructure/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -54,7 +54,18 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/api/infrastructure \\\n  --test-dir test/api \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: |
+          python scripts/readme/readme.py \
+            --project-dir src/api/infrastructure \
+            --test-dir test/api \
+            --check \
+            --prompt-check scripts/readme/prompt_check.md \
+            --prompt-update scripts/readme/prompt_update.md \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
+            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -64,17 +75,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
-          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/api/infrastructure/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/api/infrastructure/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/api/infrastructure/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/api/infrastructure/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -85,11 +96,9 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install dependencies
-        run: 'pip install pytest boto3 requests
-          '
+        run: pip install pytest boto3 requests
       - name: Run E2E tests
-        run: 'pytest test/api/test_e2e.py -v
-          '
+        run: pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -99,17 +108,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
-          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/api/infrastructure/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/api/infrastructure/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/api/infrastructure/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/api/infrastructure/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -128,19 +137,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r src/api/infrastructure/requirements.txt
       - name: CDK Bootstrap (if needed)
-        run: 'cd src/api/infrastructure && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
-          '
+        run: cd src/api/infrastructure && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
         run: cd src/api/infrastructure && cdk diff TenULabsApi
       - id: deploy
         name: CDK Deploy
-        run: "cd src/api/infrastructure && cdk deploy TenULabsApi \\\n  --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true\nif grep -qE \"(failed|ROLLBACK_COMPLETE|CREATE_FAILED)\" /tmp/cdk_deploy.log; then\n  echo \"deployment_failed=true\" >> $GITHUB_OUTPUT\nelse\n  echo \"deployment_failed=false\"\
-          \ >> $GITHUB_OUTPUT\nfi\n"
+        run: |
+          cd src/api/infrastructure && cdk deploy TenULabsApi \
+            --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true
+          if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
+            echo "deployment_failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "deployment_failed=false" >> $GITHUB_OUTPUT
+          fi
       - if: steps.deploy.outputs.deployment_failed == 'true'
         name: Fail if deployment failed
-        run: 'echo "CDK deployment failed. See logs above for details."
+        run: |
+          echo "CDK deployment failed. See logs above for details."
           exit 1
-          '
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
@@ -150,17 +164,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
-          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/api/infrastructure/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/api/infrastructure/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/api/infrastructure/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/api/infrastructure/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -171,13 +185,15 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install Python dependencies
-        run: 'pip install pytest boto3 requests
-          '
+        run: pip install pytest boto3 requests
       - name: Run pytest integration tests
-        run: 'pytest test/api/test_integration.py -v
-          '
+        run: pytest test/api/test_integration.py -v
   performing-static-analysis:
-    if: "github.ref == 'refs/heads/main' && (\n  (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||\n  (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')\n)\n"
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -188,30 +204,37 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install linting dependencies
-        run: 'pip install pylint mypy yamllint &&
+        run: |
+          pip install pylint mypy yamllint &&
           npm install -g jsonlint
-          '
       - name: Install project dependencies for linting
         run: pip install -r src/api/infrastructure/requirements.txt
       - name: Linting JSON configuration files
-        run: 'echo "Validating JSON syntax..."
+        run: |
+          echo "Validating JSON syntax..."
           jsonlint -q src/api/infrastructure/config.json
           jsonlint -q src/api/infrastructure/cdk.json
-          '
       - name: Linting Python files
-        run: "pylint \\\n  src/api/infrastructure/*.py \\\n  src/api/endpoints/root/*.py \\\n  src/api/endpoints/health/*.py \\\n  src/api/endpoints/v1/echo/*.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+        run: |
+          pylint \
+            src/api/infrastructure/*.py \
+            src/api/endpoints/root/*.py \
+            src/api/endpoints/health/*.py \
+            src/api/endpoints/v1/echo/*.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
       - name: Linting YAML files
-        run: 'echo "Running yamllint on workflow files..."
-          CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}''
+        run: |
+          echo "Running yamllint on workflow files..."
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
           yamllint --config-data "$CONFIG" .github/workflows/api.yml
-          '
       - name: Static type checking Python files with mypy
-        run: 'python -m mypy src/api/infrastructure &&
+        run: |
+          python -m mypy src/api/infrastructure &&
           python -m mypy src/api/endpoints/root &&
           python -m mypy src/api/endpoints/health &&
           python -m mypy src/api/endpoints/v1/echo &&
           python -m mypy scripts/readme/readme.py
-          '
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -228,12 +251,11 @@ jobs:
         with:
           node-version: '20'
       - name: Install Python dependencies
-        run: 'pip install pytest &&
+        run: |
+          pip install pytest &&
           pip install -r src/api/infrastructure/requirements.txt
-          '
       - name: Run unit tests
-        run: 'pytest test/api/test_unit.py -v
-          '
+        run: pytest test/api/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -248,17 +270,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/api/infrastructure/config.json);
-          REGION=$(jq -r ''.aws.region'' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/api/infrastructure/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/api/infrastructure/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/api/infrastructure/config.json);
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/api/infrastructure/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
           echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -271,25 +293,58 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/api/infrastructure \\\n  --test-dir test/api \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: |
+          python scripts/readme/readme.py \
+            --project-dir src/api/infrastructure \
+            --test-dir test/api \
+            --update \
+            --prompt-check scripts/readme/prompt_check.md \
+            --prompt-update scripts/readme/prompt_update.md \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
+            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README if changed
-        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/api/infrastructure/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update api README.md [skip ci]\"\n  for i in {1..5}; do\n    if git\
-          \ push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add src/api/infrastructure/README.md
+          if git diff --cached --quiet; then
+            echo "No changes to README.md"
+          else
+            git commit -m "Update api README.md [skip ci]"
+            for i in {1..5}; do
+              if git push; then
+                echo "Successfully pushed README update"
+                exit 0
+              fi
+              echo "Push failed (attempt $i/5), pulling and retrying..."
+              git pull --rebase origin main
+              sleep $((2 ** i))
+            done
+            echo "Failed to push after 5 attempts"
+            exit 1
+          fi
 name: Ensuring API infrastructure exists and is properly configured
 on:
   push:
     branches:
       - main
     paths:
+      - .github/workflows/api.yml
+      - src/api/*.html
+      - src/api/endpoints/catchall/**
+      - src/api/endpoints/health/**
+      - src/api/endpoints/root/**
+      - src/api/endpoints/v1/echo/**
       - src/api/infrastructure/**
-      - src/api/endpoints/**
       - src/api/openapi.yaml
       - test/api/**
-      - .github/workflows/api.yml
   workflow_dispatch:
     inputs:
       dry_run:
-        default: true
+        default: false
         description: Dry run mode (show structure without executing)
         required: false
         type: boolean
