@@ -99,11 +99,9 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install dependencies
-        run: 'pip install pytest boto3
-          '
+        run: pip install pytest boto3
       - name: Run E2E tests
-        run: 'pytest test/transform_to_compliant_markdown/test_e2e.py -v
-          '
+        run: pytest test/transform_to_compliant_markdown/test_e2e.py -v
   integration-testing:
     name: Integration testing
     needs: unit-testing
@@ -137,11 +135,9 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install Python dependencies
-        run: 'pip install pytest boto3
-          '
+        run: pip install pytest boto3
       - name: Run pytest integration tests
-        run: 'pytest test/transform_to_compliant_markdown/test_integration.py -v
-          '
+        run: pytest test/transform_to_compliant_markdown/test_integration.py -v
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' &&
@@ -165,8 +161,7 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install linting dependencies
-        run: 'pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
-          '
+        run: pip install pylint mypy yamllint boto3 boto3-stubs[bedrock-runtime]
       - name: Linting Python files
         run: |
           pylint scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \
@@ -177,8 +172,7 @@ jobs:
           echo "Running yamllint on transform_to_compliant_markdown.yml..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/transform_to_compliant_markdown.yml
       - name: Static type checking Python files with mypy
-        run: 'python -m mypy scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py
-          '
+        run: python -m mypy scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py
       - name: Validating prompt files exist
         run: |
           echo "Checking prompt files..."
@@ -197,11 +191,9 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install Python dependencies
-        run: 'pip install pytest boto3 boto3-stubs[bedrock-runtime]
-          '
+        run: pip install pytest boto3 boto3-stubs[bedrock-runtime]
       - name: Run unit tests
-        run: 'pytest test/transform_to_compliant_markdown/test_unit.py -v
-          '
+        run: pytest test/transform_to_compliant_markdown/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
