@@ -54,7 +54,7 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/generator.py \\\n  --project-dir src/gmail_email_provider \\\n  --test-dir test/gmail_email_provider \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir src/gmail_email_provider \\\n  --test-dir test/gmail_email_provider \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -227,7 +227,7 @@ jobs:
           '
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting Python files
-        run: "pylint src/gmail_email_provider/stack.py src/gmail_email_provider/app.py scripts/readme/generator.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+        run: "pylint src/gmail_email_provider/stack.py src/gmail_email_provider/app.py scripts/readme/readme.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Linting YAML files
         run: 'echo "Running yamllint on workflow files..."
@@ -236,7 +236,7 @@ jobs:
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Static type checking Python files with mypy
         run: 'python -m mypy src/gmail_email_provider &&
-          python -m mypy scripts/readme/generator.py
+          python -m mypy scripts/readme/readme.py
           '
   unit-testing:
     name: Unit testing
@@ -305,7 +305,7 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/generator.py \\\n  --project-dir src/gmail_email_provider \\\n  --test-dir test/gmail_email_provider \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir src/gmail_email_provider \\\n  --test-dir test/gmail_email_provider \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
       - name: Commit and push README if changed
         run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/gmail_email_provider/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update gmail_email_provider README.md [skip ci]\"\n  for i in {1..5};\
           \ do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"

@@ -8,7 +8,7 @@ import pytest
 
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'scripts' / 'readme'))
-from generator import (
+from readme import (
     split_text_by_words,
     find_all_project_files,
     read_all_project_files,
@@ -134,7 +134,7 @@ def test_check_readme_should_be_updated_returns_true_for_whitespace_readme():
     assert result is True
 
 
-@patch('generator.call_bedrock_with_retry')
+@patch('readme.call_bedrock_with_retry')
 def test_check_readme_should_be_updated_calls_bedrock_with_non_empty_readme(mock_bedrock):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write("Prompt: {project_files} {current_readme}")
@@ -153,7 +153,7 @@ def test_check_readme_should_be_updated_calls_bedrock_with_non_empty_readme(mock
     assert mock_bedrock.called
 
 
-@patch('generator.call_bedrock_with_retry')
+@patch('readme.call_bedrock_with_retry')
 def test_check_readme_should_be_updated_parses_json_response(mock_bedrock):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write("Prompt: {project_files} {current_readme}")
@@ -172,7 +172,7 @@ def test_check_readme_should_be_updated_parses_json_response(mock_bedrock):
     assert result is True
 
 
-@patch('generator.call_bedrock_with_retry')
+@patch('readme.call_bedrock_with_retry')
 def test_check_readme_should_be_updated_handles_fallback_response(mock_bedrock):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write("Prompt: {project_files} {current_readme}")
@@ -191,7 +191,7 @@ def test_check_readme_should_be_updated_handles_fallback_response(mock_bedrock):
     assert result is True
 
 
-@patch('generator.call_bedrock_with_retry')
+@patch('readme.call_bedrock_with_retry')
 def test_generate_readme_returns_string(mock_bedrock):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write("Prompt: {project_files}")
@@ -210,7 +210,7 @@ def test_generate_readme_returns_string(mock_bedrock):
     assert isinstance(result, str)
 
 
-@patch('generator.call_bedrock_with_retry')
+@patch('readme.call_bedrock_with_retry')
 def test_generate_readme_adds_trailing_newline(mock_bedrock):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write("Prompt: {project_files}")
@@ -229,7 +229,7 @@ def test_generate_readme_adds_trailing_newline(mock_bedrock):
     assert result.endswith('\n')
 
 
-@patch('generator.call_bedrock_with_retry')
+@patch('readme.call_bedrock_with_retry')
 def test_generate_readme_preserves_existing_trailing_newline(mock_bedrock):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write("Prompt: {project_files}")
