@@ -50,12 +50,17 @@ def test_find_all_project_files_includes_readme_py():
         assert any("readme.py" in f for f in result)
 
 
-def test_find_all_project_files_includes_test_files():
+def test_find_all_project_files_includes_test_dir_when_provided():
     with tempfile.TemporaryDirectory() as tmpdir:
-        Path(tmpdir, "test_something.py").write_text("content")
-        Path(tmpdir, "code.py").write_text("content")
-        result = readme.find_all_project_files(tmpdir)
-        assert any("test_" in f for f in result)
+        project_dir = os.path.join(tmpdir, "src")
+        test_dir = os.path.join(tmpdir, "test")
+        os.makedirs(project_dir)
+        os.makedirs(test_dir)
+        Path(project_dir, "code.py").write_text("content")
+        Path(test_dir, "test_something.py").write_text("content")
+        result = readme.find_all_project_files(project_dir, test_dir)
+        assert any("test_something.py" in f for f in result)
+        assert any("code.py" in f for f in result)
 
 
 def test_find_all_project_files_includes_python_files():
