@@ -53,11 +53,14 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
-def format_claude_md(bedrock_client, current_content: str, bedrock_config: dict, prompt_file: str) -> str:
+def format_claude_md(bedrock_client, current_content: str, bedrock_config: dict, prompt_file: str, markdownlint_errors: str = '') -> str:
     with open(prompt_file, 'r', encoding='utf-8') as f:
         prompt_template = f.read()
 
-    prompt = prompt_template.format(current_content=current_content)
+    prompt = prompt_template.format(
+        current_content=current_content,
+        markdownlint_errors=markdownlint_errors
+    )
 
     try:
         messages = [{
@@ -97,6 +100,7 @@ def main():
     parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for formatting')
     parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
     parser.add_argument('--prompt-file', required=True, help='Path to prompt template file')
+    parser.add_argument('--markdownlint-errors', default='', help='JSON output from markdownlint-cli showing errors to fix')
     args = parser.parse_args()
 
     try:
@@ -113,7 +117,7 @@ def main():
         'max_tokens_reasoning': args.max_tokens_reasoning
     }
 
-    formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config, args.prompt_file)
+    formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config, args.prompt_file, args.markdownlint_errors)
 
     if formatted_content == current_content:
         logging.warning("Bedrock returned identical content - no formatting changes made")

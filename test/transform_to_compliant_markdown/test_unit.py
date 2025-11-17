@@ -7,66 +7,66 @@ from unittest.mock import Mock, patch, mock_open
 import pytest
 from botocore.exceptions import ClientError
 
-format_claude_md_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "format_claude_md.py"
+format_claude_md_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
 spec = importlib.util.spec_from_file_location("format_claude_md", format_claude_md_path)
 format_claude_md = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(format_claude_md)
 sys.modules['format_claude_md'] = format_claude_md
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     assert config_path.exists()
 
 def test_config_has_required_account_id_field():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert 'account_id' in config
 
 def test_config_has_required_region_field():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert 'region' in config
 
 def test_config_has_required_bedrock_field():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert 'bedrock' in config
 
 def test_config_bedrock_has_max_tokens():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert 'max_tokens' in config['bedrock']
 
 def test_config_bedrock_has_model_id():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert 'model_id' in config['bedrock']
 
 def test_config_account_id_is_integer():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert isinstance(config['account_id'], int)
 
 def test_config_region_is_string():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert isinstance(config['region'], str)
 
 def test_config_bedrock_max_tokens_is_integer():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert isinstance(config['bedrock']['max_tokens'], int)
 
 def test_config_bedrock_model_id_is_string():
-    config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
     assert isinstance(config['bedrock']['model_id'], str)
@@ -168,11 +168,11 @@ def test_format_claude_md_exits_on_key_error(mock_sleep, mock_bedrock):
             format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
 
 def test_format_claude_md_script_exists():
-    script_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "format_claude_md.py"
+    script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
     assert script_path.exists()
 
 def test_format_claude_md_script_is_executable():
-    script_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "format_claude_md.py"
+    script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
     assert os.access(script_path, os.X_OK) or script_path.read_text().startswith('#!/usr/bin/env python3')
 
 def test_call_bedrock_with_retry_uses_correct_model_id():
@@ -202,7 +202,7 @@ def test_call_bedrock_with_retry_uses_correct_max_tokens():
 def test_aws_region_argument_is_required():
     with pytest.raises(SystemExit):
         format_claude_md.main.__wrapped__ if hasattr(format_claude_md.main, '__wrapped__') else None
-        sys.argv = ['format_claude_md.py']
+        sys.argv = ['transform_to_compliant_markdown.py']
         parser = format_claude_md.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
@@ -212,7 +212,7 @@ def test_aws_region_argument_is_required():
 
 def test_bedrock_model_id_argument_is_required():
     with pytest.raises(SystemExit):
-        sys.argv = ['format_claude_md.py', '--aws-region', 'us-east-1']
+        sys.argv = ['transform_to_compliant_markdown.py', '--aws-region', 'us-east-1']
         parser = format_claude_md.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
@@ -222,7 +222,7 @@ def test_bedrock_model_id_argument_is_required():
 
 def test_max_tokens_generation_argument_is_required():
     with pytest.raises(SystemExit):
-        sys.argv = ['format_claude_md.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id']
+        sys.argv = ['transform_to_compliant_markdown.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id']
         parser = format_claude_md.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
@@ -232,7 +232,7 @@ def test_max_tokens_generation_argument_is_required():
 
 def test_max_tokens_reasoning_argument_is_required():
     with pytest.raises(SystemExit):
-        sys.argv = ['format_claude_md.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000']
+        sys.argv = ['transform_to_compliant_markdown.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000']
         parser = format_claude_md.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
