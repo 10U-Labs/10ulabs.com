@@ -1,13 +1,17 @@
 import json
 import os
 import sys
+import importlib.util
 from pathlib import Path
 from unittest.mock import Mock, patch, mock_open
 import pytest
 from botocore.exceptions import ClientError
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src" / "claude_md"))
-import format_claude_md
+format_claude_md_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "format_claude_md.py"
+spec = importlib.util.spec_from_file_location("format_claude_md", format_claude_md_path)
+format_claude_md = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(format_claude_md)
+sys.modules['format_claude_md'] = format_claude_md
 
 def test_config_file_exists_in_correct_location():
     config_path = Path(__file__).parent.parent.parent / "src" / "claude_md" / "config.json"
