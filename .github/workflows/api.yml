@@ -281,15 +281,15 @@ on:
     branches:
       - main
     paths:
-      - src/api/infrastructure/**
-      - src/api/endpoints/v1/echo/**
+      - .github/workflows/api.yml
+      - src/api/*.html
       - src/api/endpoints/catchall/**
       - src/api/endpoints/health/**
       - src/api/endpoints/root/**
-      - src/api/*.html
+      - src/api/endpoints/v1/echo/**
+      - src/api/infrastructure/**
       - src/api/openapi.yaml
       - test/api/**
-      - .github/workflows/api.yml
   workflow_dispatch:
     inputs:
       dry_run:
