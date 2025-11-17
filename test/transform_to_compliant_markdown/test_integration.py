@@ -18,7 +18,7 @@ def test_config_region_is_string(config_path):
 def test_config_bedrock_max_tokens_is_integer(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
-    assert isinstance(config['bedrock']['max_tokens'], int)
+    assert isinstance(config['bedrock']['max_tokens_generation'], int)
 
 def test_config_bedrock_model_id_is_string(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
