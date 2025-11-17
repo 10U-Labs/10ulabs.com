@@ -1,221 +1,227 @@
-# AWS Bedrock Configuration Project
+# AWS Bedrock Configuration
+
+A configuration file for AWS Bedrock API integration, defining essential
+settings for interacting with Claude Sonnet models through Amazon's Bedrock
+service.
 
 ## Overview
 
-This project provides configuration management for AWS Bedrock AI services,
-specifically tailored for Claude Sonnet model integration. It centralizes
-AWS account settings, regional configurations, and Bedrock-specific parameters
-to enable consistent AI model deployment and usage across environments.
+This project provides a structured configuration setup for applications that
+integrate with AWS Bedrock's generative AI capabilities. The configuration
+defines model parameters, token limits, and AWS service settings required
+for Claude Sonnet API interactions.
 
 ## Purpose and Key Features
 
-- **Centralized Configuration**: Single source of truth for AWS Bedrock settings
-- **Claude Sonnet Integration**: Pre-configured for Claude Sonnet 4 model
-- **Token Management**: Configurable token limits for reasoning and generation
-- **Regional Deployment**: US East 1 region configuration
-- **Environment Consistency**: Standardized settings across deployments
+- **Centralized Configuration**: Single source of truth for AWS Bedrock
+  settings
+- **Token Management**: Configurable limits for reasoning and generation
+  operations
+- **Model Specification**: Defines specific Claude Sonnet model version and
+  region
+- **Environment Flexibility**: JSON-based configuration for easy environment
+  management
 
 ## Main Components
 
-### Configuration Management
+### Configuration Schema
 
-- **config.json**: Core configuration file containing AWS account details,
-  regional settings, and Bedrock model parameters
-- **AWS Bedrock Integration**: Configuration for Claude Sonnet model with
-  customizable token limits for different AI operations
+The `config.json` file contains the following key components:
 
-### Key Configuration Elements
-
-- AWS Account ID and region specification
-- Bedrock model identification and versioning
-- Token allocation for reasoning vs generation tasks
-- Model-specific parameter management
+- **AWS Account Settings**: Account ID and regional deployment configuration
+- **Bedrock Model Configuration**: Claude Sonnet model specifications and
+  token limits
+- **Service Parameters**: API interaction settings and constraints
 
 ## Prerequisites and Requirements
 
 ### System Dependencies
 
-- **Node.js**: Required for AWS CDK operations (if using CDK)
-- **Git**: For version control and repository management
-- **Python 3.7+**: For potential Python-based integrations
+- Python 3.7 or higher
+- Valid AWS account with Bedrock access
+- AWS credentials configured (IAM user or role with Bedrock permissions)
 
-### AWS Requirements
+### AWS Permissions
 
-- Valid AWS account with Bedrock service access
-- Appropriate IAM permissions for Bedrock operations
-- Model access permissions for Claude Sonnet in target region
+Your AWS credentials must have the following permissions:
+
+- `bedrock:InvokeModel`
+- `bedrock:ListFoundationModels`
 
 ## Configuration Details
 
-### AWS Configuration
-
-The project uses the following AWS configuration structure:
+### AWS Settings
 
 ```json
 {
   "aws": {
     "account_id": 781581267945,
-    "region": "us-east-1",
-    "bedrock": {
-      "max_tokens_reasoning": 4000,
-      "max_tokens_generation": 16000,
-      "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
-    }
+    "region": "us-east-1"
   }
 }
 ```
 
-### Bedrock Model Settings
+- **account_id**: Target AWS account for Bedrock operations
+- **region**: AWS region where Bedrock service is accessed
 
-- **Model ID**: Claude Sonnet 4 (May 2025 version)
-- **Reasoning Tokens**: 4,000 token limit for analytical operations
-- **Generation Tokens**: 16,000 token limit for content generation
-- **Region**: US East 1 (us-east-1)
+### Bedrock Model Configuration
+
+```json
+{
+  "bedrock": {
+    "max_tokens_reasoning": 4000,
+    "max_tokens_generation": 16000,
+    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+  }
+}
+```
+
+- **max_tokens_reasoning**: Token limit for reasoning operations (4,000)
+- **max_tokens_generation**: Token limit for content generation (16,000)
+- **model_id**: Specific Claude Sonnet model version identifier
 
 ## Usage Instructions
 
 ### Installation Steps
 
-1. Clone the repository:
+1. Clone or download the configuration file to your project directory
+
+2. Ensure your AWS credentials are configured using one of these methods:
 
    ```bash
-   git clone <repository-url>
-   cd <project-directory>
+   # Using AWS credentials file
+   ~/.aws/credentials
+   
+   # Using environment variables
+   export AWS_ACCESS_KEY_ID=your_access_key
+   export AWS_SECRET_ACCESS_KEY=your_secret_key
    ```
 
-2. Verify configuration file exists:
+### Configuration Usage
 
-   ```bash
-   ls config.json
-   ```
-
-### Configuration Setup
-
-1. Review the current configuration:
-
-   ```bash
-   cat config.json
-   ```
-
-2. Update configuration values as needed:
-   - Modify `account_id` to match your AWS account
-   - Adjust token limits based on your use case requirements
-   - Change region if deploying to a different AWS region
-
-3. Validate configuration format:
-
-   ```bash
-   python -m json.tool config.json
-   ```
-
-### Using the Configuration
-
-The configuration can be loaded and used in various ways:
-
-**Python Example:**
+Load the configuration in your Python application:
 
 ```python
 import json
 
+# Load configuration
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-aws_config = config['aws']
-bedrock_config = aws_config['bedrock']
+# Access settings
+account_id = config['aws']['account_id']
+region = config['aws']['region']
+model_id = config['aws']['bedrock']['model_id']
+max_tokens = config['aws']['bedrock']['max_tokens_generation']
 ```
 
-**Node.js Example:**
+### Environment Customization
 
-```javascript
-const config = require('./config.json');
-const bedrockConfig = config.aws.bedrock;
+Create environment-specific configurations:
+
+```bash
+# Development environment
+config-dev.json
+
+# Production environment  
+config-prod.json
+
+# Staging environment
+config-staging.json
 ```
 
 ## Architecture Overview
 
 ### Configuration Flow
 
-1. **Central Configuration**: config.json serves as the single source of truth
-2. **Application Loading**: Applications load configuration at startup
-3. **Service Integration**: Configuration parameters are passed to AWS Bedrock
-4. **Model Invocation**: Claude Sonnet model is invoked with specified limits
+```text
+Application → config.json → AWS Bedrock API → Claude Sonnet Model
+```
 
-### Component Interactions
-
-- Configuration file provides parameters to application layer
-- Application layer authenticates with AWS using account credentials
-- Bedrock service receives model ID and token limits
-- Claude Sonnet processes requests within configured constraints
+1. **Configuration Loading**: Application reads settings from config.json
+2. **AWS Authentication**: Uses configured credentials for API access
+3. **Model Interaction**: Sends requests to specified Claude Sonnet model
+4. **Response Handling**: Processes responses within configured token limits
 
 ### Authentication Flow
 
-1. AWS credentials resolved through standard AWS credential chain
-2. Account ID validation against configured value
-3. Regional endpoint resolution based on configuration
-4. Bedrock service authentication and model access verification
+- AWS credentials authenticate API requests
+- Regional endpoint routing based on configured region
+- Model access controlled by Bedrock service permissions
+
+### Data Integration
+
+- Configuration parameters control API request formatting
+- Token limits prevent excessive usage and costs
+- Model ID ensures consistent AI model version usage
 
 ## Security Considerations
 
+### Credential Management
+
+- **Never commit AWS credentials** to version control
+- Use IAM roles when running on AWS infrastructure
+- Implement credential rotation policies
+- Monitor AWS CloudTrail for API access logs
+
 ### Configuration Security
 
-- **Account ID Exposure**: Consider using environment variables for sensitive
-  account information in production
-- **Access Control**: Implement proper IAM policies for Bedrock access
-- **Regional Compliance**: Ensure data residency requirements are met with
-  chosen region
+- Store sensitive configurations outside of source code
+- Use AWS Secrets Manager for production credentials
+- Implement least-privilege IAM policies
+- Regular audit of Bedrock usage and costs
 
-### Best Practices
+### Network Security
 
-- Store sensitive configuration in AWS Systems Manager Parameter Store
-- Use IAM roles instead of access keys where possible
-- Implement least privilege access for Bedrock operations
-- Monitor and log all Bedrock API calls for audit purposes
-
-### Recommendations
-
-- Rotate AWS credentials regularly
-- Use AWS CloudTrail for comprehensive API logging
-- Implement request rate limiting to prevent quota exhaustion
-- Set up billing alerts for Bedrock usage monitoring
+- Use VPC endpoints for Bedrock API access when possible
+- Implement request rate limiting to prevent abuse
+- Monitor unusual API usage patterns
 
 ## Troubleshooting Tips
 
-### Common Configuration Issues
+### Common Issues
 
-**Invalid JSON Format:**
+**Invalid Model ID Error**
 
-```bash
-# Validate JSON syntax
-python -m json.tool config.json
+```text
+Error: Model not found or not accessible
 ```
 
-**Account ID Mismatch:**
+- Verify model availability in your AWS region
+- Check Bedrock service availability in specified region
+- Ensure model ID format matches AWS documentation
 
-- Verify the account ID matches your AWS account
-- Check AWS CLI configuration: `aws sts get-caller-identity`
+**Authentication Failures**
 
-**Region Access Issues:**
+```text
+Error: Unable to locate credentials
+```
 
-- Confirm Bedrock is available in the configured region
-- Verify Claude Sonnet model access in the target region
+- Verify AWS credentials are properly configured
+- Check IAM permissions for Bedrock access
+- Confirm account ID matches your AWS account
 
-### Model Access Problems
+**Token Limit Exceeded**
 
-1. **Check Model Availability:**
-   - Verify model ID is correct for your region
-   - Confirm model access has been requested and approved
+```text
+Error: Request exceeds maximum token limit
+```
 
-2. **Token Limit Errors:**
-   - Review and adjust max_tokens_reasoning and max_tokens_generation
-   - Monitor actual usage against configured limits
+- Review and adjust max_tokens_reasoning and max_tokens_generation
+- Optimize input text to reduce token usage
+- Consider splitting large requests into smaller chunks
 
-3. **Authentication Failures:**
-   - Verify AWS credentials are properly configured
-   - Check IAM permissions for Bedrock service access
+### Debugging Steps
+
+1. Validate JSON configuration syntax
+2. Test AWS credentials with simple Bedrock API call
+3. Verify regional service availability
+4. Check AWS service quotas and limits
+5. Monitor CloudWatch logs for detailed error information
 
 ### Performance Optimization
 
-- Adjust token limits based on actual usage patterns
-- Monitor response times and adjust regional configuration if needed
-- Implement caching strategies for repeated model invocations
-- Consider using multiple regions for improved latency
+- Adjust token limits based on use case requirements
+- Consider regional latency when selecting AWS region
+- Implement caching for frequently used model responses
+- Monitor costs and optimize request patterns
