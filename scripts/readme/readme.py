@@ -68,7 +68,7 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
-def find_all_project_files(project_dir: str) -> list:
+def find_all_project_files(project_dir: str, test_dir: str = None) -> list:
     all_files = []
 
     patterns = [
@@ -82,8 +82,14 @@ def find_all_project_files(project_dir: str) -> list:
         os.path.join(project_dir, 'lambda', '*', '*.py'),
     ]
 
+    if test_dir:
+        patterns.extend([
+            os.path.join(test_dir, '*.py'),
+            os.path.join(test_dir, '**', '*.py'),
+        ])
+
     for pattern in patterns:
-        all_files.extend(glob.glob(pattern))
+        all_files.extend(glob.glob(pattern, recursive=True))
 
     excluded_names = ['README.md']
     all_files = [
@@ -93,8 +99,8 @@ def find_all_project_files(project_dir: str) -> list:
 
     return sorted(all_files)
 
-def read_all_project_files(project_dir: str) -> str:
-    all_file_paths = find_all_project_files(project_dir)
+def read_all_project_files(project_dir: str, test_dir: str = None) -> str:
+    all_file_paths = find_all_project_files(project_dir, test_dir)
 
     if not all_file_paths:
         logging.warning("No files found in %s", project_dir)
@@ -180,16 +186,23 @@ def main():
     parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for README generation')
     parser.add_argument('--prompt-check', required=True, help='Path to check prompt template file')
     parser.add_argument('--prompt-update', required=True, help='Path to update prompt template file')
+    parser.add_argument('--test-dir', help='Optional test directory to include')
     args = parser.parse_args()
     project_dir = os.path.abspath(args.project_dir)
     if not os.path.isdir(project_dir):
         logging.error("Project directory does not exist: %s", project_dir)
         sys.exit(1)
+    test_dir = None
+    if args.test_dir:
+        test_dir = os.path.abspath(args.test_dir)
+        if not os.path.isdir(test_dir):
+            logging.error("Test directory does not exist: %s", test_dir)
+            sys.exit(1)
     if not args.check and not args.update:
         logging.error("Must specify either --check or --update")
         sys.exit(1)
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
-    project_files = read_all_project_files(project_dir)
+    project_files = read_all_project_files(project_dir, test_dir)
     if args.check:
         try:
             with open(os.path.join(project_dir, 'README.md'), 'r', encoding='utf-8') as f:
