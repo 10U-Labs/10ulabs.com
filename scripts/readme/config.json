@@ -1,0 +1,11 @@
+{
+  "aws": {
+    "account_id": 781581267945,
+    "region": "us-east-1",
+    "bedrock": {
+      "max_tokens_reasoning": 4096,
+      "max_tokens_generation": 16384,
+      "model_id": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    }
+  }
+}
