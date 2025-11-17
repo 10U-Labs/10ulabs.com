@@ -4,6 +4,10 @@ You are a technical documentation expert. Generate a comprehensive README.md fil
 {project_files}
 </project_files>
 
+CRITICAL FIRST STEP: Analyze the Python code, scripts, or source files to understand what this project ACTUALLY DOES before making any assumptions. Distinguish between:
+- Tools/scripts that USE cloud services (e.g., a script that calls AWS Bedrock API)
+- Infrastructure code that CREATES cloud resources (e.g., CDK/Terraform that deploys resources)
+
 Create a professional README that includes:
 1. Title and overview of what this project does
 2. Purpose and key features
@@ -14,11 +18,11 @@ Create a professional README that includes:
    - AWS CDK uses boto3 (Python SDK), NOT the AWS CLI tool
    - List Python packages from requirements.txt
    - List system dependencies needed to run those packages (e.g., Node.js for AWS CDK)
-5. Configuration details (analyze config.json and cdk.json files from project_files)
+5. Configuration details (analyze configuration files like config.json in project_files)
 6. Usage instructions:
    - Installation steps
-   - Running the project (deployment commands, scripts, execution steps, etc.)
-   - How to use the project or deployed resources
+   - Running the project (how to execute scripts, run commands, etc.)
+   - How to use the project
 7. Architecture overview:
    - How the components interact
    - Authentication and authorization flows
