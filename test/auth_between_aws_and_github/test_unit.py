@@ -130,9 +130,9 @@ def test_config_secrets_manager_has_github_pat_secret_name(config):
     assert 'github_pat_secret_name' in config['aws']['secrets_manager']
 
 
-def test_lambda_functions_use_python_3_11(template):
+def test_lambda_functions_use_python_3_14(template):
     template.has_resource_properties('AWS::Lambda::Function', {
-        'Runtime': 'python3.11'
+        'Runtime': 'python3.14'
     })
 
 

@@ -549,17 +549,17 @@ def test_lambda_timeout_is_900_seconds(config):
     assert domain_func and domain_func['Timeout'] == 900
 
 
-def test_lambda_runtime_is_python_3_11(config):
+def test_lambda_runtime_is_python_3_14(config):
     lambda_client = boto3.client('lambda', region_name=config['aws']['region'])
-    
+
     functions = lambda_client.list_functions()
     domain_func = None
     for func in functions['Functions']:
         if 'DomainRegistrationHandler' in func['FunctionName']:
             domain_func = func
             break
-    
-    assert domain_func and domain_func['Runtime'] == 'python3.11'
+
+    assert domain_func and domain_func['Runtime'] == 'python3.14'
 
 
 def test_domain_registration_status_not_failed(config):

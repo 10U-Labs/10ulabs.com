@@ -1918,7 +1918,7 @@ def test_lambdas_have_correct_runtime():
     lambdas = template.find_resources("AWS::Lambda::Function")
     api_lambdas = {name: lamb for name, lamb in lambdas.items() if "Handler" in name and "Custom" not in name and "LogRetention" not in name and "AWS679" not in name}
     runtimes = [lamb["Properties"]["Runtime"] for lamb in api_lambdas.values()]
-    assert all(runtime == "python3.11" for runtime in runtimes)
+    assert all(runtime == "python3.14" for runtime in runtimes)
 
 def test_cloudfront_function_code_contains_uri_rewrite():
     app = cdk.App()

@@ -25,7 +25,7 @@ class AmiForEC2RunnersStack(Stack):
         ami_builder_lambda = lambda_.Function(
             self, "AmiBuilderHandler",
             function_name=config["naming"]["lambda_function_name"],
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.lambda_handler",
             code=lambda_.Code.from_asset("api/resources/ami_for_ec2_runners"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
