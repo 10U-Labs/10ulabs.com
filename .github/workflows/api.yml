@@ -283,6 +283,9 @@ on:
     paths:
       - src/api/infrastructure/**
       - src/api/endpoints/v1/echo/**
+      - src/api/endpoints/catchall/**
+      - src/api/endpoints/health/**
+      - src/api/endpoints/root/**
       - src/api/openapi.yaml
       - test/api/**
       - .github/workflows/api.yml
