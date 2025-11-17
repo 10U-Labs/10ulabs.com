@@ -89,7 +89,7 @@ jobs:
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
           MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -141,7 +141,7 @@ jobs:
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
           MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -267,7 +267,7 @@ jobs:
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
           MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
