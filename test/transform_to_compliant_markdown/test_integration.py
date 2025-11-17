@@ -31,11 +31,11 @@ def test_config_bedrock_model_id_is_string():
         config = json.load(f)
     assert isinstance(config['bedrock']['model_id'], str)
 
-def test_format_claude_md_script_exists():
+def test_transform_script_exists():
     script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
     assert script_path.exists()
 
-def test_format_claude_md_script_is_executable():
+def test_transform_script_is_executable():
     script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
     assert os.access(script_path, os.X_OK) or script_path.read_text().startswith('#!/usr/bin/env python3')
 
