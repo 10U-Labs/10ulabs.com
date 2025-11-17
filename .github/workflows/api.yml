@@ -282,7 +282,7 @@ on:
       - main
     paths:
       - src/api/infrastructure/**
-      - src/api/endpoints/**
+      - src/api/endpoints/echo/**
       - src/api/openapi.yaml
       - test/api/**
       - .github/workflows/api.yml
