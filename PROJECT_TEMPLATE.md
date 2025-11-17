@@ -366,7 +366,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
@@ -400,7 +400,7 @@ too-many-locals \
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -430,7 +430,7 @@ too-many-locals \
           aws-region: ${{ steps.config.outputs.region }}
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -469,7 +469,7 @@ ${{ steps.config.outputs.region }}
           aws-region: ${{ steps.config.outputs.region }}
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install dependencies
         run: pip install pytest boto3
       - name: Run integration tests
@@ -494,7 +494,7 @@ ${{ steps.config.outputs.region }}
           aws-region: ${{ steps.config.outputs.region }}
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install dependencies
         run: pip install pytest boto3
       - name: Run E2E tests
@@ -521,7 +521,7 @@ ${{ steps.check.outputs.readme_should_be_updated }}
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
@@ -574,7 +574,7 @@ readme_should_be_updated != 'true'
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole

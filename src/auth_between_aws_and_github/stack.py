@@ -36,7 +36,7 @@ class AuthBetweenAwsAndGithubStack(Stack):
 
         oidc_provider_lambda = lambda_.Function(
             self, 'OIDCProviderLambda',
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler='index.handler',
             code=lambda_.Code.from_inline('''
 import boto3
@@ -122,7 +122,7 @@ def handler(event, context):
 
         iam_role_lambda = lambda_.Function(
             self, 'IAMRoleLambda',
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler='index.handler',
             code=lambda_.Code.from_inline('''
 import boto3

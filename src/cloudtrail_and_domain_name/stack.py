@@ -74,7 +74,7 @@ class DomainStack(Stack):
 
         domain_registration_handler = lambda_.Function(
             self, "DomainRegistrationHandler",
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
             code=lambda_.Code.from_asset(lambda_dir),
             timeout=Duration.seconds(900),

@@ -46,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install boto3
         run: pip install boto3
       - name: Configure AWS credentials via OIDC
@@ -84,7 +84,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install dependencies
         run: 'pip install pytest boto3
           '
@@ -125,7 +125,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
       - name: Install Python dependencies
@@ -182,7 +182,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install dependencies
         run: pip install pytest boto3
       - name: Run integration tests
@@ -197,7 +197,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install linting dependencies
         run: 'pip install pylint mypy yamllint &&
           npm install -g jsonlint
@@ -229,7 +229,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Set up Node.js (required by aws-cdk-lib/jsii)
         uses: actions/setup-node@v4
         with:
@@ -269,7 +269,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install boto3
         run: pip install boto3
       - name: Configure AWS credentials via OIDC
