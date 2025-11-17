@@ -1,41 +1,47 @@
-# Transform to Compliant Markdown
+# Markdown Compliance Formatter
 
-A tool that uses AWS Bedrock's Claude AI to automatically fix markdownlint violations in `CLAUDE.md` files while preserving all original content exactly.
+A Python tool that automatically formats Markdown files to comply with markdownlint rules using AWS Bedrock's Claude AI model.
 
 ## Overview
 
-This project provides a Python script that leverages AWS Bedrock's Claude Sonnet model to transform markdown files to comply with markdownlint rules. The tool reads an existing `CLAUDE.md` file, processes it through Claude AI with specific formatting instructions, and outputs a compliant version that fixes all markdownlint violations without removing or modifying any content.
+This tool takes Markdown files with markdownlint violations and uses AWS Bedrock to intelligently fix formatting issues while preserving all original content. It's designed to handle common markdownlint violations such as line length limits, heading spacing, trailing whitespace, and more.
 
 ## Features
 
-- **Automatic Markdownlint Compliance**: Fixes all common markdownlint violations (MD041, MD013, MD022, MD012, MD009, MD047)
-- **Content Preservation**: Maintains all original content exactly - no removal, rephrasing, or summarization
-- **AWS Bedrock Integration**: Uses Claude Sonnet 4 model with extended reasoning capabilities
+- **AI-Powered Formatting**: Uses Claude Sonnet 4 via AWS Bedrock for intelligent Markdown formatting
+- **Preserve Content**: Maintains exact content meaning while fixing formatting violations
+- **Comprehensive Rule Support**: Handles all common markdownlint violations (MD041, MD013, MD022, MD012, MD009, MD047, etc.)
 - **Retry Logic**: Built-in exponential backoff and retry handling for AWS API throttling
-- **Configurable Parameters**: Supports custom token limits for generation and reasoning
+- **Extended Reasoning**: Supports Claude's extended thinking mode for complex formatting decisions
+- **Flexible Input**: Works with any Markdown file, not just specific filenames
 
 ## Requirements
 
 - Python 3.7+
 - AWS credentials configured (via IAM roles, environment variables, or AWS CLI)
-- Access to AWS Bedrock Claude models in your AWS account
-- Required Python packages: `boto3`, `botocore`
+- Access to AWS Bedrock with Claude Sonnet 4 model
+- Required Python packages:
+  - `boto3`
+  - `botocore`
 
 ## Installation
 
 1. Clone this repository
-2. Install required dependencies:
+2. Install dependencies:
    ```bash
    pip install boto3 botocore
    ```
-3. Ensure AWS credentials are properly configured
+3. Ensure AWS credentials are configured with Bedrock access
 
 ## Usage
 
 ### Basic Usage
 
+Format a Markdown file without specific markdownlint errors:
+
 ```bash
 python transform_to_compliant_markdown.py \
+  --file README.md \
   --aws-region us-east-1 \
   --bedrock-model-id us.anthropic.claude-sonnet-4-20250514-v1:0 \
   --max-tokens-generation 16000 \
@@ -45,8 +51,11 @@ python transform_to_compliant_markdown.py \
 
 ### With Markdownlint Errors
 
+Format a file with specific markdownlint violations to fix:
+
 ```bash
 python transform_to_compliant_markdown.py \
+  --file CLAUDE.md \
   --aws-region us-east-1 \
   --bedrock-model-id us.anthropic.claude-sonnet-4-20250514-v1:0 \
   --max-tokens-generation 16000 \
@@ -57,12 +66,15 @@ python transform_to_compliant_markdown.py \
 
 ### Command Line Arguments
 
-- `--aws-region`: AWS region for Bedrock service (required)
-- `--bedrock-model-id`: Bedrock model ID to use (required)
-- `--max-tokens-generation`: Maximum tokens for content generation (required)
-- `--max-tokens-reasoning`: Maximum tokens for extended thinking reasoning (required)
-- `--prompt-file`: Path to prompt template file (required)
-- `--markdownlint-errors`: JSON output from markdownlint-cli showing errors to fix (optional)
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `--file` | Yes | Path to the Markdown file to format |
+| `--aws-region` | Yes | AWS region for Bedrock service |
+| `--bedrock-model-id` | Yes | Bedrock model ID to use |
+| `--max-tokens-generation` | Yes | Maximum tokens for content generation |
+| `--max-tokens-reasoning` | Yes | Maximum tokens for extended reasoning |
+| `--prompt-file` | Yes | Path to the prompt template file |
+| `--markdownlint-errors` | No | JSON string of markdownlint violations to fix |
 
 ## Configuration
 
@@ -82,56 +94,59 @@ The `config.json` file contains default settings:
 
 ## How It Works
 
-1. **File Reading**: The script reads the existing `CLAUDE.md` file from the current directory
-2. **Prompt Generation**: Combines the markdown content with the prompt template and any markdownlint errors
-3. **AI Processing**: Sends the content to AWS Bedrock Claude model with extended reasoning enabled
-4. **Content Formatting**: Claude AI fixes markdownlint violations while preserving all original content
-5. **File Writing**: Outputs the formatted content back to `CLAUDE.md`
+1. **Input Processing**: Reads the target Markdown file and optional markdownlint error report
+2. **Prompt Generation**: Uses the `prompt.md` template to create a detailed formatting prompt
+3. **AI Processing**: Sends the content to Claude via AWS Bedrock with specific formatting instructions
+4. **Output Generation**: Writes the formatted content back to the original file
+5. **Validation**: Ensures the output ends with a proper newline character
 
-## Prompt Template
+## Supported Markdownlint Rules
 
-The `prompt.md` file contains detailed instructions for Claude AI, including:
+The tool handles common markdownlint violations including:
 
-- Critical rules for content preservation
-- Common markdownlint violation fixes
-- Line breaking rules for long content
-- Examples of proper formatting
-
-Key formatting rules handled:
-- **MD041**: Ensures first-line heading
-- **MD013**: Breaks long lines with backslash continuation
-- **MD022**: Adds blank lines around headings
-- **MD012**: Removes consecutive blank lines
-- **MD009**: Removes trailing whitespace
-- **MD047**: Ensures single trailing newline
+- **MD041**: Missing first-line heading
+- **MD013**: Line length violations (80 character limit)
+- **MD022**: Missing blank lines around headings
+- **MD012**: Multiple consecutive blank lines
+- **MD009**: Trailing whitespace
+- **MD047**: Missing single trailing newline
 
 ## Error Handling
 
-The script includes robust error handling for:
-
-- Missing `CLAUDE.md` file (exits with code 1)
-- AWS API throttling (exponential backoff retry)
-- Invalid Bedrock responses (graceful error reporting)
-- Missing AWS credentials (boto3 exception handling)
+- **File Not Found**: Exits with code 1 if the target Markdown file doesn't exist
+- **AWS Throttling**: Implements exponential backoff retry logic for API throttling
+- **Invalid Response**: Validates Bedrock response structure and exits gracefully on errors
+- **Network Issues**: Handles AWS API errors with appropriate error messages
 
 ## Testing
 
 The project includes comprehensive tests:
 
-- **Unit Tests** (`test_unit.py`): Configuration validation, function behavior, argument parsing
-- **Integration Tests** (`test_integration.py`): AWS Bedrock client setup, file validation
-- **End-to-End Tests** (`test_e2e.py`): Full workflow testing with temporary files
+- **Unit Tests**: Test individual functions and error handling
+- **Integration Tests**: Verify configuration and file structure
+- **End-to-End Tests**: Full workflow testing with AWS Bedrock (requires credentials)
 
 Run tests with:
 ```bash
 pytest test/transform_to_compliant_markdown/
 ```
 
-Note: E2E tests require valid AWS credentials and will be skipped if not available.
+## Project Structure
+
+```
+scripts/transform_to_compliant_markdown/
+├── config.json                           # Default configuration
+├── prompt.md                            # AI prompt template
+├── transform_to_compliant_markdown.py   # Main script
+└── test/
+    ├── test_unit.py                     # Unit tests
+    ├── test_integration.py              # Integration tests
+    └── test_e2e.py                      # End-to-end tests
+```
 
 ## AWS Permissions
 
-Ensure your AWS credentials have the following permissions:
+The tool requires the following AWS permissions:
 
 ```json
 {
@@ -143,15 +158,15 @@ Ensure your AWS credentials have the following permissions:
         "bedrock:InvokeModel",
         "bedrock:InvokeModelWithResponseStream"
       ],
-      "Resource": "arn:aws:bedrock:*:*:model/us.anthropic.claude-*"
+      "Resource": "arn:aws:bedrock:*:*:model/us.anthropic.claude-sonnet-4-*"
     }
   ]
 }
 ```
 
-## Limitations
+## Contributing
 
-- Requires an existing `CLAUDE.md` file in the current working directory
-- Designed specifically for Claude Sonnet 4 model format
-- Processes only markdown files (not other document formats)
-- Requires active AWS Bedrock service availability
+1. Ensure all tests pass before submitting changes
+2. Add tests for new functionality
+3. Follow the existing code style and structure
+4. Update documentation for any new features or changes
