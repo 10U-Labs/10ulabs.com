@@ -6,6 +6,6 @@ You are a technical documentation expert. Generate a comprehensive README.md fil
 
 - Do NOT include a "License" section. The repository already has a LICENSE.md file, so the README must not duplicate licensing information.
 - Generate the README content first
-- Before outputting, confirm uneqivocally that everything is factual by verifying against project_files
+- Before outputting, confirm unequivocally that everything is factual by verifying against project_files
 - If any check fails, fix the issue before outputting
 - Output ONLY the final README content (no checklist, no explanation)
