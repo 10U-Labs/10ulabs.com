@@ -1,4 +1,4 @@
-You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given infrastructure code.
+You are a technical documentation expert. Your task is to determine if a README file is current and accurate for the given files.
 
 <project_files>
 {project_files}
@@ -9,12 +9,12 @@ You are a technical documentation expert. Your task is to determine if a README 
 </current_readme>
 
 Check if the README has ANY issues, including but not limited to:
-1. Title doesn't match actual infrastructure name
+1. Title doesn't match actual project name
 2. Inconsistent or outdated terminology throughout the document
-3. Inaccurately describes the infrastructure components
+3. Inaccurately describes the project components
 4. Missing or incorrect documentation of authentication flow
 5. Incorrect usage instructions or command examples
-6. Missing key resources created
+6. Missing key components or features
 7. Outdated command examples or file paths
 8. Missing or incorrect prerequisites
 9. Contains a "License" section (MAJOR ERROR - repository has LICENSE.md, README must not duplicate licensing)
