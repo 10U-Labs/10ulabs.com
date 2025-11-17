@@ -1,6 +1,6 @@
 {
   "aws": {
-    "account_id": "010526260440",
+    "account_id": 781581267945,
     "region": "us-east-1",
     "bedrock": {
       "max_tokens_reasoning": 4096,
