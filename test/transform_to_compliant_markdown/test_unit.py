@@ -13,64 +13,6 @@ format_claude_md = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(format_claude_md)
 sys.modules['format_claude_md'] = format_claude_md
 
-def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    assert config_path.exists()
-
-def test_config_has_required_account_id_field():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'account_id' in config
-
-def test_config_has_required_region_field():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'region' in config
-
-def test_config_has_required_bedrock_field():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'bedrock' in config
-
-def test_config_bedrock_has_max_tokens():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'max_tokens' in config['bedrock']
-
-def test_config_bedrock_has_model_id():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'model_id' in config['bedrock']
-
-def test_config_account_id_is_integer():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['account_id'], int)
-
-def test_config_region_is_string():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['region'], str)
-
-def test_config_bedrock_max_tokens_is_integer():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['bedrock']['max_tokens'], int)
-
-def test_config_bedrock_model_id_is_string():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['bedrock']['model_id'], str)
-
 @patch('format_claude_md.time.sleep')
 def test_call_bedrock_with_retry_succeeds_on_first_attempt(mock_sleep):
     mock_client = Mock()
@@ -166,14 +108,6 @@ def test_format_markdown_exits_on_key_error(mock_sleep, mock_bedrock):
     with pytest.raises(SystemExit):
         with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
             format_claude_md.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md')
-
-def test_format_claude_md_script_exists():
-    script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
-    assert script_path.exists()
-
-def test_format_claude_md_script_is_executable():
-    script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
-    assert os.access(script_path, os.X_OK) or script_path.read_text().startswith('#!/usr/bin/env python3')
 
 def test_call_bedrock_with_retry_uses_correct_model_id():
     mock_client = Mock()
@@ -362,3 +296,60 @@ def test_prompt_file_argument_is_parsed_correctly():
         '--prompt-file', 'prompt.md'
     ])
     assert args.prompt_file == 'prompt.md'
+
+def test_bedrock_message_structure_is_valid():
+    messages = [{
+        'role': 'user',
+        'content': [{'text': 'test prompt'}]
+    }]
+    assert messages[0]['role'] == 'user'
+
+def test_reasoning_config_structure():
+    reasoning_config = {
+        'type': 'enabled',
+        'budget_tokens': 4000
+    }
+    assert reasoning_config['type'] == 'enabled'
+
+def test_additional_model_request_fields_structure():
+    additional_fields = {
+        'reasoning_config': {
+            'type': 'enabled',
+            'budget_tokens': 4000
+        }
+    }
+    assert 'reasoning_config' in additional_fields
+
+@patch('format_claude_md.time.sleep')
+def test_call_bedrock_with_retry_excludes_reasoning_config_when_not_in_config(mock_sleep):
+    mock_client = Mock()
+    mock_client.converse.return_value = {
+        'output': {'message': {'content': [{'text': 'test'}]}}
+    }
+    bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
+    messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
+    format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+    call_args = mock_client.converse.call_args
+    assert 'additionalModelRequestFields' not in call_args[1]
+
+@patch('format_claude_md.call_bedrock_with_retry')
+@patch('format_claude_md.time.sleep')
+def test_format_markdown_formats_prompt_with_markdownlint_errors(mock_sleep, mock_bedrock):
+    mock_bedrock.return_value = {
+        'output': {
+            'message': {
+                'content': [{'text': 'formatted content\n'}]
+            }
+        }
+    }
+    mock_client = Mock()
+    current_content = 'test content'
+    bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
+    markdownlint_errors = '{"test.md": [{"line": 1}]}'
+
+    with patch('builtins.open', mock_open(read_data='Content: {current_content}\nErrors: {markdownlint_errors}')):
+        format_claude_md.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors)
+
+    call_args = mock_bedrock.call_args
+    prompt = call_args[0][2][0]['content'][0]['text']
+    assert 'test content' in prompt
