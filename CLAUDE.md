@@ -5,9 +5,9 @@ AWS
 - GitHub Personal Access Token (PAT) in your environment variables as 
 GITHUB_PAT
 - GITHUB_PAT has unlimited privileges in GitHub
-- Do not use environment variable expansion like $GITHUB_PAT in curl commands, 
-instead obtain the value first by running 'echo $GITHUB_PAT' and passing the 
-value literally
+- Do not use environment variable expansion like $GITHUB_PAT in curl \
+commands, instead obtain the value first by running 'echo $GITHUB_PAT' and \
+passing the value literally
 - When troubleshooting GitHub Actions workflows, always check the workflow 
 logs first
 - NEVER add ANY form of comment to source code
