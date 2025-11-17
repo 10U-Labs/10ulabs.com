@@ -240,14 +240,40 @@ def test_max_tokens_reasoning_argument_is_required():
         parser.add_argument('--max-tokens-reasoning', type=int, required=True)
         parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000'])
 
+def test_file_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['transform_to_compliant_markdown.py']
+        parser = format_claude_md.argparse.ArgumentParser()
+        parser.add_argument('--file', required=True)
+        parser.parse_args([])
+
+def test_prompt_file_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['transform_to_compliant_markdown.py', '--file', 'test.md']
+        parser = format_claude_md.argparse.ArgumentParser()
+        parser.add_argument('--file', required=True)
+        parser.add_argument('--prompt-file', required=True)
+        parser.parse_args(['--file', 'test.md'])
+
 def test_all_required_arguments_provided_successfully():
     parser = format_claude_md.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
     parser.add_argument('--aws-region', required=True)
     parser.add_argument('--bedrock-model-id', required=True)
     parser.add_argument('--max-tokens-generation', type=int, required=True)
     parser.add_argument('--max-tokens-reasoning', type=int, required=True)
-    args = parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000', '--max-tokens-reasoning', '4000'])
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
+    assert args.file == 'test.md'
     assert args.aws_region == 'us-east-1'
     assert args.bedrock_model_id == 'model-id'
     assert args.max_tokens_generation == 1000
     assert args.max_tokens_reasoning == 4000
+    assert args.prompt_file == 'prompt.md'
