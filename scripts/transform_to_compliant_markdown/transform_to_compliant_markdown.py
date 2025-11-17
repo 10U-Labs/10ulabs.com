@@ -53,48 +53,46 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     raise RuntimeError("Bedrock retry loop exited unexpectedly")
 
-def format_claude_md(bedrock_client, current_content: str, bedrock_config: dict, prompt_file: str, markdownlint_errors: str = '') -> str:
+def format_markdown(bedrock_client, current_content: str, bedrock_config: dict, prompt_file: str, *, markdownlint_errors: str = '') -> str:
     with open(prompt_file, 'r', encoding='utf-8') as f:
-        prompt_template = f.read()
-
-    prompt = prompt_template.format(
-        current_content=current_content,
-        markdownlint_errors=markdownlint_errors
-    )
+        prompt = f.read().format(
+            current_content=current_content,
+            markdownlint_errors=markdownlint_errors
+        )
 
     try:
-        messages = [{
+        response = call_bedrock_with_retry(bedrock_client, bedrock_config, [{
             'role': 'user',
             'content': [{'text': prompt}]
-        }]
-        response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
+        }])
 
         content_blocks = response['output']['message']['content']
-
-        block_keys = [list(block.keys()) for block in content_blocks]
-        logging.info("Response contains %d content blocks with keys: %s", len(content_blocks), block_keys)
+        logging.info("Response contains %d content blocks with keys: %s",
+                    len(content_blocks),
+                    [list(block.keys()) for block in content_blocks])
 
         text_blocks = [block for block in content_blocks if 'text' in block]
 
         if not text_blocks:
             logging.error("No text blocks found in Bedrock response")
-            logging.error("Available block keys: %s", block_keys)
+            logging.error("Available block keys: %s", [list(block.keys()) for block in content_blocks])
             sys.exit(1)
 
         formatted_content = text_blocks[0]['text']
 
         if not formatted_content.endswith('\n'):
             formatted_content += '\n'
-            logging.info("Added missing trailing newline to CLAUDE.md")
+            logging.info("Added missing trailing newline")
 
-        logging.info("Successfully formatted CLAUDE.md with Bedrock")
+        logging.info("Successfully formatted markdown with Bedrock")
         return formatted_content
     except (KeyError, IndexError, TypeError) as e:
-        logging.error("Failed to format CLAUDE.md with Bedrock: %s", e)
+        logging.error("Failed to format markdown with Bedrock: %s", e)
         sys.exit(1)
 
 def main():
-    parser = argparse.ArgumentParser(description='Format CLAUDE.md to comply with markdownlint rules using Bedrock')
+    parser = argparse.ArgumentParser(description='Format markdown files to comply with markdownlint rules using Bedrock')
+    parser.add_argument('--file', required=True, help='Path to markdown file to format')
     parser.add_argument('--aws-region', required=True, help='AWS region for Bedrock')
     parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
     parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for formatting')
@@ -104,10 +102,10 @@ def main():
     args = parser.parse_args()
 
     try:
-        with open('CLAUDE.md', 'r', encoding='utf-8') as f:
+        with open(args.file, 'r', encoding='utf-8') as f:
             current_content = f.read()
     except FileNotFoundError:
-        logging.error("CLAUDE.md not found")
+        logging.error("%s not found", args.file)
         sys.exit(1)
 
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
@@ -117,17 +115,17 @@ def main():
         'max_tokens_reasoning': args.max_tokens_reasoning
     }
 
-    formatted_content = format_claude_md(bedrock_client, current_content, bedrock_config, args.prompt_file, args.markdownlint_errors)
+    formatted_content = format_markdown(bedrock_client, current_content, bedrock_config, args.prompt_file, markdownlint_errors=args.markdownlint_errors)
 
     if formatted_content == current_content:
         logging.warning("Bedrock returned identical content - no formatting changes made")
     else:
         logging.info("Bedrock made formatting changes")
 
-    with open('CLAUDE.md', 'w', encoding='utf-8') as f:
+    with open(args.file, 'w', encoding='utf-8') as f:
         f.write(formatted_content)
 
-    logging.info("CLAUDE.md formatted successfully")
+    logging.info("%s formatted successfully", args.file)
     sys.exit(0)
 
 if __name__ == '__main__':

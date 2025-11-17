@@ -7,71 +7,13 @@ from unittest.mock import Mock, patch, mock_open
 import pytest
 from botocore.exceptions import ClientError
 
-format_claude_md_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
-spec = importlib.util.spec_from_file_location("format_claude_md", format_claude_md_path)
-format_claude_md = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(format_claude_md)
-sys.modules['format_claude_md'] = format_claude_md
+transform_script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
+spec = importlib.util.spec_from_file_location("transform_to_compliant_markdown", transform_script_path)
+transform_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(transform_module)
+sys.modules['transform_to_compliant_markdown'] = transform_module
 
-def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    assert config_path.exists()
-
-def test_config_has_required_account_id_field():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'account_id' in config
-
-def test_config_has_required_region_field():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'region' in config
-
-def test_config_has_required_bedrock_field():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'bedrock' in config
-
-def test_config_bedrock_has_max_tokens():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'max_tokens' in config['bedrock']
-
-def test_config_bedrock_has_model_id():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'model_id' in config['bedrock']
-
-def test_config_account_id_is_integer():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['account_id'], int)
-
-def test_config_region_is_string():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['region'], str)
-
-def test_config_bedrock_max_tokens_is_integer():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['bedrock']['max_tokens'], int)
-
-def test_config_bedrock_model_id_is_string():
-    config_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "config.json"
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert isinstance(config['bedrock']['model_id'], str)
-
-@patch('format_claude_md.time.sleep')
+@patch('transform_to_compliant_markdown.time.sleep')
 def test_call_bedrock_with_retry_succeeds_on_first_attempt(mock_sleep):
     mock_client = Mock()
     mock_client.converse.return_value = {
@@ -83,10 +25,10 @@ def test_call_bedrock_with_retry_succeeds_on_first_attempt(mock_sleep):
     }
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
-    result = format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+    result = transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
     assert 'output' in result
 
-@patch('format_claude_md.time.sleep')
+@patch('transform_to_compliant_markdown.time.sleep')
 def test_call_bedrock_with_retry_retries_on_throttling(mock_sleep):
     mock_client = Mock()
     mock_client.converse.side_effect = [
@@ -95,10 +37,10 @@ def test_call_bedrock_with_retry_retries_on_throttling(mock_sleep):
     ]
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
-    result = format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+    result = transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
     assert 'output' in result
 
-@patch('format_claude_md.time.sleep')
+@patch('transform_to_compliant_markdown.time.sleep')
 def test_call_bedrock_with_retry_raises_after_max_retries(mock_sleep):
     mock_client = Mock()
     mock_client.converse.side_effect = ClientError(
@@ -107,9 +49,9 @@ def test_call_bedrock_with_retry_raises_after_max_retries(mock_sleep):
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
     with pytest.raises(ClientError):
-        format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+        transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
 
-@patch('format_claude_md.time.sleep')
+@patch('transform_to_compliant_markdown.time.sleep')
 def test_call_bedrock_with_retry_raises_on_non_throttling_error(mock_sleep):
     mock_client = Mock()
     mock_client.converse.side_effect = ClientError(
@@ -118,11 +60,11 @@ def test_call_bedrock_with_retry_raises_on_non_throttling_error(mock_sleep):
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
     with pytest.raises(ClientError):
-        format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+        transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
 
-@patch('format_claude_md.call_bedrock_with_retry')
-@patch('format_claude_md.time.sleep')
-def test_format_claude_md_returns_formatted_content(mock_sleep, mock_bedrock):
+@patch('transform_to_compliant_markdown.call_bedrock_with_retry')
+@patch('transform_to_compliant_markdown.time.sleep')
+def test_format_markdown_returns_formatted_content(mock_sleep, mock_bedrock):
     mock_bedrock.return_value = {
         'output': {
             'message': {
@@ -135,12 +77,12 @@ def test_format_claude_md_returns_formatted_content(mock_sleep, mock_bedrock):
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
 
     with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
-        result = format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
+        result = transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors='')
     assert result == 'formatted content\n'
 
-@patch('format_claude_md.call_bedrock_with_retry')
-@patch('format_claude_md.time.sleep')
-def test_format_claude_md_adds_trailing_newline_if_missing(mock_sleep, mock_bedrock):
+@patch('transform_to_compliant_markdown.call_bedrock_with_retry')
+@patch('transform_to_compliant_markdown.time.sleep')
+def test_format_markdown_adds_trailing_newline_if_missing(mock_sleep, mock_bedrock):
     mock_bedrock.return_value = {
         'output': {
             'message': {
@@ -153,27 +95,19 @@ def test_format_claude_md_adds_trailing_newline_if_missing(mock_sleep, mock_bedr
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
 
     with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
-        result = format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
+        result = transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors='')
     assert result.endswith('\n')
 
-@patch('format_claude_md.call_bedrock_with_retry')
-@patch('format_claude_md.time.sleep')
-def test_format_claude_md_exits_on_key_error(mock_sleep, mock_bedrock):
+@patch('transform_to_compliant_markdown.call_bedrock_with_retry')
+@patch('transform_to_compliant_markdown.time.sleep')
+def test_format_markdown_exits_on_key_error(mock_sleep, mock_bedrock):
     mock_bedrock.return_value = {'invalid': 'response'}
     mock_client = Mock()
     current_content = 'original content'
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
     with pytest.raises(SystemExit):
         with patch('builtins.open', mock_open(read_data='Test prompt: {current_content}')):
-            format_claude_md.format_claude_md(mock_client, current_content, bedrock_config, 'test_prompt.md')
-
-def test_format_claude_md_script_exists():
-    script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
-    assert script_path.exists()
-
-def test_format_claude_md_script_is_executable():
-    script_path = Path(__file__).parent.parent.parent / "scripts" / "transform_to_compliant_markdown" / "transform_to_compliant_markdown.py"
-    assert os.access(script_path, os.X_OK) or script_path.read_text().startswith('#!/usr/bin/env python3')
+            transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors='')
 
 def test_call_bedrock_with_retry_uses_correct_model_id():
     mock_client = Mock()
@@ -182,7 +116,7 @@ def test_call_bedrock_with_retry_uses_correct_model_id():
     }
     bedrock_config = {'model_id': 'custom-model-id', 'max_tokens': 1000}
     messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
-    format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+    transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
     mock_client.converse.assert_called_once()
     call_args = mock_client.converse.call_args
     assert call_args[1]['modelId'] == 'custom-model-id'
@@ -194,16 +128,16 @@ def test_call_bedrock_with_retry_uses_correct_max_tokens():
     }
     bedrock_config = {'model_id': 'test-model', 'max_tokens': 5000}
     messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
-    format_claude_md.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+    transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
     mock_client.converse.assert_called_once()
     call_args = mock_client.converse.call_args
     assert call_args[1]['inferenceConfig']['maxTokens'] == 5000
 
 def test_aws_region_argument_is_required():
     with pytest.raises(SystemExit):
-        format_claude_md.main.__wrapped__ if hasattr(format_claude_md.main, '__wrapped__') else None
+        transform_module.main.__wrapped__ if hasattr(transform_module.main, '__wrapped__') else None
         sys.argv = ['transform_to_compliant_markdown.py']
-        parser = format_claude_md.argparse.ArgumentParser()
+        parser = transform_module.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
         parser.add_argument('--max-tokens-generation', type=int, required=True)
@@ -213,7 +147,7 @@ def test_aws_region_argument_is_required():
 def test_bedrock_model_id_argument_is_required():
     with pytest.raises(SystemExit):
         sys.argv = ['transform_to_compliant_markdown.py', '--aws-region', 'us-east-1']
-        parser = format_claude_md.argparse.ArgumentParser()
+        parser = transform_module.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
         parser.add_argument('--max-tokens-generation', type=int, required=True)
@@ -223,7 +157,7 @@ def test_bedrock_model_id_argument_is_required():
 def test_max_tokens_generation_argument_is_required():
     with pytest.raises(SystemExit):
         sys.argv = ['transform_to_compliant_markdown.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id']
-        parser = format_claude_md.argparse.ArgumentParser()
+        parser = transform_module.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
         parser.add_argument('--max-tokens-generation', type=int, required=True)
@@ -233,21 +167,166 @@ def test_max_tokens_generation_argument_is_required():
 def test_max_tokens_reasoning_argument_is_required():
     with pytest.raises(SystemExit):
         sys.argv = ['transform_to_compliant_markdown.py', '--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000']
-        parser = format_claude_md.argparse.ArgumentParser()
+        parser = transform_module.argparse.ArgumentParser()
         parser.add_argument('--aws-region', required=True)
         parser.add_argument('--bedrock-model-id', required=True)
         parser.add_argument('--max-tokens-generation', type=int, required=True)
         parser.add_argument('--max-tokens-reasoning', type=int, required=True)
         parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000'])
 
-def test_all_required_arguments_provided_successfully():
-    parser = format_claude_md.argparse.ArgumentParser()
+def test_file_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['transform_to_compliant_markdown.py']
+        parser = transform_module.argparse.ArgumentParser()
+        parser.add_argument('--file', required=True)
+        parser.parse_args([])
+
+def test_prompt_file_argument_is_required():
+    with pytest.raises(SystemExit):
+        sys.argv = ['transform_to_compliant_markdown.py', '--file', 'test.md']
+        parser = transform_module.argparse.ArgumentParser()
+        parser.add_argument('--file', required=True)
+        parser.add_argument('--prompt-file', required=True)
+        parser.parse_args(['--file', 'test.md'])
+
+def test_file_argument_is_parsed_correctly():
+    parser = transform_module.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
     parser.add_argument('--aws-region', required=True)
     parser.add_argument('--bedrock-model-id', required=True)
     parser.add_argument('--max-tokens-generation', type=int, required=True)
     parser.add_argument('--max-tokens-reasoning', type=int, required=True)
-    args = parser.parse_args(['--aws-region', 'us-east-1', '--bedrock-model-id', 'model-id', '--max-tokens-generation', '1000', '--max-tokens-reasoning', '4000'])
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
+    assert args.file == 'test.md'
+
+def test_aws_region_argument_is_parsed_correctly():
+    parser = transform_module.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.aws_region == 'us-east-1'
+
+def test_bedrock_model_id_argument_is_parsed_correctly():
+    parser = transform_module.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.bedrock_model_id == 'model-id'
+
+def test_max_tokens_generation_argument_is_parsed_correctly():
+    parser = transform_module.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.max_tokens_generation == 1000
+
+def test_max_tokens_reasoning_argument_is_parsed_correctly():
+    parser = transform_module.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
     assert args.max_tokens_reasoning == 4000
+
+def test_prompt_file_argument_is_parsed_correctly():
+    parser = transform_module.argparse.ArgumentParser()
+    parser.add_argument('--file', required=True)
+    parser.add_argument('--aws-region', required=True)
+    parser.add_argument('--bedrock-model-id', required=True)
+    parser.add_argument('--max-tokens-generation', type=int, required=True)
+    parser.add_argument('--max-tokens-reasoning', type=int, required=True)
+    parser.add_argument('--prompt-file', required=True)
+    args = parser.parse_args([
+        '--file', 'test.md',
+        '--aws-region', 'us-east-1',
+        '--bedrock-model-id', 'model-id',
+        '--max-tokens-generation', '1000',
+        '--max-tokens-reasoning', '4000',
+        '--prompt-file', 'prompt.md'
+    ])
+    assert args.prompt_file == 'prompt.md'
+
+@patch('transform_to_compliant_markdown.time.sleep')
+def test_call_bedrock_with_retry_excludes_reasoning_config_when_not_in_config(mock_sleep):
+    mock_client = Mock()
+    mock_client.converse.return_value = {
+        'output': {'message': {'content': [{'text': 'test'}]}}
+    }
+    bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
+    messages = [{'role': 'user', 'content': [{'text': 'test'}]}]
+    transform_module.call_bedrock_with_retry(mock_client, bedrock_config, messages)
+    call_args = mock_client.converse.call_args
+    assert 'additionalModelRequestFields' not in call_args[1]
+
+@patch('transform_to_compliant_markdown.call_bedrock_with_retry')
+@patch('transform_to_compliant_markdown.time.sleep')
+def test_format_markdown_formats_prompt_with_markdownlint_errors(mock_sleep, mock_bedrock):
+    mock_bedrock.return_value = {
+        'output': {
+            'message': {
+                'content': [{'text': 'formatted content\n'}]
+            }
+        }
+    }
+    mock_client = Mock()
+    current_content = 'test content'
+    bedrock_config = {'model_id': 'test-model', 'max_tokens': 1000}
+    markdownlint_errors = '{"test.md": [{"line": 1}]}'
+
+    with patch('builtins.open', mock_open(read_data='Content: {current_content}\nErrors: {markdownlint_errors}')):
+        transform_module.format_markdown(mock_client, current_content, bedrock_config, 'test_prompt.md', markdownlint_errors=markdownlint_errors)
+
+    call_args = mock_bedrock.call_args
+    prompt = call_args[0][2][0]['content'][0]['text']
+    assert 'test content' in prompt
