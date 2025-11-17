@@ -57,7 +57,7 @@ def test_check_workflow_writes_output_file_when_readme_missing(test_project_dir)
         '--output-file', output_path
     ], capture_output=True, text=True)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed with:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     content = Path(output_path).read_text()
     os.unlink(output_path)
 
@@ -86,7 +86,7 @@ def test_update_workflow_creates_readme_file(test_project_dir):
         '--output-file', output_path
     ], capture_output=True, text=True)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed with:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     readme_path = Path(test_project_dir) / 'README.md'
     os.unlink(output_path)
 
@@ -115,7 +115,7 @@ def test_generated_readme_contains_markdown(test_project_dir):
         '--output-file', output_path
     ], capture_output=True, text=True)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed with:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     readme_path = Path(test_project_dir) / 'README.md'
     content = readme_path.read_text()
     os.unlink(output_path)
@@ -145,7 +145,7 @@ def test_generated_readme_ends_with_newline(test_project_dir):
         '--output-file', output_path
     ], capture_output=True, text=True)
 
-    assert result.returncode == 0
+    assert result.returncode == 0, f"Script failed with:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     readme_path = Path(test_project_dir) / 'README.md'
     content = readme_path.read_text()
     os.unlink(output_path)
