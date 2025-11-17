@@ -85,7 +85,7 @@ def find_all_project_files(project_dir: str) -> list:
     for pattern in patterns:
         all_files.extend(glob.glob(pattern))
 
-    excluded_names = ['readme.py', 'conftest.py', 'test_', 'README.md']
+    excluded_names = ['conftest.py', 'test_', 'README.md']
     all_files = [
         f for f in all_files
         if not any(excluded in os.path.basename(f) for excluded in excluded_names)
@@ -96,15 +96,6 @@ def find_all_project_files(project_dir: str) -> list:
 def read_all_project_files(project_dir: str) -> str:
     all_file_paths = find_all_project_files(project_dir)
 
-    repo_root = project_dir
-    while repo_root and repo_root != '/':
-        if os.path.exists(os.path.join(repo_root, 'scripts', 'readme.py')):
-            break
-        repo_root = os.path.dirname(repo_root)
-
-    if os.path.exists(os.path.join(repo_root, 'scripts', 'readme.py')):
-        all_file_paths.append(os.path.join(repo_root, 'scripts', 'readme.py'))
-
     if not all_file_paths:
         logging.warning("No files found in %s", project_dir)
         return ""
@@ -113,10 +104,7 @@ def read_all_project_files(project_dir: str) -> str:
     for full_path in all_file_paths:
         try:
             with open(full_path, 'r', encoding='utf-8') as f:
-                if 'scripts/readme.py' in full_path:
-                    rel_path = 'scripts/readme.py'
-                else:
-                    rel_path = os.path.relpath(full_path, project_dir)
+                rel_path = os.path.relpath(full_path, project_dir)
                 all_files[rel_path] = f.read()
         except IOError as e:
             logging.error("Failed to read %s: %s", full_path, e)
