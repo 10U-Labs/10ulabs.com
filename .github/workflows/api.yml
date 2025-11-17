@@ -285,7 +285,6 @@ on:
       - src/api/endpoints/**
       - src/api/openapi.yaml
       - test/api/**
-      - scripts/readme/**
       - .github/workflows/api.yml
   workflow_dispatch:
     inputs:

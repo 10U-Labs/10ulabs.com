@@ -317,7 +317,6 @@ on:
     paths:
       - src/gmail_email_provider/**
       - test/gmail_email_provider/**
-      - scripts/readme/**
       - .github/workflows/gmail_email_provider.yml
   workflow_dispatch:
     inputs:
