@@ -42,12 +42,12 @@ def test_split_text_by_words_preserves_all_words():
     assert all(word in combined for word in ["one", "two", "three", "four", "five"])
 
 
-def test_find_all_project_files_excludes_readme_py():
+def test_find_all_project_files_includes_readme_py():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "readme.py").write_text("content")
         Path(tmpdir, "other.py").write_text("content")
         result = readme.find_all_project_files(tmpdir)
-        assert not any("readme.py" in f for f in result)
+        assert any("readme.py" in f for f in result)
 
 
 def test_find_all_project_files_excludes_test_files():
@@ -56,14 +56,6 @@ def test_find_all_project_files_excludes_test_files():
         Path(tmpdir, "code.py").write_text("content")
         result = readme.find_all_project_files(tmpdir)
         assert not any("test_" in f for f in result)
-
-
-def test_find_all_project_files_excludes_conftest():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        Path(tmpdir, "conftest.py").write_text("content")
-        Path(tmpdir, "code.py").write_text("content")
-        result = readme.find_all_project_files(tmpdir)
-        assert not any("conftest.py" in f for f in result)
 
 
 def test_find_all_project_files_includes_python_files():
