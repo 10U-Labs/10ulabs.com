@@ -291,7 +291,6 @@ on:
       - src/auth_between_aws_and_github/**
       - '!src/auth_between_aws_and_github/README.md'
       - test/auth_between_aws_and_github/**
-      - scripts/readme/**
       - .github/workflows/auth_between_aws_and_github.yml
   workflow_dispatch:
     inputs:
