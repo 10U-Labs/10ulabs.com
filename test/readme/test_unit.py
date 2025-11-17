@@ -8,36 +8,43 @@ import pytest
 
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'scripts' / 'readme'))
-import generator
+from generator import (
+    split_text_by_words,
+    find_all_project_files,
+    read_all_project_files,
+    check_readme_should_be_updated,
+    generate_readme,
+    call_bedrock_with_retry
+)
 
 
 def test_split_text_by_words_returns_single_chunk_for_short_text():
     text = "Hello world"
-    result = generator.split_text_by_words(text, max_length=100)
+    result = split_text_by_words(text, max_length=100)
     assert len(result) == 1
 
 
 def test_split_text_by_words_returns_text_unchanged_for_short_text():
     text = "Hello world"
-    result = generator.split_text_by_words(text, max_length=100)
+    result = split_text_by_words(text, max_length=100)
     assert result[0] == "Hello world"
 
 
 def test_split_text_by_words_splits_long_text_into_chunks():
     text = " ".join(["word"] * 100)
-    result = generator.split_text_by_words(text, max_length=50)
+    result = split_text_by_words(text, max_length=50)
     assert len(result) > 1
 
 
 def test_split_text_by_words_respects_max_length():
     text = " ".join(["word"] * 100)
-    result = generator.split_text_by_words(text, max_length=50)
+    result = split_text_by_words(text, max_length=50)
     assert all(len(chunk) <= 50 for chunk in result)
 
 
 def test_split_text_by_words_preserves_all_words():
     text = "one two three four five"
-    result = generator.split_text_by_words(text, max_length=10)
+    result = split_text_by_words(text, max_length=10)
     combined = " ".join(result)
     assert all(word in combined for word in ["one", "two", "three", "four", "five"])
 
@@ -46,7 +53,7 @@ def test_find_all_project_files_includes_readme_py():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "generator.py").write_text("content")
         Path(tmpdir, "other.py").write_text("content")
-        result = generator.find_all_project_files(tmpdir)
+        result = find_all_project_files(tmpdir)
         assert any("generator.py" in f for f in result)
 
 
@@ -58,7 +65,7 @@ def test_find_all_project_files_includes_test_dir_when_provided():
         os.makedirs(test_dir)
         Path(project_dir, "code.py").write_text("content")
         Path(test_dir, "test_something.py").write_text("content")
-        result = generator.find_all_project_files(project_dir, test_dir)
+        result = find_all_project_files(project_dir, test_dir)
         assert any("test_something.py" in f for f in result)
         assert any("code.py" in f for f in result)
 
@@ -66,54 +73,54 @@ def test_find_all_project_files_includes_test_dir_when_provided():
 def test_find_all_project_files_includes_python_files():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "code.py").write_text("content")
-        result = generator.find_all_project_files(tmpdir)
+        result = find_all_project_files(tmpdir)
         assert any("code.py" in f for f in result)
 
 
 def test_find_all_project_files_includes_json_files():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "config.json").write_text("{}")
-        result = generator.find_all_project_files(tmpdir)
+        result = find_all_project_files(tmpdir)
         assert any("config.json" in f for f in result)
 
 
 def test_read_all_project_files_returns_non_empty_string():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "file.py").write_text("code")
-        result = generator.read_all_project_files(tmpdir)
+        result = read_all_project_files(tmpdir)
         assert len(result) > 0
 
 
 def test_read_all_project_files_includes_file_path_header():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "file.py").write_text("code")
-        result = generator.read_all_project_files(tmpdir)
+        result = read_all_project_files(tmpdir)
         assert "File:" in result
 
 
 def test_read_all_project_files_includes_file_content():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "file.py").write_text("unique_content")
-        result = generator.read_all_project_files(tmpdir)
+        result = read_all_project_files(tmpdir)
         assert "unique_content" in result
 
 
 def test_read_all_project_files_includes_separator():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "file.py").write_text("code")
-        result = generator.read_all_project_files(tmpdir)
+        result = read_all_project_files(tmpdir)
         assert "=" * 60 in result
 
 
 def test_read_all_project_files_returns_empty_for_no_files():
     with tempfile.TemporaryDirectory() as tmpdir:
-        result = generator.read_all_project_files(tmpdir)
+        result = read_all_project_files(tmpdir)
         assert result == ""
 
 
 def test_check_readme_should_be_updated_returns_true_for_empty_readme():
     mock_client = Mock()
-    result = generator.check_readme_should_be_updated(
+    result = check_readme_should_be_updated(
         mock_client, "files", "", {"model_id": "test", "max_tokens": 100}, "/tmp/prompt.md"
     )
     assert result is True
@@ -121,7 +128,7 @@ def test_check_readme_should_be_updated_returns_true_for_empty_readme():
 
 def test_check_readme_should_be_updated_returns_true_for_whitespace_readme():
     mock_client = Mock()
-    result = generator.check_readme_should_be_updated(
+    result = check_readme_should_be_updated(
         mock_client, "files", "   \n  ", {"model_id": "test", "max_tokens": 100}, "/tmp/prompt.md"
     )
     assert result is True
@@ -138,7 +145,7 @@ def test_check_readme_should_be_updated_calls_bedrock_with_non_empty_readme(mock
     }
     mock_client = Mock()
 
-    result = generator.check_readme_should_be_updated(
+    result = check_readme_should_be_updated(
         mock_client, "files", "current", {"model_id": "test", "max_tokens": 100}, prompt_file
     )
 
@@ -157,7 +164,7 @@ def test_check_readme_should_be_updated_parses_json_response(mock_bedrock):
     }
     mock_client = Mock()
 
-    result = generator.check_readme_should_be_updated(
+    result = check_readme_should_be_updated(
         mock_client, "files", "current", {"model_id": "test", "max_tokens": 100}, prompt_file
     )
 
@@ -176,7 +183,7 @@ def test_check_readme_should_be_updated_handles_fallback_response(mock_bedrock):
     }
     mock_client = Mock()
 
-    result = generator.check_readme_should_be_updated(
+    result = check_readme_should_be_updated(
         mock_client, "files", "current", {"model_id": "test", "max_tokens": 100}, prompt_file
     )
 
@@ -195,7 +202,7 @@ def test_generate_readme_returns_string(mock_bedrock):
     }
     mock_client = Mock()
 
-    result = generator.generate_readme(
+    result = generate_readme(
         mock_client, "files", {"model_id": "test", "max_tokens": 100}, prompt_file
     )
 
@@ -214,7 +221,7 @@ def test_generate_readme_adds_trailing_newline(mock_bedrock):
     }
     mock_client = Mock()
 
-    result = generator.generate_readme(
+    result = generate_readme(
         mock_client, "files", {"model_id": "test", "max_tokens": 100}, prompt_file
     )
 
@@ -233,7 +240,7 @@ def test_generate_readme_preserves_existing_trailing_newline(mock_bedrock):
     }
     mock_client = Mock()
 
-    result = generator.generate_readme(
+    result = generate_readme(
         mock_client, "files", {"model_id": "test", "max_tokens": 100}, prompt_file
     )
 
@@ -244,7 +251,7 @@ def test_generate_readme_preserves_existing_trailing_newline(mock_bedrock):
 def test_find_all_project_files_includes_yaml_files():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "config.yaml").write_text("key: value")
-        result = generator.find_all_project_files(tmpdir)
+        result = find_all_project_files(tmpdir)
         assert any("config.yaml" in f for f in result)
 
 
@@ -252,5 +259,5 @@ def test_find_all_project_files_returns_sorted_list():
     with tempfile.TemporaryDirectory() as tmpdir:
         Path(tmpdir, "zebra.py").write_text("code")
         Path(tmpdir, "alpha.py").write_text("code")
-        result = generator.find_all_project_files(tmpdir)
+        result = find_all_project_files(tmpdir)
         assert result == sorted(result)
