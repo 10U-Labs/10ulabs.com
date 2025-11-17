@@ -47,6 +47,7 @@ def test_script_formats_claude_md_with_markdownlint_errors(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
@@ -65,6 +66,7 @@ def test_script_formats_claude_md_without_markdownlint_errors(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
@@ -82,6 +84,7 @@ def test_generated_output_ends_with_newline(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
@@ -103,6 +106,7 @@ def test_script_exits_with_error_when_claude_md_missing():
         result = subprocess.run([
             sys.executable,
             str(script_path),
+            '--file', 'CLAUDE.md',
             '--aws-region', 'us-east-1',
             '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
             '--max-tokens-reasoning', '4000',
@@ -120,6 +124,7 @@ def test_end_to_end_bedrock_integration(temp_claude_md):
     result = subprocess.run([
         sys.executable,
         str(script_path),
+        '--file', 'CLAUDE.md',
         '--aws-region', 'us-east-1',
         '--bedrock-model-id', 'us.anthropic.claude-sonnet-4-20250514-v1:0',
         '--max-tokens-reasoning', '4000',
