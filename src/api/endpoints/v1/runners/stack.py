@@ -23,7 +23,7 @@ class RunnersStack(Stack):
         webhook_router_lambda = lambda_.Function(
             self, "WebhookRouterHandler",
             function_name=config["naming"]["lambda_function_name"],
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="webhook_router.lambda_handler",
             code=lambda_.Code.from_asset("api/resources/runners"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),

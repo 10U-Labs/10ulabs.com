@@ -134,7 +134,7 @@ def test_domain_registration_lambda_has_python_runtime(config):
     template.has_resource_properties(
         "AWS::Lambda::Function",
         {
-            "Runtime": "python3.11"
+            "Runtime": "python3.14"
         }
     )
 

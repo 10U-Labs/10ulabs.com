@@ -232,7 +232,7 @@ class ApiStack(Stack):
 
         health_handler = lambda_.Function(
             self, "HealthHandler",
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
             code=lambda_.Code.from_asset(health_endpoint_dir),
             timeout=Duration.seconds(10),
@@ -241,7 +241,7 @@ class ApiStack(Stack):
         )
         echo_handler = lambda_.Function(
             self, "EchoHandler",
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
             code=lambda_.Code.from_asset(echo_endpoint_dir),
             timeout=Duration.seconds(10),
@@ -250,7 +250,7 @@ class ApiStack(Stack):
         )
         catchall_handler = lambda_.Function(
             self, "CatchAllHandler",
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
             code=lambda_.Code.from_asset(catchall_endpoint_dir),
             timeout=Duration.seconds(10),

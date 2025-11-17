@@ -23,7 +23,7 @@ class DockerRunnerStack(Stack):
         return lambda_.Function(
             self, "DockerRunnerHandler",
             function_name=config["naming"]["lambda_function_name"],
-            runtime=lambda_.Runtime.PYTHON_3_11,
+            runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.lambda_handler",
             code=lambda_.Code.from_asset("api/resources/docker_runner"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),

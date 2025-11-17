@@ -44,7 +44,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -84,7 +84,7 @@ jobs:
         name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install dependencies
         run: 'pip install pytest boto3 dnspython
@@ -122,7 +122,7 @@ jobs:
         name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Set up Node.js
         uses: actions/setup-node@v4
@@ -187,7 +187,7 @@ jobs:
         name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install Python dependencies
         run: 'pip install pytest boto3
@@ -210,7 +210,7 @@ jobs:
         name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install linting dependencies
         run: 'pip install pylint mypy yamllint &&
@@ -253,7 +253,7 @@ jobs:
         name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Set up Node.js (required by aws-cdk-lib/jsii)
         uses: actions/setup-node@v4
@@ -296,7 +296,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

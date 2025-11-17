@@ -72,11 +72,11 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
-          REGION=$(jq -r ''.region'' src/claude_md/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' src/claude_md/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' src/claude_md/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' src/claude_md/config.json);
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -86,7 +86,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -96,7 +96,7 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/claude_md \\\n  --test-dir test/claude_md \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/transform_to_compliant_markdown \\\n  --test-dir test/transform_to_compliant_markdown \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   formatting-claude-md:
     name: Formatting CLAUDE.md
     needs: concluding-claude-md-should-be-formatted
@@ -111,11 +111,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
-          REGION=$(jq -r ''.region'' src/claude_md/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' src/claude_md/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' src/claude_md/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' src/claude_md/config.json);
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -125,7 +125,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -136,11 +136,18 @@ jobs:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - name: Install dependencies
-        run: 'npm install -g markdownlint-cli2 &&
+        run: 'npm install -g markdownlint-cli &&
           pip install boto3
           '
+      - id: capture-errors
+        name: Capture markdownlint errors
+        run: 'ERRORS=$(npx markdownlint-cli CLAUDE.md --json 2>&1 || true)
+          echo "errors<<EOF" >> $GITHUB_OUTPUT
+          echo "$ERRORS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          '
       - name: Format CLAUDE.md with Bedrock
-        run: "python src/claude_md/format_claude_md.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --prompt-file src/claude_md/prompt.md\n"
+        run: "python scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --prompt-file scripts/transform_to_compliant_markdown/prompt.md \\\n  --markdownlint-errors '${{ steps.capture-errors.outputs.errors }}'\n"
       - name: Commit and push CLAUDE.md formatting
         run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add CLAUDE.md\nif git diff --cached --quiet; then\n  echo \"No changes to CLAUDE.md\"\nelse\n  git commit -m \"Auto-format CLAUDE.md with Bedrock [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed CLAUDE.md update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
   performing-static-analysis:
@@ -155,7 +162,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -166,11 +173,11 @@ jobs:
           '
       - name: Linting JSON configuration files
         run: 'echo "Validating JSON syntax...";
-          jsonlint -q src/claude_md/config.json;
+          jsonlint -q scripts/transform_to_compliant_markdown/config.json;
           echo "No errors found - JSON validation passed successfully";
           '
       - name: Linting Python files
-        run: "pylint \\\n  src/claude_md/format_claude_md.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
+        run: "pylint \\\n  scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
       - name: Linting YAML files
         run: 'echo "Running yamllint on claude_md.yml...";
           CONFIG=''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'';
@@ -178,7 +185,7 @@ jobs:
           echo "No errors found - YAML linting passed successfully"
           '
       - name: Static type checking Python files with mypy
-        run: 'python -m mypy src/claude_md/format_claude_md.py
+        run: 'python -m mypy scripts/transform_to_compliant_markdown/transform_to_compliant_markdown.py
           '
   unit-testing:
     name: Unit testing
@@ -190,12 +197,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Install Python dependencies
         run: 'pip install pytest boto3
           '
       - name: Run unit tests
-        run: 'pytest test/claude_md/test_unit.py -v
+        run: 'pytest test/transform_to_compliant_markdown/test_unit.py -v
           '
   updating-readme:
     if: always() && needs.concluding-readme-should-be-updated.result == 'success'
@@ -212,11 +219,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' src/claude_md/config.json);
-          REGION=$(jq -r ''.region'' src/claude_md/config.json);
-          MODEL_ID=$(jq -r ''.bedrock.model_id'' src/claude_md/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' src/claude_md/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' src/claude_md/config.json);
+        run: 'ACCOUNT_ID=$(jq -r ''.account_id'' scripts/transform_to_compliant_markdown/config.json);
+          REGION=$(jq -r ''.region'' scripts/transform_to_compliant_markdown/config.json);
+          MODEL_ID=$(jq -r ''.bedrock.model_id'' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_REASONING=$(jq -r ''.bedrock.max_tokens_reasoning'' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS_GENERATION=$(jq -r ''.bedrock.max_tokens'' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -226,7 +233,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -235,9 +242,9 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/claude_md \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/transform_to_compliant_markdown \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
       - name: Commit and push README if changed
-        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/claude_md/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update claude_md README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
+        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add scripts/transform_to_compliant_markdown/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update claude_md README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
 name: Ensuring CLAUDE.md is properly formatted and README.md is up to date
 on:
   push:
@@ -246,6 +253,6 @@ on:
     paths:
       - CLAUDE.md
       - .github/workflows/claude_md.yml
-      - src/claude_md/**
-      - test/claude_md/**
+      - scripts/transform_to_compliant_markdown/**
+      - test/transform_to_compliant_markdown/**
   workflow_dispatch: null
