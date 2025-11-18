@@ -35,12 +35,12 @@ def test_runners_stack_creates_lambda_function(cdk_template, function_name):
 
 def test_runners_stack_creates_api_gateway_resource(cdk_template):
     resources = cdk_template.find_resources("AWS::ApiGateway::Resource")
-    assert len(resources) == 1
+    assert len(resources) == 2
 
 
 def test_runners_stack_creates_api_gateway_method(cdk_template):
     resources = cdk_template.find_resources("AWS::ApiGateway::Method")
-    assert len(resources) == 1
+    assert len(resources) == 2
 
 
 def test_webhook_router_handler_file_exists(webhook_router_path):
@@ -695,7 +695,8 @@ def test_route_runner_request_includes_error_message_in_result_on_http_failure(w
 
 def test_handle_workflow_job_returns_success_response(webhook_router_module):
     import json
-    from unittest.mock import MagicMock, Mock, patch
+    import os
+    from unittest.mock import MagicMock, patch
 
     event_data = {
         'action': 'queued',
@@ -710,20 +711,20 @@ def test_handle_workflow_job_returns_success_response(webhook_router_module):
         }
     }
 
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        mock_urlopen.return_value = mock_response
+    with patch.dict(os.environ, {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_sqs = MagicMock()
+            mock_sqs.send_message.return_value = {'MessageId': 'test-message-id'}
+            mock_boto_client.return_value = mock_sqs
 
-        result = webhook_router_module.handle_workflow_job(event_data)
-        assert result['statusCode'] == 200
+            result = webhook_router_module.handle_workflow_job(event_data)
+            assert result['statusCode'] == 200
 
 
-def test_handle_workflow_job_returns_runner_type_in_success_response(webhook_router_module):
+def test_handle_workflow_job_returns_message_id_in_success_response(webhook_router_module):
     import json
-    from unittest.mock import MagicMock, Mock, patch
+    import os
+    from unittest.mock import MagicMock, patch
 
     event_data = {
         'action': 'queued',
@@ -738,21 +739,21 @@ def test_handle_workflow_job_returns_runner_type_in_success_response(webhook_rou
         }
     }
 
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        mock_urlopen.return_value = mock_response
+    with patch.dict(os.environ, {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_sqs = MagicMock()
+            mock_sqs.send_message.return_value = {'MessageId': 'test-message-id'}
+            mock_boto_client.return_value = mock_sqs
 
-        result = webhook_router_module.handle_workflow_job(event_data)
-        body = json.loads(result['body'])
-        assert body['runner_type'] == 'ec2'
+            result = webhook_router_module.handle_workflow_job(event_data)
+            body = json.loads(result['body'])
+            assert body['message_id'] == 'test-message-id'
 
 
 def test_handle_workflow_job_returns_error_response_on_failure(webhook_router_module):
-    import urllib.error
-    from unittest.mock import patch
+    import os
+    from unittest.mock import MagicMock, patch
+    from botocore.exceptions import ClientError
 
     event_data = {
         'action': 'queued',
@@ -767,15 +768,21 @@ def test_handle_workflow_job_returns_error_response_on_failure(webhook_router_mo
         }
     }
 
-    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError("Network error")):
-        result = webhook_router_module.handle_workflow_job(event_data)
-        assert result['statusCode'] == 500
+    with patch.dict(os.environ, {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_sqs = MagicMock()
+            mock_sqs.send_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Service unavailable'}}, 'SendMessage')
+            mock_boto_client.return_value = mock_sqs
+
+            result = webhook_router_module.handle_workflow_job(event_data)
+            assert result['statusCode'] == 500
 
 
 def test_handle_workflow_job_includes_error_message_in_failure_response(webhook_router_module):
     import json
-    import urllib.error
-    from unittest.mock import patch
+    import os
+    from unittest.mock import MagicMock, patch
+    from botocore.exceptions import ClientError
 
     event_data = {
         'action': 'queued',
@@ -790,10 +797,15 @@ def test_handle_workflow_job_includes_error_message_in_failure_response(webhook_
         }
     }
 
-    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError("Network error")):
-        result = webhook_router_module.handle_workflow_job(event_data)
-        body = json.loads(result['body'])
-        assert 'error' in body
+    with patch.dict(os.environ, {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_sqs = MagicMock()
+            mock_sqs.send_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Service unavailable'}}, 'SendMessage')
+            mock_boto_client.return_value = mock_sqs
+
+            result = webhook_router_module.handle_workflow_job(event_data)
+            body = json.loads(result['body'])
+            assert 'error' in body
 
 
 def test_lambda_handler_handles_base64_encoded_body(webhook_router_module):

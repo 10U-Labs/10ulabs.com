@@ -15,8 +15,13 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None, 'dynamodb': None}
+_clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None}
 _webhook_secret_cache = {'value': None}
+_circuit_breaker_state = {
+    'failures': 0,
+    'last_failure_time': 0,
+    'state': 'closed'
+}
 
 
 def get_secretsmanager_client():
@@ -29,6 +34,12 @@ def get_dynamodb_client():
     if _clients['dynamodb'] is None:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
+
+
+def get_sqs_client():
+    if _clients['sqs'] is None:
+        _clients['sqs'] = boto3.client('sqs')
+    return _clients['sqs']
 
 
 def check_and_record_idempotency(request_id: str) -> bool:
@@ -59,7 +70,66 @@ def check_and_record_idempotency(request_id: str) -> bool:
         return False
 
 
-def get_webhook_secret() -> str:
+def check_circuit_breaker() -> bool:
+    current_time = time.time()
+    failure_threshold = 5
+    timeout_seconds = 60
+
+    if _circuit_breaker_state['state'] == 'open':
+        if current_time - _circuit_breaker_state['last_failure_time'] > timeout_seconds:
+            logger.info("Circuit breaker transitioning to half-open state")
+            _circuit_breaker_state['state'] = 'half-open'
+            _circuit_breaker_state['failures'] = 0
+            return True
+        return False
+
+    if _circuit_breaker_state['failures'] >= failure_threshold:
+        logger.warning("Circuit breaker opening due to %d failures", _circuit_breaker_state['failures'])
+        _circuit_breaker_state['state'] = 'open'
+        _circuit_breaker_state['last_failure_time'] = current_time
+        return False
+
+    return True
+
+
+def record_circuit_breaker_success():
+    if _circuit_breaker_state['state'] == 'half-open':
+        logger.info("Circuit breaker closing after successful request")
+        _circuit_breaker_state['state'] = 'closed'
+    _circuit_breaker_state['failures'] = 0
+
+
+def record_circuit_breaker_failure():
+    _circuit_breaker_state['failures'] += 1
+    _circuit_breaker_state['last_failure_time'] = time.time()
+    if _circuit_breaker_state['state'] == 'half-open':
+        logger.warning("Circuit breaker reopening after failed request in half-open state")
+        _circuit_breaker_state['state'] = 'open'
+
+
+def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    queue_url = os.environ.get('JOB_QUEUE_URL')
+    if not queue_url:
+        logger.error("JOB_QUEUE_URL not set, cannot enqueue job")
+        return {'success': False, 'error': 'Job queue not configured'}
+
+    try:
+        sqs = get_sqs_client()
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(job_data)
+        )
+        logger.info("Enqueued job to SQS: %s", response.get('MessageId'))
+        return {'success': True, 'message_id': response.get('MessageId')}
+    except ClientError as e:
+        logger.error("Failed to enqueue job: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
+def get_webhook_secret(force_refresh: bool = False) -> str:
+    if force_refresh:
+        _webhook_secret_cache['value'] = None
+
     secret = _webhook_secret_cache['value']
     if not secret:
         secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
@@ -90,6 +160,13 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
 
 
 def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
+    if not check_circuit_breaker():
+        logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
+        return {
+            'success': False,
+            'error': 'Service temporarily unavailable (circuit breaker open)'
+        }
+
     api_base_url = os.environ.get('API_BASE_URL', 'https://api.10ulabs.com')
 
     is_ec2_runner = 'ephemeral-ec2-spot-instance' in job_labels
@@ -131,6 +208,7 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
             with urllib.request.urlopen(req, timeout=30) as response:
                 response_data = json.loads(response.read())
                 logger.info("Successfully routed job %s to %s runner on attempt %d", job_id, runner_type, attempt + 1)
+                record_circuit_breaker_success()
                 return {
                     'success': True,
                     'runner_type': runner_type,
@@ -150,6 +228,7 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
                 time.sleep(delay)
             else:
                 logger.error("Failed to route job %s after %d attempts (HTTP %d)", job_id, max_retries + 1, e.code)
+                record_circuit_breaker_failure()
                 return {
                     'success': False,
                     'error': f'HTTP {e.code} after {max_retries + 1} attempts'
@@ -161,11 +240,13 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
                 time.sleep(delay)
             else:
                 logger.error("Failed to route job %s after %d attempts: %s", job_id, max_retries + 1, e)
+                record_circuit_breaker_failure()
                 return {
                     'success': False,
                     'error': f'{str(e)} after {max_retries + 1} attempts'
                 }
 
+    record_circuit_breaker_failure()
     return {'success': False, 'error': 'Max retries exceeded'}
 
 
@@ -198,22 +279,27 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'body': json.dumps({'message': 'No matching runner type, ignoring'})
         }
 
-    logger.info("Routing runner request for job %s (%s)", job_id, job_name)
+    logger.info("Enqueueing runner request for job %s (%s)", job_id, job_name)
 
-    result = route_runner_request(job_id, job_labels, repo_full_name)
+    job_data = {
+        'job_id': job_id,
+        'job_labels': job_labels,
+        'github_repo': repo_full_name
+    }
+
+    result = enqueue_job(job_data)
 
     if result['success']:
         status_code = 200
         response_body = {
-            'message': 'Runner launched successfully',
-            'runner_type': result['runner_type'],
+            'message': 'Job enqueued successfully',
             'job_id': job_id,
-            'response': result['response']
+            'message_id': result.get('message_id')
         }
     else:
         status_code = 500
         response_body = {
-            'message': 'Failed to launch runner',
+            'message': 'Failed to enqueue job',
             'error': result['error'],
             'job_id': job_id
         }
@@ -224,8 +310,58 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        body = json.loads(message['body'])
+        job_id = body.get('job_id')
+        job_labels = body.get('job_labels', [])
+        github_repo = body.get('github_repo')
+
+        logger.info("Processing job from SQS: job_id=%s, labels=%s, repo=%s", job_id, job_labels, github_repo)
+
+        result = route_runner_request(job_id, job_labels, github_repo)
+
+        if result['success']:
+            logger.info("Successfully processed SQS message for job %s", job_id)
+            return {'success': True}
+
+        logger.error("Failed to process SQS message for job %s: %s", job_id, result.get('error'))
+        return {'success': False, 'error': result.get('error')}
+    except (ValueError, KeyError) as e:
+        logger.error("Failed to parse SQS message: %s", e)
+        return {'success': False, 'error': f'Invalid message format: {e}'}
+
+
+def handle_health_check() -> Dict[str, Any]:
+    health_status = {
+        'status': 'healthy',
+        'circuit_breaker': _circuit_breaker_state['state'],
+        'timestamp': int(time.time())
+    }
+    return {
+        'statusCode': 200,
+        'body': json.dumps(health_status)
+    }
+
+
 def lambda_handler(event, _context):
     logger.info("Received event: %s", json.dumps(event))
+
+    if 'Records' in event and len(event['Records']) > 0:
+        if event['Records'][0].get('eventSource') == 'aws:sqs':
+            logger.info("Processing SQS event")
+            results = []
+            for record in event['Records']:
+                result = handle_sqs_message(record)
+                results.append(result)
+            all_success = all(r['success'] for r in results)
+            if not all_success:
+                raise RuntimeError("One or more SQS messages failed to process")
+            return {'statusCode': 200, 'body': json.dumps({'message': 'Processed successfully'})}
+
+    path = event.get('path', event.get('rawPath', ''))
+    if path == '/v1/runners/health':
+        return handle_health_check()
 
     try:
         body_str = event.get('body', '')
