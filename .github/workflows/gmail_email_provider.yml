@@ -98,12 +98,10 @@ jobs:
           python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install dependencies
-        run: |
-          pip install pytest boto3 dnspython
+        run: pip install pytest boto3 dnspython
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run E2E tests
-        run: |
-          pytest test/gmail_email_provider/test_e2e.py -v
+        run: pytest test/gmail_email_provider/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -147,8 +145,7 @@ jobs:
         run: pip install -r src/gmail_email_provider/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Bootstrap (if needed)
-        run: |
-          cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+        run: cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Diff
         run: cd src/gmail_email_provider && cdk diff GmailEmailProvider
@@ -208,12 +205,10 @@ jobs:
           python-version: '3.14'
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Install Python dependencies
-        run: |
-          pip install pytest boto3
+        run: pip install pytest boto3
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run pytest integration tests
-        run: |
-          pytest test/gmail_email_provider/test_integration.py -v
+        run: pytest test/gmail_email_provider/test_integration.py -v
   performing-static-analysis:
     name: Performing static analysis
     runs-on: ubuntu-latest
@@ -287,8 +282,7 @@ jobs:
           pip install -r src/gmail_email_provider/requirements.txt
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Run unit tests
-        run: |
-          pytest test/gmail_email_provider/test_unit.py -v
+        run: pytest test/gmail_email_provider/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
