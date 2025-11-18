@@ -33,5 +33,5 @@ def secretsmanager_client(config):
 
 @pytest.fixture
 def runners_endpoint(config):
-    fqdn = config['domain_names']['fqdn']
+    fqdn = config['fqdn']
     return f"https://{fqdn}/v1/runners"
