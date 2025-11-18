@@ -26,9 +26,11 @@ def test_config_has_lambda_memory(config):
     assert "memory_mb" in config["aws"]["lambda"]
 
 
-def test_runners_stack_creates_lambda_function(cdk_template):
-    resources = cdk_template.find_resources("AWS::Lambda::Function")
-    assert len(resources) == 1
+def test_runners_stack_creates_lambda_function(cdk_template, function_name):
+    cdk_template.has_resource_properties("AWS::Lambda::Function", {
+        "FunctionName": function_name,
+        "Runtime": "python3.14"
+    })
 
 
 def test_runners_stack_creates_api_gateway_resource(cdk_template):
