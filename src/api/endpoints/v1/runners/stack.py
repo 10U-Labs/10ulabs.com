@@ -214,6 +214,40 @@ class RunnersStack(Stack):
 
         dlq_reprocessor_rule.add_target(targets.LambdaFunction(dlq_reprocessor_lambda))
 
+        circuit_breaker_remediation_lambda = lambda_.Function(
+            self, "CircuitBreakerRemediation",
+            function_name=f"{config['aws']['lambda']['function_name']}-cb-remediation",
+            runtime=lambda_.Runtime.PYTHON_3_14,
+            handler="circuit_breaker_remediation.handler",
+            code=lambda_.Code.from_asset(
+                os.path.join(os.path.dirname(__file__), 'lambda')
+            ),
+            timeout=Duration.seconds(60),
+            memory_size=256,
+            environment={
+                "WEBHOOK_FUNCTION_NAME": config['aws']['lambda']['function_name'],
+            },
+            log_retention=logs.RetentionDays.ONE_WEEK,
+            description="Monitors and remediates circuit breaker state"
+        )
+
+        circuit_breaker_remediation_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["lambda:InvokeFunction"],
+                resources=[webhook_router_lambda.function_arn]
+            )
+        )
+
+        circuit_breaker_remediation_rule = events.Rule(
+            self, "CircuitBreakerRemediationSchedule",
+            schedule=events.Schedule.rate(Duration.minutes(5)),
+            description="Monitors circuit breaker health every 5 minutes"
+        )
+
+        circuit_breaker_remediation_rule.add_target(
+            targets.LambdaFunction(circuit_breaker_remediation_lambda)
+        )
+
         webhook_provider = cr.Provider(
             self, "WebhookConfigProvider",
             on_event_handler=webhook_config_lambda,
