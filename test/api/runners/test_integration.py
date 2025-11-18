@@ -362,3 +362,54 @@ def test_cloudwatch_alarm_for_dlq_messages_exists(function_name, config):
     alarm_name = f"{function_name}-dlq-messages"
     response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
     assert len(response['MetricAlarms']) == 1
+
+
+def test_cloudwatch_alarm_for_job_queue_dlq_messages_exists(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-job-dlq-messages"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms']) == 1
+
+
+def test_sns_topic_for_alarms_exists(function_name, config):
+    sns_client = boto3.client('sns', region_name=config['aws']['region'])
+    topic_name = f"{function_name}-alarms"
+    topics = sns_client.list_topics()
+    topic_arns = [t['TopicArn'] for t in topics['Topics']]
+    matching_topics = [arn for arn in topic_arns if topic_name in arn]
+    assert len(matching_topics) == 1
+
+
+def test_cloudwatch_error_alarm_has_sns_action(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-errors"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms'][0]['AlarmActions']) > 0
+
+
+def test_cloudwatch_throttle_alarm_has_sns_action(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-throttles"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms'][0]['AlarmActions']) > 0
+
+
+def test_cloudwatch_dlq_alarm_has_sns_action(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-dlq-messages"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms'][0]['AlarmActions']) > 0
+
+
+def test_cloudwatch_job_queue_dlq_alarm_has_sns_action(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-job-dlq-messages"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms'][0]['AlarmActions']) > 0
+
+
+def test_stack_has_alarm_topic_arn_output(cloudformation_client):
+    stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi-Runners')
+    outputs = stacks['Stacks'][0].get('Outputs', [])
+    output_keys = [o['OutputKey'] for o in outputs]
+    assert 'AlarmTopicArn' in output_keys

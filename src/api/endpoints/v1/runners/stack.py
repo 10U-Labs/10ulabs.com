@@ -183,6 +183,12 @@ class RunnersStack(Stack):
             }
         )
 
+        alarm_topic = sns.Topic(
+            self, "AlarmTopic",
+            topic_name=f"{config['aws']['lambda']['function_name']}-alarms",
+            display_name="Webhook Router Alarms"
+        )
+
         error_alarm = cloudwatch.Alarm(
             self, "WebhookRouterErrorAlarm",
             alarm_name=f"{config['aws']['lambda']['function_name']}-errors",
@@ -235,6 +241,11 @@ class RunnersStack(Stack):
             treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
         )
 
+        error_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
+        throttle_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
+        dlq_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
+        job_queue_dlq_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
+
         CfnOutput(
             self, "RunnersWebhookEndpoint",
             value=f"https://{config['fqdn']}/v1/runners",
@@ -245,4 +256,10 @@ class RunnersStack(Stack):
             self, "WebhookRouterLambdaName",
             value=webhook_router_lambda.function_name,
             description="Lambda function name for webhook router"
+        )
+
+        CfnOutput(
+            self, "AlarmTopicArn",
+            value=alarm_topic.topic_arn,
+            description="SNS topic ARN for CloudWatch alarm notifications"
         )
