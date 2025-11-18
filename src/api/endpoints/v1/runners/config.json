@@ -9,6 +9,6 @@
     }
   },
   "domain_names": {
-    "subdomain": "api.10ulabs.com"
+    "fqdn": "api.10ulabs.com"
   }
 }
