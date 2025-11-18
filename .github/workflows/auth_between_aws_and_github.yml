@@ -97,11 +97,9 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install dependencies
-        run: |
-          pip install pytest boto3
+        run: pip install pytest boto3
       - name: Run E2E tests
-        run: |
-          pytest test/auth_between_aws_and_github/test_e2e.py -v
+        run: pytest test/auth_between_aws_and_github/test_e2e.py -v
   ensuring-infrastructure-exists-in-defined-state:
     name: Ensuring infrastructure exists in defined state
     needs: unit-testing
@@ -226,8 +224,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3
       - name: Run integration tests
-        run: |
-          pytest test/auth_between_aws_and_github/test_integration.py -v
+        run: pytest test/auth_between_aws_and_github/test_integration.py -v
   performing-static-analysis:
     if: "github.ref == 'refs/heads/main' && (\n  (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||\n  (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')\n)\n"
     name: Performing static analysis
@@ -285,8 +282,7 @@ jobs:
           pip install pytest &&
           pip install -r src/auth_between_aws_and_github/requirements.txt
       - name: Run unit tests
-        run: |
-          pytest test/auth_between_aws_and_github/test_unit.py -v
+        run: pytest test/auth_between_aws_and_github/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
