@@ -815,6 +815,163 @@ def test_lambda_handler_returns_500_when_secret_retrieval_fails_with_signature(w
         assert result['statusCode'] == 500
 
 
+def test_get_webhook_secret_uses_default_secret_name_when_env_not_set(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    import os
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': 'default_secret'}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.dict(os.environ, {}, clear=True):
+            secret = webhook_router_module.get_webhook_secret()
+            mock_client.get_secret_value.assert_called_once_with(SecretId='api-webhook-secret')
+            assert secret == 'default_secret'
+
+
+def test_get_webhook_secret_handles_resource_not_found_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Secret not found'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_access_denied_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_invalid_request_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InvalidRequestException', 'Message': 'Invalid request'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_throttling_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'ThrottlingException', 'Message': 'Rate exceeded'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_empty_secret_string(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': ''}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == ''
+
+
+def test_get_webhook_secret_handles_secret_with_special_characters(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    special_secret = '!@#$%^&*()_+-=[]{}|;:\'",.<>?/~`\n\t\r'
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': special_secret}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == special_secret
+
+
+def test_get_webhook_secret_handles_unicode_secret(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    unicode_secret = '测试密码🔐🗝️'
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': unicode_secret}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == unicode_secret
+
+
+def test_get_webhook_secret_handles_very_long_secret(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    long_secret = 'a' * 10000
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': long_secret}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == long_secret
+        assert len(secret) == 10000
+
+
+def test_get_webhook_secret_cache_persists_across_calls(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = 'cached_secret'
+
+    mock_client = MagicMock()
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == 'cached_secret'
+        mock_client.get_secret_value.assert_not_called()
+
+
 def test_configure_webhook_handler_file_exists(configure_webhook_handler_path):
     assert configure_webhook_handler_path.exists()
 
