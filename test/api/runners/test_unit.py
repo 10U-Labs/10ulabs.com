@@ -544,6 +544,50 @@ def test_get_webhook_secret_caches_secret(webhook_router_module):
         assert secret1 == secret2
 
 
+def test_get_webhook_secret_raises_runtime_error_on_secrets_manager_failure(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InternalServiceError', 'Message': 'Service unavailable'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_lambda_handler_returns_500_when_secret_retrieval_fails_with_signature(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import json
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InternalServiceError', 'Message': 'Service unavailable'}},
+        'GetSecretValue'
+    )
+
+    event = {
+        'body': json.dumps({'action': 'queued'}),
+        'headers': {
+            'x-hub-signature-256': 'sha256=abcd1234',
+            'x-github-event': 'workflow_job'
+        }
+    }
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = webhook_router_module.lambda_handler(event, None)
+        assert result['statusCode'] == 500
+
+
 def test_configure_webhook_handler_file_exists(configure_webhook_handler_path):
     assert configure_webhook_handler_path.exists()
 

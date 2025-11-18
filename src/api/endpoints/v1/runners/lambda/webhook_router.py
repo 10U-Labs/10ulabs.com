@@ -25,19 +25,18 @@ def get_secretsmanager_client():
 
 
 def get_webhook_secret() -> str:
-    if _webhook_secret_cache['value']:
-        return _webhook_secret_cache['value']
-
-    secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
-    try:
-        secretsmanager = get_secretsmanager_client()
-        response = secretsmanager.get_secret_value(SecretId=secret_name)
-        secret = response['SecretString']
-        _webhook_secret_cache['value'] = secret
-        return secret
-    except ClientError as e:
-        logger.error("Failed to retrieve webhook secret: %s", e)
-        return ''
+    secret = _webhook_secret_cache['value']
+    if not secret:
+        secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
+        try:
+            secretsmanager = get_secretsmanager_client()
+            response = secretsmanager.get_secret_value(SecretId=secret_name)
+            secret = response['SecretString']
+            _webhook_secret_cache['value'] = secret
+        except ClientError as e:
+            logger.error("Failed to retrieve webhook secret: %s", e)
+            raise RuntimeError(f"Cannot retrieve webhook secret: {e}") from e
+    return secret
 
 
 def verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
@@ -185,12 +184,19 @@ def lambda_handler(event, _context):
 
     signature_header = event.get('headers', {}).get('x-hub-signature-256')
     if signature_header:
-        webhook_secret = get_webhook_secret()
-        if webhook_secret and not verify_signature(body_str, signature_header, webhook_secret):
-            logger.error("Webhook signature verification failed")
+        try:
+            webhook_secret = get_webhook_secret()
+            if not verify_signature(body_str, signature_header, webhook_secret):
+                logger.error("Webhook signature verification failed")
+                return {
+                    'statusCode': 401,
+                    'body': json.dumps({'error': 'Invalid signature'})
+                }
+        except RuntimeError as e:
+            logger.error("Cannot verify signature, secret unavailable: %s", e)
             return {
-                'statusCode': 401,
-                'body': json.dumps({'error': 'Invalid signature'})
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Authentication system unavailable'})
             }
     else:
         logger.warning("No signature header found, proceeding without verification")
