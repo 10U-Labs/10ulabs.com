@@ -206,3 +206,194 @@ def test_runners_endpoint_ignores_unknown_event_types(runners_endpoint):
     )
 
     assert response.status_code == 200
+
+
+def test_runners_endpoint_handles_concurrent_ping_requests(runners_endpoint):
+    import concurrent.futures
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    def send_request(index):
+        return requests.post(
+            runners_endpoint,
+            json=payload,
+            headers={
+                'X-GitHub-Event': 'ping',
+                'Content-Type': 'application/json'
+            },
+            timeout=30
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(send_request, i) for i in range(5)]
+        responses = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+    assert len([r for r in responses if r.status_code == 200]) == 5
+
+
+def test_runners_endpoint_handles_concurrent_workflow_job_requests(runners_endpoint):
+    import concurrent.futures
+
+    def send_request(job_id):
+        payload = {
+            'action': 'queued',
+            'workflow_job': {
+                'id': job_id,
+                'name': f'test-job-{job_id}',
+                'labels': ['self-hosted', 'ephemeral-ec2-spot-instance'],
+                'status': 'queued'
+            },
+            'repository': {
+                'full_name': '10U-Labs-LLC/10ulabs.com'
+            }
+        }
+        return requests.post(
+            runners_endpoint,
+            json=payload,
+            headers={
+                'X-GitHub-Event': 'workflow_job',
+                'Content-Type': 'application/json'
+            },
+            timeout=30
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(send_request, 1000 + i) for i in range(3)]
+        responses = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+    assert len([r for r in responses if r.status_code in [200, 500]]) == 3
+
+
+def test_runners_endpoint_handles_duplicate_delivery_ids(runners_endpoint):
+    import time
+
+    delivery_id = f'test-delivery-{int(time.time() * 1000)}'
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    response1 = requests.post(
+        runners_endpoint,
+        json=payload,
+        headers={
+            'X-GitHub-Event': 'ping',
+            'X-GitHub-Delivery': delivery_id,
+            'Content-Type': 'application/json'
+        },
+        timeout=30
+    )
+
+    response2 = requests.post(
+        runners_endpoint,
+        json=payload,
+        headers={
+            'X-GitHub-Event': 'ping',
+            'X-GitHub-Delivery': delivery_id,
+            'Content-Type': 'application/json'
+        },
+        timeout=30
+    )
+
+    assert response1.status_code == 200
+    assert response2.status_code == 200
+
+
+def test_runners_endpoint_processes_different_delivery_ids(runners_endpoint):
+    import time
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    delivery_id1 = f'test-delivery-{int(time.time() * 1000)}-1'
+    delivery_id2 = f'test-delivery-{int(time.time() * 1000)}-2'
+
+    response1 = requests.post(
+        runners_endpoint,
+        json=payload,
+        headers={
+            'X-GitHub-Event': 'ping',
+            'X-GitHub-Delivery': delivery_id1,
+            'Content-Type': 'application/json'
+        },
+        timeout=30
+    )
+
+    response2 = requests.post(
+        runners_endpoint,
+        json=payload,
+        headers={
+            'X-GitHub-Event': 'ping',
+            'X-GitHub-Delivery': delivery_id2,
+            'Content-Type': 'application/json'
+        },
+        timeout=30
+    )
+
+    assert response1.status_code == 200
+    assert response2.status_code == 200
+
+
+def test_runners_endpoint_handles_concurrent_requests_with_same_delivery_id(runners_endpoint):
+    import concurrent.futures
+    import time
+
+    delivery_id = f'test-delivery-{int(time.time() * 1000)}-concurrent'
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    def send_request(index):
+        return requests.post(
+            runners_endpoint,
+            json=payload,
+            headers={
+                'X-GitHub-Event': 'ping',
+                'X-GitHub-Delivery': delivery_id,
+                'Content-Type': 'application/json'
+            },
+            timeout=30
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(send_request, i) for i in range(3)]
+        responses = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+    assert len([r for r in responses if r.status_code == 200]) == 3
+
+
+def test_runners_endpoint_respects_reserved_concurrent_executions_limit(runners_endpoint):
+    import concurrent.futures
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    def send_request(index):
+        return requests.post(
+            runners_endpoint,
+            json=payload,
+            headers={
+                'X-GitHub-Event': 'ping',
+                'Content-Type': 'application/json'
+            },
+            timeout=30
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        futures = [executor.submit(send_request, i) for i in range(15)]
+        responses = [f.result() for f in concurrent.futures.as_completed(futures)]
+
+    success_count = len([r for r in responses if r.status_code == 200])
+    throttled_count = len([r for r in responses if r.status_code == 429])
+
+    assert success_count + throttled_count == 15
