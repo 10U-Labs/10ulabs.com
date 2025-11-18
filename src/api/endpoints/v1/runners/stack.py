@@ -83,8 +83,7 @@ class RunnersStack(Stack):
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="GitHub webhook router for GitHub self-hosted runners",
-            dead_letter_queue=webhook_dlq,
-            reserved_concurrent_executions=100
+            dead_letter_queue=webhook_dlq
         )
 
         webhook_router_lambda.add_to_role_policy(
