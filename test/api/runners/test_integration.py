@@ -403,3 +403,52 @@ def test_stack_has_alarm_topic_arn_output(cloudformation_client):
     outputs = stacks['Stacks'][0].get('Outputs', [])
     output_keys = [o['OutputKey'] for o in outputs]
     assert 'AlarmTopicArn' in output_keys
+
+
+def test_dlq_reprocessor_lambda_exists(lambda_client, function_name):
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    assert response['Configuration']['FunctionName'] == reprocessor_function_name
+
+
+def test_dlq_reprocessor_lambda_has_correct_runtime(lambda_client, function_name):
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    assert response['Configuration']['Runtime'] == 'python3.14'
+
+
+def test_dlq_reprocessor_lambda_has_environment_variables(lambda_client, function_name):
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'WEBHOOK_DLQ_URL' in env_vars
+    assert 'JOB_DLQ_URL' in env_vars
+    assert 'JOB_QUEUE_URL' in env_vars
+
+
+def test_dlq_reprocessor_lambda_has_sqs_permissions(lambda_client, function_name, config):
+    iam_client = boto3.client('iam', region_name=config['aws']['region'])
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    role_arn = response['Configuration']['Role']
+    role_name = role_arn.split('/')[-1]
+
+    inline_policies = iam_client.list_role_policies(RoleName=role_name)
+    has_sqs_permissions = False
+
+    for policy_name in inline_policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_str = json.dumps(policy_doc['PolicyDocument'])
+        if 'sqs:ReceiveMessage' in policy_str and 'sqs:SendMessage' in policy_str:
+            has_sqs_permissions = True
+            break
+
+    assert has_sqs_permissions
+
+
+def test_dlq_reprocessor_eventbridge_rule_exists(function_name, config):
+    events_client = boto3.client('events', region_name=config['aws']['region'])
+    rules = events_client.list_rules()
+    rule_names = [r['Name'] for r in rules['Rules']]
+    matching_rules = [name for name in rule_names if 'DLQReprocessor' in name]
+    assert len(matching_rules) >= 1
