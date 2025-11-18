@@ -123,7 +123,7 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
       - name: Install dependencies
-        run: pip install -r src/api/infrastructure/requirements.txt
+        run: pip install -r src/api/endpoints/v1/runners/requirements.txt
       - name: CDK Bootstrap (if needed)
         run: cd src/api/endpoints/v1/runners && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
@@ -190,7 +190,7 @@ jobs:
           pip install pylint mypy yamllint &&
           npm install -g jsonlint
       - name: Install project dependencies for linting
-        run: pip install -r src/api/infrastructure/requirements.txt
+        run: pip install -r src/api/endpoints/v1/runners/requirements.txt
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
@@ -198,7 +198,8 @@ jobs:
       - name: Linting Python files
         run: |
           pylint \
-            src/api/endpoints/v1/runners/*.py \
+            src/api/endpoints/v1/runners/stack.py \
+            src/api/endpoints/v1/runners/lambda/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -226,7 +227,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install pytest &&
-          pip install -r src/api/infrastructure/requirements.txt
+          pip install -r src/api/endpoints/v1/runners/requirements.txt
       - name: Run unit tests
         run: pytest test/api/runners/test_unit.py -v
   updating-readme:

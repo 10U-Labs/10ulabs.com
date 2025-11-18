@@ -14,9 +14,14 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-secretsmanager = boto3.client('secretsmanager')
-
+_clients = {'secretsmanager': None}
 _webhook_secret_cache = {'value': None}
+
+
+def get_secretsmanager_client():
+    if _clients['secretsmanager'] is None:
+        _clients['secretsmanager'] = boto3.client('secretsmanager')
+    return _clients['secretsmanager']
 
 
 def get_webhook_secret() -> str:
@@ -25,6 +30,7 @@ def get_webhook_secret() -> str:
 
     secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
     try:
+        secretsmanager = get_secretsmanager_client()
         response = secretsmanager.get_secret_value(SecretId=secret_name)
         secret = response['SecretString']
         _webhook_secret_cache['value'] = secret

@@ -44,7 +44,7 @@ def runners_stack_class(stack_path):
 
 @pytest.fixture
 def webhook_router_path(runners_dir):
-    return runners_dir / "webhook_router.py"
+    return runners_dir / "lambda" / "webhook_router.py"
 
 
 @pytest.fixture
