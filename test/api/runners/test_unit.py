@@ -25,15 +25,15 @@ def test_config_has_subdomain_name(config):
 
 
 def test_config_has_lambda_function_name(config):
-    assert "lambda_function_name" in config["naming"]
+    assert "function_name" in config["aws"]["lambda"]
 
 
 def test_config_has_lambda_timeout(config):
-    assert "timeout_seconds" in config["lambda"]
+    assert "timeout_seconds" in config["aws"]["lambda"]
 
 
 def test_config_has_lambda_memory(config):
-    assert "memory_mb" in config["lambda"]
+    assert "memory_mb" in config["aws"]["lambda"]
 
 
 def test_runners_stack_creates_lambda_function():
