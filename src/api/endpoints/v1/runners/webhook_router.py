@@ -85,14 +85,14 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
 
         with urllib.request.urlopen(req, timeout=30) as response:
             response_data = json.loads(response.read())
-            logger.info("✅ Successfully routed job %s to %s runner", job_id, runner_type)
+            logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
             result = {
                 'success': True,
                 'runner_type': runner_type,
                 'response': response_data
             }
     except (urllib.error.URLError, ValueError) as e:
-        logger.error("❌ Failed to route job %s to %s runner: %s", job_id, runner_type, e)
+        logger.error("Failed to route job %s to %s runner: %s", job_id, runner_type, e)
         result = {
             'success': False,
             'error': str(e)
@@ -130,7 +130,7 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'body': json.dumps({'message': 'No matching runner type, ignoring'})
         }
 
-    logger.info("🚀 Routing runner request for job %s (%s)", job_id, job_name)
+    logger.info("Routing runner request for job %s (%s)", job_id, job_name)
 
     result = route_runner_request(job_id, job_labels, repo_full_name)
 

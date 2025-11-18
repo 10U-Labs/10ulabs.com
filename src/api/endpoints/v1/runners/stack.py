@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any
 from aws_cdk import (
     Stack,
@@ -25,7 +26,7 @@ class RunnersStack(Stack):
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="webhook_router.lambda_handler",
-            code=lambda_.Code.from_asset("api/resources/runners"),
+            code=lambda_.Code.from_asset(os.path.dirname(__file__)),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
