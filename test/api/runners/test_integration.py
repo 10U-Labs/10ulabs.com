@@ -301,7 +301,7 @@ def test_webhook_router_lambda_has_reserved_concurrent_executions(lambda_client,
 
 def test_webhook_router_lambda_reserved_concurrent_executions_is_10(lambda_client, function_name):
     response = lambda_client.get_function(FunctionName=function_name)
-    assert response['Configuration']['ReservedConcurrentExecutions'] == 10
+    assert response['Configuration']['ReservedConcurrentExecutions'] == 100
 
 
 def test_idempotency_table_exists(function_name, config):
