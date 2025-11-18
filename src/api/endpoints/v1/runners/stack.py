@@ -5,10 +5,12 @@ from aws_cdk import (
     Duration,
     CfnOutput,
     Fn,
+    CustomResource,
     aws_lambda as lambda_,
     aws_apigateway as apigw,
     aws_iam as iam,
     aws_logs as logs,
+    custom_resources as cr,
 )
 from constructs import Construct
 
@@ -20,6 +22,7 @@ class RunnersStack(Stack):
         rest_api_id = Fn.import_value("TenULabsApi-RestApiId")
         v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
         webhook_secret_name = Fn.import_value("TenULabsApi-WebhookSecretName")
+        github_pat_secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
 
         webhook_router_lambda = lambda_.Function(
             self, "WebhookRouterHandler",
@@ -40,7 +43,10 @@ class RunnersStack(Stack):
         webhook_router_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["secretsmanager:GetSecretValue"],
-                resources=[f"arn:aws:secretsmanager:{config['aws']['region']}:{config['aws']['account_id']}:secret:{webhook_secret_name}-*"]
+                resources=[
+                    f"arn:aws:secretsmanager:{config['aws']['region']}:"
+                    f"{config['aws']['account_id']}:secret:{webhook_secret_name}-*"
+                ]
             )
         )
 
@@ -61,6 +67,53 @@ class RunnersStack(Stack):
         runners_resource.add_method(
             "POST",
             apigw.LambdaIntegration(webhook_router_lambda)
+        )
+
+        webhook_config_lambda = lambda_.Function(
+            self, "WebhookConfigHandler",
+            function_name=f"{config['aws']['lambda']['function_name']}-config",
+            runtime=lambda_.Runtime.PYTHON_3_14,
+            handler="configure_webhook_handler.lambda_handler",
+            code=lambda_.Code.from_asset(os.path.dirname(__file__)),
+            timeout=Duration.seconds(60),
+            memory_size=256,
+            environment={
+                "WEBHOOK_SECRET_NAME": webhook_secret_name,
+                "GITHUB_PAT_SECRET_NAME": github_pat_secret_name,
+            },
+            log_retention=logs.RetentionDays.ONE_WEEK,
+            description="Configures GitHub webhook for self-hosted runners"
+        )
+
+        webhook_config_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:CreateSecret"
+                ],
+                resources=[
+                    f"arn:aws:secretsmanager:{config['aws']['region']}:"
+                    f"{config['aws']['account_id']}:secret:{webhook_secret_name}-*",
+                    f"arn:aws:secretsmanager:{config['aws']['region']}:"
+                    f"{config['aws']['account_id']}:secret:"
+                    f"{github_pat_secret_name}-*"
+                ]
+            )
+        )
+
+        webhook_provider = cr.Provider(
+            self, "WebhookConfigProvider",
+            on_event_handler=webhook_config_lambda,
+            log_retention=logs.RetentionDays.ONE_WEEK
+        )
+
+        _webhook_resource = CustomResource(
+            self, "GitHubWebhook",
+            service_token=webhook_provider.service_token,
+            properties={
+                "WebhookUrl": f"https://{config['fqdn']}/v1/runners",
+                "Repository": config['github']['repository']
+            }
         )
 
         CfnOutput(
