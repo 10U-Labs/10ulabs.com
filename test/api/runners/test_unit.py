@@ -991,3 +991,130 @@ def test_create_github_webhook_logs_error_on_failure(configure_webhook_handler_m
                 'owner/repo'
             )
             assert mock_logger.called
+
+
+def test_delete_github_webhook_returns_success_on_successful_deletion(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is True
+
+
+def test_delete_github_webhook_handles_http_404_as_success(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 404, 'Not Found', {}, None)
+    mock_error.fp = None
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is True
+
+
+def test_delete_github_webhook_handles_http_401_unauthorized(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 401, 'Unauthorized', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Unauthorized'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_handles_http_403_forbidden(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 403, 'Forbidden', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Forbidden'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_handles_http_500_server_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Server error'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_handles_url_error_network_failure(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network unreachable')):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_logs_success(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        with patch.object(configure_webhook_handler_module.logger, 'info') as mock_logger:
+            configure_webhook_handler_module.delete_github_webhook(
+                123456,
+                'ghp_test_token',
+                'owner/repo'
+            )
+            assert mock_logger.called
+
+
+def test_delete_github_webhook_logs_warning_on_404(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 404, 'Not Found', {}, None)
+    mock_error.fp = None
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module.logger, 'warning') as mock_logger:
+            configure_webhook_handler_module.delete_github_webhook(
+                123456,
+                'ghp_test_token',
+                'owner/repo'
+            )
+            assert mock_logger.called
