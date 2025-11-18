@@ -196,14 +196,14 @@ jobs:
           python-version: '3.14'
       - name: Install linting dependencies
         run: |
-          pip install pylint mypy yamllint &&
+          pip install pylint mypy yamllint && \
           npm install -g jsonlint
       - name: Install project dependencies for linting
         run: pip install -r src/gmail_email_provider/requirements.txt
       - name: Linting JSON configuration files
         run: |
-          echo "Validating JSON syntax..."
-          jsonlint -q src/gmail_email_provider/config.json
+          echo "Validating JSON syntax..." && \
+          jsonlint -q src/gmail_email_provider/config.json && \
           jsonlint -q src/gmail_email_provider/cdk.json
       - name: Linting Python files
         run: |
@@ -216,7 +216,7 @@ jobs:
           yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/gmail_email_provider.yml
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/gmail_email_provider &&
+          python -m mypy src/gmail_email_provider && \
           python -m mypy scripts/readme/readme.py
   unit-testing:
     name: Unit testing
@@ -235,7 +235,7 @@ jobs:
           node-version: '20'
       - name: Install Python dependencies
         run: |
-          pip install pytest &&
+          pip install pytest && \
           pip install -r src/gmail_email_provider/requirements.txt
       - name: Run unit tests
         run: pytest test/gmail_email_provider/test_unit.py -v
