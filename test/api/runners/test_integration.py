@@ -519,3 +519,22 @@ def test_circuit_breaker_remediation_lambda_has_xray_tracing_enabled(lambda_clie
     response = lambda_client.get_function(FunctionName=remediation_function_name)
     tracing_config = response['Configuration']['TracingConfig']
     assert tracing_config['Mode'] == 'Active'
+
+
+def test_webhook_router_lambda_has_cloudwatch_metrics_permissions(lambda_client, function_name, config):
+    iam_client = boto3.client('iam', region_name=config['aws']['region'])
+    response = lambda_client.get_function(FunctionName=function_name)
+    role_arn = response['Configuration']['Role']
+    role_name = role_arn.split('/')[-1]
+
+    inline_policies = iam_client.list_role_policies(RoleName=role_name)
+    has_cloudwatch_permissions = False
+
+    for policy_name in inline_policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_str = json.dumps(policy_doc['PolicyDocument'])
+        if 'cloudwatch:PutMetricData' in policy_str:
+            has_cloudwatch_permissions = True
+            break
+
+    assert has_cloudwatch_permissions

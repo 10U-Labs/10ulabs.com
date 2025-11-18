@@ -103,6 +103,13 @@ class RunnersStack(Stack):
 
         job_queue.grant_send_messages(webhook_router_lambda)
 
+        webhook_router_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["cloudwatch:PutMetricData"],
+                resources=["*"]
+            )
+        )
+
         webhook_router_lambda.add_event_source(
             lambda_events.SqsEventSource(
                 job_queue,
