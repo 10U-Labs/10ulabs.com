@@ -499,3 +499,23 @@ def test_circuit_breaker_remediation_eventbridge_rule_exists(function_name, conf
     rule_names = [r['Name'] for r in rules['Rules']]
     matching_rules = [name for name in rule_names if 'CircuitBreakerRemediation' in name]
     assert len(matching_rules) >= 1
+
+
+def test_webhook_router_lambda_has_xray_tracing_enabled(lambda_client, function_name):
+    response = lambda_client.get_function(FunctionName=function_name)
+    tracing_config = response['Configuration']['TracingConfig']
+    assert tracing_config['Mode'] == 'Active'
+
+
+def test_dlq_reprocessor_lambda_has_xray_tracing_enabled(lambda_client, function_name):
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    tracing_config = response['Configuration']['TracingConfig']
+    assert tracing_config['Mode'] == 'Active'
+
+
+def test_circuit_breaker_remediation_lambda_has_xray_tracing_enabled(lambda_client, function_name):
+    remediation_function_name = f"{function_name}-cb-remediation"
+    response = lambda_client.get_function(FunctionName=remediation_function_name)
+    tracing_config = response['Configuration']['TracingConfig']
+    assert tracing_config['Mode'] == 'Active'
