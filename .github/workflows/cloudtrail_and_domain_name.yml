@@ -275,47 +275,37 @@ jobs:
         name: Run pytest integration tests
         run: pytest test/cloudtrail_and_domain_name/test_integration.py -v
   performing-static-analysis:
+    if: github.event.inputs.dry_run != 'true'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip static analysis
-        run: echo "DRY RUN - Would run pylint and mypy static analysis"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install linting dependencies
+      - name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint
           npm install -g jsonlint
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install project dependencies for linting
+      - name: Install project dependencies for linting
         run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting JSON configuration files
+      - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
           jsonlint -q src/cloudtrail_and_domain_name/config.json
           jsonlint -q src/cloudtrail_and_domain_name/cdk.json
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Python files
+      - name: Linting Python files
         run: |
           pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/lambda/handler.py src/cloudtrail_and_domain_name/app.py scripts/readme/readme.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting YAML files
+      - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/cloudtrail_and_domain_name.yml
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Static type checking Python files with mypy
+      - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/cloudtrail_and_domain_name
           python -m mypy scripts/readme/readme.py
