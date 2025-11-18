@@ -77,7 +77,10 @@ def get_webhook_secret() -> str:
 def verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
     if not signature_header:
         return False
-    _, github_signature = signature_header.split('=')
+    parts = signature_header.split('=', 1)
+    if len(parts) != 2:
+        return False
+    _, github_signature = parts
     computed_signature = hmac.new(
         key=secret.encode('utf-8'),
         msg=payload_body.encode('utf-8'),

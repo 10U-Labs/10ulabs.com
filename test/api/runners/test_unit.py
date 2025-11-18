@@ -88,6 +88,124 @@ def test_verify_signature_rejects_incorrect_signature(webhook_router_module):
     assert result is False
 
 
+def test_verify_signature_returns_false_for_empty_signature_header(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "", "secret")
+    assert result is False
+
+
+def test_verify_signature_returns_false_for_none_signature_header(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", None, "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_without_equals_separator(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256noequals", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_only_equals(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "=", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_empty_value_after_equals(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256=", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_multiple_equals(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha256={signature}=extra", secret)
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_whitespace(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", " sha256=abc123 ", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_invalid_hex_characters(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256=notvalidhex!@#", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_wrong_algorithm_prefix(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha1={signature}", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_wrong_length(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256=abc123", "secret")
+    assert result is False
+
+
+def test_verify_signature_is_case_sensitive(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha256={signature.upper()}", secret)
+    assert result is False
+
+
+def test_verify_signature_different_payload_rejects(webhook_router_module):
+    import hashlib
+    import hmac
+
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg="original payload".encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature("different payload", f"sha256={signature}", secret)
+    assert result is False
+
+
+def test_verify_signature_different_secret_rejects(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    signature = hmac.new(
+        key="original_secret".encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha256={signature}", "different_secret")
+    assert result is False
+
+
 def test_handle_workflow_job_ignores_non_queued_actions(webhook_router_module):
     event_data = {
         'action': 'completed',
