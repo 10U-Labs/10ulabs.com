@@ -7,6 +7,7 @@ from aws_cdk import (
     Fn,
     CustomResource,
     aws_lambda as lambda_,
+    aws_lambda_event_sources as lambda_events,
     aws_apigateway as apigw,
     aws_iam as iam,
     aws_logs as logs,
@@ -36,6 +37,22 @@ class RunnersStack(Stack):
             visibility_timeout=Duration.seconds(300)
         )
 
+        job_queue_dlq = sqs.Queue(
+            self, "JobQueueDLQ",
+            queue_name=f"{config['aws']['lambda']['function_name']}-job-dlq",
+            retention_period=Duration.days(14)
+        )
+
+        job_queue = sqs.Queue(
+            self, "JobQueue",
+            queue_name=f"{config['aws']['lambda']['function_name']}-jobs",
+            visibility_timeout=Duration.seconds(config["aws"]["lambda"]["timeout_seconds"] * 6),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=3,
+                queue=job_queue_dlq
+            )
+        )
+
         idempotency_table = dynamodb.Table(
             self, "IdempotencyTable",
             table_name=f"{config['aws']['lambda']['function_name']}-idempotency",
@@ -62,6 +79,7 @@ class RunnersStack(Stack):
                 "WEBHOOK_SECRET_NAME": webhook_secret_name,
                 "API_BASE_URL": f"https://{config['fqdn']}",
                 "IDEMPOTENCY_TABLE_NAME": idempotency_table.table_name,
+                "JOB_QUEUE_URL": job_queue.queue_url,
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="GitHub webhook router for GitHub self-hosted runners",
@@ -81,6 +99,16 @@ class RunnersStack(Stack):
 
         idempotency_table.grant_read_write_data(webhook_router_lambda)
 
+        job_queue.grant_send_messages(webhook_router_lambda)
+
+        webhook_router_lambda.add_event_source(
+            lambda_events.SqsEventSource(
+                job_queue,
+                batch_size=1,
+                max_batching_window=Duration.seconds(0)
+            )
+        )
+
         rest_api = apigw.RestApi.from_rest_api_attributes(
             self, "ImportedApi",
             rest_api_id=rest_api_id,
@@ -97,6 +125,12 @@ class RunnersStack(Stack):
         runners_resource = v1_resource.add_resource("runners")
         runners_resource.add_method(
             "POST",
+            apigw.LambdaIntegration(webhook_router_lambda)
+        )
+
+        health_resource = runners_resource.add_resource("health")
+        health_resource.add_method(
+            "GET",
             apigw.LambdaIntegration(webhook_router_lambda)
         )
 
@@ -179,6 +213,19 @@ class RunnersStack(Stack):
             self, "WebhookDLQAlarm",
             alarm_name=f"{config['aws']['lambda']['function_name']}-dlq-messages",
             metric=webhook_dlq.metric_approximate_number_of_messages_visible(
+                period=Duration.minutes(5),
+                statistic="Maximum"
+            ),
+            evaluation_periods=1,
+            threshold=1,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
+        )
+
+        job_queue_dlq_alarm = cloudwatch.Alarm(
+            self, "JobQueueDLQAlarm",
+            alarm_name=f"{config['aws']['lambda']['function_name']}-job-dlq-messages",
+            metric=job_queue_dlq.metric_approximate_number_of_messages_visible(
                 period=Duration.minutes(5),
                 statistic="Maximum"
             ),
