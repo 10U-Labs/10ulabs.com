@@ -71,33 +71,27 @@ jobs:
     needs: integration-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
           REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install pytest boto3 dnspython
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run E2E tests
+      - name: Run E2E tests
         run: pytest test/cloudtrail_and_domain_name/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     if: |
@@ -107,47 +101,37 @@ jobs:
     needs: unit-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
           REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install CDK
+      - name: Install CDK
         run: npm install -g aws-cdk
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: CDK Bootstrap (if needed)
+      - name: CDK Bootstrap (if needed)
         run: cd src/cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: CDK Diff
+      - name: CDK Diff
         run: cd src/cloudtrail_and_domain_name && cdk diff TenULabsDomainName
       - id: deploy
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Deploy
         run: |
           cd src/cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
@@ -158,8 +142,7 @@ jobs:
           else
             echo "deployment_failed=false" >> $GITHUB_OUTPUT
           fi
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Fetch CloudWatch Logs
+      - name: Fetch CloudWatch Logs
         run: |
           echo "Fetching CloudWatch logs from Lambda execution..."
           echo "Searching for TenULabsDomainName DomainRegistration Lambda log groups..."
@@ -220,12 +203,12 @@ jobs:
             --output text 2>/dev/null || echo "Could not fetch logs"
           echo "=========================================="
           echo ""
-      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
+      - if: ${{ steps.deploy.outputs.deployment_failed == 'true' }}
         name: Fail if deployment failed
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
-      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
+      - if: ${{ steps.deploy.outputs.deployment_failed != 'true' }}
         name: Display outputs
         run: |
           echo "Domain infrastructure deployed successfully"
@@ -237,33 +220,27 @@ jobs:
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
           REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: pip install pytest boto3
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run pytest integration tests
+      - name: Run pytest integration tests
         run: pytest test/cloudtrail_and_domain_name/test_integration.py -v
   performing-static-analysis:
     if: |
@@ -307,26 +284,21 @@ jobs:
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Node.js (required by aws-cdk-lib/jsii)
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: |
           pip install pytest
           pip install -r src/cloudtrail_and_domain_name/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run unit tests
+      - name: Run unit tests
         run: pytest test/cloudtrail_and_domain_name/test_unit.py -v
   updating-readme:
     name: Updating README.md
