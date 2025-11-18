@@ -85,7 +85,8 @@ class RunnersStack(Stack):
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="GitHub webhook router for GitHub self-hosted runners",
-            dead_letter_queue=webhook_dlq
+            dead_letter_queue=webhook_dlq,
+            tracing=lambda_.Tracing.ACTIVE
         )
 
         webhook_router_lambda.add_to_role_policy(
@@ -185,7 +186,8 @@ class RunnersStack(Stack):
                 "JOB_QUEUE_URL": job_queue.queue_url,
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Reprocesses messages from DLQs for self-healing"
+            description="Reprocesses messages from DLQs for self-healing",
+            tracing=lambda_.Tracing.ACTIVE
         )
 
         dlq_reprocessor_lambda.add_to_role_policy(
@@ -228,7 +230,8 @@ class RunnersStack(Stack):
                 "WEBHOOK_FUNCTION_NAME": config['aws']['lambda']['function_name'],
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Monitors and remediates circuit breaker state"
+            description="Monitors and remediates circuit breaker state",
+            tracing=lambda_.Tracing.ACTIVE
         )
 
         circuit_breaker_remediation_lambda.add_to_role_policy(
