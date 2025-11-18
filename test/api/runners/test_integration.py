@@ -538,3 +538,18 @@ def test_webhook_router_lambda_has_cloudwatch_metrics_permissions(lambda_client,
             break
 
     assert has_cloudwatch_permissions
+
+
+def test_cloudwatch_dashboard_exists(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    dashboard_name = f"{function_name}-dashboard"
+    dashboards = cloudwatch_client.list_dashboards()
+    dashboard_names = [d['DashboardName'] for d in dashboards['DashboardEntries']]
+    assert dashboard_name in dashboard_names
+
+
+def test_stack_has_dashboard_url_output(cloudformation_client):
+    stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi-Runners')
+    outputs = stacks['Stacks'][0].get('Outputs', [])
+    output_keys = [o['OutputKey'] for o in outputs]
+    assert 'DashboardURL' in output_keys
