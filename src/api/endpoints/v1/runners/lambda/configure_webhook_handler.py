@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import secrets
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -53,6 +54,36 @@ def get_or_create_webhook_secret() -> str:
         return ''
 
 
+def list_github_webhooks(
+        github_pat: str,
+        repo: str
+) -> Dict[str, Any]:
+    api_endpoint = f'https://api.github.com/repos/{repo}/hooks'
+
+    headers = {
+        'Authorization': f'token {github_pat}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+
+    try:
+        req = urllib.request.Request(
+            api_endpoint,
+            headers=headers,
+            method='GET'
+        )
+
+        with urllib.request.urlopen(req, timeout=30) as response:
+            webhooks = json.loads(response.read())
+            return {'success': True, 'webhooks': webhooks}
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8') if e.fp else 'No error body'
+        logger.error("Failed to list webhooks: %s - %s", e.code, error_body)
+        return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
+    except (urllib.error.URLError, ValueError) as e:
+        logger.error("Failed to list webhooks: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
 def create_github_webhook(
         webhook_url: str,
         webhook_secret: str,
@@ -79,25 +110,64 @@ def create_github_webhook(
         'Content-Type': 'application/json'
     }
 
-    try:
-        req = urllib.request.Request(
-            api_endpoint,
-            data=json.dumps(payload).encode('utf-8'),
-            headers=headers,
-            method='POST'
-        )
+    max_retries = 3
+    base_delay = 1.0
 
-        with urllib.request.urlopen(req, timeout=30) as response:
-            response_data = json.loads(response.read())
-            logger.info("Created webhook with ID: %s", response_data.get('id'))
-            return {'success': True, 'webhook_id': response_data.get('id')}
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8') if e.fp else 'No error body'
-        logger.error("Failed to create webhook: %s - %s", e.code, error_body)
-        return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
-    except (urllib.error.URLError, ValueError) as e:
-        logger.error("Failed to create webhook: %s", e)
-        return {'success': False, 'error': str(e)}
+    for attempt in range(max_retries + 1):
+        try:
+            req = urllib.request.Request(
+                api_endpoint,
+                data=json.dumps(payload).encode('utf-8'),
+                headers=headers,
+                method='POST'
+            )
+
+            with urllib.request.urlopen(req, timeout=30) as response:
+                response_data = json.loads(response.read())
+                logger.info("Created webhook with ID: %s on attempt %d", response_data.get('id'), attempt + 1)
+                return {'success': True, 'webhook_id': response_data.get('id')}
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8') if e.fp else 'No error body'
+
+            if e.code == 422 and 'hook already exists' in error_body.lower():
+                logger.warning("Webhook already exists, attempting to retrieve existing webhook ID")
+                list_result = list_github_webhooks(github_pat, repo)
+
+                if list_result['success']:
+                    for hook in list_result['webhooks']:
+                        hook_url = hook.get('config', {}).get('url', '')
+                        if hook_url == webhook_url:
+                            webhook_id = hook.get('id')
+                            logger.info("Found existing webhook with ID: %s", webhook_id)
+                            return {'success': True, 'webhook_id': webhook_id}
+
+                    logger.error("Duplicate webhook exists but could not find matching URL")
+                    return {'success': False, 'error': 'Duplicate webhook exists but URL not found'}
+
+                logger.error("Failed to list webhooks after duplicate detection")
+                return {'success': False, 'error': f'Duplicate exists, list failed: {list_result.get("error")}'}
+
+            if 400 <= e.code < 500:
+                logger.error("Client error creating webhook (HTTP %d), not retrying", e.code)
+                return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
+
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Server error creating webhook (HTTP %d), retry %d/%d after %ds", e.code, attempt + 1, max_retries, delay)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to create webhook after %d attempts (HTTP %d)", max_retries + 1, e.code)
+                return {'success': False, 'error': f'HTTP {e.code} after {max_retries + 1} attempts'}
+        except (urllib.error.URLError, ValueError) as e:
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Error creating webhook, retry %d/%d after %ds: %s", attempt + 1, max_retries, delay, e)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to create webhook after %d attempts: %s", max_retries + 1, e)
+                return {'success': False, 'error': f'{str(e)} after {max_retries + 1} attempts'}
+
+    return {'success': False, 'error': 'Max retries exceeded'}
 
 
 def delete_github_webhook(
@@ -112,29 +182,51 @@ def delete_github_webhook(
         'Accept': 'application/vnd.github.v3+json'
     }
 
-    try:
-        req = urllib.request.Request(
-            api_endpoint,
-            headers=headers,
-            method='DELETE'
-        )
+    max_retries = 3
+    base_delay = 1.0
 
-        with urllib.request.urlopen(req, timeout=30):
-            logger.info("Deleted webhook with ID: %s", webhook_id)
-            return {'success': True}
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            logger.warning(
-                "Webhook %s not found (may already be deleted)",
-                webhook_id
+    for attempt in range(max_retries + 1):
+        try:
+            req = urllib.request.Request(
+                api_endpoint,
+                headers=headers,
+                method='DELETE'
             )
-            return {'success': True}
-        error_body = e.read().decode('utf-8') if e.fp else 'No error body'
-        logger.error("Failed to delete webhook: %s - %s", e.code, error_body)
-        return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
-    except (urllib.error.URLError, ValueError) as e:
-        logger.error("Failed to delete webhook: %s", e)
-        return {'success': False, 'error': str(e)}
+
+            with urllib.request.urlopen(req, timeout=30):
+                logger.info("Deleted webhook with ID: %s on attempt %d", webhook_id, attempt + 1)
+                return {'success': True}
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                logger.warning(
+                    "Webhook %s not found (may already be deleted)",
+                    webhook_id
+                )
+                return {'success': True}
+
+            if 400 <= e.code < 500:
+                error_body = e.read().decode('utf-8') if e.fp else 'No error body'
+                logger.error("Client error deleting webhook (HTTP %d), not retrying", e.code)
+                return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
+
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Server error deleting webhook (HTTP %d), retry %d/%d after %ds", e.code, attempt + 1, max_retries, delay)
+                time.sleep(delay)
+            else:
+                error_body = e.read().decode('utf-8') if e.fp else 'No error body'
+                logger.error("Failed to delete webhook after %d attempts (HTTP %d)", max_retries + 1, e.code)
+                return {'success': False, 'error': f'HTTP {e.code} after {max_retries + 1} attempts'}
+        except (urllib.error.URLError, ValueError) as e:
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Error deleting webhook, retry %d/%d after %ds: %s", attempt + 1, max_retries, delay, e)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to delete webhook after %d attempts: %s", max_retries + 1, e)
+                return {'success': False, 'error': f'{str(e)} after {max_retries + 1} attempts'}
+
+    return {'success': False, 'error': 'Max retries exceeded'}
 
 
 def send_response(
