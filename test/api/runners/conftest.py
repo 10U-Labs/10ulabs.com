@@ -1,14 +1,75 @@
 import json
 from pathlib import Path
+import importlib.util
 import boto3
 import pytest
+import aws_cdk as cdk
+from aws_cdk.assertions import Template
+from unittest.mock import patch
 
 
 @pytest.fixture
-def config():
-    config_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "config.json"
+def runners_dir():
+    return Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners"
+
+
+@pytest.fixture
+def config_path(runners_dir):
+    return runners_dir / "config.json"
+
+
+@pytest.fixture
+def stack_path(runners_dir):
+    return runners_dir / "stack.py"
+
+
+@pytest.fixture
+def config(config_path):
     with open(config_path, encoding='utf-8') as f:
         return json.load(f)
+
+
+@pytest.fixture
+def function_name(config):
+    return config['aws']['lambda']['function_name']
+
+
+@pytest.fixture
+def runners_stack_class(stack_path):
+    spec = importlib.util.spec_from_file_location("runners_stack", stack_path)
+    runners_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(runners_module)
+    return runners_module.RunnersStack
+
+
+@pytest.fixture
+def webhook_router_path(runners_dir):
+    return runners_dir / "webhook_router.py"
+
+
+@pytest.fixture
+def webhook_router_module(webhook_router_path):
+    spec = importlib.util.spec_from_file_location("webhook_router", webhook_router_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def cdk_template(runners_stack_class, config):
+    app = cdk.App()
+    with patch('aws_cdk.Fn.import_value') as mock_import:
+        mock_import.side_effect = lambda x: f"mock-{x}"
+        stack = runners_stack_class(
+            app,
+            "TestRunnersStack",
+            config=config,
+            env=cdk.Environment(
+                account=str(config["aws"]["account_id"]),
+                region=config["aws"]["region"]
+            )
+        )
+        return Template.from_stack(stack)
 
 
 @pytest.fixture
