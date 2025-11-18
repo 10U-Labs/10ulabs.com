@@ -20,8 +20,8 @@ def test_config_has_aws_region(config):
     assert "region" in config["aws"]
 
 
-def test_config_has_subdomain_name(config):
-    assert "subdomain" in config["domain_names"]
+def test_config_has_fqdn(config):
+    assert "fqdn" in config["domain_names"]
 
 
 def test_config_has_lambda_function_name(config):

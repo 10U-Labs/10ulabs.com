@@ -31,7 +31,7 @@ class RunnersStack(Stack):
             memory_size=config["aws"]["lambda"]["memory_mb"],
             environment={
                 "WEBHOOK_SECRET_NAME": webhook_secret_name,
-                "API_BASE_URL": f"https://{config['domain_names']['subdomain']}",
+                "API_BASE_URL": f"https://{config['domain_names']['fqdn']}",
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="GitHub webhook router for GitHub self-hosted runners"
@@ -65,7 +65,7 @@ class RunnersStack(Stack):
 
         CfnOutput(
             self, "RunnersWebhookEndpoint",
-            value=f"https://{config['domain_names']['subdomain']}/v1/runners",
+            value=f"https://{config['domain_names']['fqdn']}/v1/runners",
             description="GitHub webhook endpoint for runner routing"
         )
 
