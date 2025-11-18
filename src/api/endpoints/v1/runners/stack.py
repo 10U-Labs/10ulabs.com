@@ -16,6 +16,8 @@ from aws_cdk import (
     aws_cloudwatch as cloudwatch,
     aws_cloudwatch_actions as cw_actions,
     aws_sns as sns,
+    aws_events as events,
+    aws_events_targets as targets,
     custom_resources as cr,
 )
 from constructs import Construct
@@ -166,6 +168,51 @@ class RunnersStack(Stack):
                 ]
             )
         )
+
+        dlq_reprocessor_lambda = lambda_.Function(
+            self, "DLQReprocessor",
+            function_name=f"{config['aws']['lambda']['function_name']}-dlq-reprocessor",
+            runtime=lambda_.Runtime.PYTHON_3_14,
+            handler="dlq_reprocessor.handler",
+            code=lambda_.Code.from_asset(
+                os.path.join(os.path.dirname(__file__), 'lambda')
+            ),
+            timeout=Duration.seconds(300),
+            memory_size=256,
+            environment={
+                "WEBHOOK_DLQ_URL": webhook_dlq.queue_url,
+                "JOB_DLQ_URL": job_queue_dlq.queue_url,
+                "JOB_QUEUE_URL": job_queue.queue_url,
+            },
+            log_retention=logs.RetentionDays.ONE_WEEK,
+            description="Reprocesses messages from DLQs for self-healing"
+        )
+
+        dlq_reprocessor_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "sqs:ReceiveMessage",
+                    "sqs:DeleteMessage",
+                    "sqs:GetQueueAttributes"
+                ],
+                resources=[webhook_dlq.queue_arn, job_queue_dlq.queue_arn]
+            )
+        )
+
+        dlq_reprocessor_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["sqs:SendMessage"],
+                resources=[job_queue.queue_arn]
+            )
+        )
+
+        dlq_reprocessor_rule = events.Rule(
+            self, "DLQReprocessorSchedule",
+            schedule=events.Schedule.rate(Duration.minutes(15)),
+            description="Triggers DLQ reprocessor every 15 minutes"
+        )
+
+        dlq_reprocessor_rule.add_target(targets.LambdaFunction(dlq_reprocessor_lambda))
 
         webhook_provider = cr.Provider(
             self, "WebhookConfigProvider",
