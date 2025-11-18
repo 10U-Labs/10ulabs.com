@@ -93,7 +93,7 @@ class ApiStack(Stack):
             self, "RunnerCluster",
             cluster_name=self.config["naming"]["cluster_name"],
             vpc=self.vpc,
-            container_insights=True
+            container_insights_v2=ecs.ContainerInsights.ENABLED
         )
 
     def _create_secrets_and_security(self):
@@ -230,6 +230,22 @@ class ApiStack(Stack):
         echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
         catchall_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "catchall")
 
+        health_log_group = logs.LogGroup(
+            self, "HealthHandlerLogGroup",
+            retention=logs.RetentionDays.ONE_WEEK,
+            removal_policy=RemovalPolicy.DESTROY
+        )
+        echo_log_group = logs.LogGroup(
+            self, "EchoHandlerLogGroup",
+            retention=logs.RetentionDays.ONE_WEEK,
+            removal_policy=RemovalPolicy.DESTROY
+        )
+        catchall_log_group = logs.LogGroup(
+            self, "CatchAllHandlerLogGroup",
+            retention=logs.RetentionDays.ONE_WEEK,
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
         health_handler = lambda_.Function(
             self, "HealthHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
@@ -237,7 +253,7 @@ class ApiStack(Stack):
             code=lambda_.Code.from_asset(health_endpoint_dir),
             timeout=Duration.seconds(10),
             description="Health check endpoint for API",
-            log_retention=logs.RetentionDays.ONE_WEEK
+            log_group=health_log_group
         )
         echo_handler = lambda_.Function(
             self, "EchoHandler",
@@ -246,7 +262,7 @@ class ApiStack(Stack):
             code=lambda_.Code.from_asset(echo_endpoint_dir),
             timeout=Duration.seconds(10),
             description="Echo endpoint for testing",
-            log_retention=logs.RetentionDays.ONE_WEEK
+            log_group=echo_log_group
         )
         catchall_handler = lambda_.Function(
             self, "CatchAllHandler",
@@ -255,7 +271,7 @@ class ApiStack(Stack):
             code=lambda_.Code.from_asset(catchall_endpoint_dir),
             timeout=Duration.seconds(10),
             description="Catch-all handler for undefined routes",
-            log_retention=logs.RetentionDays.ONE_WEEK
+            log_group=catchall_log_group
         )
         return health_handler, echo_handler, catchall_handler
 
