@@ -71,86 +71,64 @@ jobs:
     needs: integration-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip E2E tests
-        run: echo "DRY RUN - Would run E2E tests"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
           REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install pytest boto3 dnspython
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run E2E tests
+      - name: Run E2E tests
         run: pytest test/gmail_email_provider/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip deployment
-        run: echo "DRY RUN - Would deploy Gmail email provider infrastructure with CDK"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
           REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install CDK
+      - name: Install CDK
         run: npm install -g aws-cdk
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install -r src/gmail_email_provider/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: CDK Bootstrap (if needed)
+      - name: CDK Bootstrap (if needed)
         run: cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: CDK Diff
+      - name: CDK Diff
         run: cd src/gmail_email_provider && cdk diff GmailEmailProvider
       - id: deploy
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Deploy
         run: |
           cd src/gmail_email_provider && cdk deploy GmailEmailProvider \
@@ -161,12 +139,12 @@ jobs:
           else
             echo "deployment_failed=false" >> $GITHUB_OUTPUT
           fi
-      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
+      - if: ${{ steps.deploy.outputs.deployment_failed == 'true' }}
         name: Fail if deployment failed
         run: |
           echo "CDK deployment failed. See logs above for details."
           exit 1
-      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
+      - if: ${{ steps.deploy.outputs.deployment_failed != 'true' }}
         name: Display outputs
         run: |
           echo "Gmail email provider infrastructure deployed successfully";
@@ -178,79 +156,65 @@ jobs:
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip integration tests
-        run: echo "DRY RUN - Would run integration tests with pytest"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
           REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: pip install pytest boto3
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run pytest integration tests
+      - name: Run pytest integration tests
         run: pytest test/gmail_email_provider/test_integration.py -v
   performing-static-analysis:
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (
+        !contains(github.event.head_commit.message, '[dry run]') ||
+        github.event.inputs.dry_run != 'true'
+      )
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip static analysis
-        run: echo "DRY RUN - Would run pylint and mypy static analysis"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install linting dependencies
+      - name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint &&
           npm install -g jsonlint
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install project dependencies for linting
+      - name: Install project dependencies for linting
         run: pip install -r src/gmail_email_provider/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting JSON configuration files
+      - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
           jsonlint -q src/gmail_email_provider/config.json
           jsonlint -q src/gmail_email_provider/cdk.json
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Python files
+      - name: Linting Python files
         run: |
           pylint src/gmail_email_provider/stack.py src/gmail_email_provider/app.py scripts/readme/readme.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting YAML files
+      - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
           yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/gmail_email_provider.yml
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Static type checking Python files with mypy
+      - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/gmail_email_provider &&
           python -m mypy scripts/readme/readme.py
@@ -259,29 +223,21 @@ jobs:
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip unit tests
-        run: echo "DRY RUN - Would run unit tests with pytest"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Node.js (required by aws-cdk-lib/jsii)
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: |
           pip install pytest &&
           pip install -r src/gmail_email_provider/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run unit tests
+      - name: Run unit tests
         run: pytest test/gmail_email_provider/test_unit.py -v
   updating-readme:
     name: Updating README.md
