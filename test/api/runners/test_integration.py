@@ -206,3 +206,159 @@ def test_stack_has_lambda_name_output(cloudformation_client):
 def test_api_gateway_can_invoke_webhook_router_lambda(lambda_client, function_name):
     policy = lambda_client.get_policy(FunctionName=function_name)
     assert 'apigateway.amazonaws.com' in policy['Policy']
+
+
+def test_webhook_config_lambda_exists(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    assert response['Configuration']['FunctionName'] == config_function_name
+
+
+def test_webhook_config_lambda_has_correct_runtime(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    assert response['Configuration']['Runtime'] == 'python3.14'
+
+
+def test_webhook_config_lambda_has_correct_timeout(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    assert response['Configuration']['Timeout'] == 60
+
+
+def test_webhook_config_lambda_has_correct_memory(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    assert response['Configuration']['MemorySize'] == 256
+
+
+def test_webhook_config_lambda_has_webhook_secret_env_var(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'WEBHOOK_SECRET_NAME' in env_vars
+
+
+def test_webhook_config_lambda_has_github_pat_secret_env_var(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'GITHUB_PAT_SECRET_NAME' in env_vars
+
+
+def test_webhook_config_lambda_has_execution_role(lambda_client, function_name):
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    assert 'Role' in response['Configuration']
+
+
+def test_webhook_config_lambda_has_secrets_manager_permission(lambda_client, function_name, config):
+    iam_client = boto3.client('iam', region_name=config['aws']['region'])
+
+    config_function_name = f"{function_name}-config"
+    response = lambda_client.get_function(FunctionName=config_function_name)
+    role_arn = response['Configuration']['Role']
+    role_name = role_arn.split('/')[-1]
+
+    inline_policies = iam_client.list_role_policies(RoleName=role_name)
+
+    has_get_secret_permission = False
+    has_create_secret_permission = False
+
+    for policy_name in inline_policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_str = json.dumps(policy_doc['PolicyDocument'])
+        if 'secretsmanager:GetSecretValue' in policy_str:
+            has_get_secret_permission = True
+        if 'secretsmanager:CreateSecret' in policy_str:
+            has_create_secret_permission = True
+
+    assert has_get_secret_permission and has_create_secret_permission
+
+
+def test_webhook_config_lambda_has_cloudwatch_log_group(lambda_client, function_name, config):
+    logs_client = boto3.client('logs', region_name=config['aws']['region'])
+    config_function_name = f"{function_name}-config"
+    log_groups = logs_client.describe_log_groups(logGroupNamePrefix=f'/aws/lambda/{config_function_name}')
+    assert len(log_groups['logGroups']) > 0
+
+
+def test_webhook_router_lambda_has_idempotency_table_env_var(lambda_client, function_name):
+    response = lambda_client.get_function(FunctionName=function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'IDEMPOTENCY_TABLE_NAME' in env_vars
+
+
+def test_webhook_router_lambda_has_dead_letter_queue_configured(lambda_client, function_name):
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert 'DeadLetterConfig' in response['Configuration']
+
+
+def test_webhook_router_lambda_has_reserved_concurrent_executions(lambda_client, function_name):
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert 'ReservedConcurrentExecutions' in response['Configuration']
+
+
+def test_webhook_router_lambda_reserved_concurrent_executions_is_10(lambda_client, function_name):
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['ReservedConcurrentExecutions'] == 10
+
+
+def test_idempotency_table_exists(function_name, config):
+    dynamodb_client = boto3.client('dynamodb', region_name=config['aws']['region'])
+    table_name = f"{function_name}-idempotency"
+    response = dynamodb_client.describe_table(TableName=table_name)
+    assert response['Table']['TableName'] == table_name
+
+
+def test_idempotency_table_has_ttl_enabled(function_name, config):
+    dynamodb_client = boto3.client('dynamodb', region_name=config['aws']['region'])
+    table_name = f"{function_name}-idempotency"
+    response = dynamodb_client.describe_time_to_live(TableName=table_name)
+    assert response['TimeToLiveDescription']['TimeToLiveStatus'] == 'ENABLED'
+
+
+def test_idempotency_table_has_point_in_time_recovery(function_name, config):
+    dynamodb_client = boto3.client('dynamodb', region_name=config['aws']['region'])
+    table_name = f"{function_name}-idempotency"
+    response = dynamodb_client.describe_continuous_backups(TableName=table_name)
+    assert response['ContinuousBackupsDescription']['PointInTimeRecoveryDescription']['PointInTimeRecoveryStatus'] == 'ENABLED'
+
+
+def test_dead_letter_queue_exists(function_name, config):
+    sqs_client = boto3.client('sqs', region_name=config['aws']['region'])
+    queue_name = f"{function_name}-dlq"
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert queue_name in response['QueueUrl']
+
+
+def test_dead_letter_queue_has_correct_retention_period(function_name, config):
+    sqs_client = boto3.client('sqs', region_name=config['aws']['region'])
+    queue_name = f"{function_name}-dlq"
+    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    attributes = sqs_client.get_queue_attributes(
+        QueueUrl=queue_url,
+        AttributeNames=['MessageRetentionPeriod']
+    )
+    assert int(attributes['Attributes']['MessageRetentionPeriod']) == 1209600
+
+
+def test_cloudwatch_alarm_for_errors_exists(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-errors"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms']) == 1
+
+
+def test_cloudwatch_alarm_for_throttles_exists(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-throttles"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms']) == 1
+
+
+def test_cloudwatch_alarm_for_dlq_messages_exists(function_name, config):
+    cloudwatch_client = boto3.client('cloudwatch', region_name=config['aws']['region'])
+    alarm_name = f"{function_name}-dlq-messages"
+    response = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(response['MetricAlarms']) == 1
