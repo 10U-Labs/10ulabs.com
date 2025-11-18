@@ -202,7 +202,7 @@ jobs:
         run: pip install -r src/gmail_email_provider/requirements.txt
       - name: Linting JSON configuration files
         run: |
-          echo "Validating JSON syntax..." && \
+          echo "Validating JSON syntax..."
           jsonlint -q src/gmail_email_provider/config.json && \
           jsonlint -q src/gmail_email_provider/cdk.json
       - name: Linting Python files
