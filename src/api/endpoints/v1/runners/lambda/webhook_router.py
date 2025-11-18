@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -14,7 +15,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None}
+_clients = {'secretsmanager': None, 'dynamodb': None}
 _webhook_secret_cache = {'value': None}
 
 
@@ -24,26 +25,62 @@ def get_secretsmanager_client():
     return _clients['secretsmanager']
 
 
-def get_webhook_secret() -> str:
-    if _webhook_secret_cache['value']:
-        return _webhook_secret_cache['value']
+def get_dynamodb_client():
+    if _clients['dynamodb'] is None:
+        _clients['dynamodb'] = boto3.client('dynamodb')
+    return _clients['dynamodb']
 
-    secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
+
+def check_and_record_idempotency(request_id: str) -> bool:
+    table_name = os.environ.get('IDEMPOTENCY_TABLE_NAME')
+    if not table_name:
+        logger.warning("IDEMPOTENCY_TABLE_NAME not set, skipping idempotency check")
+        return False
+
     try:
-        secretsmanager = get_secretsmanager_client()
-        response = secretsmanager.get_secret_value(SecretId=secret_name)
-        secret = response['SecretString']
-        _webhook_secret_cache['value'] = secret
-        return secret
+        dynamodb = get_dynamodb_client()
+        ttl = int(time.time()) + 86400
+
+        dynamodb.put_item(
+            TableName=table_name,
+            Item={
+                'request_id': {'S': request_id},
+                'ttl': {'N': str(ttl)},
+                'timestamp': {'N': str(int(time.time()))}
+            },
+            ConditionExpression='attribute_not_exists(request_id)'
+        )
+        return False
     except ClientError as e:
-        logger.error("Failed to retrieve webhook secret: %s", e)
-        return ''
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            logger.warning("Duplicate request detected: %s", request_id)
+            return True
+        logger.error("Failed to check idempotency: %s", e)
+        return False
+
+
+def get_webhook_secret() -> str:
+    secret = _webhook_secret_cache['value']
+    if not secret:
+        secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
+        try:
+            secretsmanager = get_secretsmanager_client()
+            response = secretsmanager.get_secret_value(SecretId=secret_name)
+            secret = response['SecretString']
+            _webhook_secret_cache['value'] = secret
+        except ClientError as e:
+            logger.error("Failed to retrieve webhook secret: %s", e)
+            raise RuntimeError(f"Cannot retrieve webhook secret: {e}") from e
+    return secret
 
 
 def verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
     if not signature_header:
         return False
-    _, github_signature = signature_header.split('=')
+    parts = signature_header.split('=', 1)
+    if len(parts) != 2:
+        return False
+    _, github_signature = parts
     computed_signature = hmac.new(
         key=secret.encode('utf-8'),
         msg=payload_body.encode('utf-8'),
@@ -79,32 +116,57 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
 
     logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
 
-    result = {'success': False, 'error': 'Unknown error'}
+    max_retries = 3
+    base_delay = 1.0
 
-    try:
-        req = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
+    for attempt in range(max_retries + 1):
+        try:
+            req = urllib.request.Request(
+                endpoint,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
 
-        with urllib.request.urlopen(req, timeout=30) as response:
-            response_data = json.loads(response.read())
-            logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
-            result = {
-                'success': True,
-                'runner_type': runner_type,
-                'response': response_data
-            }
-    except (urllib.error.URLError, ValueError) as e:
-        logger.error("Failed to route job %s to %s runner: %s", job_id, runner_type, e)
-        result = {
-            'success': False,
-            'error': str(e)
-        }
+            with urllib.request.urlopen(req, timeout=30) as response:
+                response_data = json.loads(response.read())
+                logger.info("Successfully routed job %s to %s runner on attempt %d", job_id, runner_type, attempt + 1)
+                return {
+                    'success': True,
+                    'runner_type': runner_type,
+                    'response': response_data
+                }
+        except urllib.error.HTTPError as e:
+            if 400 <= e.code < 500:
+                logger.error("Client error routing job %s (HTTP %d), not retrying", job_id, e.code)
+                return {
+                    'success': False,
+                    'error': f'HTTP {e.code}: {e.reason}'
+                }
 
-    return result
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Server error routing job %s (HTTP %d), retry %d/%d after %ds", job_id, e.code, attempt + 1, max_retries, delay)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to route job %s after %d attempts (HTTP %d)", job_id, max_retries + 1, e.code)
+                return {
+                    'success': False,
+                    'error': f'HTTP {e.code} after {max_retries + 1} attempts'
+                }
+        except (urllib.error.URLError, ValueError) as e:
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Error routing job %s, retry %d/%d after %ds: %s", job_id, attempt + 1, max_retries, delay, e)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to route job %s after %d attempts: %s", job_id, max_retries + 1, e)
+                return {
+                    'success': False,
+                    'error': f'{str(e)} after {max_retries + 1} attempts'
+                }
+
+    return {'success': False, 'error': 'Max retries exceeded'}
 
 
 def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -185,15 +247,32 @@ def lambda_handler(event, _context):
 
     signature_header = event.get('headers', {}).get('x-hub-signature-256')
     if signature_header:
-        webhook_secret = get_webhook_secret()
-        if webhook_secret and not verify_signature(body_str, signature_header, webhook_secret):
-            logger.error("Webhook signature verification failed")
+        try:
+            webhook_secret = get_webhook_secret()
+            if not verify_signature(body_str, signature_header, webhook_secret):
+                logger.error("Webhook signature verification failed")
+                return {
+                    'statusCode': 401,
+                    'body': json.dumps({'error': 'Invalid signature'})
+                }
+        except RuntimeError as e:
+            logger.error("Cannot verify signature, secret unavailable: %s", e)
             return {
-                'statusCode': 401,
-                'body': json.dumps({'error': 'Invalid signature'})
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Authentication system unavailable'})
             }
     else:
         logger.warning("No signature header found, proceeding without verification")
+
+    delivery_id = event.get('headers', {}).get('x-github-delivery')
+    if delivery_id:
+        is_duplicate = check_and_record_idempotency(delivery_id)
+        if is_duplicate:
+            logger.info("Duplicate webhook delivery detected, returning success")
+            return {
+                'statusCode': 200,
+                'body': json.dumps({'message': 'Duplicate request ignored'})
+            }
 
     event_type = event.get('headers', {}).get('x-github-event', payload.get('event_type'))
     logger.info("GitHub event type: %s", event_type)

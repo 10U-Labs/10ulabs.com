@@ -10,6 +10,11 @@ from aws_cdk import (
     aws_apigateway as apigw,
     aws_iam as iam,
     aws_logs as logs,
+    aws_sqs as sqs,
+    aws_dynamodb as dynamodb,
+    aws_cloudwatch as cloudwatch,
+    aws_cloudwatch_actions as cw_actions,
+    aws_sns as sns,
     custom_resources as cr,
 )
 from constructs import Construct
@@ -24,6 +29,25 @@ class RunnersStack(Stack):
         webhook_secret_name = Fn.import_value("TenULabsApi-WebhookSecretName")
         github_pat_secret_name = Fn.import_value("GitHubAuth-PATSecretName")
 
+        webhook_dlq = sqs.Queue(
+            self, "WebhookDLQ",
+            queue_name=f"{config['aws']['lambda']['function_name']}-dlq",
+            retention_period=Duration.days(14),
+            visibility_timeout=Duration.seconds(300)
+        )
+
+        idempotency_table = dynamodb.Table(
+            self, "IdempotencyTable",
+            table_name=f"{config['aws']['lambda']['function_name']}-idempotency",
+            partition_key=dynamodb.Attribute(
+                name="request_id",
+                type=dynamodb.AttributeType.STRING
+            ),
+            time_to_live_attribute="ttl",
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            point_in_time_recovery=True
+        )
+
         webhook_router_lambda = lambda_.Function(
             self, "WebhookRouterHandler",
             function_name=config["aws"]["lambda"]["function_name"],
@@ -37,9 +61,12 @@ class RunnersStack(Stack):
             environment={
                 "WEBHOOK_SECRET_NAME": webhook_secret_name,
                 "API_BASE_URL": f"https://{config['fqdn']}",
+                "IDEMPOTENCY_TABLE_NAME": idempotency_table.table_name,
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
-            description="GitHub webhook router for GitHub self-hosted runners"
+            description="GitHub webhook router for GitHub self-hosted runners",
+            dead_letter_queue=webhook_dlq,
+            reserved_concurrent_executions=10
         )
 
         webhook_router_lambda.add_to_role_policy(
@@ -51,6 +78,8 @@ class RunnersStack(Stack):
                 ]
             )
         )
+
+        idempotency_table.grant_read_write_data(webhook_router_lambda)
 
         rest_api = apigw.RestApi.from_rest_api_attributes(
             self, "ImportedApi",
@@ -118,6 +147,45 @@ class RunnersStack(Stack):
                 "WebhookUrl": f"https://{config['fqdn']}/v1/runners",
                 "Repository": config['github']['repository']
             }
+        )
+
+        error_alarm = cloudwatch.Alarm(
+            self, "WebhookRouterErrorAlarm",
+            alarm_name=f"{config['aws']['lambda']['function_name']}-errors",
+            metric=webhook_router_lambda.metric_errors(
+                period=Duration.minutes(5),
+                statistic="Sum"
+            ),
+            evaluation_periods=1,
+            threshold=5,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
+        )
+
+        throttle_alarm = cloudwatch.Alarm(
+            self, "WebhookRouterThrottleAlarm",
+            alarm_name=f"{config['aws']['lambda']['function_name']}-throttles",
+            metric=webhook_router_lambda.metric_throttles(
+                period=Duration.minutes(5),
+                statistic="Sum"
+            ),
+            evaluation_periods=1,
+            threshold=10,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
+        )
+
+        dlq_alarm = cloudwatch.Alarm(
+            self, "WebhookDLQAlarm",
+            alarm_name=f"{config['aws']['lambda']['function_name']}-dlq-messages",
+            metric=webhook_dlq.metric_approximate_number_of_messages_visible(
+                period=Duration.minutes(5),
+                statistic="Maximum"
+            ),
+            evaluation_periods=1,
+            threshold=1,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
         )
 
         CfnOutput(

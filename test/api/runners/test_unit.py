@@ -88,6 +88,124 @@ def test_verify_signature_rejects_incorrect_signature(webhook_router_module):
     assert result is False
 
 
+def test_verify_signature_returns_false_for_empty_signature_header(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "", "secret")
+    assert result is False
+
+
+def test_verify_signature_returns_false_for_none_signature_header(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", None, "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_without_equals_separator(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256noequals", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_only_equals(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "=", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_empty_value_after_equals(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256=", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_multiple_equals(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha256={signature}=extra", secret)
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_whitespace(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", " sha256=abc123 ", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_invalid_hex_characters(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256=notvalidhex!@#", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_wrong_algorithm_prefix(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha1={signature}", "secret")
+    assert result is False
+
+
+def test_verify_signature_handles_signature_with_wrong_length(webhook_router_module):
+    result = webhook_router_module.verify_signature("payload", "sha256=abc123", "secret")
+    assert result is False
+
+
+def test_verify_signature_is_case_sensitive(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha256={signature.upper()}", secret)
+    assert result is False
+
+
+def test_verify_signature_different_payload_rejects(webhook_router_module):
+    import hashlib
+    import hmac
+
+    secret = "test_secret"
+    signature = hmac.new(
+        key=secret.encode('utf-8'),
+        msg="original payload".encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature("different payload", f"sha256={signature}", secret)
+    assert result is False
+
+
+def test_verify_signature_different_secret_rejects(webhook_router_module):
+    import hashlib
+    import hmac
+
+    payload = "test payload"
+    signature = hmac.new(
+        key="original_secret".encode('utf-8'),
+        msg=payload.encode('utf-8'),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    result = webhook_router_module.verify_signature(payload, f"sha256={signature}", "different_secret")
+    assert result is False
+
+
 def test_handle_workflow_job_ignores_non_queued_actions(webhook_router_module):
     event_data = {
         'action': 'completed',
@@ -212,6 +330,115 @@ def test_route_runner_request_returns_error_for_unknown_runner_type(webhook_rout
     )
 
     assert result['success'] is False
+
+
+def test_route_runner_request_retries_on_http_500(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    import json
+
+    mock_error = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
+
+    call_count = 0
+
+    def mock_urlopen_side_effect(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise mock_error
+        mock_response = type('obj', (object,), {
+            'read': lambda self: json.dumps({'success': True}).encode('utf-8'),
+            '__enter__': lambda self: self,
+            '__exit__': lambda self, *args: None
+        })()
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=mock_urlopen_side_effect):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is True
+
+
+def test_route_runner_request_does_not_retry_on_http_400(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep') as mock_sleep:
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is False
+            assert mock_sleep.call_count == 0
+
+
+def test_route_runner_request_retries_on_network_error(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    import json
+
+    call_count = 0
+
+    def mock_urlopen_side_effect(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 2:
+            raise urllib.error.URLError('Connection refused')
+        mock_response = type('obj', (object,), {
+            'read': lambda self: json.dumps({'success': True}).encode('utf-8'),
+            '__enter__': lambda self: self,
+            '__exit__': lambda self, *args: None
+        })()
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=mock_urlopen_side_effect):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is True
+
+
+def test_route_runner_request_fails_after_max_retries(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is False
+
+
+def test_route_runner_request_uses_exponential_backoff(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.URLError('Connection refused')
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep') as mock_sleep:
+            webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert mock_sleep.call_count == 3
 
 
 def test_handle_workflow_job_returns_success_response(webhook_router_module):
@@ -544,6 +771,207 @@ def test_get_webhook_secret_caches_secret(webhook_router_module):
         assert secret1 == secret2
 
 
+def test_get_webhook_secret_raises_runtime_error_on_secrets_manager_failure(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InternalServiceError', 'Message': 'Service unavailable'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_lambda_handler_returns_500_when_secret_retrieval_fails_with_signature(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import json
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InternalServiceError', 'Message': 'Service unavailable'}},
+        'GetSecretValue'
+    )
+
+    event = {
+        'body': json.dumps({'action': 'queued'}),
+        'headers': {
+            'x-hub-signature-256': 'sha256=abcd1234',
+            'x-github-event': 'workflow_job'
+        }
+    }
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = webhook_router_module.lambda_handler(event, None)
+        assert result['statusCode'] == 500
+
+
+def test_get_webhook_secret_uses_default_secret_name_when_env_not_set(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    import os
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': 'default_secret'}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.dict(os.environ, {}, clear=True):
+            secret = webhook_router_module.get_webhook_secret()
+            mock_client.get_secret_value.assert_called_once_with(SecretId='api-webhook-secret')
+            assert secret == 'default_secret'
+
+
+def test_get_webhook_secret_handles_resource_not_found_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Secret not found'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_access_denied_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_invalid_request_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InvalidRequestException', 'Message': 'Invalid request'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_throttling_error(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import pytest
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'ThrottlingException', 'Message': 'Rate exceeded'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret'):
+            webhook_router_module.get_webhook_secret()
+
+
+def test_get_webhook_secret_handles_empty_secret_string(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': ''}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == ''
+
+
+def test_get_webhook_secret_handles_secret_with_special_characters(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    special_secret = '!@#$%^&*()_+-=[]{}|;:\'",.<>?/~`\n\t\r'
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': special_secret}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == special_secret
+
+
+def test_get_webhook_secret_handles_unicode_secret(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    unicode_secret = '测试密码🔐🗝️'
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': unicode_secret}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == unicode_secret
+
+
+def test_get_webhook_secret_handles_very_long_secret(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = None
+
+    long_secret = 'a' * 10000
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': long_secret}
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == long_secret
+        assert len(secret) == 10000
+
+
+def test_get_webhook_secret_cache_persists_across_calls(webhook_router_module):
+    from unittest.mock import patch, MagicMock
+
+    webhook_router_module._webhook_secret_cache['value'] = 'cached_secret'
+
+    mock_client = MagicMock()
+
+    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+        secret = webhook_router_module.get_webhook_secret()
+        assert secret == 'cached_secret'
+        mock_client.get_secret_value.assert_not_called()
+
+
 def test_configure_webhook_handler_file_exists(configure_webhook_handler_path):
     assert configure_webhook_handler_path.exists()
 
@@ -820,23 +1248,159 @@ def test_create_github_webhook_returns_webhook_id_on_success(configure_webhook_h
 
 
 def test_create_github_webhook_handles_http_422_duplicate(configure_webhook_handler_module):
-    from unittest.mock import patch
+    from unittest.mock import patch, MagicMock
     import urllib.error
+    import io
 
     error_response = b'{"message":"Hook already exists"}'
     mock_error = urllib.error.HTTPError(
         'url', 422, 'Unprocessable Entity', {},
         None
     )
-    mock_error.fp = type('obj', (object,), {'read': lambda: error_response})()
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    existing_webhooks = [{
+        'id': 12345,
+        'config': {'url': 'https://api.10ulabs.com/v1/runners'}
+    }]
 
     with patch('urllib.request.urlopen', side_effect=mock_error):
-        result = configure_webhook_handler_module.create_github_webhook(
-            'https://api.10ulabs.com/v1/runners',
-            'secret',
-            'token',
-            'owner/repo'
-        )
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': True, 'webhooks': existing_webhooks}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['success'] is True
+
+
+def test_create_github_webhook_returns_existing_webhook_id_on_duplicate(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+    import io
+
+    error_response = b'{"message":"Hook already exists on this repository"}'
+    mock_error = urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, None)
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    existing_webhooks = [{
+        'id': 54321,
+        'config': {'url': 'https://api.10ulabs.com/v1/runners'}
+    }]
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': True, 'webhooks': existing_webhooks}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['webhook_id'] == 54321
+
+
+def test_create_github_webhook_fails_when_duplicate_but_list_fails(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+    import io
+
+    error_response = b'{"message":"Hook already exists"}'
+    mock_error = urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, None)
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': False, 'error': 'API error'}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['success'] is False
+
+
+def test_create_github_webhook_fails_when_duplicate_but_url_not_found(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+    import io
+
+    error_response = b'{"message":"Hook already exists"}'
+    mock_error = urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, None)
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    existing_webhooks = [{
+        'id': 99999,
+        'config': {'url': 'https://different-url.com/webhook'}
+    }]
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': True, 'webhooks': existing_webhooks}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['success'] is False
+
+
+def test_list_github_webhooks_returns_success_on_valid_response(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    webhooks_data = [{'id': 123, 'config': {'url': 'https://example.com'}}]
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(webhooks_data).encode('utf-8')
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
+        assert result['success'] is True
+
+
+def test_list_github_webhooks_returns_webhooks_list(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    webhooks_data = [{'id': 123, 'config': {'url': 'https://example.com'}}]
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(webhooks_data).encode('utf-8')
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
+        assert result['webhooks'] == webhooks_data
+
+
+def test_list_github_webhooks_handles_http_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 401, 'Unauthorized', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Unauthorized'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
+        assert result['success'] is False
+
+
+def test_list_github_webhooks_handles_url_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network error')):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
         assert result['success'] is False
 
 
@@ -991,3 +1555,797 @@ def test_create_github_webhook_logs_error_on_failure(configure_webhook_handler_m
                 'owner/repo'
             )
             assert mock_logger.called
+
+
+def test_delete_github_webhook_returns_success_on_successful_deletion(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is True
+
+
+def test_delete_github_webhook_handles_http_404_as_success(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 404, 'Not Found', {}, None)
+    mock_error.fp = None
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is True
+
+
+def test_delete_github_webhook_handles_http_401_unauthorized(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 401, 'Unauthorized', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Unauthorized'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_handles_http_403_forbidden(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 403, 'Forbidden', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Forbidden'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_handles_http_500_server_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Server error'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_handles_url_error_network_failure(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network unreachable')):
+        result = configure_webhook_handler_module.delete_github_webhook(
+            123456,
+            'ghp_test_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_delete_github_webhook_logs_success(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        with patch.object(configure_webhook_handler_module.logger, 'info') as mock_logger:
+            configure_webhook_handler_module.delete_github_webhook(
+                123456,
+                'ghp_test_token',
+                'owner/repo'
+            )
+            assert mock_logger.called
+
+
+def test_delete_github_webhook_logs_warning_on_404(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 404, 'Not Found', {}, None)
+    mock_error.fp = None
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module.logger, 'warning') as mock_logger:
+            configure_webhook_handler_module.delete_github_webhook(
+                123456,
+                'ghp_test_token',
+                'owner/repo'
+            )
+            assert mock_logger.called
+
+
+def test_send_response_returns_true_on_success(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+        assert result is True
+
+
+def test_send_response_includes_status_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['Status'] == 'SUCCESS'
+
+
+def test_send_response_includes_reason_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['Reason'] == 'Test reason'
+
+
+def test_send_response_includes_physical_resource_id_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['PhysicalResourceId'] == 'physical-id-123'
+
+
+def test_send_response_includes_stack_id_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['StackId'] == event['StackId']
+
+
+def test_send_response_includes_request_id_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['RequestId'] == event['RequestId']
+
+
+def test_send_response_includes_logical_resource_id_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['LogicalResourceId'] == event['LogicalResourceId']
+
+
+def test_send_response_includes_data_in_body(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {'key': 'value'}
+        )
+
+        body = json.loads(captured_request.data.decode('utf-8'))
+        assert body['Data'] == {'key': 'value'}
+
+
+def test_send_response_uses_put_method(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    captured_request = None
+
+    def capture_urlopen(req, timeout=None):
+        nonlocal captured_request
+        captured_request = req
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=capture_urlopen):
+        configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {}
+        )
+
+        assert captured_request.get_method() == 'PUT'
+
+
+def test_send_response_returns_false_on_url_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network error')):
+        result = configure_webhook_handler_module.send_response(
+            event,
+            'SUCCESS',
+            'Test reason',
+            'physical-id-123',
+            {}
+        )
+        assert result is False
+
+
+def test_send_response_logs_success(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    mock_response = MagicMock()
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        with patch.object(configure_webhook_handler_module.logger, 'info') as mock_logger:
+            configure_webhook_handler_module.send_response(
+                event,
+                'SUCCESS',
+                'Test reason',
+                'physical-id-123',
+                {}
+            )
+            assert mock_logger.called
+
+
+def test_send_response_logs_error_on_failure(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    event = {
+        'ResponseURL': 'https://cloudformation-custom-resource-response.s3.amazonaws.com/test',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource'
+    }
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network error')):
+        with patch.object(configure_webhook_handler_module.logger, 'error') as mock_logger:
+            configure_webhook_handler_module.send_response(
+                event,
+                'SUCCESS',
+                'Test reason',
+                'physical-id-123',
+                {}
+            )
+            assert mock_logger.called
+
+
+def test_lambda_handler_returns_200_on_successful_create(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'create_github_webhook', return_value={'success': True, 'webhook_id': 12345}):
+                with patch.object(configure_webhook_handler_module, 'send_response'):
+                    result = configure_webhook_handler_module.lambda_handler(event, None)
+                    assert result['statusCode'] == 200
+
+
+def test_lambda_handler_returns_webhook_id_on_successful_create(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import json
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'create_github_webhook', return_value={'success': True, 'webhook_id': 12345}):
+                with patch.object(configure_webhook_handler_module, 'send_response'):
+                    result = configure_webhook_handler_module.lambda_handler(event, None)
+                    body = json.loads(result['body'])
+                    assert body['webhook_id'] == 12345
+
+
+def test_lambda_handler_returns_500_when_github_pat_fails_on_create(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value=''):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'send_response'):
+                result = configure_webhook_handler_module.lambda_handler(event, None)
+                assert result['statusCode'] == 500
+
+
+def test_lambda_handler_returns_500_when_webhook_secret_fails_on_create(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value=''):
+            with patch.object(configure_webhook_handler_module, 'send_response'):
+                result = configure_webhook_handler_module.lambda_handler(event, None)
+                assert result['statusCode'] == 500
+
+
+def test_lambda_handler_returns_500_when_create_webhook_fails(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'create_github_webhook', return_value={'success': False, 'error': 'API error'}):
+                with patch.object(configure_webhook_handler_module, 'send_response'):
+                    result = configure_webhook_handler_module.lambda_handler(event, None)
+                    assert result['statusCode'] == 500
+
+
+def test_lambda_handler_returns_200_on_successful_delete(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Delete',
+        'ResourceProperties': {
+            'WebhookId': '12345',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response',
+        'PhysicalResourceId': 'github-webhook-owner-repo'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'delete_github_webhook', return_value={'success': True}):
+            with patch.object(configure_webhook_handler_module, 'send_response'):
+                result = configure_webhook_handler_module.lambda_handler(event, None)
+                assert result['statusCode'] == 200
+
+
+def test_lambda_handler_returns_200_when_no_webhook_id_on_delete(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Delete',
+        'ResourceProperties': {
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response',
+        'PhysicalResourceId': 'github-webhook-owner-repo'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'send_response'):
+        result = configure_webhook_handler_module.lambda_handler(event, None)
+        assert result['statusCode'] == 200
+
+
+def test_lambda_handler_returns_500_when_github_pat_fails_on_delete(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Delete',
+        'ResourceProperties': {
+            'WebhookId': '12345',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response',
+        'PhysicalResourceId': 'github-webhook-owner-repo'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value=''):
+        with patch.object(configure_webhook_handler_module, 'send_response'):
+            result = configure_webhook_handler_module.lambda_handler(event, None)
+            assert result['statusCode'] == 500
+
+
+def test_lambda_handler_returns_500_when_delete_webhook_fails(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Delete',
+        'ResourceProperties': {
+            'WebhookId': '12345',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response',
+        'PhysicalResourceId': 'github-webhook-owner-repo'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'delete_github_webhook', return_value={'success': False, 'error': 'API error'}):
+            with patch.object(configure_webhook_handler_module, 'send_response'):
+                result = configure_webhook_handler_module.lambda_handler(event, None)
+                assert result['statusCode'] == 500
+
+
+def test_lambda_handler_returns_400_for_unsupported_request_type(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Unknown',
+        'ResourceProperties': {
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'send_response'):
+        result = configure_webhook_handler_module.lambda_handler(event, None)
+        assert result['statusCode'] == 400
+
+
+def test_lambda_handler_calls_send_response(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'create_github_webhook', return_value={'success': True, 'webhook_id': 12345}):
+                with patch.object(configure_webhook_handler_module, 'send_response') as mock_send:
+                    configure_webhook_handler_module.lambda_handler(event, None)
+                    assert mock_send.called
+
+
+def test_lambda_handler_handles_update_request(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Update',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response',
+        'PhysicalResourceId': 'github-webhook-owner-repo'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'create_github_webhook', return_value={'success': True, 'webhook_id': 12345}):
+                with patch.object(configure_webhook_handler_module, 'send_response'):
+                    result = configure_webhook_handler_module.lambda_handler(event, None)
+                    assert result['statusCode'] == 200
+
+
+def test_lambda_handler_generates_physical_resource_id(configure_webhook_handler_module):
+    from unittest.mock import patch
+
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': 'owner/repo'
+        },
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'unique-request-id',
+        'LogicalResourceId': 'MyResource',
+        'ResponseURL': 'https://cloudformation.example.com/response'
+    }
+
+    with patch.object(configure_webhook_handler_module, 'get_github_pat', return_value='ghp_token'):
+        with patch.object(configure_webhook_handler_module, 'get_or_create_webhook_secret', return_value='secret123'):
+            with patch.object(configure_webhook_handler_module, 'create_github_webhook', return_value={'success': True, 'webhook_id': 12345}):
+                with patch.object(configure_webhook_handler_module, 'send_response') as mock_send:
+                    configure_webhook_handler_module.lambda_handler(event, None)
+                    call_args = mock_send.call_args[0]
+                    assert call_args[3] == 'github-webhook-owner-repo'
