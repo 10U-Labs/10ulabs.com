@@ -23,12 +23,12 @@ class RunnersStack(Stack):
 
         webhook_router_lambda = lambda_.Function(
             self, "WebhookRouterHandler",
-            function_name=config["naming"]["lambda_function_name"],
+            function_name=config["aws"]["lambda"]["function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="webhook_router.lambda_handler",
             code=lambda_.Code.from_asset(os.path.dirname(__file__)),
-            timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
-            memory_size=config["lambda"]["memory_mb"],
+            timeout=Duration.seconds(config["aws"]["lambda"]["timeout_seconds"]),
+            memory_size=config["aws"]["lambda"]["memory_mb"],
             environment={
                 "WEBHOOK_SECRET_NAME": webhook_secret_name,
                 "API_BASE_URL": f"https://{config['domain_names']['subdomain']}",
