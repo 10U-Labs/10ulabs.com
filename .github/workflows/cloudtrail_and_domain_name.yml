@@ -30,17 +30,17 @@ jobs:
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
-          REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/cloudtrail_and_domain_name/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/cloudtrail_and_domain_name/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/cloudtrail_and_domain_name/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/cloudtrail_and_domain_name/config.json)
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/cloudtrail_and_domain_name/config.json)
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT
+          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT
+          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -54,233 +54,249 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/cloudtrail_and_domain_name \\\n  --test-dir test/cloudtrail_and_domain_name \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: |
+          python scripts/readme/readme.py \
+            --project-dir src/cloudtrail_and_domain_name \
+            --test-dir test/cloudtrail_and_domain_name \
+            --check \
+            --prompt-check scripts/readme/prompt_check.md \
+            --prompt-update scripts/readme/prompt_update.md \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
+            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip E2E tests
-        run: echo "DRY RUN - Would run E2E tests"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
-          REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
-        run: 'pip install pytest boto3 dnspython
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run E2E tests
-        run: 'pytest test/cloudtrail_and_domain_name/test_e2e.py -v
-          '
+      - name: Install dependencies
+        run: pip install pytest boto3 dnspython
+      - name: Run E2E tests
+        run: pytest test/cloudtrail_and_domain_name/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
-    if: 'github.event.inputs.dry_run != ''true'' &&
-      github.ref == ''refs/heads/main''
-      '
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip deployment
-        run: echo "DRY RUN - Would deploy domain infrastructure with CDK"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
-          REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install CDK
+      - name: Install CDK
         run: npm install -g aws-cdk
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install dependencies
+      - name: Install dependencies
         run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: CDK Bootstrap (if needed)
-        run: 'cd src/cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: CDK Diff
+      - name: CDK Bootstrap (if needed)
+        run: cd src/cloudtrail_and_domain_name && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+      - name: CDK Diff
         run: cd src/cloudtrail_and_domain_name && cdk diff TenULabsDomainName
       - id: deploy
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: CDK Deploy
-        run: "cd src/cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \\\n  --require-approval never \\\n  --outputs-file ../../domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true\nif grep -qE \"(failed|ROLLBACK_COMPLETE|CREATE_FAILED)\" /tmp/cdk_deploy.log; then\n  echo \"deployment_failed=true\"\
-          \ >> $GITHUB_OUTPUT\nelse\n  echo \"deployment_failed=false\" >> $GITHUB_OUTPUT\nfi\n"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Fetch CloudWatch Logs
-        run: "echo \"Fetching CloudWatch logs from Lambda execution...\"\necho \"Searching for TenULabsDomainName DomainRegistration Lambda log groups...\"\nLOG_GROUPS=$(aws logs describe-log-groups \\\n  --log-group-name-prefix \"/aws/lambda/TenULabsDomainName\" \\\n  --query \"logGroups[?contains(logGroupName,\
-          \ 'DomainRegistration')].logGroupName\" \\\n  --output text 2>/dev/null || echo \"\")\nif [ -z \"$LOG_GROUPS\" ]; then\n  echo \"WARNING: No DomainRegistration Lambda log groups found\"\n  echo \"This may mean the Lambda was not created, or log group naming changed\"\n  echo \"Listing all TenULabsDomainName\
-          \ log groups for debugging:\"\n  aws logs describe-log-groups \\\n    --log-group-name-prefix \"/aws/lambda/TenULabsDomainName\" \\\n    --query 'logGroups[*].logGroupName' \\\n    --output text 2>/dev/null || echo \"No log groups found\"\n  exit 0\nfi\nLATEST_LOG_GROUP=\"\"\nLATEST_TIMESTAMP=0\n\
-          for LOG_GROUP in $LOG_GROUPS; do\n  STREAM_INFO=$(aws logs describe-log-streams \\\n    --log-group-name \"$LOG_GROUP\" \\\n    --order-by LastEventTime \\\n    --descending \\\n    --max-items 1 \\\n    --query 'logStreams[0].[logStreamName,creationTime]' \\\n    --output text 2>/dev/null ||\
-          \ echo \"\")\n  if [ -z \"$STREAM_INFO\" ]; then\n    continue\n  fi\n  STREAM_NAME=$(echo \"$STREAM_INFO\" | awk '{print $1}')\n  TIMESTAMP=$(echo \"$STREAM_INFO\" | awk '{print $2}')\n  if [ -z \"$TIMESTAMP\" ] || ! [[ \"$TIMESTAMP\" =~ ^[0-9]+$ ]]; then\n    continue\n  fi\n  if [ \"$TIMESTAMP\"\
-          \ -gt \"$LATEST_TIMESTAMP\" ]; then\n    LATEST_TIMESTAMP=$TIMESTAMP\n    LATEST_LOG_GROUP=\"$LOG_GROUP\"\n    LATEST_STREAM=\"$STREAM_NAME\"\n  fi\ndone\nif [ -z \"$LATEST_LOG_GROUP\" ]; then\n  echo \"WARNING: Could not find any log groups with events\"\n  exit 0\nfi\necho \"\"\necho \"Most\
-          \ recent log group: $LATEST_LOG_GROUP\"\necho \"Latest log stream: $LATEST_STREAM\"\necho \"\"\necho \"==========================================\"\necho \"   CloudWatch Logs from Lambda Execution\"\necho \"==========================================\"\naws logs get-log-events \\\n  --log-group-name\
-          \ \"$LATEST_LOG_GROUP\" \\\n  --log-stream-name \"$LATEST_STREAM\" \\\n  --limit 100 \\\n  --query 'events[*].message' \\\n  --output text 2>/dev/null || echo \"Could not fetch logs\"\necho \"==========================================\"\necho \"\"\n"
-      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed == 'true' }}
+        run: |
+          cd src/cloudtrail_and_domain_name && cdk deploy TenULabsDomainName \
+            --require-approval never \
+            --outputs-file ../../domain-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
+          if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
+            echo "deployment_failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "deployment_failed=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Fetch CloudWatch Logs
+        run: |
+          echo "Fetching CloudWatch logs from Lambda execution..."
+          echo "Searching for TenULabsDomainName DomainRegistration Lambda log groups..."
+          LOG_GROUPS=$(aws logs describe-log-groups \
+            --log-group-name-prefix "/aws/lambda/TenULabsDomainName" \
+            --query "logGroups[?contains(logGroupName, 'DomainRegistration')].logGroupName" \
+            --output text 2>/dev/null || echo "")
+          if [ -z "$LOG_GROUPS" ]; then
+            echo "WARNING: No DomainRegistration Lambda log groups found"
+            echo "This may mean the Lambda was not created, or log group naming changed"
+            echo "Listing all TenULabsDomainName log groups for debugging:"
+            aws logs describe-log-groups \
+              --log-group-name-prefix "/aws/lambda/TenULabsDomainName" \
+              --query 'logGroups[*].logGroupName' \
+              --output text 2>/dev/null || echo "No log groups found"
+            exit 0
+          fi
+          LATEST_LOG_GROUP=""
+          LATEST_TIMESTAMP=0
+          for LOG_GROUP in $LOG_GROUPS; do
+            STREAM_INFO=$(aws logs describe-log-streams \
+              --log-group-name "$LOG_GROUP" \
+              --order-by LastEventTime \
+              --descending \
+              --max-items 1 \
+              --query 'logStreams[0].[logStreamName,creationTime]' \
+              --output text 2>/dev/null || echo "")
+            if [ -z "$STREAM_INFO" ]; then
+              continue
+            fi
+            STREAM_NAME=$(echo "$STREAM_INFO" | awk '{print $1}')
+            TIMESTAMP=$(echo "$STREAM_INFO" | awk '{print $2}')
+            if [ -z "$TIMESTAMP" ] || ! [[ "$TIMESTAMP" =~ ^[0-9]+$ ]]; then
+              continue
+            fi
+            if [ "$TIMESTAMP" -gt "$LATEST_TIMESTAMP" ]; then
+              LATEST_TIMESTAMP=$TIMESTAMP
+              LATEST_LOG_GROUP="$LOG_GROUP"
+              LATEST_STREAM="$STREAM_NAME"
+            fi
+          done
+          if [ -z "$LATEST_LOG_GROUP" ]; then
+            echo "WARNING: Could not find any log groups with events"
+            exit 0
+          fi
+          echo ""
+          echo "Most recent log group: $LATEST_LOG_GROUP"
+          echo "Latest log stream: $LATEST_STREAM"
+          echo ""
+          echo "=========================================="
+          echo "   CloudWatch Logs from Lambda Execution"
+          echo "=========================================="
+          aws logs get-log-events \
+            --log-group-name "$LATEST_LOG_GROUP" \
+            --log-stream-name "$LATEST_STREAM" \
+            --limit 100 \
+            --query 'events[*].message' \
+            --output text 2>/dev/null || echo "Could not fetch logs"
+          echo "=========================================="
+          echo ""
+      - if: ${{ steps.deploy.outputs.deployment_failed == 'true' }}
         name: Fail if deployment failed
-        run: 'echo "CDK deployment failed. See logs above for details."
+        run: |
+          echo "CDK deployment failed. See logs above for details."
           exit 1
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' && steps.deploy.outputs.deployment_failed != 'true' }}
+      - if: ${{ steps.deploy.outputs.deployment_failed != 'true' }}
         name: Display outputs
-        run: 'echo "Domain infrastructure deployed successfully";
-          echo "";
-          echo "Stack Outputs:";
-          cat domain-outputs.json | jq ''.'';
-          '
+        run: |
+          echo "Domain infrastructure deployed successfully"
+          echo ""
+          echo "Stack Outputs:"
+          cat domain-outputs.json | jq '.'
   integration-testing:
     name: Integration testing
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip integration tests
-        run: echo "DRY RUN - Would run integration tests with pytest"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
-          REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Configure AWS credentials via OIDC
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
-        run: 'pip install pytest boto3
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run pytest integration tests
-        run: 'pytest test/cloudtrail_and_domain_name/test_integration.py -v
-          '
+      - name: Install Python dependencies
+        run: pip install pytest boto3
+      - name: Run pytest integration tests
+        run: pytest test/cloudtrail_and_domain_name/test_integration.py -v
   performing-static-analysis:
+    if: |
+      github.event.inputs.dry_run != 'true' &&
+      github.ref == 'refs/heads/main'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip static analysis
-        run: echo "DRY RUN - Would run pylint and mypy static analysis"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install linting dependencies
-        run: 'pip install pylint mypy yamllint &&
-          npm install -g jsonlint
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install project dependencies for linting
+      - name: Install linting dependencies
+        run: |
+          npm install -g jsonlint && \
+          pip install pylint mypy yamllint
+      - name: Install project dependencies for linting
         run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting JSON configuration files
-        run: 'echo "Validating JSON syntax..."
-          jsonlint -q src/cloudtrail_and_domain_name/config.json
+      - name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q src/cloudtrail_and_domain_name/config.json && \
           jsonlint -q src/cloudtrail_and_domain_name/cdk.json
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting Python files
-        run: "pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/lambda/handler.py src/cloudtrail_and_domain_name/app.py scripts/readme/readme.py \\\n  --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \\\n  --fail-under=10.0\n"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Linting YAML files
-        run: 'echo "Running yamllint on workflow files..."
-          yamllint --config-data ''{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'' .github/workflows/cloudtrail_and_domain_name.yml
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Static type checking Python files with mypy
-        run: 'python -m mypy src/cloudtrail_and_domain_name &&
+      - name: Linting Python files
+        run: |
+          pylint src/cloudtrail_and_domain_name/stack.py src/cloudtrail_and_domain_name/lambda/handler.py src/cloudtrail_and_domain_name/app.py scripts/readme/readme.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/cloudtrail_and_domain_name.yml
+      - name: Static type checking Python files with mypy
+        run: |
+          python -m mypy src/cloudtrail_and_domain_name && \
           python -m mypy scripts/readme/readme.py
-          '
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip unit tests
-        run: echo "DRY RUN - Would run unit tests with pytest"
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Set up Node.js (required by aws-cdk-lib/jsii)
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Install Python dependencies
-        run: 'pip install pytest &&
+      - name: Install Python dependencies
+        run: |
+          pip install pytest && \
           pip install -r src/cloudtrail_and_domain_name/requirements.txt
-          '
-      - if: ${{ github.event.inputs.dry_run != 'true' }}
-        name: Run unit tests
-        run: 'pytest test/cloudtrail_and_domain_name/test_unit.py -v
-          '
+      - name: Run unit tests
+        run: pytest test/cloudtrail_and_domain_name/test_unit.py -v
   updating-readme:
     name: Updating README.md
     needs: concluding-readme-should-be-updated
@@ -295,17 +311,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - id: config
         name: Load configuration
-        run: 'ACCOUNT_ID=$(jq -r ''.aws.account_id'' src/cloudtrail_and_domain_name/config.json);
-          REGION=$(jq -r ''.aws.region'' src/cloudtrail_and_domain_name/config.json);
-          MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' src/cloudtrail_and_domain_name/config.json);
-          MAX_TOKENS_REASONING=$(jq -r ''.aws.bedrock.max_tokens_reasoning'' src/cloudtrail_and_domain_name/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r ''.aws.bedrock.max_tokens_generation'' src/cloudtrail_and_domain_name/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
-          '
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/cloudtrail_and_domain_name/config.json)
+          REGION=$(jq -r '.aws.region' src/cloudtrail_and_domain_name/config.json)
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/cloudtrail_and_domain_name/config.json)
+          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/cloudtrail_and_domain_name/config.json)
+          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/cloudtrail_and_domain_name/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT
+          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT
+          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -318,20 +334,49 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/readme.py \\\n  --project-dir src/cloudtrail_and_domain_name \\\n  --test-dir test/cloudtrail_and_domain_name \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens-reasoning \"${{ steps.config.outputs.max_tokens_reasoning }}\" \\\n  --max-tokens-generation \"${{ steps.config.outputs.max_tokens_generation }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: |
+          python scripts/readme/readme.py \
+            --project-dir src/cloudtrail_and_domain_name \
+            --test-dir test/cloudtrail_and_domain_name \
+            --update \
+            --prompt-check scripts/readme/prompt_check.md \
+            --prompt-update scripts/readme/prompt_update.md \
+            --aws-region "${{ steps.config.outputs.region }}" \
+            --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
+            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README if changed
-        run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add src/cloudtrail_and_domain_name/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update cloudtrail_and_domain_name README.md [skip ci]\"\n\
-          \  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n\
-          \  exit 1\nfi\n"
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add src/cloudtrail_and_domain_name/README.md
+          if git diff --cached --quiet; then
+            echo "No changes to README.md"
+          else
+            git commit -m "Update cloudtrail_and_domain_name README.md [skip ci]"
+            for i in {1..5}; do
+              if git push; then
+                echo "Successfully pushed README update"
+                exit 0
+              fi
+              echo "Push failed (attempt $i/5), pulling and retrying..."
+              git pull --rebase origin main
+              sleep $((2 ** i))
+            done
+            echo "Failed to push after 5 attempts"
+            exit 1
+          fi
 name: Ensuring CloudTrail and domain name exist and are properly configured
 on:
   push:
     branches:
       - main
     paths:
+      - .github/workflows/cloudtrail_and_domain_name.yml
+      - '!src/cloudtrail_and_domain_name/README.md'
       - src/cloudtrail_and_domain_name/**
       - test/cloudtrail_and_domain_name/**
-      - .github/workflows/cloudtrail_and_domain_name.yml
   workflow_dispatch:
     inputs:
       dry_run:
