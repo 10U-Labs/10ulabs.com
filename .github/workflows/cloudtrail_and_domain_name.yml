@@ -71,9 +71,6 @@ jobs:
     needs: integration-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip E2E tests
-        run: echo "DRY RUN - Would run E2E tests"
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
@@ -110,9 +107,6 @@ jobs:
     needs: unit-testing
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip deployment
-        run: echo "DRY RUN - Would deploy domain infrastructure with CDK"
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
@@ -243,9 +237,6 @@ jobs:
     needs: ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip integration tests
-        run: echo "DRY RUN - Would run integration tests with pytest"
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
@@ -314,9 +305,6 @@ jobs:
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ github.event.inputs.dry_run == 'true' }}
-        name: DRY RUN - Skip unit tests
-        run: echo "DRY RUN - Would run unit tests with pytest"
       - if: ${{ github.event.inputs.dry_run != 'true' }}
         name: Checkout code
         uses: actions/checkout@v4
