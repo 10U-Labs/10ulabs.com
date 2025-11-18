@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""
-Configure GitHub repository webhook for self-hosted runners.
-
-This script:
-1. Gets webhook URL from CloudFormation stack
-2. Gets webhook secret from Secrets Manager
-3. Configures GitHub repository webhook to trigger runner launches
-
-Run after infrastructure is deployed to enable webhook-triggered runners.
-"""
 
 import subprocess
 import sys
