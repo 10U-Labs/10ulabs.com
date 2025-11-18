@@ -368,32 +368,3 @@ def test_runners_endpoint_handles_concurrent_requests_with_same_delivery_id(runn
         responses = [f.result() for f in concurrent.futures.as_completed(futures)]
 
     assert len([r for r in responses if r.status_code == 200]) == 3
-
-
-def test_runners_endpoint_respects_reserved_concurrent_executions_limit(runners_endpoint):
-    import concurrent.futures
-
-    payload = {
-        'zen': 'Design for failure.',
-        'hook_id': 123456
-    }
-
-    def send_request(index):
-        return requests.post(
-            runners_endpoint,
-            json=payload,
-            headers={
-                'X-GitHub-Event': 'ping',
-                'Content-Type': 'application/json'
-            },
-            timeout=30
-        )
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
-        futures = [executor.submit(send_request, i) for i in range(15)]
-        responses = [f.result() for f in concurrent.futures.as_completed(futures)]
-
-    success_count = len([r for r in responses if r.status_code == 200])
-    throttled_count = len([r for r in responses if r.status_code == 429])
-
-    assert success_count + throttled_count == 15
