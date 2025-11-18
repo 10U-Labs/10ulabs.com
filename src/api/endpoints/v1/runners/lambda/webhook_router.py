@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None}
+_clients = {'secretsmanager': None, 'dynamodb': None}
 _webhook_secret_cache = {'value': None}
 
 
@@ -23,6 +23,40 @@ def get_secretsmanager_client():
     if _clients['secretsmanager'] is None:
         _clients['secretsmanager'] = boto3.client('secretsmanager')
     return _clients['secretsmanager']
+
+
+def get_dynamodb_client():
+    if _clients['dynamodb'] is None:
+        _clients['dynamodb'] = boto3.client('dynamodb')
+    return _clients['dynamodb']
+
+
+def check_and_record_idempotency(request_id: str) -> bool:
+    table_name = os.environ.get('IDEMPOTENCY_TABLE_NAME')
+    if not table_name:
+        logger.warning("IDEMPOTENCY_TABLE_NAME not set, skipping idempotency check")
+        return False
+
+    try:
+        dynamodb = get_dynamodb_client()
+        ttl = int(time.time()) + 86400
+
+        dynamodb.put_item(
+            TableName=table_name,
+            Item={
+                'request_id': {'S': request_id},
+                'ttl': {'N': str(ttl)},
+                'timestamp': {'N': str(int(time.time()))}
+            },
+            ConditionExpression='attribute_not_exists(request_id)'
+        )
+        return False
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            logger.warning("Duplicate request detected: %s", request_id)
+            return True
+        logger.error("Failed to check idempotency: %s", e)
+        return False
 
 
 def get_webhook_secret() -> str:
@@ -226,6 +260,16 @@ def lambda_handler(event, _context):
             }
     else:
         logger.warning("No signature header found, proceeding without verification")
+
+    delivery_id = event.get('headers', {}).get('x-github-delivery')
+    if delivery_id:
+        is_duplicate = check_and_record_idempotency(delivery_id)
+        if is_duplicate:
+            logger.info("Duplicate webhook delivery detected, returning success")
+            return {
+                'statusCode': 200,
+                'body': json.dumps({'message': 'Duplicate request ignored'})
+            }
 
     event_type = event.get('headers', {}).get('x-github-event', payload.get('event_type'))
     logger.info("GitHub event type: %s", event_type)
