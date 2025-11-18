@@ -441,6 +441,258 @@ def test_route_runner_request_uses_exponential_backoff(webhook_router_module):
             assert mock_sleep.call_count == 3
 
 
+def test_route_runner_request_handles_empty_job_labels(webhook_router_module):
+    result = webhook_router_module.route_runner_request(
+        job_id=123,
+        job_labels=[],
+        github_repo='test/repo'
+    )
+    assert result['success'] is False
+
+
+def test_route_runner_request_prefers_ec2_when_both_labels_present(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=123,
+            job_labels=['ephemeral-ec2-spot-instance', 'ephemeral-ecs-fargate-spot'],
+            github_repo='test/repo'
+        )
+
+        assert result['runner_type'] == 'ec2'
+
+
+def test_route_runner_request_handles_api_base_url_with_trailing_slash(webhook_router_module):
+    import json
+    import os
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch.dict(os.environ, {'API_BASE_URL': 'https://api.10ulabs.com/'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = MagicMock()
+            mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+            mock_response.__enter__ = Mock(return_value=mock_response)
+            mock_response.__exit__ = Mock(return_value=False)
+            mock_urlopen.return_value = mock_response
+
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+
+            assert result['success'] is True
+
+
+def test_route_runner_request_handles_empty_json_response(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=123,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo='test/repo'
+        )
+
+        assert result['response'] == {}
+
+
+def test_route_runner_request_handles_malformed_json_response(webhook_router_module):
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = b'not valid json'
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+
+            assert result['success'] is False
+
+
+def test_route_runner_request_handles_very_large_job_id(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=9999999999999999999,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo='test/repo'
+        )
+
+        assert result['success'] is True
+
+
+def test_route_runner_request_handles_zero_job_id(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=0,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo='test/repo'
+        )
+
+        assert result['success'] is True
+
+
+def test_route_runner_request_handles_negative_job_id(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=-123,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo='test/repo'
+        )
+
+        assert result['success'] is True
+
+
+def test_route_runner_request_handles_empty_github_repo(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=123,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo=''
+        )
+
+        assert result['success'] is True
+
+
+def test_route_runner_request_handles_github_repo_with_special_characters(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+
+        result = webhook_router_module.route_runner_request(
+            job_id=123,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo='org-name/repo.name-2024'
+        )
+
+        assert result['success'] is True
+
+
+def test_route_runner_request_does_not_retry_on_http_499(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 499, 'Client Closed Request', {}, None)
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep') as mock_sleep:
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert mock_sleep.call_count == 0
+
+
+def test_route_runner_request_retries_on_http_599(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    import json
+
+    call_count = 0
+
+    def mock_urlopen_side_effect(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 2:
+            raise urllib.error.HTTPError('url', 599, 'Unknown Error', {}, None)
+        mock_response = type('obj', (object,), {
+            'read': lambda self: json.dumps({'success': True}).encode('utf-8'),
+            '__enter__': lambda self: self,
+            '__exit__': lambda self, *args: None
+        })()
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=mock_urlopen_side_effect):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is True
+
+
+def test_route_runner_request_includes_error_message_in_result_on_http_failure(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 404, 'Not Found', {}, None)
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = webhook_router_module.route_runner_request(
+            job_id=123,
+            job_labels=['ephemeral-ec2-spot-instance'],
+            github_repo='test/repo'
+        )
+
+        assert 'HTTP 404' in result['error']
+
+
 def test_handle_workflow_job_returns_success_response(webhook_router_module):
     import json
     from unittest.mock import MagicMock, Mock, patch
