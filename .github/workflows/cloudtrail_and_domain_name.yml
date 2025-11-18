@@ -94,9 +94,6 @@ jobs:
       - name: Run E2E tests
         run: pytest test/cloudtrail_and_domain_name/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
-    if: |
-      github.event.inputs.dry_run != 'true' &&
-      github.ref == 'refs/heads/main'
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
     runs-on: ubuntu-latest
