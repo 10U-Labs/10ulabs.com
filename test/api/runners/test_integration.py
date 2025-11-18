@@ -452,3 +452,50 @@ def test_dlq_reprocessor_eventbridge_rule_exists(function_name, config):
     rule_names = [r['Name'] for r in rules['Rules']]
     matching_rules = [name for name in rule_names if 'DLQReprocessor' in name]
     assert len(matching_rules) >= 1
+
+
+def test_circuit_breaker_remediation_lambda_exists(lambda_client, function_name):
+    remediation_function_name = f"{function_name}-cb-remediation"
+    response = lambda_client.get_function(FunctionName=remediation_function_name)
+    assert response['Configuration']['FunctionName'] == remediation_function_name
+
+
+def test_circuit_breaker_remediation_lambda_has_correct_runtime(lambda_client, function_name):
+    remediation_function_name = f"{function_name}-cb-remediation"
+    response = lambda_client.get_function(FunctionName=remediation_function_name)
+    assert response['Configuration']['Runtime'] == 'python3.14'
+
+
+def test_circuit_breaker_remediation_lambda_has_environment_variables(lambda_client, function_name):
+    remediation_function_name = f"{function_name}-cb-remediation"
+    response = lambda_client.get_function(FunctionName=remediation_function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'WEBHOOK_FUNCTION_NAME' in env_vars
+
+
+def test_circuit_breaker_remediation_lambda_has_lambda_invoke_permissions(lambda_client, function_name, config):
+    iam_client = boto3.client('iam', region_name=config['aws']['region'])
+    remediation_function_name = f"{function_name}-cb-remediation"
+    response = lambda_client.get_function(FunctionName=remediation_function_name)
+    role_arn = response['Configuration']['Role']
+    role_name = role_arn.split('/')[-1]
+
+    inline_policies = iam_client.list_role_policies(RoleName=role_name)
+    has_lambda_permissions = False
+
+    for policy_name in inline_policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_str = json.dumps(policy_doc['PolicyDocument'])
+        if 'lambda:InvokeFunction' in policy_str:
+            has_lambda_permissions = True
+            break
+
+    assert has_lambda_permissions
+
+
+def test_circuit_breaker_remediation_eventbridge_rule_exists(function_name, config):
+    events_client = boto3.client('events', region_name=config['aws']['region'])
+    rules = events_client.list_rules()
+    rule_names = [r['Name'] for r in rules['Rules']]
+    matching_rules = [name for name in rule_names if 'CircuitBreakerRemediation' in name]
+    assert len(matching_rules) >= 1
