@@ -336,6 +336,89 @@ class RunnersStack(Stack):
         dlq_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
         job_queue_dlq_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
 
+        dashboard = cloudwatch.Dashboard(
+            self, "WebhookRouterDashboard",
+            dashboard_name=f"{config['aws']['lambda']['function_name']}-dashboard"
+        )
+
+        dashboard.add_widgets(
+            cloudwatch.GraphWidget(
+                title="Lambda Performance",
+                left=[
+                    webhook_router_lambda.metric_duration(statistic="Average"),
+                    webhook_router_lambda.metric_duration(statistic="Maximum")
+                ],
+                right=[
+                    webhook_router_lambda.metric_invocations(statistic="Sum")
+                ]
+            ),
+            cloudwatch.GraphWidget(
+                title="Lambda Errors & Throttles",
+                left=[
+                    webhook_router_lambda.metric_errors(statistic="Sum"),
+                    webhook_router_lambda.metric_throttles(statistic="Sum")
+                ]
+            )
+        )
+
+        dashboard.add_widgets(
+            cloudwatch.GraphWidget(
+                title="Circuit Breaker State",
+                left=[
+                    cloudwatch.Metric(
+                        namespace="WebhookRouter",
+                        metric_name="CircuitBreakerState",
+                        statistic="Maximum"
+                    )
+                ]
+            ),
+            cloudwatch.GraphWidget(
+                title="Processing Time",
+                left=[
+                    cloudwatch.Metric(
+                        namespace="WebhookRouter",
+                        metric_name="ProcessingTime",
+                        statistic="Average",
+                        unit=cloudwatch.Unit.MILLISECONDS
+                    ),
+                    cloudwatch.Metric(
+                        namespace="WebhookRouter",
+                        metric_name="ProcessingTime",
+                        statistic="Maximum",
+                        unit=cloudwatch.Unit.MILLISECONDS
+                    )
+                ]
+            )
+        )
+
+        dashboard.add_widgets(
+            cloudwatch.GraphWidget(
+                title="Queue Depth",
+                left=[
+                    cloudwatch.Metric(
+                        namespace="WebhookRouter",
+                        metric_name="QueueDepth",
+                        statistic="Average"
+                    ),
+                    job_queue.metric_approximate_number_of_messages_visible(statistic="Maximum")
+                ]
+            ),
+            cloudwatch.GraphWidget(
+                title="DLQ Messages",
+                left=[
+                    webhook_dlq.metric_approximate_number_of_messages_visible(statistic="Maximum"),
+                    job_queue_dlq.metric_approximate_number_of_messages_visible(statistic="Maximum")
+                ]
+            )
+        )
+
+        dashboard.add_widgets(
+            cloudwatch.AlarmStatusWidget(
+                title="Alarms",
+                alarms=[error_alarm, throttle_alarm, dlq_alarm, job_queue_dlq_alarm]
+            )
+        )
+
         CfnOutput(
             self, "RunnersWebhookEndpoint",
             value=f"https://{config['fqdn']}/v1/runners",
@@ -352,4 +435,10 @@ class RunnersStack(Stack):
             self, "AlarmTopicArn",
             value=alarm_topic.topic_arn,
             description="SNS topic ARN for CloudWatch alarm notifications"
+        )
+
+        CfnOutput(
+            self, "DashboardURL",
+            value=f"https://console.aws.amazon.com/cloudwatch/home?region={config['aws']['region']}#dashboards:name={config['aws']['lambda']['function_name']}-dashboard",
+            description="CloudWatch Dashboard URL"
         )
