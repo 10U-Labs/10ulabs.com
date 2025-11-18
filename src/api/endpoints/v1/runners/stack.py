@@ -29,7 +29,9 @@ class RunnersStack(Stack):
             function_name=config["aws"]["lambda"]["function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="webhook_router.lambda_handler",
-            code=lambda_.Code.from_asset(os.path.dirname(__file__)),
+            code=lambda_.Code.from_asset(
+                os.path.join(os.path.dirname(__file__), 'lambda')
+            ),
             timeout=Duration.seconds(config["aws"]["lambda"]["timeout_seconds"]),
             memory_size=config["aws"]["lambda"]["memory_mb"],
             environment={
@@ -74,7 +76,9 @@ class RunnersStack(Stack):
             function_name=f"{config['aws']['lambda']['function_name']}-config",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="configure_webhook_handler.lambda_handler",
-            code=lambda_.Code.from_asset(os.path.dirname(__file__)),
+            code=lambda_.Code.from_asset(
+                os.path.join(os.path.dirname(__file__), 'lambda')
+            ),
             timeout=Duration.seconds(60),
             memory_size=256,
             environment={
