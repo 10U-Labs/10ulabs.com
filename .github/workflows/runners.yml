@@ -173,8 +173,8 @@ jobs:
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+        !contains(github.event.head_commit.message, '[dry run]') ||
+        github.event.inputs.dry_run != 'true'
       )
     name: Performing static analysis
     runs-on: ubuntu-latest
