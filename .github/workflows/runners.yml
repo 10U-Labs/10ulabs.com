@@ -306,6 +306,7 @@ on:
       - main
     paths:
       - .github/workflows/runners.yml
+      - '!src/api/endpoints/v1/runners/README.md'
       - src/api/endpoints/v1/runners/**
       - test/api/runners/**
   workflow_dispatch:
