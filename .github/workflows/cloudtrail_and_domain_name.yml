@@ -254,8 +254,8 @@ jobs:
           python-version: '3.14'
       - name: Install linting dependencies
         run: |
+          npm install -g jsonlint &&
           pip install pylint mypy yamllint
-          npm install -g jsonlint
       - name: Install project dependencies for linting
         run: pip install -r src/cloudtrail_and_domain_name/requirements.txt
       - name: Linting JSON configuration files
