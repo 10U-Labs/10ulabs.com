@@ -4,6 +4,7 @@ import hmac
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -78,32 +79,57 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
 
     logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
 
-    result = {'success': False, 'error': 'Unknown error'}
+    max_retries = 3
+    base_delay = 1.0
 
-    try:
-        req = urllib.request.Request(
-            endpoint,
-            data=json.dumps(payload).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
-            method='POST'
-        )
+    for attempt in range(max_retries + 1):
+        try:
+            req = urllib.request.Request(
+                endpoint,
+                data=json.dumps(payload).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST'
+            )
 
-        with urllib.request.urlopen(req, timeout=30) as response:
-            response_data = json.loads(response.read())
-            logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
-            result = {
-                'success': True,
-                'runner_type': runner_type,
-                'response': response_data
-            }
-    except (urllib.error.URLError, ValueError) as e:
-        logger.error("Failed to route job %s to %s runner: %s", job_id, runner_type, e)
-        result = {
-            'success': False,
-            'error': str(e)
-        }
+            with urllib.request.urlopen(req, timeout=30) as response:
+                response_data = json.loads(response.read())
+                logger.info("Successfully routed job %s to %s runner on attempt %d", job_id, runner_type, attempt + 1)
+                return {
+                    'success': True,
+                    'runner_type': runner_type,
+                    'response': response_data
+                }
+        except urllib.error.HTTPError as e:
+            if 400 <= e.code < 500:
+                logger.error("Client error routing job %s (HTTP %d), not retrying", job_id, e.code)
+                return {
+                    'success': False,
+                    'error': f'HTTP {e.code}: {e.reason}'
+                }
 
-    return result
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Server error routing job %s (HTTP %d), retry %d/%d after %ds", job_id, e.code, attempt + 1, max_retries, delay)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to route job %s after %d attempts (HTTP %d)", job_id, max_retries + 1, e.code)
+                return {
+                    'success': False,
+                    'error': f'HTTP {e.code} after {max_retries + 1} attempts'
+                }
+        except (urllib.error.URLError, ValueError) as e:
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                logger.warning("Error routing job %s, retry %d/%d after %ds: %s", job_id, attempt + 1, max_retries, delay, e)
+                time.sleep(delay)
+            else:
+                logger.error("Failed to route job %s after %d attempts: %s", job_id, max_retries + 1, e)
+                return {
+                    'success': False,
+                    'error': f'{str(e)} after {max_retries + 1} attempts'
+                }
+
+    return {'success': False, 'error': 'Max retries exceeded'}
 
 
 def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:

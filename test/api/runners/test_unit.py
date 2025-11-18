@@ -214,6 +214,115 @@ def test_route_runner_request_returns_error_for_unknown_runner_type(webhook_rout
     assert result['success'] is False
 
 
+def test_route_runner_request_retries_on_http_500(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    import json
+
+    mock_error = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
+
+    call_count = 0
+
+    def mock_urlopen_side_effect(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise mock_error
+        mock_response = type('obj', (object,), {
+            'read': lambda self: json.dumps({'success': True}).encode('utf-8'),
+            '__enter__': lambda self: self,
+            '__exit__': lambda self, *args: None
+        })()
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=mock_urlopen_side_effect):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is True
+
+
+def test_route_runner_request_does_not_retry_on_http_400(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep') as mock_sleep:
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is False
+            assert mock_sleep.call_count == 0
+
+
+def test_route_runner_request_retries_on_network_error(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    import json
+
+    call_count = 0
+
+    def mock_urlopen_side_effect(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count < 2:
+            raise urllib.error.URLError('Connection refused')
+        mock_response = type('obj', (object,), {
+            'read': lambda self: json.dumps({'success': True}).encode('utf-8'),
+            '__enter__': lambda self: self,
+            '__exit__': lambda self, *args: None
+        })()
+        return mock_response
+
+    with patch('urllib.request.urlopen', side_effect=mock_urlopen_side_effect):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is True
+
+
+def test_route_runner_request_fails_after_max_retries(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep'):
+            result = webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert result['success'] is False
+
+
+def test_route_runner_request_uses_exponential_backoff(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.URLError('Connection refused')
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch('time.sleep') as mock_sleep:
+            webhook_router_module.route_runner_request(
+                job_id=123,
+                job_labels=['ephemeral-ec2-spot-instance'],
+                github_repo='test/repo'
+            )
+            assert mock_sleep.call_count == 3
+
+
 def test_handle_workflow_job_returns_success_response(webhook_router_module):
     import json
     from unittest.mock import MagicMock, Mock, patch
