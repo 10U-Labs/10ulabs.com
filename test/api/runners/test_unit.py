@@ -542,3 +542,452 @@ def test_get_webhook_secret_caches_secret(webhook_router_module):
 
         assert mock_client.get_secret_value.call_count == 1
         assert secret1 == secret2
+
+
+def test_configure_webhook_handler_file_exists(configure_webhook_handler_path):
+    assert configure_webhook_handler_path.exists()
+
+
+def test_configure_webhook_handler_has_get_github_pat_function(configure_webhook_handler_module):
+    assert hasattr(configure_webhook_handler_module, 'get_github_pat')
+
+
+def test_configure_webhook_handler_has_get_or_create_webhook_secret_function(configure_webhook_handler_module):
+    assert hasattr(configure_webhook_handler_module, 'get_or_create_webhook_secret')
+
+
+def test_configure_webhook_handler_has_create_github_webhook_function(configure_webhook_handler_module):
+    assert hasattr(configure_webhook_handler_module, 'create_github_webhook')
+
+
+def test_configure_webhook_handler_has_delete_github_webhook_function(configure_webhook_handler_module):
+    assert hasattr(configure_webhook_handler_module, 'delete_github_webhook')
+
+
+def test_configure_webhook_handler_has_send_response_function(configure_webhook_handler_module):
+    assert hasattr(configure_webhook_handler_module, 'send_response')
+
+
+def test_configure_webhook_handler_has_lambda_handler_function(configure_webhook_handler_module):
+    assert hasattr(configure_webhook_handler_module, 'lambda_handler')
+
+
+def test_get_github_pat_retrieves_secret_successfully(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': 'ghp_test_token_12345'}
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = configure_webhook_handler_module.get_github_pat()
+        assert result == 'ghp_test_token_12345'
+
+
+def test_get_github_pat_uses_environment_variable_for_secret_name(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import os
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': 'test_token'}
+
+    with patch.dict(os.environ, {'GITHUB_PAT_SECRET_NAME': 'custom-pat-secret'}):
+        with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+            configure_webhook_handler_module.get_github_pat()
+            mock_client.get_secret_value.assert_called_with(SecretId='custom-pat-secret')
+
+
+def test_get_github_pat_returns_empty_string_on_client_error(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = configure_webhook_handler_module.get_github_pat()
+        assert result == ''
+
+
+def test_get_github_pat_returns_empty_string_when_secret_not_found(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Secret not found'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = configure_webhook_handler_module.get_github_pat()
+        assert result == ''
+
+
+def test_get_github_pat_logs_error_on_failure(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InternalServiceError', 'Message': 'Internal error'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.object(configure_webhook_handler_module.logger, 'error') as mock_logger:
+            configure_webhook_handler_module.get_github_pat()
+            assert mock_logger.called
+
+
+def test_get_or_create_webhook_secret_returns_existing_secret(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': 'existing_webhook_secret_value'}
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = configure_webhook_handler_module.get_or_create_webhook_secret()
+        assert result == 'existing_webhook_secret_value'
+
+
+def test_get_or_create_webhook_secret_creates_new_secret_when_not_found(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
+    mock_client.get_secret_value.side_effect = mock_client.exceptions.ResourceNotFoundException(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Not found'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch('secrets.token_urlsafe', return_value='new_generated_secret'):
+            result = configure_webhook_handler_module.get_or_create_webhook_secret()
+            assert result == 'new_generated_secret'
+
+
+def test_get_or_create_webhook_secret_calls_create_secret_with_correct_parameters(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+    import os
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
+    mock_client.get_secret_value.side_effect = mock_client.exceptions.ResourceNotFoundException(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Not found'}},
+        'GetSecretValue'
+    )
+
+    with patch.dict(os.environ, {'WEBHOOK_SECRET_NAME': 'test-webhook-secret'}):
+        with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+            with patch('secrets.token_urlsafe', return_value='generated_secret'):
+                configure_webhook_handler_module.get_or_create_webhook_secret()
+                mock_client.create_secret.assert_called_once_with(
+                    Name='test-webhook-secret',
+                    SecretString='generated_secret',
+                    Description='GitHub webhook secret for runners endpoint'
+                )
+
+
+def test_get_or_create_webhook_secret_logs_creation(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
+    mock_client.get_secret_value.side_effect = mock_client.exceptions.ResourceNotFoundException(
+        {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Not found'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch('secrets.token_urlsafe', return_value='new_secret'):
+            with patch.object(configure_webhook_handler_module.logger, 'info') as mock_logger:
+                configure_webhook_handler_module.get_or_create_webhook_secret()
+                assert mock_logger.called
+
+
+def test_get_or_create_webhook_secret_returns_empty_string_on_other_client_errors(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        result = configure_webhook_handler_module.get_or_create_webhook_secret()
+        assert result == ''
+
+
+def test_get_or_create_webhook_secret_logs_error_on_failure(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    from botocore.exceptions import ClientError
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
+    mock_client.get_secret_value.side_effect = ClientError(
+        {'Error': {'Code': 'InternalServiceError', 'Message': 'Internal error'}},
+        'GetSecretValue'
+    )
+
+    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.object(configure_webhook_handler_module.logger, 'error') as mock_logger:
+            configure_webhook_handler_module.get_or_create_webhook_secret()
+            assert mock_logger.called
+
+
+def test_get_or_create_webhook_secret_uses_environment_variable_for_secret_name(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import os
+
+    configure_webhook_handler_module._clients['secretsmanager'] = None
+
+    mock_client = MagicMock()
+    mock_client.get_secret_value.return_value = {'SecretString': 'secret_value'}
+
+    with patch.dict(os.environ, {'WEBHOOK_SECRET_NAME': 'custom-webhook-secret'}):
+        with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+            configure_webhook_handler_module.get_or_create_webhook_secret()
+            mock_client.get_secret_value.assert_called_with(SecretId='custom-webhook-secret')
+
+
+def test_create_github_webhook_returns_success_on_valid_response(configure_webhook_handler_module):
+    from unittest.mock import patch, Mock
+    import json
+
+    mock_response = Mock()
+    mock_response.read.return_value = json.dumps({'id': 12345, 'active': True}).encode('utf-8')
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'webhook_secret_123',
+            'ghp_token_456',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+        assert result['success'] is True
+
+
+def test_create_github_webhook_returns_webhook_id_on_success(configure_webhook_handler_module):
+    from unittest.mock import patch, Mock
+    import json
+
+    mock_response = Mock()
+    mock_response.read.return_value = json.dumps({'id': 98765}).encode('utf-8')
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'owner/repo'
+        )
+        assert result['webhook_id'] == 98765
+
+
+def test_create_github_webhook_handles_http_422_duplicate(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    error_response = b'{"message":"Hook already exists"}'
+    mock_error = urllib.error.HTTPError(
+        'url', 422, 'Unprocessable Entity', {},
+        None
+    )
+    mock_error.fp = type('obj', (object,), {'read': lambda: error_response})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_create_github_webhook_handles_http_401_unauthorized(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError(
+        'url', 401, 'Unauthorized', {},
+        None
+    )
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'{"message":"Bad credentials"}'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'invalid_token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_create_github_webhook_handles_http_403_forbidden(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError(
+        'url', 403, 'Forbidden', {},
+        None
+    )
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'{"message":"Forbidden"}'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_create_github_webhook_handles_http_404_not_found(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError(
+        'url', 404, 'Not Found', {},
+        None
+    )
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'{"message":"Not Found"}'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'nonexistent/repo'
+        )
+        assert result['success'] is False
+
+
+def test_create_github_webhook_includes_error_code_in_failure_response(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError(
+        'url', 500, 'Internal Server Error', {},
+        None
+    )
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Server error'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'owner/repo'
+        )
+        assert 'HTTP 500' in result['error']
+
+
+def test_create_github_webhook_handles_url_error_network_failure(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network unreachable')):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_create_github_webhook_handles_invalid_json_response(configure_webhook_handler_module):
+    from unittest.mock import patch, Mock
+
+    mock_response = Mock()
+    mock_response.read.return_value = b'invalid json'
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'token',
+            'owner/repo'
+        )
+        assert result['success'] is False
+
+
+def test_create_github_webhook_logs_success(configure_webhook_handler_module):
+    from unittest.mock import patch, Mock
+    import json
+
+    mock_response = Mock()
+    mock_response.read.return_value = json.dumps({'id': 12345}).encode('utf-8')
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        with patch.object(configure_webhook_handler_module.logger, 'info') as mock_logger:
+            configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert mock_logger.called
+
+
+def test_create_github_webhook_logs_error_on_failure(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError(
+        'url', 500, 'Internal Server Error', {},
+        None
+    )
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Error'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module.logger, 'error') as mock_logger:
+            configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert mock_logger.called
