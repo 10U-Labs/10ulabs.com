@@ -6,9 +6,6 @@
       "function_name": "TenULabsWebhookRouter",
       "memory_mb": 256,
       "timeout_seconds": 60
-    },
-    "secrets_manager": {
-      "github_pat_secret_name": "github-runner/credentials"
     }
   },
   "fqdn": "api.10ulabs.com",
