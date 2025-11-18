@@ -56,6 +56,19 @@ def webhook_router_module(webhook_router_path):
 
 
 @pytest.fixture
+def configure_webhook_handler_path(runners_dir):
+    return runners_dir / "lambda" / "configure_webhook_handler.py"
+
+
+@pytest.fixture
+def configure_webhook_handler_module(configure_webhook_handler_path):
+    spec = importlib.util.spec_from_file_location("configure_webhook_handler", configure_webhook_handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
 def cdk_template(runners_stack_class, config):
     app = cdk.App()
     with patch('aws_cdk.Fn.import_value') as mock_import:
