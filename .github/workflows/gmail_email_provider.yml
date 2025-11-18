@@ -359,9 +359,10 @@ on:
     branches:
       - main
     paths:
+      - '!src/gmail_email_provider/README.md'
+      - .github/workflows/gmail_email_provider.yml
       - src/gmail_email_provider/**
       - test/gmail_email_provider/**
-      - .github/workflows/gmail_email_provider.yml
   workflow_dispatch:
     inputs:
       dry_run:
