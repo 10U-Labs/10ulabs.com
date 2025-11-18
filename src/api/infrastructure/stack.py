@@ -230,9 +230,11 @@ class ApiStack(Stack):
         echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
         catchall_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "catchall")
 
+        runtime = getattr(lambda_.Runtime, 'PYTHON_3_14')
+
         health_handler = lambda_.Function(
             self, "HealthHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=runtime,
             handler="handler.handler",
             code=lambda_.Code.from_asset(health_endpoint_dir),
             timeout=Duration.seconds(10),
@@ -241,7 +243,7 @@ class ApiStack(Stack):
         )
         echo_handler = lambda_.Function(
             self, "EchoHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=runtime,
             handler="handler.handler",
             code=lambda_.Code.from_asset(echo_endpoint_dir),
             timeout=Duration.seconds(10),
@@ -250,7 +252,7 @@ class ApiStack(Stack):
         )
         catchall_handler = lambda_.Function(
             self, "CatchAllHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=runtime,
             handler="handler.handler",
             code=lambda_.Code.from_asset(catchall_endpoint_dir),
             timeout=Duration.seconds(10),
