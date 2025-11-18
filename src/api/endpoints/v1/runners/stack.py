@@ -22,7 +22,7 @@ class RunnersStack(Stack):
         rest_api_id = Fn.import_value("TenULabsApi-RestApiId")
         v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
         webhook_secret_name = Fn.import_value("TenULabsApi-WebhookSecretName")
-        github_pat_secret_name = config['aws']['secrets_manager']['github_pat_secret_name']
+        github_pat_secret_name = Fn.import_value("GitHubAuth-PATSecretName")
 
         webhook_router_lambda = lambda_.Function(
             self, "WebhookRouterHandler",
