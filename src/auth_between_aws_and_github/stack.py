@@ -1,5 +1,6 @@
 from aws_cdk import (
     Stack,
+    CfnOutput,
     CustomResource,
     aws_iam as iam,
     aws_lambda as lambda_,
@@ -231,3 +232,10 @@ def handler(event, context):
         self.role_arn = role_arn
         self.secret_arn = secret.secret_arn
         self.provider_arn = provider_arn
+
+        CfnOutput(
+            self, "GitHubPATSecretName",
+            value=config['aws']['secrets_manager']['github_pat_secret_name'],
+            export_name="GitHubAuth-PATSecretName",
+            description="GitHub Personal Access Token secret name in Secrets Manager"
+        )
