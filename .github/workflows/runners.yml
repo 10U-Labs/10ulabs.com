@@ -299,7 +299,7 @@ jobs:
             echo "Failed to push after 5 attempts"
             exit 1
           fi
-name: Ensure runners endpoint exists and works properly
+name: Ensuring runners endpoint exists and works properly
 on:
   push:
     branches:
