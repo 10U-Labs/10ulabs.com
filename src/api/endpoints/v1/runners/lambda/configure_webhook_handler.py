@@ -53,6 +53,36 @@ def get_or_create_webhook_secret() -> str:
         return ''
 
 
+def list_github_webhooks(
+        github_pat: str,
+        repo: str
+) -> Dict[str, Any]:
+    api_endpoint = f'https://api.github.com/repos/{repo}/hooks'
+
+    headers = {
+        'Authorization': f'token {github_pat}',
+        'Accept': 'application/vnd.github.v3+json'
+    }
+
+    try:
+        req = urllib.request.Request(
+            api_endpoint,
+            headers=headers,
+            method='GET'
+        )
+
+        with urllib.request.urlopen(req, timeout=30) as response:
+            webhooks = json.loads(response.read())
+            return {'success': True, 'webhooks': webhooks}
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8') if e.fp else 'No error body'
+        logger.error("Failed to list webhooks: %s - %s", e.code, error_body)
+        return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
+    except (urllib.error.URLError, ValueError) as e:
+        logger.error("Failed to list webhooks: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
 def create_github_webhook(
         webhook_url: str,
         webhook_secret: str,
@@ -93,6 +123,25 @@ def create_github_webhook(
             return {'success': True, 'webhook_id': response_data.get('id')}
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8') if e.fp else 'No error body'
+
+        if e.code == 422 and 'hook already exists' in error_body.lower():
+            logger.warning("Webhook already exists, attempting to retrieve existing webhook ID")
+            list_result = list_github_webhooks(github_pat, repo)
+
+            if list_result['success']:
+                for hook in list_result['webhooks']:
+                    hook_url = hook.get('config', {}).get('url', '')
+                    if hook_url == webhook_url:
+                        webhook_id = hook.get('id')
+                        logger.info("Found existing webhook with ID: %s", webhook_id)
+                        return {'success': True, 'webhook_id': webhook_id}
+
+                logger.error("Duplicate webhook exists but could not find matching URL")
+                return {'success': False, 'error': 'Duplicate webhook exists but URL not found'}
+
+            logger.error("Failed to list webhooks after duplicate detection")
+            return {'success': False, 'error': f'Duplicate exists, list failed: {list_result.get("error")}'}
+
         logger.error("Failed to create webhook: %s - %s", e.code, error_body)
         return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
     except (urllib.error.URLError, ValueError) as e:

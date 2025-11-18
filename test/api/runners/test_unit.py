@@ -864,23 +864,159 @@ def test_create_github_webhook_returns_webhook_id_on_success(configure_webhook_h
 
 
 def test_create_github_webhook_handles_http_422_duplicate(configure_webhook_handler_module):
-    from unittest.mock import patch
+    from unittest.mock import patch, MagicMock
     import urllib.error
+    import io
 
     error_response = b'{"message":"Hook already exists"}'
     mock_error = urllib.error.HTTPError(
         'url', 422, 'Unprocessable Entity', {},
         None
     )
-    mock_error.fp = type('obj', (object,), {'read': lambda: error_response})()
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    existing_webhooks = [{
+        'id': 12345,
+        'config': {'url': 'https://api.10ulabs.com/v1/runners'}
+    }]
 
     with patch('urllib.request.urlopen', side_effect=mock_error):
-        result = configure_webhook_handler_module.create_github_webhook(
-            'https://api.10ulabs.com/v1/runners',
-            'secret',
-            'token',
-            'owner/repo'
-        )
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': True, 'webhooks': existing_webhooks}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['success'] is True
+
+
+def test_create_github_webhook_returns_existing_webhook_id_on_duplicate(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+    import io
+
+    error_response = b'{"message":"Hook already exists on this repository"}'
+    mock_error = urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, None)
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    existing_webhooks = [{
+        'id': 54321,
+        'config': {'url': 'https://api.10ulabs.com/v1/runners'}
+    }]
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': True, 'webhooks': existing_webhooks}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['webhook_id'] == 54321
+
+
+def test_create_github_webhook_fails_when_duplicate_but_list_fails(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+    import io
+
+    error_response = b'{"message":"Hook already exists"}'
+    mock_error = urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, None)
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': False, 'error': 'API error'}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['success'] is False
+
+
+def test_create_github_webhook_fails_when_duplicate_but_url_not_found(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+    import io
+
+    error_response = b'{"message":"Hook already exists"}'
+    mock_error = urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, None)
+    fp = io.BytesIO(error_response)
+    mock_error.fp = fp
+    mock_error.read = fp.read
+
+    existing_webhooks = [{
+        'id': 99999,
+        'config': {'url': 'https://different-url.com/webhook'}
+    }]
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        with patch.object(configure_webhook_handler_module, 'list_github_webhooks', return_value={'success': True, 'webhooks': existing_webhooks}):
+            result = configure_webhook_handler_module.create_github_webhook(
+                'https://api.10ulabs.com/v1/runners',
+                'secret',
+                'token',
+                'owner/repo'
+            )
+            assert result['success'] is False
+
+
+def test_list_github_webhooks_returns_success_on_valid_response(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    webhooks_data = [{'id': 123, 'config': {'url': 'https://example.com'}}]
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(webhooks_data).encode('utf-8')
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
+        assert result['success'] is True
+
+
+def test_list_github_webhooks_returns_webhooks_list(configure_webhook_handler_module):
+    from unittest.mock import patch, MagicMock
+    import json
+
+    webhooks_data = [{'id': 123, 'config': {'url': 'https://example.com'}}]
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(webhooks_data).encode('utf-8')
+    mock_response.__enter__ = MagicMock(return_value=mock_response)
+    mock_response.__exit__ = MagicMock(return_value=False)
+
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
+        assert result['webhooks'] == webhooks_data
+
+
+def test_list_github_webhooks_handles_http_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    mock_error = urllib.error.HTTPError('url', 401, 'Unauthorized', {}, None)
+    mock_error.fp = type('obj', (object,), {'read': lambda: b'Unauthorized'})()
+
+    with patch('urllib.request.urlopen', side_effect=mock_error):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
+        assert result['success'] is False
+
+
+def test_list_github_webhooks_handles_url_error(configure_webhook_handler_module):
+    from unittest.mock import patch
+    import urllib.error
+
+    with patch('urllib.request.urlopen', side_effect=urllib.error.URLError('Network error')):
+        result = configure_webhook_handler_module.list_github_webhooks('token', 'owner/repo')
         assert result['success'] is False
 
 
