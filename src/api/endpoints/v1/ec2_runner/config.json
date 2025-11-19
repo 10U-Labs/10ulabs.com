@@ -14,7 +14,6 @@
     "memory_mb": 256
   },
   "ec2": {
-    "ami_id": "",
     "instance_types": ["t4g.large", "t4g.medium", "t4g.small"],
     "max_price": 0.05
   }
