@@ -51,6 +51,7 @@ class ApiStack(Stack):
         docs_bucket = self._create_docs_bucket()
         self._create_api_gateway(self._create_lambda_functions())
         cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
+        self._deploy_docs_to_s3(docs_bucket, cf_dist)
         self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role))
 
     def _create_vpc(self):
@@ -211,16 +212,18 @@ class ApiStack(Stack):
             block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
             encryption=s3.BucketEncryption.S3_MANAGED
         )
+        return docs_bucket
 
+    def _deploy_docs_to_s3(self, docs_bucket, cf_dist):
         api_dir = os.path.join(os.path.dirname(__file__), "..")
         s3deploy.BucketDeployment(
             self, "DeployApiDocs",
             sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yml", "!index.html", "!404.html"])],
             destination_bucket=docs_bucket,
+            distribution=cf_dist,
+            distribution_paths=["/*"],
             prune=False
         )
-
-        return docs_bucket
 
     def _create_lambda_functions(self):
         health_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "health")
