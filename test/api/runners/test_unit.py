@@ -2675,3 +2675,609 @@ def test_lambda_handler_generates_physical_resource_id(configure_webhook_handler
                     configure_webhook_handler_module.lambda_handler(event, None)
                     call_args = mock_send.call_args[0]
                     assert call_args[3] == 'github-webhook-owner-repo'
+
+
+def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+    
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+        
+        success, response, error = webhook_router_module.make_http_request_with_retry('https://api.example.com/test', {'data': 'test'})
+        
+        assert success is True
+
+
+def test_make_http_request_with_retry_returns_response_data(webhook_router_module):
+    import json
+    from unittest.mock import MagicMock, Mock, patch
+    
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'result': 'success'}).encode('utf-8')
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        mock_urlopen.return_value = mock_response
+        
+        success, response, error = webhook_router_module.make_http_request_with_retry('https://api.example.com/test', {'data': 'test'})
+        
+        assert response == {'result': 'success'}
+
+
+def test_make_http_request_with_retry_does_not_retry_on_http_400(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
+        
+        success, response, error = webhook_router_module.make_http_request_with_retry('https://api.example.com/test', {'data': 'test'})
+        
+        assert success is False
+        assert 'HTTP 400' in error
+
+
+def test_make_http_request_with_retry_retries_on_http_500(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+        
+        success, response, error = webhook_router_module.make_http_request_with_retry('https://api.example.com/test', {'data': 'test'}, max_retries=2)
+        
+        assert success is False
+        assert 'after 3 attempts' in error
+
+
+def test_make_http_request_with_retry_uses_exponential_backoff(webhook_router_module):
+    from unittest.mock import patch
+    import urllib.error
+    
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        with patch('time.sleep') as mock_sleep:
+            mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+            
+            webhook_router_module.make_http_request_with_retry('https://api.example.com/test', {'data': 'test'}, max_retries=3)
+            
+            assert mock_sleep.call_count == 3
+
+
+def test_parse_event_body_handles_plain_json(webhook_router_module):
+    event = {
+        'body': '{"test": "data"}',
+        'isBase64Encoded': False
+    }
+    
+    body_str, payload = webhook_router_module.parse_event_body(event)
+    
+    assert payload == {'test': 'data'}
+
+
+def test_parse_event_body_handles_base64_encoded_body(webhook_router_module):
+    import base64
+    
+    original_data = '{"test": "data"}'
+    encoded_data = base64.b64encode(original_data.encode('utf-8')).decode('utf-8')
+    
+    event = {
+        'body': encoded_data,
+        'isBase64Encoded': True
+    }
+    
+    body_str, payload = webhook_router_module.parse_event_body(event)
+    
+    assert payload == {'test': 'data'}
+
+
+def test_parse_event_body_handles_form_encoded_payload(webhook_router_module):
+    import urllib.parse
+    import json
+    
+    payload_data = {'test': 'data'}
+    encoded_payload = urllib.parse.quote(json.dumps(payload_data))
+    
+    event = {
+        'body': f'payload={encoded_payload}',
+        'isBase64Encoded': False
+    }
+    
+    body_str, payload = webhook_router_module.parse_event_body(event)
+    
+    assert payload == {'test': 'data'}
+
+
+def test_verify_webhook_signature_returns_error_on_invalid_signature(webhook_router_module):
+    from unittest.mock import patch
+    
+    with patch.object(webhook_router_module, 'get_webhook_secret', return_value='secret123'):
+        result = webhook_router_module.verify_webhook_signature('body', 'sha256=invalidsig')
+        
+        assert result.get('statusCode') == 401
+
+
+def test_verify_webhook_signature_returns_empty_dict_on_valid_signature(webhook_router_module):
+    import hashlib
+    import hmac
+    from unittest.mock import patch
+    
+    secret = 'secret123'
+    body = 'test body'
+    signature = hmac.new(secret.encode('utf-8'), body.encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    with patch.object(webhook_router_module, 'get_webhook_secret', return_value=secret):
+        result = webhook_router_module.verify_webhook_signature(body, f'sha256={signature}')
+        
+        assert result == {}
+
+
+def test_verify_webhook_signature_handles_secret_unavailable(webhook_router_module):
+    from unittest.mock import patch
+    
+    with patch.object(webhook_router_module, 'get_webhook_secret', side_effect=RuntimeError('Secret unavailable')):
+        result = webhook_router_module.verify_webhook_signature('body', 'sha256=sig')
+        
+        assert result.get('statusCode') == 500
+
+
+def test_handle_api_gateway_event_routes_to_health_check(webhook_router_module):
+    from unittest.mock import patch
+    
+    event = {
+        'path': '/v1/runners/health',
+        'headers': {}
+    }
+    
+    with patch.object(webhook_router_module, 'handle_health_check', return_value={'statusCode': 200}) as mock_health:
+        result = webhook_router_module.handle_api_gateway_event(event, 0.0)
+        
+        assert mock_health.called
+
+
+def test_handle_api_gateway_event_parses_event_body(webhook_router_module):
+    from unittest.mock import patch
+    import json
+    
+    event = {
+        'path': '/v1/runners',
+        'body': json.dumps({'action': 'queued'}),
+        'headers': {'x-github-event': 'workflow_job'}
+    }
+    
+    with patch.object(webhook_router_module, 'handle_workflow_job', return_value={'statusCode': 200}):
+        result = webhook_router_module.handle_api_gateway_event(event, 0.0)
+        
+        assert result.get('statusCode') == 200
+
+
+def test_handle_api_gateway_event_returns_400_on_invalid_json(webhook_router_module):
+    event = {
+        'path': '/v1/runners',
+        'body': 'invalid json',
+        'headers': {}
+    }
+    
+    result = webhook_router_module.handle_api_gateway_event(event, 0.0)
+    
+    assert result.get('statusCode') == 400
+
+
+def test_handle_api_gateway_event_verifies_signature_when_present(webhook_router_module):
+    from unittest.mock import patch
+    import json
+    
+    event = {
+        'path': '/v1/runners',
+        'body': json.dumps({'action': 'ping'}),
+        'headers': {
+            'x-github-event': 'ping',
+            'x-hub-signature-256': 'sha256=invalidsig'
+        }
+    }
+    
+    with patch.object(webhook_router_module, 'verify_webhook_signature', return_value={'statusCode': 401}):
+        result = webhook_router_module.handle_api_gateway_event(event, 0.0)
+        
+        assert result.get('statusCode') == 401
+
+
+def test_handle_api_gateway_event_checks_idempotency(webhook_router_module):
+    from unittest.mock import patch
+    import json
+    
+    event = {
+        'path': '/v1/runners',
+        'body': json.dumps({'action': 'ping'}),
+        'headers': {
+            'x-github-event': 'ping',
+            'x-github-delivery': 'delivery-id-123'
+        }
+    }
+    
+    with patch.object(webhook_router_module, 'check_and_record_idempotency', return_value=True):
+        result = webhook_router_module.handle_api_gateway_event(event, 0.0)
+        
+        assert result.get('statusCode') == 200
+        assert 'Duplicate request' in result.get('body')
+
+
+def test_handle_api_gateway_event_returns_pong_for_ping(webhook_router_module):
+    import json
+    
+    event = {
+        'path': '/v1/runners',
+        'body': json.dumps({'action': 'ping'}),
+        'headers': {'x-github-event': 'ping'}
+    }
+    
+    result = webhook_router_module.handle_api_gateway_event(event, 0.0)
+    
+    assert result.get('statusCode') == 200
+    assert 'pong' in result.get('body')
+
+
+def test_handle_sqs_message_processes_valid_message(webhook_router_module):
+    import json
+    from unittest.mock import patch
+    
+    message = {
+        'body': json.dumps({
+            'job_id': 123,
+            'job_labels': ['ephemeral-ec2-spot-instance'],
+            'github_repo': 'owner/repo'
+        })
+    }
+    
+    with patch.object(webhook_router_module, 'route_runner_request', return_value={'success': True}):
+        result = webhook_router_module.handle_sqs_message(message)
+        
+        assert result['success'] is True
+
+
+def test_handle_sqs_message_handles_invalid_json(webhook_router_module):
+    message = {
+        'body': 'invalid json'
+    }
+    
+    result = webhook_router_module.handle_sqs_message(message)
+    
+    assert result['success'] is False
+
+
+def test_handle_sqs_message_handles_missing_fields(webhook_router_module):
+    import json
+    from unittest.mock import patch
+    
+    message = {
+        'body': json.dumps({
+            'job_id': 123
+        })
+    }
+    
+    with patch.object(webhook_router_module, 'route_runner_request', return_value={'success': True}):
+        result = webhook_router_module.handle_sqs_message(message)
+        
+        assert result['success'] is True
+
+
+def test_handle_health_check_returns_200(webhook_router_module):
+    result = webhook_router_module.handle_health_check()
+    
+    assert result['statusCode'] == 200
+
+
+def test_handle_health_check_includes_circuit_breaker_state(webhook_router_module):
+    import json
+    
+    result = webhook_router_module.handle_health_check()
+    body = json.loads(result['body'])
+    
+    assert 'circuit_breaker' in body
+
+
+def test_handle_health_check_includes_timestamp(webhook_router_module):
+    import json
+    
+    result = webhook_router_module.handle_health_check()
+    body = json.loads(result['body'])
+    
+    assert 'timestamp' in body
+
+
+def test_handle_health_check_returns_healthy_status(webhook_router_module):
+    import json
+    
+    result = webhook_router_module.handle_health_check()
+    body = json.loads(result['body'])
+    
+    assert body['status'] == 'healthy'
+
+
+def test_create_queues_creates_webhook_dlq(runners_stack_class, config, cdk_template):
+    resources = cdk_template.find_resources("AWS::SQS::Queue")
+    
+    webhook_dlq_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('QueueName') == f"{config['aws']['lambda']['function_name']}-dlq":
+            webhook_dlq_found = True
+            break
+    
+    assert webhook_dlq_found
+
+
+def test_create_queues_creates_job_queue_dlq(runners_stack_class, config, cdk_template):
+    resources = cdk_template.find_resources("AWS::SQS::Queue")
+    
+    job_dlq_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('QueueName') == f"{config['aws']['lambda']['function_name']}-job-dlq":
+            job_dlq_found = True
+            break
+    
+    assert job_dlq_found
+
+
+def test_create_queues_creates_job_queue(runners_stack_class, config, cdk_template):
+    resources = cdk_template.find_resources("AWS::SQS::Queue")
+    
+    job_queue_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('QueueName') == f"{config['aws']['lambda']['function_name']}-jobs":
+            job_queue_found = True
+            break
+    
+    assert job_queue_found
+
+
+def test_create_idempotency_table_creates_dynamodb_table(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::DynamoDB::Table")
+    
+    table_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('TableName') == f"{config['aws']['lambda']['function_name']}-idempotency":
+            table_found = True
+            break
+    
+    assert table_found
+
+
+def test_create_idempotency_table_has_ttl_enabled(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::DynamoDB::Table")
+    
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('TableName') == f"{config['aws']['lambda']['function_name']}-idempotency":
+            assert props.get('TimeToLiveSpecification', {}).get('Enabled') is True
+
+
+def test_create_idempotency_table_has_point_in_time_recovery(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::DynamoDB::Table")
+    
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('TableName') == f"{config['aws']['lambda']['function_name']}-idempotency":
+            assert props.get('PointInTimeRecoverySpecification', {}).get('PointInTimeRecoveryEnabled') is True
+
+
+def test_create_webhook_router_lambda_creates_lambda_function(cdk_template, function_name):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    lambda_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == function_name:
+            lambda_found = True
+            break
+    
+    assert lambda_found
+
+
+def test_create_webhook_router_lambda_sets_runtime(cdk_template, function_name):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == function_name:
+            assert props.get('Runtime') == 'python3.14'
+
+
+def test_create_webhook_router_lambda_sets_timeout(cdk_template, function_name, config):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == function_name:
+            assert props.get('Timeout') == config['aws']['lambda']['timeout_seconds']
+
+
+def test_create_webhook_router_lambda_sets_memory(cdk_template, function_name, config):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == function_name:
+            assert props.get('MemorySize') == config['aws']['lambda']['memory_mb']
+
+
+def test_setup_api_gateway_creates_runners_resource(cdk_template):
+    resources = cdk_template.find_resources("AWS::ApiGateway::Resource")
+    
+    assert len(resources) == 2
+
+
+def test_setup_api_gateway_creates_post_method(cdk_template):
+    resources = cdk_template.find_resources("AWS::ApiGateway::Method")
+    
+    post_method_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('HttpMethod') == 'POST':
+            post_method_found = True
+            break
+    
+    assert post_method_found
+
+
+def test_setup_api_gateway_creates_health_endpoint(cdk_template):
+    resources = cdk_template.find_resources("AWS::ApiGateway::Resource")
+    
+    health_resource_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('PathPart') == 'health':
+            health_resource_found = True
+            break
+    
+    assert health_resource_found
+
+
+def test_create_webhook_config_lambda_creates_lambda_function(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    config_lambda_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == f"{config['aws']['lambda']['function_name']}-config":
+            config_lambda_found = True
+            break
+    
+    assert config_lambda_found
+
+
+def test_create_dlq_reprocessor_lambda_creates_lambda_function(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    dlq_lambda_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == f"{config['aws']['lambda']['function_name']}-dlq-reprocessor":
+            dlq_lambda_found = True
+            break
+    
+    assert dlq_lambda_found
+
+
+def test_create_dlq_reprocessor_lambda_creates_eventbridge_rule(cdk_template):
+    resources = cdk_template.find_resources("AWS::Events::Rule")
+    
+    dlq_rule_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('Description') == 'Triggers DLQ reprocessor every 15 minutes':
+            dlq_rule_found = True
+            break
+    
+    assert dlq_rule_found
+
+
+def test_create_circuit_breaker_lambda_creates_lambda_function(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::Lambda::Function")
+    
+    cb_lambda_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('FunctionName') == f"{config['aws']['lambda']['function_name']}-cb-remediation":
+            cb_lambda_found = True
+            break
+    
+    assert cb_lambda_found
+
+
+def test_create_circuit_breaker_lambda_creates_eventbridge_rule(cdk_template):
+    resources = cdk_template.find_resources("AWS::Events::Rule")
+    
+    cb_rule_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('Description') == 'Monitors circuit breaker health every 5 minutes':
+            cb_rule_found = True
+            break
+    
+    assert cb_rule_found
+
+
+def test_setup_monitoring_creates_sns_topic(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::SNS::Topic")
+    
+    topic_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('TopicName') == f"{config['aws']['lambda']['function_name']}-alarms":
+            topic_found = True
+            break
+    
+    assert topic_found
+
+
+def test_setup_monitoring_creates_error_alarm(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::CloudWatch::Alarm")
+    
+    error_alarm_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('AlarmName') == f"{config['aws']['lambda']['function_name']}-errors":
+            error_alarm_found = True
+            break
+    
+    assert error_alarm_found
+
+
+def test_setup_monitoring_creates_throttle_alarm(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::CloudWatch::Alarm")
+    
+    throttle_alarm_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('AlarmName') == f"{config['aws']['lambda']['function_name']}-throttles":
+            throttle_alarm_found = True
+            break
+    
+    assert throttle_alarm_found
+
+
+def test_setup_monitoring_creates_dlq_alarm(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::CloudWatch::Alarm")
+    
+    dlq_alarm_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('AlarmName') == f"{config['aws']['lambda']['function_name']}-dlq-messages":
+            dlq_alarm_found = True
+            break
+    
+    assert dlq_alarm_found
+
+
+def test_setup_monitoring_creates_job_queue_dlq_alarm(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::CloudWatch::Alarm")
+    
+    job_dlq_alarm_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('AlarmName') == f"{config['aws']['lambda']['function_name']}-job-dlq-messages":
+            job_dlq_alarm_found = True
+            break
+    
+    assert job_dlq_alarm_found
+
+
+def test_setup_monitoring_creates_cloudwatch_dashboard(cdk_template, config):
+    resources = cdk_template.find_resources("AWS::CloudWatch::Dashboard")
+    
+    dashboard_found = False
+    for _, resource in resources.items():
+        props = resource.get('Properties', {})
+        if props.get('DashboardName') == f"{config['aws']['lambda']['function_name']}-dashboard":
+            dashboard_found = True
+            break
+    
+    assert dashboard_found
