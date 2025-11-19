@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import urllib.request
+import urllib.error
 from typing import Dict, Any
 import boto3
 from botocore.exceptions import ClientError
@@ -64,7 +65,7 @@ def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
                 'success': False,
                 'error': f'Unexpected response status: {response.status}'
             }
-    except Exception as e:
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
         logger.error("Failed to trigger GitHub Actions workflow: %s", e)
         return {
             'success': False,
@@ -92,7 +93,7 @@ def list_amis() -> Dict[str, Any]:
                 'tags': {tag['Key']: tag['Value'] for tag in image.get('Tags', [])}
             })
 
-        amis.sort(key=lambda x: x['creation_date'], reverse=True)
+        amis.sort(key=lambda x: str(x['creation_date']), reverse=True)
 
         logger.info("Listed %s AMIs", len(amis))
         return {
