@@ -13,9 +13,6 @@ from aws_cdk import (
     aws_logs as logs,
     aws_sqs as sqs,
     aws_dynamodb as dynamodb,
-    aws_cloudwatch as cloudwatch,
-    aws_cloudwatch_actions as cw_actions,
-    aws_sns as sns,
     aws_events as events,
     aws_events_targets as targets,
     custom_resources as cr,
@@ -102,13 +99,6 @@ class RunnersStack(Stack):
         idempotency_table.grant_read_write_data(webhook_router_lambda)
 
         job_queue.grant_send_messages(webhook_router_lambda)
-
-        webhook_router_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["cloudwatch:PutMetricData"],
-                resources=["*"]
-            )
-        )
 
         webhook_router_lambda.add_event_source(
             lambda_events.SqsEventSource(
@@ -273,152 +263,6 @@ class RunnersStack(Stack):
             }
         )
 
-        alarm_topic = sns.Topic(
-            self, "AlarmTopic",
-            topic_name=f"{config['aws']['lambda']['function_name']}-alarms",
-            display_name="Webhook Router Alarms"
-        )
-
-        error_alarm = cloudwatch.Alarm(
-            self, "WebhookRouterErrorAlarm",
-            alarm_name=f"{config['aws']['lambda']['function_name']}-errors",
-            metric=webhook_router_lambda.metric_errors(
-                period=Duration.minutes(5),
-                statistic="Sum"
-            ),
-            evaluation_periods=1,
-            threshold=5,
-            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
-        )
-
-        throttle_alarm = cloudwatch.Alarm(
-            self, "WebhookRouterThrottleAlarm",
-            alarm_name=f"{config['aws']['lambda']['function_name']}-throttles",
-            metric=webhook_router_lambda.metric_throttles(
-                period=Duration.minutes(5),
-                statistic="Sum"
-            ),
-            evaluation_periods=1,
-            threshold=10,
-            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
-        )
-
-        dlq_alarm = cloudwatch.Alarm(
-            self, "WebhookDLQAlarm",
-            alarm_name=f"{config['aws']['lambda']['function_name']}-dlq-messages",
-            metric=webhook_dlq.metric_approximate_number_of_messages_visible(
-                period=Duration.minutes(5),
-                statistic="Maximum"
-            ),
-            evaluation_periods=1,
-            threshold=1,
-            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
-        )
-
-        job_queue_dlq_alarm = cloudwatch.Alarm(
-            self, "JobQueueDLQAlarm",
-            alarm_name=f"{config['aws']['lambda']['function_name']}-job-dlq-messages",
-            metric=job_queue_dlq.metric_approximate_number_of_messages_visible(
-                period=Duration.minutes(5),
-                statistic="Maximum"
-            ),
-            evaluation_periods=1,
-            threshold=1,
-            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING
-        )
-
-        error_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
-        throttle_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
-        dlq_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
-        job_queue_dlq_alarm.add_alarm_action(cw_actions.SnsAction(alarm_topic))
-
-        dashboard = cloudwatch.Dashboard(
-            self, "WebhookRouterDashboard",
-            dashboard_name=f"{config['aws']['lambda']['function_name']}-dashboard"
-        )
-
-        dashboard.add_widgets(
-            cloudwatch.GraphWidget(
-                title="Lambda Performance",
-                left=[
-                    webhook_router_lambda.metric_duration(statistic="Average"),
-                    webhook_router_lambda.metric_duration(statistic="Maximum")
-                ],
-                right=[
-                    webhook_router_lambda.metric_invocations(statistic="Sum")
-                ]
-            ),
-            cloudwatch.GraphWidget(
-                title="Lambda Errors & Throttles",
-                left=[
-                    webhook_router_lambda.metric_errors(statistic="Sum"),
-                    webhook_router_lambda.metric_throttles(statistic="Sum")
-                ]
-            )
-        )
-
-        dashboard.add_widgets(
-            cloudwatch.GraphWidget(
-                title="Circuit Breaker State",
-                left=[
-                    cloudwatch.Metric(
-                        namespace="WebhookRouter",
-                        metric_name="CircuitBreakerState",
-                        statistic="Maximum"
-                    )
-                ]
-            ),
-            cloudwatch.GraphWidget(
-                title="Processing Time",
-                left=[
-                    cloudwatch.Metric(
-                        namespace="WebhookRouter",
-                        metric_name="ProcessingTime",
-                        statistic="Average",
-                        unit=cloudwatch.Unit.MILLISECONDS
-                    ),
-                    cloudwatch.Metric(
-                        namespace="WebhookRouter",
-                        metric_name="ProcessingTime",
-                        statistic="Maximum",
-                        unit=cloudwatch.Unit.MILLISECONDS
-                    )
-                ]
-            )
-        )
-
-        dashboard.add_widgets(
-            cloudwatch.GraphWidget(
-                title="Queue Depth",
-                left=[
-                    cloudwatch.Metric(
-                        namespace="WebhookRouter",
-                        metric_name="QueueDepth",
-                        statistic="Average"
-                    ),
-                    job_queue.metric_approximate_number_of_messages_visible(statistic="Maximum")
-                ]
-            ),
-            cloudwatch.GraphWidget(
-                title="DLQ Messages",
-                left=[
-                    webhook_dlq.metric_approximate_number_of_messages_visible(statistic="Maximum"),
-                    job_queue_dlq.metric_approximate_number_of_messages_visible(statistic="Maximum")
-                ]
-            )
-        )
-
-        dashboard.add_widgets(
-            cloudwatch.AlarmStatusWidget(
-                title="Alarms",
-                alarms=[error_alarm, throttle_alarm, dlq_alarm, job_queue_dlq_alarm]
-            )
-        )
-
         CfnOutput(
             self, "RunnersWebhookEndpoint",
             value=f"https://{config['fqdn']}/v1/runners",
@@ -429,16 +273,4 @@ class RunnersStack(Stack):
             self, "WebhookRouterLambdaName",
             value=webhook_router_lambda.function_name,
             description="Lambda function name for webhook router"
-        )
-
-        CfnOutput(
-            self, "AlarmTopicArn",
-            value=alarm_topic.topic_arn,
-            description="SNS topic ARN for CloudWatch alarm notifications"
-        )
-
-        CfnOutput(
-            self, "DashboardURL",
-            value=f"https://console.aws.amazon.com/cloudwatch/home?region={config['aws']['region']}#dashboards:name={config['aws']['lambda']['function_name']}-dashboard",
-            description="CloudWatch Dashboard URL"
         )

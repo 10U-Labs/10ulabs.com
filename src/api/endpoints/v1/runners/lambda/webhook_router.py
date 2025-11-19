@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+_clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None}
 _webhook_secret_cache = {'value': None}
 _circuit_breaker_state = {
     'failures': 0,
@@ -40,30 +40,6 @@ def get_sqs_client():
     if _clients['sqs'] is None:
         _clients['sqs'] = boto3.client('sqs')
     return _clients['sqs']
-
-
-def get_cloudwatch_client():
-    if _clients['cloudwatch'] is None:
-        _clients['cloudwatch'] = boto3.client('cloudwatch')
-    return _clients['cloudwatch']
-
-
-def publish_metric(metric_name: str, value: float, unit: str = 'None'):
-    try:
-        cloudwatch = get_cloudwatch_client()
-        cloudwatch.put_metric_data(
-            Namespace='WebhookRouter',
-            MetricData=[
-                {
-                    'MetricName': metric_name,
-                    'Value': value,
-                    'Unit': unit,
-                    'Timestamp': time.time()
-                }
-            ]
-        )
-    except ClientError as e:
-        logger.warning("Failed to publish metric %s: %s", metric_name, e)
 
 
 def check_and_record_idempotency(request_id: str) -> bool:
@@ -104,19 +80,15 @@ def check_circuit_breaker() -> bool:
             logger.info("Circuit breaker transitioning to half-open state")
             _circuit_breaker_state['state'] = 'half-open'
             _circuit_breaker_state['failures'] = 0
-            publish_metric('CircuitBreakerState', 1.0, 'Count')
             return True
-        publish_metric('CircuitBreakerState', 2.0, 'Count')
         return False
 
     if _circuit_breaker_state['failures'] >= failure_threshold:
         logger.warning("Circuit breaker opening due to %d failures", _circuit_breaker_state['failures'])
         _circuit_breaker_state['state'] = 'open'
         _circuit_breaker_state['last_failure_time'] = current_time
-        publish_metric('CircuitBreakerState', 2.0, 'Count')
         return False
 
-    publish_metric('CircuitBreakerState', 0.0, 'Count')
     return True
 
 
@@ -148,14 +120,6 @@ def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
             MessageBody=json.dumps(job_data)
         )
         logger.info("Enqueued job to SQS: %s", response.get('MessageId'))
-
-        queue_attrs = sqs.get_queue_attributes(
-            QueueUrl=queue_url,
-            AttributeNames=['ApproximateNumberOfMessages']
-        )
-        queue_depth = int(queue_attrs['Attributes'].get('ApproximateNumberOfMessages', 0))
-        publish_metric('QueueDepth', float(queue_depth), 'Count')
-
         return {'success': True, 'message_id': response.get('MessageId')}
     except ClientError as e:
         logger.error("Failed to enqueue job: %s", e)
@@ -381,7 +345,6 @@ def handle_health_check() -> Dict[str, Any]:
 
 
 def lambda_handler(event, _context):
-    start_time = time.time()
     logger.info("Received event: %s", json.dumps(event))
 
     if 'Records' in event and len(event['Records']) > 0:
@@ -442,8 +405,6 @@ def lambda_handler(event, _context):
         is_duplicate = check_and_record_idempotency(delivery_id)
         if is_duplicate:
             logger.info("Duplicate webhook delivery detected, returning success")
-            processing_time = (time.time() - start_time) * 1000
-            publish_metric('ProcessingTime', processing_time, 'Milliseconds')
             return {
                 'statusCode': 200,
                 'body': json.dumps({'message': 'Duplicate request ignored'})
@@ -453,23 +414,16 @@ def lambda_handler(event, _context):
     logger.info("GitHub event type: %s", event_type)
 
     if event_type == 'workflow_job':
-        result = handle_workflow_job(payload)
-        processing_time = (time.time() - start_time) * 1000
-        publish_metric('ProcessingTime', processing_time, 'Milliseconds')
-        return result
+        return handle_workflow_job(payload)
 
     if event_type == 'ping':
         logger.info("Received ping event")
-        processing_time = (time.time() - start_time) * 1000
-        publish_metric('ProcessingTime', processing_time, 'Milliseconds')
         return {
             'statusCode': 200,
             'body': json.dumps({'message': 'pong'})
         }
 
     logger.info("Ignoring event type: %s", event_type)
-    processing_time = (time.time() - start_time) * 1000
-    publish_metric('ProcessingTime', processing_time, 'Milliseconds')
     return {
         'statusCode': 200,
         'body': json.dumps({'message': f'Event type {event_type} ignored'})
