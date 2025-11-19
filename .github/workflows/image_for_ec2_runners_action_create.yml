@@ -23,8 +23,8 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/image_for_ec2_runners_logic.yml'
-      - 'src/api/endpoints/v1/image_for_ec2_runners/logic/**'
+      - '.github/workflows/image_for_ec2_runners_action_create.yml'
+      - 'src/api/endpoints/v1/image_for_ec2_runners/actions/create/**'
       - '!**/README.md'
 concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
@@ -60,30 +60,30 @@ jobs:
           pylint \
             src/api/endpoints/v1/image_for_ec2_runners/infrastructure/*.py \
             src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py \
-            src/api/endpoints/v1/image_for_ec2_runners/logic/*.py \
+            src/api/endpoints/v1/image_for_ec2_runners/actions/create/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
           CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
-          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_logic.yml
+          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_action_create.yml
       - name: Static type checking Python files with mypy
         run: |
           python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure/*.py &&
           python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py &&
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/logic/*.py
+          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/actions/create/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/logic
+          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
           packer init template.pkr.hcl
       - name: Validating Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/logic
+          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
           packer validate \
             -var="debian_version=12" \
             -var="architecture=amd64" \
@@ -207,11 +207,11 @@ jobs:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/logic
+          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
           packer init template.pkr.hcl
       - name: Validate Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/logic
+          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
           packer validate \
             -var="debian_version=${{ steps.config.outputs.debian_version }}" \
             -var="architecture=${{ steps.config.outputs.architecture }}" \
@@ -224,7 +224,7 @@ jobs:
       - name: Build AMI with Packer
         id: build
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/logic
+          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
           echo "Architecture: ${{ steps.config.outputs.architecture }}"
