@@ -5,6 +5,11 @@ on:
       debian_version:
         description: 'Debian version (leave empty to use config default)'
         required: false
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
       skip_build:
         description: 'Skip build and only validate existing AMI'
         required: false
@@ -26,8 +31,70 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  performing-static-analysis:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint &&
+          npm install -g jsonlint
+      - name: Install project dependencies for linting
+        run: pip install boto3
+      - name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/config.json
+      - name: Linting Python files
+        run: |
+          pylint \
+            src/api/endpoints/v1/image_for_ec2_runners/*.py \
+            src/api/endpoints/v1/image_for_ec2_runners/packer/*.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
+          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners.yml
+      - name: Static type checking Python files with mypy
+        run: |
+          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/*.py &&
+          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/packer/*.py
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+      - name: Initialize Packer
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners/packer
+          packer init template.pkr.hcl
+      - name: Validating Packer template
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners/packer
+          packer validate \
+            -var="debian_version=12" \
+            -var="architecture=amd64" \
+            -var="runner_version=2.319.1" \
+            -var="aws_region=us-east-1" \
+            -var="instance_type=t3.medium" \
+            -var='spot_instance_types=["t3.medium"]' \
+            -var="vpc_id=vpc-dummy" \
+            template.pkr.hcl
   build-ami:
     name: Building AMI
+    needs: performing-static-analysis
     if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
     runs-on: ubuntu-latest
     outputs:
