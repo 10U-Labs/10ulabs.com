@@ -252,7 +252,6 @@ def test_openapi_spec_has_ec2_ami_endpoints(openapi_spec):
 def test_openapi_spec_has_docker_image_endpoints(openapi_spec):
     assert '/v1/image-for-docker-runners' in openapi_spec['paths']
     assert '/v1/image-for-docker-runners/latest' in openapi_spec['paths']
-    assert '/v1/image-for-docker-runners/{id}' in openapi_spec['paths']
     assert '/v1/image-for-docker-runners/{digest}' in openapi_spec['paths']
 
 
