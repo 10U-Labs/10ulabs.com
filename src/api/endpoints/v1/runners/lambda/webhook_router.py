@@ -15,8 +15,13 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None, 'dynamodb': None}
+_clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
 _webhook_secret_cache = {'value': None}
+_circuit_breaker_state: Dict[str, Any] = {
+    'failures': 0,
+    'last_failure_time': 0.0,
+    'state': 'closed'
+}
 
 
 def get_secretsmanager_client():
@@ -29,6 +34,36 @@ def get_dynamodb_client():
     if _clients['dynamodb'] is None:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
+
+
+def get_sqs_client():
+    if _clients['sqs'] is None:
+        _clients['sqs'] = boto3.client('sqs')
+    return _clients['sqs']
+
+
+def get_cloudwatch_client():
+    if _clients['cloudwatch'] is None:
+        _clients['cloudwatch'] = boto3.client('cloudwatch')
+    return _clients['cloudwatch']
+
+
+def publish_metric(metric_name: str, value: float, unit: str = 'None'):
+    try:
+        cloudwatch = get_cloudwatch_client()
+        cloudwatch.put_metric_data(
+            Namespace='WebhookRouter',
+            MetricData=[
+                {
+                    'MetricName': metric_name,
+                    'Value': value,
+                    'Unit': unit,
+                    'Timestamp': time.time()
+                }
+            ]
+        )
+    except ClientError as e:
+        logger.warning("Failed to publish metric %s: %s", metric_name, e)
 
 
 def check_and_record_idempotency(request_id: str) -> bool:
@@ -59,7 +94,78 @@ def check_and_record_idempotency(request_id: str) -> bool:
         return False
 
 
-def get_webhook_secret() -> str:
+def check_circuit_breaker() -> bool:
+    current_time = time.time()
+    failure_threshold = 5
+    timeout_seconds = 60
+
+    if _circuit_breaker_state['state'] == 'open':
+        if current_time - _circuit_breaker_state['last_failure_time'] > timeout_seconds:
+            logger.info("Circuit breaker transitioning to half-open state")
+            _circuit_breaker_state['state'] = 'half-open'
+            _circuit_breaker_state['failures'] = 0
+            publish_metric('CircuitBreakerState', 1.0, 'Count')
+            return True
+        publish_metric('CircuitBreakerState', 2.0, 'Count')
+        return False
+
+    if _circuit_breaker_state['failures'] >= failure_threshold:
+        logger.warning("Circuit breaker opening due to %d failures", _circuit_breaker_state['failures'])
+        _circuit_breaker_state['state'] = 'open'
+        _circuit_breaker_state['last_failure_time'] = current_time
+        publish_metric('CircuitBreakerState', 2.0, 'Count')
+        return False
+
+    publish_metric('CircuitBreakerState', 0.0, 'Count')
+    return True
+
+
+def record_circuit_breaker_success():
+    if _circuit_breaker_state['state'] == 'half-open':
+        logger.info("Circuit breaker closing after successful request")
+        _circuit_breaker_state['state'] = 'closed'
+    _circuit_breaker_state['failures'] = 0
+
+
+def record_circuit_breaker_failure():
+    _circuit_breaker_state['failures'] += 1
+    _circuit_breaker_state['last_failure_time'] = time.time()
+    if _circuit_breaker_state['state'] == 'half-open':
+        logger.warning("Circuit breaker reopening after failed request in half-open state")
+        _circuit_breaker_state['state'] = 'open'
+
+
+def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    queue_url = os.environ.get('JOB_QUEUE_URL')
+    if not queue_url:
+        logger.error("JOB_QUEUE_URL not set, cannot enqueue job")
+        return {'success': False, 'error': 'Job queue not configured'}
+
+    try:
+        sqs = get_sqs_client()
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(job_data)
+        )
+        logger.info("Enqueued job to SQS: %s", response.get('MessageId'))
+
+        queue_attrs = sqs.get_queue_attributes(
+            QueueUrl=queue_url,
+            AttributeNames=['ApproximateNumberOfMessages']
+        )
+        queue_depth = int(queue_attrs['Attributes'].get('ApproximateNumberOfMessages', 0))
+        publish_metric('QueueDepth', float(queue_depth), 'Count')
+
+        return {'success': True, 'message_id': response.get('MessageId')}
+    except ClientError as e:
+        logger.error("Failed to enqueue job: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
+def get_webhook_secret(force_refresh: bool = False) -> str:
+    if force_refresh:
+        _webhook_secret_cache['value'] = None
+
     secret = _webhook_secret_cache['value']
     if not secret:
         secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
@@ -89,84 +195,51 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
     return hmac.compare_digest(computed_signature, github_signature)
 
 
-def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
-    api_base_url = os.environ.get('API_BASE_URL', 'https://api.10ulabs.com')
-
-    is_ec2_runner = 'ephemeral-ec2-spot-instance' in job_labels
-    is_fargate_runner = 'ephemeral-ecs-fargate-spot' in job_labels
-
-    if is_ec2_runner:
-        endpoint = f"{api_base_url}/v1/ec2-runner"
-        runner_type = "ec2"
-    elif is_fargate_runner:
-        endpoint = f"{api_base_url}/v1/docker-runner"
-        runner_type = "fargate"
-    else:
-        logger.error("No matching runner type for labels: %s", job_labels)
-        return {
-            'success': False,
-            'error': f'No matching runner type for labels: {job_labels}'
-        }
-
-    payload = {
-        'job_id': job_id,
-        'job_labels': job_labels,
-        'github_repo': github_repo
-    }
-
-    logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
-
-    max_retries = 3
+def make_http_request_with_retry(endpoint: str, payload: dict, max_retries: int = 3) -> tuple:
     base_delay = 1.0
-
     for attempt in range(max_retries + 1):
         try:
-            req = urllib.request.Request(
-                endpoint,
-                data=json.dumps(payload).encode('utf-8'),
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-
+            req = urllib.request.Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'}, method='POST')
             with urllib.request.urlopen(req, timeout=30) as response:
-                response_data = json.loads(response.read())
-                logger.info("Successfully routed job %s to %s runner on attempt %d", job_id, runner_type, attempt + 1)
-                return {
-                    'success': True,
-                    'runner_type': runner_type,
-                    'response': response_data
-                }
+                return (True, json.loads(response.read()), None)
         except urllib.error.HTTPError as e:
             if 400 <= e.code < 500:
-                logger.error("Client error routing job %s (HTTP %d), not retrying", job_id, e.code)
-                return {
-                    'success': False,
-                    'error': f'HTTP {e.code}: {e.reason}'
-                }
-
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning("Server error routing job %s (HTTP %d), retry %d/%d after %ds", job_id, e.code, attempt + 1, max_retries, delay)
-                time.sleep(delay)
-            else:
-                logger.error("Failed to route job %s after %d attempts (HTTP %d)", job_id, max_retries + 1, e.code)
-                return {
-                    'success': False,
-                    'error': f'HTTP {e.code} after {max_retries + 1} attempts'
-                }
+                return (False, None, f'HTTP {e.code}: {e.reason}')
+            if attempt >= max_retries:
+                return (False, None, f'HTTP {e.code} after {max_retries + 1} attempts')
+            time.sleep(base_delay * (2 ** attempt))
         except (urllib.error.URLError, ValueError) as e:
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning("Error routing job %s, retry %d/%d after %ds: %s", job_id, attempt + 1, max_retries, delay, e)
-                time.sleep(delay)
-            else:
-                logger.error("Failed to route job %s after %d attempts: %s", job_id, max_retries + 1, e)
-                return {
-                    'success': False,
-                    'error': f'{str(e)} after {max_retries + 1} attempts'
-                }
+            if attempt >= max_retries:
+                return (False, None, f'{str(e)} after {max_retries + 1} attempts')
+            time.sleep(base_delay * (2 ** attempt))
+    return (False, None, 'Max retries exceeded')
 
-    return {'success': False, 'error': 'Max retries exceeded'}
+
+def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
+    if not check_circuit_breaker():
+        logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
+        return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
+
+    api_base_url = os.environ.get('API_BASE_URL', 'https://api.10ulabs.com')
+    if 'ephemeral-ec2-spot-instance' in job_labels:
+        endpoint, runner_type = f"{api_base_url}/v1/ec2-runner", "ec2"
+    elif 'ephemeral-ecs-fargate-spot' in job_labels:
+        endpoint, runner_type = f"{api_base_url}/v1/docker-runner", "fargate"
+    else:
+        logger.error("No matching runner type for labels: %s", job_labels)
+        return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
+
+    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo}
+    logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
+
+    success, response_data, error = make_http_request_with_retry(endpoint, payload)
+    if success:
+        logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
+        record_circuit_breaker_success()
+        return {'success': True, 'runner_type': runner_type, 'response': response_data}
+    logger.error("Failed to route job %s: %s", job_id, error)
+    record_circuit_breaker_failure()
+    return {'success': False, 'error': error}
 
 
 def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -198,22 +271,27 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'body': json.dumps({'message': 'No matching runner type, ignoring'})
         }
 
-    logger.info("Routing runner request for job %s (%s)", job_id, job_name)
+    logger.info("Enqueueing runner request for job %s (%s)", job_id, job_name)
 
-    result = route_runner_request(job_id, job_labels, repo_full_name)
+    job_data = {
+        'job_id': job_id,
+        'job_labels': job_labels,
+        'github_repo': repo_full_name
+    }
+
+    result = enqueue_job(job_data)
 
     if result['success']:
         status_code = 200
         response_body = {
-            'message': 'Runner launched successfully',
-            'runner_type': result['runner_type'],
+            'message': 'Job enqueued successfully',
             'job_id': job_id,
-            'response': result['response']
+            'message_id': result.get('message_id')
         }
     else:
         status_code = 500
         response_body = {
-            'message': 'Failed to launch runner',
+            'message': 'Failed to enqueue job',
             'error': result['error'],
             'job_id': job_id
         }
@@ -224,71 +302,110 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def lambda_handler(event, _context):
-    logger.info("Received event: %s", json.dumps(event))
+def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        body = json.loads(message['body'])
+        job_id = body.get('job_id')
+        job_labels = body.get('job_labels', [])
+        github_repo = body.get('github_repo')
+
+        logger.info("Processing job from SQS: job_id=%s, labels=%s, repo=%s", job_id, job_labels, github_repo)
+
+        result = route_runner_request(job_id, job_labels, github_repo)
+
+        if result['success']:
+            logger.info("Successfully processed SQS message for job %s", job_id)
+            return {'success': True}
+
+        logger.error("Failed to process SQS message for job %s: %s", job_id, result.get('error'))
+        return {'success': False, 'error': result.get('error')}
+    except (ValueError, KeyError) as e:
+        logger.error("Failed to parse SQS message: %s", e)
+        return {'success': False, 'error': f'Invalid message format: {e}'}
+
+
+def handle_health_check() -> Dict[str, Any]:
+    health_status = {
+        'status': 'healthy',
+        'circuit_breaker': _circuit_breaker_state['state'],
+        'timestamp': int(time.time())
+    }
+    return {
+        'statusCode': 200,
+        'body': json.dumps(health_status)
+    }
+
+
+def parse_event_body(event: dict) -> tuple:
+    body_str = event.get('body', '')
+    if event.get('isBase64Encoded'):
+        body_str = base64.b64decode(body_str).decode('utf-8')
+    if body_str.startswith('payload='):
+        payload_json = urllib.parse.unquote(body_str[8:])
+        payload = json.loads(payload_json)
+    else:
+        payload = json.loads(body_str)
+    return (body_str, payload)
+
+
+def verify_webhook_signature(body_str: str, signature_header: str) -> dict:
+    try:
+        webhook_secret = get_webhook_secret()
+        if not verify_signature(body_str, signature_header, webhook_secret):
+            logger.error("Webhook signature verification failed")
+            return {'statusCode': 401, 'body': json.dumps({'error': 'Invalid signature'})}
+        return {}
+    except RuntimeError as e:
+        logger.error("Cannot verify signature, secret unavailable: %s", e)
+        return {'statusCode': 500, 'body': json.dumps({'error': 'Authentication system unavailable'})}
+
+
+def handle_api_gateway_event(event: dict, start_time: float) -> dict:
+    path = event.get('path', event.get('rawPath', ''))
+    if path == '/v1/runners/health':
+        return handle_health_check()
 
     try:
-        body_str = event.get('body', '')
-        if event.get('isBase64Encoded'):
-            body_str = base64.b64decode(body_str).decode('utf-8')
-
-        if body_str.startswith('payload='):
-            payload_json = urllib.parse.unquote(body_str[8:])
-            payload = json.loads(payload_json)
-        else:
-            payload = json.loads(body_str)
+        body_str, payload = parse_event_body(event)
     except (ValueError, KeyError) as e:
         logger.error("Failed to parse request body: %s", e)
         logger.error("Body content (first 500 chars): %s", str(event.get('body', ''))[:500])
-        return {
-            'statusCode': 400,
-            'body': json.dumps({'error': 'Invalid JSON payload'})
-        }
+        return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid JSON payload'})}
 
     signature_header = event.get('headers', {}).get('x-hub-signature-256')
     if signature_header:
-        try:
-            webhook_secret = get_webhook_secret()
-            if not verify_signature(body_str, signature_header, webhook_secret):
-                logger.error("Webhook signature verification failed")
-                return {
-                    'statusCode': 401,
-                    'body': json.dumps({'error': 'Invalid signature'})
-                }
-        except RuntimeError as e:
-            logger.error("Cannot verify signature, secret unavailable: %s", e)
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'error': 'Authentication system unavailable'})
-            }
+        error_response = verify_webhook_signature(body_str, signature_header)
+        if error_response:
+            return error_response
     else:
         logger.warning("No signature header found, proceeding without verification")
 
     delivery_id = event.get('headers', {}).get('x-github-delivery')
-    if delivery_id:
-        is_duplicate = check_and_record_idempotency(delivery_id)
-        if is_duplicate:
-            logger.info("Duplicate webhook delivery detected, returning success")
-            return {
-                'statusCode': 200,
-                'body': json.dumps({'message': 'Duplicate request ignored'})
-            }
+    if delivery_id and check_and_record_idempotency(delivery_id):
+        logger.info("Duplicate webhook delivery detected, returning success")
+        publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
+        return {'statusCode': 200, 'body': json.dumps({'message': 'Duplicate request ignored'})}
 
     event_type = event.get('headers', {}).get('x-github-event', payload.get('event_type'))
     logger.info("GitHub event type: %s", event_type)
+    publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
 
     if event_type == 'workflow_job':
         return handle_workflow_job(payload)
+    logger.info("Received ping event" if event_type == 'ping' else f"Ignoring event type: {event_type}")
+    message = 'pong' if event_type == 'ping' else f'Event type {event_type} ignored'
+    return {'statusCode': 200, 'body': json.dumps({'message': message})}
 
-    if event_type == 'ping':
-        logger.info("Received ping event")
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'pong'})
-        }
 
-    logger.info("Ignoring event type: %s", event_type)
-    return {
-        'statusCode': 200,
-        'body': json.dumps({'message': f'Event type {event_type} ignored'})
-    }
+def lambda_handler(event, _context):
+    start_time = time.time()
+    logger.info("Received event: %s", json.dumps(event))
+
+    if 'Records' in event and len(event['Records']) > 0 and event['Records'][0].get('eventSource') == 'aws:sqs':
+        logger.info("Processing SQS event")
+        results = [handle_sqs_message(record) for record in event['Records']]
+        if not all(r['success'] for r in results):
+            raise RuntimeError("One or more SQS messages failed to process")
+        return {'statusCode': 200, 'body': json.dumps({'message': 'Processed successfully'})}
+
+    return handle_api_gateway_event(event, start_time)
