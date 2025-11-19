@@ -20,11 +20,12 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     for attempt in range(1, max_retries + 1):
         try:
+            thinking_config = {'type': 'enabled', 'budget_tokens': bedrock_config['budget_tokens']}
             response = bedrock_client.converse(
                 modelId=bedrock_config['model_id'],
                 messages=messages,
                 inferenceConfig={'maxTokens': bedrock_config['max_tokens']},
-                additionalModelRequestFields={'thinking': {'type': 'enabled'}}
+                additionalModelRequestFields={'thinking': thinking_config}
             )
             logging.info("Bedrock call succeeded on attempt %d", attempt)
             return response
@@ -85,6 +86,7 @@ def main():
     parser.add_argument('--aws-region', required=True, help='AWS region for Bedrock')
     parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
     parser.add_argument('--max-tokens', type=int, required=True, help='Max tokens for model output')
+    parser.add_argument('--budget-tokens', type=int, required=True, help='Budget tokens for extended thinking')
     parser.add_argument('--prompt-file', required=True, help='Path to prompt template file')
     parser.add_argument('--markdownlint-errors', default='', help='JSON output from markdownlint-cli showing errors to fix')
     args = parser.parse_args()
@@ -99,7 +101,8 @@ def main():
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     bedrock_config = {
         'model_id': args.bedrock_model_id,
-        'max_tokens': args.max_tokens
+        'max_tokens': args.max_tokens,
+        'budget_tokens': args.budget_tokens
     }
 
     formatted_content = format_markdown(bedrock_client, current_content, bedrock_config, args.prompt_file, markdownlint_errors=args.markdownlint_errors)
