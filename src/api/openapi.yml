@@ -233,15 +233,15 @@ paths:
         uri: ${DockerImageBuilderHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runners/{id}:
+  /v1/image-for-docker-runners/{digest}:
     get:
-      summary: Get Docker Runner Image by ID
-      description: Returns a specific Docker runner image by ID
-      operationId: getDockerRunnerImageById
+      summary: Get Docker Runner Image by Digest
+      description: Returns a specific Docker runner image by digest
+      operationId: getDockerRunnerImageByDigest
       tags:
         - Docker Images
       parameters:
-        - name: id
+        - name: digest
           in: path
           required: true
           schema:
@@ -253,10 +253,9 @@ paths:
         uri: ${DockerImageBuilderHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runners/{digest}:
     delete:
       summary: Delete Docker Runner Image
-      description: Deletes a specific Docker runner image
+      description: Deletes a specific Docker runner image by digest
       operationId: deleteDockerRunnerImage
       tags:
         - Docker Images
