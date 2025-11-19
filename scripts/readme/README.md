@@ -1,29 +1,24 @@
-# README Generator
+# README Generator for Infrastructure Projects
 
-An AI-powered README generator that uses AWS Bedrock to automatically create and maintain README documentation for software projects.
+An AI-powered tool that automatically generates and maintains README.md files for infrastructure projects using AWS Bedrock and Claude AI.
 
 ## Overview
 
-This tool analyzes project files and uses Claude (via AWS Bedrock) to generate comprehensive README documentation. It can both check if an existing README needs updating and generate new README content based on the current state of your project files.
+This tool uses AWS Bedrock's Claude Sonnet model to analyze project files and generate comprehensive, up-to-date README documentation. It can both check if existing README files need updates and generate new content automatically.
 
 ## Features
 
-- **Intelligent README Generation**: Uses AWS Bedrock's Claude model to analyze project files and generate comprehensive documentation
-- **Smart Update Detection**: Checks if existing README files are current and accurate
-- **Multi-file Analysis**: Scans Python, JSON, Markdown, YAML, and text files across the project
-- **Retry Logic**: Built-in retry mechanism with exponential backoff for API throttling
-- **GitHub Actions Ready**: Designed to work seamlessly in CI/CD pipelines
-
-## Prerequisites
-
-- Python 3.x
-- AWS account with Bedrock access
-- Appropriate AWS credentials configured
-- Access to Claude Sonnet model in AWS Bedrock
+- **AI-Powered Analysis**: Uses Claude Sonnet 4 to understand project structure and generate relevant documentation
+- **Dual Modes**: Check existing README currency or generate new content
+- **Robust AWS Integration**: Built-in retry logic with exponential backoff for Bedrock API calls  
+- **Multi-File Support**: Scans Python, JSON, YAML, Markdown, and text files
+- **Template System**: Customizable prompts for different documentation needs
+- **CI/CD Ready**: Outputs machine-readable results for GitHub Actions integration
+- **Comprehensive Testing**: Full test suite with unit, integration, and end-to-end tests
 
 ## Configuration
 
-The tool uses a `config.json` file for AWS and Bedrock settings:
+The tool is configured via `config.json`:
 
 ```json
 {
@@ -31,8 +26,8 @@ The tool uses a `config.json` file for AWS and Bedrock settings:
     "account_id": 781581267945,
     "region": "us-east-1",
     "bedrock": {
-      "max_tokens_reasoning": 4000,
-      "max_tokens_generation": 16000,
+      "budget_tokens": 10000,
+      "max_tokens": 64000,
       "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
     }
   }
@@ -41,85 +36,120 @@ The tool uses a `config.json` file for AWS and Bedrock settings:
 
 ## Usage
 
-### Check if README needs updating
+### Check Mode
+Determine if an existing README needs updating:
 
 ```bash
 python readme.py --check \
   --project-dir /path/to/project \
   --aws-region us-east-1 \
-  --output-file output.txt \
-  --bedrock-model-id "us.anthropic.claude-sonnet-4-20250514-v1:0" \
-  --max-tokens-reasoning 4000 \
-  --max-tokens-generation 16000 \
+  --bedrock-model-id us.anthropic.claude-sonnet-4-20250514-v1:0 \
+  --budget-tokens 4000 \
+  --max-tokens 16000 \
   --prompt-check prompt_check.md \
-  --prompt-update prompt_update.md
+  --prompt-update prompt_update.md \
+  --output-file result.txt
 ```
 
-### Generate/Update README
+### Update Mode
+Generate or update the README file:
 
 ```bash
 python readme.py --update \
   --project-dir /path/to/project \
   --aws-region us-east-1 \
-  --output-file output.txt \
-  --bedrock-model-id "us.anthropic.claude-sonnet-4-20250514-v1:0" \
-  --max-tokens-reasoning 4000 \
-  --max-tokens-generation 16000 \
+  --bedrock-model-id us.anthropic.claude-sonnet-4-20250514-v1:0 \
+  --budget-tokens 4000 \
+  --max-tokens 16000 \
   --prompt-check prompt_check.md \
-  --prompt-update prompt_update.md
+  --prompt-update prompt_update.md \
+  --output-file result.txt
+```
+
+### Optional Test Directory
+Include test files in the analysis:
+
+```bash
+python readme.py --update \
+  --project-dir /path/to/project \
+  --test-dir /path/to/tests \
+  # ... other options
 ```
 
 ## Command Line Arguments
 
-- `--check`: Check if the current README is up to date
-- `--update`: Generate or update the README file
-- `--project-dir`: Path to the project directory to analyze
-- `--aws-region`: AWS region for Bedrock service
-- `--output-file`: Output file for check results (used by GitHub Actions)
-- `--bedrock-model-id`: Bedrock model ID to use for generation
-- `--max-tokens-reasoning`: Maximum tokens for reasoning phase
-- `--max-tokens-generation`: Maximum tokens for content generation
-- `--prompt-check`: Path to the check prompt template file
-- `--prompt-update`: Path to the update prompt template file
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `--check` | No* | Check if README is current |
+| `--update` | No* | Update/generate README |
+| `--project-dir` | Yes | Project directory path |
+| `--aws-region` | Yes | AWS region for Bedrock |
+| `--bedrock-model-id` | Yes | Bedrock model ID |
+| `--budget-tokens` | Yes | Budget tokens for AI thinking |
+| `--max-tokens` | Yes | Max tokens for model output |
+| `--prompt-check` | Yes | Path to check prompt template |
+| `--prompt-update` | Yes | Path to update prompt template |
+| `--output-file` | Yes | Output file for results |
+| `--test-dir` | No | Optional test directory to include |
 
-## File Analysis
-
-The tool automatically discovers and analyzes these file types:
-- Python files (`.py`)
-- JSON configuration files (`.json`)
-- Markdown files (`.md`)
-- YAML files (`.yaml`, `.yml`)
-- Text files (`.txt`)
-- Lambda function files in `lambda/` directories
+*Either `--check` or `--update` must be specified.
 
 ## Prompt Templates
 
-The tool uses two prompt templates:
+### Check Template (`prompt_check.md`)
+Analyzes existing README files to determine if updates are needed. Returns JSON with update recommendation and reasoning.
 
-### prompt_check.md
-Used to determine if an existing README needs updating. Returns a JSON response indicating whether updates are needed and the reasoning.
+### Update Template (`prompt_update.md`) 
+Generates comprehensive README content based on project files. Explicitly excludes license information to avoid duplication with LICENSE.md files.
 
-### prompt_update.md
-Used to generate new README content based on project files. Includes instructions to avoid duplicating license information since the repository has a separate LICENSE.md file.
+## File Discovery
+
+The tool automatically discovers and analyzes:
+- Python files (`*.py`)
+- Configuration files (`*.json`, `*.yaml`, `*.yml`)
+- Documentation files (`*.md`, `*.txt`)
+- Lambda function files (`lambda/*.py`, `lambda/*/*.py`)
+- Test files (when `--test-dir` specified)
+
+Excludes existing README.md files to prevent circular references.
 
 ## Error Handling
 
-- **Throttling**: Automatic retry with exponential backoff for API rate limits
-- **File Access**: Graceful handling of missing or unreadable files
-- **Network Issues**: Retry logic for transient network problems
-- **Validation**: Input validation for required parameters and file paths
+- **Throttling**: Automatic retry with exponential backoff for Bedrock rate limits
+- **Credentials**: Clear error messages for AWS authentication issues  
+- **File Access**: Graceful handling of file read errors
+- **API Responses**: Robust parsing of Bedrock responses with fallback logic
 
-## Dependencies
+## Testing
 
-- `boto3`: AWS SDK for Python
-- `botocore`: Core functionality for AWS SDK
-- Standard library modules: `argparse`, `json`, `logging`, `os`, `random`, `sys`, `time`, `glob`
+Run the test suite:
+
+```bash
+# Unit tests
+python -m pytest test/readme/test_unit.py
+
+# Integration tests  
+python -m pytest test/readme/test_integration.py
+
+# End-to-end tests (requires AWS credentials)
+python -m pytest test/readme/test_e2e.py
+```
+
+## Requirements
+
+- Python 3.7+
+- boto3
+- AWS credentials configured
+- Access to AWS Bedrock Claude models
 
 ## Architecture
 
 The tool follows a modular design:
-1. **File Discovery**: Scans project directory for relevant files
-2. **Content Analysis**: Reads and combines file contents
-3. **AI Processing**: Uses Bedrock to analyze and generate documentation
-4. **Output Generation**: Creates formatted README content
-5. **Error Recovery**: Handles API limits and network issues gracefully
+
+1. **File Discovery**: Scans project directories for relevant files
+2. **Content Aggregation**: Combines file contents with metadata
+3. **AI Analysis**: Sends structured prompts to Claude via Bedrock
+4. **Response Processing**: Parses AI responses and handles errors
+5. **Output Generation**: Creates README files or status reports
+
+The retry mechanism ensures reliability against API rate limits, while the prompt template system allows customization for different project types.
