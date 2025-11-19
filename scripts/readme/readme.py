@@ -42,10 +42,16 @@ def split_text_by_words(text: str, max_length: int = 1000) -> list:
     return chunks
 
 def extract_text_from_response(response: dict) -> str:
-    for block in response['output']['message']['content']:
-        if 'text' in block:
-            return block['text']
-    raise ValueError("No text content found in Bedrock response")
+    content_blocks = response['output']['message']['content']
+    logging.info("Response contains %d content blocks with keys: %s",
+                len(content_blocks),
+                [list(block.keys()) for block in content_blocks])
+    text_blocks = [block for block in content_blocks if 'text' in block]
+    if not text_blocks:
+        logging.error("No text blocks found in Bedrock response")
+        logging.error("Available block keys: %s", [list(block.keys()) for block in content_blocks])
+        raise ValueError("No text content found in Bedrock response")
+    return text_blocks[0]['text']
 
 def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list, max_retries: int = 5) -> dict:
     initial_jitter = random.randint(5, 30)
