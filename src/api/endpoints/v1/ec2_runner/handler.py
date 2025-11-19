@@ -2,6 +2,8 @@
 import json
 import logging
 import os
+import urllib.request
+import urllib.parse
 from typing import Dict, Any, List
 import boto3
 from botocore.exceptions import ClientError
@@ -48,7 +50,8 @@ def get_latest_ami() -> str:
         response = ec2.describe_images(
             Owners=['self'],
             Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['github-actions-runner']},
+                {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']},
+                {'Name': 'tag:stable', 'Values': ['true']},
                 {'Name': 'state', 'Values': ['available']}
             ]
         )
@@ -67,12 +70,8 @@ def get_latest_ami() -> str:
 
 
 def _get_ec2_config() -> Dict[str, Any]:
-    ami_id = os.environ.get('EC2_AMI_ID')
-    if not ami_id:
-        ami_id = get_latest_ami()
-
     return {
-        'ami_id': ami_id,
+        'ami_id': get_latest_ami(),
         'subnet_ids': os.environ['SUBNETS'].split(','),
         'security_group_id': os.environ['SECURITY_GROUPS'],
         'instance_types': os.environ.get('EC2_INSTANCE_TYPES', 't4g.large,t4g.medium,t4g.small').split(','),
@@ -81,16 +80,48 @@ def _get_ec2_config() -> Dict[str, Any]:
     }
 
 
+def trigger_ami_creation() -> Dict[str, Any]:
+    api_domain = os.environ.get('API_DOMAIN', 'api.10ulabs.com')
+    ami_creation_url = f"https://{api_domain}/v1/image-for-ec2-runners"
+
+    try:
+        req = urllib.request.Request(
+            ami_creation_url,
+            data=json.dumps({}).encode('utf-8'),
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+
+        with urllib.request.urlopen(req, timeout=10) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            logger.info("AMI creation triggered successfully: %s", result)
+            return {'success': True, 'result': result}
+    except Exception as e:
+        logger.error("Failed to trigger AMI creation: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
 def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
     config = _get_ec2_config()
     github_token = get_github_token()
 
     if not config['ami_id']:
-        logger.error("No AMI available - please create one using /v1/image-for-ec2-runners endpoint")
+        logger.warning("No AMI available - triggering AMI creation")
+        trigger_result = trigger_ami_creation()
+
+        if trigger_result['success']:
+            return {
+                'success': False,
+                'job_id': job_id,
+                'error': 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.',
+                'ami_creation_triggered': True
+            }
+
         return {
             'success': False,
             'job_id': job_id,
-            'error': 'No AMI available - please create one using /v1/image-for-ec2-runners endpoint'
+            'error': f"No AMI available and failed to trigger creation: {trigger_result.get('error')}",
+            'ami_creation_triggered': False
         }
 
     if not github_token:
@@ -224,6 +255,8 @@ def lambda_handler(event, _context):
                 'error': result['error'],
                 'job_id': result['job_id']
             }
+            if 'ami_creation_triggered' in result:
+                response_body['ami_creation_triggered'] = result['ami_creation_triggered']
 
         return {
             'statusCode': status_code,

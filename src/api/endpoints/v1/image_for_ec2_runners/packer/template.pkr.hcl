@@ -121,14 +121,16 @@ source "amazon-ebs" "github_runner" {
     Version       = var.debian_version
     Architecture  = var.architecture
     RunnerVersion = var.runner_version
-    Purpose       = "github-actions-runner"
+    Purpose       = "Github self-hosted EC2 runner"
+    stable        = "true"
     BuildDate     = local.timestamp
   }
 
   # Snapshot tags
   snapshot_tags = {
     Name    = "${local.ami_name}-snapshot"
-    Purpose = "github-actions-runner"
+    Purpose = "Github self-hosted EC2 runner"
+    stable  = "true"
   }
 }
 
