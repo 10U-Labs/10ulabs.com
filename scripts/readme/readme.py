@@ -51,7 +51,8 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
             response = bedrock_client.converse(
                 modelId=bedrock_config['model_id'],
                 messages=messages,
-                inferenceConfig={'maxTokens': bedrock_config['max_tokens']}
+                inferenceConfig={'maxTokens': bedrock_config['max_tokens']},
+                additionalModelRequestFields={'thinking': {'type': 'enabled'}}
             )
             logging.info("Bedrock call succeeded on attempt %d", attempt)
             return response
