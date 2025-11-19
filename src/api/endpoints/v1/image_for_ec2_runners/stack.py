@@ -27,7 +27,7 @@ class AmiForEC2RunnersStack(Stack):
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset("api/resources/ami_for_ec2_runners"),
+            code=lambda_.Code.from_asset("api/resources/image_for_ec2_runners"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
@@ -100,7 +100,7 @@ class AmiForEC2RunnersStack(Stack):
             path="/v1"
         )
 
-        ami_resource = v1_resource.add_resource("ami-for-ec2-runners")
+        ami_resource = v1_resource.add_resource("image-for-ec2-runners")
 
         ami_resource.add_method(
             "POST",
@@ -108,6 +108,12 @@ class AmiForEC2RunnersStack(Stack):
         )
 
         ami_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(ami_builder_lambda)
+        )
+
+        latest_resource = ami_resource.add_resource("latest")
+        latest_resource.add_method(
             "GET",
             apigw.LambdaIntegration(ami_builder_lambda)
         )
@@ -120,7 +126,7 @@ class AmiForEC2RunnersStack(Stack):
 
         CfnOutput(
             self, "AmiBuilderEndpoint",
-            value=f"https://{config['domain_names']['subdomain']}/v1/ami-for-ec2-runners",
+            value=f"https://{config['domain_names']['subdomain']}/v1/image-for-ec2-runners",
             description="API endpoint for building GitHub runner AMIs"
         )
 
