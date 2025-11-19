@@ -7,6 +7,7 @@ import yaml
 from aws_cdk import (
     Stack,
     CfnOutput,
+    CustomResource,
     Duration,
     RemovalPolicy,
     Fn,
@@ -323,6 +324,66 @@ class ApiStack(Stack):
         stage.node.add_dependency(deployment)
 
         self.api.deployment_stage = stage
+
+        api_version = self.config.get("api", {}).get("version", "v1")
+
+        version_resource_lookup_fn = lambda_.Function(
+            self, f"{api_version.upper()}ResourceLookup",
+            runtime=lambda_.Runtime.PYTHON_3_14,
+            handler="index.handler",
+            code=lambda_.Code.from_inline("""
+import boto3
+import cfnresponse
+
+def handler(event, context):
+    try:
+        if event['RequestType'] == 'Delete':
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            return
+
+        api_id = event['ResourceProperties']['ApiId']
+        version_path = event['ResourceProperties']['VersionPath']
+        client = boto3.client('apigateway')
+
+        response = client.get_resources(restApiId=api_id, limit=500)
+
+        for item in response['items']:
+            if item.get('path') == version_path:
+                data = {'ResourceId': item['id']}
+                cfnresponse.send(event, context, cfnresponse.SUCCESS, data, item['id'])
+                return
+
+        cfnresponse.send(event, context, cfnresponse.FAILED, {}, f'{version_path} resource not found')
+    except Exception as e:
+        cfnresponse.send(event, context, cfnresponse.FAILED, {}, str(e))
+"""),
+            timeout=Duration.seconds(30)
+        )
+
+        version_resource_lookup_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["apigateway:GET"],
+                resources=[f"arn:aws:apigateway:{self.config['aws']['region']}::/restapis/{self.api.rest_api_id}/resources"]
+            )
+        )
+
+        version_resource_provider = cr.Provider(
+            self, f"{api_version.upper()}ResourceProvider",
+            on_event_handler=version_resource_lookup_fn
+        )
+
+        version_resource_lookup = CustomResource(
+            self, f"{api_version.upper()}ResourceCustomResource",
+            service_token=version_resource_provider.service_token,
+            properties={
+                "ApiId": self.api.rest_api_id,
+                "VersionPath": f"/{api_version}"
+            }
+        )
+        version_resource_lookup.node.add_dependency(deployment)
+
+        self.version_resource_id = version_resource_lookup.get_att_string("ResourceId")
+
         health_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
@@ -331,7 +392,7 @@ class ApiStack(Stack):
         echo_handler.add_permission(
             "ApiGatewayInvoke",
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/POST/v1/echo"
+            source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/POST/{api_version}/echo"
         )
         catchall_handler.add_permission(
             "ApiGatewayInvoke",
@@ -523,6 +584,13 @@ function handler(event) {
             value=self.api.rest_api_root_resource_id,
             description="API Gateway root resource ID",
             export_name="TenULabsApi-RootResourceId"
+        )
+
+        CfnOutput(
+            self, "ApiGatewayV1ResourceId",
+            value=self.version_resource_id,
+            description="API Gateway /v1 resource ID",
+            export_name="TenULabsApi-V1ResourceId"
         )
 
         CfnOutput(

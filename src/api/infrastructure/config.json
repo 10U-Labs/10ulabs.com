@@ -1,4 +1,7 @@
 {
+  "api": {
+    "version": "v1"
+  },
   "aws": {
     "account_id": 781581267945,
     "region": "us-east-1",
