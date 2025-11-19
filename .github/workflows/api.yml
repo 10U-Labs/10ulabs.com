@@ -85,7 +85,8 @@ jobs:
       - if: steps.deploy.outputs.deployment_failed == 'true'
         name: Fail if deployment failed
         run: |
-          echo "CDK deployment failed. See logs above for details."
+          echo "CDK deployment failed. Full logs:"
+          cat /tmp/cdk_deploy.log
           exit 1
   integration-testing:
     name: Integration testing
