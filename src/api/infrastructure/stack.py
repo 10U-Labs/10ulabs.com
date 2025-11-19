@@ -7,7 +7,6 @@ import yaml
 from aws_cdk import (
     Stack,
     CfnOutput,
-    CustomResource,
     Duration,
     RemovalPolicy,
     Fn,
@@ -50,9 +49,9 @@ class ApiStack(Stack):
         cert_info = self._create_certificate(parent_domain, subdomain, parent_domain.replace('.', '-'))
 
         docs_bucket = self._create_docs_bucket()
-        version_resource_id = self._create_api_gateway(self._create_lambda_functions())
+        self._create_api_gateway(self._create_lambda_functions())
         cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
-        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role, version_resource_id))
+        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role))
 
     def _create_vpc(self):
         max_azs = self.config["aws"]["vpc"].get("max_azs", 99)
@@ -294,53 +293,6 @@ class ApiStack(Stack):
         )
         return openapi_spec_str
 
-    def _create_version_resource_lookup(self, api_version):
-        version_resource_lookup_fn = lambda_.Function(
-            self, f"{api_version.upper()}ResourceLookup",
-            runtime=lambda_.Runtime.PYTHON_3_14,
-            handler="index.handler",
-            code=lambda_.Code.from_inline("""
-import boto3
-import cfnresponse
-
-def handler(event, context):
-    try:
-        if event['RequestType'] == 'Delete':
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-            return
-
-        api_id = event['ResourceProperties']['ApiId']
-        version_path = event['ResourceProperties']['VersionPath']
-        client = boto3.client('apigateway')
-
-        response = client.get_resources(restApiId=api_id, limit=500)
-
-        for item in response['items']:
-            if item.get('path') == version_path:
-                data = {'ResourceId': item['id']}
-                cfnresponse.send(event, context, cfnresponse.SUCCESS, data, item['id'])
-                return
-
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, f'{version_path} resource not found')
-    except Exception as e:
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, str(e))
-"""),
-            timeout=Duration.seconds(30)
-        )
-
-        version_resource_lookup_fn.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["apigateway:GET"],
-                resources=[f"arn:aws:apigateway:{self.config['aws']['region']}::/restapis/{self.api.rest_api_id}/resources"]
-            )
-        )
-
-        version_resource_provider = cr.Provider(
-            self, f"{api_version.upper()}ResourceProvider",
-            on_event_handler=version_resource_lookup_fn
-        )
-        return version_resource_provider
-
     def _create_api_gateway(self, handlers):
         health_handler, echo_handler, catchall_handler = handlers
         openapi_spec_str = self._process_openapi_spec(handlers)
@@ -376,17 +328,6 @@ def handler(event, context):
         self.api.deployment_stage = stage
 
         api_version = self.config.get("api", {}).get("version", "v1")
-        version_resource_provider = self._create_version_resource_lookup(api_version)
-
-        version_resource_lookup = CustomResource(
-            self, f"{api_version.upper()}ResourceCustomResource",
-            service_token=version_resource_provider.service_token,
-            properties={
-                "ApiId": self.api.rest_api_id,
-                "VersionPath": f"/{api_version}"
-            }
-        )
-        version_resource_lookup.node.add_dependency(deployment)
 
         health_handler.add_permission(
             "ApiGatewayInvoke",
@@ -403,8 +344,6 @@ def handler(event, context):
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
             source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/*"
         )
-
-        return version_resource_lookup.get_att_string("ResourceId")
 
     def _create_waf(self):
         return wafv2.CfnWebACL(
@@ -549,7 +488,7 @@ function handler(event) {
         return distribution
 
     def _create_dns_and_outputs(self, parent_zone, subdomain_name, cf_distribution, resources):
-        runner_sg, ec2_runner_role, version_resource_id = resources
+        runner_sg, ec2_runner_role = resources
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
@@ -590,13 +529,6 @@ function handler(event) {
             value=self.api.rest_api_root_resource_id,
             description="API Gateway root resource ID",
             export_name="TenULabsApi-RootResourceId"
-        )
-
-        CfnOutput(
-            self, "ApiGatewayV1ResourceId",
-            value=version_resource_id,
-            description="API Gateway /v1 resource ID",
-            export_name="TenULabsApi-V1ResourceId"
         )
 
         CfnOutput(
