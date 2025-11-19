@@ -35,10 +35,12 @@ jobs:
           REGION=$(jq -r '.aws.region' src/api/endpoints/v1/runners/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
           MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/infrastructure/config.json);
+          BUDGET_TOKENS=$(jq -r '.aws.bedrock.budget_tokens' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
+          echo "budget_tokens=$BUDGET_TOKENS" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -62,6 +64,7 @@ jobs:
             --aws-region "${{ steps.config.outputs.region }}" \
             --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
             --max-tokens "${{ steps.config.outputs.max_tokens }}" \
+            --budget-tokens "${{ steps.config.outputs.budget_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
@@ -247,10 +250,12 @@ jobs:
           REGION=$(jq -r '.aws.region' src/api/endpoints/v1/runners/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
           MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/infrastructure/config.json);
+          BUDGET_TOKENS=$(jq -r '.aws.bedrock.budget_tokens' src/api/infrastructure/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
+          echo "budget_tokens=$BUDGET_TOKENS" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -273,6 +278,7 @@ jobs:
             --aws-region "${{ steps.config.outputs.region }}" \
             --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
             --max-tokens "${{ steps.config.outputs.max_tokens }}" \
+            --budget-tokens "${{ steps.config.outputs.budget_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README if changed
         run: |

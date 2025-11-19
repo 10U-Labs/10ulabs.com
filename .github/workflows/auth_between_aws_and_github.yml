@@ -36,11 +36,13 @@ jobs:
           aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json);
           bedrock_model_id=$(jq -r '.aws.bedrock.model_id' src/auth_between_aws_and_github/config.json);
           bedrock_max_tokens=$(jq -r '.aws.bedrock.max_tokens' src/auth_between_aws_and_github/config.json);
+          bedrock_budget_tokens=$(jq -r '.aws.bedrock.budget_tokens' src/auth_between_aws_and_github/config.json);
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
           echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
           echo "bedrock_max_tokens=$bedrock_max_tokens" >> $GITHUB_OUTPUT;
+          echo "bedrock_budget_tokens=$bedrock_budget_tokens" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -64,6 +66,7 @@ jobs:
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --bedrock-model-id "${{ steps.config.outputs.bedrock_model_id }}" \
             --max-tokens "${{ steps.config.outputs.bedrock_max_tokens }}" \
+            --budget-tokens "${{ steps.config.outputs.bedrock_budget_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
@@ -295,11 +298,13 @@ jobs:
           aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json);
           bedrock_model_id=$(jq -r '.aws.bedrock.model_id' src/auth_between_aws_and_github/config.json);
           bedrock_max_tokens=$(jq -r '.aws.bedrock.max_tokens' src/auth_between_aws_and_github/config.json);
+          bedrock_budget_tokens=$(jq -r '.aws.bedrock.budget_tokens' src/auth_between_aws_and_github/config.json);
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
           echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
           echo "bedrock_max_tokens=$bedrock_max_tokens" >> $GITHUB_OUTPUT;
+          echo "bedrock_budget_tokens=$bedrock_budget_tokens" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -322,6 +327,7 @@ jobs:
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --bedrock-model-id "${{ steps.config.outputs.bedrock_model_id }}" \
             --max-tokens "${{ steps.config.outputs.bedrock_max_tokens }}" \
+            --budget-tokens "${{ steps.config.outputs.bedrock_budget_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README
         run: |
