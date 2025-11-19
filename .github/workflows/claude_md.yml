@@ -70,13 +70,11 @@ jobs:
           ACCOUNT_ID=$(jq -r '.account_id' scripts/transform_to_compliant_markdown/config.json);
           REGION=$(jq -r '.region' scripts/transform_to_compliant_markdown/config.json);
           MODEL_ID=$(jq -r '.bedrock.model_id' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_REASONING=$(jq -r '.bedrock.max_tokens_reasoning' scripts/transform_to_compliant_markdown/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.bedrock.max_tokens_generation' scripts/transform_to_compliant_markdown/config.json);
+          MAX_TOKENS=$(jq -r '.bedrock.max_tokens' scripts/transform_to_compliant_markdown/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
+          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -94,8 +92,7 @@ jobs:
             --file CLAUDE.md \
             --aws-region "${{ steps.config.outputs.region }}" \
             --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
-            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
+            --max-tokens "${{ steps.config.outputs.max_tokens }}" \
             --prompt-file scripts/transform_to_compliant_markdown/prompt.md \
             --markdownlint-errors '${{ needs.determining-if-claude-md-should-be-formatted.outputs.errors }}'
       - name: Commit and push CLAUDE.md formatting

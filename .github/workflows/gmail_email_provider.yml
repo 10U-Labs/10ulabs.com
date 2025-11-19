@@ -34,13 +34,11 @@ jobs:
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
           REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/gmail_email_provider/config.json);
-          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/gmail_email_provider/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/gmail_email_provider/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/gmail_email_provider/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
+          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -63,8 +61,7 @@ jobs:
             --prompt-update scripts/readme/prompt_update.md \
             --aws-region "${{ steps.config.outputs.region }}" \
             --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
-            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --max-tokens "${{ steps.config.outputs.max_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
@@ -255,13 +252,11 @@ jobs:
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
           REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/gmail_email_provider/config.json);
-          MAX_TOKENS_REASONING=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/gmail_email_provider/config.json);
-          MAX_TOKENS_GENERATION=$(jq -r '.aws.bedrock.max_tokens_generation' src/gmail_email_provider/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/gmail_email_provider/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens_reasoning=$MAX_TOKENS_REASONING" >> $GITHUB_OUTPUT;
-          echo "max_tokens_generation=$MAX_TOKENS_GENERATION" >> $GITHUB_OUTPUT;
+          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -283,8 +278,7 @@ jobs:
             --prompt-update scripts/readme/prompt_update.md \
             --aws-region "${{ steps.config.outputs.region }}" \
             --bedrock-model-id "${{ steps.config.outputs.model_id }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.max_tokens_reasoning }}" \
-            --max-tokens-generation "${{ steps.config.outputs.max_tokens_generation }}" \
+            --max-tokens "${{ steps.config.outputs.max_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README if changed
         run: |
