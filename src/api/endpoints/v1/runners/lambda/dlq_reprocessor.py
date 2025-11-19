@@ -7,18 +7,9 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_sqs_client = None
-
-
-def get_sqs_client():
-    global _sqs_client
-    if _sqs_client is None:
-        _sqs_client = boto3.client('sqs')
-    return _sqs_client
-
 
 def reprocess_dlq_messages(dlq_url: str, target_queue_url: str, max_messages: int = 10) -> dict:
-    sqs = get_sqs_client()
+    sqs = boto3.client('sqs')
     reprocessed = 0
     failed = 0
 
@@ -61,6 +52,7 @@ def reprocess_dlq_messages(dlq_url: str, target_queue_url: str, max_messages: in
 
 
 def handler(event, context):
+    del event, context
     webhook_dlq_url = os.environ.get('WEBHOOK_DLQ_URL')
     job_dlq_url = os.environ.get('JOB_DLQ_URL')
     job_queue_url = os.environ.get('JOB_QUEUE_URL')
