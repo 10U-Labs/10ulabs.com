@@ -148,7 +148,7 @@ def test_s3_bucket_contains_index_html(s3_client, bucket_name):
 def test_s3_bucket_contains_openapi_yaml(s3_client, bucket_name):
     objects = s3_client.list_objects_v2(Bucket=bucket_name)
     object_keys = [obj['Key'] for obj in objects.get('Contents', [])]
-    assert 'openapi.yaml' in object_keys
+    assert 'openapi.yml' in object_keys
 
 
 def test_s3_bucket_versioning_is_disabled(s3_client, bucket_name):

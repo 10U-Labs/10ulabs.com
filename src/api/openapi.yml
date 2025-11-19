@@ -1,0 +1,359 @@
+openapi: 3.0.3
+info:
+  title: 10U Labs API
+  description: API for 10U Labs services
+  version: 1.0.0
+  contact:
+    name: 10U Labs
+    url: https://10ulabs.com
+servers:
+  - url: https://api.10ulabs.com
+    description: Production API
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Returns the health status of the API
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - service
+                  - version
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  service:
+                    type: string
+                    example: 10U Labs API
+                  version:
+                    type: string
+                    example: 1.0.0
+      x-amazon-apigateway-integration:
+        uri: ${HealthHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/echo:
+    post:
+      summary: Echo Endpoint
+      description: Echoes back the request body
+      operationId: echo
+      tags:
+        - Utilities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Any JSON object to echo back
+            examples:
+              simple:
+                summary: Simple echo example
+                value:
+                  message: Hello World
+              complex:
+                summary: Complex object
+                value:
+                  user: john_doe
+                  data:
+                    items: [1, 2, 3]
+                    nested:
+                      field: value
+      responses:
+        '200':
+          description: Successfully echoed the request
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - echo
+                  - received_at
+                properties:
+                  echo:
+                    type: object
+                    description: The echoed request body
+                  received_at:
+                    type: string
+                    description: AWS request ID
+                    example: 1234-5678-90ab-cdef
+        '400':
+          description: Invalid JSON in request body
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                properties:
+                  error:
+                    type: string
+                    example: Invalid JSON
+      x-amazon-apigateway-integration:
+        uri: ${EchoHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/runners:
+    post:
+      summary: Create GitHub Runner
+      description: Creates a new GitHub runner instance
+      operationId: createRunner
+      tags:
+        - Runners
+      responses:
+        '200':
+          description: Runner created successfully
+      x-amazon-apigateway-integration:
+        uri: ${RunnersHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/runners/health:
+    get:
+      summary: Runners Health Check
+      description: Returns the health status of the runners service
+      operationId: runnersHealth
+      tags:
+        - Runners
+      responses:
+        '200':
+          description: Service is healthy
+      x-amazon-apigateway-integration:
+        uri: ${RunnersHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-ec2-runners:
+    post:
+      summary: Build EC2 Runner AMI
+      description: Triggers a build of a new EC2 runner AMI
+      operationId: buildEC2RunnerAMI
+      tags:
+        - AMI
+      responses:
+        '200':
+          description: AMI build started successfully
+      x-amazon-apigateway-integration:
+        uri: ${AmiBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+    get:
+      summary: List EC2 Runner AMIs
+      description: Lists all available EC2 runner AMIs
+      operationId: listEC2RunnerAMIs
+      tags:
+        - AMI
+      responses:
+        '200':
+          description: List of AMIs
+      x-amazon-apigateway-integration:
+        uri: ${AmiBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-ec2-runners/latest:
+    get:
+      summary: Get Latest EC2 Runner AMI
+      description: Returns the latest EC2 runner AMI
+      operationId: getLatestEC2RunnerAMI
+      tags:
+        - AMI
+      responses:
+        '200':
+          description: Latest AMI information
+      x-amazon-apigateway-integration:
+        uri: ${AmiBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-ec2-runners/{ami_id}:
+    delete:
+      summary: Delete EC2 Runner AMI
+      description: Deletes a specific EC2 runner AMI
+      operationId: deleteEC2RunnerAMI
+      tags:
+        - AMI
+      parameters:
+        - name: ami_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: AMI deleted successfully
+      x-amazon-apigateway-integration:
+        uri: ${AmiBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-docker-runner:
+    post:
+      summary: Build Docker Runner Image
+      description: Triggers a build of a new Docker runner image
+      operationId: buildDockerRunnerImage
+      tags:
+        - Docker Images
+      responses:
+        '200':
+          description: Docker image build started successfully
+      x-amazon-apigateway-integration:
+        uri: ${DockerImageBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+    get:
+      summary: List Docker Runner Images
+      description: Lists all available Docker runner images
+      operationId: listDockerRunnerImages
+      tags:
+        - Docker Images
+      responses:
+        '200':
+          description: List of Docker images
+      x-amazon-apigateway-integration:
+        uri: ${DockerImageBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-docker-runner/latest:
+    get:
+      summary: Get Latest Docker Runner Image
+      description: Returns the latest Docker runner image
+      operationId: getLatestDockerRunnerImage
+      tags:
+        - Docker Images
+      responses:
+        '200':
+          description: Latest Docker image information
+      x-amazon-apigateway-integration:
+        uri: ${DockerImageBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-docker-runner/{digest}:
+    delete:
+      summary: Delete Docker Runner Image
+      description: Deletes a specific Docker runner image
+      operationId: deleteDockerRunnerImage
+      tags:
+        - Docker Images
+      parameters:
+        - name: digest
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Docker image deleted successfully
+      x-amazon-apigateway-integration:
+        uri: ${DockerImageBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/docker-runner:
+    post:
+      summary: Create Docker Runner
+      description: Creates a new Docker runner instance
+      operationId: createDockerRunner
+      tags:
+        - Runners
+      responses:
+        '200':
+          description: Docker runner created successfully
+      x-amazon-apigateway-integration:
+        uri: ${DockerRunnerHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+    get:
+      summary: Get Docker Runner Status
+      description: Returns the status of Docker runners
+      operationId: getDockerRunnerStatus
+      tags:
+        - Runners
+      responses:
+        '200':
+          description: Docker runner status
+      x-amazon-apigateway-integration:
+        uri: ${DockerRunnerHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/docker-runner/latest:
+    get:
+      summary: Get Latest Docker Runner
+      description: Returns information about the latest Docker runner
+      operationId: getLatestDockerRunner
+      tags:
+        - Runners
+      responses:
+        '200':
+          description: Latest Docker runner information
+      x-amazon-apigateway-integration:
+        uri: ${DockerRunnerHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/ec2-runner:
+    post:
+      summary: Create EC2 Runner
+      description: Creates a new EC2 runner instance
+      operationId: createEC2Runner
+      tags:
+        - Runners
+      responses:
+        '200':
+          description: EC2 runner created successfully
+      x-amazon-apigateway-integration:
+        uri: ${EC2RunnerHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /{proxy+}:
+    x-amazon-apigateway-any-method:
+      summary: Catch-all for undefined routes
+      description: Returns 404 for any undefined API endpoint
+      operationId: catchAll
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '404':
+          description: Endpoint not found
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - error
+                  - message
+                  - path
+                properties:
+                  error:
+                    type: string
+                    example: Not Found
+                  message:
+                    type: string
+                    example: The requested endpoint does not exist
+                  path:
+                    type: string
+                    example: /invalid
+      x-amazon-apigateway-integration:
+        uri: ${CatchAllHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+components:
+  schemas: {}
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Utilities
+    description: Utility endpoints
+  - name: Runners
+    description: GitHub runner management endpoints
+  - name: AMI
+    description: EC2 runner AMI management endpoints
+  - name: Docker Images
+    description: Docker runner image management endpoints

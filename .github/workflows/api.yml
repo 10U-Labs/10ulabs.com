@@ -200,7 +200,7 @@ on:
       - src/api/endpoints/root/**
       - src/api/endpoints/v1/echo/**
       - src/api/infrastructure/**
-      - src/api/openapi.yaml
+      - src/api/openapi.yml
       - test/api/infrastructure/**
       - '!**/README.md'
   workflow_dispatch:
