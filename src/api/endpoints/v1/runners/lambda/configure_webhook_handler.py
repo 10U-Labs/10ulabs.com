@@ -13,41 +13,43 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None}
+_clients = {'ssm': None}
 
 
-def get_secretsmanager_client():
-    if _clients['secretsmanager'] is None:
-        _clients['secretsmanager'] = boto3.client('secretsmanager')
-    return _clients['secretsmanager']
+def get_ssm_client():
+    if _clients['ssm'] is None:
+        _clients['ssm'] = boto3.client('ssm')
+    return _clients['ssm']
 
 
 def get_github_pat() -> str:
-    secret_name = os.environ.get('GITHUB_PAT_SECRET_NAME', 'github-pat')
+    parameter_name = os.environ.get('GITHUB_PAT_SECRET_NAME', '/github-runner/credentials')
     try:
-        client = get_secretsmanager_client()
-        response = client.get_secret_value(SecretId=secret_name)
-        return response['SecretString']
+        client = get_ssm_client()
+        response = client.get_parameter(Name=parameter_name, WithDecryption=True)
+        return response['Parameter']['Value']
     except ClientError as e:
         logger.error("Failed to retrieve GitHub PAT: %s", e)
         return ''
 
 
 def get_or_create_webhook_secret() -> str:
-    secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
-    client = get_secretsmanager_client()
+    parameter_name = os.environ.get('WEBHOOK_SECRET_NAME', '/api-webhook-secret')
+    client = get_ssm_client()
 
     try:
-        response = client.get_secret_value(SecretId=secret_name)
-        return response['SecretString']
-    except client.exceptions.ResourceNotFoundException:
+        response = client.get_parameter(Name=parameter_name, WithDecryption=True)
+        return response['Parameter']['Value']
+    except client.exceptions.ParameterNotFound:
         new_secret = secrets.token_urlsafe(32)
-        client.create_secret(
-            Name=secret_name,
-            SecretString=new_secret,
-            Description='GitHub webhook secret for runners endpoint'
+        client.put_parameter(
+            Name=parameter_name,
+            Value=new_secret,
+            Description='GitHub webhook secret for runners endpoint',
+            Type='String',
+            Tier='Standard'
         )
-        logger.info("Created new webhook secret: %s", secret_name)
+        logger.info("Created new webhook secret: %s", parameter_name)
         return new_secret
     except ClientError as e:
         logger.error("Failed to get or create webhook secret: %s", e)

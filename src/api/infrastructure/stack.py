@@ -23,7 +23,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_s3 as s3,
     aws_s3_deployment as s3deploy,
-    aws_secretsmanager as secretsmanager,
+    aws_ssm as ssm,
     aws_cloudfront as cloudfront,
     aws_cloudfront_origins as origins,
     aws_wafv2 as wafv2,
@@ -97,19 +97,16 @@ class ApiStack(Stack):
         )
 
     def _create_secrets_and_security(self):
-        github_token_secret = secretsmanager.Secret.from_secret_name_v2(
+        github_token_parameter = ssm.StringParameter.from_string_parameter_name(
             self, "GitHubToken",
-            secret_name=self.config["naming"]["github_token_secret_name"]
+            string_parameter_name=f"/github-runner/credentials"
         )
-        self.webhook_secret = secretsmanager.Secret(
-            self, "WebhookSecret",
-            secret_name=self.config["naming"]["webhook_secret_name"],
+        self.webhook_parameter = ssm.StringParameter(
+            self, "WebhookParameter",
+            parameter_name=f"/{self.config['naming']['webhook_secret_name']}",
+            string_value="PLACEHOLDER_WILL_BE_UPDATED",
             description="GitHub webhook secret for signature verification",
-            generate_secret_string=secretsmanager.SecretStringGenerator(
-                exclude_punctuation=True,
-                password_length=32
-            ),
-            removal_policy=RemovalPolicy.DESTROY
+            tier=ssm.ParameterTier.STANDARD
         )
         runner_sg = ec2.SecurityGroup(
             self, "SelfHostedRunnerSecurityGroup",
@@ -117,9 +114,9 @@ class ApiStack(Stack):
             description="Security group for GitHub self-hosted runner Fargate tasks",
             allow_all_outbound=True
         )
-        return github_token_secret, runner_sg
+        return github_token_parameter, runner_sg
 
-    def _create_fargate_task(self, github_token_secret):
+    def _create_fargate_task(self, github_token_parameter):
         self.task_definition = ecs.FargateTaskDefinition(
             self, "RunnerTaskDefinition",
             family=self.config["naming"]["task_family"],
@@ -138,7 +135,7 @@ class ApiStack(Stack):
                 log_retention=logs.RetentionDays.ONE_WEEK
             ),
             secrets={
-                "GITHUB_TOKEN": ecs.Secret.from_secrets_manager(github_token_secret)
+                "GITHUB_TOKEN": ecs.Secret.from_ssm_parameter(github_token_parameter)
             },
             environment={
                 "GITHUB_REPO": self.config["github"]["repo"],
@@ -599,16 +596,16 @@ function handler(event) {
         )
 
         CfnOutput(
-            self, "WebhookSecretName",
-            value=self.webhook_secret.secret_name,
-            description="Webhook secret name in Secrets Manager",
+            self, "WebhookParameterName",
+            value=self.webhook_parameter.parameter_name,
+            description="Webhook parameter name in SSM Parameter Store",
             export_name="TenULabsApi-WebhookSecretName"
         )
 
         CfnOutput(
-            self, "WebhookSecretArn",
-            value=self.webhook_secret.secret_arn,
-            description="ARN of the webhook secret",
+            self, "WebhookParameterArn",
+            value=self.webhook_parameter.parameter_arn,
+            description="ARN of the webhook parameter",
             export_name="TenULabsApi-WebhookSecretArn"
         )
 
