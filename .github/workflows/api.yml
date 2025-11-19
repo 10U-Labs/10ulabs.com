@@ -12,10 +12,10 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
-          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
-          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/infrastructure/config.json);
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
+          REGION=$(jq -r '.aws.region' src/api/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3 requests
       - name: Run E2E tests
-        run: pytest test/api/infrastructure/test_e2e.py -v
+        run: pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -43,10 +43,10 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
-          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
-          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/infrastructure/config.json);
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
+          REGION=$(jq -r '.aws.region' src/api/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -67,15 +67,15 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
       - name: Install dependencies
-        run: pip install -r src/api/infrastructure/requirements.txt
+        run: pip install -r src/api/requirements.txt
       - name: CDK Bootstrap (if needed)
-        run: cd src/api/infrastructure && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+        run: cd src/api && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
-        run: cd src/api/infrastructure && cdk diff TenULabsApi
+        run: cd src/api && cdk diff TenULabsApi
       - id: deploy
         name: CDK Deploy
         run: |
-          cd src/api/infrastructure && cdk deploy TenULabsApi \
+          cd src/api && cdk deploy TenULabsApi \
             --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
             echo "deployment_failed=true" >> $GITHUB_OUTPUT
@@ -98,10 +98,10 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/infrastructure/config.json);
-          REGION=$(jq -r '.aws.region' src/api/infrastructure/config.json);
-          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/infrastructure/config.json);
-          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/infrastructure/config.json);
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
+          REGION=$(jq -r '.aws.region' src/api/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
@@ -118,7 +118,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3 requests
       - name: Run pytest integration tests
-        run: pytest test/api/infrastructure/test_integration.py -v
+        run: pytest test/api/test_integration.py -v
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -139,16 +139,16 @@ jobs:
           pip install pylint mypy yamllint &&
           npm install -g jsonlint
       - name: Install project dependencies for linting
-        run: pip install -r src/api/infrastructure/requirements.txt
+        run: pip install -r src/api/requirements.txt
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q src/api/infrastructure/config.json
-          jsonlint -q src/api/infrastructure/cdk.json
+          jsonlint -q src/api/config.json
+          jsonlint -q src/api/cdk.json
       - name: Linting Python files
         run: |
           pylint \
-            src/api/infrastructure/*.py \
+            src/api/*.py \
             src/api/endpoints/root/*.py \
             src/api/endpoints/health/*.py \
             src/api/endpoints/v1/echo/*.py \
@@ -184,9 +184,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install pytest &&
-          pip install -r src/api/infrastructure/requirements.txt
+          pip install -r src/api/requirements.txt
       - name: Run unit tests
-        run: pytest test/api/infrastructure/test_unit.py -v
+        run: pytest test/api/test_unit.py -v
 name: Ensuring API infrastructure exists and is properly configured
 on:
   push:
@@ -199,9 +199,9 @@ on:
       - src/api/endpoints/health/**
       - src/api/endpoints/root/**
       - src/api/endpoints/v1/echo/**
-      - src/api/infrastructure/**
+      - src/api/**
       - src/api/openapi.yml
-      - test/api/infrastructure/**
+      - test/api/**
       - '!**/README.md'
   workflow_dispatch:
     inputs:
