@@ -55,13 +55,13 @@ jobs:
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/config.json
+          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json
       - name: Linting Python files
         run: |
           pylint \
-            src/api/endpoints/v1/image_for_ec2_runners/*.py \
-            src/api/endpoints/v1/image_for_ec2_runners/lambda/*.py \
-            src/api/endpoints/v1/image_for_ec2_runners/packer/*.py \
+            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/*.py \
+            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py \
+            src/api/endpoints/v1/image_for_ec2_runners/logic/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -71,20 +71,20 @@ jobs:
           yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners.yml
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/*.py &&
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/lambda/*.py &&
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/packer/*.py
+          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure/*.py &&
+          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py &&
+          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/logic/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/packer
+          cd src/api/endpoints/v1/image_for_ec2_runners/logic
           packer init template.pkr.hcl
       - name: Validating Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/packer
+          cd src/api/endpoints/v1/image_for_ec2_runners/logic
           packer validate \
             -var="debian_version=12" \
             -var="architecture=amd64" \
