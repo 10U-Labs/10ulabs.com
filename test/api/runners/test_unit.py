@@ -1359,7 +1359,7 @@ def test_get_github_pat_retrieves_secret_successfully(configure_webhook_handler_
     configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'ghp_test_token_12345'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'ghp_test_token_12345'}}
 
     with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_github_pat()
@@ -1373,7 +1373,7 @@ def test_get_github_pat_uses_environment_variable_for_secret_name(configure_webh
     configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'test_token'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'test_token'}}
 
     with patch.dict(os.environ, {'GITHUB_PAT_SECRET_NAME': 'custom-pat-secret'}):
         with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
@@ -1439,7 +1439,7 @@ def test_get_or_create_webhook_secret_returns_existing_secret(configure_webhook_
     configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'existing_webhook_secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'existing_webhook_secret_value'}}
 
     with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_or_create_webhook_secret()
@@ -1551,7 +1551,7 @@ def test_get_or_create_webhook_secret_uses_environment_variable_for_secret_name(
     configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'secret_value'}}
 
     with patch.dict(os.environ, {'WEBHOOK_SECRET_NAME': 'custom-webhook-secret'}):
         with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
