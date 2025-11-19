@@ -28,7 +28,6 @@ concurrency:
 jobs:
   build-ami:
     name: Building AMI
-    needs: conclude-building-needed
     if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
     runs-on: ubuntu-latest
     outputs:
@@ -215,7 +214,7 @@ jobs:
   cleanup-old-amis:
     name: Cleaning up Packer build artifacts
     runs-on: ubuntu-latest
-    needs: [smoke-test-new-ami, smoke-test-preexisting-ami]
+    needs: smoke-test-new-ami
     if: always()
     permissions:
       id-token: write
@@ -354,36 +353,9 @@ jobs:
               aws ec2 delete-network-interface --network-interface-id $ENI_ID || echo "⚠ Failed to delete $ENI_ID"
             done
           fi
-  conclude-building-needed:
-    name: Concluding building is needed
-    needs: determine-mode
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Confirm build mode
-        run: echo "AMI build will proceed"
-  conclude-smoke-testing-only:
-    name: Concluding only smoke testing was requested
-    needs: determine-mode
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_build }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Confirm smoke test only mode
-        run: echo "Using existing AMI ${{ inputs.ami_id }} for smoke testing only"
-  determine-mode:
-    name: Determining if AMI should be built or only smoke tested
-    runs-on: ubuntu-latest
-    steps:
-      - name: Display workflow mode
-        run: |
-          if [ "${{ inputs.skip_build }}" = "true" ]; then
-            echo "Workflow mode: Smoke testing only (AMI ID: ${{ inputs.ami_id }})"
-          else
-            echo "Workflow mode: Building new AMI + smoke testing"
-          fi
   smoke-test-new-ami:
     name: Smoke testing newly built AMI
-    needs: [conclude-building-needed, build-ami]
+    needs: build-ami
     if: ${{ !inputs.skip_build && needs.build-ami.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
@@ -536,156 +508,4 @@ jobs:
             aws ec2 wait instance-terminated \
               --instance-ids ${{ steps.launch.outputs.instance_id }}
             echo "Instance terminated successfully"
-          fi
-  smoke-test-preexisting-ami:
-    name: Smoke testing pre-existing AMI
-    needs: conclude-smoke-testing-only
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_build }}
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Load configuration from config file
-        id: aws-config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/image_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' api/resources/image_for_ec2_runners/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ steps.aws-config.outputs.account_id }}:role/GitHubActionsRole
-          aws-region: ${{ steps.aws-config.outputs.region }}
-      - name: Get VPC and subnet info
-        id: network
-        run: |
-          VPC_ID=$(aws ec2 describe-vpcs \
-            --filters "Name=tag:Name,Values=github-runners-vpc" \
-            --query 'Vpcs[0].VpcId' \
-            --output text --no-cli-pager)
-          SUBNET_ID=$(aws ec2 describe-subnets \
-            --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
-            --query 'Subnets[0].SubnetId' \
-            --output text --no-cli-pager)
-          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
-          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-      - name: Load AMI validation config
-        id: config
-        run: |
-          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' api/resources/image_for_ec2_runners/config.json)
-          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' api/resources/image_for_ec2_runners/config.json)
-          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' api/resources/image_for_ec2_runners/config.json)
-          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' api/resources/image_for_ec2_runners/config.json)
-          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
-          echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
-          echo "spot_retry_attempts=$SPOT_RETRY_ATTEMPTS" >> $GITHUB_OUTPUT
-          echo "spot_retry_delay=$SPOT_RETRY_DELAY" >> $GITHUB_OUTPUT
-      - name: Launch test instance
-        id: launch
-        env:
-          AMI_ID: ${{ inputs.skip_build && inputs.ami_id || needs.build-ami.outputs.ami_id }}
-        run: |
-          echo "Validating AMI: $AMI_ID"
-          INSTANCE_TYPES="${{ steps.config.outputs.spot_instance_types }}"
-          MAX_ATTEMPTS=${{ steps.config.outputs.spot_retry_attempts }}
-          RETRY_DELAY=${{ steps.config.outputs.spot_retry_delay }}
-          INSTANCE_ID=""
-          for attempt in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $attempt of $MAX_ATTEMPTS"
-            for instance_type in $INSTANCE_TYPES; do
-              echo "Trying spot instance type: $instance_type"
-              set +e
-              INSTANCE_ID=$(aws ec2 run-instances \
-                --image-id $AMI_ID \
-                --instance-type $instance_type \
-                --subnet-id ${{ steps.network.outputs.subnet_id }} \
-                --associate-public-ip-address \
-                --iam-instance-profile Name=PackerEC2InstanceProfile \
-                --instance-market-options "MarketType=spot,SpotOptions={MaxPrice=${{ steps.config.outputs.spot_max_price }},SpotInstanceType=one-time}" \
-                --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=ami-validation-test},{Key=Purpose,Value=temporary-testing}]' \
-                --query 'Instances[0].InstanceId' \
-                --output text --no-cli-pager 2>&1)
-              EXIT_CODE=$?
-              set -e
-              if [ $EXIT_CODE -eq 0 ] && [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
-                echo "Successfully launched $instance_type spot instance: $INSTANCE_ID"
-                echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
-                echo "instance_type=$instance_type" >> $GITHUB_OUTPUT
-                exit 0
-              else
-                echo "Failed to launch $instance_type: $INSTANCE_ID"
-              fi
-            done
-            if [ $attempt -lt $MAX_ATTEMPTS ]; then
-              echo "No spot capacity available, retrying in ${RETRY_DELAY}s..."
-              sleep $RETRY_DELAY
-            fi
-          done
-          echo "Failed to launch spot instance after $MAX_ATTEMPTS attempts"
-          exit 1
-      - name: Wait for instance to be ready
-        run: |
-          echo "Waiting for instance to be running..."
-          aws ec2 wait instance-running \
-            --instance-ids ${{ steps.launch.outputs.instance_id }}
-          echo "Waiting for status checks to pass..."
-          aws ec2 wait instance-status-ok \
-            --instance-ids ${{ steps.launch.outputs.instance_id }}
-          echo "Instance is ready"
-      - name: Wait for SSM agent to be online
-        run: |
-          echo "Waiting for SSM agent..."
-          TIMEOUT=300
-          ELAPSED=0
-          SLEEP_TIME=10
-          while [ $ELAPSED -lt $TIMEOUT ]; do
-            STATUS=$(aws ssm describe-instance-information \
-              --filters "Key=InstanceIds,Values=${{ steps.launch.outputs.instance_id }}" \
-              --query 'InstanceInformationList[0].PingStatus' \
-              --output text --no-cli-pager 2>/dev/null || echo "NotFound")
-            if [ "$STATUS" = "Online" ]; then
-              echo "SSM agent is online"
-              break
-            fi
-            echo "SSM agent status: $STATUS - waiting..."
-            sleep $SLEEP_TIME
-            ELAPSED=$((ELAPSED + SLEEP_TIME))
-          done
-          if [ $ELAPSED -ge $TIMEOUT ]; then
-            echo "Timeout waiting for SSM agent"
-            exit 1
-          fi
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Install test dependencies
-        run: |
-          pip install pytest boto3
-      - name: Run validation tests
-        env:
-          AMI_ID: ${{ inputs.ami_id }}
-          INSTANCE_ID: ${{ steps.launch.outputs.instance_id }}
-          INSTANCE_TYPE: ${{ steps.launch.outputs.instance_type }}
-          SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
-        run: |
-          cd api/resources/image_for_ec2_runners/test
-          pytest test_ami_validation.py -v \
-            --ami-id=$AMI_ID \
-            --instance-id=$INSTANCE_ID \
-            --instance-type=$INSTANCE_TYPE \
-            --subnet-id=$SUBNET_ID \
-            --region=${{ steps.aws-config.outputs.region }}
-      - name: Terminate test instance
-        if: always()
-        run: |
-          if [ -n "${{ steps.launch.outputs.instance_id }}" ]; then
-            echo "Terminating test instance..."
-            aws ec2 terminate-instances \
-              --instance-ids ${{ steps.launch.outputs.instance_id }}
-            echo "Instance termination initiated"
           fi
