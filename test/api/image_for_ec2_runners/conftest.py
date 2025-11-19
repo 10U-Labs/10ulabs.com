@@ -51,7 +51,7 @@ def stack_path(endpoint_dir):
 
 @pytest.fixture
 def handler_path(endpoint_dir):
-    return endpoint_dir / "handler.py"
+    return endpoint_dir / "lambda" / "handler.py"
 
 
 @pytest.fixture
