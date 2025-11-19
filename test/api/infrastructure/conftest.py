@@ -9,14 +9,14 @@ from aws_cdk.assertions import Template
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    config_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     with open(config_path, encoding='utf-8') as f:
         return json.load(f)
 
 
 @pytest.fixture
 def api_stack_class():
-    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "infrastructure" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
