@@ -87,6 +87,13 @@ class AmiForEC2RunnersStack(Stack):
             )
         )
 
+        ami_builder_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["ssm:GetParameter"],
+                resources=[f"arn:aws:ssm:{config['aws']['region']}:{config['aws']['account_id']}:parameter/github-runner/ami/latest"]
+            )
+        )
+
         rest_api = apigw.RestApi.from_rest_api_attributes(
             self, "ImportedApi",
             rest_api_id=Fn.import_value("TenULabsApi-RestApiId"),

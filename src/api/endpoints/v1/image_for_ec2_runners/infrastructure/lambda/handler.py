@@ -111,24 +111,42 @@ def list_amis() -> Dict[str, Any]:
 
 def get_latest_ami() -> Dict[str, Any]:
     try:
-        response = ec2.describe_images(
-            Owners=['self'],
-            Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
-                {'Name': 'tag:stable', 'Values': ['true']},
-                {'Name': 'state', 'Values': ['available']}
-            ]
-        )
+        try:
+            param_response = ssm.get_parameter(
+                Name='/github-runner/ami/latest'
+            )
+            ami_id = param_response['Parameter']['Value']
+            logger.info("Retrieved latest AMI from SSM Parameter Store: %s", ami_id)
+        except ClientError as ssm_error:
+            if ssm_error.response['Error']['Code'] == 'ParameterNotFound':
+                logger.warning("SSM parameter not found, falling back to EC2 query")
+                response = ec2.describe_images(
+                    Owners=['self'],
+                    Filters=[
+                        {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
+                        {'Name': 'tag:stable', 'Values': ['true']},
+                        {'Name': 'state', 'Values': ['available']}
+                    ]
+                )
+                if not response['Images']:
+                    return {
+                        'success': False,
+                        'error': 'No available AMI found'
+                    }
+                images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
+                ami_id = images[0]['ImageId']
+                logger.info("Retrieved latest AMI from EC2 query: %s", ami_id)
+            else:
+                raise
 
-        if not response['Images']:
+        image_response = ec2.describe_images(ImageIds=[ami_id])
+        if not image_response['Images']:
             return {
                 'success': False,
-                'error': 'No available AMI found'
+                'error': f'AMI {ami_id} not found'
             }
 
-        images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
-        latest_image = images[0]
-
+        latest_image = image_response['Images'][0]
         result = {
             'success': True,
             'ami_id': latest_image['ImageId'],
@@ -138,7 +156,7 @@ def get_latest_ami() -> Dict[str, Any]:
             'architecture': latest_image['Architecture'],
             'tags': {tag['Key']: tag['Value'] for tag in latest_image.get('Tags', [])}
         }
-        logger.info("Latest AMI: %s", result['ami_id'])
+        logger.info("Latest AMI details: %s", result['ami_id'])
         return result
     except ClientError as e:
         logger.error("Error getting latest AMI: %s", e)
