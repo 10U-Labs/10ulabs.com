@@ -181,7 +181,7 @@ on:
     paths:
       - .github/workflows/image_for_ec2_runners_infrastructure.yml
       - src/api/endpoints/v1/image_for_ec2_runners/infrastructure/**
-      - test/api/image_for_ec2_runners/**
+      - test/api/image_for_ec2_runners/infrastructure/**
       - '!**/README.md'
   workflow_dispatch:
     inputs:
