@@ -99,7 +99,7 @@ class ApiStack(Stack):
     def _create_secrets_and_security(self):
         github_token_parameter = ssm.StringParameter.from_string_parameter_name(
             self, "GitHubToken",
-            string_parameter_name=f"/github-runner/credentials"
+            string_parameter_name="/github-runner/credentials"
         )
         self.webhook_parameter = ssm.StringParameter(
             self, "WebhookParameter",

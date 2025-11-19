@@ -1016,46 +1016,46 @@ def test_lambda_handler_ignores_unknown_event_types(webhook_router_module):
     assert result['statusCode'] == 200
 
 
-def test_get_secretsmanager_client_returns_boto3_client(webhook_router_module):
+def test_get_ssm_client_returns_boto3_client(webhook_router_module):
     from unittest.mock import patch, MagicMock
 
-    webhook_router_module._clients['secretsmanager'] = None
+    webhook_router_module._clients['ssm'] = None
 
     with patch('boto3.client') as mock_boto_client:
         mock_client = MagicMock()
         mock_boto_client.return_value = mock_client
 
-        client = webhook_router_module.get_secretsmanager_client()
-        mock_boto_client.assert_called_once_with('secretsmanager')
+        client = webhook_router_module.get_ssm_client()
+        mock_boto_client.assert_called_once_with('ssm')
         assert client == mock_client
 
 
-def test_get_secretsmanager_client_caches_client_call_count(webhook_router_module):
+def test_get_ssm_client_caches_client_call_count(webhook_router_module):
     from unittest.mock import patch, MagicMock
 
-    webhook_router_module._clients['secretsmanager'] = None
+    webhook_router_module._clients['ssm'] = None
 
     with patch('boto3.client') as mock_boto_client:
         mock_client = MagicMock()
         mock_boto_client.return_value = mock_client
 
-        webhook_router_module.get_secretsmanager_client()
-        webhook_router_module.get_secretsmanager_client()
+        webhook_router_module.get_ssm_client()
+        webhook_router_module.get_ssm_client()
 
         assert mock_boto_client.call_count == 1
 
 
-def test_get_secretsmanager_client_caches_client_returns_same_instance(webhook_router_module):
+def test_get_ssm_client_caches_client_returns_same_instance(webhook_router_module):
     from unittest.mock import patch, MagicMock
 
-    webhook_router_module._clients['secretsmanager'] = None
+    webhook_router_module._clients['ssm'] = None
 
     with patch('boto3.client') as mock_boto_client:
         mock_client = MagicMock()
         mock_boto_client.return_value = mock_client
 
-        client1 = webhook_router_module.get_secretsmanager_client()
-        client2 = webhook_router_module.get_secretsmanager_client()
+        client1 = webhook_router_module.get_ssm_client()
+        client2 = webhook_router_module.get_ssm_client()
 
         assert client1 == client2
 
@@ -1067,12 +1067,12 @@ def test_get_webhook_secret_retrieves_secret(webhook_router_module):
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'my_secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'my_secret_value'}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with patch.dict(os.environ, {'WEBHOOK_SECRET_NAME': 'test-secret'}):
             secret = webhook_router_module.get_webhook_secret()
-            mock_client.get_secret_value.assert_called_once_with(SecretId='test-secret')
+            mock_client.get_parameter.assert_called_once_with(Name='test-secret', WithDecryption=True)
             assert secret == 'my_secret_value'
 
 
@@ -1082,13 +1082,13 @@ def test_get_webhook_secret_caches_secret_call_count(webhook_router_module):
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'my_secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'my_secret_value'}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         webhook_router_module.get_webhook_secret()
         webhook_router_module.get_webhook_secret()
 
-        assert mock_client.get_secret_value.call_count == 1
+        assert mock_client.get_parameter.call_count == 1
 
 
 def test_get_webhook_secret_caches_secret_returns_same_value(webhook_router_module):
@@ -1097,16 +1097,16 @@ def test_get_webhook_secret_caches_secret_returns_same_value(webhook_router_modu
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'my_secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'my_secret_value'}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret1 = webhook_router_module.get_webhook_secret()
         secret2 = webhook_router_module.get_webhook_secret()
 
         assert secret1 == secret2
 
 
-def test_get_webhook_secret_raises_runtime_error_on_secrets_manager_failure(webhook_router_module):
+def test_get_webhook_secret_raises_runtime_error_on_ssm_failure(webhook_router_module):
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
     import pytest
@@ -1114,12 +1114,12 @@ def test_get_webhook_secret_raises_runtime_error_on_secrets_manager_failure(webh
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'InternalServiceError', 'Message': 'Service unavailable'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with pytest.raises(RuntimeError) as exc_info:
             webhook_router_module.get_webhook_secret()
         assert exc_info.type == RuntimeError
@@ -1133,9 +1133,9 @@ def test_lambda_handler_returns_500_when_secret_retrieval_fails_with_signature(w
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'InternalServiceError', 'Message': 'Service unavailable'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
     event = {
@@ -1146,7 +1146,7 @@ def test_lambda_handler_returns_500_when_secret_retrieval_fails_with_signature(w
         }
     }
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         result = webhook_router_module.lambda_handler(event, None)
         assert result['statusCode'] == 500
 
@@ -1158,12 +1158,12 @@ def test_get_webhook_secret_uses_default_secret_name_when_env_not_set(webhook_ro
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'default_secret'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'default_secret'}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with patch.dict(os.environ, {}, clear=True):
             secret = webhook_router_module.get_webhook_secret()
-            mock_client.get_secret_value.assert_called_once_with(SecretId='api-webhook-secret')
+            mock_client.get_parameter.assert_called_once_with(Name='/api-webhook-secret', WithDecryption=True)
             assert secret == 'default_secret'
 
 
@@ -1175,12 +1175,12 @@ def test_get_webhook_secret_handles_resource_not_found_error(webhook_router_modu
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Secret not found'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret') as exc_info:
             webhook_router_module.get_webhook_secret()
         assert 'Cannot retrieve webhook secret' in str(exc_info.value)
@@ -1194,12 +1194,12 @@ def test_get_webhook_secret_handles_access_denied_error(webhook_router_module):
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret') as exc_info:
             webhook_router_module.get_webhook_secret()
         assert 'Cannot retrieve webhook secret' in str(exc_info.value)
@@ -1213,12 +1213,12 @@ def test_get_webhook_secret_handles_invalid_request_error(webhook_router_module)
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'InvalidRequestException', 'Message': 'Invalid request'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret') as exc_info:
             webhook_router_module.get_webhook_secret()
         assert 'Cannot retrieve webhook secret' in str(exc_info.value)
@@ -1232,12 +1232,12 @@ def test_get_webhook_secret_handles_throttling_error(webhook_router_module):
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'ThrottlingException', 'Message': 'Rate exceeded'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         with pytest.raises(RuntimeError, match='Cannot retrieve webhook secret') as exc_info:
             webhook_router_module.get_webhook_secret()
         assert 'Cannot retrieve webhook secret' in str(exc_info.value)
@@ -1249,9 +1249,9 @@ def test_get_webhook_secret_handles_empty_secret_string(webhook_router_module):
     webhook_router_module._webhook_secret_cache['value'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': ''}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': ''}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret = webhook_router_module.get_webhook_secret()
         assert secret == ''
 
@@ -1263,9 +1263,9 @@ def test_get_webhook_secret_handles_secret_with_special_characters(webhook_route
 
     special_secret = '!@#$%^&*()_+-=[]{}|;:\'",.<>?/~`\n\t\r'
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': special_secret}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': special_secret}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret = webhook_router_module.get_webhook_secret()
         assert secret == special_secret
 
@@ -1277,9 +1277,9 @@ def test_get_webhook_secret_handles_unicode_secret(webhook_router_module):
 
     unicode_secret = '测试密码🔐🗝️'
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': unicode_secret}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': unicode_secret}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret = webhook_router_module.get_webhook_secret()
         assert secret == unicode_secret
 
@@ -1291,9 +1291,9 @@ def test_get_webhook_secret_handles_very_long_secret(webhook_router_module):
 
     long_secret = 'a' * 10000
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': long_secret}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': long_secret}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret = webhook_router_module.get_webhook_secret()
         assert secret == long_secret
 
@@ -1305,9 +1305,9 @@ def test_get_webhook_secret_handles_very_long_secret_length(webhook_router_modul
 
     long_secret = 'a' * 10000
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': long_secret}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': long_secret}}
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret = webhook_router_module.get_webhook_secret()
         assert len(secret) == 10000
 
@@ -1319,7 +1319,7 @@ def test_get_webhook_secret_cache_persists_across_calls(webhook_router_module):
 
     mock_client = MagicMock()
 
-    with patch.object(webhook_router_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(webhook_router_module, 'get_ssm_client', return_value=mock_client):
         secret = webhook_router_module.get_webhook_secret()
         assert secret == 'cached_secret'
         mock_client.get_secret_value.assert_not_called()
@@ -1356,12 +1356,12 @@ def test_configure_webhook_handler_has_lambda_handler_function(configure_webhook
 def test_get_github_pat_retrieves_secret_successfully(configure_webhook_handler_module):
     from unittest.mock import patch, MagicMock
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'ghp_test_token_12345'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'ghp_test_token_12345'}
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_github_pat()
         assert result == 'ghp_test_token_12345'
 
@@ -1370,13 +1370,13 @@ def test_get_github_pat_uses_environment_variable_for_secret_name(configure_webh
     from unittest.mock import patch, MagicMock
     import os
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'test_token'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'test_token'}
 
     with patch.dict(os.environ, {'GITHUB_PAT_SECRET_NAME': 'custom-pat-secret'}):
-        with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
             configure_webhook_handler_module.get_github_pat()
             assert mock_client.get_secret_value.call_args[1]['SecretId'] == 'custom-pat-secret'
 
@@ -1385,15 +1385,15 @@ def test_get_github_pat_returns_empty_string_on_client_error(configure_webhook_h
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_github_pat()
         assert result == ''
 
@@ -1402,15 +1402,15 @@ def test_get_github_pat_returns_empty_string_when_secret_not_found(configure_web
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Secret not found'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_github_pat()
         assert result == ''
 
@@ -1419,15 +1419,15 @@ def test_get_github_pat_logs_error_on_failure(configure_webhook_handler_module):
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'InternalServiceError', 'Message': 'Internal error'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         with patch.object(configure_webhook_handler_module.logger, 'error') as mock_logger:
             configure_webhook_handler_module.get_github_pat()
             assert mock_logger.called
@@ -1436,12 +1436,12 @@ def test_get_github_pat_logs_error_on_failure(configure_webhook_handler_module):
 def test_get_or_create_webhook_secret_returns_existing_secret(configure_webhook_handler_module):
     from unittest.mock import patch, MagicMock
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'existing_webhook_secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'existing_webhook_secret_value'}
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_or_create_webhook_secret()
         assert result == 'existing_webhook_secret_value'
 
@@ -1450,16 +1450,16 @@ def test_get_or_create_webhook_secret_creates_new_secret_when_not_found(configur
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
     mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
-    mock_client.get_secret_value.side_effect = mock_client.exceptions.ResourceNotFoundException(
+    mock_client.get_parameter.side_effect = mock_client.exceptions.ResourceNotFoundException(
         {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Not found'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         with patch('secrets.token_urlsafe', return_value='new_generated_secret'):
             result = configure_webhook_handler_module.get_or_create_webhook_secret()
             assert result == 'new_generated_secret'
@@ -1470,17 +1470,17 @@ def test_get_or_create_webhook_secret_calls_create_secret_with_correct_parameter
     from botocore.exceptions import ClientError
     import os
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
     mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
-    mock_client.get_secret_value.side_effect = mock_client.exceptions.ResourceNotFoundException(
+    mock_client.get_parameter.side_effect = mock_client.exceptions.ResourceNotFoundException(
         {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Not found'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
     with patch.dict(os.environ, {'WEBHOOK_SECRET_NAME': 'test-webhook-secret'}):
-        with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
             with patch('secrets.token_urlsafe', return_value='generated_secret'):
                 configure_webhook_handler_module.get_or_create_webhook_secret()
                 call_kwargs = mock_client.create_secret.call_args[1]
@@ -1491,16 +1491,16 @@ def test_get_or_create_webhook_secret_logs_creation(configure_webhook_handler_mo
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
     mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
-    mock_client.get_secret_value.side_effect = mock_client.exceptions.ResourceNotFoundException(
+    mock_client.get_parameter.side_effect = mock_client.exceptions.ResourceNotFoundException(
         {'Error': {'Code': 'ResourceNotFoundException', 'Message': 'Not found'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         with patch('secrets.token_urlsafe', return_value='new_secret'):
             with patch.object(configure_webhook_handler_module.logger, 'info') as mock_logger:
                 configure_webhook_handler_module.get_or_create_webhook_secret()
@@ -1511,16 +1511,16 @@ def test_get_or_create_webhook_secret_returns_empty_string_on_other_client_error
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
     mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'AccessDeniedException', 'Message': 'Access denied'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         result = configure_webhook_handler_module.get_or_create_webhook_secret()
         assert result == ''
 
@@ -1529,16 +1529,16 @@ def test_get_or_create_webhook_secret_logs_error_on_failure(configure_webhook_ha
     from unittest.mock import patch, MagicMock
     from botocore.exceptions import ClientError
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
     mock_client.exceptions.ResourceNotFoundException = type('ResourceNotFoundException', (ClientError,), {})
-    mock_client.get_secret_value.side_effect = ClientError(
+    mock_client.get_parameter.side_effect = ClientError(
         {'Error': {'Code': 'InternalServiceError', 'Message': 'Internal error'}},
-        'GetSecretValue'
+        'GetParameter'
     )
 
-    with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+    with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
         with patch.object(configure_webhook_handler_module.logger, 'error') as mock_logger:
             configure_webhook_handler_module.get_or_create_webhook_secret()
             assert mock_logger.called
@@ -1548,13 +1548,13 @@ def test_get_or_create_webhook_secret_uses_environment_variable_for_secret_name(
     from unittest.mock import patch, MagicMock
     import os
 
-    configure_webhook_handler_module._clients['secretsmanager'] = None
+    configure_webhook_handler_module._clients['ssm'] = None
 
     mock_client = MagicMock()
-    mock_client.get_secret_value.return_value = {'SecretString': 'secret_value'}
+    mock_client.get_parameter.return_value = {'Parameter': {'Value': 'secret_value'}
 
     with patch.dict(os.environ, {'WEBHOOK_SECRET_NAME': 'custom-webhook-secret'}):
-        with patch.object(configure_webhook_handler_module, 'get_secretsmanager_client', return_value=mock_client):
+        with patch.object(configure_webhook_handler_module, 'get_ssm_client', return_value=mock_client):
             configure_webhook_handler_module.get_or_create_webhook_secret()
             assert mock_client.get_secret_value.call_args[1]['SecretId'] == 'custom-webhook-secret'
 
