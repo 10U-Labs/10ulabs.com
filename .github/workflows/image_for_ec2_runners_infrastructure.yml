@@ -1,0 +1,195 @@
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  e2e-testing:
+    name: E2E testing
+    needs: integration-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install dependencies
+        run: pip install pytest boto3 requests
+      - name: Run E2E tests
+        run: pytest test/api/image_for_ec2_runners/test_e2e.py -v
+  ensuring-infrastructure-in-desired-state:
+    name: Ensuring infrastructure is in desired state
+    needs: unit-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install CDK
+        run: npm install -g aws-cdk
+      - name: Install dependencies
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure
+          pip install -r requirements.txt
+      - name: CDK Bootstrap (if needed)
+        run: cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+      - name: CDK Diff
+        run: cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure && cdk diff TenULabsApi-AmiForEC2Runners
+      - id: deploy
+        name: CDK Deploy
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure && cdk deploy TenULabsApi-AmiForEC2Runners \
+            --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true
+          if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
+            echo "deployment_failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "deployment_failed=false" >> $GITHUB_OUTPUT
+          fi
+      - if: steps.deploy.outputs.deployment_failed == 'true'
+        name: Fail if deployment failed
+        run: |
+          echo "CDK deployment failed. See logs above for details."
+          exit 1
+  integration-testing:
+    name: Integration testing
+    needs: ensuring-infrastructure-in-desired-state
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json);
+          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install Python dependencies
+        run: pip install pytest boto3 requests
+      - name: Run pytest integration tests
+        run: pytest test/api/image_for_ec2_runners/test_integration.py -v
+  performing-static-analysis:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        !contains(github.event.head_commit.message, '[dry run]') ||
+        github.event.inputs.dry_run != 'true'
+      )
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint &&
+          npm install -g jsonlint
+      - name: Install project dependencies for linting
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure
+          pip install -r requirements.txt
+      - name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json
+          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/infrastructure/cdk.json
+      - name: Linting Python files
+        run: |
+          pylint \
+            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/stack.py \
+            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/app.py \
+            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
+          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_infrastructure.yml
+      - name: Static type checking Python files with mypy
+        run: python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
+        run: |
+          pip install pytest &&
+          cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure &&
+          pip install -r requirements.txt
+      - name: Run unit tests
+        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
+name: Ensuring image_for_ec2_runners infrastructure exists and works properly
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/image_for_ec2_runners_infrastructure.yml
+      - src/api/endpoints/v1/image_for_ec2_runners/infrastructure/**
+      - test/api/image_for_ec2_runners/**
+      - '!**/README.md'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+permissions:
+  contents: read
+  id-token: write
