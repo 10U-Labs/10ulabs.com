@@ -72,7 +72,7 @@ def test_webhook_router_lambda_has_secrets_manager_permission(lambda_client, fun
     assert has_secrets_permission
 
 
-def test_api_gateway_has_runners_resource(apigw_client):
+def test_api_gateway_has_api_id(apigw_client):
     apis = apigw_client.get_rest_apis()
     api_id = None
     for api in apis['items']:
@@ -81,6 +81,15 @@ def test_api_gateway_has_runners_resource(apigw_client):
             break
 
     assert api_id is not None
+
+
+def test_api_gateway_has_runners_resource(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
 
     resources = apigw_client.get_resources(restApiId=api_id)
     resource_paths = [r['path'] for r in resources['items']]
@@ -417,12 +426,24 @@ def test_dlq_reprocessor_lambda_has_correct_runtime(lambda_client, function_name
     assert response['Configuration']['Runtime'] == 'python3.14'
 
 
-def test_dlq_reprocessor_lambda_has_environment_variables(lambda_client, function_name):
+def test_dlq_reprocessor_lambda_has_webhook_dlq_url_env_var(lambda_client, function_name):
     reprocessor_function_name = f"{function_name}-dlq-reprocessor"
     response = lambda_client.get_function(FunctionName=reprocessor_function_name)
     env_vars = response['Configuration']['Environment']['Variables']
     assert 'WEBHOOK_DLQ_URL' in env_vars
+
+
+def test_dlq_reprocessor_lambda_has_job_dlq_url_env_var(lambda_client, function_name):
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
     assert 'JOB_DLQ_URL' in env_vars
+
+
+def test_dlq_reprocessor_lambda_has_job_queue_url_env_var(lambda_client, function_name):
+    reprocessor_function_name = f"{function_name}-dlq-reprocessor"
+    response = lambda_client.get_function(FunctionName=reprocessor_function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
     assert 'JOB_QUEUE_URL' in env_vars
 
 
