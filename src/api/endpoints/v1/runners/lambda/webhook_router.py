@@ -17,9 +17,9 @@ logger.setLevel(logging.INFO)
 
 _clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
 _webhook_secret_cache = {'value': None}
-_circuit_breaker_state = {
+_circuit_breaker_state: Dict[str, Any] = {
     'failures': 0,
-    'last_failure_time': 0,
+    'last_failure_time': 0.0,
     'state': 'closed'
 }
 
@@ -195,95 +195,51 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
     return hmac.compare_digest(computed_signature, github_signature)
 
 
+def make_http_request_with_retry(endpoint: str, payload: dict, max_retries: int = 3) -> tuple:
+    base_delay = 1.0
+    for attempt in range(max_retries + 1):
+        try:
+            req = urllib.request.Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'}, method='POST')
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return (True, json.loads(response.read()), None)
+        except urllib.error.HTTPError as e:
+            if 400 <= e.code < 500:
+                return (False, None, f'HTTP {e.code}: {e.reason}')
+            if attempt >= max_retries:
+                return (False, None, f'HTTP {e.code} after {max_retries + 1} attempts')
+            time.sleep(base_delay * (2 ** attempt))
+        except (urllib.error.URLError, ValueError) as e:
+            if attempt >= max_retries:
+                return (False, None, f'{str(e)} after {max_retries + 1} attempts')
+            time.sleep(base_delay * (2 ** attempt))
+    return (False, None, 'Max retries exceeded')
+
+
 def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
     if not check_circuit_breaker():
         logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
-        return {
-            'success': False,
-            'error': 'Service temporarily unavailable (circuit breaker open)'
-        }
+        return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
 
     api_base_url = os.environ.get('API_BASE_URL', 'https://api.10ulabs.com')
-
-    is_ec2_runner = 'ephemeral-ec2-spot-instance' in job_labels
-    is_fargate_runner = 'ephemeral-ecs-fargate-spot' in job_labels
-
-    if is_ec2_runner:
-        endpoint = f"{api_base_url}/v1/ec2-runner"
-        runner_type = "ec2"
-    elif is_fargate_runner:
-        endpoint = f"{api_base_url}/v1/docker-runner"
-        runner_type = "fargate"
+    if 'ephemeral-ec2-spot-instance' in job_labels:
+        endpoint, runner_type = f"{api_base_url}/v1/ec2-runner", "ec2"
+    elif 'ephemeral-ecs-fargate-spot' in job_labels:
+        endpoint, runner_type = f"{api_base_url}/v1/docker-runner", "fargate"
     else:
         logger.error("No matching runner type for labels: %s", job_labels)
-        return {
-            'success': False,
-            'error': f'No matching runner type for labels: {job_labels}'
-        }
+        return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
 
-    payload = {
-        'job_id': job_id,
-        'job_labels': job_labels,
-        'github_repo': github_repo
-    }
-
+    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo}
     logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
 
-    max_retries = 3
-    base_delay = 1.0
-
-    for attempt in range(max_retries + 1):
-        try:
-            req = urllib.request.Request(
-                endpoint,
-                data=json.dumps(payload).encode('utf-8'),
-                headers={'Content-Type': 'application/json'},
-                method='POST'
-            )
-
-            with urllib.request.urlopen(req, timeout=30) as response:
-                response_data = json.loads(response.read())
-                logger.info("Successfully routed job %s to %s runner on attempt %d", job_id, runner_type, attempt + 1)
-                record_circuit_breaker_success()
-                return {
-                    'success': True,
-                    'runner_type': runner_type,
-                    'response': response_data
-                }
-        except urllib.error.HTTPError as e:
-            if 400 <= e.code < 500:
-                logger.error("Client error routing job %s (HTTP %d), not retrying", job_id, e.code)
-                return {
-                    'success': False,
-                    'error': f'HTTP {e.code}: {e.reason}'
-                }
-
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning("Server error routing job %s (HTTP %d), retry %d/%d after %ds", job_id, e.code, attempt + 1, max_retries, delay)
-                time.sleep(delay)
-            else:
-                logger.error("Failed to route job %s after %d attempts (HTTP %d)", job_id, max_retries + 1, e.code)
-                record_circuit_breaker_failure()
-                return {
-                    'success': False,
-                    'error': f'HTTP {e.code} after {max_retries + 1} attempts'
-                }
-        except (urllib.error.URLError, ValueError) as e:
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning("Error routing job %s, retry %d/%d after %ds: %s", job_id, attempt + 1, max_retries, delay, e)
-                time.sleep(delay)
-            else:
-                logger.error("Failed to route job %s after %d attempts: %s", job_id, max_retries + 1, e)
-                record_circuit_breaker_failure()
-                return {
-                    'success': False,
-                    'error': f'{str(e)} after {max_retries + 1} attempts'
-                }
-
+    success, response_data, error = make_http_request_with_retry(endpoint, payload)
+    if success:
+        logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
+        record_circuit_breaker_success()
+        return {'success': True, 'runner_type': runner_type, 'response': response_data}
+    logger.error("Failed to route job %s: %s", job_id, error)
     record_circuit_breaker_failure()
-    return {'success': False, 'error': 'Max retries exceeded'}
+    return {'success': False, 'error': error}
 
 
 def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -380,97 +336,76 @@ def handle_health_check() -> Dict[str, Any]:
     }
 
 
-def lambda_handler(event, _context):
-    start_time = time.time()
-    logger.info("Received event: %s", json.dumps(event))
+def parse_event_body(event: dict) -> tuple:
+    body_str = event.get('body', '')
+    if event.get('isBase64Encoded'):
+        body_str = base64.b64decode(body_str).decode('utf-8')
+    if body_str.startswith('payload='):
+        payload_json = urllib.parse.unquote(body_str[8:])
+        payload = json.loads(payload_json)
+    else:
+        payload = json.loads(body_str)
+    return (body_str, payload)
 
-    if 'Records' in event and len(event['Records']) > 0:
-        if event['Records'][0].get('eventSource') == 'aws:sqs':
-            logger.info("Processing SQS event")
-            results = []
-            for record in event['Records']:
-                result = handle_sqs_message(record)
-                results.append(result)
-            all_success = all(r['success'] for r in results)
-            if not all_success:
-                raise RuntimeError("One or more SQS messages failed to process")
-            return {'statusCode': 200, 'body': json.dumps({'message': 'Processed successfully'})}
 
+def verify_webhook_signature(body_str: str, signature_header: str) -> dict:
+    try:
+        webhook_secret = get_webhook_secret()
+        if not verify_signature(body_str, signature_header, webhook_secret):
+            logger.error("Webhook signature verification failed")
+            return {'statusCode': 401, 'body': json.dumps({'error': 'Invalid signature'})}
+        return {}
+    except RuntimeError as e:
+        logger.error("Cannot verify signature, secret unavailable: %s", e)
+        return {'statusCode': 500, 'body': json.dumps({'error': 'Authentication system unavailable'})}
+
+
+def handle_api_gateway_event(event: dict, start_time: float) -> dict:
     path = event.get('path', event.get('rawPath', ''))
     if path == '/v1/runners/health':
         return handle_health_check()
 
     try:
-        body_str = event.get('body', '')
-        if event.get('isBase64Encoded'):
-            body_str = base64.b64decode(body_str).decode('utf-8')
-
-        if body_str.startswith('payload='):
-            payload_json = urllib.parse.unquote(body_str[8:])
-            payload = json.loads(payload_json)
-        else:
-            payload = json.loads(body_str)
+        body_str, payload = parse_event_body(event)
     except (ValueError, KeyError) as e:
         logger.error("Failed to parse request body: %s", e)
         logger.error("Body content (first 500 chars): %s", str(event.get('body', ''))[:500])
-        return {
-            'statusCode': 400,
-            'body': json.dumps({'error': 'Invalid JSON payload'})
-        }
+        return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid JSON payload'})}
 
     signature_header = event.get('headers', {}).get('x-hub-signature-256')
     if signature_header:
-        try:
-            webhook_secret = get_webhook_secret()
-            if not verify_signature(body_str, signature_header, webhook_secret):
-                logger.error("Webhook signature verification failed")
-                return {
-                    'statusCode': 401,
-                    'body': json.dumps({'error': 'Invalid signature'})
-                }
-        except RuntimeError as e:
-            logger.error("Cannot verify signature, secret unavailable: %s", e)
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'error': 'Authentication system unavailable'})
-            }
+        error_response = verify_webhook_signature(body_str, signature_header)
+        if error_response:
+            return error_response
     else:
         logger.warning("No signature header found, proceeding without verification")
 
     delivery_id = event.get('headers', {}).get('x-github-delivery')
-    if delivery_id:
-        is_duplicate = check_and_record_idempotency(delivery_id)
-        if is_duplicate:
-            logger.info("Duplicate webhook delivery detected, returning success")
-            processing_time = (time.time() - start_time) * 1000
-            publish_metric('ProcessingTime', processing_time, 'Milliseconds')
-            return {
-                'statusCode': 200,
-                'body': json.dumps({'message': 'Duplicate request ignored'})
-            }
+    if delivery_id and check_and_record_idempotency(delivery_id):
+        logger.info("Duplicate webhook delivery detected, returning success")
+        publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
+        return {'statusCode': 200, 'body': json.dumps({'message': 'Duplicate request ignored'})}
 
     event_type = event.get('headers', {}).get('x-github-event', payload.get('event_type'))
     logger.info("GitHub event type: %s", event_type)
+    publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
 
     if event_type == 'workflow_job':
-        result = handle_workflow_job(payload)
-        processing_time = (time.time() - start_time) * 1000
-        publish_metric('ProcessingTime', processing_time, 'Milliseconds')
-        return result
+        return handle_workflow_job(payload)
+    logger.info("Received ping event" if event_type == 'ping' else f"Ignoring event type: {event_type}")
+    message = 'pong' if event_type == 'ping' else f'Event type {event_type} ignored'
+    return {'statusCode': 200, 'body': json.dumps({'message': message})}
 
-    if event_type == 'ping':
-        logger.info("Received ping event")
-        processing_time = (time.time() - start_time) * 1000
-        publish_metric('ProcessingTime', processing_time, 'Milliseconds')
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'pong'})
-        }
 
-    logger.info("Ignoring event type: %s", event_type)
-    processing_time = (time.time() - start_time) * 1000
-    publish_metric('ProcessingTime', processing_time, 'Milliseconds')
-    return {
-        'statusCode': 200,
-        'body': json.dumps({'message': f'Event type {event_type} ignored'})
-    }
+def lambda_handler(event, _context):
+    start_time = time.time()
+    logger.info("Received event: %s", json.dumps(event))
+
+    if 'Records' in event and len(event['Records']) > 0 and event['Records'][0].get('eventSource') == 'aws:sqs':
+        logger.info("Processing SQS event")
+        results = [handle_sqs_message(record) for record in event['Records']]
+        if not all(r['success'] for r in results):
+            raise RuntimeError("One or more SQS messages failed to process")
+        return {'statusCode': 200, 'body': json.dumps({'message': 'Processed successfully'})}
+
+    return handle_api_gateway_event(event, start_time)

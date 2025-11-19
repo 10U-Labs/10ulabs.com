@@ -84,89 +84,52 @@ def list_github_webhooks(
         return {'success': False, 'error': str(e)}
 
 
-def create_github_webhook(
-        webhook_url: str,
-        webhook_secret: str,
-        github_pat: str,
-        repo: str
-) -> Dict[str, Any]:
+def handle_duplicate_webhook(webhook_url: str, github_pat: str, repo: str) -> Dict[str, Any]:
+    list_result = list_github_webhooks(github_pat, repo)
+    if not list_result['success']:
+        return {'success': False, 'error': f'Duplicate exists, list failed: {list_result.get("error")}'}
+
+    for hook in list_result['webhooks']:
+        hook_url = hook.get('config', {}).get('url', '')
+        if hook_url == webhook_url:
+            webhook_id = hook.get('id')
+            logger.info("Found existing webhook with ID: %s", webhook_id)
+            return {'success': True, 'webhook_id': webhook_id}
+
+    return {'success': False, 'error': 'Duplicate webhook exists but URL not found'}
+
+
+def create_github_webhook(webhook_url: str, webhook_secret: str, github_pat: str, repo: str) -> Dict[str, Any]:
     api_endpoint = f'https://api.github.com/repos/{repo}/hooks'
+    payload = {'name': 'web', 'active': True, 'events': ['workflow_job'], 'config': {'url': webhook_url, 'content_type': 'application/json', 'secret': webhook_secret, 'insecure_ssl': '0'}}
+    headers = {'Authorization': f'token {github_pat}', 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json'}
 
-    payload = {
-        'name': 'web',
-        'active': True,
-        'events': ['workflow_job'],
-        'config': {
-            'url': webhook_url,
-            'content_type': 'application/json',
-            'secret': webhook_secret,
-            'insecure_ssl': '0'
-        }
-    }
-
-    headers = {
-        'Authorization': f'token {github_pat}',
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-    }
-
-    max_retries = 3
-    base_delay = 1.0
-
-    for attempt in range(max_retries + 1):
+    for attempt in range(4):
         try:
-            req = urllib.request.Request(
-                api_endpoint,
-                data=json.dumps(payload).encode('utf-8'),
-                headers=headers,
-                method='POST'
-            )
-
+            req = urllib.request.Request(api_endpoint, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req, timeout=30) as response:
                 response_data = json.loads(response.read())
                 logger.info("Created webhook with ID: %s on attempt %d", response_data.get('id'), attempt + 1)
                 return {'success': True, 'webhook_id': response_data.get('id')}
         except urllib.error.HTTPError as e:
             error_body = e.read().decode('utf-8') if e.fp else 'No error body'
-
             if e.code == 422 and 'hook already exists' in error_body.lower():
                 logger.warning("Webhook already exists, attempting to retrieve existing webhook ID")
-                list_result = list_github_webhooks(github_pat, repo)
-
-                if list_result['success']:
-                    for hook in list_result['webhooks']:
-                        hook_url = hook.get('config', {}).get('url', '')
-                        if hook_url == webhook_url:
-                            webhook_id = hook.get('id')
-                            logger.info("Found existing webhook with ID: %s", webhook_id)
-                            return {'success': True, 'webhook_id': webhook_id}
-
-                    logger.error("Duplicate webhook exists but could not find matching URL")
-                    return {'success': False, 'error': 'Duplicate webhook exists but URL not found'}
-
-                logger.error("Failed to list webhooks after duplicate detection")
-                return {'success': False, 'error': f'Duplicate exists, list failed: {list_result.get("error")}'}
-
+                return handle_duplicate_webhook(webhook_url, github_pat, repo)
             if 400 <= e.code < 500:
                 logger.error("Client error creating webhook (HTTP %d), not retrying", e.code)
                 return {'success': False, 'error': f'HTTP {e.code}: {error_body}'}
-
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning("Server error creating webhook (HTTP %d), retry %d/%d after %ds", e.code, attempt + 1, max_retries, delay)
-                time.sleep(delay)
+            if attempt < 3:
+                time.sleep(1.0 * (2 ** attempt))
             else:
-                logger.error("Failed to create webhook after %d attempts (HTTP %d)", max_retries + 1, e.code)
-                return {'success': False, 'error': f'HTTP {e.code} after {max_retries + 1} attempts'}
+                logger.error("Failed to create webhook after 4 attempts (HTTP %d)", e.code)
+                return {'success': False, 'error': f'HTTP {e.code} after 4 attempts'}
         except (urllib.error.URLError, ValueError) as e:
-            if attempt < max_retries:
-                delay = base_delay * (2 ** attempt)
-                logger.warning("Error creating webhook, retry %d/%d after %ds: %s", attempt + 1, max_retries, delay, e)
-                time.sleep(delay)
+            if attempt < 3:
+                time.sleep(1.0 * (2 ** attempt))
             else:
-                logger.error("Failed to create webhook after %d attempts: %s", max_retries + 1, e)
-                return {'success': False, 'error': f'{str(e)} after {max_retries + 1} attempts'}
-
+                logger.error("Failed to create webhook after 4 attempts: %s", e)
+                return {'success': False, 'error': f'{str(e)} after 4 attempts'}
     return {'success': False, 'error': 'Max retries exceeded'}
 
 
@@ -264,87 +227,96 @@ def send_response(
         return False
 
 
+def handle_delete_request(event: dict, repo: str) -> dict:
+    webhook_id_str = event['ResourceProperties'].get('WebhookId', '')
+    if not webhook_id_str:
+        return {
+            'status_code': 200,
+            'response_body': {'message': 'No webhook to delete'},
+            'cf_status': 'SUCCESS',
+            'cf_reason': 'No webhook to delete',
+            'cf_data': {}
+        }
+
+    github_pat = get_github_pat()
+    if not github_pat:
+        return {
+            'status_code': 500,
+            'response_body': {'error': 'Failed to get GitHub PAT'},
+            'cf_status': 'FAILED',
+            'cf_reason': 'Failed to get GitHub PAT',
+            'cf_data': {}
+        }
+
+    result = delete_github_webhook(int(webhook_id_str), github_pat, repo)
+    if result['success']:
+        return {
+            'status_code': 200,
+            'response_body': {'message': 'Webhook deleted'},
+            'cf_status': 'SUCCESS',
+            'cf_reason': 'Webhook deleted',
+            'cf_data': {}
+        }
+    return {
+        'status_code': 500,
+        'response_body': {'error': result.get('error')},
+        'cf_status': 'FAILED',
+        'cf_reason': result.get('error', 'Unknown error'),
+        'cf_data': {}
+    }
+
+
+def handle_create_update_request(webhook_url: str, repo: str) -> dict:
+    github_pat = get_github_pat()
+    webhook_secret = get_or_create_webhook_secret()
+
+    if not github_pat or not webhook_secret:
+        return {
+            'status_code': 500,
+            'response_body': {'error': 'Failed to retrieve secrets'},
+            'cf_status': 'FAILED',
+            'cf_reason': 'Failed to retrieve secrets',
+            'cf_data': {}
+        }
+
+    result = create_github_webhook(webhook_url, webhook_secret, github_pat, repo)
+    if result['success']:
+        return {
+            'status_code': 200,
+            'response_body': {'message': 'Webhook configured', 'webhook_id': result['webhook_id']},
+            'cf_status': 'SUCCESS',
+            'cf_reason': 'Webhook configured',
+            'cf_data': {'WebhookId': str(result['webhook_id']), 'WebhookUrl': webhook_url}
+        }
+    return {
+        'status_code': 500,
+        'response_body': {'error': result.get('error')},
+        'cf_status': 'FAILED',
+        'cf_reason': result.get('error', 'Unknown error'),
+        'cf_data': {}
+    }
+
+
 def lambda_handler(event, _context):
     logger.info("Received event: %s", json.dumps(event))
 
     request_type = event['RequestType']
     webhook_url = event['ResourceProperties'].get('WebhookUrl', '')
     repo = event['ResourceProperties'].get('Repository', '')
-
-    resource_id = event.get(
-        'PhysicalResourceId',
-        f'github-webhook-{repo.replace("/", "-")}'
-    )
-
-    status_code = 200
-    response_body = {}
-    cf_status = 'SUCCESS'
-    cf_reason = ''
-    cf_data = {}
+    resource_id = event.get('PhysicalResourceId', f'github-webhook-{repo.replace("/", "-")}')
 
     if request_type == 'Delete':
-        webhook_id_str = event['ResourceProperties'].get('WebhookId', '')
-        if webhook_id_str:
-            github_pat = get_github_pat()
-            if github_pat:
-                result = delete_github_webhook(
-                    int(webhook_id_str),
-                    github_pat,
-                    repo
-                )
-                if result['success']:
-                    cf_reason = 'Webhook deleted'
-                    response_body = {'message': 'Webhook deleted'}
-                else:
-                    status_code = 500
-                    cf_status = 'FAILED'
-                    cf_reason = result.get('error', 'Unknown error')
-                    response_body = {'error': result.get('error')}
-            else:
-                status_code = 500
-                cf_status = 'FAILED'
-                cf_reason = 'Failed to get GitHub PAT'
-                response_body = {'error': 'Failed to get GitHub PAT'}
-        else:
-            cf_reason = 'No webhook to delete'
-            response_body = {'message': 'No webhook to delete'}
+        result = handle_delete_request(event, repo)
     elif request_type in ['Create', 'Update']:
-        github_pat = get_github_pat()
-        webhook_secret = get_or_create_webhook_secret()
-
-        if not github_pat or not webhook_secret:
-            status_code = 500
-            cf_status = 'FAILED'
-            cf_reason = 'Failed to retrieve secrets'
-            response_body = {'error': 'Failed to retrieve secrets'}
-        else:
-            result = create_github_webhook(
-                webhook_url,
-                webhook_secret,
-                github_pat,
-                repo
-            )
-
-            if result['success']:
-                cf_reason = 'Webhook configured'
-                cf_data = {
-                    'WebhookId': str(result['webhook_id']),
-                    'WebhookUrl': webhook_url
-                }
-                response_body = {
-                    'message': 'Webhook configured',
-                    'webhook_id': result['webhook_id']
-                }
-            else:
-                status_code = 500
-                cf_status = 'FAILED'
-                cf_reason = result.get('error', 'Unknown error')
-                response_body = {'error': result.get('error')}
+        result = handle_create_update_request(webhook_url, repo)
     else:
-        status_code = 400
-        cf_status = 'FAILED'
-        cf_reason = f'Unsupported request type: {request_type}'
-        response_body = {'error': cf_reason}
+        result = {
+            'status_code': 400,
+            'response_body': {'error': f'Unsupported request type: {request_type}'},
+            'cf_status': 'FAILED',
+            'cf_reason': f'Unsupported request type: {request_type}',
+            'cf_data': {}
+        }
 
-    send_response(event, cf_status, cf_reason, resource_id, cf_data)
-    return {'statusCode': status_code, 'body': json.dumps(response_body)}
+    send_response(event, result['cf_status'], result['cf_reason'], resource_id, result['cf_data'])
+    return {'statusCode': result['status_code'], 'body': json.dumps(result['response_body'])}
