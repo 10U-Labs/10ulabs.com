@@ -35,7 +35,7 @@ def endpoint_dir():
 
 @pytest.fixture
 def config_path(endpoint_dir):
-    return endpoint_dir / "config.json"
+    return endpoint_dir / "infrastructure" / "config.json"
 
 
 @pytest.fixture
@@ -46,12 +46,12 @@ def config(config_path):
 
 @pytest.fixture
 def stack_path(endpoint_dir):
-    return endpoint_dir / "stack.py"
+    return endpoint_dir / "infrastructure" / "stack.py"
 
 
 @pytest.fixture
 def handler_path(endpoint_dir):
-    return endpoint_dir / "lambda" / "handler.py"
+    return endpoint_dir / "infrastructure" / "lambda" / "handler.py"
 
 
 @pytest.fixture
