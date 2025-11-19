@@ -301,29 +301,28 @@ class ApiStack(Stack):
             handler="index.handler",
             code=lambda_.Code.from_inline("""
 import boto3
-import cfnresponse
 
 def handler(event, context):
-    try:
-        if event['RequestType'] == 'Delete':
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-            return
+    request_type = event['RequestType']
+    if request_type == 'Delete':
+        return {'PhysicalResourceId': event.get('PhysicalResourceId', 'none')}
 
-        api_id = event['ResourceProperties']['ApiId']
-        version_path = event['ResourceProperties']['VersionPath']
-        client = boto3.client('apigateway')
+    api_id = event['ResourceProperties']['ApiId']
+    version_path = event['ResourceProperties']['VersionPath']
+    client = boto3.client('apigateway')
 
-        response = client.get_resources(restApiId=api_id, limit=500)
+    response = client.get_resources(restApiId=api_id, limit=500)
 
-        for item in response['items']:
-            if item.get('path') == version_path:
-                data = {'ResourceId': item['id']}
-                cfnresponse.send(event, context, cfnresponse.SUCCESS, data, item['id'])
-                return
+    for item in response['items']:
+        if item.get('path') == version_path:
+            return {
+                'PhysicalResourceId': item['id'],
+                'Data': {
+                    'ResourceId': item['id']
+                }
+            }
 
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, f'{version_path} resource not found')
-    except Exception as e:
-        cfnresponse.send(event, context, cfnresponse.FAILED, {}, str(e))
+    raise Exception(f'{version_path} resource not found')
 """),
             timeout=Duration.seconds(30)
         )
