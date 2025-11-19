@@ -147,6 +147,44 @@ def list_amis() -> Dict[str, Any]:
         }
 
 
+def get_latest_ami() -> Dict[str, Any]:
+    try:
+        response = ec2.describe_images(
+            Owners=['self'],
+            Filters=[
+                {'Name': 'tag:Purpose', 'Values': ['github-actions-runner']},
+                {'Name': 'state', 'Values': ['available']}
+            ]
+        )
+
+        if not response['Images']:
+            return {
+                'success': False,
+                'error': 'No available AMI found'
+            }
+
+        images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
+        latest_image = images[0]
+
+        result = {
+            'success': True,
+            'ami_id': latest_image['ImageId'],
+            'name': latest_image['Name'],
+            'state': latest_image['State'],
+            'creation_date': latest_image['CreationDate'],
+            'architecture': latest_image['Architecture'],
+            'tags': {tag['Key']: tag['Value'] for tag in latest_image.get('Tags', [])}
+        }
+        logger.info("Latest AMI: %s", result['ami_id'])
+        return result
+    except ClientError as e:
+        logger.error("Error getting latest AMI: %s", e)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
 def deregister_ami(ami_id: str) -> Dict[str, Any]:
     try:
         image_response = ec2.describe_images(ImageIds=[ami_id])
@@ -213,8 +251,13 @@ def _handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
-def _handle_get() -> Dict[str, Any]:
-    result = list_amis()
+def _handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
+    path = event.get('path', '')
+
+    if path.endswith('/latest'):
+        result = get_latest_ami()
+    else:
+        result = list_amis()
 
     status_code = 200 if result['success'] else 500
     return {
@@ -257,7 +300,7 @@ def lambda_handler(event, _context):
         return _handle_post(event)
 
     if http_method == 'GET':
-        return _handle_get()
+        return _handle_get(event)
 
     if http_method == 'DELETE':
         return _handle_delete(event)

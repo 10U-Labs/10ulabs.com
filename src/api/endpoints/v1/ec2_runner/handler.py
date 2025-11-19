@@ -43,9 +43,36 @@ export AWS_REGION="{os.environ.get('AWS_REGION', 'us-east-1')}"
 """
 
 
+def get_latest_ami() -> str:
+    try:
+        response = ec2.describe_images(
+            Owners=['self'],
+            Filters=[
+                {'Name': 'tag:Purpose', 'Values': ['github-actions-runner']},
+                {'Name': 'state', 'Values': ['available']}
+            ]
+        )
+
+        if not response['Images']:
+            logger.warning("No available AMI found")
+            return ''
+
+        images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
+        latest_ami_id = images[0]['ImageId']
+        logger.info("Found latest AMI: %s", latest_ami_id)
+        return latest_ami_id
+    except ClientError as e:
+        logger.error("Error getting latest AMI: %s", e)
+        return ''
+
+
 def _get_ec2_config() -> Dict[str, Any]:
+    ami_id = os.environ.get('EC2_AMI_ID')
+    if not ami_id:
+        ami_id = get_latest_ami()
+
     return {
-        'ami_id': os.environ.get('EC2_AMI_ID'),
+        'ami_id': ami_id,
         'subnet_ids': os.environ['SUBNETS'].split(','),
         'security_group_id': os.environ['SECURITY_GROUPS'],
         'instance_types': os.environ.get('EC2_INSTANCE_TYPES', 't4g.large,t4g.medium,t4g.small').split(','),
@@ -59,8 +86,12 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
     github_token = get_github_token()
 
     if not config['ami_id']:
-        logger.error("EC2_AMI_ID not set in Lambda environment")
-        return {'success': False, 'job_id': job_id, 'error': 'EC2_AMI_ID not configured'}
+        logger.error("No AMI available - please create one using /v1/image-for-ec2-runners endpoint")
+        return {
+            'success': False,
+            'job_id': job_id,
+            'error': 'No AMI available - please create one using /v1/image-for-ec2-runners endpoint'
+        }
 
     if not github_token:
         logger.error("GITHUB_TOKEN not set - cannot register runner")
