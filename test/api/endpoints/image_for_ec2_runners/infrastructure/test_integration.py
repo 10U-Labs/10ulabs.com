@@ -1,10 +1,10 @@
 def test_stack_creates_lambda_function(cdk_template):
-    assert cdk_template.resource_count_is("AWS::Lambda::Function", 1)
+    cdk_template.resource_count_is("AWS::Lambda::Function", 1)
 
 
 def test_stack_creates_api_gateway_resources(cdk_template):
-    assert cdk_template.resource_count_is("AWS::ApiGateway::Resource", 3)
+    cdk_template.resource_count_is("AWS::ApiGateway::Resource", 3)
 
 
 def test_stack_creates_api_gateway_methods(cdk_template):
-    assert cdk_template.resource_count_is("AWS::ApiGateway::Method", 4)
+    cdk_template.resource_count_is("AWS::ApiGateway::Method", 4)

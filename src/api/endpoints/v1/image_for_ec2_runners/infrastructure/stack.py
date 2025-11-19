@@ -16,12 +16,18 @@ class AmiForEC2RunnersStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
+        log_group = logs.LogGroup(
+            self, "AmiBuilderLogGroup",
+            log_group_name=f"/aws/lambda/{config['naming']['lambda_function_name']}",
+            retention=logs.RetentionDays.ONE_WEEK
+        )
+
         ami_builder_lambda = lambda_.Function(
             self, "AmiBuilderHandler",
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="lambda.handler.lambda_handler",
-            code=lambda_.Code.from_asset("src/api/endpoints/v1/image_for_ec2_runners/infrastructure"),
+            code=lambda_.Code.from_asset("."),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
@@ -34,7 +40,7 @@ class AmiForEC2RunnersStack(Stack):
                 "PACKER_MAX_PRICE": str(config["packer"]["max_price"]),
                 "PACKER_CONFIG_BUCKET": config["packer"]["config_bucket"],
             },
-            log_retention=logs.RetentionDays.ONE_WEEK,
+            log_group=log_group,
             description="Lambda handler for building GitHub runner AMIs with Packer"
         )
 
