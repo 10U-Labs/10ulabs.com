@@ -195,6 +195,7 @@ jobs:
         run: |
           echo "Validating JSON syntax..."
           jsonlint -q src/api/endpoints/v1/runners/config.json
+          jsonlint -q src/api/endpoints/v1/runners/cdk.json
       - name: Linting Python files
         run: |
           pylint \
