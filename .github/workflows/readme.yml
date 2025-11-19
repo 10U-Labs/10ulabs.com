@@ -34,10 +34,12 @@ jobs:
           REGION=$(jq -r ''.aws.region'' scripts/readme/config.json);
           MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' scripts/readme/config.json);
           MAX_TOKENS=$(jq -r ''.aws.bedrock.max_tokens'' scripts/readme/config.json);
+          BUDGET_TOKENS=$(jq -r ''.aws.bedrock.budget_tokens'' scripts/readme/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
+          echo "budget_tokens=$BUDGET_TOKENS" >> $GITHUB_OUTPUT;
           '
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -52,7 +54,7 @@ jobs:
         run: pip install boto3
       - id: check
         name: Check if README needs update
-        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --test-dir test/readme \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens \"${{ steps.config.outputs.max_tokens }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --test-dir test/readme \\\n  --check \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens \"${{ steps.config.outputs.max_tokens }}\" \\\n  --budget-tokens \"${{ steps.config.outputs.budget_tokens }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -185,10 +187,12 @@ jobs:
           REGION=$(jq -r ''.aws.region'' scripts/readme/config.json);
           MODEL_ID=$(jq -r ''.aws.bedrock.model_id'' scripts/readme/config.json);
           MAX_TOKENS=$(jq -r ''.aws.bedrock.max_tokens'' scripts/readme/config.json);
+          BUDGET_TOKENS=$(jq -r ''.aws.bedrock.budget_tokens'' scripts/readme/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
+          echo "budget_tokens=$BUDGET_TOKENS" >> $GITHUB_OUTPUT;
           '
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -202,7 +206,7 @@ jobs:
       - name: Install boto3
         run: pip install boto3
       - name: Update README with Bedrock
-        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --test-dir test/readme \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens \"${{ steps.config.outputs.max_tokens }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
+        run: "python scripts/readme/readme.py \\\n  --project-dir scripts/readme \\\n  --test-dir test/readme \\\n  --update \\\n  --prompt-check scripts/readme/prompt_check.md \\\n  --prompt-update scripts/readme/prompt_update.md \\\n  --aws-region \"${{ steps.config.outputs.region }}\" \\\n  --bedrock-model-id \"${{ steps.config.outputs.model_id }}\" \\\n  --max-tokens \"${{ steps.config.outputs.max_tokens }}\" \\\n  --budget-tokens \"${{ steps.config.outputs.budget_tokens }}\" \\\n  --output-file \"$GITHUB_OUTPUT\"\n"
       - name: Commit and push README if changed
         run: "git config user.name \"GitHub Actions\"\ngit config user.email \"actions@github.com\"\ngit add scripts/readme/README.md\nif git diff --cached --quiet; then\n  echo \"No changes to README.md\"\nelse\n  git commit -m \"Update readme README.md [skip ci]\"\n  for i in {1..5}; do\n    if git push; then\n      echo \"Successfully pushed README update\"\n      exit 0\n    fi\n    echo \"Push failed (attempt $i/5), pulling and retrying...\"\n    git pull --rebase origin main\n    sleep $((2 ** i))\n  done\n  echo \"Failed to push after 5 attempts\"\n  exit 1\nfi\n"
 name: Ensure readme script works properly
