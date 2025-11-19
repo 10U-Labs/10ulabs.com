@@ -26,6 +26,30 @@ def test_config_has_lambda_memory(config):
     assert "memory_mb" in config["aws"]["lambda"]
 
 
+def test_cdk_json_file_exists_in_correct_location(cdk_json_path):
+    assert cdk_json_path.exists()
+
+
+def test_cdk_json_has_app_key(cdk_json):
+    assert "app" in cdk_json
+
+
+def test_cdk_json_app_value_is_string(cdk_json):
+    assert isinstance(cdk_json["app"], str)
+
+
+def test_cdk_json_app_value_is_not_empty(cdk_json):
+    assert len(cdk_json["app"].strip()) > 0
+
+
+def test_cdk_json_app_references_python(cdk_json):
+    assert "python" in cdk_json["app"].lower()
+
+
+def test_cdk_json_app_references_app_py(cdk_json):
+    assert "app.py" in cdk_json["app"]
+
+
 def test_runners_stack_creates_lambda_function(cdk_template, function_name):
     resources = cdk_template.find_resources("AWS::Lambda::Function")
     lambda_found = False
