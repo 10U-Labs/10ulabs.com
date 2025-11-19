@@ -134,7 +134,14 @@ def check_readme_should_be_updated(bedrock_client, project_files: str, current_r
             prompt = f.read().format(project_files=project_files, current_readme=current_readme)
         try:
             response = call_bedrock_with_retry(bedrock_client, bedrock_config, [{'role': 'user', 'content': [{'text': prompt}]}])
-            answer_text = response['output']['message']['content'][0]['text'].strip()
+            content_blocks = response['output']['message']['content']
+            answer_text = None
+            for block in content_blocks:
+                if 'text' in block:
+                    answer_text = block['text'].strip()
+                    break
+            if answer_text is None:
+                raise ValueError("No text content found in Bedrock response")
             try:
                 parsed = json.loads(answer_text)
                 result = bool(parsed.get('readme_should_be_updated', False))
@@ -164,7 +171,15 @@ def generate_readme(bedrock_client, project_files: str, bedrock_config: dict, pr
         }]
         response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
 
-        readme_content = response['output']['message']['content'][0]['text']
+        content_blocks = response['output']['message']['content']
+        readme_content = None
+        for block in content_blocks:
+            if 'text' in block:
+                readme_content = block['text']
+                break
+
+        if readme_content is None:
+            raise ValueError("No text content found in Bedrock response")
 
         if not readme_content.endswith('\n'):
             readme_content += '\n'
