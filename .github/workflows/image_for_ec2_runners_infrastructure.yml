@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3 requests
       - name: Run E2E tests
-        run: pytest test/api/image_for_ec2_runners/test_e2e.py -v
+        run: pytest test/api/endpoints/image_for_ec2_runners/infrastructure/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -107,7 +107,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3 requests
       - name: Run pytest integration tests
-        run: pytest test/api/image_for_ec2_runners/test_integration.py -v
+        run: pytest test/api/endpoints/image_for_ec2_runners/infrastructure/test_integration.py -v
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' &&
@@ -171,8 +171,8 @@ jobs:
           cd src/api/endpoints/v1/image_for_ec2_runners/infrastructure &&
           pip install -r requirements.txt
       - name: Run unit tests
-        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
-name: Ensuring image_for_ec2_runners infrastructure exists and works properly
+        run: pytest test/api/endpoints/image_for_ec2_runners/infrastructure/test_unit.py -v
+name: Ensuring infrastructure for image-for-ec2-runners endpoint exists and works properly
 on:
   push:
     branches:
@@ -180,7 +180,7 @@ on:
     paths:
       - .github/workflows/image_for_ec2_runners_infrastructure.yml
       - src/api/endpoints/v1/image_for_ec2_runners/infrastructure/**
-      - test/api/image_for_ec2_runners/infrastructure/**
+      - test/api/endpoints/image_for_ec2_runners/infrastructure/**
       - '!**/README.md'
   workflow_dispatch:
     inputs:
