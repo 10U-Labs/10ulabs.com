@@ -19,6 +19,7 @@ class DockerRunnerStack(Stack):
         cluster_arn = Fn.import_value("TenULabsApi-ClusterArn")
         task_definition_arn = Fn.import_value("TenULabsApi-TaskDefinitionArn")
         github_token_secret_name = Fn.import_value("TenULabsApi-GitHubTokenSecretName")
+        ecr_repository_name = Fn.import_value("TenULabsApi-ECRRepositoryName")
 
         return lambda_.Function(
             self, "DockerRunnerHandler",
@@ -34,6 +35,8 @@ class DockerRunnerStack(Stack):
                 "ECS_CLUSTER": cluster_arn,
                 "TASK_DEFINITION": task_definition_arn,
                 "GITHUB_TOKEN_SECRET_NAME": github_token_secret_name,
+                "ECR_REPOSITORY": ecr_repository_name,
+                "IMAGE_API_ENDPOINT": f"https://{config['domain_names']['subdomain']}",
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="Lambda handler for launching Fargate spot GitHub runners"
@@ -41,6 +44,7 @@ class DockerRunnerStack(Stack):
 
     def _configure_lambda_permissions(self, docker_runner_lambda: lambda_.Function, config: Dict[str, Any]) -> None:
         github_token_secret_name = Fn.import_value("TenULabsApi-GitHubTokenSecretName")
+        ecr_repository_name = Fn.import_value("TenULabsApi-ECRRepositoryName")
 
         docker_runner_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -71,6 +75,18 @@ class DockerRunnerStack(Stack):
             )
         )
 
+        docker_runner_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "ecr:DescribeImages",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage",
+                    "ecr:GetDownloadUrlForLayer"
+                ],
+                resources=[f"arn:aws:ecr:{config['aws']['region']}:{config['aws']['account_id']}:repository/{ecr_repository_name}"]
+            )
+        )
+
     def _create_api_resources(self, docker_runner_lambda: lambda_.Function) -> apigw.Resource:
         rest_api_id = Fn.import_value("TenULabsApi-RestApiId")
         v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
@@ -93,6 +109,17 @@ class DockerRunnerStack(Stack):
             "POST",
             apigw.LambdaIntegration(docker_runner_lambda)
         )
+        docker_runner_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(docker_runner_lambda)
+        )
+
+        latest_resource = docker_runner_resource.add_resource("latest")
+        latest_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(docker_runner_lambda)
+        )
+
         return docker_runner_resource
 
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
