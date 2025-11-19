@@ -9,6 +9,7 @@ on:
       - 'api/resources/docker_runner/**'
       - 'api/resources/image_for_docker_runners/**'
       - '.github/workflows/build_docker_image_for_github_self_hosted_runners.yml'
+      - '!**/README.md'
 concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
