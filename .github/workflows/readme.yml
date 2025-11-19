@@ -218,6 +218,7 @@ on:
       - scripts/readme/**
       - test/readme/**
       - .github/workflows/readme.yml
+      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:

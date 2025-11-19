@@ -21,6 +21,7 @@ on:
       - 'api/resources/ami_for_ec2_runners/config.json'
       - 'api/resources/ami_for_ec2_runners/**'
       - '.github/workflows/build-ami-for-github_self_hosted_runners.yml'
+      - '!**/README.md'
 concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true

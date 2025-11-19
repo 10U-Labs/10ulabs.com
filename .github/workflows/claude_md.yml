@@ -182,4 +182,5 @@ on:
     paths:
       - CLAUDE.md
       - .github/workflows/claude_md.yml
+      - '!**/README.md'
   workflow_dispatch: null

@@ -372,9 +372,9 @@ on:
       - main
     paths:
       - .github/workflows/cloudtrail_and_domain_name.yml
-      - '!src/cloudtrail_and_domain_name/README.md'
       - src/cloudtrail_and_domain_name/**
       - test/cloudtrail_and_domain_name/**
+      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:
