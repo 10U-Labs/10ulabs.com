@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+_clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
 _webhook_secret_cache = {'value': None}
 _circuit_breaker_state: Dict[str, Any] = {
     'failures': 0,
@@ -24,10 +24,10 @@ _circuit_breaker_state: Dict[str, Any] = {
 }
 
 
-def get_secretsmanager_client():
-    if _clients['secretsmanager'] is None:
-        _clients['secretsmanager'] = boto3.client('secretsmanager')
-    return _clients['secretsmanager']
+def get_ssm_client():
+    if _clients['ssm'] is None:
+        _clients['ssm'] = boto3.client('ssm')
+    return _clients['ssm']
 
 
 def get_dynamodb_client():
@@ -168,11 +168,11 @@ def get_webhook_secret(force_refresh: bool = False) -> str:
 
     secret = _webhook_secret_cache['value']
     if not secret:
-        secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
+        parameter_name = os.environ.get('WEBHOOK_SECRET_NAME', '/api-webhook-secret')
         try:
-            secretsmanager = get_secretsmanager_client()
-            response = secretsmanager.get_secret_value(SecretId=secret_name)
-            secret = response['SecretString']
+            ssm = get_ssm_client()
+            response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+            secret = response['Parameter']['Value']
             _webhook_secret_cache['value'] = secret
         except ClientError as e:
             logger.error("Failed to retrieve webhook secret: %s", e)
