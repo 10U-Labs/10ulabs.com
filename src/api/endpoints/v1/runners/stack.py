@@ -91,10 +91,10 @@ class RunnersStack(Stack):
 
         webhook_router_lambda.add_to_role_policy(
             iam.PolicyStatement(
-                actions=["secretsmanager:GetSecretValue"],
+                actions=["ssm:GetParameter"],
                 resources=[
-                    f"arn:aws:secretsmanager:{config['aws']['region']}:"
-                    f"{config['aws']['account_id']}:secret:{webhook_secret_name}-*"
+                    f"arn:aws:ssm:{config['aws']['region']}:"
+                    f"{config['aws']['account_id']}:parameter{webhook_secret_name}"
                 ]
             )
         )
@@ -164,15 +164,14 @@ class RunnersStack(Stack):
         webhook_config_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    "secretsmanager:GetSecretValue",
-                    "secretsmanager:CreateSecret"
+                    "ssm:GetParameter",
+                    "ssm:PutParameter"
                 ],
                 resources=[
-                    f"arn:aws:secretsmanager:{config['aws']['region']}:"
-                    f"{config['aws']['account_id']}:secret:{webhook_secret_name}-*",
-                    f"arn:aws:secretsmanager:{config['aws']['region']}:"
-                    f"{config['aws']['account_id']}:secret:"
-                    f"{github_pat_secret_name}-*"
+                    f"arn:aws:ssm:{config['aws']['region']}:"
+                    f"{config['aws']['account_id']}:parameter{webhook_secret_name}",
+                    f"arn:aws:ssm:{config['aws']['region']}:"
+                    f"{config['aws']['account_id']}:parameter{github_pat_secret_name}"
                 ]
             )
         )

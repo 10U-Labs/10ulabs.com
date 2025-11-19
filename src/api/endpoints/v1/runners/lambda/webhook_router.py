@@ -15,7 +15,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'secretsmanager': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+_clients = {'ssm': None, 'dynamodb': None, 'sqs': None}
 _webhook_secret_cache = {'value': None}
 _circuit_breaker_state = {
     'failures': 0,
@@ -24,10 +24,10 @@ _circuit_breaker_state = {
 }
 
 
-def get_secretsmanager_client():
-    if _clients['secretsmanager'] is None:
-        _clients['secretsmanager'] = boto3.client('secretsmanager')
-    return _clients['secretsmanager']
+def get_ssm_client():
+    if _clients['ssm'] is None:
+        _clients['ssm'] = boto3.client('ssm')
+    return _clients['ssm']
 
 
 def get_dynamodb_client():
@@ -40,12 +40,6 @@ def get_sqs_client():
     if _clients['sqs'] is None:
         _clients['sqs'] = boto3.client('sqs')
     return _clients['sqs']
-
-
-def get_cloudwatch_client():
-    if _clients['cloudwatch'] is None:
-        _clients['cloudwatch'] = boto3.client('cloudwatch')
-    return _clients['cloudwatch']
 
 
 def publish_metric(metric_name: str, value: float, unit: str = 'None'):
@@ -168,15 +162,15 @@ def get_webhook_secret(force_refresh: bool = False) -> str:
 
     secret = _webhook_secret_cache['value']
     if not secret:
-        secret_name = os.environ.get('WEBHOOK_SECRET_NAME', 'api-webhook-secret')
+        parameter_name = os.environ.get('WEBHOOK_SECRET_NAME', '/api-webhook-secret')
         try:
-            secretsmanager = get_secretsmanager_client()
-            response = secretsmanager.get_secret_value(SecretId=secret_name)
-            secret = response['SecretString']
+            ssm = get_ssm_client()
+            response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+            secret = response['Parameter']['Value']
             _webhook_secret_cache['value'] = secret
         except ClientError as e:
-            logger.error("Failed to retrieve webhook secret: %s", e)
-            raise RuntimeError(f"Cannot retrieve webhook secret: {e}") from e
+            logger.error("Failed to retrieve webhook parameter: %s", e)
+            raise RuntimeError(f"Cannot retrieve webhook parameter: {e}") from e
     return secret
 
 
