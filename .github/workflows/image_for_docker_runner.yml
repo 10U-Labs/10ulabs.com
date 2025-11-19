@@ -48,13 +48,15 @@ jobs:
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
             --build-arg RUNNER_ARCH=${{ steps.config.outputs.architecture }} \
             -t $ECR_URL:latest \
+            -t $ECR_URL:stable \
             -t $ECR_URL:$BUILD_TAG \
             .
           sudo docker push $ECR_URL:latest
+          sudo docker push $ECR_URL:stable
           sudo docker push $ECR_URL:$BUILD_TAG
           echo "✓ Docker image built and pushed to ECR"
           echo "  Repository: $ECR_URL"
-          echo "  Tags: latest, $BUILD_TAG"
+          echo "  Tags: latest, stable, $BUILD_TAG"
           echo "  Built on native ARM64 (no emulation)"
   post-build-e2e-tests:
     name: E2E testing Docker image
