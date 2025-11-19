@@ -3,6 +3,7 @@ from pathlib import Path
 import importlib.util
 import boto3
 import pytest
+import yaml
 import aws_cdk as cdk
 from aws_cdk.assertions import Template
 
@@ -12,6 +13,13 @@ def config():
     config_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     with open(config_path, encoding='utf-8') as f:
         return json.load(f)
+
+
+@pytest.fixture
+def openapi_spec():
+    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
+    with open(openapi_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
 
 
 @pytest.fixture

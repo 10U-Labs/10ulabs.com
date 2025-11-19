@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest.mock import Mock
 import json
-import yaml
 
 
 def test_config_file_exists_in_correct_location():
@@ -207,109 +206,70 @@ def test_openapi_spec_file_exists():
     assert openapi_path.exists()
 
 
-def test_openapi_spec_is_valid_yaml():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert spec is not None
+def test_openapi_spec_is_valid_yaml(openapi_spec):
+    assert openapi_spec is not None
 
 
-def test_openapi_spec_has_correct_version():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert 'openapi' in spec
-    assert spec['openapi'].startswith('3.0')
+def test_openapi_spec_has_correct_version(openapi_spec):
+    assert 'openapi' in openapi_spec
+    assert openapi_spec['openapi'].startswith('3.0')
 
 
-def test_openapi_spec_has_info_section():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert 'info' in spec
-    assert 'title' in spec['info']
-    assert 'version' in spec['info']
+def test_openapi_spec_has_info_section(openapi_spec):
+    assert 'info' in openapi_spec
+    assert 'title' in openapi_spec['info']
+    assert 'version' in openapi_spec['info']
 
 
-def test_openapi_spec_has_paths_section():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert 'paths' in spec
-    assert len(spec['paths']) > 0
+def test_openapi_spec_has_paths_section(openapi_spec):
+    assert 'paths' in openapi_spec
+    assert len(openapi_spec['paths']) > 0
 
 
-def test_openapi_spec_has_health_endpoint():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/health' in spec['paths']
-    assert 'get' in spec['paths']['/health']
+def test_openapi_spec_has_health_endpoint(openapi_spec):
+    assert '/health' in openapi_spec['paths']
+    assert 'get' in openapi_spec['paths']['/health']
 
 
-def test_openapi_spec_has_echo_endpoint():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/echo' in spec['paths']
-    assert 'post' in spec['paths']['/v1/echo']
+def test_openapi_spec_has_echo_endpoint(openapi_spec):
+    assert '/v1/echo' in openapi_spec['paths']
+    assert 'post' in openapi_spec['paths']['/v1/echo']
 
 
-def test_openapi_spec_has_runners_endpoints():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/runners' in spec['paths']
-    assert 'post' in spec['paths']['/v1/runners']
-    assert '/v1/runners/health' in spec['paths']
-    assert 'get' in spec['paths']['/v1/runners/health']
+def test_openapi_spec_has_runners_endpoints(openapi_spec):
+    assert '/v1/runners' in openapi_spec['paths']
+    assert 'post' in openapi_spec['paths']['/v1/runners']
+    assert '/v1/runners/health' in openapi_spec['paths']
+    assert 'get' in openapi_spec['paths']['/v1/runners/health']
 
 
-def test_openapi_spec_has_ec2_ami_endpoints():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/image-for-ec2-runners' in spec['paths']
-    assert '/v1/image-for-ec2-runners/latest' in spec['paths']
-    assert '/v1/image-for-ec2-runners/{ami_id}' in spec['paths']
+def test_openapi_spec_has_ec2_ami_endpoints(openapi_spec):
+    assert '/v1/image-for-ec2-runners' in openapi_spec['paths']
+    assert '/v1/image-for-ec2-runners/latest' in openapi_spec['paths']
+    assert '/v1/image-for-ec2-runners/{ami_id}' in openapi_spec['paths']
 
 
-def test_openapi_spec_has_docker_image_endpoints():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/image-for-docker-runners' in spec['paths']
-    assert '/v1/image-for-docker-runners/latest' in spec['paths']
-    assert '/v1/image-for-docker-runners/{id}' in spec['paths']
-    assert '/v1/image-for-docker-runners/{digest}' in spec['paths']
+def test_openapi_spec_has_docker_image_endpoints(openapi_spec):
+    assert '/v1/image-for-docker-runners' in openapi_spec['paths']
+    assert '/v1/image-for-docker-runners/latest' in openapi_spec['paths']
+    assert '/v1/image-for-docker-runners/{id}' in openapi_spec['paths']
+    assert '/v1/image-for-docker-runners/{digest}' in openapi_spec['paths']
 
 
-def test_openapi_spec_has_docker_runner_endpoint():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/docker-runner' in spec['paths']
-    assert 'post' in spec['paths']['/v1/docker-runner']
-    assert 'get' in spec['paths']['/v1/docker-runner']
+def test_openapi_spec_has_docker_runner_endpoint(openapi_spec):
+    assert '/v1/docker-runner' in openapi_spec['paths']
+    assert 'post' in openapi_spec['paths']['/v1/docker-runner']
+    assert 'get' in openapi_spec['paths']['/v1/docker-runner']
 
 
-def test_openapi_spec_does_not_have_docker_runner_latest():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/docker-runner/latest' not in spec['paths']
+def test_openapi_spec_does_not_have_docker_runner_latest(openapi_spec):
+    assert '/v1/docker-runner/latest' not in openapi_spec['paths']
 
 
-def test_openapi_spec_has_ec2_runner_endpoint():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/v1/ec2-runner' in spec['paths']
-    assert 'post' in spec['paths']['/v1/ec2-runner']
+def test_openapi_spec_has_ec2_runner_endpoint(openapi_spec):
+    assert '/v1/ec2-runner' in openapi_spec['paths']
+    assert 'post' in openapi_spec['paths']['/v1/ec2-runner']
 
 
-def test_openapi_spec_has_catchall_endpoint():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
-    with open(openapi_path, 'r', encoding='utf-8') as f:
-        spec = yaml.safe_load(f)
-    assert '/{proxy+}' in spec['paths']
+def test_openapi_spec_has_catchall_endpoint(openapi_spec):
+    assert '/{proxy+}' in openapi_spec['paths']
