@@ -368,8 +368,8 @@ class TestComponentIntegration:
     def test_stack_outputs_include_role_arn(self, stack):
         assert hasattr(stack, 'role_arn')
 
-    def test_stack_outputs_include_secret_arn(self, stack):
-        assert hasattr(stack, 'secret_arn')
+    def test_stack_outputs_include_parameter_arn(self, stack):
+        assert hasattr(stack, 'parameter_arn')
 
     def test_stack_outputs_include_provider_arn(self, stack):
         assert hasattr(stack, 'provider_arn')
