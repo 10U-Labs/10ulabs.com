@@ -226,7 +226,7 @@ def handler(event, context):
 
         parameter = ssm.StringParameter(
             self, 'GitHubPATParameter',
-            parameter_name=f"/github-runner/credentials",
+            parameter_name="/github-runner/credentials",
             string_value="PLACEHOLDER_WILL_BE_UPDATED",
             description="GitHub Personal Access Token for runner authentication",
             tier=ssm.ParameterTier.STANDARD
