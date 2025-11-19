@@ -194,7 +194,7 @@ def handle_check_mode(bedrock_client, project_files, project_dir, args):
             current_readme = f.read()
     except FileNotFoundError:
         current_readme = ""
-    bedrock_config = {'model_id': args.bedrock_model_id, 'max_tokens': args.max_tokens_reasoning}
+    bedrock_config = {'model_id': args.bedrock_model_id, 'max_tokens': args.max_tokens}
     should_be_updated = check_readme_should_be_updated(bedrock_client, project_files, current_readme, bedrock_config, args.prompt_check)
     result_value = 'true' if should_be_updated else 'false'
     if args.output_file:
@@ -207,7 +207,7 @@ def handle_check_mode(bedrock_client, project_files, project_dir, args):
     return 0
 
 def handle_update_mode(bedrock_client, project_files, project_dir, args):
-    bedrock_config = {'model_id': args.bedrock_model_id, 'max_tokens': args.max_tokens_generation}
+    bedrock_config = {'model_id': args.bedrock_model_id, 'max_tokens': args.max_tokens}
     new_readme = generate_readme(bedrock_client, project_files, bedrock_config, args.prompt_update)
     with open(os.path.join(project_dir, 'README.md'), 'w', encoding='utf-8') as f:
         f.write(new_readme)
@@ -222,8 +222,7 @@ def main():
     parser.add_argument('--aws-region', required=True, help='AWS region')
     parser.add_argument('--output-file', required=True, help='Output file for check result (for GitHub Actions)')
     parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
-    parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
-    parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for README generation')
+    parser.add_argument('--max-tokens', type=int, required=True, help='Max tokens for model output')
     parser.add_argument('--prompt-check', required=True, help='Path to check prompt template file')
     parser.add_argument('--prompt-update', required=True, help='Path to update prompt template file')
     parser.add_argument('--test-dir', help='Optional test directory to include')

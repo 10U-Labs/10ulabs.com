@@ -47,8 +47,7 @@ def test_script_formats_markdown_with_markdownlint_errors(temp_test_md, script_p
         '--file', 'test.md',
         '--aws-region', config['region'],
         '--bedrock-model-id', config['bedrock']['model_id'],
-        '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
-        '--max-tokens-generation', str(config['bedrock']['max_tokens_generation']),
+        '--max-tokens', str(config['bedrock']['max_tokens']),
         '--prompt-file', str(prompt_path),
         '--markdownlint-errors', markdownlint_errors
     ], capture_output=True, text=True, cwd=temp_test_md)
@@ -63,8 +62,7 @@ def test_script_formats_markdown_without_markdownlint_errors(temp_test_md, scrip
         '--file', 'test.md',
         '--aws-region', config['region'],
         '--bedrock-model-id', config['bedrock']['model_id'],
-        '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
-        '--max-tokens-generation', str(config['bedrock']['max_tokens_generation']),
+        '--max-tokens', str(config['bedrock']['max_tokens']),
         '--prompt-file', str(prompt_path)
     ], capture_output=True, text=True, cwd=temp_test_md)
 
@@ -78,8 +76,7 @@ def test_generated_output_ends_with_newline(temp_test_md, script_path, prompt_pa
         '--file', 'test.md',
         '--aws-region', config['region'],
         '--bedrock-model-id', config['bedrock']['model_id'],
-        '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
-        '--max-tokens-generation', str(config['bedrock']['max_tokens_generation']),
+        '--max-tokens', str(config['bedrock']['max_tokens']),
         '--prompt-file', str(prompt_path)
     ], capture_output=True, text=True, cwd=temp_test_md)
 
@@ -97,8 +94,7 @@ def test_script_exits_with_error_when_file_missing(script_path, prompt_path, con
             '--file', 'nonexistent.md',
             '--aws-region', config['region'],
             '--bedrock-model-id', config['bedrock']['model_id'],
-            '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
-            '--max-tokens-generation', str(config['bedrock']['max_tokens_generation']),
+            '--max-tokens', str(config['bedrock']['max_tokens']),
             '--prompt-file', str(prompt_path)
         ], capture_output=True, text=True, cwd=tmpdir)
 
@@ -119,8 +115,7 @@ def test_script_works_with_any_markdown_filename(script_path, prompt_path, confi
             '--file', 'README.md',
             '--aws-region', config['region'],
             '--bedrock-model-id', config['bedrock']['model_id'],
-            '--max-tokens-reasoning', str(config['bedrock']['max_tokens_reasoning']),
-            '--max-tokens-generation', str(config['bedrock']['max_tokens_generation']),
+            '--max-tokens', str(config['bedrock']['max_tokens']),
             '--prompt-file', str(prompt_path)
         ], capture_output=True, text=True, cwd=tmpdir)
 

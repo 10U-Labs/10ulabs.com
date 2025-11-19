@@ -18,7 +18,7 @@ def test_config_region_is_string(config_path):
 def test_config_bedrock_max_tokens_is_integer(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
         config = json.load(f)
-    assert isinstance(config['bedrock']['max_tokens_generation'], int)
+    assert isinstance(config['bedrock']['max_tokens'], int)
 
 def test_config_bedrock_model_id_is_string(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -38,8 +38,3 @@ def test_prompt_formats_with_variables(prompt_path):
     content = prompt_path.read_text()
     formatted = content.format(current_content="test content", markdownlint_errors="test errors")
     assert '{current_content}' not in formatted
-
-def test_config_bedrock_has_max_tokens_reasoning(config_path):
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-    assert 'max_tokens_reasoning' in config['bedrock']

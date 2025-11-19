@@ -20,23 +20,11 @@ def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list
 
     for attempt in range(1, max_retries + 1):
         try:
-            kwargs = {
-                'modelId': bedrock_config['model_id'],
-                'messages': messages,
-                'inferenceConfig': {'maxTokens': bedrock_config['max_tokens']}
-            }
-
-            if 'max_tokens_reasoning' in bedrock_config:
-                kwargs['additionalModelRequestFields'] = {
-                    'reasoning_config': {
-                        'type': 'enabled',
-                        'budget_tokens': bedrock_config['max_tokens_reasoning']
-                    }
-                }
-                logging.info("Extended thinking enabled with %d reasoning tokens",
-                           bedrock_config['max_tokens_reasoning'])
-
-            response = bedrock_client.converse(**kwargs)
+            response = bedrock_client.converse(
+                modelId=bedrock_config['model_id'],
+                messages=messages,
+                inferenceConfig={'maxTokens': bedrock_config['max_tokens']}
+            )
             logging.info("Bedrock call succeeded on attempt %d", attempt)
             return response
         except ClientError as e:
@@ -95,8 +83,7 @@ def main():
     parser.add_argument('--file', required=True, help='Path to markdown file to format')
     parser.add_argument('--aws-region', required=True, help='AWS region for Bedrock')
     parser.add_argument('--bedrock-model-id', required=True, help='Bedrock model ID to use')
-    parser.add_argument('--max-tokens-generation', type=int, required=True, help='Max tokens for formatting')
-    parser.add_argument('--max-tokens-reasoning', type=int, required=True, help='Max tokens for extended thinking reasoning')
+    parser.add_argument('--max-tokens', type=int, required=True, help='Max tokens for model output')
     parser.add_argument('--prompt-file', required=True, help='Path to prompt template file')
     parser.add_argument('--markdownlint-errors', default='', help='JSON output from markdownlint-cli showing errors to fix')
     args = parser.parse_args()
@@ -111,8 +98,7 @@ def main():
     bedrock_client = boto3.client('bedrock-runtime', region_name=args.aws_region)
     bedrock_config = {
         'model_id': args.bedrock_model_id,
-        'max_tokens': args.max_tokens_generation,
-        'max_tokens_reasoning': args.max_tokens_reasoning
+        'max_tokens': args.max_tokens
     }
 
     formatted_content = format_markdown(bedrock_client, current_content, bedrock_config, args.prompt_file, markdownlint_errors=args.markdownlint_errors)
