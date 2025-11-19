@@ -124,8 +124,7 @@ def get_latest_ami() -> Dict[str, Any]:
                     Owners=['self'],
                     Filters=[
                         {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
-                        {'Name': 'tag:stable', 'Values': ['true']},
-                        {'Name': 'state', 'Values': ['available']}
+                        {'Name': 'tag:stable', 'Values': ['true']}
                     ]
                 )
                 if not response['Images']:
