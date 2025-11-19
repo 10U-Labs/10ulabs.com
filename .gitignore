@@ -55,3 +55,4 @@ __pycache__/
 *$py.class
 *.so
 cdk.out/
+cdk.context.json
