@@ -252,17 +252,17 @@ def test_api_has_endpoint_output():
     assert "ApiEndpoint" in outputs
 
 
-health_handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
+health_handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
 spec = importlib.util.spec_from_file_location("health_handler", health_handler_path)
 health = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(health)
 
-echo_handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "echo" / "handler.py"
+echo_handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "echo" / "handler.py"
 spec = importlib.util.spec_from_file_location("echo_handler", echo_handler_path)
 echo = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(echo)
 
-catchall_handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
+catchall_handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
 spec = importlib.util.spec_from_file_location("catchall_handler", catchall_handler_path)
 catchall = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(catchall)
