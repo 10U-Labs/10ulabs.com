@@ -16,12 +16,6 @@ class AmiForEC2RunnersStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
-        rest_api_id = Fn.import_value("TenULabsApi-RestApiId")
-        v1_resource_id = Fn.import_value("TenULabsApi-V1ResourceId")
-        vpc_id = Fn.import_value("TenULabsApi-VpcId")
-        vpc_public_subnet_ids = Fn.import_value("TenULabsApi-PublicSubnetIds")
-        runner_sg_id = Fn.import_value("TenULabsApi-RunnerSecurityGroupId")
-
         ami_builder_lambda = lambda_.Function(
             self, "AmiBuilderHandler",
             function_name=config["naming"]["lambda_function_name"],
@@ -31,9 +25,9 @@ class AmiForEC2RunnersStack(Stack):
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
-                "VPC_ID": vpc_id,
-                "SUBNETS": vpc_public_subnet_ids,
-                "SECURITY_GROUPS": runner_sg_id,
+                "VPC_ID": Fn.import_value("TenULabsApi-VpcId"),
+                "SUBNETS": Fn.import_value("TenULabsApi-PublicSubnetIds"),
+                "SECURITY_GROUPS": Fn.import_value("TenULabsApi-RunnerSecurityGroupId"),
                 "BUILDER_AMI_ID": config["packer"]["builder_ami_id"],
                 "PACKER_INSTANCE_TYPES": ",".join(config["packer"]["instance_types"]),
                 "PACKER_INSTANCE_PROFILE": config["packer"]["iam_instance_profile"],
@@ -89,13 +83,13 @@ class AmiForEC2RunnersStack(Stack):
 
         rest_api = apigw.RestApi.from_rest_api_attributes(
             self, "ImportedApi",
-            rest_api_id=rest_api_id,
+            rest_api_id=Fn.import_value("TenULabsApi-RestApiId"),
             root_resource_id=Fn.import_value("TenULabsApi-RootResourceId")
         )
 
         v1_resource = apigw.Resource.from_resource_attributes(
             self, "V1Resource",
-            resource_id=v1_resource_id,
+            resource_id=Fn.import_value("TenULabsApi-V1ResourceId"),
             rest_api=rest_api,
             path="/v1"
         )
@@ -112,14 +106,12 @@ class AmiForEC2RunnersStack(Stack):
             apigw.LambdaIntegration(ami_builder_lambda)
         )
 
-        latest_resource = ami_resource.add_resource("latest")
-        latest_resource.add_method(
+        ami_resource.add_resource("latest").add_method(
             "GET",
             apigw.LambdaIntegration(ami_builder_lambda)
         )
 
-        ami_id_resource = ami_resource.add_resource("{ami_id}")
-        ami_id_resource.add_method(
+        ami_resource.add_resource("{ami_id}").add_method(
             "DELETE",
             apigw.LambdaIntegration(ami_builder_lambda)
         )
