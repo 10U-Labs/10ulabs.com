@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import urllib.request
 from typing import Dict, Any
 import boto3
 from botocore.exceptions import ClientError
@@ -14,101 +15,61 @@ ssm = boto3.client('ssm')
 
 def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
     subnet_ids = os.environ['SUBNETS'].split(',')
-    security_group_id = os.environ['SECURITY_GROUPS']
-    instance_types = os.environ.get('PACKER_INSTANCE_TYPES', 't4g.large,t4g.medium,t4g.small').split(',')
-    iam_instance_profile = os.environ.get('PACKER_INSTANCE_PROFILE', 'PackerEC2InstanceProfile')
-    max_price = os.environ.get('PACKER_MAX_PRICE', '0.05')
     vpc_id = os.environ['VPC_ID']
+    region = os.environ.get('AWS_REGION', 'us-east-1')
+    github_repo = os.environ.get('GITHUB_REPO', '10U-Labs-LLC/10ulabs.com')
+    github_token = os.environ.get('GITHUB_TOKEN')
 
-    user_data = f"""#!/bin/bash
-set -e
-export DEBIAN_FRONTEND=noninteractive
-
-apt-get update
-apt-get install -y curl unzip wget
-
-cd /tmp
-wget -q https://releases.hashicorp.com/packer/1.9.4/packer_1.9.4_linux_arm64.zip
-unzip packer_1.9.4_linux_arm64.zip
-mv packer /usr/local/bin/
-chmod +x /usr/local/bin/packer
-
-mkdir -p /opt/packer-build
-cd /opt/packer-build
-
-aws s3 cp s3://{os.environ.get('PACKER_CONFIG_BUCKET')}/ami_for_ec2_runners/ . --recursive
-
-packer init template.pkr.hcl
-packer build \\
-  -var "vpc_id={vpc_id}" \\
-  -var "subnet_id={subnet_ids[0]}" \\
-  -var "aws_region={os.environ.get('AWS_REGION', 'us-east-1')}" \\
-  template.pkr.hcl
-
-INSTANCE_ID=$(ec2-metadata --instance-id | cut -d ' ' -f 2)
-aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region {os.environ.get('AWS_REGION', 'us-east-1')}
-"""
-
-    response = None
-    last_error = None
-
-    for subnet_id in subnet_ids:
-        try:
-            response = ec2.run_instances(
-                ImageId=os.environ.get('BUILDER_AMI_ID'),
-                MinCount=1,
-                MaxCount=1,
-                InstanceMarketOptions={
-                    'MarketType': 'spot',
-                    'SpotOptions': {
-                        'SpotInstanceType': 'one-time',
-                        'InstanceInterruptionBehavior': 'terminate',
-                        'MaxPrice': max_price
-                    }
-                },
-                InstanceType=instance_types[0],
-                SecurityGroupIds=[security_group_id],
-                SubnetId=subnet_id,
-                IamInstanceProfile={'Name': iam_instance_profile},
-                UserData=user_data,
-                TagSpecifications=[{
-                    'ResourceType': 'instance',
-                    'Tags': [
-                        {'Key': 'Name', 'Value': 'packer-ami-builder'},
-                        {'Key': 'Type', 'Value': 'ami-builder'},
-                        {'Key': 'ManagedBy', 'Value': 'ami-builder-api'}
-                    ]
-                }]
-            )
-            logger.info("Launched Packer builder instance in subnet %s", subnet_id)
-            break
-        except ClientError as e:
-            error_msg = str(e)
-            if 'InsufficientInstanceCapacity' in error_msg:
-                logger.warning("No capacity in subnet %s, trying next AZ...", subnet_id)
-                last_error = e
-                continue
-            logger.error("Error launching Packer builder: %s", e)
-            return {
-                'success': False,
-                'error': str(e)
-            }
-
-    if response and response['Instances']:
-        instance_id = response['Instances'][0]['InstanceId']
-        logger.info("✅ Launched Packer builder: %s", instance_id)
+    if not github_token:
+        logger.error("GITHUB_TOKEN not set")
         return {
-            'success': True,
-            'instance_id': instance_id,
-            'message': 'AMI build started'
+            'success': False,
+            'error': 'GITHUB_TOKEN not configured'
         }
 
-    error_detail = str(last_error) if last_error else 'No instances launched'
-    logger.error("❌ Failed to launch Packer builder: %s", error_detail)
-    return {
-        'success': False,
-        'error': error_detail
+    workflow_url = f'https://api.github.com/repos/{github_repo}/actions/workflows/image_for_ec2_runners.yml/dispatches'
+
+    payload = {
+        'ref': 'main',
+        'inputs': {
+            'vpc_id': vpc_id,
+            'subnet_id': subnet_ids[0],
+            'region': region
+        }
     }
+
+    try:
+        req = urllib.request.Request(
+            workflow_url,
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                'Accept': 'application/vnd.github+json',
+                'Authorization': f'Bearer {github_token}',
+                'X-GitHub-Api-Version': '2022-11-28',
+                'Content-Type': 'application/json'
+            },
+            method='POST'
+        )
+
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status == 204:
+                logger.info("GitHub Actions workflow triggered successfully")
+                return {
+                    'success': True,
+                    'message': 'AMI build workflow triggered via GitHub Actions'
+                }
+
+            logger.warning("Unexpected response status: %s", response.status)
+            return {
+                'success': False,
+                'error': f'Unexpected response status: {response.status}'
+            }
+    except Exception as e:
+        logger.error("Failed to trigger GitHub Actions workflow: %s", e)
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 
 def list_amis() -> Dict[str, Any]:
