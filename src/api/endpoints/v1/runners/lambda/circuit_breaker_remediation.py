@@ -7,18 +7,9 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_lambda_client = None
-
-
-def get_lambda_client():
-    global _lambda_client
-    if _lambda_client is None:
-        _lambda_client = boto3.client('lambda')
-    return _lambda_client
-
 
 def check_circuit_breaker_health(function_name: str) -> dict:
-    lambda_client = get_lambda_client()
+    lambda_client = boto3.client('lambda')
 
     try:
         response = lambda_client.invoke(
@@ -43,6 +34,7 @@ def check_circuit_breaker_health(function_name: str) -> dict:
 
 
 def handler(event, context):
+    del event, context
     webhook_function_name = os.environ.get('WEBHOOK_FUNCTION_NAME')
 
     if not webhook_function_name:
