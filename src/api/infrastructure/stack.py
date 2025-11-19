@@ -215,7 +215,7 @@ class ApiStack(Stack):
         api_dir = os.path.join(os.path.dirname(__file__), "..")
         s3deploy.BucketDeployment(
             self, "DeployApiDocs",
-            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yaml", "!index.html", "!404.html"])],
+            sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yml", "!index.html", "!404.html"])],
             destination_bucket=docs_bucket,
             prune=False
         )
@@ -274,7 +274,7 @@ class ApiStack(Stack):
 
     def _process_openapi_spec(self, handlers):
         health_handler, echo_handler, catchall_handler = handlers
-        openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yaml")
+        openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
             openapi_spec = yaml.safe_load(f)
 
@@ -420,7 +420,7 @@ function handler(event) {
                         )
                     ]
                 ),
-                "/openapi.yaml": cloudfront.BehaviorOptions(
+                "/openapi.yml": cloudfront.BehaviorOptions(
                     origin=s3_origin,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD,

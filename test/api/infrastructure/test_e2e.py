@@ -82,16 +82,16 @@ def test_root_endpoint_contains_redoc_element(api_endpoint):
 
 def test_root_endpoint_references_openapi_spec(api_endpoint):
     response = requests.get(api_endpoint, timeout=10)
-    assert 'openapi.yaml' in response.text
+    assert 'openapi.yml' in response.text
 
 
 def test_openapi_yaml_endpoint_returns_200(api_endpoint):
-    response = requests.get(f"{api_endpoint}/openapi.yaml", timeout=10)
+    response = requests.get(f"{api_endpoint}/openapi.yml", timeout=10)
     assert response.status_code == 200
 
 
 def test_openapi_yaml_contains_paths_section(api_endpoint):
-    response = requests.get(f"{api_endpoint}/openapi.yaml", timeout=10)
+    response = requests.get(f"{api_endpoint}/openapi.yml", timeout=10)
     assert 'paths:' in response.text
 
 

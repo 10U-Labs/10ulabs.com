@@ -3,7 +3,7 @@ import yaml
 
 
 def handler(_event, _context):
-    openapi_spec_path = os.path.join(os.path.dirname(__file__), '..', '..', 'openapi.yaml')
+    openapi_spec_path = os.path.join(os.path.dirname(__file__), '..', '..', 'openapi.yml')
 
     with open(openapi_spec_path, 'r', encoding='utf-8') as f:
         openapi_spec = yaml.safe_load(f)
