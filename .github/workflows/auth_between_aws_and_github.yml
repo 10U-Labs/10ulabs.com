@@ -354,8 +354,8 @@ on:
     paths:
       - .github/workflows/auth_between_aws_and_github.yml
       - src/auth_between_aws_and_github/**
-      - '!src/auth_between_aws_and_github/README.md'
       - test/auth_between_aws_and_github/**
+      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:

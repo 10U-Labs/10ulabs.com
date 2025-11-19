@@ -335,6 +335,7 @@ on:
       - src/api/infrastructure/**
       - src/api/openapi.yaml
       - test/api/infrastructure/**
+      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:
