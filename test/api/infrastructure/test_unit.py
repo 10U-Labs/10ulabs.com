@@ -4,7 +4,7 @@ import json
 
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
+    config_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "infrastructure" / "config.json"
     assert config_path.exists()
 
 

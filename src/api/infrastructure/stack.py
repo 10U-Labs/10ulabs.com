@@ -50,9 +50,9 @@ class ApiStack(Stack):
         cert_info = self._create_certificate(parent_domain, subdomain, parent_domain.replace('.', '-'))
 
         docs_bucket = self._create_docs_bucket()
-        self._create_api_gateway(self._create_lambda_functions())
+        version_resource_id = self._create_api_gateway(self._create_lambda_functions())
         cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
-        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role))
+        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (secrets_and_security[1], ec2_runner_role, version_resource_id))
 
     def _create_vpc(self):
         max_azs = self.config["aws"]["vpc"].get("max_azs", 99)
@@ -273,7 +273,7 @@ class ApiStack(Stack):
         )
         return health_handler, echo_handler, catchall_handler
 
-    def _create_api_gateway(self, handlers):
+    def _process_openapi_spec(self, handlers):
         health_handler, echo_handler, catchall_handler = handlers
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yaml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
@@ -292,41 +292,9 @@ class ApiStack(Stack):
             '${CatchAllHandlerArn}',
             f'arn:aws:apigateway:{self.config["aws"]["region"]}:lambda:path/2015-03-31/functions/{catchall_handler.function_arn}/invocations'
         )
+        return openapi_spec_str
 
-        spec_hash = hashlib.md5(openapi_spec_str.encode('utf-8')).hexdigest()[:8]
-
-        api_log_group = logs.LogGroup(
-            self, "ApiGatewayAccessLogs",
-            retention=logs.RetentionDays.ONE_MONTH,
-            removal_policy=RemovalPolicy.DESTROY
-        )
-        self.api = apigw.SpecRestApi(
-            self, "TenULabsApi",
-            api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),
-            deploy=False
-        )
-
-        deployment = apigw.Deployment(
-            self, f"ApiDeployment{spec_hash}",
-            api=self.api,
-            description=f"Deployment for spec hash {spec_hash}"
-        )
-
-        stage = apigw.Stage(
-            self, "ProdStage",
-            deployment=deployment,
-            stage_name="prod",
-            logging_level=apigw.MethodLoggingLevel.INFO,
-            access_log_destination=apigw.LogGroupLogDestination(api_log_group),
-            access_log_format=apigw.AccessLogFormat.clf()
-        )
-
-        stage.node.add_dependency(deployment)
-
-        self.api.deployment_stage = stage
-
-        api_version = self.config.get("api", {}).get("version", "v1")
-
+    def _create_version_resource_lookup(self, api_version):
         version_resource_lookup_fn = lambda_.Function(
             self, f"{api_version.upper()}ResourceLookup",
             runtime=lambda_.Runtime.PYTHON_3_14,
@@ -371,6 +339,44 @@ def handler(event, context):
             self, f"{api_version.upper()}ResourceProvider",
             on_event_handler=version_resource_lookup_fn
         )
+        return version_resource_provider
+
+    def _create_api_gateway(self, handlers):
+        health_handler, echo_handler, catchall_handler = handlers
+        openapi_spec_str = self._process_openapi_spec(handlers)
+        spec_hash = hashlib.md5(openapi_spec_str.encode('utf-8')).hexdigest()[:8]
+
+        api_log_group = logs.LogGroup(
+            self, "ApiGatewayAccessLogs",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=RemovalPolicy.DESTROY
+        )
+        self.api = apigw.SpecRestApi(
+            self, "TenULabsApi",
+            api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),
+            deploy=False
+        )
+
+        deployment = apigw.Deployment(
+            self, f"ApiDeployment{spec_hash}",
+            api=self.api,
+            description=f"Deployment for spec hash {spec_hash}"
+        )
+
+        stage = apigw.Stage(
+            self, "ProdStage",
+            deployment=deployment,
+            stage_name="prod",
+            logging_level=apigw.MethodLoggingLevel.INFO,
+            access_log_destination=apigw.LogGroupLogDestination(api_log_group),
+            access_log_format=apigw.AccessLogFormat.clf()
+        )
+
+        stage.node.add_dependency(deployment)
+        self.api.deployment_stage = stage
+
+        api_version = self.config.get("api", {}).get("version", "v1")
+        version_resource_provider = self._create_version_resource_lookup(api_version)
 
         version_resource_lookup = CustomResource(
             self, f"{api_version.upper()}ResourceCustomResource",
@@ -381,8 +387,6 @@ def handler(event, context):
             }
         )
         version_resource_lookup.node.add_dependency(deployment)
-
-        self.version_resource_id = version_resource_lookup.get_att_string("ResourceId")
 
         health_handler.add_permission(
             "ApiGatewayInvoke",
@@ -399,6 +403,8 @@ def handler(event, context):
             principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
             source_arn=f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}/*/*"
         )
+
+        return version_resource_lookup.get_att_string("ResourceId")
 
     def _create_waf(self):
         return wafv2.CfnWebACL(
@@ -543,7 +549,7 @@ function handler(event) {
         return distribution
 
     def _create_dns_and_outputs(self, parent_zone, subdomain_name, cf_distribution, resources):
-        runner_sg, ec2_runner_role = resources
+        runner_sg, ec2_runner_role, version_resource_id = resources
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
@@ -588,7 +594,7 @@ function handler(event) {
 
         CfnOutput(
             self, "ApiGatewayV1ResourceId",
-            value=self.version_resource_id,
+            value=version_resource_id,
             description="API Gateway /v1 resource ID",
             export_name="TenULabsApi-V1ResourceId"
         )
