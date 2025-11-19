@@ -92,9 +92,30 @@ jobs:
             -var='spot_instance_types=["t3.medium"]' \
             -var="vpc_id=vpc-dummy" \
             template.pkr.hcl
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
+        run: |
+          pip install pytest boto3 moto &&
+          pip install aws-cdk-lib constructs
+      - name: Run unit tests
+        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
   build-ami:
     name: Building AMI
-    needs: performing-static-analysis
+    needs: unit-testing
     if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
     runs-on: ubuntu-latest
     outputs:
