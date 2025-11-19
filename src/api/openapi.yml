@@ -192,7 +192,7 @@ paths:
         uri: ${AmiBuilderHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runner:
+  /v1/image-for-docker-runners:
     post:
       summary: Build Docker Runner Image
       description: Triggers a build of a new Docker runner image
@@ -219,7 +219,7 @@ paths:
         uri: ${DockerImageBuilderHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runner/latest:
+  /v1/image-for-docker-runners/latest:
     get:
       summary: Get Latest Docker Runner Image
       description: Returns the latest Docker runner image
@@ -233,7 +233,27 @@ paths:
         uri: ${DockerImageBuilderHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runner/{digest}:
+  /v1/image-for-docker-runners/{id}:
+    get:
+      summary: Get Docker Runner Image by ID
+      description: Returns a specific Docker runner image by ID
+      operationId: getDockerRunnerImageById
+      tags:
+        - Docker Images
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Docker image information
+      x-amazon-apigateway-integration:
+        uri: ${DockerImageBuilderHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+  /v1/image-for-docker-runners/{digest}:
     delete:
       summary: Delete Docker Runner Image
       description: Deletes a specific Docker runner image
@@ -276,20 +296,6 @@ paths:
       responses:
         '200':
           description: Docker runner status
-      x-amazon-apigateway-integration:
-        uri: ${DockerRunnerHandlerArn}
-        httpMethod: POST
-        type: aws_proxy
-  /v1/docker-runner/latest:
-    get:
-      summary: Get Latest Docker Runner
-      description: Returns information about the latest Docker runner
-      operationId: getLatestDockerRunner
-      tags:
-        - Runners
-      responses:
-        '200':
-          description: Latest Docker runner information
       x-amazon-apigateway-integration:
         uri: ${DockerRunnerHandlerArn}
         httpMethod: POST
