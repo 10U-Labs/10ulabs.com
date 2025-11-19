@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import importlib.util
 import boto3
@@ -71,20 +72,33 @@ def handler_module(handler_path):
 
 
 @pytest.fixture
-def cdk_template(stack_class, config):
-    app = cdk.App()
-    with patch('aws_cdk.Fn.import_value') as mock_import:
-        mock_import.side_effect = lambda x: f"mock-{x}"
-        stack = stack_class(
-            app,
-            "TestImageForEC2RunnersStack",
-            config=config,
-            env=cdk.Environment(
-                account=str(config["aws"]["account_id"]),
-                region=config["aws"]["region"]
+def cdk_template(stack_class, config, endpoint_dir):
+    from aws_cdk import aws_lambda as lambda_
+    infrastructure_dir = endpoint_dir / "infrastructure"
+    lambda_dir = infrastructure_dir / "lambda"
+
+    original_from_asset = lambda_.Code.from_asset
+
+    def patched_from_asset(path, **kwargs):
+        if path == "lambda":
+            return original_from_asset(str(lambda_dir), **kwargs)
+        return original_from_asset(path, **kwargs)
+
+    with patch.object(lambda_.Code, 'from_asset', patched_from_asset):
+        app = cdk.App()
+        with patch('aws_cdk.Fn.import_value') as mock_import:
+            mock_import.side_effect = lambda x: f"mock-{x}"
+            stack = stack_class(
+                app,
+                "TestImageForEC2RunnersStack",
+                config=config,
+                env=cdk.Environment(
+                    account=str(config["aws"]["account_id"]),
+                    region=config["aws"]["region"]
+                )
             )
-        )
-        return Template.from_stack(stack)
+            template = Template.from_stack(stack)
+            return template
 
 
 @pytest.fixture
