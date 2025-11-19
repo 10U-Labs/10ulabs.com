@@ -47,6 +47,17 @@ def config_path(runners_dir):
 
 
 @pytest.fixture
+def cdk_json_path(runners_dir):
+    return runners_dir / "cdk.json"
+
+
+@pytest.fixture
+def cdk_json(cdk_json_path):
+    with open(cdk_json_path, encoding='utf-8') as f:
+        return json.load(f)
+
+
+@pytest.fixture
 def stack_path(runners_dir):
     return runners_dir / "stack.py"
 
