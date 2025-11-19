@@ -116,7 +116,7 @@ def list_amis() -> Dict[str, Any]:
         response = ec2.describe_images(
             Owners=['self'],
             Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['github-actions-runner']}
+                {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']}
             ]
         )
 
@@ -152,7 +152,8 @@ def get_latest_ami() -> Dict[str, Any]:
         response = ec2.describe_images(
             Owners=['self'],
             Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['github-actions-runner']},
+                {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']},
+                {'Name': 'tag:stable', 'Values': ['true']},
                 {'Name': 'state', 'Values': ['available']}
             ]
         )

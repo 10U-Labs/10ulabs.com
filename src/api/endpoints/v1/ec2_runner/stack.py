@@ -30,7 +30,6 @@ class EC2RunnerStack(Stack):
             environment={
                 "SUBNETS": vpc_public_subnet_ids,
                 "SECURITY_GROUPS": runner_sg_id,
-                "EC2_AMI_ID": config["ec2"]["ami_id"],
                 "EC2_INSTANCE_TYPES": ",".join(config["ec2"]["instance_types"]),
                 "EC2_IAM_INSTANCE_PROFILE": ec2_instance_profile_name,
                 "EC2_MAX_PRICE": str(config["ec2"]["max_price"]),
