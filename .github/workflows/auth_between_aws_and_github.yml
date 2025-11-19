@@ -35,14 +35,12 @@ jobs:
           aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json);
           aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json);
           bedrock_model_id=$(jq -r '.aws.bedrock.model_id' src/auth_between_aws_and_github/config.json);
-          bedrock_max_tokens_reasoning=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/auth_between_aws_and_github/config.json);
-          bedrock_max_tokens_generation=$(jq -r '.aws.bedrock.max_tokens_generation' src/auth_between_aws_and_github/config.json);
+          bedrock_max_tokens=$(jq -r '.aws.bedrock.max_tokens' src/auth_between_aws_and_github/config.json);
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
           echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
-          echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
-          echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
+          echo "bedrock_max_tokens=$bedrock_max_tokens" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -65,8 +63,7 @@ jobs:
             --prompt-update scripts/readme/prompt_update.md \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --bedrock-model-id "${{ steps.config.outputs.bedrock_model_id }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.bedrock_max_tokens_reasoning }}" \
-            --max-tokens-generation "${{ steps.config.outputs.bedrock_max_tokens_generation }}" \
+            --max-tokens "${{ steps.config.outputs.bedrock_max_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
   e2e-testing:
     name: E2E testing
@@ -297,14 +294,12 @@ jobs:
           aws_region=$(jq -r '.aws.region' src/auth_between_aws_and_github/config.json);
           aws_iam_role_name=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json);
           bedrock_model_id=$(jq -r '.aws.bedrock.model_id' src/auth_between_aws_and_github/config.json);
-          bedrock_max_tokens_reasoning=$(jq -r '.aws.bedrock.max_tokens_reasoning' src/auth_between_aws_and_github/config.json);
-          bedrock_max_tokens_generation=$(jq -r '.aws.bedrock.max_tokens_generation' src/auth_between_aws_and_github/config.json);
+          bedrock_max_tokens=$(jq -r '.aws.bedrock.max_tokens' src/auth_between_aws_and_github/config.json);
           echo "aws_account_id=$aws_account_id" >> $GITHUB_OUTPUT;
           echo "aws_region=$aws_region" >> $GITHUB_OUTPUT;
           echo "aws_iam_role_name=$aws_iam_role_name" >> $GITHUB_OUTPUT;
           echo "bedrock_model_id=$bedrock_model_id" >> $GITHUB_OUTPUT;
-          echo "bedrock_max_tokens_reasoning=$bedrock_max_tokens_reasoning" >> $GITHUB_OUTPUT;
-          echo "bedrock_max_tokens_generation=$bedrock_max_tokens_generation" >> $GITHUB_OUTPUT;
+          echo "bedrock_max_tokens=$bedrock_max_tokens" >> $GITHUB_OUTPUT;
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -326,8 +321,7 @@ jobs:
             --prompt-update scripts/readme/prompt_update.md \
             --aws-region "${{ steps.config.outputs.aws_region }}" \
             --bedrock-model-id "${{ steps.config.outputs.bedrock_model_id }}" \
-            --max-tokens-reasoning "${{ steps.config.outputs.bedrock_max_tokens_reasoning }}" \
-            --max-tokens-generation "${{ steps.config.outputs.bedrock_max_tokens_generation }}" \
+            --max-tokens "${{ steps.config.outputs.bedrock_max_tokens }}" \
             --output-file "$GITHUB_OUTPUT"
       - name: Commit and push README
         run: |
