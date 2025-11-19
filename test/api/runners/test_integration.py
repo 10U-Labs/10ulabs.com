@@ -50,7 +50,7 @@ def test_webhook_router_lambda_has_execution_role(lambda_client, function_name):
     assert 'Role' in response['Configuration']
 
 
-def test_webhook_router_lambda_has_secrets_manager_permission(lambda_client, function_name, config):
+def test_webhook_router_lambda_has_ssm_parameter_permission(lambda_client, function_name, config):
     iam_client = boto3.client('iam', region_name=config['aws']['region'])
 
     response = lambda_client.get_function(FunctionName=function_name)
@@ -60,16 +60,16 @@ def test_webhook_router_lambda_has_secrets_manager_permission(lambda_client, fun
     attached_policies = iam_client.list_attached_role_policies(RoleName=role_name)
     inline_policies = iam_client.list_role_policies(RoleName=role_name)
 
-    has_secrets_permission = False
+    has_ssm_permission = False
 
     for policy_name in inline_policies['PolicyNames']:
         policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
         policy_str = json.dumps(policy_doc['PolicyDocument'])
-        if 'secretsmanager:GetSecretValue' in policy_str:
-            has_secrets_permission = True
+        if 'ssm:GetParameter' in policy_str:
+            has_ssm_permission = True
             break
 
-    assert has_secrets_permission
+    assert has_ssm_permission
 
 
 def test_api_gateway_has_api_id(apigw_client):
@@ -261,7 +261,7 @@ def test_webhook_config_lambda_has_execution_role(lambda_client, function_name):
     assert 'Role' in response['Configuration']
 
 
-def test_webhook_config_lambda_has_secrets_manager_permission(lambda_client, function_name, config):
+def test_webhook_config_lambda_has_ssm_parameter_permission(lambda_client, function_name, config):
     iam_client = boto3.client('iam', region_name=config['aws']['region'])
 
     config_function_name = f"{function_name}-config"
@@ -271,18 +271,18 @@ def test_webhook_config_lambda_has_secrets_manager_permission(lambda_client, fun
 
     inline_policies = iam_client.list_role_policies(RoleName=role_name)
 
-    has_get_secret_permission = False
-    has_create_secret_permission = False
+    has_get_parameter_permission = False
+    has_put_parameter_permission = False
 
     for policy_name in inline_policies['PolicyNames']:
         policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
         policy_str = json.dumps(policy_doc['PolicyDocument'])
-        if 'secretsmanager:GetSecretValue' in policy_str:
-            has_get_secret_permission = True
-        if 'secretsmanager:CreateSecret' in policy_str:
-            has_create_secret_permission = True
+        if 'ssm:GetParameter' in policy_str:
+            has_get_parameter_permission = True
+        if 'ssm:PutParameter' in policy_str:
+            has_put_parameter_permission = True
 
-    assert has_get_secret_permission and has_create_secret_permission
+    assert has_get_parameter_permission and has_put_parameter_permission
 
 
 def test_webhook_config_lambda_has_cloudwatch_log_group(lambda_client, function_name, config):

@@ -11,14 +11,14 @@ from unittest.mock import patch, MagicMock
 @pytest.fixture(autouse=True)
 def mock_boto3_clients():
     with patch('boto3.client') as mock_client:
-        mock_secretsmanager = MagicMock()
+        mock_ssm = MagicMock()
         mock_dynamodb = MagicMock()
         mock_sqs = MagicMock()
         mock_cloudwatch = MagicMock()
 
         def client_factory(service_name, **kwargs):
-            if service_name == 'secretsmanager':
-                return mock_secretsmanager
+            if service_name == 'ssm':
+                return mock_ssm
             if service_name == 'dynamodb':
                 return mock_dynamodb
             if service_name == 'sqs':
@@ -29,7 +29,7 @@ def mock_boto3_clients():
 
         mock_client.side_effect = client_factory
         yield {
-            'secretsmanager': mock_secretsmanager,
+            'ssm': mock_ssm,
             'dynamodb': mock_dynamodb,
             'sqs': mock_sqs,
             'cloudwatch': mock_cloudwatch

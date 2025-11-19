@@ -70,7 +70,7 @@ class RunnersStack(Stack):
             dead_letter_queue=webhook_dlq,
             tracing=lambda_.Tracing.ACTIVE
         )
-        webhook_router.add_to_role_policy(iam.PolicyStatement(actions=["secretsmanager:GetSecretValue"], resources=[f"arn:aws:secretsmanager:{config['aws']['region']}:{config['aws']['account_id']}:secret:{webhook_secret_name}-*"]))
+        webhook_router.add_to_role_policy(iam.PolicyStatement(actions=["ssm:GetParameter"], resources=[f"arn:aws:ssm:{config['aws']['region']}:{config['aws']['account_id']}:parameter{webhook_secret_name}"]))
         idempotency_table.grant_read_write_data(webhook_router)
         job_queue.grant_send_messages(webhook_router)
         webhook_router.add_to_role_policy(iam.PolicyStatement(actions=["cloudwatch:PutMetricData"], resources=["*"]))
@@ -99,7 +99,7 @@ class RunnersStack(Stack):
             log_retention=logs.RetentionDays.ONE_WEEK,
             description="Configures GitHub webhook for self-hosted runners"
         )
-        webhook_config_lambda.add_to_role_policy(iam.PolicyStatement(actions=["secretsmanager:GetSecretValue", "secretsmanager:CreateSecret"], resources=[f"arn:aws:secretsmanager:{config['aws']['region']}:{config['aws']['account_id']}:secret:{webhook_secret_name}-*", f"arn:aws:secretsmanager:{config['aws']['region']}:{config['aws']['account_id']}:secret:{github_pat_secret_name}-*"]))
+        webhook_config_lambda.add_to_role_policy(iam.PolicyStatement(actions=["ssm:GetParameter", "ssm:PutParameter"], resources=[f"arn:aws:ssm:{config['aws']['region']}:{config['aws']['account_id']}:parameter{webhook_secret_name}", f"arn:aws:ssm:{config['aws']['region']}:{config['aws']['account_id']}:parameter{github_pat_secret_name}"]))
         return webhook_config_lambda
 
     def create_dlq_reprocessor_lambda(self, config: Dict[str, Any], queues: tuple) -> None:
