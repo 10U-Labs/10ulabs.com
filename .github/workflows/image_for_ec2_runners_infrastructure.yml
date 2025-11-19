@@ -110,10 +110,9 @@ jobs:
         run: pytest test/api/image_for_ec2_runners/test_integration.py -v
   performing-static-analysis:
     if: |
-      github.ref == 'refs/heads/main' && (
-        !contains(github.event.head_commit.message, '[dry run]') ||
-        github.event.inputs.dry_run != 'true'
-      )
+      github.ref == 'refs/heads/main' &&
+      !(contains(github.event.head_commit.message, '[dry run]') ||
+        github.event.inputs.dry_run == 'true')
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
