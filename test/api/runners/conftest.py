@@ -5,7 +5,35 @@ import boto3
 import pytest
 import aws_cdk as cdk
 from aws_cdk.assertions import Template
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+
+
+@pytest.fixture(autouse=True)
+def mock_boto3_clients():
+    with patch('boto3.client') as mock_client:
+        mock_secretsmanager = MagicMock()
+        mock_dynamodb = MagicMock()
+        mock_sqs = MagicMock()
+        mock_cloudwatch = MagicMock()
+
+        def client_factory(service_name, **kwargs):
+            if service_name == 'secretsmanager':
+                return mock_secretsmanager
+            if service_name == 'dynamodb':
+                return mock_dynamodb
+            if service_name == 'sqs':
+                return mock_sqs
+            if service_name == 'cloudwatch':
+                return mock_cloudwatch
+            return MagicMock()
+
+        mock_client.side_effect = client_factory
+        yield {
+            'secretsmanager': mock_secretsmanager,
+            'dynamodb': mock_dynamodb,
+            'sqs': mock_sqs,
+            'cloudwatch': mock_cloudwatch
+        }
 
 
 @pytest.fixture
