@@ -95,6 +95,32 @@ def test_runners_endpoint_ignores_workflow_job_without_runner_labels(runners_end
     )
 
     assert response.status_code == 200
+
+
+def test_runners_endpoint_returns_ignoring_message_for_workflow_job_without_runner_labels(runners_endpoint):
+    payload = {
+        'action': 'queued',
+        'workflow_job': {
+            'id': 456,
+            'name': 'test-job',
+            'labels': ['self-hosted', 'linux'],
+            'status': 'queued'
+        },
+        'repository': {
+            'full_name': '10U-Labs-LLC/10ulabs.com'
+        }
+    }
+
+    response = requests.post(
+        runners_endpoint,
+        json=payload,
+        headers={
+            'X-GitHub-Event': 'workflow_job',
+            'Content-Type': 'application/json'
+        },
+        timeout=30
+    )
+
     data = response.json()
     assert 'ignoring' in data['message'].lower()
 
@@ -267,7 +293,7 @@ def test_runners_endpoint_handles_concurrent_workflow_job_requests(runners_endpo
     assert len([r for r in responses if r.status_code in [200, 500]]) == 3
 
 
-def test_runners_endpoint_handles_duplicate_delivery_ids(runners_endpoint):
+def test_runners_endpoint_handles_duplicate_delivery_ids_first_request(runners_endpoint):
     import time
 
     delivery_id = f'test-delivery-{int(time.time() * 1000)}'
@@ -288,6 +314,30 @@ def test_runners_endpoint_handles_duplicate_delivery_ids(runners_endpoint):
         timeout=30
     )
 
+    assert response1.status_code == 200
+
+
+def test_runners_endpoint_handles_duplicate_delivery_ids_second_request(runners_endpoint):
+    import time
+
+    delivery_id = f'test-delivery-{int(time.time() * 1000)}'
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    requests.post(
+        runners_endpoint,
+        json=payload,
+        headers={
+            'X-GitHub-Event': 'ping',
+            'X-GitHub-Delivery': delivery_id,
+            'Content-Type': 'application/json'
+        },
+        timeout=30
+    )
+
     response2 = requests.post(
         runners_endpoint,
         json=payload,
@@ -299,11 +349,10 @@ def test_runners_endpoint_handles_duplicate_delivery_ids(runners_endpoint):
         timeout=30
     )
 
-    assert response1.status_code == 200
     assert response2.status_code == 200
 
 
-def test_runners_endpoint_processes_different_delivery_ids(runners_endpoint):
+def test_runners_endpoint_processes_different_delivery_ids_first_request(runners_endpoint):
     import time
 
     payload = {
@@ -312,7 +361,6 @@ def test_runners_endpoint_processes_different_delivery_ids(runners_endpoint):
     }
 
     delivery_id1 = f'test-delivery-{int(time.time() * 1000)}-1'
-    delivery_id2 = f'test-delivery-{int(time.time() * 1000)}-2'
 
     response1 = requests.post(
         runners_endpoint,
@@ -325,6 +373,19 @@ def test_runners_endpoint_processes_different_delivery_ids(runners_endpoint):
         timeout=30
     )
 
+    assert response1.status_code == 200
+
+
+def test_runners_endpoint_processes_different_delivery_ids_second_request(runners_endpoint):
+    import time
+
+    payload = {
+        'zen': 'Design for failure.',
+        'hook_id': 123456
+    }
+
+    delivery_id2 = f'test-delivery-{int(time.time() * 1000)}-2'
+
     response2 = requests.post(
         runners_endpoint,
         json=payload,
@@ -336,7 +397,6 @@ def test_runners_endpoint_processes_different_delivery_ids(runners_endpoint):
         timeout=30
     )
 
-    assert response1.status_code == 200
     assert response2.status_code == 200
 
 
