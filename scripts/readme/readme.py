@@ -41,6 +41,12 @@ def split_text_by_words(text: str, max_length: int = 1000) -> list:
 
     return chunks
 
+def extract_text_from_response(response: dict) -> str:
+    for block in response['output']['message']['content']:
+        if 'text' in block:
+            return block['text']
+    raise ValueError("No text content found in Bedrock response")
+
 def call_bedrock_with_retry(bedrock_client, bedrock_config: dict, messages: list, max_retries: int = 5) -> dict:
     initial_jitter = random.randint(5, 30)
     logging.info("Waiting %ds before Bedrock call to avoid thundering herd", initial_jitter)
@@ -134,7 +140,7 @@ def check_readme_should_be_updated(bedrock_client, project_files: str, current_r
             prompt = f.read().format(project_files=project_files, current_readme=current_readme)
         try:
             response = call_bedrock_with_retry(bedrock_client, bedrock_config, [{'role': 'user', 'content': [{'text': prompt}]}])
-            answer_text = response['output']['message']['content'][0]['text'].strip()
+            answer_text = extract_text_from_response(response).strip()
             try:
                 parsed = json.loads(answer_text)
                 result = bool(parsed.get('readme_should_be_updated', False))
@@ -163,8 +169,7 @@ def generate_readme(bedrock_client, project_files: str, bedrock_config: dict, pr
             'content': [{'text': prompt}]
         }]
         response = call_bedrock_with_retry(bedrock_client, bedrock_config, messages)
-
-        readme_content = response['output']['message']['content'][0]['text']
+        readme_content = extract_text_from_response(response)
 
         if not readme_content.endswith('\n'):
             readme_content += '\n'
