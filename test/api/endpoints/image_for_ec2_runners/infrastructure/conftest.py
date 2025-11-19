@@ -30,7 +30,7 @@ def mock_boto3_clients():
 
 @pytest.fixture
 def endpoint_dir():
-    return Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_ec2_runners"
+    return Path(__file__).parent.parent.parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_ec2_runners"
 
 
 @pytest.fixture
