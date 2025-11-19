@@ -27,7 +27,7 @@ class AmiForEC2RunnersStack(Stack):
             function_name=config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="lambda.handler.lambda_handler",
-            code=lambda_.Code.from_asset("src/api/endpoints/v1/image_for_ec2_runners"),
+            code=lambda_.Code.from_asset("src/api/endpoints/v1/image_for_ec2_runners/infrastructure"),
             timeout=Duration.seconds(config["lambda"]["timeout_seconds"]),
             memory_size=config["lambda"]["memory_mb"],
             environment={
