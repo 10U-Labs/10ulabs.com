@@ -99,6 +99,50 @@ def s3_client(config):
 
 
 @pytest.fixture
+def api_id(apigw_client):
+    apis = apigw_client.get_rest_apis()
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            return api['id']
+    return None
+
+
+@pytest.fixture
+def health_function_name(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    return [name for name in function_names if 'HealthHandler' in name][0]
+
+
+@pytest.fixture
+def echo_function_name(lambda_client):
+    functions = lambda_client.list_functions()
+    function_names = [fn['FunctionName'] for fn in functions['Functions']]
+    return [name for name in function_names if 'EchoHandler' in name][0]
+
+
+@pytest.fixture
+def stack_outputs(cloudformation_client):
+    stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
+    return stacks['Stacks'][0].get('Outputs', [])
+
+
+@pytest.fixture
+def certificate_arn(acm_client, config):
+    subdomain = config['domain_names']['subdomain']
+    certificates = acm_client.list_certificates()
+    for cert in certificates['CertificateSummaryList']:
+        if cert['DomainName'] == subdomain:
+            return cert['CertificateArn']
+    return None
+
+
+@pytest.fixture
+def bucket_name(config):
+    return config['domain_names']['subdomain']
+
+
+@pytest.fixture
 def api_endpoint(cloudformation_client, config):
     stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
     outputs = stacks['Stacks'][0].get('Outputs', [])
