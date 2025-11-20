@@ -20,6 +20,10 @@ def test_config_has_aws_region(config):
     assert "region" in config["aws"]
 
 
+def test_config_has_stack_name(config):
+    assert "stack_name" in config["naming"]
+
+
 def test_config_has_subdomain_name(config):
     assert "subdomain" in config["domain_names"]
 

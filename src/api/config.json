@@ -4,12 +4,31 @@
   },
   "aws": {
     "account_id": 781581267945,
-    "region": "us-east-1",
     "bedrock": {
       "budget_tokens": 10000,
       "max_tokens": 64000,
       "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
     },
+    "ec2_runners": {
+      "max_spot_price": "0.05",
+      "runner_labels": [
+        "ephemeral-ec2-spot-instance"
+      ],
+      "spot_instance_types": [
+        "t4g.small",
+        "t4g.medium",
+        "t4g.large"
+      ]
+    },
+    "fargate_runners": {
+      "cpu": "256",
+      "ecr_repository": "github-runner",
+      "memory": "512",
+      "runner_labels": [
+        "ephemeral-ecs-fargate-spot"
+      ]
+    },
+    "region": "us-east-1",
     "vpc": {
       "cidr": "10.0.0.0/16",
       "max_azs": 99,
@@ -17,39 +36,29 @@
       "subnet_configuration": {
         "public_subnet_cidr_mask": 24
       }
-    },
-    "fargate_runners": {
-      "cpu": "256",
-      "memory": "512",
-      "runner_labels": ["ephemeral-ecs-fargate-spot"],
-      "ecr_repository": "github-runner"
-    },
-    "ec2_runners": {
-      "spot_instance_types": ["t4g.large", "t4g.medium", "t4g.small"],
-      "max_spot_price": "0.05",
-      "runner_labels": ["ephemeral-ec2-spot-instance"]
     }
   },
   "domain_names": {
     "parent": "10ulabs.com",
     "subdomain": "api.10ulabs.com"
   },
-  "naming": {
-    "vpc_name": "TenULabsApiVpc",
-    "cluster_name": "TenULabsRunnerCluster",
-    "task_family": "github-runner",
-    "container_name": "github-runner",
-    "log_stream_prefix": "github-runner",
-    "lambda_function_name": "TenULabsWebhookHandler",
-    "github_token_secret_name": "github-runner/credentials",
-    "webhook_secret_name": "api-webhook-secret"
-  },
-  "lambda": {
-    "timeout_seconds": 30,
-    "memory_mb": 256
-  },
   "github": {
     "org": "10U-Labs-LLC",
     "repo": "10U-Labs-LLC/10ulabs.com"
+  },
+  "lambda": {
+    "memory_mb": 256,
+    "timeout_seconds": 30
+  },
+  "naming": {
+    "cluster_name": "TenULabsRunnerCluster",
+    "container_name": "github-runner",
+    "github_token_secret_name": "github-runner/credentials",
+    "lambda_function_name": "TenULabsWebhookHandler",
+    "log_stream_prefix": "github-runner",
+    "stack_name": "TenULabsApi",
+    "task_family": "github-runner",
+    "vpc_name": "TenULabsApiVpc",
+    "webhook_secret_name": "api-webhook-secret"
   }
 }

@@ -14,10 +14,12 @@ jobs:
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
           REGION=$(jq -r '.aws.region' src/api/config.json);
+          STACK_NAME=$(jq -r '.naming.stack_name' src/api/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
           MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
@@ -45,10 +47,12 @@ jobs:
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
           REGION=$(jq -r '.aws.region' src/api/config.json);
+          STACK_NAME=$(jq -r '.naming.stack_name' src/api/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
           MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials
@@ -71,11 +75,11 @@ jobs:
       - name: CDK Bootstrap (if needed)
         run: cd src/api && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
-        run: cd src/api && cdk diff TenULabsApi
+        run: cd src/api && cdk diff ${{ steps.config.outputs.stack_name }}
       - id: deploy
         name: CDK Deploy
         run: |
-          cd src/api && cdk deploy TenULabsApi \
+          cd src/api && cdk deploy ${{ steps.config.outputs.stack_name }} \
             --require-approval never 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
             echo "deployment_failed=true" >> $GITHUB_OUTPUT
@@ -85,7 +89,14 @@ jobs:
       - if: steps.deploy.outputs.deployment_failed == 'true'
         name: Fail if deployment failed
         run: |
-          echo "CDK deployment failed. Full logs:"
+          echo "CDK deployment failed. Running diagnostics..."
+          python scripts/diagnose_cdk_failure/diagnose_cdk_failure.py \
+            --stack-name ${{ steps.config.outputs.stack_name }} \
+            --region ${{ steps.config.outputs.region }}
+          echo ""
+          echo "=========================================="
+          echo "ORIGINAL CDK DEPLOYMENT LOGS"
+          echo "=========================================="
           cat /tmp/cdk_deploy.log
           exit 1
   integration-testing:
@@ -100,10 +111,12 @@ jobs:
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
           REGION=$(jq -r '.aws.region' src/api/config.json);
+          STACK_NAME=$(jq -r '.naming.stack_name' src/api/config.json);
           MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
           MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "stack_name=$STACK_NAME" >> $GITHUB_OUTPUT;
           echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
           echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC

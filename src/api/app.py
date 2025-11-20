@@ -28,7 +28,7 @@ env = cdk.Environment(
 
 api_stack = ApiStack(
     app,
-    "TenULabsApi",
+    config["naming"]["stack_name"],
     config=config,
     env=env,
     description="API Gateway and Lambda infrastructure for api.10ulabs.com"
