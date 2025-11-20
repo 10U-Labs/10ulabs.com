@@ -100,7 +100,7 @@ class ApiStack(Stack):
             self, "RunnerCluster",
             cluster_name=self.config["naming"]["cluster_name"],
             vpc=self.vpc,
-            container_insights_v2=ecs.ContainerInsights.ENABLED
+            container_insights=True
         )
 
     def _create_secrets_and_security(self):
@@ -265,7 +265,7 @@ class ApiStack(Stack):
 
         health_handler = lambda_.Function(
             self, "HealthHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=getattr(lambda_.Runtime, "PYTHON_3_14"),
             handler="handler.handler",
             code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "health")),
             timeout=Duration.seconds(10),
@@ -274,7 +274,7 @@ class ApiStack(Stack):
         )
         catchall_handler = lambda_.Function(
             self, "CatchAllHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=getattr(lambda_.Runtime, "PYTHON_3_14"),
             handler="handler.handler",
             code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "catchall")),
             timeout=Duration.seconds(10),
@@ -285,7 +285,7 @@ class ApiStack(Stack):
         runners_handler = lambda_.Function(
             self, "RunnersHandler",
             function_name=self.config["naming"]["lambda_function_name"],
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=getattr(lambda_.Runtime, "PYTHON_3_14"),
             handler="webhook_router.lambda_handler",
             code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "v1", "runners")),
             timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
@@ -319,7 +319,7 @@ class ApiStack(Stack):
 
         v1_handler = lambda_.Function(
             self, "V1ApiHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
+            runtime=getattr(lambda_.Runtime, "PYTHON_3_14"),
             handler="handler.lambda_handler",
             code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "v1")),
             timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),

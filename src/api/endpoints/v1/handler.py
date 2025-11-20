@@ -31,7 +31,7 @@ def success_response(data: Dict[str, Any]) -> Dict[str, Any]:
     return json_response(status_code, data)
 
 
-def error_response(status_code: int, error: str, details: str = None) -> Dict[str, Any]:
+def error_response(status_code: int, error: str, details: str | None = None) -> Dict[str, Any]:
     body = {'success': False, 'error': error}
     if details:
         body['details'] = details
