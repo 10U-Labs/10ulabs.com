@@ -427,16 +427,25 @@ jobs:
         run: |
           cd src/api/endpoints/v1/image_for_ec2_runners
           packer init template.pkr.hcl
+      - id: packer-config
+        name: Load Packer validation config
+        run: |
+          REGION=$(jq -r '.aws.region' src/api/config.json)
+          SPOT_INSTANCE_TYPES=$(jq -c '.aws.ec2_runners.spot_instance_types' src/api/config.json)
+          FIRST_INSTANCE_TYPE=$(jq -r '.aws.ec2_runners.spot_instance_types[0]' src/api/config.json)
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "first_instance_type=$FIRST_INSTANCE_TYPE" >> $GITHUB_OUTPUT
       - name: Validating Packer template
         run: |
           cd src/api/endpoints/v1/image_for_ec2_runners
           packer validate \
-            -var="debian_version=12" \
-            -var="architecture=amd64" \
+            -var="debian_version=stable" \
+            -var="architecture=arm64" \
             -var="runner_version=2.319.1" \
-            -var="aws_region=us-east-1" \
-            -var="instance_type=t3.medium" \
-            -var='spot_instance_types=["t3.medium"]' \
+            -var="aws_region=${{ steps.packer-config.outputs.region }}" \
+            -var="instance_type=${{ steps.packer-config.outputs.first_instance_type }}" \
+            -var='spot_instance_types=${{ steps.packer-config.outputs.spot_instance_types }}' \
             -var="vpc_id=vpc-dummy" \
             template.pkr.hcl
   promoting-ami:
