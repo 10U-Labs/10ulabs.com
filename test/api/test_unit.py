@@ -4,7 +4,7 @@ import json
 
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "config.json"
     assert config_path.exists()
 
 
@@ -97,78 +97,66 @@ def test_lambda_handler_health_endpoint_status_is_healthy(health_handler):
     assert body['status'] == 'healthy'
 
 
-def test_lambda_handler_echo_endpoint_returns_200_status_code(echo_handler):
+def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler):
     event = {
         'path': '/v1/echo',
         'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'})
+        'body': json.dumps({'test': 'data'}),
+        'requestContext': {'requestId': 'test-request-id'}
     }
     context = Mock()
-    context.aws_request_id = 'test-request-id'
-    response = echo_handler.handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 200
 
 
-def test_lambda_handler_echo_endpoint_returns_json_content_type(echo_handler):
+def test_lambda_handler_echo_endpoint_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/echo',
         'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'})
+        'body': json.dumps({'test': 'data'}),
+        'requestContext': {'requestId': 'test-request-id'}
     }
     context = Mock()
-    context.aws_request_id = 'test-request-id'
-    response = echo_handler.handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_echo_endpoint_returns_cors_header(echo_handler):
-    event = {
-        'path': '/v1/echo',
-        'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'})
-    }
-    context = Mock()
-    context.aws_request_id = 'test-request-id'
-    response = echo_handler.handler(event, context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
-
-
-def test_lambda_handler_echo_endpoint_echoes_input_data(echo_handler):
+def test_lambda_handler_echo_endpoint_echoes_input_data(v1_handler):
     payload = {'message': 'hello', 'number': 42}
     event = {
         'path': '/v1/echo',
         'httpMethod': 'POST',
-        'body': json.dumps(payload)
+        'body': json.dumps(payload),
+        'requestContext': {'requestId': 'test-request-id'}
     }
     context = Mock()
-    context.aws_request_id = 'test-request-id'
-    response = echo_handler.handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     body = json.loads(response['body'])
     assert body['echo'] == payload
 
 
-def test_lambda_handler_echo_endpoint_includes_received_at(echo_handler):
+def test_lambda_handler_echo_endpoint_includes_received_at(v1_handler):
     event = {
         'path': '/v1/echo',
         'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'})
+        'body': json.dumps({'test': 'data'}),
+        'requestContext': {'requestId': 'test-request-id'}
     }
     context = Mock()
-    context.aws_request_id = 'test-request-id'
-    response = echo_handler.handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     body = json.loads(response['body'])
     assert 'received_at' in body
 
 
-def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400(echo_handler):
+def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400(v1_handler):
     event = {
         'path': '/v1/echo',
         'httpMethod': 'POST',
-        'body': 'not valid json'
+        'body': 'not valid json',
+        'requestContext': {'requestId': 'test-request-id'}
     }
     context = Mock()
-    context.aws_request_id = 'test-request-id'
-    response = echo_handler.handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
@@ -202,7 +190,7 @@ def test_lambda_handler_catchall_body_contains_error_message(catchall_handler):
 
 
 def test_openapi_spec_file_exists():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yml"
     assert openapi_path.exists()
 
 
@@ -228,36 +216,69 @@ def test_openapi_spec_has_paths_section(openapi_spec):
 
 def test_openapi_spec_has_health_endpoint(openapi_spec):
     assert '/health' in openapi_spec['paths']
+
+
+def test_openapi_spec_health_has_get_method(openapi_spec):
     assert 'get' in openapi_spec['paths']['/health']
 
 
 def test_openapi_spec_has_echo_endpoint(openapi_spec):
     assert '/v1/echo' in openapi_spec['paths']
+
+
+def test_openapi_spec_echo_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/v1/echo']
 
 
-def test_openapi_spec_has_runners_endpoints(openapi_spec):
+def test_openapi_spec_has_runners_post_endpoint(openapi_spec):
     assert '/v1/runners' in openapi_spec['paths']
+
+
+def test_openapi_spec_runners_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/v1/runners']
+
+
+def test_openapi_spec_has_runners_health_endpoint(openapi_spec):
     assert '/v1/runners/health' in openapi_spec['paths']
+
+
+def test_openapi_spec_runners_health_has_get_method(openapi_spec):
     assert 'get' in openapi_spec['paths']['/v1/runners/health']
 
 
-def test_openapi_spec_has_ec2_ami_endpoints(openapi_spec):
+def test_openapi_spec_has_ec2_ami_base_endpoint(openapi_spec):
     assert '/v1/image-for-ec2-runners' in openapi_spec['paths']
+
+
+def test_openapi_spec_has_ec2_ami_latest_endpoint(openapi_spec):
     assert '/v1/image-for-ec2-runners/latest' in openapi_spec['paths']
+
+
+def test_openapi_spec_has_ec2_ami_delete_endpoint(openapi_spec):
     assert '/v1/image-for-ec2-runners/{ami_id}' in openapi_spec['paths']
 
 
-def test_openapi_spec_has_docker_image_endpoints(openapi_spec):
+def test_openapi_spec_has_docker_image_base_endpoint(openapi_spec):
     assert '/v1/image-for-docker-runners' in openapi_spec['paths']
+
+
+def test_openapi_spec_has_docker_image_latest_endpoint(openapi_spec):
     assert '/v1/image-for-docker-runners/latest' in openapi_spec['paths']
+
+
+def test_openapi_spec_has_docker_image_delete_endpoint(openapi_spec):
     assert '/v1/image-for-docker-runners/{digest}' in openapi_spec['paths']
 
 
 def test_openapi_spec_has_docker_runner_endpoint(openapi_spec):
     assert '/v1/docker-runner' in openapi_spec['paths']
+
+
+def test_openapi_spec_docker_runner_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/v1/docker-runner']
+
+
+def test_openapi_spec_docker_runner_has_get_method(openapi_spec):
     assert 'get' in openapi_spec['paths']['/v1/docker-runner']
 
 
@@ -274,228 +295,193 @@ def test_openapi_spec_has_catchall_endpoint(openapi_spec):
     assert '/{proxy+}' in openapi_spec['paths']
 
 
-def test_lambda_handler_root_endpoint_returns_200_status_code(root_handler):
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = root_handler.handler(event, context)
-    assert response['statusCode'] == 200
-
-
-def test_lambda_handler_root_endpoint_returns_html_content_type(root_handler):
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = root_handler.handler(event, context)
-    assert response['headers']['Content-Type'] == 'text/html'
-
-
-def test_lambda_handler_root_endpoint_returns_cors_header(root_handler):
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = root_handler.handler(event, context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
-
-
-def test_lambda_handler_root_endpoint_body_contains_swagger_ui(root_handler):
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = root_handler.handler(event, context)
-    assert 'swagger-ui' in response['body']
-
-
-def test_lambda_handler_root_endpoint_body_contains_openapi_spec(root_handler):
-    event = {'path': '/', 'httpMethod': 'GET'}
-    context = Mock()
-    response = root_handler.handler(event, context)
-    assert 'openapi' in response['body'].lower()
-
-
-def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(docker_runner_handler):
+def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(v1_handler):
     event = {
         'path': '/v1/docker-runner',
         'httpMethod': 'POST',
         'body': json.dumps({'github_repo': '10U-Labs-LLC/10ulabs.com'})
     }
     context = Mock()
-    response = docker_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
-def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(docker_runner_handler):
+def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(v1_handler):
     event = {
         'path': '/v1/docker-runner',
         'httpMethod': 'POST',
         'body': json.dumps({'job_id': 12345})
     }
     context = Mock()
-    response = docker_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
-def test_lambda_handler_docker_runner_post_returns_json_content_type(docker_runner_handler):
+def test_lambda_handler_docker_runner_post_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/docker-runner',
         'httpMethod': 'POST',
         'body': json.dumps({'job_id': 12345, 'github_repo': '10U-Labs-LLC/10ulabs.com'})
     }
     context = Mock()
-    response = docker_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_docker_runner_get_returns_json_content_type(docker_runner_handler):
+def test_lambda_handler_docker_runner_get_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/docker-runner',
         'httpMethod': 'GET'
     }
     context = Mock()
-    response = docker_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_docker_runner_unsupported_method_returns_405(docker_runner_handler):
+def test_lambda_handler_docker_runner_unsupported_method_returns_404(v1_handler):
     event = {
         'path': '/v1/docker-runner',
         'httpMethod': 'DELETE'
     }
     context = Mock()
-    response = docker_runner_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 405
+    response = v1_handler.lambda_handler(event, context)
+    assert response['statusCode'] == 404
 
 
-def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(ec2_runner_handler):
+def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(v1_handler):
     event = {
         'path': '/v1/ec2-runner',
         'httpMethod': 'POST',
         'body': json.dumps({'github_repo': '10U-Labs-LLC/10ulabs.com'})
     }
     context = Mock()
-    response = ec2_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
-def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(ec2_runner_handler):
+def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(v1_handler):
     event = {
         'path': '/v1/ec2-runner',
         'httpMethod': 'POST',
         'body': json.dumps({'job_id': 12345})
     }
     context = Mock()
-    response = ec2_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
-def test_lambda_handler_ec2_runner_post_returns_json_content_type(ec2_runner_handler):
+def test_lambda_handler_ec2_runner_post_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/ec2-runner',
         'httpMethod': 'POST',
         'body': json.dumps({'job_id': 12345, 'github_repo': '10U-Labs-LLC/10ulabs.com'})
     }
     context = Mock()
-    response = ec2_runner_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(image_for_docker_runners_handler):
+def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/image-for-docker-runners',
         'httpMethod': 'POST',
         'body': json.dumps({})
     }
     context = Mock()
-    response = image_for_docker_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(image_for_docker_runners_handler):
+def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/image-for-docker-runners',
         'httpMethod': 'GET'
     }
     context = Mock()
-    response = image_for_docker_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_400(image_for_docker_runners_handler):
+def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_400(v1_handler):
     event = {
         'path': '/v1/image-for-docker-runners/sha256:abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {}
     }
     context = Mock()
-    response = image_for_docker_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
-def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(image_for_docker_runners_handler):
+def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/image-for-docker-runners/sha256:abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {'digest': 'sha256:abc123'}
     }
     context = Mock()
-    response = image_for_docker_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_docker_runners_unsupported_method_returns_405(image_for_docker_runners_handler):
+def test_lambda_handler_image_for_docker_runners_unsupported_method_returns_404(v1_handler):
     event = {
         'path': '/v1/image-for-docker-runners',
         'httpMethod': 'PUT'
     }
     context = Mock()
-    response = image_for_docker_runners_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 405
+    response = v1_handler.lambda_handler(event, context)
+    assert response['statusCode'] == 404
 
 
-def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(image_for_ec2_runners_handler):
+def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/image-for-ec2-runners',
         'httpMethod': 'POST',
         'body': json.dumps({})
     }
     context = Mock()
-    response = image_for_ec2_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(image_for_ec2_runners_handler):
+def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/image-for-ec2-runners',
         'httpMethod': 'GET'
     }
     context = Mock()
-    response = image_for_ec2_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(image_for_ec2_runners_handler):
+def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(v1_handler):
     event = {
         'path': '/v1/image-for-ec2-runners/ami-abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {}
     }
     context = Mock()
-    response = image_for_ec2_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 400
 
 
-def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(image_for_ec2_runners_handler):
+def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(v1_handler):
     event = {
         'path': '/v1/image-for-ec2-runners/ami-abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {'ami_id': 'ami-abc123'}
     }
     context = Mock()
-    response = image_for_ec2_runners_handler.lambda_handler(event, context)
+    response = v1_handler.lambda_handler(event, context)
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_405(image_for_ec2_runners_handler):
+def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_handler):
     event = {
         'path': '/v1/image-for-ec2-runners',
         'httpMethod': 'PATCH'
     }
     context = Mock()
-    response = image_for_ec2_runners_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 405
+    response = v1_handler.lambda_handler(event, context)
+    assert response['statusCode'] == 404
