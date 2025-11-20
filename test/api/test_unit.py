@@ -1,6 +1,9 @@
 from pathlib import Path
-from unittest.mock import Mock
 import json
+import time
+from unittest.mock import patch, MagicMock
+import pytest
+from conftest import parse_response_body, assert_response_status, assert_json_content_type, assert_cors_headers
 
 
 def test_config_file_exists_in_correct_location():
@@ -60,132 +63,85 @@ def test_api_has_endpoint_output(cdk_template):
     assert "ApiEndpoint" in outputs
 
 
-def test_lambda_handler_health_endpoint_returns_200_status_code(health_handler):
-    event = {'path': '/health', 'httpMethod': 'GET'}
-    context = Mock()
-    response = health_handler.handler(event, context)
-    assert response['statusCode'] == 200
+def test_lambda_handler_health_endpoint_returns_200_status_code(health_handler, health_get_event, lambda_context):
+    response = health_handler.handler(health_get_event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_health_endpoint_returns_json_content_type(health_handler):
-    event = {'path': '/health', 'httpMethod': 'GET'}
-    context = Mock()
-    response = health_handler.handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_health_endpoint_returns_json_content_type(health_handler, health_get_event, lambda_context):
+    response = health_handler.handler(health_get_event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_health_endpoint_returns_cors_header(health_handler):
-    event = {'path': '/health', 'httpMethod': 'GET'}
-    context = Mock()
-    response = health_handler.handler(event, context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
+def test_lambda_handler_health_endpoint_returns_cors_header(health_handler, health_get_event, lambda_context):
+    response = health_handler.handler(health_get_event, lambda_context)
+    assert_cors_headers(response)
 
 
-def test_lambda_handler_health_endpoint_body_contains_status(health_handler):
-    event = {'path': '/health', 'httpMethod': 'GET'}
-    context = Mock()
-    response = health_handler.handler(event, context)
-    body = json.loads(response['body'])
+def test_lambda_handler_health_endpoint_body_contains_status(health_handler, health_get_event, lambda_context):
+    response = health_handler.handler(health_get_event, lambda_context)
+    body = parse_response_body(response)
     assert 'status' in body
 
 
-def test_lambda_handler_health_endpoint_status_is_healthy(health_handler):
-    event = {'path': '/health', 'httpMethod': 'GET'}
-    context = Mock()
-    response = health_handler.handler(event, context)
-    body = json.loads(response['body'])
+def test_lambda_handler_health_endpoint_status_is_healthy(health_handler, health_get_event, lambda_context):
+    response = health_handler.handler(health_get_event, lambda_context)
+    body = parse_response_body(response)
     assert body['status'] == 'healthy'
 
 
-def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler):
-    event = {
-        'path': '/v1/echo',
-        'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'}),
-        'requestContext': {'requestId': 'test-request-id'}
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_echo_endpoint_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/echo',
-        'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'}),
-        'requestContext': {'requestId': 'test-request-id'}
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_echo_endpoint_returns_json_content_type(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_echo_endpoint_echoes_input_data(v1_handler):
+def test_lambda_handler_echo_endpoint_echoes_input_data(v1_handler, echo_post_event_factory, lambda_context):
     payload = {'message': 'hello', 'number': 42}
-    event = {
-        'path': '/v1/echo',
-        'httpMethod': 'POST',
-        'body': json.dumps(payload),
-        'requestContext': {'requestId': 'test-request-id'}
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    body = json.loads(response['body'])
+    event = echo_post_event_factory(body_data=payload)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
     assert body['echo'] == payload
 
 
-def test_lambda_handler_echo_endpoint_includes_received_at(v1_handler):
-    event = {
-        'path': '/v1/echo',
-        'httpMethod': 'POST',
-        'body': json.dumps({'test': 'data'}),
-        'requestContext': {'requestId': 'test-request-id'}
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    body = json.loads(response['body'])
+def test_lambda_handler_echo_endpoint_includes_received_at(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
     assert 'received_at' in body
 
 
-def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400(v1_handler):
-    event = {
-        'path': '/v1/echo',
-        'httpMethod': 'POST',
-        'body': 'not valid json',
-        'requestContext': {'requestId': 'test-request-id'}
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    event['body'] = 'not valid json'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_catchall_returns_404_for_unknown_path(catchall_handler):
-    event = {'path': '/unknown', 'httpMethod': 'GET'}
-    context = Mock()
-    response = catchall_handler.handler(event, context)
-    assert response['statusCode'] == 404
+def test_lambda_handler_catchall_returns_404_for_unknown_path(catchall_handler, catchall_unknown_event, lambda_context):
+    response = catchall_handler.handler(catchall_unknown_event, lambda_context)
+    assert_response_status(response, 404)
 
 
-def test_lambda_handler_catchall_returns_json_content_type(catchall_handler):
-    event = {'path': '/unknown', 'httpMethod': 'GET'}
-    context = Mock()
-    response = catchall_handler.handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_catchall_returns_json_content_type(catchall_handler, catchall_unknown_event, lambda_context):
+    response = catchall_handler.handler(catchall_unknown_event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_catchall_returns_cors_header(catchall_handler):
-    event = {'path': '/unknown', 'httpMethod': 'GET'}
-    context = Mock()
-    response = catchall_handler.handler(event, context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
+def test_lambda_handler_catchall_returns_cors_header(catchall_handler, catchall_unknown_event, lambda_context):
+    response = catchall_handler.handler(catchall_unknown_event, lambda_context)
+    assert_cors_headers(response)
 
 
-def test_lambda_handler_catchall_body_contains_error_message(catchall_handler):
-    event = {'path': '/unknown', 'httpMethod': 'GET'}
-    context = Mock()
-    response = catchall_handler.handler(event, context)
-    body = json.loads(response['body'])
+def test_lambda_handler_catchall_body_contains_error_message(catchall_handler, catchall_unknown_event, lambda_context):
+    response = catchall_handler.handler(catchall_unknown_event, lambda_context)
+    body = parse_response_body(response)
     assert 'error' in body
 
 
@@ -295,357 +251,218 @@ def test_openapi_spec_has_catchall_endpoint(openapi_spec):
     assert '/{proxy+}' in openapi_spec['paths']
 
 
-def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(v1_handler):
-    event = {
-        'path': '/v1/docker-runner',
-        'httpMethod': 'POST',
-        'body': json.dumps({'github_repo': '10U-Labs-LLC/10ulabs.com'})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(v1_handler, docker_runner_post_event_factory, lambda_context):
+    event = docker_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['job_id']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(v1_handler):
-    event = {
-        'path': '/v1/docker-runner',
-        'httpMethod': 'POST',
-        'body': json.dumps({'job_id': 12345})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(v1_handler, docker_runner_post_event_factory, lambda_context):
+    event = docker_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['github_repo']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_docker_runner_post_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/docker-runner',
-        'httpMethod': 'POST',
-        'body': json.dumps({'job_id': 12345, 'github_repo': '10U-Labs-LLC/10ulabs.com'})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_docker_runner_post_returns_json_content_type(v1_handler, docker_runner_post_event_factory, lambda_context):
+    event = docker_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_docker_runner_get_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/docker-runner',
-        'httpMethod': 'GET'
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_docker_runner_get_returns_json_content_type(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_docker_runner_unsupported_method_returns_404(v1_handler):
-    event = {
-        'path': '/v1/docker-runner',
-        'httpMethod': 'DELETE'
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 404
+def test_lambda_handler_docker_runner_unsupported_method_returns_404(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'DELETE'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
 
 
-def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(v1_handler):
-    event = {
-        'path': '/v1/ec2-runner',
-        'httpMethod': 'POST',
-        'body': json.dumps({'github_repo': '10U-Labs-LLC/10ulabs.com'})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(v1_handler, ec2_runner_post_event_factory, lambda_context):
+    event = ec2_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['job_id']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(v1_handler):
-    event = {
-        'path': '/v1/ec2-runner',
-        'httpMethod': 'POST',
-        'body': json.dumps({'job_id': 12345})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(v1_handler, ec2_runner_post_event_factory, lambda_context):
+    event = ec2_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['github_repo']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_ec2_runner_post_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/ec2-runner',
-        'httpMethod': 'POST',
-        'body': json.dumps({'job_id': 12345, 'github_repo': '10U-Labs-LLC/10ulabs.com'})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_ec2_runner_post_returns_json_content_type(v1_handler, ec2_runner_post_event_factory, lambda_context):
+    event = ec2_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/image-for-docker-runners',
-        'httpMethod': 'POST',
-        'body': json.dumps({})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(v1_handler, image_docker_event_factory, lambda_context):
+    event = image_docker_event_factory(method='POST')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/image-for-docker-runners',
-        'httpMethod': 'GET'
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(v1_handler, image_docker_event_factory, lambda_context):
+    event = image_docker_event_factory(method='GET')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_400(v1_handler):
+def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_400(v1_handler, lambda_context):
     event = {
         'path': '/v1/image-for-docker-runners/sha256:abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {}
     }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(v1_handler):
+def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(v1_handler, lambda_context):
     event = {
         'path': '/v1/image-for-docker-runners/sha256:abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {'digest': 'sha256:abc123'}
     }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_docker_runners_unsupported_method_returns_404(v1_handler):
-    event = {
-        'path': '/v1/image-for-docker-runners',
-        'httpMethod': 'PUT'
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 404
+def test_lambda_handler_image_for_docker_runners_unsupported_method_returns_404(v1_handler, image_docker_event_factory, lambda_context):
+    event = image_docker_event_factory()
+    event['httpMethod'] = 'PUT'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
 
 
-def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/image-for-ec2-runners',
-        'httpMethod': 'POST',
-        'body': json.dumps({})
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
+    event = image_ec2_event_factory(method='POST')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(v1_handler):
-    event = {
-        'path': '/v1/image-for-ec2-runners',
-        'httpMethod': 'GET'
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
+    event = image_ec2_event_factory(method='GET', ami_id=None)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(v1_handler):
+def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(v1_handler, lambda_context):
     event = {
         'path': '/v1/image-for-ec2-runners/ami-abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {}
     }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(v1_handler):
+def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(v1_handler, lambda_context):
     event = {
         'path': '/v1/image-for-ec2-runners/ami-abc123',
         'httpMethod': 'DELETE',
         'pathParameters': {'ami_id': 'ami-abc123'}
     }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['headers']['Content-Type'] == 'application/json'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_handler):
-    event = {
-        'path': '/v1/image-for-ec2-runners',
-        'httpMethod': 'PATCH'
-    }
-    context = Mock()
-    response = v1_handler.lambda_handler(event, context)
-    assert response['statusCode'] == 404
-import json
-import time
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_handler, image_ec2_event_factory, lambda_context):
+    event = image_ec2_event_factory(ami_id=None)
+    event['httpMethod'] = 'PATCH'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
 
 
-def test_lambda_handler_health_check_returns_200(webhook_router):
-    event = {
-        'path': '/v1/runners/health',
-        'httpMethod': 'GET'
-    }
-    context = Mock()
-    response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+def test_lambda_handler_health_check_returns_200(webhook_router, lambda_context):
+    event = {'path': '/v1/runners/health', 'httpMethod': 'GET'}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_health_check_returns_circuit_breaker_state(webhook_router):
-    event = {
-        'path': '/v1/runners/health',
-        'httpMethod': 'GET'
-    }
-    context = Mock()
-    response = webhook_router.lambda_handler(event, context)
-    body = json.loads(response['body'])
+def test_lambda_handler_health_check_returns_circuit_breaker_state(webhook_router, lambda_context):
+    event = {'path': '/v1/runners/health', 'httpMethod': 'GET'}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
     assert 'circuit_breaker' in body
 
 
-def test_lambda_handler_health_check_returns_healthy_status(webhook_router):
-    event = {
-        'path': '/v1/runners/health',
-        'httpMethod': 'GET'
-    }
-    context = Mock()
-    response = webhook_router.lambda_handler(event, context)
-    body = json.loads(response['body'])
+def test_lambda_handler_health_check_returns_healthy_status(webhook_router, lambda_context):
+    event = {'path': '/v1/runners/health', 'httpMethod': 'GET'}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
     assert body['status'] == 'healthy'
 
 
-def test_lambda_handler_with_invalid_json_returns_400(webhook_router):
-    event = {
-        'path': '/v1/runners',
-        'httpMethod': 'POST',
-        'body': 'invalid json',
-        'headers': {}
-    }
-    context = Mock()
-    response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+def test_lambda_handler_with_invalid_json_returns_400(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'POST', 'body': 'invalid json', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
-def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, mock_sqs):
-    event = {
-        'path': '/v1/runners',
-        'httpMethod': 'POST',
-        'body': json.dumps({
-            'action': 'queued',
-            'workflow_job': {
-                'id': 123,
-                'name': 'test-job',
-                'labels': ['ephemeral-ec2-spot-instance'],
-                'status': 'queued'
-            },
-            'repository': {
-                'full_name': '10U-Labs-LLC/10ulabs.com'
-            }
-        }),
-        'headers': {}
-    }
-    context = Mock()
+def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, lambda_context):
+    from unittest.mock import patch
+    event = workflow_job_event_factory(action='queued', labels=['ephemeral-ec2-spot-instance'])
     with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
-        response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+        response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router):
+def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
+    from unittest.mock import patch
+    event = workflow_job_event_factory(action='completed', labels=['ephemeral-ec2-spot-instance'])
+    with patch('boto3.client'):
+        response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
+    from unittest.mock import patch
+    event = workflow_job_event_factory(action='queued', labels=['some-other-label'])
+    with patch('boto3.client'):
+        response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
+    from unittest.mock import patch
     event = {
         'path': '/v1/runners',
         'httpMethod': 'POST',
-        'body': json.dumps({
-            'action': 'completed',
-            'workflow_job': {
-                'id': 123,
-                'name': 'test-job',
-                'labels': ['ephemeral-ec2-spot-instance'],
-                'status': 'completed'
-            },
-            'repository': {
-                'full_name': '10U-Labs-LLC/10ulabs.com'
-            }
-        }),
-        'headers': {}
+        'body': json.dumps({'zen': 'Design for failure.', 'hook_id': 123}),
+        'headers': {'x-github-event': 'ping'}
     }
-    context = Mock()
     with patch('boto3.client'):
-        response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+        response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook_router):
-    event = {
-        'path': '/v1/runners',
-        'httpMethod': 'POST',
-        'body': json.dumps({
-            'action': 'queued',
-            'workflow_job': {
-                'id': 123,
-                'name': 'test-job',
-                'labels': ['some-other-label'],
-                'status': 'queued'
-            },
-            'repository': {
-                'full_name': '10U-Labs-LLC/10ulabs.com'
-            }
-        }),
-        'headers': {}
-    }
-    context = Mock()
-    with patch('boto3.client'):
-        response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 200
-
-
-def test_lambda_handler_ping_event_returns_200(webhook_router):
-    event = {
-        'path': '/v1/runners',
-        'httpMethod': 'POST',
-        'body': json.dumps({
-            'zen': 'Design for failure.',
-            'hook_id': 123
-        }),
-        'headers': {
-            'x-github-event': 'ping'
-        }
-    }
-    context = Mock()
-    with patch('boto3.client'):
-        response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 200
-
-
-def test_lambda_handler_sqs_event_processes_successfully(webhook_router, mock_sqs):
-    event = {
-        'Records': [
-            {
-                'eventSource': 'aws:sqs',
-                'body': json.dumps({
-                    'job_id': 123,
-                    'job_labels': ['ephemeral-ec2-spot-instance'],
-                    'github_repo': '10U-Labs-LLC/10ulabs.com'
-                })
-            }
-        ]
-    }
-    context = Mock()
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'success': True}).encode()
-        mock_response.__enter__.return_value = mock_response
-        mock_urlopen.return_value = mock_response
-        response = webhook_router.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+def test_lambda_handler_sqs_event_processes_successfully(webhook_router, sqs_event_factory, mock_github_api_success, lambda_context):
+    from unittest.mock import MagicMock
+    event = sqs_event_factory(records=[{
+        'messageId': 'test-message-id',
+        'eventSource': 'aws:sqs',
+        'body': json.dumps({'job_id': 123, 'job_labels': ['ephemeral-ec2-spot-instance'], 'github_repo': '10U-Labs-LLC/10ulabs.com'}),
+        'attributes': {},
+        'messageAttributes': {}
+    }])
+    response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
 def test_verify_signature_with_valid_signature_returns_true(webhook_router):
@@ -1007,7 +824,7 @@ def test_handle_api_gateway_event_with_workflow_job_processes_correctly(webhook_
     assert result['statusCode'] == 200
 
 
-def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_router):
+def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_router, lambda_context):
     event = {
         'Records': [
             {
@@ -1016,97 +833,64 @@ def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_route
             }
         ]
     }
-    context = Mock()
     with pytest.raises(RuntimeError):
-        webhook_router.lambda_handler(event, context)
-import json
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+        webhook_router.lambda_handler(event, lambda_context)
 
 
-def test_lambda_handler_create_request_creates_webhook(configure_webhook, mock_ssm):
-    event = {
-        'RequestType': 'Create',
-        'ResourceProperties': {
-            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
-            'Repository': '10U-Labs-LLC/10ulabs.com'
-        },
-        'ResponseURL': 'https://cloudformation-presigned-url',
-        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
-        'RequestId': 'req-123',
-        'LogicalResourceId': 'WebhookConfig'
-    }
-    context = Mock()
+def test_lambda_handler_create_request_creates_webhook(configure_webhook, cfn_event_factory, mock_ssm, lambda_context):
+    from unittest.mock import MagicMock, patch
+    event = cfn_event_factory(request_type='Create', properties={
+        'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+        'Repository': '10U-Labs-LLC/10ulabs.com'
+    })
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({'id': 12345}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        response = configure_webhook.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+        response = configure_webhook.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_delete_request_deletes_webhook(configure_webhook, mock_ssm):
-    event = {
-        'RequestType': 'Delete',
-        'ResourceProperties': {
-            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
-            'Repository': '10U-Labs-LLC/10ulabs.com',
-            'WebhookId': '12345'
-        },
-        'PhysicalResourceId': 'github-webhook-10U-Labs-LLC-10ulabs.com',
-        'ResponseURL': 'https://cloudformation-presigned-url',
-        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
-        'RequestId': 'req-123',
-        'LogicalResourceId': 'WebhookConfig'
-    }
-    context = Mock()
+def test_lambda_handler_delete_request_deletes_webhook(configure_webhook, cfn_event_factory, mock_ssm, lambda_context):
+    from unittest.mock import MagicMock, patch
+    event = cfn_event_factory(request_type='Delete', properties={
+        'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+        'Repository': '10U-Labs-LLC/10ulabs.com',
+        'WebhookId': '12345'
+    }, physical_resource_id='github-webhook-10U-Labs-LLC-10ulabs.com')
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        response = configure_webhook.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+        response = configure_webhook.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_update_request_creates_webhook(configure_webhook, mock_ssm):
-    event = {
-        'RequestType': 'Update',
-        'ResourceProperties': {
-            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
-            'Repository': '10U-Labs-LLC/10ulabs.com'
-        },
-        'ResponseURL': 'https://cloudformation-presigned-url',
-        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
-        'RequestId': 'req-123',
-        'LogicalResourceId': 'WebhookConfig'
-    }
-    context = Mock()
+def test_lambda_handler_update_request_creates_webhook(configure_webhook, cfn_event_factory, mock_ssm, lambda_context):
+    from unittest.mock import MagicMock, patch
+    event = cfn_event_factory(request_type='Update', properties={
+        'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+        'Repository': '10U-Labs-LLC/10ulabs.com'
+    })
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({'id': 12345}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        response = configure_webhook.lambda_handler(event, context)
-    assert response['statusCode'] == 200
+        response = configure_webhook.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_lambda_handler_unsupported_request_type_returns_400(configure_webhook):
-    event = {
-        'RequestType': 'Unknown',
-        'ResourceProperties': {},
-        'ResponseURL': 'https://cloudformation-presigned-url',
-        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
-        'RequestId': 'req-123',
-        'LogicalResourceId': 'WebhookConfig'
-    }
-    context = Mock()
+def test_lambda_handler_unsupported_request_type_returns_400(configure_webhook, cfn_event_factory, lambda_context):
+    from unittest.mock import patch
+    event = cfn_event_factory(request_type='Unknown', properties={})
     with patch('urllib.request.urlopen'):
-        response = configure_webhook.lambda_handler(event, context)
-    assert response['statusCode'] == 400
+        response = configure_webhook.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
 
 
 def test_get_github_pat_retrieves_from_ssm(configure_webhook, mock_ssm):
@@ -1496,83 +1280,79 @@ def test_handle_create_update_request_without_secrets_returns_failed(configure_w
     assert result['cf_status'] == 'FAILED'
 
 
-def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation):
+def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+    from unittest.mock import MagicMock, patch
     event = {}
-    context = Mock()
-    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_boto_client.return_value = mock_lambda
-            mock_lambda.invoke.return_value = {
-                'Payload': MagicMock(read=lambda: json.dumps({
-                    'statusCode': 200,
-                    'body': json.dumps({'circuit_breaker_state': 'closed'})
-                }).encode())
-            }
-            response = circuit_breaker_remediation.handler(event, context)
-    assert response['statusCode'] == 200
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        response = circuit_breaker_remediation.handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation):
+def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+    from unittest.mock import MagicMock, patch
     event = {}
-    context = Mock()
-    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_boto_client.return_value = mock_lambda
-            mock_lambda.invoke.return_value = {
-                'Payload': MagicMock(read=lambda: json.dumps({
-                    'statusCode': 200,
-                    'body': json.dumps({'circuit_breaker_state': 'closed'})
-                }).encode())
-            }
-            response = circuit_breaker_remediation.handler(event, context)
-            body = json.loads(response['body'])
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        response = circuit_breaker_remediation.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert 'circuit_breaker_state' in body
 
 
-def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation):
+def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+    from unittest.mock import MagicMock, patch
     event = {}
-    context = Mock()
-    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_boto_client.return_value = mock_lambda
-            mock_lambda.invoke.return_value = {
-                'Payload': MagicMock(read=lambda: json.dumps({
-                    'statusCode': 200,
-                    'body': json.dumps({'circuit_breaker_state': 'open'})
-                }).encode())
-            }
-            response = circuit_breaker_remediation.handler(event, context)
-            body = json.loads(response['body'])
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'open'})
+            }).encode())
+        }
+        response = circuit_breaker_remediation.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert body['action'] == 'monitored'
 
 
-def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation):
+def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+    from unittest.mock import MagicMock, patch
     event = {}
-    context = Mock()
-    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
-        with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_boto_client.return_value = mock_lambda
-            mock_lambda.invoke.return_value = {
-                'Payload': MagicMock(read=lambda: json.dumps({
-                    'statusCode': 200,
-                    'body': json.dumps({'circuit_breaker_state': 'closed'})
-                }).encode())
-            }
-            response = circuit_breaker_remediation.handler(event, context)
-            body = json.loads(response['body'])
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        response = circuit_breaker_remediation.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert body['action'] == 'none'
 
 
-def test_handler_returns_500_when_function_name_not_set(circuit_breaker_remediation):
+def test_handler_returns_500_when_function_name_not_set(circuit_breaker_remediation, lambda_context):
+    from unittest.mock import patch
     event = {}
-    context = Mock()
     with patch.dict('os.environ', {}, clear=True):
-        response = circuit_breaker_remediation.handler(event, context)
-    assert response['statusCode'] == 500
+        response = circuit_breaker_remediation.handler(event, lambda_context)
+    assert_response_status(response, 500)
 
 
 def test_check_circuit_breaker_health_invokes_lambda(circuit_breaker_remediation):
@@ -1641,78 +1421,63 @@ def test_check_circuit_breaker_health_includes_error_message(circuit_breaker_rem
         )
         result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
     assert 'error' in result
-import json
-from unittest.mock import Mock, patch, MagicMock
-import pytest
 
 
-def test_handler_processes_job_dlq(dlq_reprocessor, mock_sqs):
+def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
+    from unittest.mock import patch
     event = {}
-    context = Mock()
     mock_sqs.receive_message.return_value = {
-        'Messages': [
-            {
-                'Body': json.dumps({'job_id': 123}),
-                'ReceiptHandle': 'receipt-123',
-                'MessageAttributes': {}
-            }
-        ]
+        'Messages': [dlq_message_factory(body={'job_id': 123})]
     }
     with patch.dict('os.environ', {
         'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-dlq',
         'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-queue'
     }):
-        response = dlq_reprocessor.handler(event, context)
-    assert response['statusCode'] == 200
+        response = dlq_reprocessor.handler(event, lambda_context)
+    assert_response_status(response, 200)
 
 
-def test_handler_returns_reprocessed_count(dlq_reprocessor, mock_sqs):
+def test_handler_returns_reprocessed_count(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
+    from unittest.mock import patch
     event = {}
-    context = Mock()
     mock_sqs.receive_message.return_value = {
-        'Messages': [
-            {
-                'Body': json.dumps({'job_id': 123}),
-                'ReceiptHandle': 'receipt-123',
-                'MessageAttributes': {}
-            }
-        ]
+        'Messages': [dlq_message_factory(body={'job_id': 123})]
     }
     with patch.dict('os.environ', {
         'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-dlq',
         'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-queue'
     }):
-        response = dlq_reprocessor.handler(event, context)
-        body = json.loads(response['body'])
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert body['job_dlq']['reprocessed'] == 1
 
 
-def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor):
+def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
+    from unittest.mock import patch
     event = {}
-    context = Mock()
     with patch.dict('os.environ', {
         'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/webhook-dlq'
     }):
-        response = dlq_reprocessor.handler(event, context)
-        body = json.loads(response['body'])
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert 'note' in body['webhook_dlq']
 
 
-def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor):
+def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor, lambda_context):
+    from unittest.mock import patch
     event = {}
-    context = Mock()
     with patch.dict('os.environ', {}, clear=True):
-        response = dlq_reprocessor.handler(event, context)
-        body = json.loads(response['body'])
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert 'job_dlq' not in body
 
 
-def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor):
+def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor, lambda_context):
+    from unittest.mock import patch
     event = {}
-    context = Mock()
     with patch.dict('os.environ', {}, clear=True):
-        response = dlq_reprocessor.handler(event, context)
-        body = json.loads(response['body'])
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
     assert 'webhook_dlq' not in body
 
 
