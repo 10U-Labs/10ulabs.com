@@ -505,7 +505,7 @@ def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
         }
     }
 
-    result = trigger_github_workflow('image_for_ec2_runners.yml', payload)
+    result = trigger_github_workflow('image_for_ec2_runners_post.yml', payload)
     return result
 
 

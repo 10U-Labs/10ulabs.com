@@ -183,147 +183,6 @@ jobs:
           echo "add it to the config file under docker_builder.custom_ami"
           echo ""
           echo "==================================="
-  cleaning-up:
-    name: Cleaning up
-    needs: promoting-ami
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Load configuration from config file
-        run: |
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          AWS_REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
-          AMI_NAME_PREFIX="github-runner-debian-"
-          echo "ami_name_prefix=$AMI_NAME_PREFIX" >> $GITHUB_OUTPUT
-          echo "account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "iam_role_name=$IAM_ROLE_NAME" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/${{ steps.config.outputs.iam_role_name }}
-      - name: Delete old AMIs (keep latest only)
-        run: |
-          echo "Finding all AMIs with prefix: ${{ steps.config.outputs.ami_name_prefix }}"
-          AMIS=$(aws ec2 describe-images \
-            --owners self \
-            --filters "Name=name,Values=${{ steps.config.outputs.ami_name_prefix }}*" \
-            --query 'sort_by(Images, &CreationDate) | reverse(@) | [*].[ImageId,Name,CreationDate]' \
-            --output text)
-          if [ -z "$AMIS" ]; then
-            echo "No AMIs found to clean up"
-            exit 0
-          fi
-          TOTAL_AMIS=$(echo "$AMIS" | wc -l)
-          echo "Found $TOTAL_AMIS AMI(s)"
-          if [ "$TOTAL_AMIS" -le 1 ]; then
-            echo "Only 1 or fewer AMIs exist - keeping all"
-            exit 0
-          fi
-          echo "$AMIS" | tail -n +2 | while read AMI_ID AMI_NAME CREATION_DATE; do
-            echo "Deleting old AMI: $AMI_ID ($AMI_NAME) created $CREATION_DATE"
-            SNAPSHOTS=$(aws ec2 describe-images --image-ids $AMI_ID \
-              --query 'Images[0].BlockDeviceMappings[*].Ebs.SnapshotId' \
-              --output text)
-            aws ec2 deregister-image --image-id $AMI_ID
-            echo "✓ Deregistered AMI: $AMI_ID"
-            for SNAPSHOT_ID in $SNAPSHOTS; do
-              if [ -n "$SNAPSHOT_ID" ] && [ "$SNAPSHOT_ID" != "None" ]; then
-                aws ec2 delete-snapshot --snapshot-id $SNAPSHOT_ID
-                echo "✓ Deleted snapshot: $SNAPSHOT_ID"
-              fi
-            done
-          done
-          echo "Cleanup complete - kept latest AMI, deleted $(($TOTAL_AMIS - 1)) old AMI(s)"
-      - name: Terminate orphaned Packer build instances
-        run: |
-          echo "Checking for orphaned Packer build instances..."
-          INSTANCES=$(aws ec2 describe-instances \
-            --filters "Name=instance-state-name,Values=running,stopped" \
-                      "Name=tag-key,Values=aws:ec2:fleet-id" \
-            --query 'Reservations[*].Instances[*].[InstanceId,LaunchTime,State.Name]' \
-            --output text)
-          if [ -z "$INSTANCES" ]; then
-            echo "No orphaned build instances found"
-            exit 0
-          fi
-          echo "$INSTANCES" | while read INSTANCE_ID LAUNCH_TIME STATE; do
-            echo "Terminating orphaned build instance: $INSTANCE_ID (launched $LAUNCH_TIME, state: $STATE)"
-            aws ec2 terminate-instances --instance-ids $INSTANCE_ID
-            echo "✓ Terminated $INSTANCE_ID"
-          done
-          TERMINATED_COUNT=$(echo "$INSTANCES" | wc -l)
-          echo "Terminated $TERMINATED_COUNT orphaned build instance(s)"
-      - name: Delete orphaned EBS volumes
-        run: |
-          echo "Checking for orphaned EBS volumes..."
-          VOLUMES=$(aws ec2 describe-volumes \
-            --filters "Name=status,Values=available" \
-            --query 'Volumes[?!not_null(Tags[?Key==`aws:ec2:fleet-id`])].VolumeId' \
-            --output text)
-          if [ -z "$VOLUMES" ]; then
-            echo "No orphaned volumes found"
-          else
-            for VOLUME_ID in $VOLUMES; do
-              echo "Deleting orphaned volume: $VOLUME_ID"
-              aws ec2 delete-volume --volume-id $VOLUME_ID
-              echo "✓ Deleted $VOLUME_ID"
-            done
-          fi
-      - name: Delete orphaned security groups
-        run: |
-          echo "Checking for orphaned Packer security groups..."
-          SECURITY_GROUPS=$(aws ec2 describe-security-groups \
-            --filters "Name=group-name,Values=packer_*" \
-            --query 'SecurityGroups[*].GroupId' \
-            --output text)
-          if [ -z "$SECURITY_GROUPS" ]; then
-            echo "No orphaned security groups found"
-          else
-            for SG_ID in $SECURITY_GROUPS; do
-              echo "Deleting orphaned security group: $SG_ID"
-              aws ec2 delete-security-group --group-id $SG_ID || echo "⚠ Failed to delete $SG_ID (may be in use)"
-            done
-          fi
-      - name: Delete orphaned SSH key pairs
-        run: |
-          echo "Checking for orphaned Packer SSH keys..."
-          KEY_PAIRS=$(aws ec2 describe-key-pairs \
-            --filters "Name=key-name,Values=packer_*" \
-            --query 'KeyPairs[*].KeyName' \
-            --output text)
-          if [ -z "$KEY_PAIRS" ]; then
-            echo "No orphaned key pairs found"
-          else
-            for KEY_NAME in $KEY_PAIRS; do
-              echo "Deleting orphaned key pair: $KEY_NAME"
-              aws ec2 delete-key-pair --key-name $KEY_NAME
-              echo "✓ Deleted $KEY_NAME"
-            done
-          fi
-      - name: Delete orphaned network interfaces
-        run: |
-          echo "Checking for orphaned network interfaces..."
-          ENIS=$(aws ec2 describe-network-interfaces \
-            --filters "Name=status,Values=available" \
-                      "Name=tag-key,Values=aws:ec2:fleet-id" \
-            --query 'NetworkInterfaces[*].NetworkInterfaceId' \
-            --output text)
-          if [ -z "$ENIS" ]; then
-            echo "No orphaned network interfaces found"
-          else
-            for ENI_ID in $ENIS; do
-              echo "Deleting orphaned network interface: $ENI_ID"
-              aws ec2 delete-network-interface --network-interface-id $ENI_ID || echo "⚠ Failed to delete $ENI_ID"
-            done
-          fi
   e2e-testing:
     name: E2E testing
     needs: integration-testing
@@ -408,29 +267,18 @@ jobs:
         with:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - env:
-          AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
-        name: Tag AMI as stable
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install Python dependencies
+        run: pip install boto3
+      - name: Promote AMI
         run: |
-          echo "Tagging AMI $AMI_ID as stable"
-          aws ec2 create-tags \
-            --resources $AMI_ID \
-            --tags Key=stable,Value=true \
-            --region ${{ steps.config.outputs.region }}
-          echo "AMI $AMI_ID tagged as stable"
-      - env:
-          AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
-        name: Update SSM Parameter with latest stable AMI
-        run: |
-          echo "Updating SSM Parameter /github-runner/ami/latest with $AMI_ID"
-          aws ssm put-parameter \
-            --name "/github-runner/ami/latest" \
-            --value "$AMI_ID" \
-            --type String \
-            --overwrite \
-            --region ${{ steps.config.outputs.region }} \
-            --description "Latest stable GitHub runner AMI (updated by workflow run ${{ github.run_id }})"
-          echo "SSM Parameter updated successfully"
+          python src/api/endpoints/v1/image_for_ec2_runners/promote_ami.py \
+            --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
+            --region "${{ steps.config.outputs.region }}" \
+            --run-id "${{ github.run_id }}"
   static-analysis:
     if: |
       github.ref == 'refs/heads/main' &&
