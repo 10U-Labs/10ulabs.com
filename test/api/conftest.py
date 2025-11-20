@@ -161,3 +161,75 @@ def api_endpoint(cloudformation_client, config):
 
     subdomain = config['domain_names']['subdomain']
     return f"https://{subdomain}"
+
+
+@pytest.fixture
+def webhook_router():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "webhook_router.py"
+    spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def configure_webhook():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "configure_webhook_handler.py"
+    spec = importlib.util.spec_from_file_location("configure_webhook", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def circuit_breaker_remediation():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "circuit_breaker_remediation.py"
+    spec = importlib.util.spec_from_file_location("circuit_breaker_remediation", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def dlq_reprocessor():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "dlq_reprocessor.py"
+    spec = importlib.util.spec_from_file_location("dlq_reprocessor", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def mock_sqs():
+    from unittest.mock import MagicMock, patch
+    with patch('boto3.client') as mock_boto_client:
+        mock_sqs_client = MagicMock()
+        mock_boto_client.return_value = mock_sqs_client
+        yield mock_sqs_client
+
+
+@pytest.fixture
+def mock_dynamodb():
+    from unittest.mock import MagicMock, patch
+    with patch('boto3.client') as mock_boto_client:
+        mock_dynamodb_client = MagicMock()
+        mock_boto_client.return_value = mock_dynamodb_client
+        yield mock_dynamodb_client
+
+
+@pytest.fixture
+def mock_ssm():
+    from unittest.mock import MagicMock, patch
+    with patch('boto3.client') as mock_boto_client:
+        mock_ssm_client = MagicMock()
+        mock_boto_client.return_value = mock_ssm_client
+        yield mock_ssm_client
+
+
+@pytest.fixture
+def mock_cloudwatch():
+    from unittest.mock import MagicMock, patch
+    with patch('boto3.client') as mock_boto_client:
+        mock_cw_client = MagicMock()
+        mock_boto_client.return_value = mock_cw_client
+        yield mock_cw_client
