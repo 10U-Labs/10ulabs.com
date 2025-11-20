@@ -267,7 +267,7 @@ class ApiStack(Stack):
             self, "HealthHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
-            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "health")),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "health")),
             timeout=Duration.seconds(10),
             description="Health check endpoint for API",
             log_retention=logs.RetentionDays.ONE_WEEK
@@ -276,7 +276,7 @@ class ApiStack(Stack):
             self, "CatchAllHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
-            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "catchall")),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "catchall")),
             timeout=Duration.seconds(10),
             description="Catch-all handler for undefined routes",
             log_retention=logs.RetentionDays.ONE_WEEK
@@ -287,7 +287,7 @@ class ApiStack(Stack):
             function_name=self.config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="webhook_router.lambda_handler",
-            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "v1", "runners")),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "v1", "runners")),
             timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
             memory_size=self.config["lambda"]["memory_mb"],
             environment={
@@ -321,7 +321,7 @@ class ApiStack(Stack):
             self, "V1ApiHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "v1")),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "v1")),
             timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
             memory_size=self.config["lambda"]["memory_mb"],
             environment={
