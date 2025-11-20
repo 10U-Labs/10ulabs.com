@@ -44,7 +44,7 @@ class ApiStack(Stack):
         self._create_vpc()
         self._create_ecr_and_ecs()
         secrets_and_security = self._create_secrets_and_security()
-        self.runner_sg = secrets_and_security[1]
+        runner_sg = secrets_and_security[1]
         self._create_fargate_task(secrets_and_security[0])
         ec2_runner_role = self._create_ec2_runner_role()
 
@@ -54,11 +54,11 @@ class ApiStack(Stack):
 
         docs_bucket = self._create_docs_bucket()
         support_infra = self._create_support_infrastructure()
-        handlers = self._create_lambda_functions(support_infra)
+        handlers = self._create_lambda_functions(support_infra, runner_sg)
         self._create_api_gateway(handlers)
         cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
         self._deploy_docs_to_s3(docs_bucket, cf_dist)
-        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (self.runner_sg, ec2_runner_role))
+        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (runner_sg, ec2_runner_role))
 
     def _create_vpc(self):
         max_azs = self.config["aws"]["vpc"].get("max_azs", 99)
@@ -259,41 +259,24 @@ class ApiStack(Stack):
         )
         return webhook_dlq, job_queue_dlq, job_queue, idempotency_table
 
-    def _create_lambda_functions(self, support_infra):
-        webhook_dlq, job_queue_dlq, job_queue, idempotency_table = support_infra
-
-        health_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "health")
-        echo_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "echo")
-        catchall_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "catchall")
-        runners_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "runners", "lambda")
-        docker_runner_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "docker_runner")
-        ec2_runner_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "ec2_runner")
-        image_docker_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "image_for_docker_runners")
-        image_ec2_endpoint_dir = os.path.join(os.path.dirname(__file__), "..", "endpoints", "v1", "image_for_ec2_runners", "infrastructure", "lambda")
+    def _create_lambda_functions(self, support_infra, runner_sg):
+        webhook_dlq, _, job_queue, idempotency_table = support_infra
+        base_dir = os.path.dirname(__file__)
 
         health_handler = lambda_.Function(
             self, "HealthHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
-            code=lambda_.Code.from_asset(health_endpoint_dir),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "health")),
             timeout=Duration.seconds(10),
             description="Health check endpoint for API",
-            log_retention=logs.RetentionDays.ONE_WEEK
-        )
-        echo_handler = lambda_.Function(
-            self, "EchoHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
-            handler="handler.handler",
-            code=lambda_.Code.from_asset(echo_endpoint_dir),
-            timeout=Duration.seconds(10),
-            description="Echo endpoint for testing",
             log_retention=logs.RetentionDays.ONE_WEEK
         )
         catchall_handler = lambda_.Function(
             self, "CatchAllHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.handler",
-            code=lambda_.Code.from_asset(catchall_endpoint_dir),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "catchall")),
             timeout=Duration.seconds(10),
             description="Catch-all handler for undefined routes",
             log_retention=logs.RetentionDays.ONE_WEEK
@@ -304,7 +287,7 @@ class ApiStack(Stack):
             function_name=self.config["naming"]["lambda_function_name"],
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="webhook_router.lambda_handler",
-            code=lambda_.Code.from_asset(runners_endpoint_dir),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "v1", "runners")),
             timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
             memory_size=self.config["lambda"]["memory_mb"],
             environment={
@@ -334,124 +317,39 @@ class ApiStack(Stack):
             max_batching_window=Duration.seconds(0)
         ))
 
-        docker_runner_handler = lambda_.Function(
-            self, "DockerRunnerHandler",
+        v1_handler = lambda_.Function(
+            self, "V1ApiHandler",
             runtime=lambda_.Runtime.PYTHON_3_14,
             handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset(docker_runner_endpoint_dir),
+            code=lambda_.Code.from_asset(os.path.join(base_dir, "..", "endpoints", "v1")),
             timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
             memory_size=self.config["lambda"]["memory_mb"],
             environment={
                 "SUBNETS": ",".join([subnet.subnet_id for subnet in self.vpc.public_subnets]),
-                "SECURITY_GROUPS": self.runner_sg.security_group_id,
+                "SECURITY_GROUPS": runner_sg.security_group_id,
+                "VPC_ID": self.vpc.vpc_id,
                 "ECS_CLUSTER": self.cluster.cluster_arn,
                 "TASK_DEFINITION": self.task_definition.task_definition_arn,
-                "GITHUB_TOKEN_SECRET_NAME": self.config["naming"]["github_token_secret_name"],
-                "ECR_REPOSITORY": self.ecr_repository.repository_name,
-                "IMAGE_API_ENDPOINT": f"https://{self.config['domain_names']['subdomain']}"
-            },
-            log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Lambda handler for launching Fargate spot GitHub runners"
-        )
-        docker_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["ecs:RunTask", "ecs:DescribeTasks", "ecs:ListTasks", "ecs:StopTask"],
-            resources=["*"]
-        ))
-        docker_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["iam:PassRole"],
-            resources=[
-                self.task_definition.task_role.role_arn,
-                self.task_definition.execution_role.role_arn if self.task_definition.execution_role else ""
-            ]
-        ))
-        docker_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["secretsmanager:GetSecretValue"],
-            resources=[f"arn:aws:secretsmanager:{self.config['aws']['region']}:{self.config['aws']['account_id']}:secret:{self.config['naming']['github_token_secret_name']}-*"]
-        ))
-        docker_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["ecr:DescribeImages", "ecr:ListImages", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"],
-            resources=[self.ecr_repository.repository_arn]
-        ))
-
-        ec2_runner_handler = lambda_.Function(
-            self, "EC2RunnerHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
-            handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset(ec2_runner_endpoint_dir),
-            timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
-            memory_size=self.config["lambda"]["memory_mb"],
-            environment={
-                "SUBNETS": ",".join([subnet.subnet_id for subnet in self.vpc.public_subnets]),
-                "SECURITY_GROUPS": self.runner_sg.security_group_id,
                 "EC2_INSTANCE_TYPES": ",".join(self.config["aws"]["ec2_runners"]["spot_instance_types"]),
                 "EC2_IAM_INSTANCE_PROFILE": "GitHubSelfHostedRunnerInstanceProfile",
                 "EC2_MAX_PRICE": str(self.config["aws"]["ec2_runners"]["max_spot_price"]),
-                "GITHUB_TOKEN_SECRET_NAME": self.config["naming"]["github_token_secret_name"]
-            },
-            log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Lambda handler for launching EC2 spot instance GitHub runners"
-        )
-        ec2_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=[
-                "ec2:RunInstances", "ec2:TerminateInstances", "ec2:CreateTags",
-                "ec2:DescribeInstances", "ec2:DescribeImages", "ec2:DescribeSubnets",
-                "ec2:DescribeSecurityGroups"
-            ],
-            resources=["*"]
-        ))
-        ec2_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["iam:PassRole"],
-            resources=[f"arn:aws:iam::{self.config['aws']['account_id']}:role/GitHubSelfHostedRunnerEC2Role"],
-            conditions={"StringEquals": {"iam:PassedToService": "ec2.amazonaws.com"}}
-        ))
-        ec2_runner_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["secretsmanager:GetSecretValue"],
-            resources=[f"arn:aws:secretsmanager:{self.config['aws']['region']}:{self.config['aws']['account_id']}:secret:{self.config['naming']['github_token_secret_name']}-*"]
-        ))
-
-        docker_image_handler = lambda_.Function(
-            self, "DockerImageBuilderHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
-            handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset(image_docker_endpoint_dir),
-            timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
-            memory_size=self.config["lambda"]["memory_mb"],
-            environment={
+                "GITHUB_TOKEN_SECRET_NAME": self.config["naming"]["github_token_secret_name"],
                 "GITHUB_TOKEN": Fn.sub(
                     "{{resolve:secretsmanager:${SecretName}:SecretString:github_token}}",
                     {"SecretName": self.config["naming"]["github_token_secret_name"]}
                 ),
                 "GITHUB_REPO": self.config["github"]["repo"],
-                "ECR_REPOSITORY": self.ecr_repository.repository_name
+                "ECR_REPOSITORY": self.ecr_repository.repository_name,
+                "IMAGE_API_ENDPOINT": f"https://{self.config['domain_names']['subdomain']}"
             },
             log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Lambda handler for triggering Docker image builds via GitHub Actions"
+            description="Unified Lambda handler for all /v1/* API endpoints"
         )
-        docker_image_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["secretsmanager:GetSecretValue"],
-            resources=[f"arn:aws:secretsmanager:{self.config['aws']['region']}:{self.config['aws']['account_id']}:secret:{self.config['naming']['github_token_secret_name']}-*"]
+        v1_handler.add_to_role_policy(iam.PolicyStatement(
+            actions=["ecs:RunTask", "ecs:DescribeTasks", "ecs:ListTasks", "ecs:StopTask"],
+            resources=["*"]
         ))
-        docker_image_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["ecr:DescribeImages", "ecr:ListImages", "ecr:BatchDeleteImage", "ecr:BatchGetImage"],
-            resources=[self.ecr_repository.repository_arn]
-        ))
-
-        ami_builder_handler = lambda_.Function(
-            self, "AmiBuilderHandler",
-            runtime=lambda_.Runtime.PYTHON_3_14,
-            handler="handler.lambda_handler",
-            code=lambda_.Code.from_asset(image_ec2_endpoint_dir),
-            timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
-            memory_size=self.config["lambda"]["memory_mb"],
-            environment={
-                "VPC_ID": self.vpc.vpc_id,
-                "SUBNETS": ",".join([subnet.subnet_id for subnet in self.vpc.public_subnets]),
-                "SECURITY_GROUPS": self.runner_sg.security_group_id
-            },
-            log_retention=logs.RetentionDays.ONE_WEEK,
-            description="Lambda handler for building GitHub runner AMIs with Packer"
-        )
-        ami_builder_handler.add_to_role_policy(iam.PolicyStatement(
+        v1_handler.add_to_role_policy(iam.PolicyStatement(
             actions=[
                 "ec2:RunInstances", "ec2:TerminateInstances", "ec2:CreateTags",
                 "ec2:DescribeInstances", "ec2:DescribeImages", "ec2:DeregisterImage",
@@ -460,18 +358,36 @@ class ApiStack(Stack):
             ],
             resources=["*"]
         ))
-        ami_builder_handler.add_to_role_policy(iam.PolicyStatement(
+        v1_handler.add_to_role_policy(iam.PolicyStatement(
+            actions=["iam:PassRole"],
+            resources=[
+                self.task_definition.task_role.role_arn,
+                self.task_definition.execution_role.role_arn if self.task_definition.execution_role else "",
+                f"arn:aws:iam::{self.config['aws']['account_id']}:role/GitHubSelfHostedRunnerEC2Role"
+            ],
+            conditions={"StringEquals": {"iam:PassedToService": ["ecs-tasks.amazonaws.com", "ec2.amazonaws.com"]}}
+        ))
+        v1_handler.add_to_role_policy(iam.PolicyStatement(
+            actions=["secretsmanager:GetSecretValue"],
+            resources=[f"arn:aws:secretsmanager:{self.config['aws']['region']}:{self.config['aws']['account_id']}:secret:{self.config['naming']['github_token_secret_name']}-*"]
+        ))
+        v1_handler.add_to_role_policy(iam.PolicyStatement(
+            actions=["ecr:DescribeImages", "ecr:ListImages", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchDeleteImage"],
+            resources=[self.ecr_repository.repository_arn]
+        ))
+        v1_handler.add_to_role_policy(iam.PolicyStatement(
             actions=["ssm:GetParameter"],
             resources=[f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/ami/latest"]
         ))
 
-        return (health_handler, echo_handler, catchall_handler, runners_handler,
-                docker_runner_handler, ec2_runner_handler, docker_image_handler, ami_builder_handler)
+        return {
+            'health': health_handler,
+            'catchall': catchall_handler,
+            'runners': runners_handler,
+            'v1': v1_handler
+        }
 
     def _process_openapi_spec(self, handlers):
-        (health_handler, echo_handler, catchall_handler, runners_handler,
-         docker_runner_handler, ec2_runner_handler, docker_image_handler, ami_builder_handler) = handlers
-
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "openapi.yml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
             openapi_spec = yaml.safe_load(f)
@@ -479,14 +395,14 @@ class ApiStack(Stack):
         openapi_spec_str = yaml.dump(openapi_spec)
 
         replacements = {
-            '${HealthHandlerArn}': health_handler.function_arn,
-            '${EchoHandlerArn}': echo_handler.function_arn,
-            '${CatchAllHandlerArn}': catchall_handler.function_arn,
-            '${RunnersHandlerArn}': runners_handler.function_arn,
-            '${DockerRunnerHandlerArn}': docker_runner_handler.function_arn,
-            '${EC2RunnerHandlerArn}': ec2_runner_handler.function_arn,
-            '${DockerImageBuilderHandlerArn}': docker_image_handler.function_arn,
-            '${AmiBuilderHandlerArn}': ami_builder_handler.function_arn
+            '${HealthHandlerArn}': handlers['health'].function_arn,
+            '${EchoHandlerArn}': handlers['v1'].function_arn,
+            '${CatchAllHandlerArn}': handlers['catchall'].function_arn,
+            '${RunnersHandlerArn}': handlers['runners'].function_arn,
+            '${DockerRunnerHandlerArn}': handlers['v1'].function_arn,
+            '${EC2RunnerHandlerArn}': handlers['v1'].function_arn,
+            '${DockerImageBuilderHandlerArn}': handlers['v1'].function_arn,
+            '${AmiBuilderHandlerArn}': handlers['v1'].function_arn
         }
 
         for placeholder, function_arn in replacements.items():
@@ -496,9 +412,6 @@ class ApiStack(Stack):
         return openapi_spec_str
 
     def _create_api_gateway(self, handlers):
-        (health_handler, echo_handler, catchall_handler, runners_handler,
-         docker_runner_handler, ec2_runner_handler, docker_image_handler, ami_builder_handler) = handlers
-
         openapi_spec_str = self._process_openapi_spec(handlers)
         spec_hash = hashlib.md5(openapi_spec_str.encode('utf-8')).hexdigest()[:8]
 
@@ -534,46 +447,19 @@ class ApiStack(Stack):
         api_version = self.config.get("api", {}).get("version", "v1")
         base_arn = f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}"
 
-        health_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/GET/health"
-        )
-        echo_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/POST/{api_version}/echo"
-        )
-        runners_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/{api_version}/runners*"
-        )
-        docker_runner_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/{api_version}/docker-runner*"
-        )
-        ec2_runner_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/POST/{api_version}/ec2-runner"
-        )
-        docker_image_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/{api_version}/image-for-docker-runners*"
-        )
-        ami_builder_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/{api_version}/image-for-ec2-runners*"
-        )
-        catchall_handler.add_permission(
-            "ApiGatewayInvoke",
-            principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
-            source_arn=f"{base_arn}/*/*"
-        )
+        handler_permissions = {
+            'health': f"{base_arn}/*/GET/health",
+            'v1': f"{base_arn}/*/{api_version}/*",
+            'runners': f"{base_arn}/*/{api_version}/runners*",
+            'catchall': f"{base_arn}/*/*"
+        }
+
+        for handler_key, source_arn in handler_permissions.items():
+            handlers[handler_key].add_permission(
+                "ApiGatewayInvoke",
+                principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
+                source_arn=source_arn
+            )
 
     def _create_waf(self):
         return wafv2.CfnWebACL(
