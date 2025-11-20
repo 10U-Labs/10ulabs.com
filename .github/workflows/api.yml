@@ -123,7 +123,8 @@ jobs:
     if: |
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
       )
     name: Performing static analysis
     runs-on: ubuntu-latest
@@ -214,6 +215,10 @@ on:
         description: Dry run mode (show structure without executing)
         required: false
         type: boolean
+  workflow_run:
+    branches: [main]
+    types: [completed]
+    workflows: ["Ensuring CloudTrail and domain name exist and are properly configured"]
 permissions:
   contents: read
   id-token: write
