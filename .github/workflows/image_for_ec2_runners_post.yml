@@ -1,128 +1,25 @@
-name: Building AMI for EC2 self-hosted runners
-on:
-  workflow_dispatch:
-    inputs:
-      debian_version:
-        description: 'Debian version (leave empty to use config default)'
-        required: false
-      dry_run:
-        default: false
-        description: Dry run mode (show structure without executing)
-        required: false
-        type: boolean
-      skip_build:
-        description: 'Skip build and only validate existing AMI'
-        required: false
-        type: boolean
-        default: false
-      ami_id:
-        description: 'AMI ID to validate (required if skip_build is true)'
-        required: false
-        type: string
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/image_for_ec2_runners_action_create.yml'
-      - 'src/api/endpoints/v1/image_for_ec2_runners/**'
-      - '!**/README.md'
 concurrency:
-  group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  performing-static-analysis:
-    if: |
-      github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
-      )
-    name: Performing static analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Install linting dependencies
-        run: |
-          pip install pylint mypy yamllint &&
-          npm install -g jsonlint
-      - name: Install project dependencies for linting
-        run: pip install boto3
-      - name: Linting Python files
-        run: |
-          pylint \
-            src/api/endpoints/v1/image_for_ec2_runners/*.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-under=10.0
-      - name: Linting YAML files
-        run: |
-          echo "Running yamllint on workflow files..."
-          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
-          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_action_create.yml
-      - name: Static type checking Python files with mypy
-        run: python -m mypy src/api/endpoints/v1/image_for_ec2_runners/*.py
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@main
-        with:
-          version: "latest"
-      - name: Initialize Packer
-        run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
-          packer init template.pkr.hcl
-      - name: Validating Packer template
-        run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
-          packer validate \
-            -var="debian_version=12" \
-            -var="architecture=amd64" \
-            -var="runner_version=2.319.1" \
-            -var="aws_region=us-east-1" \
-            -var="instance_type=t3.medium" \
-            -var='spot_instance_types=["t3.medium"]' \
-            -var="vpc_id=vpc-dummy" \
-            template.pkr.hcl
-  unit-testing:
-    name: Unit testing
-    needs: performing-static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install Python dependencies
-        run: |
-          pip install pytest boto3 moto &&
-          pip install aws-cdk-lib constructs
-      - name: Run unit tests
-        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
   build-ami:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
     name: Building AMI
     needs: unit-testing
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
-    runs-on: ubuntu-latest
     outputs:
       ami_id: ${{ steps.build.outputs.ami_id }}
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install jq
         run: |
           sudo apt-get update && sudo apt-get install -y jq
-      - name: Load configuration from config file
-        id: config
+      - id: config
+        name: Load configuration from config file
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
           REGION=$(jq -r '.aws.region' src/api/config.json)
@@ -154,10 +51,10 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
-      - name: Get VPC info from deployed infrastructure
-        id: network
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - id: network
+        name: Get VPC info from deployed infrastructure
         run: |
           VPC_ID=$(aws ec2 describe-vpcs \
             --filters "Name=tag:Name,Values=${{ steps.config.outputs.vpc_name }}" \
@@ -212,8 +109,8 @@ jobs:
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
             -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
             template.pkr.hcl
-      - name: Build AMI with Packer
-        id: build
+      - id: build
+        name: Build AMI with Packer
         run: |
           cd src/api/endpoints/v1/image_for_ec2_runners
           echo "Building GitHub Runner AMI..."
@@ -266,16 +163,16 @@ jobs:
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
           echo ""
           echo "AMI built successfully: $AMI_ID"
-      - name: Tag AMI
-        if: steps.build.outputs.ami_id != ''
+      - if: steps.build.outputs.ami_id != ''
+        name: Tag AMI
         run: |
           aws ec2 create-tags \
             --resources ${{ steps.build.outputs.ami_id }} \
             --tags Key=ManagedBy,Value=GitHubActions Key=Repository,Value=${{ github.repository }} Key=Workflow,Value="${{ github.workflow }}" Key=RunId,Value=${{ github.run_id }} \
             --region ${{ steps.config.outputs.region }}
           echo "Tagged AMI ${{ steps.build.outputs.ami_id }}"
-      - name: Output AMI details
-        if: steps.build.outputs.ami_id != ''
+      - if: steps.build.outputs.ami_id != ''
+        name: Output AMI details
         run: |
           echo "==================================="
           echo "GitHub Runner AMI Built Successfully"
@@ -291,65 +188,19 @@ jobs:
           echo "add it to the config file under docker_builder.custom_ami"
           echo ""
           echo "==================================="
-  promote-ami-to-stable:
-    name: Promoting AMI to stable
-    runs-on: ubuntu-latest
-    needs: smoke-test-new-ami
-    if: ${{ needs.smoke-test-new-ami.result == 'success' }}
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Load configuration from config file
-        id: config
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
-          REGION=$(jq -r '.aws.region' src/api/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Tag AMI as stable
-        env:
-          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
-        run: |
-          echo "Tagging AMI $AMI_ID as stable"
-          aws ec2 create-tags \
-            --resources $AMI_ID \
-            --tags Key=stable,Value=true \
-            --region ${{ steps.config.outputs.region }}
-          echo "AMI $AMI_ID tagged as stable"
-      - name: Update SSM Parameter with latest stable AMI
-        env:
-          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
-        run: |
-          echo "Updating SSM Parameter /github-runner/ami/latest with $AMI_ID"
-          aws ssm put-parameter \
-            --name "/github-runner/ami/latest" \
-            --value "$AMI_ID" \
-            --type String \
-            --overwrite \
-            --region ${{ steps.config.outputs.region }} \
-            --description "Latest stable GitHub runner AMI (updated by workflow run ${{ github.run_id }})"
-          echo "SSM Parameter updated successfully"
   cleanup-old-amis:
-    name: Cleaning up Packer build artifacts
-    runs-on: ubuntu-latest
-    needs: promote-ami-to-stable
     if: always()
+    name: Cleaning up Packer build artifacts
+    needs: promote-ami-to-stable
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration from config file
-        id: config
+      - id: config
+        name: Load configuration from config file
         run: |
           AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
           AWS_REGION=$(jq -r '.aws.region' src/api/config.json)
@@ -362,8 +213,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/${{ steps.config.outputs.iam_role_name }}
           aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/${{ steps.config.outputs.iam_role_name }}
       - name: Delete old AMIs (keep latest only)
         run: |
           echo "Finding all AMIs with prefix: ${{ steps.config.outputs.ami_name_prefix }}"
@@ -479,19 +330,73 @@ jobs:
               aws ec2 delete-network-interface --network-interface-id $ENI_ID || echo "⚠ Failed to delete $ENI_ID"
             done
           fi
-  smoke-test-new-ami:
-    name: Smoke testing newly built AMI
-    needs: build-ami
-    if: ${{ !inputs.skip_build && needs.build-ami.result == 'success' }}
+  performing-static-analysis:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
+    name: Performing static analysis
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration from config file
-        id: aws-config
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint &&
+          npm install -g jsonlint
+      - name: Install project dependencies for linting
+        run: pip install boto3
+      - name: Linting Python files
+        run: |
+          pylint \
+            src/api/endpoints/v1/image_for_ec2_runners/*.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
+          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_action_create.yml
+      - name: Static type checking Python files with mypy
+        run: python -m mypy src/api/endpoints/v1/image_for_ec2_runners/*.py
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "latest"
+      - name: Initialize Packer
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners
+          packer init template.pkr.hcl
+      - name: Validating Packer template
+        run: |
+          cd src/api/endpoints/v1/image_for_ec2_runners
+          packer validate \
+            -var="debian_version=12" \
+            -var="architecture=amd64" \
+            -var="runner_version=2.319.1" \
+            -var="aws_region=us-east-1" \
+            -var="instance_type=t3.medium" \
+            -var='spot_instance_types=["t3.medium"]' \
+            -var="vpc_id=vpc-dummy" \
+            template.pkr.hcl
+  promote-ami-to-stable:
+    if: ${{ needs.smoke-test-new-ami.result == 'success' }}
+    name: Promoting AMI to stable
+    needs: smoke-test-new-ami
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration from config file
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
           REGION=$(jq -r '.aws.region' src/api/config.json)
@@ -500,10 +405,56 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.aws-config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - env:
+          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
+        name: Tag AMI as stable
+        run: |
+          echo "Tagging AMI $AMI_ID as stable"
+          aws ec2 create-tags \
+            --resources $AMI_ID \
+            --tags Key=stable,Value=true \
+            --region ${{ steps.config.outputs.region }}
+          echo "AMI $AMI_ID tagged as stable"
+      - env:
+          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
+        name: Update SSM Parameter with latest stable AMI
+        run: |
+          echo "Updating SSM Parameter /github-runner/ami/latest with $AMI_ID"
+          aws ssm put-parameter \
+            --name "/github-runner/ami/latest" \
+            --value "$AMI_ID" \
+            --type String \
+            --overwrite \
+            --region ${{ steps.config.outputs.region }} \
+            --description "Latest stable GitHub runner AMI (updated by workflow run ${{ github.run_id }})"
+          echo "SSM Parameter updated successfully"
+  smoke-test-new-ami:
+    if: ${{ !inputs.skip_build && needs.build-ami.result == 'success' }}
+    name: Smoke testing newly built AMI
+    needs: build-ami
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: aws-config
+        name: Load configuration from config file
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
+          REGION=$(jq -r '.aws.region' src/api/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
           aws-region: ${{ steps.aws-config.outputs.region }}
-      - name: Get VPC and subnet info
-        id: network
+          role-to-assume: arn:aws:iam::${{ steps.aws-config.outputs.account_id }}:role/GitHubActionsRole
+      - id: network
+        name: Get VPC and subnet info
         run: |
           VPC_ID=$(aws ec2 describe-vpcs \
             --filters "Name=tag:Name,Values=github-runners-vpc" \
@@ -515,8 +466,8 @@ jobs:
             --output text --no-cli-pager)
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-      - name: Load AMI validation config
-        id: config
+      - id: config
+        name: Load AMI validation config
         run: |
           SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' src/api/config.json)
           SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' src/api/config.json)
@@ -526,10 +477,10 @@ jobs:
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
           echo "spot_retry_attempts=$SPOT_RETRY_ATTEMPTS" >> $GITHUB_OUTPUT
           echo "spot_retry_delay=$SPOT_RETRY_DELAY" >> $GITHUB_OUTPUT
-      - name: Launch test instance
-        id: launch
-        env:
+      - env:
           AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
+        id: launch
+        name: Launch test instance
         run: |
           echo "Smoke testing newly built AMI: $AMI_ID"
           INSTANCE_TYPES="${{ steps.config.outputs.spot_instance_types }}"
@@ -608,12 +559,12 @@ jobs:
       - name: Install test dependencies
         run: |
           pip install pytest boto3
-      - name: Run validation tests
-        env:
+      - env:
           AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
           INSTANCE_ID: ${{ steps.launch.outputs.instance_id }}
           INSTANCE_TYPE: ${{ steps.config.outputs.instance_type }}
           SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
+        name: Run validation tests
         run: |
           cd test/api/image_for_ec2_runners
           pytest test_ami_validation.py -v \
@@ -622,8 +573,8 @@ jobs:
             --instance-type=$INSTANCE_TYPE \
             --subnet-id=$SUBNET_ID \
             --region=${{ steps.aws-config.outputs.region }}
-      - name: Terminate test instance
-        if: always()
+      - if: always()
+        name: Terminate test instance
         run: |
           if [ -n "${{ steps.launch.outputs.instance_id }}" ]; then
             echo "Terminating test instance ${{ steps.launch.outputs.instance_id }}"
@@ -635,3 +586,53 @@ jobs:
               --instance-ids ${{ steps.launch.outputs.instance_id }}
             echo "Instance terminated successfully"
           fi
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
+        run: |
+          pip install pytest boto3 moto &&
+          pip install aws-cdk-lib constructs
+      - name: Run unit tests
+        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
+name: Building AMI for EC2 self-hosted runners
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/image_for_ec2_runners_action_create.yml'
+      - 'src/api/endpoints/v1/image_for_ec2_runners/**'
+      - '!**/README.md'
+  workflow_dispatch:
+    inputs:
+      ami_id:
+        description: 'AMI ID to validate (required if skip_build is true)'
+        required: false
+        type: string
+      debian_version:
+        description: 'Debian version (leave empty to use config default)'
+        required: false
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      skip_build:
+        default: false
+        description: 'Skip build and only validate existing AMI'
+        required: false
+        type: boolean
+
