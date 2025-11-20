@@ -104,9 +104,19 @@ class ApiStack(Stack):
         )
 
     def _create_secrets_and_security(self):
-        github_token_parameter = ssm.StringParameter.from_string_parameter_name(
+        github_token_parameter = ssm.StringParameter(
             self, "GitHubToken",
-            string_parameter_name="/github-runner/credentials"
+            parameter_name="/github-runner/credentials",
+            string_value="PLACEHOLDER_UPDATE_WITH_GITHUB_TOKEN",
+            description="GitHub Personal Access Token for self-hosted runners",
+            tier=ssm.ParameterTier.STANDARD
+        )
+        ami_parameter = ssm.StringParameter(
+            self, "LatestAmiParameter",
+            parameter_name="/github-runner/ami/latest",
+            string_value="PLACEHOLDER_UPDATE_AFTER_AMI_BUILD",
+            description="Latest AMI ID for EC2 GitHub self-hosted runners",
+            tier=ssm.ParameterTier.STANDARD
         )
         self.webhook_parameter = ssm.StringParameter(
             self, "WebhookParameter",
@@ -370,8 +380,7 @@ class ApiStack(Stack):
         v1_handler.add_to_role_policy(iam.PolicyStatement(
             actions=["ssm:GetParameter"],
             resources=[
-                f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/ami/latest",
-                f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/credentials"
+                f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/*"
             ]
         ))
 
