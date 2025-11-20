@@ -18,6 +18,17 @@ class TestWaitForStatusChecks:
             token = wait_for_status_checks.get_imds_token()
 
             assert token == 'test-token-123'
+
+    def test_get_imds_token_calls_urlopen(self, wait_for_status_checks):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = Mock()
+            mock_response.read.return_value = b'test-token-123'
+            mock_response.__enter__ = Mock(return_value=mock_response)
+            mock_response.__exit__ = Mock(return_value=False)
+            mock_urlopen.return_value = mock_response
+
+            wait_for_status_checks.get_imds_token()
+
             mock_urlopen.assert_called_once()
 
     def test_get_imds_token_timeout(self, wait_for_status_checks):
@@ -139,13 +150,29 @@ class TestWaitForStatusChecks:
 
 class TestGetEcConfig:
 
-    def test_returns_correct_config_dict(self, v1_handler, mock_env_vars):
+    def test_config_contains_subnet_ids(self, v1_handler, mock_env_vars):
         config = v1_handler._get_ec2_config()
 
         assert 'subnet_ids' in config
+
+    def test_config_contains_security_group_id(self, v1_handler, mock_env_vars):
+        config = v1_handler._get_ec2_config()
+
         assert 'security_group_id' in config
+
+    def test_config_contains_instance_types(self, v1_handler, mock_env_vars):
+        config = v1_handler._get_ec2_config()
+
         assert 'instance_types' in config
+
+    def test_config_contains_iam_instance_profile(self, v1_handler, mock_env_vars):
+        config = v1_handler._get_ec2_config()
+
         assert 'iam_instance_profile' in config
+
+    def test_config_contains_max_price(self, v1_handler, mock_env_vars):
+        config = v1_handler._get_ec2_config()
+
         assert 'max_price' in config
 
     def test_subnet_ids_parsed_from_env(self, v1_handler, mock_env_vars):
@@ -240,14 +267,34 @@ class TestGetRunnerRegistrationToken:
 
 class TestCreateEc2UserData:
 
-    def test_user_data_generation_with_valid_inputs(self, v1_handler, mock_env_vars):
+    def test_user_data_contains_bash_shebang(self, v1_handler, mock_env_vars):
         user_data = v1_handler._create_ec2_user_data('token123', ['label1'], 'owner/repo')
 
         assert '#!/bin/bash' in user_data
+
+    def test_user_data_contains_set_e(self, v1_handler, mock_env_vars):
+        user_data = v1_handler._create_ec2_user_data('token123', ['label1'], 'owner/repo')
+
         assert 'set -e' in user_data
+
+    def test_user_data_contains_config_sh(self, v1_handler, mock_env_vars):
+        user_data = v1_handler._create_ec2_user_data('token123', ['label1'], 'owner/repo')
+
         assert './config.sh' in user_data
+
+    def test_user_data_contains_run_sh(self, v1_handler, mock_env_vars):
+        user_data = v1_handler._create_ec2_user_data('token123', ['label1'], 'owner/repo')
+
         assert './run.sh' in user_data
+
+    def test_user_data_contains_token(self, v1_handler, mock_env_vars):
+        user_data = v1_handler._create_ec2_user_data('token123', ['label1'], 'owner/repo')
+
         assert 'token123' in user_data
+
+    def test_user_data_contains_repo_name(self, v1_handler, mock_env_vars):
+        user_data = v1_handler._create_ec2_user_data('token123', ['label1'], 'owner/repo')
+
         assert 'owner/repo' in user_data
 
     def test_single_label(self, v1_handler, mock_env_vars):
@@ -313,6 +360,7 @@ class TestGetLatestAmi:
 
             call_args = mock_ec2.describe_images.call_args
             filters = call_args[1]['Filters']
+
             assert {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']} in filters
 
     def test_filters_by_stable_tag(self, v1_handler):
@@ -327,6 +375,7 @@ class TestGetLatestAmi:
 
             call_args = mock_ec2.describe_images.call_args
             filters = call_args[1]['Filters']
+
             assert {'Name': 'tag:stable', 'Values': ['true']} in filters
 
     def test_returns_empty_string_when_no_amis(self, v1_handler):
@@ -407,7 +456,7 @@ class TestTriggerAmiCreation:
 
 class TestLaunchEc2SpotRunner:
 
-    def test_successful_launch(self, v1_handler, mock_env_vars):
+    def test_successful_launch_returns_success(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
@@ -430,7 +479,38 @@ class TestLaunchEc2SpotRunner:
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
 
             assert result['success'] is True
+
+    def test_successful_launch_returns_instance_id(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
+             patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
+             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch('boto3.client') as mock_boto_client:
+
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.run_instances.return_value = {
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'PrivateIpAddress': '10.0.0.1',
+                    'InstanceType': 't4g.large',
+                    'Placement': {'AvailabilityZone': 'us-east-1a'}
+                }]
+            }
+
+            result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
             assert result['instance_id'] == 'i-123'
+
+    def test_no_ami_returns_failure(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
+             patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
+
+            result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
+            assert result['success'] is False
 
     def test_no_ami_triggers_creation(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
@@ -438,19 +518,25 @@ class TestLaunchEc2SpotRunner:
 
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
 
-            assert result['success'] is False
             assert 'ami_creation_triggered' in result
 
-    def test_no_github_token_returns_error(self, v1_handler, mock_env_vars):
+    def test_no_github_token_returns_failure(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value=''):
 
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
 
             assert result['success'] is False
+
+    def test_no_github_token_returns_error_message(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value=''):
+
+            result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
             assert 'GITHUB_TOKEN' in result['error']
 
-    def test_registration_token_failure(self, v1_handler, mock_env_vars):
+    def test_registration_token_failure_returns_failure(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
@@ -458,9 +544,17 @@ class TestLaunchEc2SpotRunner:
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
 
             assert result['success'] is False
+
+    def test_registration_token_failure_returns_error_message(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
+             patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
+
+            result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
             assert 'registration token' in result['error']
 
-    def test_subnet_iteration_on_capacity_error(self, v1_handler, mock_env_vars):
+    def test_subnet_iteration_on_capacity_error_returns_success(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
@@ -486,9 +580,35 @@ class TestLaunchEc2SpotRunner:
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
 
             assert result['success'] is True
+
+    def test_subnet_iteration_on_capacity_error_retries(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
+             patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
+             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch('boto3.client') as mock_boto_client:
+
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.run_instances.side_effect = [
+                ClientError({'Error': {'Code': 'InsufficientInstanceCapacity'}}, 'run_instances'),
+                {
+                    'Instances': [{
+                        'InstanceId': 'i-456',
+                        'PrivateIpAddress': '10.0.0.2',
+                        'InstanceType': 't4g.large',
+                        'Placement': {'AvailabilityZone': 'us-east-1b'}
+                    }]
+                }
+            ]
+
+            v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
             assert mock_ec2.run_instances.call_count == 2
 
-    def test_applies_correct_tags(self, v1_handler, mock_env_vars):
+    def test_applies_name_tag(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
@@ -512,9 +632,36 @@ class TestLaunchEc2SpotRunner:
 
             call_args = mock_ec2.run_instances.call_args
             tag_specs = call_args[1]['TagSpecifications'][0]['Tags']
-
             tags_dict = {tag['Key']: tag['Value'] for tag in tag_specs}
+
             assert tags_dict['Name'] == 'github-runner-ec2-456'
+
+    def test_applies_github_job_id_tag(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
+             patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
+             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch('boto3.client') as mock_boto_client:
+
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.run_instances.return_value = {
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'PrivateIpAddress': '10.0.0.1',
+                    'InstanceType': 't4g.large',
+                    'Placement': {'AvailabilityZone': 'us-east-1a'}
+                }]
+            }
+
+            v1_handler.launch_ec2_spot_runner(456, ['self-hosted'], 'owner/repo')
+
+            call_args = mock_ec2.run_instances.call_args
+            tag_specs = call_args[1]['TagSpecifications'][0]['Tags']
+            tags_dict = {tag['Key']: tag['Value'] for tag in tag_specs}
+
             assert tags_dict['GitHubJobId'] == '456'
 
 
@@ -526,11 +673,16 @@ class TestLaunchPackerBuilder:
 
             assert result['success'] is True
 
-    def test_calls_with_correct_workflow_file(self, v1_handler, mock_env_vars):
+    def test_calls_trigger_github_workflow_once(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'trigger_github_workflow', return_value={'success': True}) as mock_trigger:
             v1_handler.launch_packer_builder({})
 
             mock_trigger.assert_called_once()
+
+    def test_calls_with_correct_workflow_file(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'trigger_github_workflow', return_value={'success': True}) as mock_trigger:
+            v1_handler.launch_packer_builder({})
+
             assert mock_trigger.call_args[0][0] == 'image_for_ec2_runners_post.yml'
 
     def test_error_handling(self, v1_handler, mock_env_vars):
@@ -542,7 +694,7 @@ class TestLaunchPackerBuilder:
 
 class TestListAmis:
 
-    def test_returns_list_with_details(self, v1_handler):
+    def test_returns_list_with_success(self, v1_handler):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_boto_client.return_value = mock_ec2
@@ -562,10 +714,50 @@ class TestListAmis:
             result = v1_handler.list_amis()
 
             assert result['success'] is True
+
+    def test_returns_correct_ami_count(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.describe_images.return_value = {
+                'Images': [{
+                    'ImageId': 'ami-123',
+                    'Name': 'github-runner-ami',
+                    'CreationDate': '2024-01-01T00:00:00.000Z',
+                    'State': 'available',
+                    'Architecture': 'arm64',
+                    'Tags': [{'Key': 'stable', 'Value': 'true'}]
+                }]
+            }
+
+            result = v1_handler.list_amis()
+
             assert len(result['amis']) == 1
+
+    def test_returns_correct_ami_id(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.describe_images.return_value = {
+                'Images': [{
+                    'ImageId': 'ami-123',
+                    'Name': 'github-runner-ami',
+                    'CreationDate': '2024-01-01T00:00:00.000Z',
+                    'State': 'available',
+                    'Architecture': 'arm64',
+                    'Tags': [{'Key': 'stable', 'Value': 'true'}]
+                }]
+            }
+
+            result = v1_handler.list_amis()
+
             assert result['amis'][0]['ami_id'] == 'ami-123'
 
-    def test_handles_empty_ami_list(self, v1_handler):
+    def test_handles_empty_ami_list_returns_success(self, v1_handler):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_boto_client.return_value = mock_ec2
@@ -576,9 +768,20 @@ class TestListAmis:
             result = v1_handler.list_amis()
 
             assert result['success'] is True
+
+    def test_handles_empty_ami_list_returns_empty_array(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.describe_images.return_value = {'Images': []}
+
+            result = v1_handler.list_amis()
+
             assert result['amis'] == []
 
-    def test_handles_missing_stable_tag(self, v1_handler):
+    def test_handles_missing_stable_tag_returns_success(self, v1_handler):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_boto_client.return_value = mock_ec2
@@ -598,12 +801,32 @@ class TestListAmis:
             result = v1_handler.list_amis()
 
             assert result['success'] is True
+
+    def test_handles_missing_stable_tag_defaults_to_false(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.describe_images.return_value = {
+                'Images': [{
+                    'ImageId': 'ami-123',
+                    'Name': 'github-runner-ami',
+                    'CreationDate': '2024-01-01T00:00:00.000Z',
+                    'State': 'available',
+                    'Architecture': 'arm64',
+                    'Tags': []
+                }]
+            }
+
+            result = v1_handler.list_amis()
+
             assert result['amis'][0]['tags'].get('stable', 'false') == 'false'
 
 
 class TestGetLatestAmiDetails:
 
-    def test_returns_full_details(self, v1_handler):
+    def test_returns_full_details_with_success(self, v1_handler):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_ssm = MagicMock()
@@ -629,9 +852,35 @@ class TestGetLatestAmiDetails:
             result = v1_handler.get_latest_ami_details()
 
             assert result['success'] is True
+
+    def test_returns_full_details_with_ami_id(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ssm = MagicMock()
+            mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
+            v1_handler.ec2 = mock_ec2
+            v1_handler.ssm = mock_ssm
+
+            mock_ssm.get_parameter.side_effect = ClientError(
+                {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
+            )
+
+            mock_ec2.describe_images.return_value = {
+                'Images': [{
+                    'ImageId': 'ami-123',
+                    'Name': 'test-ami',
+                    'CreationDate': '2024-01-01T00:00:00.000Z',
+                    'State': 'available',
+                    'Architecture': 'arm64',
+                    'Tags': [{'Key': 'stable', 'Value': 'true'}]
+                }]
+            }
+
+            result = v1_handler.get_latest_ami_details()
+
             assert result['ami_id'] == 'ami-123'
 
-    def test_returns_error_when_no_ami(self, v1_handler):
+    def test_returns_error_when_no_ami_returns_failure(self, v1_handler):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_ssm = MagicMock()
@@ -648,12 +897,29 @@ class TestGetLatestAmiDetails:
             result = v1_handler.get_latest_ami_details()
 
             assert result['success'] is False
+
+    def test_returns_error_when_no_ami_has_error_message(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ssm = MagicMock()
+            mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
+            v1_handler.ec2 = mock_ec2
+            v1_handler.ssm = mock_ssm
+
+            mock_ssm.get_parameter.side_effect = ClientError(
+                {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
+            )
+
+            mock_ec2.describe_images.return_value = {'Images': []}
+
+            result = v1_handler.get_latest_ami_details()
+
             assert 'No available AMI found' in result['error']
 
 
 class TestDeregisterAmi:
 
-    def test_successful_deregistration(self, v1_handler):
+    def test_successful_deregistration_returns_success(self, v1_handler):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_boto_client.return_value = mock_ec2
@@ -664,6 +930,17 @@ class TestDeregisterAmi:
             result = v1_handler.deregister_ami('ami-123')
 
             assert result['success'] is True
+
+    def test_successful_deregistration_calls_deregister_image(self, v1_handler):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.deregister_image.return_value = {}
+
+            v1_handler.deregister_ami('ami-123')
+
             mock_ec2.deregister_image.assert_called_once_with(ImageId='ami-123')
 
     def test_handles_invalid_ami_id(self, v1_handler):
@@ -740,18 +1017,27 @@ class TestHandleEc2ImageDelete:
 
 class TestPromoteAmi:
 
-    def test_successful_ami_promotion(self, promote_ami):
+    def test_successful_ami_promotion_calls_create_tags(self, promote_ami):
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_ssm = MagicMock()
             mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
 
-            result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456')
+            promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
 
             mock_ec2.create_tags.assert_called_once_with(
                 Resources=['ami-123'],
                 Tags=[{'Key': 'stable', 'Value': 'true'}]
             )
+
+    def test_successful_ami_promotion_calls_put_parameter(self, promote_ami):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ssm = MagicMock()
+            mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
+
+            promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
+
             mock_ssm.put_parameter.assert_called_once_with(
                 Name='/github-runner/ami/latest',
                 Value='ami-123',
@@ -759,6 +1045,15 @@ class TestPromoteAmi:
                 Overwrite=True,
                 Description='Latest stable GitHub runner AMI (updated by workflow run run-456)'
             )
+
+    def test_successful_ami_promotion_returns_zero(self, promote_ami):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ssm = MagicMock()
+            mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
+
+            result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
+
             assert result == 0
 
     def test_ec2_tag_failure(self, promote_ami):
@@ -769,7 +1064,7 @@ class TestPromoteAmi:
 
             mock_ec2.create_tags.side_effect = Exception('EC2 error')
 
-            result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456')
+            result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
 
             assert result == 1
 
@@ -781,6 +1076,6 @@ class TestPromoteAmi:
 
             mock_ssm.put_parameter.side_effect = Exception('SSM error')
 
-            result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456')
+            result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
 
             assert result == 1

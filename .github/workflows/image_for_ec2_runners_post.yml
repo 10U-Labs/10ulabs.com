@@ -259,8 +259,12 @@ jobs:
         name: Load configuration from config file
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/config.json)
+          AMI_SSM_PARAMETER=$(jq -r '.ami_promotion.ssm_parameter_name' src/api/endpoints/v1/image_for_ec2_runners/config.json)
+          AMI_TAG_KEY=$(jq -r '.ami_promotion.stable_tag_key' src/api/endpoints/v1/image_for_ec2_runners/config.json)
           REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
+          echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -278,7 +282,9 @@ jobs:
           python src/api/endpoints/v1/image_for_ec2_runners/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ steps.config.outputs.region }}" \
-            --run-id "${{ github.run_id }}"
+            --run-id "${{ github.run_id }}" \
+            --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
+            --tag-key "${{ steps.config.outputs.ami_tag_key }}"
   static-analysis:
     if: |
       github.ref == 'refs/heads/main' &&
