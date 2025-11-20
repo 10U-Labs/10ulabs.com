@@ -679,12 +679,12 @@ ROUTE_MAP = {
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,
-    ('/v1/image/docker', 'POST'): lambda e: handle_post_request(e, trigger_docker_image_build),
-    ('/v1/image/docker', 'GET'): handle_docker_image_get,
-    ('/v1/image/docker', 'DELETE'): handle_docker_image_delete,
-    ('/v1/image/ec2', 'POST'): lambda e: handle_post_request(e, launch_packer_builder),
-    ('/v1/image/ec2', 'GET'): handle_ec2_image_get,
-    ('/v1/image/ec2', 'DELETE'): handle_ec2_image_delete
+    ('/v1/image-for-docker-runners', 'POST'): lambda e: handle_post_request(e, trigger_docker_image_build),
+    ('/v1/image-for-docker-runners', 'GET'): handle_docker_image_get,
+    ('/v1/image-for-docker-runners/latest', 'GET'): handle_docker_image_get,
+    ('/v1/image-for-ec2-runners', 'POST'): lambda e: handle_post_request(e, launch_packer_builder),
+    ('/v1/image-for-ec2-runners', 'GET'): handle_ec2_image_get,
+    ('/v1/image-for-ec2-runners/latest', 'GET'): handle_ec2_image_get
 }
 
 
@@ -694,6 +694,12 @@ def lambda_handler(event, _context):
     path = event.get('path', '')
     method = event.get('httpMethod', '')
     handler = ROUTE_MAP.get((path, method))
+
+    if not handler:
+        if path.startswith('/v1/image-for-docker-runners/') and method == 'DELETE':
+            handler = handle_docker_image_delete
+        elif path.startswith('/v1/image-for-ec2-runners/') and method == 'DELETE':
+            handler = handle_ec2_image_delete
 
     if handler:
         response = handler(event)
