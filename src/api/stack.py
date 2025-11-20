@@ -256,7 +256,7 @@ class ApiStack(Stack):
         job_queue = sqs.Queue(
             self, "JobQueue",
             queue_name=f"{self.config['naming']['lambda_function_name']}-jobs",
-            visibility_timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"] * 6),
+            visibility_timeout=Duration.seconds(self.config["aws"]["lambda"]["timeout_seconds"] * 6),
             dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=3, queue=job_queue_dlq)
         )
         idempotency_table = dynamodb.Table(
@@ -298,8 +298,8 @@ class ApiStack(Stack):
             runtime=getattr(lambda_.Runtime, "PYTHON_3_14"),
             handler="webhook_router.lambda_handler",
             code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "v1", "runners")),
-            timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
-            memory_size=self.config["lambda"]["memory_mb"],
+            timeout=Duration.seconds(self.config["aws"]["lambda"]["timeout_seconds"]),
+            memory_size=self.config["aws"]["lambda"]["memory_mb"],
             environment={
                 "WEBHOOK_SECRET_NAME": self.webhook_parameter.parameter_name,
                 "API_BASE_URL": f"https://{self.config['domain_names']['subdomain']}",
@@ -332,8 +332,8 @@ class ApiStack(Stack):
             runtime=getattr(lambda_.Runtime, "PYTHON_3_14"),
             handler="handler.lambda_handler",
             code=lambda_.Code.from_asset(os.path.join(base_dir, "endpoints", "v1")),
-            timeout=Duration.seconds(self.config["lambda"]["timeout_seconds"]),
-            memory_size=self.config["lambda"]["memory_mb"],
+            timeout=Duration.seconds(self.config["aws"]["lambda"]["timeout_seconds"]),
+            memory_size=self.config["aws"]["lambda"]["memory_mb"],
             environment={
                 "SUBNETS": ",".join([subnet.subnet_id for subnet in self.vpc.public_subnets]),
                 "SECURITY_GROUPS": runner_sg.security_group_id,

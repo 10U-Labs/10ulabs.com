@@ -28,6 +28,10 @@
         "ephemeral-ecs-fargate-spot"
       ]
     },
+    "lambda": {
+      "memory_mb": 256,
+      "timeout_seconds": 30
+    },
     "region": "us-east-1",
     "vpc": {
       "cidr": "10.0.0.0/16",
@@ -45,10 +49,6 @@
   "github": {
     "org": "10U-Labs-LLC",
     "repo": "10U-Labs-LLC/10ulabs.com"
-  },
-  "lambda": {
-    "memory_mb": 256,
-    "timeout_seconds": 30
   },
   "naming": {
     "cluster_name": "TenULabsRunnerCluster",
