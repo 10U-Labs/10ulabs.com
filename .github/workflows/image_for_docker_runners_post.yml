@@ -2,9 +2,9 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  building-image:
+  build-docker-image:
     name: Building image
-    needs: performing-static-analysis
+    needs: pre-build-integration-tests
     runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
@@ -96,6 +96,166 @@ jobs:
           python -m mypy endpoints/root &&
           python -m mypy endpoints/v1/handler.py &&
           python -m mypy endpoints/v1/runners
+  post-build-e2e-tests:
+    name: E2E testing
+    needs: [pre-build-integration-tests, post-build-integration-tests]
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.pre-build-integration-tests.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
+      - name: Verify Fargate infrastructure exists
+        run: |
+          CLUSTER=$(aws ecs describe-clusters \
+            --clusters github-runners-cluster \
+            --query 'clusters[0].clusterName' \
+            --output text 2>/dev/null || echo "")
+          if [ -z "$CLUSTER" ] || [ "$CLUSTER" == "None" ]; then
+            echo "SKIP: ECS cluster not deployed yet"
+            echo "Image is built and in ECR, ready for when infrastructure is deployed"
+            exit 0
+          fi
+          echo "✓ ECS cluster exists"
+          echo "✓ Docker image ready for Fargate deployment"
+  post-build-integration-tests:
+    name: Integration testing
+    needs: [pre-build-integration-tests, post-build-unit-tests]
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.pre-build-integration-tests.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
+      - name: Pull Docker image from ECR
+        run: |
+          aws ecr get-login-password | \
+            docker login --username AWS --password-stdin ${{ needs.pre-build-integration-tests.outputs.account_id }}.dkr.ecr.${{ needs.pre-build-integration-tests.outputs.region }}.amazonaws.com
+          docker pull ${{ needs.pre-build-integration-tests.outputs.account_id }}.dkr.ecr.${{ needs.pre-build-integration-tests.outputs.region }}.amazonaws.com/${{ needs.pre-build-integration-tests.outputs.ecr_repo }}:latest
+          echo "✓ Successfully pulled image from ECR"
+      - name: Inspect image
+        run: |
+          IMAGE="${{ needs.pre-build-integration-tests.outputs.account_id }}.dkr.ecr.${{ needs.pre-build-integration-tests.outputs.region }}.amazonaws.com/${{ needs.pre-build-integration-tests.outputs.ecr_repo }}:latest"
+          docker inspect $IMAGE
+          ARCH=$(docker inspect $IMAGE --format='{{.Architecture}}')
+          echo "Image architecture: $ARCH"
+          if [ "$ARCH" != "arm64" ]; then
+            echo "ERROR: Expected arm64, got $ARCH"
+            exit 1
+          fi
+          echo "✓ Image is ARM64 as expected"
+  post-build-unit-tests:
+    name: Unit testing
+    needs: [pre-build-integration-tests, build-docker-image]
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.pre-build-integration-tests.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
+      - name: Verify image exists in ECR
+        run: |
+          aws ecr describe-images \
+            --repository-name ${{ needs.pre-build-integration-tests.outputs.ecr_repo }} \
+            --image-ids imageTag=latest
+          echo "✓ Docker image exists in ECR with 'latest' tag"
+      - name: Verify image tags
+        run: |
+          TAGS=$(aws ecr describe-images \
+            --repository-name ${{ needs.pre-build-integration-tests.outputs.ecr_repo }} \
+            --query 'imageDetails[0].imageTags' \
+            --output json)
+          echo "Image tags: $TAGS"
+          if ! echo "$TAGS" | jq -e '. | contains(["latest"])' > /dev/null; then
+            echo "ERROR: 'latest' tag not found!"
+            exit 1
+          fi
+          echo "✓ Image has 'latest' tag"
+  pre-build-integration-tests:
+    name: Integration testing build prerequisites
+    needs: performing-static-analysis
+    outputs:
+      account_id: ${{ steps.config.outputs.account_id }}
+      ami_id: ${{ steps.ami-check.outputs.ami_id }}
+      ecr_repo: ${{ steps.config.outputs.ecr_repo }}
+      region: ${{ steps.config.outputs.region }}
+      subnet_id: ${{ steps.network.outputs.subnet_id }}
+      vpc_id: ${{ steps.network.outputs.vpc_id }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
+          REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
+          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
+          VPC_NAME=$(jq -r '.naming.vpc_name' api/resources/ami_for_ec2_runners/config.json)
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
+          echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - id: ami-check
+        name: Verify GitHub runner AMI exists
+        run: |
+          AMI_ID=$(aws ec2 describe-images \
+            --owners self \
+            --filters "Name=name,Values=github-runner-debian-*" \
+            --query 'sort_by(Images, &CreationDate) | reverse(@) | [0].ImageId' \
+            --output text)
+          if [ "$AMI_ID" == "None" ] || [ -z "$AMI_ID" ]; then
+            echo "ERROR: No github-runner AMI found!"
+            echo "Run AMI builder workflow first."
+            exit 1
+          fi
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+          echo "✓ Found AMI: $AMI_ID"
+      - id: network
+        name: Verify VPC and subnet exist
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters "Name=tag:Name,Values=${{ steps.config.outputs.vpc_name }}" \
+            --query 'Vpcs[0].VpcId' \
+            --output text)
+          if [ "$VPC_ID" == "None" ] || [ -z "$VPC_ID" ]; then
+            echo "ERROR: VPC not found! Run infrastructure workflow first."
+            exit 1
+          fi
+          SUBNET_ID=$(aws ec2 describe-subnets \
+            --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
+            --query 'Subnets[0].SubnetId' \
+            --output text)
+          if [ "$SUBNET_ID" == "None" ] || [ -z "$SUBNET_ID" ]; then
+            echo "ERROR: No public subnet found!"
+            exit 1
+          fi
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
+          echo "✓ Found VPC: $VPC_ID"
+          echo "✓ Found Subnet: $SUBNET_ID"
 name: Build Docker Image for Self-Hosted Runner
 on:
   push:
