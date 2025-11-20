@@ -391,13 +391,9 @@ class ApiStack(Stack):
 
         replacements = {
             '${HealthHandlerArn}': handlers['health'].function_arn,
-            '${EchoHandlerArn}': handlers['v1'].function_arn,
+            '${V1HandlerArn}': handlers['v1'].function_arn,
             '${CatchAllHandlerArn}': handlers['catchall'].function_arn,
-            '${RunnersHandlerArn}': handlers['runners'].function_arn,
-            '${DockerRunnerHandlerArn}': handlers['v1'].function_arn,
-            '${EC2RunnerHandlerArn}': handlers['v1'].function_arn,
-            '${DockerImageBuilderHandlerArn}': handlers['v1'].function_arn,
-            '${AmiBuilderHandlerArn}': handlers['v1'].function_arn
+            '${RunnersHandlerArn}': handlers['runners'].function_arn
         }
 
         for placeholder, function_arn in replacements.items():
