@@ -10,12 +10,39 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-ec2 = boto3.client('ec2')
-ecs = boto3.client('ecs')
-ecr = boto3.client('ecr')
-ssm = boto3.client('ssm')
-
+_ec2_client = None
+_ecs_client = None
+_ecr_client = None
+_ssm_client = None
 _github_token_cache = {'value': None}
+
+
+def get_ec2_client():
+    global _ec2_client
+    if _ec2_client is None:
+        _ec2_client = boto3.client('ec2')
+    return _ec2_client
+
+
+def get_ecs_client():
+    global _ecs_client
+    if _ecs_client is None:
+        _ecs_client = boto3.client('ecs')
+    return _ecs_client
+
+
+def get_ecr_client():
+    global _ecr_client
+    if _ecr_client is None:
+        _ecr_client = boto3.client('ecr')
+    return _ecr_client
+
+
+def get_ssm_client():
+    global _ssm_client
+    if _ssm_client is None:
+        _ssm_client = boto3.client('ssm')
+    return _ssm_client
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -95,7 +122,7 @@ def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
 def list_ecr_images() -> Dict[str, Any]:
     ecr_repo = os.environ.get('ECR_REPOSITORY', 'github-runner')
     try:
-        response = ecr.describe_images(
+        response = get_ecr_client().describe_images(
             repositoryName=ecr_repo,
             filter={'tagStatus': 'TAGGED'}
         )
@@ -132,7 +159,7 @@ def list_ecr_images() -> Dict[str, Any]:
 def get_latest_ecr_image() -> Dict[str, Any]:
     ecr_repo = os.environ.get('ECR_REPOSITORY', 'github-runner')
     try:
-        response = ecr.describe_images(
+        response = get_ecr_client().describe_images(
             repositoryName=ecr_repo,
             filter={'tagStatus': 'TAGGED'}
         )
@@ -177,7 +204,7 @@ def get_latest_ecr_image() -> Dict[str, Any]:
 def delete_ecr_image(image_digest: str) -> Dict[str, Any]:
     ecr_repo = os.environ.get('ECR_REPOSITORY', 'github-runner')
     try:
-        ecr.batch_delete_image(
+        get_ecr_client().batch_delete_image(
             repositoryName=ecr_repo,
             imageIds=[{'imageDigest': image_digest}]
         )
@@ -202,7 +229,7 @@ def get_github_token() -> str:
 
     parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '/github-runner/credentials')
     try:
-        response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+        response = get_ssm_client().get_parameter(Name=parameter_name, WithDecryption=True)
         token = response['Parameter']['Value']
         _github_token_cache['value'] = token
         return token
@@ -248,7 +275,7 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
     result = {'success': False, 'job_id': job_id, 'error': 'Unknown error'}
 
     try:
-        response = ecs.run_task(
+        response = get_ecs_client().run_task(
             cluster=cluster,
             taskDefinition=task_definition,
             launchType='FARGATE',
@@ -351,7 +378,7 @@ aws ec2 terminate-instances \
 
 def get_latest_ami() -> str:
     try:
-        response = ec2.describe_images(
+        response = get_ec2_client().describe_images(
             Owners=['self'],
             Filters=[
                 {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']},
@@ -434,7 +461,7 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
 
     for subnet_id in config['subnet_ids']:
         try:
-            response = ec2.run_instances(
+            response = get_ec2_client().run_instances(
                 ImageId=ami_id,
                 MinCount=1,
                 MaxCount=1,
@@ -509,7 +536,7 @@ def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
 
 def list_amis() -> Dict[str, Any]:
     try:
-        response = ec2.describe_images(
+        response = get_ec2_client().describe_images(
             Owners=['self'],
             Filters=[
                 {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']}
@@ -538,13 +565,13 @@ def list_amis() -> Dict[str, Any]:
 def get_latest_ami_details() -> Dict[str, Any]:
     try:
         try:
-            param_response = ssm.get_parameter(Name='/github-runner/ami/latest')
+            param_response = get_ssm_client().get_parameter(Name='/github-runner/ami/latest')
             ami_id = param_response['Parameter']['Value']
             logger.info("Retrieved latest AMI from SSM Parameter Store: %s", ami_id)
         except ClientError as ssm_error:
             if ssm_error.response['Error']['Code'] == 'ParameterNotFound':
                 logger.warning("SSM parameter not found, falling back to EC2 query")
-                response = ec2.describe_images(
+                response = get_ec2_client().describe_images(
                     Owners=['self'],
                     Filters=[
                         {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
@@ -559,7 +586,7 @@ def get_latest_ami_details() -> Dict[str, Any]:
             else:
                 raise
 
-        image_response = ec2.describe_images(ImageIds=[ami_id])
+        image_response = get_ec2_client().describe_images(ImageIds=[ami_id])
         if not image_response['Images']:
             return {'success': False, 'error': f'AMI {ami_id} not found'}
 
@@ -582,7 +609,7 @@ def get_latest_ami_details() -> Dict[str, Any]:
 
 def deregister_ami(ami_id: str) -> Dict[str, Any]:
     try:
-        image_response = ec2.describe_images(ImageIds=[ami_id])
+        image_response = get_ec2_client().describe_images(ImageIds=[ami_id])
         if not image_response['Images']:
             return {'success': False, 'error': 'AMI not found'}
 
@@ -591,12 +618,12 @@ def deregister_ami(ami_id: str) -> Dict[str, Any]:
             if 'Ebs' in mapping and 'SnapshotId' in mapping['Ebs']:
                 snapshot_ids.append(mapping['Ebs']['SnapshotId'])
 
-        ec2.deregister_image(ImageId=ami_id)
+        get_ec2_client().deregister_image(ImageId=ami_id)
         logger.info("Deregistered AMI: %s", ami_id)
 
         for snapshot_id in snapshot_ids:
             try:
-                ec2.delete_snapshot(SnapshotId=snapshot_id)
+                get_ec2_client().delete_snapshot(SnapshotId=snapshot_id)
                 logger.info("Deleted snapshot: %s", snapshot_id)
             except ClientError as e:
                 logger.warning("Failed to delete snapshot %s: %s", snapshot_id, e)
