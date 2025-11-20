@@ -198,19 +198,31 @@ def test_openapi_spec_is_valid_yaml(openapi_spec):
     assert openapi_spec is not None
 
 
-def test_openapi_spec_has_correct_version(openapi_spec):
+def test_openapi_spec_has_openapi_field(openapi_spec):
     assert 'openapi' in openapi_spec
+
+
+def test_openapi_spec_version_is_3_0(openapi_spec):
     assert openapi_spec['openapi'].startswith('3.0')
 
 
 def test_openapi_spec_has_info_section(openapi_spec):
     assert 'info' in openapi_spec
+
+
+def test_openapi_spec_info_has_title(openapi_spec):
     assert 'title' in openapi_spec['info']
+
+
+def test_openapi_spec_info_has_version(openapi_spec):
     assert 'version' in openapi_spec['info']
 
 
 def test_openapi_spec_has_paths_section(openapi_spec):
     assert 'paths' in openapi_spec
+
+
+def test_openapi_spec_paths_not_empty(openapi_spec):
     assert len(openapi_spec['paths']) > 0
 
 
@@ -288,6 +300,9 @@ def test_openapi_spec_does_not_have_docker_runner_latest(openapi_spec):
 
 def test_openapi_spec_has_ec2_runner_endpoint(openapi_spec):
     assert '/v1/ec2-runner' in openapi_spec['paths']
+
+
+def test_openapi_spec_ec2_runner_has_post_method(openapi_spec):
     assert 'post' in openapi_spec['paths']['/v1/ec2-runner']
 
 
