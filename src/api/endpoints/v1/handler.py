@@ -305,15 +305,49 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
     return result
 
 
-def _create_ec2_user_data(job_id: int, job_labels: List[str], github_token: str, github_repo: str) -> str:
+def get_runner_registration_token(github_token: str, github_repo: str) -> str:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    req = urllib.request.Request(
+        f'https://api.github.com/repos/{github_repo}/actions/runners/registration-token',
+        method='POST',
+        headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read())
+            return data.get('token', '')
+    except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
+        logger.error("Failed to get runner registration token: %s", e)
+        return ''
+
+
+def _create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str) -> str:
+    aws_region = os.environ.get('AWS_REGION', 'us-east-1')
+    runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
 set -e
-export JOB_ID="{job_id}"
-export RUNNER_LABELS="{','.join(job_labels)}"
-export GITHUB_TOKEN="{github_token}"
-export GITHUB_REPO="{github_repo}"
-export AWS_REGION="{os.environ.get('AWS_REGION', 'us-east-1')}"
-/usr/local/bin/github-runner-setup
+
+cd /home/github-runner/actions-runner
+
+sudo -u github-runner ./config.sh \
+    --url "https://github.com/{github_repo}" \
+    --token "{registration_token}" \
+    --name "ec2-spot-$(hostname)" \
+    --labels "{runner_labels}" \
+    --ephemeral \
+    --unattended
+
+sudo -u github-runner ./run.sh
+
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d' ' -f2)
+aws ec2 terminate-instances \
+    --instance-ids "$INSTANCE_ID" \
+    --region {aws_region} \
+    || shutdown -h now
 """
 
 
@@ -391,7 +425,12 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
         logger.error("GITHUB_TOKEN not set - cannot register runner")
         return {'success': False, 'job_id': job_id, 'error': 'GITHUB_TOKEN not configured'}
 
-    user_data = _create_ec2_user_data(job_id, job_labels, github_token, github_repo)
+    registration_token = get_runner_registration_token(github_token, github_repo)
+    if not registration_token:
+        logger.error("Failed to get runner registration token")
+        return {'success': False, 'job_id': job_id, 'error': 'Failed to get runner registration token'}
+
+    user_data = _create_ec2_user_data(registration_token, job_labels, github_repo)
     response = None
     last_error = None
 
@@ -466,7 +505,7 @@ def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
         }
     }
 
-    result = trigger_github_workflow('image_for_ec2_runners.yml', payload)
+    result = trigger_github_workflow('image_for_ec2_runners_post.yml', payload)
     return result
 
 
