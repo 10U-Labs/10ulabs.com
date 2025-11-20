@@ -485,3 +485,1429 @@ def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_
     context = Mock()
     response = v1_handler.lambda_handler(event, context)
     assert response['statusCode'] == 404
+import json
+import time
+from unittest.mock import Mock, patch, MagicMock
+import pytest
+
+
+def test_lambda_handler_health_check_returns_200(webhook_router):
+    event = {
+        'path': '/v1/runners/health',
+        'httpMethod': 'GET'
+    }
+    context = Mock()
+    response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_health_check_returns_circuit_breaker_state(webhook_router):
+    event = {
+        'path': '/v1/runners/health',
+        'httpMethod': 'GET'
+    }
+    context = Mock()
+    response = webhook_router.lambda_handler(event, context)
+    body = json.loads(response['body'])
+    assert 'circuit_breaker' in body
+
+
+def test_lambda_handler_health_check_returns_healthy_status(webhook_router):
+    event = {
+        'path': '/v1/runners/health',
+        'httpMethod': 'GET'
+    }
+    context = Mock()
+    response = webhook_router.lambda_handler(event, context)
+    body = json.loads(response['body'])
+    assert body['status'] == 'healthy'
+
+
+def test_lambda_handler_with_invalid_json_returns_400(webhook_router):
+    event = {
+        'path': '/v1/runners',
+        'httpMethod': 'POST',
+        'body': 'invalid json',
+        'headers': {}
+    }
+    context = Mock()
+    response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 400
+
+
+def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, mock_sqs):
+    event = {
+        'path': '/v1/runners',
+        'httpMethod': 'POST',
+        'body': json.dumps({
+            'action': 'queued',
+            'workflow_job': {
+                'id': 123,
+                'name': 'test-job',
+                'labels': ['ephemeral-ec2-spot-instance'],
+                'status': 'queued'
+            },
+            'repository': {
+                'full_name': '10U-Labs-LLC/10ulabs.com'
+            }
+        }),
+        'headers': {}
+    }
+    context = Mock()
+    with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router):
+    event = {
+        'path': '/v1/runners',
+        'httpMethod': 'POST',
+        'body': json.dumps({
+            'action': 'completed',
+            'workflow_job': {
+                'id': 123,
+                'name': 'test-job',
+                'labels': ['ephemeral-ec2-spot-instance'],
+                'status': 'completed'
+            },
+            'repository': {
+                'full_name': '10U-Labs-LLC/10ulabs.com'
+            }
+        }),
+        'headers': {}
+    }
+    context = Mock()
+    with patch('boto3.client'):
+        response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook_router):
+    event = {
+        'path': '/v1/runners',
+        'httpMethod': 'POST',
+        'body': json.dumps({
+            'action': 'queued',
+            'workflow_job': {
+                'id': 123,
+                'name': 'test-job',
+                'labels': ['some-other-label'],
+                'status': 'queued'
+            },
+            'repository': {
+                'full_name': '10U-Labs-LLC/10ulabs.com'
+            }
+        }),
+        'headers': {}
+    }
+    context = Mock()
+    with patch('boto3.client'):
+        response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_ping_event_returns_200(webhook_router):
+    event = {
+        'path': '/v1/runners',
+        'httpMethod': 'POST',
+        'body': json.dumps({
+            'zen': 'Design for failure.',
+            'hook_id': 123
+        }),
+        'headers': {
+            'x-github-event': 'ping'
+        }
+    }
+    context = Mock()
+    with patch('boto3.client'):
+        response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_sqs_event_processes_successfully(webhook_router, mock_sqs):
+    event = {
+        'Records': [
+            {
+                'eventSource': 'aws:sqs',
+                'body': json.dumps({
+                    'job_id': 123,
+                    'job_labels': ['ephemeral-ec2-spot-instance'],
+                    'github_repo': '10U-Labs-LLC/10ulabs.com'
+                })
+            }
+        ]
+    }
+    context = Mock()
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        response = webhook_router.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_verify_signature_with_valid_signature_returns_true(webhook_router):
+    secret = 'test-secret'
+    payload = 'test payload'
+    signature = webhook_router.hmac.new(
+        secret.encode('utf-8'),
+        payload.encode('utf-8'),
+        webhook_router.hashlib.sha256
+    ).hexdigest()
+    header = f'sha256={signature}'
+    result = webhook_router.verify_signature(payload, header, secret)
+    assert result is True
+
+
+def test_verify_signature_with_invalid_signature_returns_false(webhook_router):
+    secret = 'test-secret'
+    payload = 'test payload'
+    header = 'sha256=invalid'
+    result = webhook_router.verify_signature(payload, header, secret)
+    assert result is False
+
+
+def test_verify_signature_with_empty_header_returns_false(webhook_router):
+    result = webhook_router.verify_signature('payload', '', 'secret')
+    assert result is False
+
+
+def test_verify_signature_with_malformed_header_returns_false(webhook_router):
+    result = webhook_router.verify_signature('payload', 'malformed', 'secret')
+    assert result is False
+
+
+def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'closed'
+    webhook_router._circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is True
+
+
+def test_check_circuit_breaker_open_state_returns_false(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'open'
+    webhook_router._circuit_breaker_state['last_failure_time'] = time.time()
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is False
+
+
+def test_check_circuit_breaker_transitions_to_half_open_after_timeout(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'open'
+    webhook_router._circuit_breaker_state['last_failure_time'] = time.time() - 61
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is True
+
+
+def test_check_circuit_breaker_opens_after_threshold_failures(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'closed'
+    webhook_router._circuit_breaker_state['failures'] = 5
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is False
+
+
+def test_record_circuit_breaker_success_resets_failures(webhook_router):
+    webhook_router._circuit_breaker_state['failures'] = 3
+    webhook_router.record_circuit_breaker_success()
+    assert webhook_router._circuit_breaker_state['failures'] == 0
+
+
+def test_record_circuit_breaker_success_closes_half_open_circuit(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'half-open'
+    webhook_router.record_circuit_breaker_success()
+    assert webhook_router._circuit_breaker_state['state'] == 'closed'
+
+
+def test_record_circuit_breaker_failure_increments_count(webhook_router):
+    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.record_circuit_breaker_failure()
+    assert webhook_router._circuit_breaker_state['failures'] == 1
+
+
+def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'half-open'
+    webhook_router.record_circuit_breaker_failure()
+    assert webhook_router._circuit_breaker_state['state'] == 'open'
+
+
+def test_check_and_record_idempotency_with_new_request_returns_false(webhook_router, mock_dynamodb):
+    result = webhook_router.check_and_record_idempotency('test-request-id')
+    assert result is False
+
+
+def test_check_and_record_idempotency_with_duplicate_request_returns_true(webhook_router):
+    from botocore.exceptions import ClientError
+    with patch('boto3.client') as mock_boto:
+        mock_dynamodb = MagicMock()
+        mock_boto.return_value = mock_dynamodb
+        error = ClientError({'Error': {'Code': 'ConditionalCheckFailedException'}}, 'PutItem')
+        mock_dynamodb.put_item.side_effect = error
+        with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
+            result = webhook_router.check_and_record_idempotency('duplicate-id')
+    assert result is True
+
+
+def test_enqueue_job_succeeds_and_returns_message_id(webhook_router, mock_sqs):
+    mock_sqs.send_message.return_value = {'MessageId': 'msg-123'}
+    mock_sqs.get_queue_attributes.return_value = {
+        'Attributes': {'ApproximateNumberOfMessages': '5'}
+    }
+    with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        result = webhook_router.enqueue_job({'job_id': 123})
+    assert result['success'] is True
+
+
+def test_enqueue_job_returns_error_when_queue_url_not_set(webhook_router):
+    with patch.dict('os.environ', {}, clear=True):
+        result = webhook_router.enqueue_job({'job_id': 123})
+    assert result['success'] is False
+
+
+def test_route_runner_request_with_ec2_label_calls_ec2_endpoint(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'closed'
+    webhook_router._circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+    assert result['success'] is True
+
+
+def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'closed'
+    webhook_router._circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = webhook_router.route_runner_request(123, ['ephemeral-ecs-fargate-spot'], 'test/repo')
+    assert result['success'] is True
+
+
+def test_route_runner_request_with_no_matching_labels_returns_error(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'closed'
+    webhook_router._circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'):
+        result = webhook_router.route_runner_request(123, ['other-label'], 'test/repo')
+    assert result['success'] is False
+
+
+def test_route_runner_request_rejected_when_circuit_breaker_open(webhook_router):
+    webhook_router._circuit_breaker_state['state'] = 'open'
+    webhook_router._circuit_breaker_state['last_failure_time'] = time.time()
+    with patch('boto3.client'):
+        result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+    assert result['success'] is False
+
+
+def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs):
+    event_data = {
+        'action': 'queued',
+        'workflow_job': {
+            'id': 123,
+            'name': 'test',
+            'labels': ['ephemeral-ec2-spot-instance'],
+            'status': 'queued'
+        },
+        'repository': {'full_name': 'test/repo'}
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg-123'}
+    mock_sqs.get_queue_attributes.return_value = {
+        'Attributes': {'ApproximateNumberOfMessages': '0'}
+    }
+    with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        result = webhook_router.handle_workflow_job(event_data)
+    assert result['statusCode'] == 200
+
+
+def test_handle_workflow_job_enqueues_fargate_job(webhook_router, mock_sqs):
+    event_data = {
+        'action': 'queued',
+        'workflow_job': {
+            'id': 456,
+            'name': 'test',
+            'labels': ['ephemeral-ecs-fargate-spot'],
+            'status': 'queued'
+        },
+        'repository': {'full_name': 'test/repo'}
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg-456'}
+    mock_sqs.get_queue_attributes.return_value = {
+        'Attributes': {'ApproximateNumberOfMessages': '0'}
+    }
+    with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+        result = webhook_router.handle_workflow_job(event_data)
+    assert result['statusCode'] == 200
+
+
+def test_handle_sqs_message_processes_valid_message(webhook_router):
+    message = {
+        'body': json.dumps({
+            'job_id': 123,
+            'job_labels': ['ephemeral-ec2-spot-instance'],
+            'github_repo': 'test/repo'
+        })
+    }
+    webhook_router._circuit_breaker_state['state'] = 'closed'
+    webhook_router._circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'success': True}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = webhook_router.handle_sqs_message(message)
+    assert result['success'] is True
+
+
+def test_handle_sqs_message_with_invalid_json_returns_error(webhook_router):
+    message = {'body': 'invalid json'}
+    result = webhook_router.handle_sqs_message(message)
+    assert result['success'] is False
+
+
+def test_parse_event_body_with_json_string_returns_dict(webhook_router):
+    event = {'body': json.dumps({'key': 'value'})}
+    body_str, payload = webhook_router.parse_event_body(event)
+    assert payload['key'] == 'value'
+
+
+def test_parse_event_body_with_base64_encoded_body_decodes_correctly(webhook_router):
+    import base64
+    body = json.dumps({'key': 'value'})
+    encoded = base64.b64encode(body.encode()).decode()
+    event = {'body': encoded, 'isBase64Encoded': True}
+    body_str, payload = webhook_router.parse_event_body(event)
+    assert payload['key'] == 'value'
+
+
+def test_parse_event_body_with_form_urlencoded_payload_parses_correctly(webhook_router):
+    import urllib.parse
+    payload = {'key': 'value'}
+    encoded = 'payload=' + urllib.parse.quote(json.dumps(payload))
+    event = {'body': encoded}
+    body_str, parsed_payload = webhook_router.parse_event_body(event)
+    assert parsed_payload['key'] == 'value'
+
+
+def test_get_webhook_secret_retrieves_from_ssm(webhook_router, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'test-secret'}
+    }
+    secret = webhook_router.get_webhook_secret()
+    assert secret == 'test-secret'
+
+
+def test_get_webhook_secret_caches_value(webhook_router, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'test-secret'}
+    }
+    webhook_router.get_webhook_secret()
+    webhook_router.get_webhook_secret()
+    assert mock_ssm.get_parameter.call_count == 1
+
+
+def test_get_webhook_secret_force_refresh_clears_cache(webhook_router, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'test-secret'}
+    }
+    webhook_router._webhook_secret_cache['value'] = 'old-secret'
+    secret = webhook_router.get_webhook_secret(force_refresh=True)
+    assert secret == 'test-secret'
+
+
+def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'result': 'success'}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        success, data, error = webhook_router.make_http_request_with_retry('http://test.com', {})
+    assert success is True
+
+
+def test_make_http_request_with_retry_retries_on_server_error(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        import urllib.error
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+        success, data, error = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
+    assert success is False
+
+
+def test_make_http_request_with_retry_fails_immediately_on_client_error(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        import urllib.error
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
+        success, data, error = webhook_router.make_http_request_with_retry('http://test.com', {})
+    assert success is False
+
+
+def test_publish_metric_sends_to_cloudwatch(webhook_router, mock_cloudwatch):
+    webhook_router.publish_metric('TestMetric', 1.0, 'Count')
+    assert mock_cloudwatch.put_metric_data.call_count == 1
+
+
+def test_verify_webhook_signature_with_valid_signature_returns_empty_dict(webhook_router, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'test-secret'}
+    }
+    webhook_router._webhook_secret_cache['value'] = None
+    payload = 'test payload'
+    signature = webhook_router.hmac.new(
+        'test-secret'.encode('utf-8'),
+        payload.encode('utf-8'),
+        webhook_router.hashlib.sha256
+    ).hexdigest()
+    header = f'sha256={signature}'
+    result = webhook_router.verify_webhook_signature(payload, header)
+    assert result == {}
+
+
+def test_verify_webhook_signature_with_invalid_signature_returns_401(webhook_router, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'test-secret'}
+    }
+    webhook_router._webhook_secret_cache['value'] = None
+    result = webhook_router.verify_webhook_signature('payload', 'sha256=invalid')
+    assert result['statusCode'] == 401
+
+
+def test_handle_api_gateway_event_with_workflow_job_processes_correctly(webhook_router):
+    event = {
+        'path': '/v1/runners',
+        'body': json.dumps({
+            'action': 'queued',
+            'workflow_job': {
+                'id': 123,
+                'name': 'test',
+                'labels': ['ephemeral-ec2-spot-instance'],
+                'status': 'queued'
+            },
+            'repository': {'full_name': 'test/repo'}
+        }),
+        'headers': {'x-github-event': 'workflow_job'}
+    }
+    webhook_router._clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+    with patch('boto3.client') as mock_boto:
+        mock_sqs = MagicMock()
+        mock_boto.return_value = mock_sqs
+        mock_sqs.send_message.return_value = {'MessageId': 'msg-123'}
+        mock_sqs.get_queue_attributes.return_value = {
+            'Attributes': {'ApproximateNumberOfMessages': '0'}
+        }
+        with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
+            result = webhook_router.handle_api_gateway_event(event, time.time())
+    assert result['statusCode'] == 200
+
+
+def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_router):
+    event = {
+        'Records': [
+            {
+                'eventSource': 'aws:sqs',
+                'body': 'invalid json'
+            }
+        ]
+    }
+    context = Mock()
+    with pytest.raises(RuntimeError):
+        webhook_router.lambda_handler(event, context)
+import json
+from unittest.mock import Mock, patch, MagicMock
+import pytest
+
+
+def test_lambda_handler_create_request_creates_webhook(configure_webhook, mock_ssm):
+    event = {
+        'RequestType': 'Create',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': '10U-Labs-LLC/10ulabs.com'
+        },
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    context = Mock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'id': 12345}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        response = configure_webhook.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_delete_request_deletes_webhook(configure_webhook, mock_ssm):
+    event = {
+        'RequestType': 'Delete',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': '10U-Labs-LLC/10ulabs.com',
+            'WebhookId': '12345'
+        },
+        'PhysicalResourceId': 'github-webhook-10U-Labs-LLC-10ulabs.com',
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    context = Mock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        response = configure_webhook.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_update_request_creates_webhook(configure_webhook, mock_ssm):
+    event = {
+        'RequestType': 'Update',
+        'ResourceProperties': {
+            'WebhookUrl': 'https://api.10ulabs.com/v1/runners',
+            'Repository': '10U-Labs-LLC/10ulabs.com'
+        },
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    context = Mock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'id': 12345}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        response = configure_webhook.lambda_handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_lambda_handler_unsupported_request_type_returns_400(configure_webhook):
+    event = {
+        'RequestType': 'Unknown',
+        'ResourceProperties': {},
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    context = Mock()
+    with patch('urllib.request.urlopen'):
+        response = configure_webhook.lambda_handler(event, context)
+    assert response['statusCode'] == 400
+
+
+def test_get_github_pat_retrieves_from_ssm(configure_webhook, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'github-pat-token'}
+    }
+    pat = configure_webhook.get_github_pat()
+    assert pat == 'github-pat-token'
+
+
+def test_get_github_pat_handles_ssm_error(configure_webhook, mock_ssm):
+    from botocore.exceptions import ClientError
+    mock_ssm.get_parameter.side_effect = ClientError(
+        {'Error': {'Code': 'ParameterNotFound'}},
+        'GetParameter'
+    )
+    pat = configure_webhook.get_github_pat()
+    assert pat == ''
+
+
+def test_get_or_create_webhook_secret_retrieves_existing_secret(configure_webhook, mock_ssm):
+    mock_ssm.get_parameter.return_value = {
+        'Parameter': {'Value': 'existing-secret'}
+    }
+    secret = configure_webhook.get_or_create_webhook_secret()
+    assert secret == 'existing-secret'
+
+
+def test_get_or_create_webhook_secret_creates_new_secret_when_not_found(configure_webhook):
+    from botocore.exceptions import ClientError
+    configure_webhook._clients = {'ssm': None}
+    with patch('boto3.client') as mock_boto:
+        mock_ssm = MagicMock()
+        mock_boto.return_value = mock_ssm
+        param_not_found = type('ParameterNotFound', (ClientError,), {})
+        mock_ssm.exceptions.ParameterNotFound = param_not_found
+        error = param_not_found(
+            {'Error': {'Code': 'ParameterNotFound'}},
+            'GetParameter'
+        )
+        mock_ssm.get_parameter.side_effect = error
+        secret = configure_webhook.get_or_create_webhook_secret()
+    assert len(secret) > 0
+
+
+def test_create_github_webhook_succeeds_on_first_attempt(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'id': 12345}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['success'] is True
+
+
+def test_create_github_webhook_returns_webhook_id_on_success(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'id': 12345}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['webhook_id'] == 12345
+
+
+def test_create_github_webhook_retries_on_server_error(configure_webhook):
+    import urllib.error
+    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+        result = configure_webhook.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['success'] is False
+
+
+def test_create_github_webhook_does_not_retry_on_client_error(configure_webhook):
+    import urllib.error
+    error_response = MagicMock()
+    error_response.read.return_value = b'Bad Request'
+    error_response.fp = error_response
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, error_response)
+        result = configure_webhook.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['success'] is False
+
+
+def test_create_github_webhook_handles_duplicate_webhook(configure_webhook):
+    import urllib.error
+    error_response = MagicMock()
+    error_response.read.return_value = b'hook already exists on this repository'
+    error_response.fp = error_response
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        list_response = MagicMock()
+        list_response.read.return_value = json.dumps([
+            {'id': 99999, 'config': {'url': 'https://api.10ulabs.com/v1/runners'}}
+        ]).encode()
+        list_response.__enter__.return_value = list_response
+        mock_urlopen.side_effect = [
+            urllib.error.HTTPError('url', 422, 'Unprocessable Entity', {}, error_response),
+            list_response
+        ]
+        result = configure_webhook.create_github_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'secret',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['success'] is True
+
+
+def test_delete_github_webhook_succeeds(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.delete_github_webhook(12345, 'pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert result['success'] is True
+
+
+def test_delete_github_webhook_handles_404_as_success(configure_webhook):
+    import urllib.error
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 404, 'Not Found', {}, None)
+        result = configure_webhook.delete_github_webhook(12345, 'pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert result['success'] is True
+
+
+def test_delete_github_webhook_retries_on_server_error(configure_webhook):
+    import urllib.error
+    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+        result = configure_webhook.delete_github_webhook(12345, 'pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert result['success'] is False
+
+
+def test_delete_github_webhook_does_not_retry_on_client_error(configure_webhook):
+    import urllib.error
+    error_response = MagicMock()
+    error_response.read.return_value = b'Bad Request'
+    error_response.fp = error_response
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, error_response)
+        result = configure_webhook.delete_github_webhook(12345, 'pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert result['success'] is False
+
+
+def test_list_github_webhooks_returns_webhooks(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps([
+            {'id': 1, 'config': {'url': 'https://example.com'}},
+            {'id': 2, 'config': {'url': 'https://example2.com'}}
+        ]).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.list_github_webhooks('pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert result['success'] is True
+
+
+def test_list_github_webhooks_returns_webhook_count(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps([
+            {'id': 1, 'config': {'url': 'https://example.com'}},
+            {'id': 2, 'config': {'url': 'https://example2.com'}}
+        ]).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.list_github_webhooks('pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert len(result['webhooks']) == 2
+
+
+def test_list_github_webhooks_handles_http_error(configure_webhook):
+    import urllib.error
+    error_response = MagicMock()
+    error_response.read.return_value = b'Unauthorized'
+    error_response.fp = error_response
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 401, 'Unauthorized', {}, error_response)
+        result = configure_webhook.list_github_webhooks('pat-token', '10U-Labs-LLC/10ulabs.com')
+    assert result['success'] is False
+
+
+def test_handle_duplicate_webhook_finds_existing_webhook(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps([
+            {'id': 12345, 'config': {'url': 'https://api.10ulabs.com/v1/runners'}}
+        ]).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.handle_duplicate_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['success'] is True
+
+
+def test_handle_duplicate_webhook_returns_webhook_id(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps([
+            {'id': 12345, 'config': {'url': 'https://api.10ulabs.com/v1/runners'}}
+        ]).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.handle_duplicate_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['webhook_id'] == 12345
+
+
+def test_handle_duplicate_webhook_fails_when_url_not_found(configure_webhook):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps([
+            {'id': 99999, 'config': {'url': 'https://different-url.com'}}
+        ]).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.handle_duplicate_webhook(
+            'https://api.10ulabs.com/v1/runners',
+            'pat-token',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['success'] is False
+
+
+def test_send_response_sends_to_cloudformation(configure_webhook):
+    event = {
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.send_response(event, 'SUCCESS', 'Test', 'physical-id', {})
+    assert result is True
+
+
+def test_send_response_includes_status_in_body(configure_webhook):
+    event = {
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        configure_webhook.send_response(event, 'FAILED', 'Error occurred', 'physical-id', {})
+        call_args = mock_urlopen.call_args
+        sent_data = json.loads(call_args[0][0].data.decode())
+    assert sent_data['Status'] == 'FAILED'
+
+
+def test_send_response_handles_network_error(configure_webhook):
+    import urllib.error
+    event = {
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'arn:aws:cloudformation:us-east-1:123456789012:stack/test/guid',
+        'RequestId': 'req-123',
+        'LogicalResourceId': 'WebhookConfig'
+    }
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.URLError('Network error')
+        result = configure_webhook.send_response(event, 'SUCCESS', 'Test', 'physical-id', {})
+    assert result is False
+
+
+def test_handle_delete_request_with_no_webhook_id_returns_success(configure_webhook):
+    event = {
+        'ResourceProperties': {},
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'stack-id',
+        'RequestId': 'req-id',
+        'LogicalResourceId': 'resource-id'
+    }
+    result = configure_webhook.handle_delete_request(event, '10U-Labs-LLC/10ulabs.com')
+    assert result['cf_status'] == 'SUCCESS'
+
+
+def test_handle_delete_request_with_webhook_id_deletes_webhook(configure_webhook, mock_ssm):
+    event = {
+        'ResourceProperties': {'WebhookId': '12345'},
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'stack-id',
+        'RequestId': 'req-id',
+        'LogicalResourceId': 'resource-id'
+    }
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.handle_delete_request(event, '10U-Labs-LLC/10ulabs.com')
+    assert result['cf_status'] == 'SUCCESS'
+
+
+def test_handle_delete_request_without_pat_returns_failed(configure_webhook, mock_ssm):
+    from botocore.exceptions import ClientError
+    event = {
+        'ResourceProperties': {'WebhookId': '12345'},
+        'ResponseURL': 'https://cloudformation-presigned-url',
+        'StackId': 'stack-id',
+        'RequestId': 'req-id',
+        'LogicalResourceId': 'resource-id'
+    }
+    mock_ssm.get_parameter.side_effect = ClientError(
+        {'Error': {'Code': 'ParameterNotFound'}},
+        'GetParameter'
+    )
+    result = configure_webhook.handle_delete_request(event, '10U-Labs-LLC/10ulabs.com')
+    assert result['cf_status'] == 'FAILED'
+
+
+def test_handle_create_update_request_creates_webhook(configure_webhook, mock_ssm):
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'id': 12345}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.handle_create_update_request(
+            'https://api.10ulabs.com/v1/runners',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['cf_status'] == 'SUCCESS'
+
+
+def test_handle_create_update_request_returns_webhook_data(configure_webhook, mock_ssm):
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.read.return_value = json.dumps({'id': 12345}).encode()
+        mock_response.__enter__.return_value = mock_response
+        mock_urlopen.return_value = mock_response
+        result = configure_webhook.handle_create_update_request(
+            'https://api.10ulabs.com/v1/runners',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['cf_data']['WebhookId'] == '12345'
+
+
+def test_handle_create_update_request_without_secrets_returns_failed(configure_webhook):
+    from botocore.exceptions import ClientError
+    configure_webhook._clients = {'ssm': None}
+    with patch('boto3.client') as mock_boto:
+        mock_ssm = MagicMock()
+        mock_boto.return_value = mock_ssm
+        param_not_found = type('ParameterNotFound', (ClientError,), {})
+        mock_ssm.exceptions.ParameterNotFound = param_not_found
+        error = ClientError(
+            {'Error': {'Code': 'ParameterNotFound'}},
+            'GetParameter'
+        )
+        mock_ssm.get_parameter.side_effect = error
+        result = configure_webhook.handle_create_update_request(
+            'https://api.10ulabs.com/v1/runners',
+            '10U-Labs-LLC/10ulabs.com'
+        )
+    assert result['cf_status'] == 'FAILED'
+
+
+def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, context)
+            body = json.loads(response['body'])
+    assert 'circuit_breaker_state' in body
+
+
+def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'open'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, context)
+            body = json.loads(response['body'])
+    assert body['action'] == 'monitored'
+
+
+def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, context)
+            body = json.loads(response['body'])
+    assert body['action'] == 'none'
+
+
+def test_handler_returns_500_when_function_name_not_set(circuit_breaker_remediation):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {}, clear=True):
+        response = circuit_breaker_remediation.handler(event, context)
+    assert response['statusCode'] == 500
+
+
+def test_check_circuit_breaker_health_invokes_lambda(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert mock_lambda.invoke.called
+
+
+def test_check_circuit_breaker_health_returns_state(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert result['circuit_breaker_state'] == 'closed'
+
+
+def test_check_circuit_breaker_health_handles_non_200_response(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Internal error'})
+            }).encode())
+        }
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert result['circuit_breaker_state'] == 'unknown'
+
+
+def test_check_circuit_breaker_health_handles_lambda_error(circuit_breaker_remediation):
+    from botocore.exceptions import ClientError
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.side_effect = ClientError(
+            {'Error': {'Code': 'FunctionNotFound'}},
+            'Invoke'
+        )
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert result['circuit_breaker_state'] == 'unknown'
+
+
+def test_check_circuit_breaker_health_includes_error_message(circuit_breaker_remediation):
+    from botocore.exceptions import ClientError
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.side_effect = ClientError(
+            {'Error': {'Code': 'FunctionNotFound'}},
+            'Invoke'
+        )
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert 'error' in result
+import json
+from unittest.mock import Mock, patch, MagicMock
+import pytest
+
+
+def test_handler_processes_job_dlq(dlq_reprocessor, mock_sqs):
+    event = {}
+    context = Mock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'job_id': 123}),
+                'ReceiptHandle': 'receipt-123',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    with patch.dict('os.environ', {
+        'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-dlq',
+        'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-queue'
+    }):
+        response = dlq_reprocessor.handler(event, context)
+    assert response['statusCode'] == 200
+
+
+def test_handler_returns_reprocessed_count(dlq_reprocessor, mock_sqs):
+    event = {}
+    context = Mock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'job_id': 123}),
+                'ReceiptHandle': 'receipt-123',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    with patch.dict('os.environ', {
+        'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-dlq',
+        'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-queue'
+    }):
+        response = dlq_reprocessor.handler(event, context)
+        body = json.loads(response['body'])
+    assert body['job_dlq']['reprocessed'] == 1
+
+
+def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {
+        'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/webhook-dlq'
+    }):
+        response = dlq_reprocessor.handler(event, context)
+        body = json.loads(response['body'])
+    assert 'note' in body['webhook_dlq']
+
+
+def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {}, clear=True):
+        response = dlq_reprocessor.handler(event, context)
+        body = json.loads(response['body'])
+    assert 'job_dlq' not in body
+
+
+def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor):
+    event = {}
+    context = Mock()
+    with patch.dict('os.environ', {}, clear=True):
+        response = dlq_reprocessor.handler(event, context)
+        body = json.loads(response['body'])
+    assert 'webhook_dlq' not in body
+
+
+def test_reprocess_dlq_messages_receives_messages(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 1
+
+
+def test_reprocess_dlq_messages_sends_to_target_queue(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert mock_sqs.send_message.called
+
+
+def test_reprocess_dlq_messages_deletes_from_dlq(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert mock_sqs.delete_message.called
+
+
+def test_reprocess_dlq_messages_handles_empty_queue(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {}
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 0
+
+
+def test_reprocess_dlq_messages_processes_multiple_messages(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            },
+            {
+                'Body': json.dumps({'id': 2}),
+                'ReceiptHandle': 'receipt-2',
+                'MessageAttributes': {}
+            },
+            {
+                'Body': json.dumps({'id': 3}),
+                'ReceiptHandle': 'receipt-3',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 3
+
+
+def test_reprocess_dlq_messages_counts_failures(dlq_reprocessor, mock_sqs):
+    from botocore.exceptions import ClientError
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    mock_sqs.send_message.side_effect = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable'}},
+        'SendMessage'
+    )
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['failed'] == 1
+
+
+def test_reprocess_dlq_messages_respects_max_messages_limit(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': i}),
+                'ReceiptHandle': f'receipt-{i}',
+                'MessageAttributes': {}
+            }
+            for i in range(5)
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target',
+        max_messages=5
+    )
+    call_args = mock_sqs.receive_message.call_args
+    assert call_args[1]['MaxNumberOfMessages'] == 5
+
+
+def test_reprocess_dlq_messages_preserves_message_attributes(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {'key': {'StringValue': 'value', 'DataType': 'String'}}
+            }
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    call_args = mock_sqs.send_message.call_args
+    assert 'MessageAttributes' in call_args[1]
+
+
+def test_reprocess_dlq_messages_handles_receive_error(dlq_reprocessor, mock_sqs):
+    from botocore.exceptions import ClientError
+    mock_sqs.receive_message.side_effect = ClientError(
+        {'Error': {'Code': 'QueueDoesNotExist'}},
+        'ReceiveMessage'
+    )
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert 'error' in result
+
+
+def test_reprocess_dlq_messages_continues_on_individual_failure(dlq_reprocessor, mock_sqs):
+    from botocore.exceptions import ClientError
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            },
+            {
+                'Body': json.dumps({'id': 2}),
+                'ReceiptHandle': 'receipt-2',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    mock_sqs.send_message.side_effect = [
+        ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'SendMessage'),
+        {'MessageId': 'msg-2'}
+    ]
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 1
+
+
+def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {}
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    call_args = mock_sqs.receive_message.call_args
+    assert call_args[1]['WaitTimeSeconds'] == 5
