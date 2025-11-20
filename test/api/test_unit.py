@@ -1714,9 +1714,12 @@ def test_stack_creates_github_credentials_ssm_parameter(cdk_template):
 
 def test_github_credentials_parameter_has_placeholder_value(cdk_template):
     parameters = cdk_template.find_resources("AWS::SSM::Parameter")
+    github_creds_param = None
     for key, param in parameters.items():
         if param['Properties']['Name'] == '/github-runner/credentials':
-            assert param['Properties']['Value'] == 'PLACEHOLDER_UPDATE_WITH_GITHUB_TOKEN'
+            github_creds_param = param
+            break
+    assert github_creds_param['Properties']['Value'] == 'PLACEHOLDER_UPDATE_WITH_GITHUB_TOKEN'
 
 
 def test_stack_creates_ami_latest_ssm_parameter(cdk_template):
@@ -1731,12 +1734,15 @@ def test_stack_creates_ami_latest_ssm_parameter(cdk_template):
 
 def test_ami_parameter_has_placeholder_value(cdk_template):
     parameters = cdk_template.find_resources("AWS::SSM::Parameter")
+    ami_param = None
     for key, param in parameters.items():
         if param['Properties']['Name'] == '/github-runner/ami/latest':
-            assert param['Properties']['Value'] == 'PLACEHOLDER_UPDATE_AFTER_AMI_BUILD'
+            ami_param = param
+            break
+    assert ami_param['Properties']['Value'] == 'PLACEHOLDER_UPDATE_AFTER_AMI_BUILD'
 
 
-def test_v1_handler_iam_policy_uses_wildcard_for_ssm(cdk_template):
+def test_v1_handler_has_ssm_policy(cdk_template):
     policies = cdk_template.find_resources("AWS::IAM::Policy")
     v1_handler_policy = None
     for key, policy in policies.items():
@@ -1744,6 +1750,15 @@ def test_v1_handler_iam_policy_uses_wildcard_for_ssm(cdk_template):
             v1_handler_policy = policy
             break
     assert v1_handler_policy is not None
+
+
+def test_v1_handler_policy_has_ssm_get_parameter_statement(cdk_template):
+    policies = cdk_template.find_resources("AWS::IAM::Policy")
+    v1_handler_policy = None
+    for key, policy in policies.items():
+        if 'V1ApiHandlerServiceRoleDefaultPolicy' in key:
+            v1_handler_policy = policy
+            break
     statements = v1_handler_policy['Properties']['PolicyDocument']['Statement']
     ssm_statement = None
     for statement in statements:
@@ -1751,6 +1766,21 @@ def test_v1_handler_iam_policy_uses_wildcard_for_ssm(cdk_template):
             ssm_statement = statement
             break
     assert ssm_statement is not None
+
+
+def test_v1_handler_ssm_policy_uses_wildcard_for_github_runner(cdk_template):
+    policies = cdk_template.find_resources("AWS::IAM::Policy")
+    v1_handler_policy = None
+    for key, policy in policies.items():
+        if 'V1ApiHandlerServiceRoleDefaultPolicy' in key:
+            v1_handler_policy = policy
+            break
+    statements = v1_handler_policy['Properties']['PolicyDocument']['Statement']
+    ssm_statement = None
+    for statement in statements:
+        if 'ssm:GetParameter' in statement.get('Action', []):
+            ssm_statement = statement
+            break
     resources = ssm_statement['Resource']
     if isinstance(resources, str):
         resources = [resources]
