@@ -10,39 +10,32 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_ec2_client = None
-_ecs_client = None
-_ecr_client = None
-_ssm_client = None
+_clients = {}
 _github_token_cache = {'value': None}
 
 
 def get_ec2_client():
-    global _ec2_client
-    if _ec2_client is None:
-        _ec2_client = boto3.client('ec2')
-    return _ec2_client
+    if 'ec2' not in _clients:
+        _clients['ec2'] = boto3.client('ec2')
+    return _clients['ec2']
 
 
 def get_ecs_client():
-    global _ecs_client
-    if _ecs_client is None:
-        _ecs_client = boto3.client('ecs')
-    return _ecs_client
+    if 'ecs' not in _clients:
+        _clients['ecs'] = boto3.client('ecs')
+    return _clients['ecs']
 
 
 def get_ecr_client():
-    global _ecr_client
-    if _ecr_client is None:
-        _ecr_client = boto3.client('ecr')
-    return _ecr_client
+    if 'ecr' not in _clients:
+        _clients['ecr'] = boto3.client('ecr')
+    return _clients['ecr']
 
 
 def get_ssm_client():
-    global _ssm_client
-    if _ssm_client is None:
-        _ssm_client = boto3.client('ssm')
-    return _ssm_client
+    if 'ssm' not in _clients:
+        _clients['ssm'] = boto3.client('ssm')
+    return _clients['ssm']
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
