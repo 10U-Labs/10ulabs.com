@@ -8,50 +8,42 @@ packer {
 }
 
 variable "debian_version" {
-  type    = string
-  default = "13"
+  type        = string
   description = "Debian version number"
 }
 
 variable "architecture" {
-  type    = string
-  default = "arm64"
+  type        = string
   description = "CPU architecture (arm64 or x86_64)"
 }
 
 variable "runner_version" {
-  type    = string
-  default = "2.311.0"
+  type        = string
   description = "GitHub Actions runner version"
 }
 
 variable "aws_region" {
-  type    = string
-  default = "us-east-1"
+  type        = string
   description = "AWS region"
 }
 
 variable "instance_type" {
-  type    = string
-  default = "t4g.large"
+  type        = string
   description = "Primary EC2 instance type for building (spot instance)"
 }
 
 variable "spot_instance_types" {
-  type    = list(string)
-  default = ["t4g.large", "t4g.medium", "t4g.small"]
+  type        = list(string)
   description = "List of instance types for spot diversification (capacity-optimized strategy)"
 }
 
 variable "vpc_id" {
-  type    = string
-  default = ""
+  type        = string
   description = "VPC ID for builder instance"
 }
 
 variable "subnet_id" {
-  type    = string
-  default = ""
+  type        = string
   description = "Subnet ID for builder instance (should be in AZ supporting ARM/t4g instances)"
 }
 
