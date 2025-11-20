@@ -506,6 +506,7 @@ class TestLaunchEc2SpotRunner:
 
     def test_no_ami_returns_failure(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
 
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
@@ -514,6 +515,7 @@ class TestLaunchEc2SpotRunner:
 
     def test_no_ami_triggers_creation(self, v1_handler, mock_env_vars):
         with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
 
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
