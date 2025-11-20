@@ -111,7 +111,7 @@ class ApiStack(Stack):
             description="GitHub Personal Access Token for self-hosted runners",
             tier=ssm.ParameterTier.STANDARD
         )
-        ami_parameter = ssm.StringParameter(
+        _ami_parameter = ssm.StringParameter(
             self, "LatestAmiParameter",
             parameter_name="/github-runner/ami/latest",
             string_value="PLACEHOLDER_UPDATE_AFTER_AMI_BUILD",
