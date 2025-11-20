@@ -528,6 +528,7 @@ on:
     paths:
       - '.github/workflows/image_for_ec2_runners_post.yml'
       - 'src/api/endpoints/v1/image_for_ec2_runners/**'
+      - 'test/api/endpoints/v1/image_for_ec2_runners/**'
       - '!**/README.md'
   workflow_dispatch:
     inputs:
