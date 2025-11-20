@@ -1,28 +1,16 @@
-name: Build Docker Image for Self-Hosted Runner
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'api/resources/ami_for_ec2_runners/config.json'
-      - 'api/resources/docker_runner/**'
-      - 'api/resources/image_for_docker_runners/**'
-      - '.github/workflows/build_docker_image_for_github_self_hosted_runners.yml'
-      - '!**/README.md'
 concurrency:
-  group: ${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   build-docker-image:
-    name: Building Docker image
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    name: Building image
     needs: pre-build-integration-tests
+    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration
-        id: config
+      - id: config
+        name: Load configuration
         run: |
           RUNNER_VERSION=$(jq -r '.github.runner_version' api/resources/ami_for_ec2_runners/config.json)
           ARCHITECTURE=$(jq -r '.base_os.architecture' api/resources/ami_for_ec2_runners/config.json)
@@ -58,21 +46,71 @@ jobs:
           echo "  Repository: $ECR_URL"
           echo "  Tags: latest, stable, $BUILD_TAG"
           echo "  Built on native ARM64 (no emulation)"
-  post-build-e2e-tests:
-    name: E2E testing Docker image
+  performing-static-analysis:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
+    name: Performing static analysis
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint &&
+          npm install -g jsonlint
+      - name: Install project dependencies for linting
+        run: pip install -r src/api/requirements.txt
+      - name: Linting JSON configuration files
+        run: |
+          echo "Validating JSON syntax..."
+          jsonlint -q src/api/config.json
+          jsonlint -q src/api/cdk.json
+      - name: Linting Python files
+        run: |
+          cd src/api && pylint \
+            *.py \
+            endpoints/catchall/*.py \
+            endpoints/health/*.py \
+            endpoints/root/*.py \
+            endpoints/v1/handler.py \
+            endpoints/v1/runners/*.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
+          yamllint --config-data "$CONFIG" .github/workflows/api.yml
+      - name: Static type checking Python files with mypy
+        run: |
+          cd src/api && python -m mypy *.py &&
+          python -m mypy endpoints/catchall &&
+          python -m mypy endpoints/health &&
+          python -m mypy endpoints/root &&
+          python -m mypy endpoints/v1/handler.py &&
+          python -m mypy endpoints/v1/runners
+  post-build-e2e-tests:
+    name: E2E testing
     needs: [pre-build-integration-tests, post-build-integration-tests]
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ needs.pre-build-integration-tests.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
       - name: Verify Fargate infrastructure exists
         run: |
           CLUSTER=$(aws ecs describe-clusters \
@@ -87,18 +125,18 @@ jobs:
           echo "✓ ECS cluster exists"
           echo "✓ Docker image ready for Fargate deployment"
   post-build-integration-tests:
-    name: Integration testing Docker image
-    runs-on: ubuntu-latest
+    name: Integration testing
     needs: [pre-build-integration-tests, post-build-unit-tests]
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ needs.pre-build-integration-tests.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
       - name: Pull Docker image from ECR
         run: |
           aws ecr get-login-password | \
@@ -117,18 +155,18 @@ jobs:
           fi
           echo "✓ Image is ARM64 as expected"
   post-build-unit-tests:
-    name: Unit testing Docker image
-    runs-on: ubuntu-latest
+    name: Unit testing
     needs: [pre-build-integration-tests, build-docker-image]
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ needs.pre-build-integration-tests.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.pre-build-integration-tests.outputs.account_id }}:role/GitHubActionsRole
       - name: Verify image exists in ECR
         run: |
           aws ecr describe-images \
@@ -149,15 +187,23 @@ jobs:
           echo "✓ Image has 'latest' tag"
   pre-build-integration-tests:
     name: Integration testing build prerequisites
-    runs-on: ubuntu-latest
+    needs: performing-static-analysis
+    outputs:
+      account_id: ${{ steps.config.outputs.account_id }}
+      ami_id: ${{ steps.ami-check.outputs.ami_id }}
+      ecr_repo: ${{ steps.config.outputs.ecr_repo }}
+      region: ${{ steps.config.outputs.region }}
+      subnet_id: ${{ steps.network.outputs.subnet_id }}
+      vpc_id: ${{ steps.network.outputs.vpc_id }}
     permissions:
-      id-token: write
       contents: read
+      id-token: write
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Load configuration
-        id: config
+      - id: config
+        name: Load configuration
         run: |
           ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
           REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
@@ -170,10 +216,10 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
           aws-region: ${{ steps.config.outputs.region }}
-      - name: Verify GitHub runner AMI exists
-        id: ami-check
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - id: ami-check
+        name: Verify GitHub runner AMI exists
         run: |
           AMI_ID=$(aws ec2 describe-images \
             --owners self \
@@ -187,8 +233,8 @@ jobs:
           fi
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
           echo "✓ Found AMI: $AMI_ID"
-      - name: Verify VPC and subnet exist
-        id: network
+      - id: network
+        name: Verify VPC and subnet exist
         run: |
           VPC_ID=$(aws ec2 describe-vpcs \
             --filters "Name=tag:Name,Values=${{ steps.config.outputs.vpc_name }}" \
@@ -210,10 +256,15 @@ jobs:
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
           echo "✓ Found VPC: $VPC_ID"
           echo "✓ Found Subnet: $SUBNET_ID"
-    outputs:
-      ami_id: ${{ steps.ami-check.outputs.ami_id }}
-      vpc_id: ${{ steps.network.outputs.vpc_id }}
-      subnet_id: ${{ steps.network.outputs.subnet_id }}
-      account_id: ${{ steps.config.outputs.account_id }}
-      region: ${{ steps.config.outputs.region }}
-      ecr_repo: ${{ steps.config.outputs.ecr_repo }}
+name: Build Docker Image for Self-Hosted Runner
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/resources/ami_for_ec2_runners/config.json'
+      - 'api/resources/docker_runner/**'
+      - 'api/resources/image_for_docker_runners/**'
+      - '.github/workflows/build_docker_image_for_github_self_hosted_runners.yml'
+      - '!**/README.md'
+  workflow_dispatch:
