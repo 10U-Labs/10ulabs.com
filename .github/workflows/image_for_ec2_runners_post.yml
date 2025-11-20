@@ -1,4 +1,4 @@
-name: Build AMI for Self-Hosted Runner
+name: Building AMI for EC2 self-hosted runners
 on:
   workflow_dispatch:
     inputs:
