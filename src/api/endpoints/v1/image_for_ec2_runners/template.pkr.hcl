@@ -175,7 +175,18 @@ build {
 
   # Install Docker
   provisioner "shell" {
-    script = "${path.root}/install_docker.py"
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "set -e",
+      "export DEBIAN_FRONTEND=noninteractive",
+      "sudo install -m 0755 -d /etc/apt/keyrings",
+      "curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
+      "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
+      "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+      "sudo apt-get update",
+      "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
+      "sudo systemctl enable docker"
+    ]
   }
 
   # Create runner user
@@ -190,21 +201,29 @@ build {
 
   # Install GitHub Actions runner
   provisioner "shell" {
-    script = "${path.root}/install_github_runner.py"
-    execute_command = "chmod +x {{ .Path }}; {{ .Path }} --runner-version ${var.runner_version} --runner-arch ${local.runner_arch}"
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "set -e",
+      "cd /home/github-runner",
+      "sudo -u github-runner mkdir -p actions-runner",
+      "cd actions-runner",
+      "sudo -u github-runner curl -o actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz -L https://github.com/actions/runner/releases/download/v${var.runner_version}/actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz",
+      "sudo -u github-runner tar xzf ./actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz",
+      "sudo chown -R github-runner:github-runner /home/github-runner/actions-runner"
+    ]
   }
 
   # Install runner setup script
   provisioner "file" {
-    source      = "${path.root}/register_and_run_ephemeral_github_runner.py"
-    destination = "/tmp/register_and_run_ephemeral_github_runner.py"
+    source      = "${path.root}/register_and_run_ephemeral_github_runner.sh"
+    destination = "/tmp/register_and_run_ephemeral_github_runner.sh"
   }
 
   provisioner "shell" {
     inline_shebang = "/bin/bash -e"
     inline = [
       "set -e",
-      "sudo mv /tmp/register_and_run_ephemeral_github_runner.py /usr/local/bin/github-runner-setup",
+      "sudo mv /tmp/register_and_run_ephemeral_github_runner.sh /usr/local/bin/github-runner-setup",
       "sudo chmod +x /usr/local/bin/github-runner-setup",
       "sudo chown root:root /usr/local/bin/github-runner-setup"
     ]
