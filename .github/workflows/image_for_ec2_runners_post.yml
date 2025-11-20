@@ -511,7 +511,7 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/image_for_ec2_runners_action_create.yml'
+      - '.github/workflows/image_for_ec2_runners_post.yml'
       - 'src/api/endpoints/v1/image_for_ec2_runners/**'
       - '!**/README.md'
   workflow_dispatch:
