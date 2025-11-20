@@ -1,4 +1,8 @@
 {
+  "ami_promotion": {
+    "ssm_parameter_name": "/github-runner/ami/latest",
+    "stable_tag_key": "stable"
+  },
   "aws": {
     "account_id": 781581267945,
     "region": "us-east-1"
@@ -8,15 +12,15 @@
     "version": "stable",
     "architecture": "arm64"
   },
-  "github": {
-    "runner_version": "2.319.1"
-  },
   "docker_builder": {
     "instance_type": "t4g.small",
     "spot_instance_types": ["t4g.small", "t4g.medium", "t4g.large"],
     "spot_max_price": "0.05",
     "spot_retry_attempts": 3,
     "spot_retry_delay": 30
+  },
+  "github": {
+    "runner_version": "2.319.1"
   },
   "naming": {
     "vpc_name": "TenULabsApiVpc"
