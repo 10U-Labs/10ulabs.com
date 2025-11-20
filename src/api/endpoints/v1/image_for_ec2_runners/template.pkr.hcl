@@ -213,22 +213,6 @@ build {
     ]
   }
 
-  # Install runner setup script
-  provisioner "file" {
-    source      = "${path.root}/register_and_run_ephemeral_github_runner.sh"
-    destination = "/tmp/register_and_run_ephemeral_github_runner.sh"
-  }
-
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -e"
-    inline = [
-      "set -e",
-      "sudo mv /tmp/register_and_run_ephemeral_github_runner.sh /usr/local/bin/github-runner-setup",
-      "sudo chmod +x /usr/local/bin/github-runner-setup",
-      "sudo chown root:root /usr/local/bin/github-runner-setup"
-    ]
-  }
-
   # Install SSM agent
   provisioner "shell" {
     inline_shebang = "/bin/bash -e"
