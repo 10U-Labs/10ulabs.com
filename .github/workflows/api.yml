@@ -151,7 +151,6 @@ jobs:
             *.py \
             endpoints/catchall/*.py \
             endpoints/health/*.py \
-            endpoints/root/*.py \
             endpoints/v1/handler.py \
             endpoints/v1/runners/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
@@ -166,7 +165,6 @@ jobs:
           cd src/api && python -m mypy *.py &&
           python -m mypy endpoints/catchall &&
           python -m mypy endpoints/health &&
-          python -m mypy endpoints/root &&
           python -m mypy endpoints/v1/handler.py &&
           python -m mypy endpoints/v1/runners
   unit-testing:
