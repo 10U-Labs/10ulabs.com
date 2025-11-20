@@ -196,11 +196,7 @@ build {
     inline_shebang = "/bin/bash -e"
     inline = [
       "set -e",
-      "cd /home/github-runner",
-      "sudo -u github-runner mkdir -p actions-runner",
-      "cd actions-runner",
-      "sudo -u github-runner curl -o actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz -L https://github.com/actions/runner/releases/download/v${var.runner_version}/actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz",
-      "sudo -u github-runner tar xzf ./actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz",
+      "sudo -u github-runner bash -c 'cd /home/github-runner && mkdir -p actions-runner && cd actions-runner && curl -o actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz -L https://github.com/actions/runner/releases/download/v${var.runner_version}/actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz && tar xzf ./actions-runner-linux-${local.runner_arch}-${var.runner_version}.tar.gz'",
       "sudo chown -R github-runner:github-runner /home/github-runner/actions-runner"
     ]
   }
