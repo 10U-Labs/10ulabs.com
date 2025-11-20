@@ -24,7 +24,7 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_ec2_runners_action_create.yml'
-      - 'src/api/endpoints/v1/image_for_ec2_runners/actions/create/**'
+      - 'src/api/endpoints/v1/image_for_ec2_runners/**'
       - '!**/README.md'
 concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
@@ -51,16 +51,10 @@ jobs:
           npm install -g jsonlint
       - name: Install project dependencies for linting
         run: pip install boto3
-      - name: Linting JSON configuration files
-        run: |
-          echo "Validating JSON syntax..."
-          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json
       - name: Linting Python files
         run: |
           pylint \
-            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/*.py \
-            src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py \
-            src/api/endpoints/v1/image_for_ec2_runners/actions/create/*.py \
+            src/api/endpoints/v1/image_for_ec2_runners/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -69,21 +63,18 @@ jobs:
           CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
           yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_action_create.yml
       - name: Static type checking Python files with mypy
-        run: |
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure/*.py &&
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/infrastructure/lambda/*.py &&
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners/actions/create/*.py
+        run: python -m mypy src/api/endpoints/v1/image_for_ec2_runners/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
+          cd src/api/endpoints/v1/image_for_ec2_runners
           packer init template.pkr.hcl
       - name: Validating Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
+          cd src/api/endpoints/v1/image_for_ec2_runners
           packer validate \
             -var="debian_version=12" \
             -var="architecture=amd64" \
@@ -133,12 +124,12 @@ jobs:
       - name: Load configuration from config file
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          VPC_NAME=$(jq -r '.naming.vpc_name' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          BASE_OS=$(jq -r '.base_os.os' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          BASE_OS_VERSION=$(jq -r '.base_os.version' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
+          REGION=$(jq -r '.aws.region' src/api/config.json)
+          VPC_NAME=$(jq -r '.naming.vpc_name' src/api/config.json)
+          BASE_OS=$(jq -r '.base_os.os' src/api/config.json)
+          BASE_OS_VERSION=$(jq -r '.base_os.version' src/api/config.json)
+          ARCHITECTURE=$(jq -r '.base_os.architecture' src/api/config.json)
           if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
             DEBIAN_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
             echo "Resolved Debian stable to version $DEBIAN_VERSION (queried from Debian repository)"
@@ -149,9 +140,9 @@ jobs:
             DEBIAN_VERSION="${{ github.event.inputs.debian_version }}"
             echo "Using Debian version from workflow input: $DEBIAN_VERSION"
           fi
-          RUNNER_VERSION=$(jq -r '.github.runner_version' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
+          RUNNER_VERSION=$(jq -r '.github.runner_version' src/api/config.json)
+          INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' src/api/config.json)
+          SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
@@ -207,11 +198,11 @@ jobs:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
+          cd src/api/endpoints/v1/image_for_ec2_runners
           packer init template.pkr.hcl
       - name: Validate Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
+          cd src/api/endpoints/v1/image_for_ec2_runners
           packer validate \
             -var="debian_version=${{ steps.config.outputs.debian_version }}" \
             -var="architecture=${{ steps.config.outputs.architecture }}" \
@@ -224,7 +215,7 @@ jobs:
       - name: Build AMI with Packer
         id: build
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners/actions/create
+          cd src/api/endpoints/v1/image_for_ec2_runners
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
           echo "Architecture: ${{ steps.config.outputs.architecture }}"
@@ -314,8 +305,8 @@ jobs:
       - name: Load configuration from config file
         id: config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
+          REGION=$(jq -r '.aws.region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -360,8 +351,8 @@ jobs:
       - name: Load configuration from config file
         id: config
         run: |
-          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          AWS_REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
+          AWS_ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
+          AWS_REGION=$(jq -r '.aws.region' src/api/config.json)
           IAM_ROLE_NAME=$(jq -r '.aws.iam_role_name' src/auth_between_aws_and_github/config.json)
           AMI_NAME_PREFIX="github-runner-debian-"
           echo "ami_name_prefix=$AMI_NAME_PREFIX" >> $GITHUB_OUTPUT
@@ -502,8 +493,8 @@ jobs:
       - name: Load configuration from config file
         id: aws-config
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
+          REGION=$(jq -r '.aws.region' src/api/config.json)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -527,10 +518,10 @@ jobs:
       - name: Load AMI validation config
         id: config
         run: |
-          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
-          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' src/api/endpoints/v1/image_for_ec2_runners/infrastructure/config.json)
+          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' src/api/config.json)
+          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' src/api/config.json)
+          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' src/api/config.json)
+          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' src/api/config.json)
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
           echo "spot_retry_attempts=$SPOT_RETRY_ATTEMPTS" >> $GITHUB_OUTPUT
