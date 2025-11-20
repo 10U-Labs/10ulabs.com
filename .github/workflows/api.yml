@@ -204,7 +204,10 @@ on:
       - src/api/endpoints/v1/echo/**
       - src/api/**
       - src/api/openapi.yml
-      - test/api/**
+      - test/api/conftest.py
+      - test/api/test_unit.py
+      - test/api/test_integration.py
+      - test/api/test_e2e.py
       - '!**/README.md'
   workflow_dispatch:
     inputs:
