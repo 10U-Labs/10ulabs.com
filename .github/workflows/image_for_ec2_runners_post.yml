@@ -103,6 +103,7 @@ jobs:
             -var="instance_type=${{ steps.config.outputs.instance_type }}" \
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
             -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
+            -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
             template.pkr.hcl
       - id: build
         name: Build AMI with Packer

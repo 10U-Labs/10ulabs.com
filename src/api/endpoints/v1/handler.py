@@ -14,7 +14,6 @@ ec2 = boto3.client('ec2')
 ecs = boto3.client('ecs')
 ecr = boto3.client('ecr')
 ssm = boto3.client('ssm')
-secretsmanager = boto3.client('secretsmanager')
 
 _github_token_cache = {'value': None}
 
@@ -201,11 +200,10 @@ def get_github_token() -> str:
     if _github_token_cache['value']:
         return _github_token_cache['value']
 
-    secret_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', 'github-runner/credentials')
+    parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '/github-runner/credentials')
     try:
-        response = secretsmanager.get_secret_value(SecretId=secret_name)
-        secret_data = json.loads(response['SecretString'])
-        token = secret_data.get('github_token', '')
+        response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+        token = response['Parameter']['Value']
         _github_token_cache['value'] = token
         return token
     except (ClientError, ValueError, KeyError) as e:

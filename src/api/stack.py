@@ -334,10 +334,6 @@ class ApiStack(Stack):
                 "EC2_IAM_INSTANCE_PROFILE": "GitHubSelfHostedRunnerInstanceProfile",
                 "EC2_MAX_PRICE": str(self.config["aws"]["ec2_runners"]["max_spot_price"]),
                 "GITHUB_TOKEN_SECRET_NAME": self.config["naming"]["github_token_secret_name"],
-                "GITHUB_TOKEN": Fn.sub(
-                    "{{resolve:secretsmanager:${SecretName}:SecretString:github_token}}",
-                    {"SecretName": self.config["naming"]["github_token_secret_name"]}
-                ),
                 "GITHUB_REPO": self.config["github"]["repo"],
                 "ECR_REPOSITORY": self.ecr_repository.repository_name,
                 "IMAGE_API_ENDPOINT": f"https://{self.config['domain_names']['subdomain']}"
@@ -368,16 +364,15 @@ class ApiStack(Stack):
             conditions={"StringEquals": {"iam:PassedToService": ["ecs-tasks.amazonaws.com", "ec2.amazonaws.com"]}}
         ))
         v1_handler.add_to_role_policy(iam.PolicyStatement(
-            actions=["secretsmanager:GetSecretValue"],
-            resources=[f"arn:aws:secretsmanager:{self.config['aws']['region']}:{self.config['aws']['account_id']}:secret:{self.config['naming']['github_token_secret_name']}-*"]
-        ))
-        v1_handler.add_to_role_policy(iam.PolicyStatement(
             actions=["ecr:DescribeImages", "ecr:ListImages", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchDeleteImage"],
             resources=[self.ecr_repository.repository_arn]
         ))
         v1_handler.add_to_role_policy(iam.PolicyStatement(
             actions=["ssm:GetParameter"],
-            resources=[f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/ami/latest"]
+            resources=[
+                f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/ami/latest",
+                f"arn:aws:ssm:{self.config['aws']['region']}:{self.config['aws']['account_id']}:parameter/github-runner/credentials"
+            ]
         ))
 
         return {
