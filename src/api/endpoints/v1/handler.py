@@ -306,14 +306,42 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
 
 
 def _create_ec2_user_data(job_id: int, job_labels: List[str], github_token: str, github_repo: str) -> str:
+    aws_region = os.environ.get('AWS_REGION', 'us-east-1')
+    runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
 set -e
-export JOB_ID="{job_id}"
-export RUNNER_LABELS="{','.join(job_labels)}"
-export GITHUB_TOKEN="{github_token}"
-export GITHUB_REPO="{github_repo}"
-export AWS_REGION="{os.environ.get('AWS_REGION', 'us-east-1')}"
-/usr/local/bin/github-runner-setup
+
+RUNNER_TOKEN=$(curl -L \
+    -X POST \
+    -H "Accept: application/vnd.github+json" \
+    -H "Authorization: Bearer {github_token}" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "https://api.github.com/repos/{github_repo}/actions/runners/registration-token" \
+    2>/dev/null | jq -r '.token')
+
+if [ -z "$RUNNER_TOKEN" ] || [ "$RUNNER_TOKEN" = "null" ]; then
+    echo "ERROR: Failed to get runner token"
+    shutdown -h now
+    exit 1
+fi
+
+cd /home/github-runner/actions-runner
+
+sudo -u github-runner ./config.sh \
+    --url "https://github.com/{github_repo}" \
+    --token "$RUNNER_TOKEN" \
+    --name "ec2-spot-$(hostname)" \
+    --labels "{runner_labels}" \
+    --ephemeral \
+    --unattended
+
+sudo -u github-runner ./run.sh
+
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d' ' -f2)
+aws ec2 terminate-instances \
+    --instance-ids "$INSTANCE_ID" \
+    --region {aws_region} \
+    || shutdown -h now
 """
 
 
