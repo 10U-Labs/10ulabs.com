@@ -1062,7 +1062,9 @@ class TestPromoteAmi:
             mock_ssm = MagicMock()
             mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
 
-            mock_ec2.create_tags.side_effect = Exception('EC2 error')
+            mock_ec2.create_tags.side_effect = ClientError(
+                {'Error': {'Code': 'InvalidParameterValue'}}, 'create_tags'
+            )
 
             result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
 
@@ -1074,7 +1076,9 @@ class TestPromoteAmi:
             mock_ssm = MagicMock()
             mock_boto_client.side_effect = lambda service, **kwargs: mock_ssm if service == 'ssm' else mock_ec2
 
-            mock_ssm.put_parameter.side_effect = Exception('SSM error')
+            mock_ssm.put_parameter.side_effect = ClientError(
+                {'Error': {'Code': 'ParameterAlreadyExists'}}, 'put_parameter'
+            )
 
             result = promote_ami.promote_ami('ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable')
 
