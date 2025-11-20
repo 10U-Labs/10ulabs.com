@@ -385,9 +385,7 @@ class ApiStack(Stack):
     def _process_openapi_spec(self, handlers):
         openapi_spec_path = os.path.join(os.path.dirname(__file__), "openapi.yml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
-            openapi_spec = yaml.safe_load(f)
-
-        openapi_spec_str = yaml.dump(openapi_spec)
+            openapi_spec_str = f.read()
 
         replacements = {
             '${HealthHandlerArn}': handlers['health'].function_arn,
