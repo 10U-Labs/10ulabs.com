@@ -2,6 +2,7 @@
 import argparse
 import sys
 import boto3
+from botocore.exceptions import ClientError
 
 
 def promote_ami(ami_id: str, region: str, run_id: str, ssm_parameter_name: str, tag_key: str) -> int:
@@ -17,7 +18,7 @@ def promote_ami(ami_id: str, region: str, run_id: str, ssm_parameter_name: str, 
             Tags=[{'Key': tag_key, 'Value': 'true'}]
         )
         print(f"AMI {ami_id} tagged with {tag_key}=true")
-    except Exception as e:
+    except ClientError as e:
         print(f"Error tagging AMI: {e}")
         exit_code = 1
 
@@ -32,7 +33,7 @@ def promote_ami(ami_id: str, region: str, run_id: str, ssm_parameter_name: str, 
                 Description=f"Latest stable GitHub runner AMI (updated by workflow run {run_id})"
             )
             print("SSM Parameter updated successfully")
-        except Exception as e:
+        except ClientError as e:
             print(f"Error updating SSM parameter: {e}")
             exit_code = 1
 
