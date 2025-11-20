@@ -5,14 +5,13 @@
 - AWS access key ID in your environment variables as AWS_ACCESS_KEY_ID
 - AWS secret key in your environment variables as AWS_SECRET_ACCESS_KEY
 - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY have unlimited privileges in \
-AWS
+  AWS
 - GitHub Personal Access Token (PAT) in your environment variables as \
-GITHUB_PAT
+  GITHUB_PAT
 - GITHUB_PAT has unlimited privileges in GitHub
 - Do not use environment variable expansion like $GITHUB_PAT in curl \
-commands, instead obtain the value first by running 'echo $GITHUB_PAT' \
-and \
-passing the value literally
+  commands, instead obtain the value first by running 'echo $GITHUB_PAT' \
+  and passing the value literally
 
 ## Code Quality Standards
 
@@ -41,8 +40,8 @@ passing the value literally
 ## Git and GitHub
 
 - ALWAYS include [skip ci] in commit messages unless explicitly told \
-otherwise by the user
+  otherwise by the user
 - When troubleshooting GitHub Actions workflows, always check the workflow \
-logs first
+  logs first
 - If the GitHub CLI is not installed, install it in ~/bin/gh
 - When using most gh commands, add the repository by using the --repo flag
