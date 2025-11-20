@@ -377,7 +377,7 @@ jobs:
           pip install pytest boto3 moto &&
           pip install aws-cdk-lib constructs
       - name: Run unit tests
-        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
+        run: pytest test/api/endpoints/v1/image_for_ec2_runners/test_unit.py -v
 name: Building AMI for EC2 self-hosted runners
 on:
   push:
