@@ -48,10 +48,9 @@ jobs:
           echo "  Built on native ARM64 (no emulation)"
   performing-static-analysis:
     if: |
-      github.ref == 'refs/heads/main' && (
-        !contains(github.event.head_commit.message, '[dry run]') ||
-        github.event.inputs.dry_run != 'true'
-      )
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[dry run]') &&
+      github.event.inputs.dry_run != 'true'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
