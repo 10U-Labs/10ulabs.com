@@ -301,7 +301,7 @@ jobs:
           python-version: '3.14'
       - name: Install linting dependencies
         run: |
-          pip install pylint mypy yamllint &&
+          pip install pylint mypy yamllint boto3-stubs &&
           npm install -g jsonlint
       - name: Install project dependencies for linting
         run: pip install boto3
