@@ -147,17 +147,13 @@ jobs:
           jsonlint -q src/api/cdk.json
       - name: Linting Python files
         run: |
-          pylint \
-            src/api/*.py \
-            src/api/endpoints/catchall/*.py \
-            src/api/endpoints/health/*.py \
-            src/api/endpoints/root/*.py \
-            src/api/endpoints/v1/docker_runner/*.py \
-            src/api/endpoints/v1/ec2_runner/*.py \
-            src/api/endpoints/v1/echo/*.py \
-            src/api/endpoints/v1/image_for_docker_runners/*.py \
-            src/api/endpoints/v1/image_for_ec2_runners/*.py \
-            src/api/endpoints/v1/runners/*.py \
+          cd src/api && pylint \
+            *.py \
+            endpoints/catchall/*.py \
+            endpoints/health/*.py \
+            endpoints/root/*.py \
+            endpoints/v1/handler.py \
+            endpoints/v1/runners/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -167,16 +163,12 @@ jobs:
           yamllint --config-data "$CONFIG" .github/workflows/api.yml
       - name: Static type checking Python files with mypy
         run: |
-          python -m mypy src/api/*.py &&
-          python -m mypy src/api/endpoints/catchall &&
-          python -m mypy src/api/endpoints/health &&
-          python -m mypy src/api/endpoints/root &&
-          python -m mypy src/api/endpoints/v1/docker_runner &&
-          python -m mypy src/api/endpoints/v1/ec2_runner &&
-          python -m mypy src/api/endpoints/v1/echo &&
-          python -m mypy src/api/endpoints/v1/image_for_docker_runners &&
-          python -m mypy src/api/endpoints/v1/image_for_ec2_runners &&
-          python -m mypy src/api/endpoints/v1/runners
+          cd src/api && python -m mypy *.py &&
+          python -m mypy endpoints/catchall &&
+          python -m mypy endpoints/health &&
+          python -m mypy endpoints/root &&
+          python -m mypy endpoints/v1/handler.py &&
+          python -m mypy endpoints/v1/runners
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
