@@ -82,6 +82,51 @@ def catchall_handler():
 
 
 @pytest.fixture
+def root_handler():
+    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "root" / "handler.py"
+    spec = importlib.util.spec_from_file_location("root_handler", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def docker_runner_handler():
+    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "docker_runner" / "handler.py"
+    spec = importlib.util.spec_from_file_location("docker_runner_handler", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def ec2_runner_handler():
+    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "ec2_runner" / "handler.py"
+    spec = importlib.util.spec_from_file_location("ec2_runner_handler", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def image_for_docker_runners_handler():
+    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_docker_runners" / "handler.py"
+    spec = importlib.util.spec_from_file_location("image_for_docker_runners_handler", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def image_for_ec2_runners_handler():
+    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_ec2_runners" / "handler.py"
+    spec = importlib.util.spec_from_file_location("image_for_ec2_runners_handler", handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
 def apigw_client(config):
     return boto3.client('apigateway', region_name=config['aws']['region'])
 
