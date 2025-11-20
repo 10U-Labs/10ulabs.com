@@ -472,7 +472,7 @@ class ApiStack(Stack):
         (health_handler, echo_handler, catchall_handler, runners_handler,
          docker_runner_handler, ec2_runner_handler, docker_image_handler, ami_builder_handler) = handlers
 
-        openapi_spec_path = os.path.join(os.path.dirname(__file__), "..", "openapi.yml")
+        openapi_spec_path = os.path.join(os.path.dirname(__file__), "openapi.yml")
         with open(openapi_spec_path, 'r', encoding='utf-8') as f:
             openapi_spec = yaml.safe_load(f)
 
