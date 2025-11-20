@@ -2,9 +2,9 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  build-docker-image:
+  building-image:
     name: Building image
-    needs: post-build-unit-tests
+    needs: unit-testing
     runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
@@ -46,6 +46,64 @@ jobs:
           echo "  Repository: $ECR_URL"
           echo "  Tags: latest, stable, $BUILD_TAG"
           echo "  Built on native ARM64 (no emulation)"
+  e2e-testing:
+    name: E2E testing
+    needs: integration-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.unit-testing.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.unit-testing.outputs.account_id }}:role/GitHubActionsRole
+      - name: Verify Fargate infrastructure exists
+        run: |
+          CLUSTER=$(aws ecs describe-clusters \
+            --clusters github-runners-cluster \
+            --query 'clusters[0].clusterName' \
+            --output text 2>/dev/null || echo "")
+          if [ -z "$CLUSTER" ] || [ "$CLUSTER" == "None" ]; then
+            echo "SKIP: ECS cluster not deployed yet"
+            echo "Image is built and in ECR, ready for when infrastructure is deployed"
+            exit 0
+          fi
+          echo "✓ ECS cluster exists"
+          echo "✓ Docker image ready for Fargate deployment"
+  integration-testing:
+    name: Integration testing
+    needs: building-image
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.unit-testing.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ needs.unit-testing.outputs.account_id }}:role/GitHubActionsRole
+      - name: Pull Docker image from ECR
+        run: |
+          aws ecr get-login-password | \
+            docker login --username AWS --password-stdin ${{ needs.unit-testing.outputs.account_id }}.dkr.ecr.${{ needs.unit-testing.outputs.region }}.amazonaws.com
+          docker pull ${{ needs.unit-testing.outputs.account_id }}.dkr.ecr.${{ needs.unit-testing.outputs.region }}.amazonaws.com/${{ needs.unit-testing.outputs.ecr_repo }}:latest
+          echo "✓ Successfully pulled image from ECR"
+      - name: Inspect image
+        run: |
+          IMAGE="${{ needs.unit-testing.outputs.account_id }}.dkr.ecr.${{ needs.unit-testing.outputs.region }}.amazonaws.com/${{ needs.unit-testing.outputs.ecr_repo }}:latest"
+          docker inspect $IMAGE
+          ARCH=$(docker inspect $IMAGE --format='{{.Architecture}}')
+          echo "Image architecture: $ARCH"
+          if [ "$ARCH" != "arm64" ]; then
+            echo "ERROR: Expected arm64, got $ARCH"
+            exit 1
+          fi
+          echo "✓ Image is ARM64 as expected"
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' &&
@@ -95,65 +153,7 @@ jobs:
           python -m mypy endpoints/root &&
           python -m mypy endpoints/v1/handler.py &&
           python -m mypy endpoints/v1/runners
-  post-build-e2e-tests:
-    name: E2E testing
-    needs: post-build-integration-tests
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.post-build-unit-tests.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ needs.post-build-unit-tests.outputs.account_id }}:role/GitHubActionsRole
-      - name: Verify Fargate infrastructure exists
-        run: |
-          CLUSTER=$(aws ecs describe-clusters \
-            --clusters github-runners-cluster \
-            --query 'clusters[0].clusterName' \
-            --output text 2>/dev/null || echo "")
-          if [ -z "$CLUSTER" ] || [ "$CLUSTER" == "None" ]; then
-            echo "SKIP: ECS cluster not deployed yet"
-            echo "Image is built and in ECR, ready for when infrastructure is deployed"
-            exit 0
-          fi
-          echo "✓ ECS cluster exists"
-          echo "✓ Docker image ready for Fargate deployment"
-  post-build-integration-tests:
-    name: Integration testing
-    needs: build-docker-image
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.post-build-unit-tests.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ needs.post-build-unit-tests.outputs.account_id }}:role/GitHubActionsRole
-      - name: Pull Docker image from ECR
-        run: |
-          aws ecr get-login-password | \
-            docker login --username AWS --password-stdin ${{ needs.post-build-unit-tests.outputs.account_id }}.dkr.ecr.${{ needs.post-build-unit-tests.outputs.region }}.amazonaws.com
-          docker pull ${{ needs.post-build-unit-tests.outputs.account_id }}.dkr.ecr.${{ needs.post-build-unit-tests.outputs.region }}.amazonaws.com/${{ needs.post-build-unit-tests.outputs.ecr_repo }}:latest
-          echo "✓ Successfully pulled image from ECR"
-      - name: Inspect image
-        run: |
-          IMAGE="${{ needs.post-build-unit-tests.outputs.account_id }}.dkr.ecr.${{ needs.post-build-unit-tests.outputs.region }}.amazonaws.com/${{ needs.post-build-unit-tests.outputs.ecr_repo }}:latest"
-          docker inspect $IMAGE
-          ARCH=$(docker inspect $IMAGE --format='{{.Architecture}}')
-          echo "Image architecture: $ARCH"
-          if [ "$ARCH" != "arm64" ]; then
-            echo "ERROR: Expected arm64, got $ARCH"
-            exit 1
-          fi
-          echo "✓ Image is ARM64 as expected"
-  post-build-unit-tests:
+  unit-testing:
     name: Unit testing
     needs: performing-static-analysis
     outputs:
