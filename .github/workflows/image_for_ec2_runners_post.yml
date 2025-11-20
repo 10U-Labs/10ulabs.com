@@ -2,8 +2,7 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  build-ami:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.skip_build }}
+  building-ami:
     name: Building AMI
     needs: unit-testing
     outputs:
@@ -32,10 +31,6 @@ jobs:
             echo "Resolved Debian stable to version $DEBIAN_VERSION (queried from Debian repository)"
           else
             DEBIAN_VERSION="$BASE_OS_VERSION"
-          fi
-          if [ -n "${{ github.event.inputs.debian_version }}" ]; then
-            DEBIAN_VERSION="${{ github.event.inputs.debian_version }}"
-            echo "Using Debian version from workflow input: $DEBIAN_VERSION"
           fi
           RUNNER_VERSION=$(jq -r '.github.runner_version' src/api/config.json)
           INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' src/api/config.json)
@@ -188,10 +183,71 @@ jobs:
           echo "add it to the config file under docker_builder.custom_ami"
           echo ""
           echo "==================================="
-  cleanup-old-amis:
-    if: always()
-    name: Cleaning up Packer build artifacts
-    needs: promote-ami-to-stable
+  e2e-testing:
+    name: E2E testing
+    needs: integration-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
+          REGION=$(jq -r '.aws.region' src/api/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
+          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install dependencies
+        run: pip install pytest boto3 requests
+      - name: Run E2E tests
+        run: pytest test/api/test_e2e.py -v
+  integration-testing:
+    name: Integration testing
+    needs: building-ami
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
+          REGION=$(jq -r '.aws.region' src/api/config.json);
+          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
+          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
+          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install Python dependencies
+        run: pip install pytest boto3 requests
+      - name: Run pytest integration tests
+        run: pytest test/api/test_integration.py -v
+  cleaning-up:
+    name: Cleaning up
+    needs: promoting-ami
     permissions:
       contents: read
       id-token: write
@@ -330,12 +386,11 @@ jobs:
               aws ec2 delete-network-interface --network-interface-id $ENI_ID || echo "⚠ Failed to delete $ENI_ID"
             done
           fi
-  performing-static-analysis:
+  static-analysis:
     if: |
-      github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
-      )
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, '[dry run]') &&
+      github.event.inputs.dry_run != 'true'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -384,10 +439,9 @@ jobs:
             -var='spot_instance_types=["t3.medium"]' \
             -var="vpc_id=vpc-dummy" \
             template.pkr.hcl
-  promote-ami-to-stable:
-    if: ${{ needs.smoke-test-new-ami.result == 'success' }}
-    name: Promoting AMI to stable
-    needs: smoke-test-new-ami
+  promoting-ami:
+    name: Promoting AMI
+    needs: e2e-testing
     permissions:
       contents: read
       id-token: write
@@ -408,7 +462,7 @@ jobs:
           aws-region: ${{ steps.config.outputs.region }}
           role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - env:
-          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
+          AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
         name: Tag AMI as stable
         run: |
           echo "Tagging AMI $AMI_ID as stable"
@@ -418,7 +472,7 @@ jobs:
             --region ${{ steps.config.outputs.region }}
           echo "AMI $AMI_ID tagged as stable"
       - env:
-          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
+          AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
         name: Update SSM Parameter with latest stable AMI
         run: |
           echo "Updating SSM Parameter /github-runner/ami/latest with $AMI_ID"
@@ -430,165 +484,9 @@ jobs:
             --region ${{ steps.config.outputs.region }} \
             --description "Latest stable GitHub runner AMI (updated by workflow run ${{ github.run_id }})"
           echo "SSM Parameter updated successfully"
-  smoke-test-new-ami:
-    if: ${{ !inputs.skip_build && needs.build-ami.result == 'success' }}
-    name: Smoke testing newly built AMI
-    needs: build-ami
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: aws-config
-        name: Load configuration from config file
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json)
-          REGION=$(jq -r '.aws.region' src/api/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.aws-config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.aws-config.outputs.account_id }}:role/GitHubActionsRole
-      - id: network
-        name: Get VPC and subnet info
-        run: |
-          VPC_ID=$(aws ec2 describe-vpcs \
-            --filters "Name=tag:Name,Values=github-runners-vpc" \
-            --query 'Vpcs[0].VpcId' \
-            --output text --no-cli-pager)
-          SUBNET_ID=$(aws ec2 describe-subnets \
-            --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
-            --query 'Subnets[0].SubnetId' \
-            --output text --no-cli-pager)
-          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
-          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-      - id: config
-        name: Load AMI validation config
-        run: |
-          SPOT_INSTANCE_TYPES=$(jq -r '.docker_builder.spot_instance_types | join(" ")' src/api/config.json)
-          SPOT_MAX_PRICE=$(jq -r '.docker_builder.spot_max_price' src/api/config.json)
-          SPOT_RETRY_ATTEMPTS=$(jq -r '.docker_builder.spot_retry_attempts' src/api/config.json)
-          SPOT_RETRY_DELAY=$(jq -r '.docker_builder.spot_retry_delay' src/api/config.json)
-          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
-          echo "spot_max_price=$SPOT_MAX_PRICE" >> $GITHUB_OUTPUT
-          echo "spot_retry_attempts=$SPOT_RETRY_ATTEMPTS" >> $GITHUB_OUTPUT
-          echo "spot_retry_delay=$SPOT_RETRY_DELAY" >> $GITHUB_OUTPUT
-      - env:
-          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
-        id: launch
-        name: Launch test instance
-        run: |
-          echo "Smoke testing newly built AMI: $AMI_ID"
-          INSTANCE_TYPES="${{ steps.config.outputs.spot_instance_types }}"
-          MAX_ATTEMPTS=${{ steps.config.outputs.spot_retry_attempts }}
-          RETRY_DELAY=${{ steps.config.outputs.spot_retry_delay }}
-          INSTANCE_ID=""
-          for attempt in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $attempt of $MAX_ATTEMPTS"
-            for instance_type in $INSTANCE_TYPES; do
-              echo "Trying spot instance type: $instance_type"
-              set +e
-              INSTANCE_ID=$(aws ec2 run-instances \
-                --image-id $AMI_ID \
-                --instance-type $instance_type \
-                --subnet-id ${{ steps.network.outputs.subnet_id }} \
-                --associate-public-ip-address \
-                --iam-instance-profile Name=PackerEC2InstanceProfile \
-                --instance-market-options "MarketType=spot,SpotOptions={MaxPrice=${{ steps.config.outputs.spot_max_price }},SpotInstanceType=one-time}" \
-                --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=ami-validation-test},{Key=Purpose,Value=temporary-testing}]' \
-                --query 'Instances[0].InstanceId' \
-                --output text --no-cli-pager 2>&1)
-              EXIT_CODE=$?
-              set -e
-              if [ $EXIT_CODE -eq 0 ] && [ -n "$INSTANCE_ID" ] && [ "$INSTANCE_ID" != "None" ]; then
-                echo "Successfully launched $instance_type spot instance: $INSTANCE_ID"
-                echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
-                echo "instance_type=$instance_type" >> $GITHUB_OUTPUT
-                exit 0
-              else
-                echo "Failed to launch $instance_type: $INSTANCE_ID"
-              fi
-            done
-            if [ $attempt -lt $MAX_ATTEMPTS ]; then
-              echo "No spot capacity available, retrying in ${RETRY_DELAY}s..."
-              sleep $RETRY_DELAY
-            fi
-          done
-          echo "Failed to launch spot instance after $MAX_ATTEMPTS attempts"
-          exit 1
-      - name: Wait for instance to be ready
-        run: |
-          echo "Waiting for instance to be running..."
-          aws ec2 wait instance-running \
-            --instance-ids ${{ steps.launch.outputs.instance_id }}
-          echo "Waiting for status checks to pass..."
-          aws ec2 wait instance-status-ok \
-            --instance-ids ${{ steps.launch.outputs.instance_id }}
-          echo "Instance is ready"
-      - name: Wait for SSM agent to be online
-        run: |
-          echo "Waiting for SSM agent..."
-          TIMEOUT=300
-          ELAPSED=0
-          SLEEP_TIME=10
-          while [ $ELAPSED -lt $TIMEOUT ]; do
-            STATUS=$(aws ssm describe-instance-information \
-              --filters "Key=InstanceIds,Values=${{ steps.launch.outputs.instance_id }}" \
-              --query 'InstanceInformationList[0].PingStatus' \
-              --output text --no-cli-pager 2>/dev/null || echo "NotFound")
-            if [ "$STATUS" = "Online" ]; then
-              echo "SSM agent is online"
-              break
-            fi
-            echo "SSM agent status: $STATUS - waiting..."
-            sleep $SLEEP_TIME
-            ELAPSED=$((ELAPSED + SLEEP_TIME))
-          done
-          if [ $ELAPSED -ge $TIMEOUT ]; then
-            echo "Timeout waiting for SSM agent"
-            exit 1
-          fi
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Install test dependencies
-        run: |
-          pip install pytest boto3
-      - env:
-          AMI_ID: ${{ needs.build-ami.outputs.ami_id }}
-          INSTANCE_ID: ${{ steps.launch.outputs.instance_id }}
-          INSTANCE_TYPE: ${{ steps.config.outputs.instance_type }}
-          SUBNET_ID: ${{ steps.network.outputs.subnet_id }}
-        name: Run validation tests
-        run: |
-          cd test/api/image_for_ec2_runners
-          pytest test_ami_validation.py -v \
-            --ami-id=$AMI_ID \
-            --instance-id=$INSTANCE_ID \
-            --instance-type=$INSTANCE_TYPE \
-            --subnet-id=$SUBNET_ID \
-            --region=${{ steps.aws-config.outputs.region }}
-      - if: always()
-        name: Terminate test instance
-        run: |
-          if [ -n "${{ steps.launch.outputs.instance_id }}" ]; then
-            echo "Terminating test instance ${{ steps.launch.outputs.instance_id }}"
-            aws ec2 terminate-instances \
-              --instance-ids ${{ steps.launch.outputs.instance_id }} \
-              --no-cli-pager
-            echo "Waiting for instance to terminate..."
-            aws ec2 wait instance-terminated \
-              --instance-ids ${{ steps.launch.outputs.instance_id }}
-            echo "Instance terminated successfully"
-          fi
   unit-testing:
     name: Unit testing
-    needs: performing-static-analysis
+    needs: static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -618,21 +516,9 @@ on:
       - '!**/README.md'
   workflow_dispatch:
     inputs:
-      ami_id:
-        description: 'AMI ID to validate (required if skip_build is true)'
-        required: false
-        type: string
-      debian_version:
-        description: 'Debian version (leave empty to use config default)'
-        required: false
       dry_run:
         default: false
         description: Dry run mode (show structure without executing)
-        required: false
-        type: boolean
-      skip_build:
-        default: false
-        description: 'Skip build and only validate existing AMI'
         required: false
         type: boolean
 
