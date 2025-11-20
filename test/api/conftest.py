@@ -10,21 +10,21 @@ from aws_cdk.assertions import Template
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "config.json"
     with open(config_path, encoding='utf-8') as f:
         return json.load(f)
 
 
 @pytest.fixture
 def openapi_spec():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "openapi.yml"
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yml"
     with open(openapi_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
 
 @pytest.fixture
 def api_stack_class():
-    stack_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "stack.py"
+    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "stack.py"
     spec = importlib.util.spec_from_file_location("api_stack", stack_path)
     api_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(api_module)
@@ -56,7 +56,7 @@ def cdk_template(api_stack):
 
 @pytest.fixture
 def health_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
     spec = importlib.util.spec_from_file_location("health_handler", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -64,9 +64,9 @@ def health_handler():
 
 
 @pytest.fixture
-def echo_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "echo" / "handler.py"
-    spec = importlib.util.spec_from_file_location("echo_handler", handler_path)
+def v1_handler():
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "handler.py"
+    spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -74,53 +74,8 @@ def echo_handler():
 
 @pytest.fixture
 def catchall_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
     spec = importlib.util.spec_from_file_location("catchall_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.fixture
-def root_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "root" / "handler.py"
-    spec = importlib.util.spec_from_file_location("root_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.fixture
-def docker_runner_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "docker_runner" / "handler.py"
-    spec = importlib.util.spec_from_file_location("docker_runner_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.fixture
-def ec2_runner_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "ec2_runner" / "handler.py"
-    spec = importlib.util.spec_from_file_location("ec2_runner_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.fixture
-def image_for_docker_runners_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_docker_runners" / "handler.py"
-    spec = importlib.util.spec_from_file_location("image_for_docker_runners_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.fixture
-def image_for_ec2_runners_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_ec2_runners" / "handler.py"
-    spec = importlib.util.spec_from_file_location("image_for_ec2_runners_handler", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
