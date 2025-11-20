@@ -356,6 +356,7 @@ jobs:
             -var="instance_type=${{ steps.packer-config.outputs.first_instance_type }}" \
             -var='spot_instance_types=${{ steps.packer-config.outputs.spot_instance_types }}' \
             -var="vpc_id=vpc-dummy" \
+            -var="subnet_id=subnet-dummy" \
             template.pkr.hcl
   unit-testing:
     name: Unit testing
