@@ -256,14 +256,13 @@ jobs:
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
           echo "✓ Found VPC: $VPC_ID"
           echo "✓ Found Subnet: $SUBNET_ID"
-name: Build Docker Image for Self-Hosted Runner
+name: Building Docker image for self-hosted runners
 on:
   push:
     branches:
       - main
     paths:
-      - 'api/resources/ami_for_ec2_runners/config.json'
-      - 'api/resources/docker_runner/**'
+      - 'src/api/endpoints/v1/image_for_docker_runners'
       - '.github/workflows/image_for_docker_runners_post.yml'
   workflow_dispatch:
     inputs:
