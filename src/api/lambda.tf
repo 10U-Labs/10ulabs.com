@@ -1,6 +1,6 @@
 data "archive_file" "health_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/lambdas/health"
+  source_file = "${path.module}/lambdas/health.py"
   output_path = "${path.module}/.terraform/lambda_packages/health_handler.zip"
 }
 
@@ -8,7 +8,7 @@ resource "aws_lambda_function" "health_handler" {
   filename         = data.archive_file.health_handler.output_path
   function_name    = "HealthHandler"
   role             = aws_iam_role.lambda_health_handler.arn
-  handler          = "handler.handler"
+  handler          = "health.handler"
   source_code_hash = data.archive_file.health_handler.output_base64sha256
   runtime          = "python3.14"
   timeout          = 10
@@ -35,7 +35,7 @@ resource "aws_cloudwatch_log_group" "health_handler" {
 
 data "archive_file" "catchall_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/lambdas/catchall"
+  source_file = "${path.module}/lambdas/catchall.py"
   output_path = "${path.module}/.terraform/lambda_packages/catchall_handler.zip"
 }
 
@@ -43,7 +43,7 @@ resource "aws_lambda_function" "catchall_handler" {
   filename         = data.archive_file.catchall_handler.output_path
   function_name    = "CatchAllHandler"
   role             = aws_iam_role.lambda_catchall_handler.arn
-  handler          = "handler.handler"
+  handler          = "catchall.handler"
   source_code_hash = data.archive_file.catchall_handler.output_base64sha256
   runtime          = "python3.14"
   timeout          = 10
@@ -130,7 +130,7 @@ resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
 
 data "archive_file" "v1_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/lambdas/v1_api"
+  source_file = "${path.module}/lambdas/v1_api.py"
   output_path = "${path.module}/.terraform/lambda_packages/v1_handler.zip"
 }
 
@@ -138,7 +138,7 @@ resource "aws_lambda_function" "v1_handler" {
   filename         = data.archive_file.v1_handler.output_path
   function_name    = "V1ApiHandler"
   role             = aws_iam_role.lambda_v1_handler.arn
-  handler          = "handler.lambda_handler"
+  handler          = "v1_api.lambda_handler"
   source_code_hash = data.archive_file.v1_handler.output_base64sha256
   runtime          = "python3.14"
   timeout          = var.lambda_timeout_seconds
