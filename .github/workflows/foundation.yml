@@ -97,13 +97,13 @@ jobs:
         run: cd src/foundation && tflint --init && tflint
       - name: Linting YAML files
         run: |
-          LL='line-length: {max: 300, level: warning}'
-          DS='document-start: disable'
-          TR='truthy: {allowed-values: ["true", "false", "on"]}'
-          EL='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          NL='new-line-at-end-of-file: enable'
-          KO='key-ordering: enable'
-          RULES="$LL, $DS, $TR, $EL, $NL, $KO"
+          LINE_LENGTH='line-length: {max: 300, level: warning}'
+          DOCUMENT_START='document-start: disable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          KEY_ORDERING='key-ordering: enable'
+          RULES="$LINE_LENGTH, $DOCUMENT_START, $TRUTHY, $EMPTY_LINES, $NEWLINE_AT_EOF, $KEY_ORDERING"
           yamllint --config-data "{extends: default, rules: {$RULES}}" .github/workflows/foundation.yml
   snapshot-testing:
     defaults:
