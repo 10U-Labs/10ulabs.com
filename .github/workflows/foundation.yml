@@ -1,10 +1,6 @@
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
-env:
-  AWS_ACCOUNT_ID: '781581267945'
-  AWS_REGION: us-east-1
-  GITHUB_ACTIONS_ROLE: GitHubActionsRole
 jobs:
   e2e-testing:
     name: E2E testing
@@ -13,11 +9,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - id: tfvars
+        name: Extract AWS values from tfvars
+        run: |
+          AWS_REGION=$(grep 'aws_region' src/foundation/terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/foundation/terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/foundation/terraform.tfvars | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
+          aws-region: ${{ steps.tfvars.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.tfvars.outputs.aws_account_id }}:role/${{ steps.tfvars.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -36,11 +41,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - id: tfvars
+        name: Extract AWS values from tfvars
+        run: |
+          AWS_REGION=$(grep 'aws_region' terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' terraform.tfvars | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
+          aws-region: ${{ steps.tfvars.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.tfvars.outputs.aws_account_id }}:role/${{ steps.tfvars.outputs.github_actions_role }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -58,11 +72,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - id: tfvars
+        name: Extract AWS values from tfvars
+        run: |
+          AWS_REGION=$(grep 'aws_region' src/foundation/terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/foundation/terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/foundation/terraform.tfvars | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
+          aws-region: ${{ steps.tfvars.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.tfvars.outputs.aws_account_id }}:role/${{ steps.tfvars.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -131,11 +154,20 @@ jobs:
         with:
           terraform_version: "1.10"
           terraform_wrapper: false
+      - id: tfvars
+        name: Extract AWS values from tfvars
+        run: |
+          AWS_REGION=$(grep 'aws_region' terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' terraform.tfvars | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
+          aws-region: ${{ steps.tfvars.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.tfvars.outputs.aws_account_id }}:role/${{ steps.tfvars.outputs.github_actions_role }}
       - name: Terraform Init
         run: terraform init
       - name: Terraform Plan
