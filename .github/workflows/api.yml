@@ -254,9 +254,10 @@ on:
       - src/api/**
       - src/api/openapi.yml
       - test/api/conftest.py
-      - test/api/test_unit.py
-      - test/api/test_integration.py
       - test/api/test_e2e.py
+      - test/api/test_integration.py
+      - test/api/test_snapshot.py
+      - test/api/test_unit.py
       - '!**/README.md'
   workflow_dispatch:
     inputs:
