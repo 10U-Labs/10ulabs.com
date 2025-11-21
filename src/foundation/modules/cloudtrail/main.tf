@@ -113,10 +113,10 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
         }
       },
       {
-        Sid    = "DenyInsecureTransport"
-        Effect = "Deny"
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
         Principal = "*"
-        Action = "s3:*"
+        Action    = "s3:*"
         Resource = [
           aws_s3_bucket.cloudtrail.arn,
           "${aws_s3_bucket.cloudtrail.arn}/*"
