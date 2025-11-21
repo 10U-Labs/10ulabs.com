@@ -202,6 +202,18 @@ jobs:
           pip install -r src/api/requirements.txt
       - name: Install CDK CLI
         run: npm install -g aws-cdk
+      - id: config
+        name: Load configuration
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
+          REGION=$(jq -r '.aws.region' src/api/config.json);
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
+          echo "region=$REGION" >> $GITHUB_OUTPUT;
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
       - name: Synthesize CDK stack
         run: cd src/api && cdk synth
       - name: Run snapshot tests
