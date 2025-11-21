@@ -23,7 +23,7 @@
 ## Testing Standards
 
 - Tests must have only one assert.
-- Tests must not have asserts in loops.
+- Tests must not use iteration (no loops, comprehensions, `all()`, `any()`, `in`, `.get()`, or other iterative operations).
 
 ## Architecture Standards
 
