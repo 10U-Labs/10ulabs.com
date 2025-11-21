@@ -4,7 +4,9 @@ concurrency:
 jobs:
   building-ami:
     name: Building AMI
-    needs: unit-testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
     outputs:
       ami_id: ${{ steps.build.outputs.ami_id }}
     permissions:
@@ -14,29 +16,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install jq
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq
       - id: config
         name: Load configuration from terraform.tfvars
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"')
-          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
-          VPC_NAME=$(jq -r '.vpc_name' src/api/terraform.tfvars | tr -d '"')
-          BASE_OS=$(jq -r '.debian_os' src/api/terraform.tfvars | tr -d '"')
-          BASE_OS_VERSION=$(jq -r '.debian_version' src/api/terraform.tfvars | tr -d '"')
-          ARCHITECTURE=$(jq -r '.debian_architecture' src/api/terraform.tfvars | tr -d '"')
+          VPC_NAME=$(grep 'vpc_name' src/api/terraform.tfvars | cut -d'"' -f2)
+          BASE_OS=$(grep 'debian_os' src/api/terraform.tfvars | cut -d'"' -f2)
+          BASE_OS_VERSION=$(grep 'debian_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          ARCHITECTURE=$(grep 'debian_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
           if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
             DEBIAN_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
             echo "Resolved Debian stable to version $DEBIAN_VERSION (queried from Debian repository)"
           else
             DEBIAN_VERSION="$BASE_OS_VERSION"
           fi
-          RUNNER_VERSION=$(jq -r '.github_runner_version' src/api/terraform.tfvars | tr -d '"')
-          INSTANCE_TYPE=$(jq -r '.packer_instance_type' src/api/terraform.tfvars | tr -d '"')
-          SPOT_INSTANCE_TYPES=$(jq -c '.ec2_spot_instance_types' src/api/terraform.tfvars)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
+          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          INSTANCE_TYPE=$(grep 'packer_instance_type' src/api/terraform.tfvars | cut -d'"' -f2)
+          SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
           echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
           echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
@@ -46,8 +41,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - id: network
         name: Get VPC info from deployed infrastructure
         run: |
@@ -99,7 +94,7 @@ jobs:
             -var="debian_version=${{ steps.config.outputs.debian_version }}" \
             -var="architecture=${{ steps.config.outputs.architecture }}" \
             -var="runner_version=${{ steps.config.outputs.runner_version }}" \
-            -var="aws_region=${{ steps.config.outputs.region }}" \
+            -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="instance_type=${{ steps.config.outputs.instance_type }}" \
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
             -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
@@ -123,7 +118,7 @@ jobs:
               -var="debian_version=${{ steps.config.outputs.debian_version }}" \
               -var="architecture=${{ steps.config.outputs.architecture }}" \
               -var="runner_version=${{ steps.config.outputs.runner_version }}" \
-              -var="aws_region=${{ steps.config.outputs.region }}" \
+              -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
               -var="instance_type=${{ steps.config.outputs.instance_type }}" \
               -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
               -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
@@ -165,7 +160,7 @@ jobs:
           aws ec2 create-tags \
             --resources ${{ steps.build.outputs.ami_id }} \
             --tags Key=ManagedBy,Value=GitHubActions Key=Repository,Value=${{ github.repository }} Key=Workflow,Value="${{ github.workflow }}" Key=RunId,Value=${{ github.run_id }} \
-            --region ${{ steps.config.outputs.region }}
+            --region ${{ needs.declaring-common-variables.outputs.aws_region }}
           echo "Tagged AMI ${{ steps.build.outputs.ami_id }}"
       - if: steps.build.outputs.ami_id != ''
         name: Output AMI details
@@ -175,7 +170,7 @@ jobs:
           echo "==================================="
           echo ""
           echo "AMI ID: ${{ steps.build.outputs.ami_id }}"
-          echo "Region: ${{ steps.config.outputs.region }}"
+          echo "Region: ${{ needs.declaring-common-variables.outputs.aws_region }}"
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
           echo "Architecture: ${{ steps.config.outputs.architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
@@ -184,25 +179,39 @@ jobs:
           echo "add it to the config file under docker_builder.custom_ami"
           echo ""
           echo "==================================="
-  e2e-testing:
-    name: E2E testing
-    needs: integration-testing
+  declaring-common-variables:
+    name: Declaring common variables
+    outputs:
+      aws_account_id: ${{ steps.config.outputs.aws_account_id }}
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      github_actions_role: ${{ steps.config.outputs.github_actions_role }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        name: Load configuration
+        name: Extract configuration values
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"');
-          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"');
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE='GitHubActionsRole'
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -213,23 +222,18 @@ jobs:
         run: pytest test/api/image_for_ec2_runners/test_e2e.py -v
   integration-testing:
     name: Integration testing
-    needs: building-ami
+    needs:
+      - building-ami
+      - declaring-common-variables
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"');
-          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"');
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -246,6 +250,7 @@ jobs:
         (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
       )
     name: Performing static analysis
+    needs: declaring-common-variables
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -290,13 +295,11 @@ jobs:
       - id: packer-config
         name: Load Packer validation config
         run: |
-          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
-          ARCHITECTURE=$(jq -r '.debian_architecture' src/api/terraform.tfvars | tr -d '"')
-          DEBIAN_VERSION=$(jq -r '.debian_version' src/api/terraform.tfvars | tr -d '"')
-          RUNNER_VERSION=$(jq -r '.github_runner_version' src/api/terraform.tfvars | tr -d '"')
-          SPOT_INSTANCE_TYPES=$(jq -c '.ec2_spot_instance_types' src/api/terraform.tfvars)
-          FIRST_INSTANCE_TYPE=$(jq -r '.ec2_spot_instance_types[0]' src/api/terraform.tfvars | tr -d '"')
-          echo "region=$REGION" >> $GITHUB_OUTPUT
+          ARCHITECTURE=$(grep 'debian_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
+          DEBIAN_VERSION=$(grep 'debian_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
+          FIRST_INSTANCE_TYPE=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]' | sed 's/\[//;s/\]//;s/"//g;s/,.*//;s/ //')
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
@@ -309,7 +312,7 @@ jobs:
             -var="debian_version=${{ steps.packer-config.outputs.debian_version }}" \
             -var="architecture=${{ steps.packer-config.outputs.architecture }}" \
             -var="runner_version=${{ steps.packer-config.outputs.runner_version }}" \
-            -var="aws_region=${{ steps.packer-config.outputs.region }}" \
+            -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="instance_type=${{ steps.packer-config.outputs.first_instance_type }}" \
             -var='spot_instance_types=${{ steps.packer-config.outputs.spot_instance_types }}' \
             -var="vpc_id=vpc-dummy" \
@@ -317,7 +320,9 @@ jobs:
             template.pkr.hcl
   promoting-ami:
     name: Promoting AMI
-    needs: e2e-testing
+    needs:
+      - declaring-common-variables
+      - e2e-testing
     permissions:
       contents: read
       id-token: write
@@ -328,19 +333,15 @@ jobs:
       - id: config
         name: Load configuration from terraform.tfvars
         run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"')
-          AMI_SSM_PARAMETER=$(jq -r '.ami_promotion_ssm_parameter' src/api/terraform.tfvars | tr -d '"')
-          AMI_TAG_KEY=$(jq -r '.ami_promotion_stable_tag' src/api/terraform.tfvars | tr -d '"')
-          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          AMI_SSM_PARAMETER=$(grep 'ami_promotion_ssm_parameter' src/api/terraform.tfvars | cut -d'"' -f2)
+          AMI_TAG_KEY=$(grep 'ami_promotion_stable_tag' src/api/terraform.tfvars | cut -d'"' -f2)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
           echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -351,13 +352,15 @@ jobs:
         run: |
           python src/api/packer/image_for_ec2_runners/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
-            --region "${{ steps.config.outputs.region }}" \
+            --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \
             --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
             --tag-key "${{ steps.config.outputs.ami_tag_key }}"
   unit-testing:
     name: Unit testing
-    needs: performing-static-analysis
+    needs:
+      - declaring-common-variables
+      - performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -398,4 +401,6 @@ on:
     branches: [main]
     types: [completed]
     workflows: ["Ensuring API infrastructure exists and is properly configured"]
-
+permissions:
+  contents: read
+  id-token: write
