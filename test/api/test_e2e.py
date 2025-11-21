@@ -1,10 +1,27 @@
+import os
+import re
 import requests
 import pytest
 
 
 @pytest.fixture(scope="module")
-def api_url():
-    return "https://api.10ulabs.com"
+def tfvars():
+    tfvars_path = os.path.join(os.path.dirname(__file__), "../../src/api/terraform.tfvars")
+    config = {}
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+                if match:
+                    key, value = match.groups()
+                    config[key] = value.strip('"')
+    return config
+
+
+@pytest.fixture(scope="module")
+def api_url(tfvars):
+    return f"https://{tfvars['domain_subdomain']}"
 
 
 def test_health_endpoint_responds(api_url):
