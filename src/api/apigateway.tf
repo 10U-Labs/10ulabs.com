@@ -1,5 +1,5 @@
 locals {
-  openapi_spec = templatefile("${path.module}/../openapi.yml", {
+  openapi_spec = templatefile("${path.module}/openapi.yml", {
     HealthHandlerArn   = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.health_handler.arn}/invocations"
     V1HandlerArn       = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.v1_handler.arn}/invocations"
     CatchAllHandlerArn = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"

@@ -37,25 +37,25 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "docs" {
 resource "aws_s3_object" "index_html" {
   bucket       = aws_s3_bucket.docs.id
   key          = "index.html"
-  source       = "${path.module}/../index.html"
+  source       = "${path.module}/index.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../index.html")
+  etag         = filemd5("${path.module}/index.html")
 }
 
 resource "aws_s3_object" "not_found_html" {
   bucket       = aws_s3_bucket.docs.id
   key          = "404.html"
-  source       = "${path.module}/../404.html"
+  source       = "${path.module}/404.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/../404.html")
+  etag         = filemd5("${path.module}/404.html")
 }
 
 resource "aws_s3_object" "openapi_yml" {
   bucket       = aws_s3_bucket.docs.id
   key          = "openapi.yml"
-  source       = "${path.module}/../openapi.yml"
+  source       = "${path.module}/openapi.yml"
   content_type = "application/x-yaml"
-  etag         = filemd5("${path.module}/../openapi.yml")
+  etag         = filemd5("${path.module}/openapi.yml")
 }
 
 resource "aws_cloudfront_origin_access_control" "s3" {
