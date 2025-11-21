@@ -9,14 +9,16 @@ def test_oidc_provider_has_correct_thumbprint(iam_client, config):
     account_id = config['aws_account_id']
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
-    assert '6938fd4d98bab03faadb97b34396831e3780aea1' in response['ThumbprintList']
+    thumbprint = response['ThumbprintList'][0]
+    assert thumbprint == '6938fd4d98bab03faadb97b34396831e3780aea1'
 
 
 def test_oidc_provider_has_correct_client_id(iam_client, config):
     account_id = config['aws_account_id']
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
-    assert 'sts.amazonaws.com' in response['ClientIDList']
+    client_id = response['ClientIDList'][0]
+    assert client_id == 'sts.amazonaws.com'
 
 
 def test_iam_role_exists_in_aws(iam_client, config):
@@ -31,26 +33,18 @@ def test_iam_role_trust_policy_has_federated_principal(iam_client, config):
     expected_provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
-    federated_principals = [
-        stmt['Principal'].get('Federated')
-        for stmt in trust_policy['Statement']
-        if 'Federated' in stmt.get('Principal', {})
-    ]
-    assert expected_provider_arn in federated_principals
+    federated_principal = trust_policy['Statement'][0]['Principal']['Federated']
+    assert expected_provider_arn == federated_principal
 
 
 def test_iam_role_trust_policy_has_correct_audience_condition(iam_client, config):
     role_name = config['github_actions_role_name']
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
-    has_aud_condition = False
-    for stmt in trust_policy['Statement']:
-        condition = stmt.get('Condition', {})
-        string_equals = condition.get('StringEquals', {})
-        if 'token.actions.githubusercontent.com:aud' in string_equals:
-            assert string_equals['token.actions.githubusercontent.com:aud'] == 'sts.amazonaws.com'
-            has_aud_condition = True
-    assert has_aud_condition
+    condition = trust_policy['Statement'][0]['Condition']
+    string_equals = condition['StringEquals']
+    aud_value = string_equals['token.actions.githubusercontent.com:aud']
+    assert aud_value == 'sts.amazonaws.com'
 
 
 def test_iam_role_trust_policy_has_correct_subject_condition(iam_client, config):
@@ -60,42 +54,30 @@ def test_iam_role_trust_policy_has_correct_subject_condition(iam_client, config)
     expected_pattern = f"repo:{github_org}/{github_repo}:*"
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
-    has_sub_condition = False
-    for stmt in trust_policy['Statement']:
-        condition = stmt.get('Condition', {})
-        string_like = condition.get('StringLike', {})
-        if 'token.actions.githubusercontent.com:sub' in string_like:
-            assert string_like['token.actions.githubusercontent.com:sub'] == expected_pattern
-            has_sub_condition = True
-    assert has_sub_condition
+    condition = trust_policy['Statement'][0]['Condition']
+    string_like = condition['StringLike']
+    sub_value = string_like['token.actions.githubusercontent.com:sub']
+    assert sub_value == expected_pattern
 
 
 def test_iam_role_has_administrator_access_policy(iam_client, config):
     role_name = config['github_actions_role_name']
     response = iam_client.list_attached_role_policies(RoleName=role_name)
-    policy_arns = [p['PolicyArn'] for p in response['AttachedPolicies']]
-    assert 'arn:aws:iam::aws:policy/AdministratorAccess' in policy_arns
+    policy_arn = response['AttachedPolicies'][0]['PolicyArn']
+    assert policy_arn == 'arn:aws:iam::aws:policy/AdministratorAccess'
 
 
 def test_hosted_zone_exists(route53_client, config):
     domain_name = config['domain_name']
     zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-    assert zone is not None
+    zone = zones['HostedZones'][0]
+    assert zone['Name'] == f"{domain_name}."
 
 
 def test_hosted_zone_is_public(route53_client, config):
     domain_name = config['domain_name']
     zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
+    zone = zones['HostedZones'][0]
     assert zone['Config']['PrivateZone'] is False
 
 
@@ -232,7 +214,8 @@ def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
     objects = s3_client.list_objects_v2(Bucket=bucket_name, MaxKeys=10)
-    assert objects.get('KeyCount', 0) > 0 or 'Contents' in objects
+    key_count = objects['KeyCount']
+    assert key_count > 0
 
 
 def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
@@ -293,11 +276,10 @@ def test_access_log_bucket_has_glacier_lifecycle_rule(s3_client, cloudtrail_clie
     if 'LoggingEnabled' in response:
         access_log_bucket = response['LoggingEnabled']['TargetBucket']
         lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
-        has_glacier_rule = any(
-            any(t.get('StorageClass') == 'GLACIER' for t in rule.get('Transitions', []))
-            for rule in lifecycle.get('Rules', [])
-        )
-        assert has_glacier_rule
+        rule = lifecycle['Rules'][0]
+        transition = rule['Transitions'][0]
+        storage_class = transition['StorageClass']
+        assert storage_class == 'GLACIER'
 
 
 def test_cloudtrail_bucket_enforces_ssl(s3_client, cloudtrail_client):

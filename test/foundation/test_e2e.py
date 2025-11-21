@@ -83,8 +83,11 @@ class TestCompleteOIDCWorkflow:
             env=env
         )
         identity = json.loads(result.stdout)
-        assert config['github_actions_role_name'] in identity['Arn']
-        assert 'assumed-role' in identity['Arn']
+        arn = identity['Arn']
+        role_name_present = config['github_actions_role_name'] in arn
+        assumed_role_present = 'assumed-role' in arn
+        both_present = role_name_present and assumed_role_present
+        assert both_present is True
 
 
 def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, hosted_zone, config):
@@ -110,11 +113,14 @@ def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, ho
             }
         )
         change_id = change_response['ChangeInfo']['Id']
-        for _ in range(30):
+        max_attempts = 30
+        attempt = 0
+        while attempt < max_attempts:
             change_status = route53_client.get_change(Id=change_id)
             if change_status['ChangeInfo']['Status'] == 'INSYNC':
                 break
             time.sleep(1)
+            attempt = attempt + 1
         ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
         resolver = dns.resolver.Resolver()
         resolver.nameservers = [ns_ip]

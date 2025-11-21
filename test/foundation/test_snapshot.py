@@ -71,81 +71,90 @@ def test_cloudwatch_log_group_count(terraform_plan_json):
     assert count == 1
 
 
-def test_s3_buckets_have_versioning_disabled(terraform_plan_json):
+def test_first_s3_bucket_has_versioning_disabled(terraform_plan_json):
     versioning_resources = find_resource_by_type(terraform_plan_json, 'aws_s3_bucket_versioning')
-    for resource in versioning_resources:
-        values = resource.get('values', {})
-        versioning_config = values.get('versioning_configuration', [{}])[0]
-        assert versioning_config.get('status') == 'Disabled'
+    versioning_config = versioning_resources[0]['values']['versioning_configuration'][0]
+    assert versioning_config['status'] == 'Disabled'
+
+
+def test_second_s3_bucket_has_versioning_disabled(terraform_plan_json):
+    versioning_resources = find_resource_by_type(terraform_plan_json, 'aws_s3_bucket_versioning')
+    versioning_config = versioning_resources[1]['values']['versioning_configuration'][0]
+    assert versioning_config['status'] == 'Disabled'
+
+
+def test_third_s3_bucket_has_versioning_disabled(terraform_plan_json):
+    versioning_resources = find_resource_by_type(terraform_plan_json, 'aws_s3_bucket_versioning')
+    versioning_config = versioning_resources[2]['values']['versioning_configuration'][0]
+    assert versioning_config['status'] == 'Disabled'
+
+
+def test_fourth_s3_bucket_has_versioning_disabled(terraform_plan_json):
+    versioning_resources = find_resource_by_type(terraform_plan_json, 'aws_s3_bucket_versioning')
+    versioning_config = versioning_resources[3]['values']['versioning_configuration'][0]
+    assert versioning_config['status'] == 'Disabled'
 
 
 def test_s3_buckets_have_encryption(terraform_plan_json):
-    encryption_resources = find_resource_by_type(terraform_plan_json, 'aws_s3_bucket_server_side_encryption_configuration')
-    assert len(encryption_resources) >= 3
+    count = count_resources_by_type(terraform_plan_json, 'aws_s3_bucket_server_side_encryption_configuration')
+    assert count == 4
 
 
 def test_s3_buckets_have_public_access_block(terraform_plan_json):
-    public_access_resources = find_resource_by_type(terraform_plan_json, 'aws_s3_bucket_public_access_block')
-    assert len(public_access_resources) >= 3
+    count = count_resources_by_type(terraform_plan_json, 'aws_s3_bucket_public_access_block')
+    assert count == 4
 
 
 def test_cloudtrail_is_multi_region(terraform_plan_json):
     trails = find_resource_by_type(terraform_plan_json, 'aws_cloudtrail')
-    for trail in trails:
-        values = trail.get('values', {})
-        assert values.get('is_multi_region_trail') is True
+    values = trails[0]['values']
+    assert values['is_multi_region_trail'] is True
 
 
 def test_cloudtrail_includes_global_service_events(terraform_plan_json):
     trails = find_resource_by_type(terraform_plan_json, 'aws_cloudtrail')
-    for trail in trails:
-        values = trail.get('values', {})
-        assert values.get('include_global_service_events') is True
+    values = trails[0]['values']
+    assert values['include_global_service_events'] is True
 
 
 def test_cloudwatch_log_group_has_retention(terraform_plan_json):
     log_groups = find_resource_by_type(terraform_plan_json, 'aws_cloudwatch_log_group')
-    for log_group in log_groups:
-        values = log_group.get('values', {})
-        assert values.get('retention_in_days') == 365
+    values = log_groups[0]['values']
+    assert values['retention_in_days'] == 365
 
 
 def test_oidc_provider_has_github_url(terraform_plan_json):
     providers = find_resource_by_type(terraform_plan_json, 'aws_iam_openid_connect_provider')
-    for provider in providers:
-        values = provider.get('values', {})
-        assert values.get('url') == 'token.actions.githubusercontent.com'
+    values = providers[0]['values']
+    assert values['url'] == 'token.actions.githubusercontent.com'
 
 
 def test_oidc_provider_has_thumbprints(terraform_plan_json):
     providers = find_resource_by_type(terraform_plan_json, 'aws_iam_openid_connect_provider')
-    for provider in providers:
-        values = provider.get('values', {})
-        thumbprints = values.get('thumbprint_list', [])
-        assert '6938fd4d98bab03faadb97b34396831e3780aea1' in thumbprints
+    values = providers[0]['values']
+    thumbprints = values['thumbprint_list']
+    assert thumbprints[0] == '6938fd4d98bab03faadb97b34396831e3780aea1'
 
 
 def test_oidc_provider_has_client_ids(terraform_plan_json):
     providers = find_resource_by_type(terraform_plan_json, 'aws_iam_openid_connect_provider')
-    for provider in providers:
-        values = provider.get('values', {})
-        client_ids = values.get('client_id_list', [])
-        assert 'sts.amazonaws.com' in client_ids
+    values = providers[0]['values']
+    client_ids = values['client_id_list']
+    assert client_ids[0] == 'sts.amazonaws.com'
 
 
 def test_github_actions_role_has_administrator_access(terraform_plan_json):
     attachments = find_resource_by_type(terraform_plan_json, 'aws_iam_role_policy_attachment')
-    admin_attachments = [a for a in attachments if 'AdministratorAccess' in a.get('values', {}).get('policy_arn', '')]
-    assert len(admin_attachments) >= 1
+    policy_arn = attachments[0]['values']['policy_arn']
+    assert 'AdministratorAccess' == policy_arn.split('/')[-1]
 
 
 def test_no_unintended_resource_deletions(terraform_plan_json):
     if 'resource_changes' not in terraform_plan_json:
         return
-
-    deletions = [
-        r for r in terraform_plan_json['resource_changes']
-        if r.get('change', {}).get('actions', []) == ['delete']
-    ]
-
-    assert len(deletions) == 0
+    deletion_count = 0
+    for resource in terraform_plan_json['resource_changes']:
+        actions = resource['change']['actions']
+        if actions[0] == 'delete':
+            deletion_count = deletion_count + 1
+    assert deletion_count == 0
