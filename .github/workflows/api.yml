@@ -181,27 +181,6 @@ jobs:
           python -m mypy endpoints/health &&
           python -m mypy endpoints/v1/handler.py &&
           python -m mypy endpoints/v1/runners
-  unit-testing:
-    name: Unit testing
-    needs: performing-static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Set up Node.js (required by aws-cdk-lib/jsii)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install Python dependencies
-        run: |
-          pip install pytest &&
-          pip install -r src/api/requirements.txt
-      - name: Run unit tests
-        run: pytest test/api/test_unit.py -v
   snapshot-testing:
     name: Snapshot testing
     needs: unit-testing
@@ -227,6 +206,27 @@ jobs:
         run: cd src/api && cdk synth
       - name: Run snapshot tests
         run: pytest test/api/test_snapshot.py -v
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Set up Node.js (required by aws-cdk-lib/jsii)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python dependencies
+        run: |
+          pip install pytest &&
+          pip install -r src/api/requirements.txt
+      - name: Run unit tests
+        run: pytest test/api/test_unit.py -v
 name: Ensuring API infrastructure exists and is properly configured
 on:
   push:
