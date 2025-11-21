@@ -6,7 +6,7 @@ import pytest
 
 @pytest.fixture
 def config():
-    tfvars_path = Path(__file__).parent.parent.parent / "src" / "foundation" / "terraform.tfvars"
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "bootstrap" / "terraform.tfvars"
     config_dict = {}
     with open(tfvars_path, encoding='utf-8') as f:
         for line in f:

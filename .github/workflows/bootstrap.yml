@@ -16,10 +16,10 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          AWS_REGION=$(grep 'aws_region' src/foundation/terraform.tfvars | cut -d'"' -f2)
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/foundation/terraform.tfvars | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/foundation/terraform.tfvars | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/foundation/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          AWS_REGION=$(grep 'aws_region' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          TERRAFORM_VERSION=$(grep 'required_version' src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
@@ -45,11 +45,11 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3 dnspython
       - name: Run E2E tests
-        run: pytest test/foundation/test_e2e.py -v
+        run: pytest test/bootstrap/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
-        working-directory: src/foundation
+        working-directory: src/bootstrap
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
@@ -94,7 +94,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run integration tests
-        run: pytest test/foundation/test_integration.py -v
+        run: pytest test/bootstrap/test_integration.py -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -123,15 +123,15 @@ jobs:
       - name: Install linting dependencies
         run: pip install pylint mypy yamllint
       - name: Terraform Format Check
-        run: cd src/foundation && terraform fmt -check -recursive
+        run: cd src/bootstrap && terraform fmt -check -recursive
       - name: Terraform Init
-        run: cd src/foundation && terraform init
+        run: cd src/bootstrap && terraform init
       - name: Terraform Validate
-        run: cd src/foundation && terraform validate
+        run: cd src/bootstrap && terraform validate
       - name: Run tflint
-        run: cd src/foundation && tflint --init && tflint
+        run: cd src/bootstrap && tflint --init && tflint
       - name: Terraform Plan
-        run: cd src/foundation && terraform plan
+        run: cd src/bootstrap && terraform plan
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
@@ -143,7 +143,7 @@ jobs:
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/foundation.yml
+            .github/workflows/bootstrap.yml
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -158,16 +158,16 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run unit tests
-        run: pytest test/foundation/test_unit.py -v
-name: Ensuring foundational infrastructure exists and is properly configured
+        run: pytest test/bootstrap/test_unit.py -v
+name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
   push:
     branches:
       - main
     paths:
-      - '.github/workflows/foundation.yml'
-      - 'src/foundation/**'
-      - 'test/foundation/**'
+      - '.github/workflows/bootstrap.yml'
+      - 'src/bootstrap/**'
+      - 'test/bootstrap/**'
   workflow_dispatch:
 permissions:
   contents: read

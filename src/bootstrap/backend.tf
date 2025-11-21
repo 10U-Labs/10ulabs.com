@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket       = "10ulabs-terraform-state"
-    key          = "foundation/terraform.tfstate"
+    key          = "bootstrap/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true
