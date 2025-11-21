@@ -7,12 +7,12 @@ packer {
   }
 }
 
-variable "debian_version" {
+variable "os_version" {
   type        = string
-  description = "Debian version number"
+  description = "OS version number"
 }
 
-variable "architecture" {
+variable "os_architecture" {
   type        = string
   description = "CPU architecture (arm64 or x86_64)"
 }
@@ -49,19 +49,19 @@ variable "subnet_id" {
 
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name  = "github-runner-debian-${var.debian_version}-${var.architecture}-${local.timestamp}"
+  ami_name  = "github-runner-debian-${var.os_version}-${var.os_architecture}-${local.timestamp}"
 
   # Map architecture for AMI lookup
-  ami_arch = var.architecture == "arm64" ? "arm64" : "amd64"
+  ami_arch = var.os_architecture == "arm64" ? "arm64" : "amd64"
 
   # Map architecture for runner download
-  runner_arch = var.architecture == "arm64" ? "arm64" : "x64"
+  runner_arch = var.os_architecture == "arm64" ? "arm64" : "x64"
 }
 
 # Data source to get the latest Debian AMI
 data "amazon-ami" "debian" {
   filters = {
-    name                = "debian-${var.debian_version}-${local.ami_arch}-*"
+    name                = "debian-${var.os_version}-${local.ami_arch}-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
@@ -105,13 +105,13 @@ source "amazon-ebs" "github_runner" {
   iam_instance_profile = "PackerEC2InstanceProfile"
 
   # AMI configuration
-  ami_description = "GitHub Actions Runner - Debian ${var.debian_version} ${var.architecture}"
+  ami_description = "GitHub Actions Runner - Debian ${var.os_version} ${var.os_architecture}"
 
   tags = {
     Name          = local.ami_name
     OS            = "Debian"
-    Version       = var.debian_version
-    Architecture  = var.architecture
+    Version       = var.os_version
+    Architecture  = var.os_architecture
     RunnerVersion = var.runner_version
     Purpose       = "Github self-hosted EC2 runner"
     stable        = "true"
@@ -207,7 +207,7 @@ build {
     inline = [
       "set -e",
       "cd /tmp",
-      "wget -q https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${var.architecture}/amazon-ssm-agent.deb",
+      "wget -q https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${var.os_architecture}/amazon-ssm-agent.deb",
       "sudo dpkg -i -E ./amazon-ssm-agent.deb",
       "sudo systemctl enable amazon-ssm-agent",
       "rm amazon-ssm-agent.deb"
@@ -220,7 +220,7 @@ build {
     inline = [
       "set -e",
       "cd /tmp",
-      "wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${var.architecture}/latest/amazon-cloudwatch-agent.deb",
+      "wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${var.os_architecture}/latest/amazon-cloudwatch-agent.deb",
       "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
       "rm amazon-cloudwatch-agent.deb"
     ]

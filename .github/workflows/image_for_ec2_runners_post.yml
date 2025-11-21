@@ -20,21 +20,21 @@ jobs:
         name: Load configuration from terraform.tfvars
         run: |
           VPC_NAME=$(grep 'vpc_name' src/api/terraform.tfvars | cut -d'"' -f2)
-          BASE_OS=$(grep 'debian_os' src/api/terraform.tfvars | cut -d'"' -f2)
-          BASE_OS_VERSION=$(grep 'debian_version' src/api/terraform.tfvars | cut -d'"' -f2)
-          ARCHITECTURE=$(grep 'debian_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
-          if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
-            DEBIAN_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
-            echo "Resolved Debian stable to version $DEBIAN_VERSION (queried from Debian repository)"
+          OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
+          if [ "$OS_FAMILY" = "debian" ] && [ "$OS_VERSION" = "stable" ]; then
+            RESOLVED_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
+            echo "Resolved Debian stable to version $RESOLVED_VERSION (queried from Debian repository)"
           else
-            DEBIAN_VERSION="$BASE_OS_VERSION"
+            RESOLVED_VERSION="$OS_VERSION"
           fi
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           INSTANCE_TYPE=$(grep 'packer_instance_type' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
           echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
-          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
-          echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "os_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
+          echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
@@ -91,8 +91,8 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners
           packer validate \
-            -var="debian_version=${{ steps.config.outputs.debian_version }}" \
-            -var="architecture=${{ steps.config.outputs.architecture }}" \
+            -var="os_version=${{ steps.config.outputs.os_version }}" \
+            -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
             -var="runner_version=${{ steps.config.outputs.runner_version }}" \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="instance_type=${{ steps.config.outputs.instance_type }}" \
@@ -105,8 +105,8 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners
           echo "Building GitHub Runner AMI..."
-          echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
-          echo "Architecture: ${{ steps.config.outputs.architecture }}"
+          echo "Debian Version: ${{ steps.config.outputs.os_version }}"
+          echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
           echo "Instance Type: ${{ steps.config.outputs.instance_type }}"
           echo ""
@@ -115,8 +115,8 @@ jobs:
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             echo "Build attempt $ATTEMPT of $MAX_ATTEMPTS"
             packer build \
-              -var="debian_version=${{ steps.config.outputs.debian_version }}" \
-              -var="architecture=${{ steps.config.outputs.architecture }}" \
+              -var="os_version=${{ steps.config.outputs.os_version }}" \
+              -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
               -var="runner_version=${{ steps.config.outputs.runner_version }}" \
               -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
               -var="instance_type=${{ steps.config.outputs.instance_type }}" \
@@ -171,8 +171,8 @@ jobs:
           echo ""
           echo "AMI ID: ${{ steps.build.outputs.ami_id }}"
           echo "Region: ${{ needs.declaring-common-variables.outputs.aws_region }}"
-          echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
-          echo "Architecture: ${{ steps.config.outputs.architecture }}"
+          echo "Debian Version: ${{ steps.config.outputs.os_version }}"
+          echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
           echo ""
           echo "To use this AMI, update your CloudFormation template or"
@@ -295,13 +295,13 @@ jobs:
       - id: packer-config
         name: Load Packer validation config
         run: |
-          ARCHITECTURE=$(grep 'debian_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
-          DEBIAN_VERSION=$(grep 'debian_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
           FIRST_INSTANCE_TYPE=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]' | sed 's/\[//;s/\]//;s/"//g;s/,.*//;s/ //')
-          echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
-          echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
+          echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "first_instance_type=$FIRST_INSTANCE_TYPE" >> $GITHUB_OUTPUT
@@ -309,8 +309,8 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners
           packer validate \
-            -var="debian_version=${{ steps.packer-config.outputs.debian_version }}" \
-            -var="architecture=${{ steps.packer-config.outputs.architecture }}" \
+            -var="os_version=${{ steps.packer-config.outputs.os_version }}" \
+            -var="os_architecture=${{ steps.packer-config.outputs.os_architecture }}" \
             -var="runner_version=${{ steps.packer-config.outputs.runner_version }}" \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="instance_type=${{ steps.packer-config.outputs.first_instance_type }}" \
