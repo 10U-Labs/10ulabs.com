@@ -114,7 +114,7 @@ def test_oidc_provider_has_github_url(terraform_plan_json):
     providers = find_resource_by_type(terraform_plan_json, 'aws_iam_openid_connect_provider')
     for provider in providers:
         values = provider.get('values', {})
-        assert values.get('url') == 'https://token.actions.githubusercontent.com'
+        assert values.get('url') == 'token.actions.githubusercontent.com'
 
 
 def test_oidc_provider_has_thumbprints(terraform_plan_json):
