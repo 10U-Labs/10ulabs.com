@@ -175,7 +175,7 @@ jobs:
           terraform plan -out=tfplan.binary
           terraform show -json tfplan.binary > ../../tfplan.json
       - name: Install Python dependencies
-        run: pip install pytest
+        run: pip install pytest boto3
       - name: Run snapshot tests
         run: pytest ../../test/foundation/test_snapshot.py -v
   unit-testing:
