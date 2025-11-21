@@ -84,11 +84,9 @@ jobs:
         with:
           terraform_version: "1.10"
       - name: Install tflint
-        run: |
-          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        run: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
       - name: Install linting dependencies
-        run: |
-          pip install pylint mypy yamllint
+        run: pip install pylint mypy yamllint
       - name: Terraform Format Check
         run: cd src/foundation && terraform fmt -check -recursive
       - name: Terraform Init
