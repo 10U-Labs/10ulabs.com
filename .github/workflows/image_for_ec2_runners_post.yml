@@ -18,23 +18,23 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y jq
       - id: config
-        name: Load configuration from config file
+        name: Load configuration from terraform.tfvars
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          VPC_NAME=$(jq -r '.naming.vpc_name' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          BASE_OS=$(jq -r '.base_os.os' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          BASE_OS_VERSION=$(jq -r '.base_os.version' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' src/api/endpoints/v1/image_for_ec2_runners/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"')
+          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
+          VPC_NAME=$(jq -r '.vpc_name' src/api/terraform.tfvars | tr -d '"')
+          BASE_OS=$(jq -r '.debian_os' src/api/terraform.tfvars | tr -d '"')
+          BASE_OS_VERSION=$(jq -r '.debian_version' src/api/terraform.tfvars | tr -d '"')
+          ARCHITECTURE=$(jq -r '.debian_architecture' src/api/terraform.tfvars | tr -d '"')
           if [ "$BASE_OS" = "debian" ] && [ "$BASE_OS_VERSION" = "stable" ]; then
             DEBIAN_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
             echo "Resolved Debian stable to version $DEBIAN_VERSION (queried from Debian repository)"
           else
             DEBIAN_VERSION="$BASE_OS_VERSION"
           fi
-          RUNNER_VERSION=$(jq -r '.github.runner_version' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          INSTANCE_TYPE=$(jq -r '.docker_builder.instance_type' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' src/api/endpoints/v1/image_for_ec2_runners/config.json)
+          RUNNER_VERSION=$(jq -r '.github_runner_version' src/api/terraform.tfvars | tr -d '"')
+          INSTANCE_TYPE=$(jq -r '.packer_instance_type' src/api/terraform.tfvars | tr -d '"')
+          SPOT_INSTANCE_TYPES=$(jq -c '.ec2_spot_instance_types' src/api/terraform.tfvars)
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
@@ -90,11 +90,11 @@ jobs:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners
           packer init template.pkr.hcl
       - name: Validate Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners
           packer validate \
             -var="debian_version=${{ steps.config.outputs.debian_version }}" \
             -var="architecture=${{ steps.config.outputs.architecture }}" \
@@ -108,7 +108,7 @@ jobs:
       - id: build
         name: Build AMI with Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.debian_version }}"
           echo "Architecture: ${{ steps.config.outputs.architecture }}"
@@ -194,14 +194,10 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
-          REGION=$(jq -r '.aws.region' src/api/config.json);
-          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
-          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"');
+          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"');
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -214,7 +210,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3 requests
       - name: Run E2E tests
-        run: pytest test/api/test_e2e.py -v
+        run: pytest test/api/image_for_ec2_runners/test_e2e.py -v
   integration-testing:
     name: Integration testing
     needs: building-ami
@@ -225,14 +221,10 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/config.json);
-          REGION=$(jq -r '.aws.region' src/api/config.json);
-          MODEL_ID=$(jq -r '.aws.bedrock.model_id' src/api/config.json);
-          MAX_TOKENS=$(jq -r '.aws.bedrock.max_tokens' src/api/config.json);
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"');
+          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"');
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
-          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT;
-          echo "max_tokens=$MAX_TOKENS" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -245,7 +237,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3 requests
       - name: Run pytest integration tests
-        run: pytest test/api/test_integration.py -v
+        run: pytest test/api/image_for_ec2_runners/test_integration.py -v
   promoting-ami:
     name: Promoting AMI
     needs: e2e-testing
@@ -257,12 +249,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - id: config
-        name: Load configuration from config file
+        name: Load configuration from terraform.tfvars
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          AMI_SSM_PARAMETER=$(jq -r '.ami_promotion.ssm_parameter_name' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          AMI_TAG_KEY=$(jq -r '.ami_promotion.stable_tag_key' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/config.json)
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"')
+          AMI_SSM_PARAMETER=$(jq -r '.ami_promotion_ssm_parameter' src/api/terraform.tfvars | tr -d '"')
+          AMI_TAG_KEY=$(jq -r '.ami_promotion_stable_tag' src/api/terraform.tfvars | tr -d '"')
+          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
           echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
@@ -280,7 +272,7 @@ jobs:
         run: pip install boto3
       - name: Promote AMI
         run: |
-          python src/api/endpoints/v1/image_for_ec2_runners/promote_ami.py \
+          python src/api/packer/image_for_ec2_runners/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ steps.config.outputs.region }}" \
             --run-id "${{ github.run_id }}" \
@@ -303,19 +295,17 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install linting dependencies
-        run: |
-          pip install pylint mypy yamllint boto3-stubs &&
-          npm install -g jsonlint
+        run: pip install pylint mypy yamllint boto3-stubs
       - name: Install project dependencies for linting
         run: pip install boto3
-      - name: Linting JSON configuration files
+      - name: Validating Terraform configuration
         run: |
-          echo "Validating JSON syntax..."
-          jsonlint -q src/api/endpoints/v1/image_for_ec2_runners/config.json
+          echo "Validating terraform.tfvars syntax..."
+          jq empty src/api/terraform.tfvars
       - name: Linting Python files
         run: |
           pylint \
-            src/api/endpoints/v1/image_for_ec2_runners/*.py \
+            src/api/packer/image_for_ec2_runners/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -324,24 +314,24 @@ jobs:
           CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
           yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_post.yml
       - name: Static type checking Python files with mypy
-        run: python -m mypy src/api/endpoints/v1/image_for_ec2_runners/*.py
+        run: python -m mypy src/api/packer/image_for_ec2_runners/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners
           packer init template.pkr.hcl
       - id: packer-config
         name: Load Packer validation config
         run: |
-          REGION=$(jq -r '.aws.region' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          DEBIAN_VERSION=$(jq -r '.base_os.version' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          RUNNER_VERSION=$(jq -r '.github.runner_version' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          SPOT_INSTANCE_TYPES=$(jq -c '.docker_builder.spot_instance_types' src/api/endpoints/v1/image_for_ec2_runners/config.json)
-          FIRST_INSTANCE_TYPE=$(jq -r '.docker_builder.spot_instance_types[0]' src/api/endpoints/v1/image_for_ec2_runners/config.json)
+          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
+          ARCHITECTURE=$(jq -r '.debian_architecture' src/api/terraform.tfvars | tr -d '"')
+          DEBIAN_VERSION=$(jq -r '.debian_version' src/api/terraform.tfvars | tr -d '"')
+          RUNNER_VERSION=$(jq -r '.github_runner_version' src/api/terraform.tfvars | tr -d '"')
+          SPOT_INSTANCE_TYPES=$(jq -c '.ec2_spot_instance_types' src/api/terraform.tfvars)
+          FIRST_INSTANCE_TYPE=$(jq -r '.ec2_spot_instance_types[0]' src/api/terraform.tfvars | tr -d '"')
           echo "region=$REGION" >> $GITHUB_OUTPUT
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "debian_version=$DEBIAN_VERSION" >> $GITHUB_OUTPUT
@@ -350,7 +340,7 @@ jobs:
           echo "first_instance_type=$FIRST_INSTANCE_TYPE" >> $GITHUB_OUTPUT
       - name: Validating Packer template
         run: |
-          cd src/api/endpoints/v1/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners
           packer validate \
             -var="debian_version=${{ steps.packer-config.outputs.debian_version }}" \
             -var="architecture=${{ steps.packer-config.outputs.architecture }}" \
@@ -381,7 +371,7 @@ jobs:
           pip install pytest boto3 moto &&
           pip install aws-cdk-lib constructs
       - name: Run unit tests
-        run: pytest test/api/endpoints/v1/image_for_ec2_runners/test_unit.py -v
+        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
 name: Building AMI for EC2 self-hosted runners
 on:
   push:
@@ -389,8 +379,9 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_ec2_runners_post.yml'
-      - 'src/api/endpoints/v1/image_for_ec2_runners/**'
-      - 'test/api/endpoints/v1/image_for_ec2_runners/**'
+      - 'src/api/packer/image_for_ec2_runners/**'
+      - 'src/api/terraform.tfvars'
+      - 'test/api/image_for_ec2_runners/**'
       - '!**/README.md'
   workflow_dispatch:
     inputs:

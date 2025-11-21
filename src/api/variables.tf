@@ -127,3 +127,48 @@ variable "github_token_secret_name" {
   type        = string
   description = "GitHub token secret parameter name"
 }
+
+variable "ami_promotion_ssm_parameter" {
+  type        = string
+  description = "SSM parameter name for promoted AMI"
+}
+
+variable "ami_promotion_stable_tag" {
+  type        = string
+  description = "Tag key for stable AMI"
+}
+
+variable "debian_os" {
+  type        = string
+  description = "Debian OS name"
+}
+
+variable "debian_version" {
+  type        = string
+  description = "Debian version"
+}
+
+variable "debian_architecture" {
+  type        = string
+  description = "CPU architecture for Debian (arm64 or x86_64)"
+}
+
+variable "github_runner_version" {
+  type        = string
+  description = "GitHub Actions runner version"
+}
+
+variable "packer_instance_type" {
+  type        = string
+  description = "EC2 instance type for Packer builds"
+}
+
+variable "packer_spot_retry_attempts" {
+  type        = number
+  description = "Number of retry attempts for Packer spot instances"
+}
+
+variable "packer_spot_retry_delay" {
+  type        = number
+  description = "Delay in seconds between Packer spot retry attempts"
+}
