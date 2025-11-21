@@ -4,8 +4,6 @@ import importlib.util
 import boto3
 import pytest
 import yaml
-import aws_cdk as cdk
-from aws_cdk.assertions import Template
 
 
 @pytest.fixture
@@ -20,43 +18,6 @@ def openapi_spec():
     openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yml"
     with open(openapi_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
-
-
-@pytest.fixture
-def api_stack_class():
-    stack_path = Path(__file__).parent.parent.parent / "src" / "api" / "stack.py"
-    spec = importlib.util.spec_from_file_location("api_stack", stack_path)
-    api_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(api_module)
-    return api_module.ApiStack
-
-
-@pytest.fixture
-def cdk_app():
-    return cdk.App()
-
-
-@pytest.fixture
-def api_stack(cdk_app, api_stack_class, config):
-    return api_stack_class(
-        cdk_app,
-        "TestApiStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-
-@pytest.fixture
-def cdk_template(api_stack):
-    return Template.from_stack(api_stack)
-
-
-@pytest.fixture
-def stack_hash(api_stack):
-    return api_stack.stack_hash
 
 
 @pytest.fixture
