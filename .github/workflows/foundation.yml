@@ -1,4 +1,4 @@
-name: Foundation Infrastructure
+name: Ensuring foundational infrastructure exists and is properly configured
 
 on:
   push:
