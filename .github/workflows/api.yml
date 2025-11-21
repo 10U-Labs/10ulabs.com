@@ -71,6 +71,18 @@ jobs:
         run: terraform init
       - name: Terraform Apply
         run: terraform apply -auto-approve
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install boto3
+      - name: Extract domain from terraform.tfvars
+        run: |
+          DOMAIN_SUBDOMAIN=$(grep 'domain_subdomain' terraform.tfvars | cut -d'"' -f2)
+          echo "DOMAIN_SUBDOMAIN=$DOMAIN_SUBDOMAIN" >> $GITHUB_ENV
+      - name: Invalidate CloudFront cache
+        run: python ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py "${{ env.DOMAIN_SUBDOMAIN }}" ${{ needs.declaring-common-variables.outputs.aws_region }}
   integration-testing:
     name: Integration testing
     needs:
