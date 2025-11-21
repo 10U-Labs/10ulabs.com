@@ -12,8 +12,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
-          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json);
+          REGION=$(jq -r '.aws.region' src/gmail/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3 dnspython
       - name: Run E2E tests
-        run: pytest test/gmail_email_provider/test_e2e.py -v
+        run: pytest test/gmail/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs: unit-testing
@@ -39,8 +39,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
-          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json);
+          REGION=$(jq -r '.aws.region' src/gmail/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials
@@ -59,15 +59,15 @@ jobs:
       - name: Install CDK
         run: npm install -g aws-cdk
       - name: Install dependencies
-        run: pip install -r src/gmail_email_provider/requirements.txt
+        run: pip install -r src/gmail/requirements.txt
       - name: CDK Bootstrap (if needed)
-        run: cd src/gmail_email_provider && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
+        run: cd src/gmail && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
       - name: CDK Diff
-        run: cd src/gmail_email_provider && cdk diff GmailEmailProvider
+        run: cd src/gmail && cdk diff GmailEmailProvider
       - id: deploy
         name: CDK Deploy
         run: |
-          cd src/gmail_email_provider && cdk deploy GmailEmailProvider \
+          cd src/gmail && cdk deploy GmailEmailProvider \
             --require-approval never \
             --outputs-file ../../gmail-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
           if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
@@ -97,8 +97,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail_email_provider/config.json);
-          REGION=$(jq -r '.aws.region' src/gmail_email_provider/config.json);
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json);
+          REGION=$(jq -r '.aws.region' src/gmail/config.json);
           echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
           echo "region=$REGION" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
@@ -113,7 +113,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run pytest integration tests
-        run: pytest test/gmail_email_provider/test_integration.py -v
+        run: pytest test/gmail/test_integration.py -v
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -135,23 +135,23 @@ jobs:
           pip install pylint mypy yamllint && \
           npm install -g jsonlint
       - name: Install project dependencies for linting
-        run: pip install -r src/gmail_email_provider/requirements.txt
+        run: pip install -r src/gmail/requirements.txt
       - name: Linting JSON configuration files
         run: |
           echo "Validating JSON syntax..."
-          jsonlint -q src/gmail_email_provider/config.json && \
-          jsonlint -q src/gmail_email_provider/cdk.json
+          jsonlint -q src/gmail/config.json && \
+          jsonlint -q src/gmail/cdk.json
       - name: Linting Python files
         run: |
-          pylint src/gmail_email_provider/stack.py src/gmail_email_provider/app.py \
+          pylint src/gmail/stack.py src/gmail/app.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
         run: |
           echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/gmail_email_provider.yml
+          yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/gmail.yml
       - name: Static type checking Python files with mypy
-        run: python -m mypy src/gmail_email_provider
+        run: python -m mypy src/gmail
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -172,16 +172,16 @@ jobs:
           pip install pytest && \
           pip install -r src/gmail_email_provider/requirements.txt
       - name: Run unit tests
-        run: pytest test/gmail_email_provider/test_unit.py -v
+        run: pytest test/gmail/test_unit.py -v
 name: Ensuring DNS allows Gmail to be email provider
 on:
   push:
     branches:
       - main
     paths:
-      - .github/workflows/gmail_email_provider.yml
-      - src/gmail_email_provider/**
-      - test/gmail_email_provider/**
+      - .github/workflows/gmail.yml
+      - src/gmail/**
+      - test/gmail/**
       - '!**/README.md'
   workflow_dispatch:
     inputs:

@@ -6,11 +6,11 @@ from pathlib import Path
 import aws_cdk as cdk
 
 spec = importlib.util.spec_from_file_location(
-    "gmail_email_provider",
+    "gmail",
     Path(__file__).parent / "stack.py"
 )
 if spec is None or spec.loader is None:
-    raise RuntimeError("Failed to load gmail_email_provider stack module")
+    raise RuntimeError("Failed to load gmail stack module")
 gmail_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gmail_module)
 GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
