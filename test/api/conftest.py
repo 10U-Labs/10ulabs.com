@@ -122,7 +122,7 @@ def health_function_name(lambda_client):
 
 @pytest.fixture
 def echo_function_name(lambda_client):
-    return find_lambda_by_substring(lambda_client, 'EchoHandler')
+    return find_lambda_by_substring(lambda_client, 'V1ApiHandler')
 
 
 @pytest.fixture
