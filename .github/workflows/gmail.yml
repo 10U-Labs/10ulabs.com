@@ -28,10 +28,25 @@ jobs:
               echo "Foundation files modified, skipping (will run via workflow_run after foundation succeeds)"
             fi
           fi
-  declaring-common-variables:
-    name: Declaring common variables
+  concluding-rest-of-workflow-should-run:
+    name: Concluding rest of workflow should run
     needs: determining-if-rest-of-workflow-should-run
     if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow completed successfully
+        run: echo "Gmail workflow completed successfully"
+  concluding-rest-of-workflow-should-not-run:
+    name: Concluding rest of workflow should not run
+    needs: determining-if-rest-of-workflow-should-run
+    if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow skipped
+        run: echo "Gmail workflow skipped - foundation files were modified, will run after foundation workflow completes"
+  declaring-common-variables:
+    name: Declaring common variables
+    needs: concluding-rest-of-workflow-should-run
     outputs:
       aws_account_id: ${{ steps.load_config.outputs.aws_account_id }}
       aws_region: ${{ steps.load_config.outputs.aws_region }}
@@ -194,22 +209,6 @@ jobs:
         run: pip install pytest boto3
       - name: Run unit tests
         run: pytest test/gmail/test_unit.py -v
-  concluding-rest-of-workflow-should-run:
-    name: Concluding rest of workflow should run
-    needs: determining-if-rest-of-workflow-should-run
-    if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Workflow completed successfully
-        run: echo "Gmail workflow completed successfully"
-  concluding-rest-of-workflow-should-not-run:
-    name: Concluding rest of workflow should not run
-    needs: determining-if-rest-of-workflow-should-run
-    if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Workflow skipped
-        run: echo "Gmail workflow skipped - foundation files were modified, will run after foundation workflow completes"
 name: Ensuring DNS allows Gmail to be email provider
 on:
   push:
