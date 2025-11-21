@@ -27,7 +27,7 @@ jobs:
           echo "Using EC2 instance role for AWS credentials"
       - name: Build and push Docker image (native ARM64, no emulation!)
         run: |
-          cd api/resources/docker_runner
+          cd src/api/packer/image_for_docker_runners
           BUILD_TAG="${{ github.run_number }}-$(git rev-parse --short HEAD)"
           ECR_URL="${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
           aws ecr get-login-password --region ${{ steps.config.outputs.region }} | \
