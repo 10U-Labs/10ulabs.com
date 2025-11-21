@@ -70,7 +70,7 @@ resource "aws_cloudwatch_log_group" "catchall_handler" {
 
 data "archive_file" "runners_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/lambdas/runners"
+  source_file = "${path.module}/lambdas/webhook_router.py"
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
 }
 
@@ -130,7 +130,7 @@ resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
 
 data "archive_file" "v1_handler" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/v1_api.py"
+  source_file = "${path.module}/lambdas/v1.py"
   output_path = "${path.module}/.terraform/lambda_packages/v1_handler.zip"
 }
 
@@ -138,7 +138,7 @@ resource "aws_lambda_function" "v1_handler" {
   filename         = data.archive_file.v1_handler.output_path
   function_name    = "V1ApiHandler"
   role             = aws_iam_role.lambda_v1_handler.arn
-  handler          = "v1_api.lambda_handler"
+  handler          = "v1.lambda_handler"
   source_code_hash = data.archive_file.v1_handler.output_base64sha256
   runtime          = "python3.14"
   timeout          = var.lambda_timeout_seconds
