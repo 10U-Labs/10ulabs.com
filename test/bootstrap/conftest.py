@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 import boto3
 import pytest
@@ -59,3 +60,33 @@ def hosted_zone(route53_client, config):
     zone_id = config['hosted_zone_id']
     response = route53_client.get_hosted_zone(Id=zone_id)
     return response['HostedZone']
+
+
+@pytest.fixture
+def expected_resource_count(bootstrap_dir):
+    tf_files = list(bootstrap_dir.glob('*.tf'))
+    module_files = list(bootstrap_dir.glob('modules/**/*.tf'))
+    all_files = tf_files + module_files
+
+    resource_count = 0
+    for tf_file in all_files:
+        with open(tf_file, encoding='utf-8') as f:
+            content = f.read()
+            resource_count += content.count('\nresource "')
+            if content.startswith('resource "'):
+                resource_count += 1
+
+    return resource_count
+
+
+@pytest.fixture
+def terraform_state_resources(bootstrap_dir):
+    result = subprocess.run(
+        ['terraform', 'state', 'list'],
+        cwd=bootstrap_dir,
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    resources = result.stdout.strip().split('\n') if result.stdout.strip() else []
+    return resources
