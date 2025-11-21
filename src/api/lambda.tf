@@ -70,7 +70,7 @@ resource "aws_cloudwatch_log_group" "catchall_handler" {
 
 data "archive_file" "runners_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/lambdas/v1/runners"
+  source_dir  = "${path.module}/lambdas/runners"
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
 }
 
@@ -130,9 +130,8 @@ resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
 
 data "archive_file" "v1_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/lambdas/v1"
+  source_dir  = "${path.module}/lambdas/v1_api"
   output_path = "${path.module}/.terraform/lambda_packages/v1_handler.zip"
-  excludes    = ["runners"]
 }
 
 resource "aws_lambda_function" "v1_handler" {
