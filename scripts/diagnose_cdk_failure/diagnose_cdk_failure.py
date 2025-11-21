@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import json
 import boto3
 from botocore.exceptions import ClientError
 
@@ -15,6 +16,181 @@ def get_failed_changeset(cfn_client, stack_name):
     except ClientError as e:
         print(f"Failed to get changeset: {e}")
         return None
+
+
+def get_changeset_hooks(cfn_client, stack_name):
+    try:
+        response = cfn_client.describe_change_set_hooks(
+            StackName=stack_name,
+            ChangeSetName='cdk-deploy-change-set'
+        )
+        return response.get('Hooks', [])
+    except ClientError:
+        return []
+
+
+def validate_resource_reference(ref_type, ref_value, region):
+    exists = False
+    error_msg = None
+
+    try:
+        if ref_type == 'CertificateArn':
+            acm = boto3.client('acm', region_name=region)
+            try:
+                acm.describe_certificate(CertificateArn=ref_value)
+                exists = True
+            except ClientError as e:
+                error_msg = f"Certificate {ref_value} not found: {e.response['Error']['Message']}"
+
+        elif ref_type == 'HostedZoneId':
+            route53 = boto3.client('route53', region_name=region)
+            try:
+                route53.get_hosted_zone(Id=ref_value)
+                exists = True
+            except ClientError as e:
+                error_msg = f"Hosted Zone {ref_value} not found: {e.response['Error']['Message']}"
+
+        elif ref_type == 'VpcId':
+            ec2 = boto3.client('ec2', region_name=region)
+            try:
+                response = ec2.describe_vpcs(VpcIds=[ref_value])
+                exists = len(response['Vpcs']) > 0
+                if not exists:
+                    error_msg = f"VPC {ref_value} not found"
+            except ClientError as e:
+                error_msg = f"VPC {ref_value} not found: {e.response['Error']['Message']}"
+
+        elif ref_type == 'SubnetId':
+            ec2 = boto3.client('ec2', region_name=region)
+            try:
+                response = ec2.describe_subnets(SubnetIds=[ref_value])
+                exists = len(response['Subnets']) > 0
+                if not exists:
+                    error_msg = f"Subnet {ref_value} not found"
+            except ClientError as e:
+                error_msg = f"Subnet {ref_value} not found: {e.response['Error']['Message']}"
+
+        elif ref_type == 'SecurityGroupId':
+            ec2 = boto3.client('ec2', region_name=region)
+            try:
+                response = ec2.describe_security_groups(GroupIds=[ref_value])
+                exists = len(response['SecurityGroups']) > 0
+                if not exists:
+                    error_msg = f"Security Group {ref_value} not found"
+            except ClientError as e:
+                error_msg = f"Security Group {ref_value} not found: {e.response['Error']['Message']}"
+
+    except Exception as e:
+        error_msg = f"Error validating {ref_type} {ref_value}: {str(e)}"
+
+    return exists, error_msg
+
+
+def extract_resource_references(resource_properties):
+    references = []
+
+    if not isinstance(resource_properties, dict):
+        return references
+
+    ref_types = {
+        'CertificateArn': 'CertificateArn',
+        'HostedZoneId': 'HostedZoneId',
+        'VpcId': 'VpcId',
+        'SubnetId': 'SubnetId',
+        'SecurityGroupId': 'SecurityGroupId'
+    }
+
+    for key, ref_type in ref_types.items():
+        if key in resource_properties:
+            value = resource_properties[key]
+            if isinstance(value, str):
+                references.append((ref_type, value))
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, str):
+                        references.append((ref_type, item))
+
+    return references
+
+
+def analyze_early_validation_failure(cfn_client, changeset, region):
+    print("=" * 80)
+    print("EARLY VALIDATION FAILURE ANALYSIS")
+    print("=" * 80)
+    print()
+
+    status_reason = changeset.get('StatusReason', '')
+    if 'EarlyValidation' in status_reason or 'ResourceExistenceCheck' in status_reason:
+        print("⚠️  AWS Early Validation detected resource existence issues")
+        print()
+
+        hooks = get_changeset_hooks(cfn_client, changeset.get('StackName', ''))
+        if hooks:
+            print("Hook Execution Details:")
+            for hook in hooks:
+                print(f"   Hook: {hook.get('TypeName', 'Unknown')}")
+                print(f"   Status: {hook.get('Status', 'Unknown')}")
+                if hook.get('FailureMode'):
+                    print(f"   Failure Mode: {hook.get('FailureMode')}")
+                if hook.get('StatusReason'):
+                    print(f"   Reason: {hook.get('StatusReason')}")
+                print()
+
+        print("-" * 80)
+        print("CHECKING RESOURCE REFERENCES")
+        print("-" * 80)
+        print()
+
+        changes = changeset.get('Changes', [])
+        validation_errors = []
+
+        for change in changes:
+            resource_change = change.get('ResourceChange', {})
+            logical_id = resource_change.get('LogicalResourceId')
+            resource_type = resource_change.get('ResourceType')
+            action = resource_change.get('Action')
+
+            details = resource_change.get('Details', [])
+            for detail in details:
+                if detail.get('Target', {}).get('Attribute') == 'Properties':
+                    after_value = detail.get('Target', {}).get('AfterValue')
+                    if after_value:
+                        try:
+                            props = json.loads(after_value) if isinstance(after_value, str) else after_value
+                            refs = extract_resource_references(props)
+
+                            for ref_type, ref_value in refs:
+                                exists, error_msg = validate_resource_reference(ref_type, ref_value, region)
+                                if not exists:
+                                    validation_errors.append({
+                                        'logical_id': logical_id,
+                                        'resource_type': resource_type,
+                                        'action': action,
+                                        'ref_type': ref_type,
+                                        'ref_value': ref_value,
+                                        'error': error_msg
+                                    })
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+
+        if validation_errors:
+            print("❌ INVALID RESOURCE REFERENCES FOUND:")
+            print()
+            for error in validation_errors:
+                print(f"   Resource: {error['logical_id']} ({error['resource_type']})")
+                print(f"   Action: {error['action']}")
+                print(f"   Invalid Reference: {error['ref_type']}")
+                print(f"   Value: {error['ref_value']}")
+                print(f"   Error: {error['error']}")
+                print()
+
+            return True
+        else:
+            print("   No invalid resource references found in changeset properties")
+            print("   (The validation error may be in a nested stack or imported value)")
+            print()
+
+    return False
 
 
 def check_resource_exists(resource_type, resource_name, region):
@@ -132,6 +308,23 @@ def diagnose_deployment_failure(stack_name, region):
     if not changes:
         print("No changes found in changeset")
         return
+
+    status_reason = changeset.get('StatusReason', '')
+    is_early_validation = 'EarlyValidation' in status_reason or 'ResourceExistenceCheck' in status_reason
+
+    if is_early_validation:
+        found_issue = analyze_early_validation_failure(cfn_client, changeset, region)
+        if found_issue:
+            print("=" * 80)
+            print("RECOMMENDATIONS")
+            print("=" * 80)
+            print()
+            print("1. Verify the referenced resources exist in your AWS account and region")
+            print("2. Check if you're referencing resources from a different region")
+            print("3. Ensure cross-stack exports are available if using Fn::ImportValue")
+            print("4. Verify resource IDs/ARNs are correct and haven't been deleted")
+            print()
+            return
 
     print("-" * 80)
     print("RESOURCE CONFLICT ANALYSIS")
