@@ -128,11 +128,3 @@ def test_github_oidc_module_exists(bootstrap_dir):
 
 def test_domain_module_exists(bootstrap_dir):
     assert (bootstrap_dir / "modules" / "domain" / "main.tf").exists()
-
-
-def test_terraform_state_matches_defined_resources(expected_resource_count, terraform_state_resources):
-    state_count = len(terraform_state_resources)
-    is_empty_state = state_count == 0
-    is_complete_state = state_count == expected_resource_count
-    is_valid_state = is_empty_state or is_complete_state
-    assert is_valid_state

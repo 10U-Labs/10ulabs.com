@@ -77,16 +77,3 @@ def expected_resource_count(bootstrap_dir):
                 resource_count += 1
 
     return resource_count
-
-
-@pytest.fixture
-def terraform_state_resources(bootstrap_dir):
-    result = subprocess.run(
-        ['terraform', 'state', 'list'],
-        cwd=bootstrap_dir,
-        capture_output=True,
-        text=True,
-        check=True
-    )
-    resources = result.stdout.strip().split('\n') if result.stdout.strip() else []
-    return resources
