@@ -2,8 +2,24 @@
 import argparse
 import sys
 import json
+import re
 import boto3
 from botocore.exceptions import ClientError
+
+
+ARN_PATTERN = re.compile(r'arn:aws:([^:]+):([^:]*):([^:]*):(.+)')
+RESOURCE_ID_PATTERNS = {
+    'vpc': re.compile(r'vpc-[a-f0-9]+'),
+    'subnet': re.compile(r'subnet-[a-f0-9]+'),
+    'sg': re.compile(r'sg-[a-f0-9]+'),
+    'instance': re.compile(r'i-[a-f0-9]+'),
+    'ami': re.compile(r'ami-[a-f0-9]+'),
+    'eni': re.compile(r'eni-[a-f0-9]+'),
+    'igw': re.compile(r'igw-[a-f0-9]+'),
+    'nat': re.compile(r'nat-[a-f0-9]+'),
+    'rtb': re.compile(r'rtb-[a-f0-9]+'),
+    'hosted_zone': re.compile(r'Z[A-Z0-9]{12,}'),
+}
 
 
 def get_failed_changeset(cfn_client, stack_name):
@@ -29,86 +45,180 @@ def get_changeset_hooks(cfn_client, stack_name):
         return []
 
 
-def validate_resource_reference(ref_type, ref_value, region):
-    exists = False
-    error_msg = None
+def validate_arn(arn, region):
+    match = ARN_PATTERN.match(arn)
+    if not match:
+        return False, f"Invalid ARN format: {arn}"
 
-    try:
-        if ref_type == 'CertificateArn':
-            acm = boto3.client('acm', region_name=region)
-            try:
-                acm.describe_certificate(CertificateArn=ref_value)
-                exists = True
-            except ClientError as e:
-                error_msg = f"Certificate {ref_value} not found: {e.response['Error']['Message']}"
+    service, arn_region, account, resource = match.groups()
 
-        elif ref_type == 'HostedZoneId':
-            route53 = boto3.client('route53', region_name=region)
-            try:
-                route53.get_hosted_zone(Id=ref_value)
-                exists = True
-            except ClientError as e:
-                error_msg = f"Hosted Zone {ref_value} not found: {e.response['Error']['Message']}"
+    use_region = arn_region if arn_region else region
 
-        elif ref_type == 'VpcId':
-            ec2 = boto3.client('ec2', region_name=region)
-            try:
-                response = ec2.describe_vpcs(VpcIds=[ref_value])
-                exists = len(response['Vpcs']) > 0
-                if not exists:
-                    error_msg = f"VPC {ref_value} not found"
-            except ClientError as e:
-                error_msg = f"VPC {ref_value} not found: {e.response['Error']['Message']}"
-
-        elif ref_type == 'SubnetId':
-            ec2 = boto3.client('ec2', region_name=region)
-            try:
-                response = ec2.describe_subnets(SubnetIds=[ref_value])
-                exists = len(response['Subnets']) > 0
-                if not exists:
-                    error_msg = f"Subnet {ref_value} not found"
-            except ClientError as e:
-                error_msg = f"Subnet {ref_value} not found: {e.response['Error']['Message']}"
-
-        elif ref_type == 'SecurityGroupId':
-            ec2 = boto3.client('ec2', region_name=region)
-            try:
-                response = ec2.describe_security_groups(GroupIds=[ref_value])
-                exists = len(response['SecurityGroups']) > 0
-                if not exists:
-                    error_msg = f"Security Group {ref_value} not found"
-            except ClientError as e:
-                error_msg = f"Security Group {ref_value} not found: {e.response['Error']['Message']}"
-
-    except Exception as e:
-        error_msg = f"Error validating {ref_type} {ref_value}: {str(e)}"
-
-    return exists, error_msg
-
-
-def extract_resource_references(resource_properties):
-    references = []
-
-    if not isinstance(resource_properties, dict):
-        return references
-
-    ref_types = {
-        'CertificateArn': 'CertificateArn',
-        'HostedZoneId': 'HostedZoneId',
-        'VpcId': 'VpcId',
-        'SubnetId': 'SubnetId',
-        'SecurityGroupId': 'SecurityGroupId'
+    validators = {
+        'acm': validate_acm_certificate,
+        'lambda': validate_lambda_function,
+        's3': validate_s3_bucket,
+        'dynamodb': validate_dynamodb_table,
+        'iam': validate_iam_role,
+        'sqs': validate_sqs_queue,
+        'sns': validate_sns_topic,
+        'ec2': validate_ec2_resource,
     }
 
-    for key, ref_type in ref_types.items():
-        if key in resource_properties:
-            value = resource_properties[key]
-            if isinstance(value, str):
-                references.append((ref_type, value))
-            elif isinstance(value, list):
-                for item in value:
-                    if isinstance(item, str):
-                        references.append((ref_type, item))
+    validator = validators.get(service)
+    if validator:
+        return validator(arn, resource, use_region)
+
+    return None, f"No validator for service: {service}"
+
+
+def validate_acm_certificate(arn, resource, region):
+    try:
+        acm = boto3.client('acm', region_name=region)
+        acm.describe_certificate(CertificateArn=arn)
+        return True, None
+    except ClientError as e:
+        return False, f"Certificate not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating certificate: {str(e)}"
+
+
+def validate_lambda_function(arn, resource, region):
+    try:
+        lambda_client = boto3.client('lambda', region_name=region)
+        function_name = resource.split(':')[-1]
+        lambda_client.get_function(FunctionName=function_name)
+        return True, None
+    except ClientError as e:
+        return False, f"Lambda function not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating Lambda function: {str(e)}"
+
+
+def validate_s3_bucket(arn, resource, region):
+    try:
+        s3 = boto3.client('s3', region_name=region)
+        bucket_name = resource
+        s3.head_bucket(Bucket=bucket_name)
+        return True, None
+    except ClientError as e:
+        return False, f"S3 bucket not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating S3 bucket: {str(e)}"
+
+
+def validate_dynamodb_table(arn, resource, region):
+    try:
+        dynamodb = boto3.client('dynamodb', region_name=region)
+        table_name = resource.split('/')[-1]
+        dynamodb.describe_table(TableName=table_name)
+        return True, None
+    except ClientError as e:
+        return False, f"DynamoDB table not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating DynamoDB table: {str(e)}"
+
+
+def validate_iam_role(arn, resource, region):
+    try:
+        iam = boto3.client('iam')
+        role_name = resource.split('/')[-1]
+        iam.get_role(RoleName=role_name)
+        return True, None
+    except ClientError as e:
+        return False, f"IAM role not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating IAM role: {str(e)}"
+
+
+def validate_sqs_queue(arn, resource, region):
+    try:
+        sqs = boto3.client('sqs', region_name=region)
+        queue_name = resource.split(':')[-1]
+        sqs.get_queue_url(QueueName=queue_name)
+        return True, None
+    except ClientError as e:
+        return False, f"SQS queue not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating SQS queue: {str(e)}"
+
+
+def validate_sns_topic(arn, resource, region):
+    try:
+        sns = boto3.client('sns', region_name=region)
+        sns.get_topic_attributes(TopicArn=arn)
+        return True, None
+    except ClientError as e:
+        return False, f"SNS topic not found: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating SNS topic: {str(e)}"
+
+
+def validate_ec2_resource(arn, resource, region):
+    return None, "EC2 ARN validation not implemented (use resource ID patterns instead)"
+
+
+def validate_resource_id(resource_id, region):
+    ec2 = boto3.client('ec2', region_name=region)
+    route53 = boto3.client('route53')
+
+    try:
+        if RESOURCE_ID_PATTERNS['vpc'].match(resource_id):
+            response = ec2.describe_vpcs(VpcIds=[resource_id])
+            exists = len(response['Vpcs']) > 0
+            return exists, None if exists else f"VPC {resource_id} not found"
+
+        elif RESOURCE_ID_PATTERNS['subnet'].match(resource_id):
+            response = ec2.describe_subnets(SubnetIds=[resource_id])
+            exists = len(response['Subnets']) > 0
+            return exists, None if exists else f"Subnet {resource_id} not found"
+
+        elif RESOURCE_ID_PATTERNS['sg'].match(resource_id):
+            response = ec2.describe_security_groups(GroupIds=[resource_id])
+            exists = len(response['SecurityGroups']) > 0
+            return exists, None if exists else f"Security Group {resource_id} not found"
+
+        elif RESOURCE_ID_PATTERNS['ami'].match(resource_id):
+            response = ec2.describe_images(ImageIds=[resource_id])
+            exists = len(response['Images']) > 0
+            return exists, None if exists else f"AMI {resource_id} not found"
+
+        elif RESOURCE_ID_PATTERNS['hosted_zone'].match(resource_id):
+            try:
+                route53.get_hosted_zone(Id=resource_id)
+                return True, None
+            except ClientError as e:
+                return False, f"Hosted Zone {resource_id} not found: {e.response['Error']['Message']}"
+
+    except ClientError as e:
+        return False, f"Error validating {resource_id}: {e.response['Error']['Message']}"
+    except Exception as e:
+        return False, f"Error validating {resource_id}: {str(e)}"
+
+    return None, f"Unknown resource ID format: {resource_id}"
+
+
+def extract_all_references(obj, references=None):
+    if references is None:
+        references = set()
+
+    if isinstance(obj, str):
+        arn_match = ARN_PATTERN.match(obj)
+        if arn_match:
+            references.add(('arn', obj))
+        else:
+            for pattern_name, pattern in RESOURCE_ID_PATTERNS.items():
+                if pattern.match(obj):
+                    references.add(('resource_id', obj))
+                    break
+
+    elif isinstance(obj, list):
+        for item in obj:
+            extract_all_references(item, references)
+
+    elif isinstance(obj, dict):
+        for value in obj.values():
+            extract_all_references(value, references)
 
     return references
 
@@ -137,11 +247,12 @@ def analyze_early_validation_failure(cfn_client, changeset, region):
                 print()
 
         print("-" * 80)
-        print("CHECKING RESOURCE REFERENCES")
+        print("SCANNING FOR ALL AWS RESOURCE REFERENCES")
         print("-" * 80)
         print()
 
         changes = changeset.get('Changes', [])
+        all_references = set()
         validation_errors = []
 
         for change in changes:
@@ -157,11 +268,20 @@ def analyze_early_validation_failure(cfn_client, changeset, region):
                     if after_value:
                         try:
                             props = json.loads(after_value) if isinstance(after_value, str) else after_value
-                            refs = extract_resource_references(props)
+                            refs = extract_all_references(props)
 
                             for ref_type, ref_value in refs:
-                                exists, error_msg = validate_resource_reference(ref_type, ref_value, region)
-                                if not exists:
+                                all_references.add((ref_type, ref_value))
+
+                                exists = None
+                                error_msg = None
+
+                                if ref_type == 'arn':
+                                    exists, error_msg = validate_arn(ref_value, region)
+                                elif ref_type == 'resource_id':
+                                    exists, error_msg = validate_resource_id(ref_value, region)
+
+                                if exists is False:
                                     validation_errors.append({
                                         'logical_id': logical_id,
                                         'resource_type': resource_type,
@@ -170,8 +290,12 @@ def analyze_early_validation_failure(cfn_client, changeset, region):
                                         'ref_value': ref_value,
                                         'error': error_msg
                                     })
+
                         except (json.JSONDecodeError, TypeError):
                             pass
+
+        print(f"Detected {len(all_references)} AWS resource references in changeset")
+        print()
 
         if validation_errors:
             print("❌ INVALID RESOURCE REFERENCES FOUND:")
@@ -179,15 +303,15 @@ def analyze_early_validation_failure(cfn_client, changeset, region):
             for error in validation_errors:
                 print(f"   Resource: {error['logical_id']} ({error['resource_type']})")
                 print(f"   Action: {error['action']}")
-                print(f"   Invalid Reference: {error['ref_type']}")
+                print(f"   Reference Type: {error['ref_type']}")
                 print(f"   Value: {error['ref_value']}")
                 print(f"   Error: {error['error']}")
                 print()
 
             return True
         else:
-            print("   No invalid resource references found in changeset properties")
-            print("   (The validation error may be in a nested stack or imported value)")
+            print("   ✓ All detected resource references appear to be valid")
+            print("   (Note: Some references may not be validated if validators are not implemented)")
             print()
 
     return False
