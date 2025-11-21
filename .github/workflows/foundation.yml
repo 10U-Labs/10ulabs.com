@@ -6,12 +6,14 @@ on:
       - main
     paths:
       - 'src/foundation/**'
+      - 'test/foundation/**'
       - '.github/workflows/foundation.yml'
   pull_request:
     branches:
       - main
     paths:
       - 'src/foundation/**'
+      - 'test/foundation/**'
       - '.github/workflows/foundation.yml'
   workflow_dispatch:
 
@@ -19,13 +21,126 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  terraform:
+  performing-static-analysis:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push') ||
+        (github.event_name == 'workflow_dispatch')
+      )
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10"
+
+      - name: Install tflint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+      - name: Install linting dependencies
+        run: |
+          pip install pylint mypy yamllint
+
+      - name: Terraform Format Check
+        run: cd src/foundation && terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: cd src/foundation && terraform init
+
+      - name: Terraform Validate
+        run: cd src/foundation && terraform validate
+
+      - name: Run tflint
+        run: cd src/foundation && tflint --init && tflint
+
+      - name: Linting YAML files
+        run: |
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
+          yamllint --config-data "$CONFIG" .github/workflows/foundation.yml
+
+  unit-testing:
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install Python dependencies
+        run: pip install pytest boto3
+
+      - name: Run unit tests
+        run: pytest test/foundation/test_unit.py -v
+
+  snapshot-testing:
+    name: Snapshot testing
+    needs: unit-testing
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: src/foundation
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10"
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform plan -out=tfplan.binary
+          terraform show -json tfplan.binary > ../../tfplan.json
+
+      - name: Install Python dependencies
+        run: pip install pytest
+
+      - name: Run snapshot tests
+        run: pytest ../../test/foundation/test_snapshot.py -v
+
+  ensuring-infrastructure-in-desired-state:
+    name: Ensuring infrastructure is in desired state
+    needs: snapshot-testing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/foundation
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,14 +156,8 @@ jobs:
         with:
           terraform_version: "1.10"
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
       - name: Terraform Init
         run: terraform init
-
-      - name: Terraform Validate
-        run: terraform validate
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan
@@ -56,3 +165,53 @@ jobs:
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve tfplan
+
+  integration-testing:
+    name: Integration testing
+    needs: ensuring-infrastructure-in-desired-state
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install Python dependencies
+        run: pip install pytest boto3
+
+      - name: Run integration tests
+        run: pytest test/foundation/test_integration.py -v
+
+  e2e-testing:
+    name: E2E testing
+    needs: integration-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Install Python dependencies
+        run: pip install pytest boto3 dnspython
+
+      - name: Run E2E tests
+        run: pytest test/foundation/test_e2e.py -v
