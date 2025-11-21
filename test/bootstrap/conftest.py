@@ -5,8 +5,13 @@ import pytest
 
 
 @pytest.fixture
-def config():
-    tfvars_path = Path(__file__).parent.parent.parent / "src" / "bootstrap" / "terraform.tfvars"
+def bootstrap_dir():
+    return Path(__file__).parent.parent.parent / "src" / "bootstrap"
+
+
+@pytest.fixture
+def config(bootstrap_dir):
+    tfvars_path = bootstrap_dir / "terraform.tfvars"
     config_dict = {}
     with open(tfvars_path, encoding='utf-8') as f:
         for line in f:
