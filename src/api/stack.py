@@ -231,7 +231,7 @@ class ApiStack(Stack):
         return docs_bucket
 
     def _deploy_docs_to_s3(self, docs_bucket, cf_dist):
-        api_dir = os.path.join(os.path.dirname(__file__), "..")
+        api_dir = os.path.dirname(__file__)
         s3deploy.BucketDeployment(
             self, "DeployApiDocs",
             sources=[s3deploy.Source.asset(api_dir, exclude=["**", "!openapi.yml", "!index.html", "!404.html"])],
