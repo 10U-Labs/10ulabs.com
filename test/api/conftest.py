@@ -8,21 +8,21 @@ import yaml
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "packer" / "ec2_runner" / "config.json"
     with open(config_path, encoding='utf-8') as f:
         return json.load(f)
 
 
 @pytest.fixture
 def openapi_spec():
-    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "openapi.yml"
+    openapi_path = Path(__file__).parent.parent.parent / "src" / "api" / "files" / "openapi.yml"
     with open(openapi_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
 
 @pytest.fixture
 def health_handler():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "health.py"
     spec = importlib.util.spec_from_file_location("health_handler", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -31,7 +31,7 @@ def health_handler():
 
 @pytest.fixture
 def v1_handler():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "handler.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
     spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -40,7 +40,7 @@ def v1_handler():
 
 @pytest.fixture
 def catchall_handler():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "catchall" / "handler.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "catchall.py"
     spec = importlib.util.spec_from_file_location("catchall_handler", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -99,7 +99,7 @@ def stack_outputs(cloudformation_client):
 
 @pytest.fixture
 def certificate_arn(acm_client, config):
-    subdomain = config['domain_names']['subdomain']
+    subdomain = "api.10ulabs.com"
     certificates = acm_client.list_certificates()
     for cert in certificates['CertificateSummaryList']:
         if cert['DomainName'] == subdomain:
@@ -109,7 +109,7 @@ def certificate_arn(acm_client, config):
 
 @pytest.fixture
 def bucket_name(config):
-    return config['domain_names']['subdomain']
+    return "api.10ulabs.com"
 
 
 @pytest.fixture
@@ -121,13 +121,12 @@ def api_endpoint(cloudformation_client, config):
         if output['OutputKey'] == 'ApiEndpoint':
             return output['OutputValue']
 
-    subdomain = config['domain_names']['subdomain']
-    return f"https://{subdomain}"
+    return "https://api.10ulabs.com"
 
 
 @pytest.fixture
 def webhook_router():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "webhook_router.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
     spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -135,17 +134,8 @@ def webhook_router():
 
 
 @pytest.fixture
-def configure_webhook():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "configure_webhook_handler.py"
-    spec = importlib.util.spec_from_file_location("configure_webhook", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.fixture
 def circuit_breaker_remediation():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "circuit_breaker_remediation.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
     spec = importlib.util.spec_from_file_location("circuit_breaker_remediation", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -154,7 +144,7 @@ def circuit_breaker_remediation():
 
 @pytest.fixture
 def dlq_reprocessor():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "runners" / "dlq_reprocessor.py"
+    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
     spec = importlib.util.spec_from_file_location("dlq_reprocessor", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
