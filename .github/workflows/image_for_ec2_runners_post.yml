@@ -238,46 +238,6 @@ jobs:
         run: pip install pytest boto3 requests
       - name: Run pytest integration tests
         run: pytest test/api/image_for_ec2_runners/test_integration.py -v
-  promoting-ami:
-    name: Promoting AMI
-    needs: e2e-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Load configuration from terraform.tfvars
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"')
-          AMI_SSM_PARAMETER=$(jq -r '.ami_promotion_ssm_parameter' src/api/terraform.tfvars | tr -d '"')
-          AMI_TAG_KEY=$(jq -r '.ami_promotion_stable_tag' src/api/terraform.tfvars | tr -d '"')
-          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
-          echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install Python dependencies
-        run: pip install boto3
-      - name: Promote AMI
-        run: |
-          python src/api/packer/image_for_ec2_runners/promote_ami.py \
-            --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
-            --region "${{ steps.config.outputs.region }}" \
-            --run-id "${{ github.run_id }}" \
-            --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
-            --tag-key "${{ steps.config.outputs.ami_tag_key }}"
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -294,14 +254,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Install tflint
+        run: |
+          TFLINT_INSTALL_URL='https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh'
+          curl -s "$TFLINT_INSTALL_URL" | bash
       - name: Install linting dependencies
         run: pip install pylint mypy yamllint boto3-stubs
       - name: Install project dependencies for linting
         run: pip install boto3
-      - name: Validating Terraform configuration
-        run: |
-          echo "Validating terraform.tfvars syntax..."
-          jq empty src/api/terraform.tfvars
+      - name: Terraform Format Check
+        run: cd src/api && terraform fmt -check terraform.tfvars
+      - name: Run tflint
+        run: cd src/api && tflint --init && tflint
       - name: Linting Python files
         run: |
           pylint \
@@ -351,6 +315,46 @@ jobs:
             -var="vpc_id=vpc-dummy" \
             -var="subnet_id=subnet-dummy" \
             template.pkr.hcl
+  promoting-ami:
+    name: Promoting AMI
+    needs: e2e-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Load configuration from terraform.tfvars
+        run: |
+          ACCOUNT_ID=$(jq -r '.aws_account_id' src/api/terraform.tfvars | tr -d '"')
+          AMI_SSM_PARAMETER=$(jq -r '.ami_promotion_ssm_parameter' src/api/terraform.tfvars | tr -d '"')
+          AMI_TAG_KEY=$(jq -r '.ami_promotion_stable_tag' src/api/terraform.tfvars | tr -d '"')
+          REGION=$(jq -r '.aws_region' src/api/terraform.tfvars | tr -d '"')
+          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
+          echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install boto3
+      - name: Promote AMI
+        run: |
+          python src/api/packer/image_for_ec2_runners/promote_ami.py \
+            --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
+            --region "${{ steps.config.outputs.region }}" \
+            --run-id "${{ github.run_id }}" \
+            --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
+            --tag-key "${{ steps.config.outputs.ami_tag_key }}"
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
