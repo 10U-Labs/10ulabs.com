@@ -2,8 +2,36 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  determining-if-rest-of-workflow-should-run:
+    name: Determining if rest of workflow should run
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: check
+        name: Check if foundation files were modified
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Workflow triggered by ${{ github.event_name }}, will run"
+          else
+            FOUNDATION_FILES=$(git diff --name-only HEAD~1 HEAD | grep -E '^(src/foundation/|test/foundation/|\.github/workflows/foundation\.yml)' || true)
+            if [ -z "$FOUNDATION_FILES" ]; then
+              echo "should_run=true" >> $GITHUB_OUTPUT
+              echo "No foundation files modified, will run"
+            else
+              echo "should_run=false" >> $GITHUB_OUTPUT
+              echo "Foundation files modified, skipping (will run via workflow_run after foundation succeeds)"
+            fi
+          fi
   declaring-common-variables:
     name: Declaring common variables
+    needs: determining-if-rest-of-workflow-should-run
+    if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'true'
     outputs:
       aws_account_id: ${{ steps.load_config.outputs.aws_account_id }}
       aws_region: ${{ steps.load_config.outputs.aws_region }}
@@ -166,6 +194,24 @@ jobs:
         run: pip install pytest boto3
       - name: Run unit tests
         run: pytest test/gmail/test_unit.py -v
+  concluding-rest-of-workflow-should-run:
+    name: Concluding rest of workflow should run
+    needs:
+      - determining-if-rest-of-workflow-should-run
+      - e2e-testing
+    if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow completed successfully
+        run: echo "Gmail workflow completed successfully"
+  concluding-rest-of-workflow-should-not-run:
+    name: Concluding rest of workflow should not run
+    needs: determining-if-rest-of-workflow-should-run
+    if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow skipped
+        run: echo "Gmail workflow skipped - foundation files were modified, will run after foundation workflow completes"
 name: Ensuring DNS allows Gmail to be email provider
 on:
   push:
