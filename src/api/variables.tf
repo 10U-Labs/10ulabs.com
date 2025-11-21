@@ -18,11 +18,6 @@ variable "domain_subdomain" {
   description = "Subdomain for API"
 }
 
-variable "github_org" {
-  type        = string
-  description = "GitHub organization"
-}
-
 variable "github_repo" {
   type        = string
   description = "GitHub repository (org/repo format)"
@@ -73,11 +68,6 @@ variable "ec2_max_spot_price" {
   description = "Maximum spot price for EC2 runners"
 }
 
-variable "ec2_runner_labels" {
-  type        = list(string)
-  description = "Labels for EC2 runners"
-}
-
 variable "lambda_memory_mb" {
   type        = number
   description = "Lambda function memory in MB"
@@ -91,21 +81,6 @@ variable "lambda_timeout_seconds" {
 variable "api_version" {
   type        = string
   description = "API version"
-}
-
-variable "bedrock_model_id" {
-  type        = string
-  description = "Bedrock model ID"
-}
-
-variable "bedrock_max_tokens" {
-  type        = number
-  description = "Bedrock maximum tokens"
-}
-
-variable "bedrock_budget_tokens" {
-  type        = number
-  description = "Bedrock budget tokens"
 }
 
 variable "stack_name" {

@@ -1,6 +1,5 @@
 locals {
-  stack_hash = upper(substr(md5(var.stack_name), 0, 8))
-  azs        = slice(data.aws_availability_zones.available.names, 0, var.vpc_max_azs)
+  azs = slice(data.aws_availability_zones.available.names, 0, var.vpc_max_azs)
 }
 
 data "aws_availability_zones" "available" {

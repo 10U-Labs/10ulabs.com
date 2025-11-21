@@ -167,11 +167,11 @@ resource "aws_cloudfront_distribution" "main" {
   web_acl_id          = aws_wafv2_web_acl.api.arn
 
   origin {
-    domain_name              = "${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com"
-    origin_id                = "api-gateway"
-    origin_path              = "/prod"
-    connection_attempts      = 3
-    connection_timeout       = 10
+    domain_name         = "${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com"
+    origin_id           = "api-gateway"
+    origin_path         = "/prod"
+    connection_attempts = 3
+    connection_timeout  = 10
 
     custom_origin_config {
       http_port              = 80

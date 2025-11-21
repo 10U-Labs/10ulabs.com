@@ -53,7 +53,7 @@ def test_lambda_health_handler_exists(lambda_client):
 
 def test_lambda_health_handler_runtime(lambda_client):
     response = lambda_client.get_function(FunctionName="HealthHandler")
-    assert response["Configuration"]["Runtime"] == "python3.14"
+    assert response["Configuration"]["Runtime"] == "python3.13"
 
 
 def test_lambda_v1_handler_exists(lambda_client):
@@ -63,7 +63,7 @@ def test_lambda_v1_handler_exists(lambda_client):
 
 def test_lambda_v1_handler_runtime(lambda_client):
     response = lambda_client.get_function(FunctionName="V1ApiHandler")
-    assert response["Configuration"]["Runtime"] == "python3.14"
+    assert response["Configuration"]["Runtime"] == "python3.13"
 
 
 def test_lambda_catchall_handler_exists(lambda_client):
@@ -73,7 +73,7 @@ def test_lambda_catchall_handler_exists(lambda_client):
 
 def test_lambda_catchall_handler_runtime(lambda_client):
     response = lambda_client.get_function(FunctionName="CatchAllHandler")
-    assert response["Configuration"]["Runtime"] == "python3.14"
+    assert response["Configuration"]["Runtime"] == "python3.13"
 
 
 def test_lambda_runners_handler_exists(lambda_client, config):
@@ -85,7 +85,7 @@ def test_lambda_runners_handler_exists(lambda_client, config):
 def test_lambda_runners_handler_runtime(lambda_client, config):
     function_name = config["naming"]["lambda_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)
-    assert response["Configuration"]["Runtime"] == "python3.14"
+    assert response["Configuration"]["Runtime"] == "python3.13"
 
 
 def test_s3_docs_bucket_exists(s3_client, config):

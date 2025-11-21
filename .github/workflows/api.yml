@@ -41,7 +41,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3 requests
       - name: Run E2E tests
@@ -88,7 +88,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run integration tests
@@ -104,7 +104,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -152,7 +152,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run unit tests

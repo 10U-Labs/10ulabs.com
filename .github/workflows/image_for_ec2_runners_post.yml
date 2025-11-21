@@ -210,7 +210,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install dependencies
         run: pip install pytest boto3 requests
       - name: Run E2E tests
@@ -241,7 +241,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3 requests
       - name: Run pytest integration tests
@@ -275,7 +275,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install Python dependencies
         run: pip install boto3
       - name: Promote AMI
@@ -301,7 +301,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Install linting dependencies
         run: |
           pip install pylint mypy yamllint boto3-stubs &&
@@ -371,7 +371,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.13'
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

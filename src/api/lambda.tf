@@ -10,7 +10,7 @@ resource "aws_lambda_function" "health_handler" {
   role             = aws_iam_role.lambda_health_handler.arn
   handler          = "health.handler"
   source_code_hash = data.archive_file.health_handler.output_base64sha256
-  runtime          = "python3.14"
+  runtime          = "python3.13"
   timeout          = 10
   description      = "Health check endpoint for API"
 
@@ -45,7 +45,7 @@ resource "aws_lambda_function" "catchall_handler" {
   role             = aws_iam_role.lambda_catchall_handler.arn
   handler          = "catchall.handler"
   source_code_hash = data.archive_file.catchall_handler.output_base64sha256
-  runtime          = "python3.14"
+  runtime          = "python3.13"
   timeout          = 10
   description      = "Catch-all handler for undefined routes"
 
@@ -80,17 +80,17 @@ resource "aws_lambda_function" "runners_handler" {
   role             = aws_iam_role.lambda_runners_handler.arn
   handler          = "webhook_router.lambda_handler"
   source_code_hash = data.archive_file.runners_handler.output_base64sha256
-  runtime          = "python3.14"
+  runtime          = "python3.13"
   timeout          = var.lambda_timeout_seconds
   memory_size      = var.lambda_memory_mb
   description      = "GitHub webhook router for GitHub self-hosted runners"
 
   environment {
     variables = {
-      WEBHOOK_SECRET_NAME   = aws_ssm_parameter.webhook_secret.name
-      API_BASE_URL          = "https://${var.domain_subdomain}"
+      WEBHOOK_SECRET_NAME    = aws_ssm_parameter.webhook_secret.name
+      API_BASE_URL           = "https://${var.domain_subdomain}"
       IDEMPOTENCY_TABLE_NAME = aws_dynamodb_table.idempotency.name
-      JOB_QUEUE_URL         = aws_sqs_queue.job_queue.url
+      JOB_QUEUE_URL          = aws_sqs_queue.job_queue.url
     }
   }
 
@@ -140,7 +140,7 @@ resource "aws_lambda_function" "v1_handler" {
   role             = aws_iam_role.lambda_v1_handler.arn
   handler          = "v1.lambda_handler"
   source_code_hash = data.archive_file.v1_handler.output_base64sha256
-  runtime          = "python3.14"
+  runtime          = "python3.13"
   timeout          = var.lambda_timeout_seconds
   memory_size      = var.lambda_memory_mb
   description      = "Unified Lambda handler for all /v1/* API endpoints"
