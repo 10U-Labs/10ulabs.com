@@ -111,6 +111,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Install tflint
         run: |
           TFLINT_INSTALL_URL='https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh'
