@@ -2,57 +2,8 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  e2e-testing:
-    name: E2E testing
-    needs:
-      - extracting-config
-      - integration-testing
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.extracting-config.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.extracting-config.outputs.aws_account_id }}:role/${{ needs.extracting-config.outputs.github_actions_role }}
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Install Python dependencies
-        run: pip install pytest boto3 dnspython
-      - name: Run E2E tests
-        run: pytest test/foundation/test_e2e.py -v
-  ensuring-infrastructure-in-desired-state:
-    defaults:
-      run:
-        working-directory: src/foundation
-    name: Ensuring infrastructure is in desired state
-    needs:
-      - extracting-config
-      - snapshot-testing
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.extracting-config.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.extracting-config.outputs.aws_account_id }}:role/${{ needs.extracting-config.outputs.github_actions_role }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "1.10"
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-  extracting-config:
-    name: Extract configuration from tfvars
+  declaring-common-variables:
+    name: Declaring common variables
     outputs:
       aws_account_id: ${{ steps.tfvars.outputs.aws_account_id }}
       aws_region: ${{ steps.tfvars.outputs.aws_region }}
@@ -70,11 +21,11 @@ jobs:
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
-  integration-testing:
-    name: Integration testing
+  e2e-testing:
+    name: E2E testing
     needs:
-      - ensuring-infrastructure-in-desired-state
-      - extracting-config
+      - declaring-common-variables
+      - integration-testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -82,8 +33,57 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.extracting-config.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.extracting-config.outputs.aws_account_id }}:role/${{ needs.extracting-config.outputs.github_actions_role }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Install Python dependencies
+        run: pip install pytest boto3 dnspython
+      - name: Run E2E tests
+        run: pytest test/foundation/test_e2e.py -v
+  ensuring-infrastructure-in-desired-state:
+    defaults:
+      run:
+        working-directory: src/foundation
+    name: Ensuring infrastructure is in desired state
+    needs:
+      - declaring-common-variables
+      - snapshot-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10"
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+  integration-testing:
+    name: Integration testing
+    needs:
+      - ensuring-infrastructure-in-desired-state
+      - declaring-common-variables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -95,7 +95,7 @@ jobs:
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
-    needs: extracting-config
+    needs: declaring-common-variables
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -140,7 +140,7 @@ jobs:
         working-directory: src/foundation
     name: Snapshot testing
     needs:
-      - extracting-config
+      - declaring-common-variables
       - unit-testing
     runs-on: ubuntu-latest
     steps:
@@ -158,8 +158,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.extracting-config.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.extracting-config.outputs.aws_account_id }}:role/${{ needs.extracting-config.outputs.github_actions_role }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Terraform Init
         run: terraform init
       - name: Terraform Plan
