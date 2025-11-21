@@ -78,38 +78,42 @@ resource "aws_iam_role" "ec2_runner_role" {
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   ]
 
-  inline_policy {
-    name = "ECRAccess"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect   = "Allow"
-        Action   = ["ecr:*"]
-        Resource = ["*"]
-      }]
-    })
-  }
-
-  inline_policy {
-    name = "SelfTerminate"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect   = "Allow"
-        Action   = ["ec2:TerminateInstances"]
-        Resource = ["*"]
-        Condition = {
-          StringEquals = {
-            "ec2:ResourceTag/ManagedBy" = "webhook-handler"
-          }
-        }
-      }]
-    })
-  }
-
   tags = {
     Name = "GitHubSelfHostedRunnerEC2Role"
   }
+}
+
+resource "aws_iam_role_policy" "ec2_runner_ecr_access" {
+  name = "ECRAccess"
+  role = aws_iam_role.ec2_runner_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ecr:*"]
+      Resource = ["*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ec2_runner_self_terminate" {
+  name = "SelfTerminate"
+  role = aws_iam_role.ec2_runner_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ec2:TerminateInstances"]
+      Resource = ["*"]
+      Condition = {
+        StringEquals = {
+          "ec2:ResourceTag/ManagedBy" = "webhook-handler"
+        }
+      }
+    }]
+  })
 }
 
 resource "aws_iam_instance_profile" "ec2_runner" {

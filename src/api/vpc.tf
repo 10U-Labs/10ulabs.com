@@ -1,5 +1,5 @@
 locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, var.vpc_max_azs)
+  azs = slice(data.aws_availability_zones.available.names, 0, min(length(data.aws_availability_zones.available.names), var.vpc_max_azs))
 }
 
 data "aws_availability_zones" "available" {
