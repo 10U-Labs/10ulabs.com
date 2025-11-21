@@ -34,6 +34,21 @@ def get_failed_changeset(cfn_client, stack_name):
         return None
 
 
+def get_changeset_template(cfn_client, stack_name):
+    try:
+        response = cfn_client.get_template(
+            StackName=stack_name,
+            ChangeSetName='cdk-deploy-change-set'
+        )
+        template_body = response.get('TemplateBody')
+        if isinstance(template_body, str):
+            return json.loads(template_body)
+        return template_body
+    except ClientError as e:
+        print(f"Failed to get template: {e}")
+        return None
+
+
 def get_changeset_hooks(cfn_client, stack_name):
     try:
         response = cfn_client.describe_change_set_hooks(
@@ -329,7 +344,8 @@ def check_resource_exists(resource_type, resource_name, region):
                 exists = True
                 details = {
                     'Status': response['Table']['TableStatus'],
-                    'Arn': response['Table']['TableArn']
+                    'Arn': response['Table']['TableArn'],
+                    'CreationDateTime': str(response['Table']['CreationDateTime'])
                 }
             except ClientError as e:
                 if e.response['Error']['Code'] != 'ResourceNotFoundException':
@@ -371,18 +387,122 @@ def check_resource_exists(resource_type, resource_name, region):
                 if 'NonExistentQueue' not in str(e):
                     details = {'Error': str(e)}
 
+        elif resource_type == 'AWS::SNS::Topic':
+            sns = boto3.client('sns', region_name=region)
+            try:
+                topics = sns.list_topics()
+                for topic in topics.get('Topics', []):
+                    if resource_name in topic['TopicArn']:
+                        exists = True
+                        details = {'Arn': topic['TopicArn']}
+                        break
+            except ClientError as e:
+                details = {'Error': str(e)}
+
+        elif resource_type == 'AWS::S3::Bucket':
+            s3 = boto3.client('s3', region_name=region)
+            try:
+                s3.head_bucket(Bucket=resource_name)
+                exists = True
+                details = {'BucketName': resource_name}
+            except ClientError as e:
+                if e.response['Error']['Code'] not in ['404', 'NoSuchBucket']:
+                    details = {'Error': str(e)}
+
+        elif resource_type == 'AWS::ECR::Repository':
+            ecr = boto3.client('ecr', region_name=region)
+            try:
+                response = ecr.describe_repositories(repositoryNames=[resource_name])
+                if response['repositories']:
+                    exists = True
+                    details = {'Arn': response['repositories'][0]['repositoryArn']}
+            except ClientError as e:
+                if e.response['Error']['Code'] != 'RepositoryNotFoundException':
+                    details = {'Error': str(e)}
+
+        elif resource_type == 'AWS::IAM::Role':
+            iam = boto3.client('iam')
+            try:
+                response = iam.get_role(RoleName=resource_name)
+                exists = True
+                details = {'Arn': response['Role']['Arn']}
+            except ClientError as e:
+                if e.response['Error']['Code'] != 'NoSuchEntity':
+                    details = {'Error': str(e)}
+
     except Exception as e:
         details = {'Error': str(e)}
 
     return exists, details
 
 
-def extract_resource_name(resource_type, changeset_change):
-    resource_properties = changeset_change.get('ResourceChange', {})
-    physical_id = resource_properties.get('PhysicalResourceId')
+def extract_resource_properties(changeset_change):
+    resource_change = changeset_change.get('ResourceChange', {})
+    details = resource_change.get('Details', [])
+
+    for detail in details:
+        target = detail.get('Target', {})
+        if target.get('Attribute') == 'Properties':
+            after_value = target.get('AfterValue')
+            if after_value:
+                try:
+                    return json.loads(after_value) if isinstance(after_value, str) else after_value
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+    return None
+
+
+def extract_resource_name(resource_type, changeset_change, stack_name='', template=None):
+    resource_change = changeset_change.get('ResourceChange', {})
+    physical_id = resource_change.get('PhysicalResourceId')
+    logical_id = resource_change.get('LogicalResourceId', '')
 
     if physical_id:
         return physical_id
+
+    props = None
+
+    if template and logical_id:
+        resources = template.get('Resources', {})
+        resource_def = resources.get(logical_id, {})
+        props = resource_def.get('Properties', {})
+
+    if not props:
+        props = extract_resource_properties(changeset_change)
+
+    if not props:
+        if stack_name and logical_id:
+            return f"{stack_name}-{logical_id}"
+        return None
+
+    name_property_map = {
+        'AWS::DynamoDB::Table': 'TableName',
+        'AWS::Lambda::Function': 'FunctionName',
+        'AWS::SQS::Queue': 'QueueName',
+        'AWS::SNS::Topic': 'TopicName',
+        'AWS::S3::Bucket': 'BucketName',
+        'AWS::ECR::Repository': 'RepositoryName',
+        'AWS::ECS::Cluster': 'ClusterName',
+        'AWS::ECS::Service': 'ServiceName',
+        'AWS::ECS::TaskDefinition': 'Family',
+        'AWS::IAM::Role': 'RoleName',
+        'AWS::IAM::Policy': 'PolicyName',
+        'AWS::IAM::User': 'UserName',
+        'AWS::SecretsManager::Secret': 'Name',
+        'AWS::SSM::Parameter': 'Name',
+        'AWS::KMS::Key': 'KeyId',
+        'AWS::CloudWatch::Alarm': 'AlarmName',
+    }
+
+    name_property = name_property_map.get(resource_type)
+    if name_property and name_property in props:
+        name_value = props[name_property]
+        if isinstance(name_value, str):
+            return name_value
+
+    if stack_name and logical_id:
+        return f"{stack_name}-{logical_id}"
 
     return None
 
@@ -423,6 +543,8 @@ def diagnose_deployment_failure(stack_name, region):
     if not changeset:
         print("ERROR: Could not retrieve changeset information")
         return
+
+    template = get_changeset_template(cfn_client, stack_name)
 
     print(f"Changeset Status: {changeset.get('Status')}")
     print(f"Status Reason: {changeset.get('StatusReason')}")
@@ -467,7 +589,7 @@ def diagnose_deployment_failure(stack_name, region):
             logical_id = resource_change.get('LogicalResourceId')
             resource_type = resource_change.get('ResourceType')
 
-            resource_name = extract_resource_name(resource_type, change)
+            resource_name = extract_resource_name(resource_type, change, stack_name, template)
             if not resource_name:
                 continue
 
