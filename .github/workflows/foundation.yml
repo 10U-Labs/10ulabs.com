@@ -1,6 +1,10 @@
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
+env:
+  AWS_ACCOUNT_ID: '781581267945'
+  AWS_REGION: us-east-1
+  GITHUB_ACTIONS_ROLE: GitHubActionsRole
 jobs:
   e2e-testing:
     name: E2E testing
@@ -12,8 +16,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -35,8 +39,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -45,8 +49,7 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         run: terraform plan -out=tfplan
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Terraform Apply
+      - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
   integration-testing:
     name: Integration testing
@@ -58,8 +61,8 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -84,7 +87,9 @@ jobs:
         with:
           terraform_version: "1.10"
       - name: Install tflint
-        run: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+        run: |
+          TFLINT_INSTALL_URL='https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh'
+          curl -s "$TFLINT_INSTALL_URL" | bash
       - name: Install linting dependencies
         run: pip install pylint mypy yamllint
       - name: Terraform Format Check
@@ -129,8 +134,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
-          role-to-assume: arn:aws:iam::781581267945:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.GITHUB_ACTIONS_ROLE }}
       - name: Terraform Init
         run: terraform init
       - name: Terraform Plan
@@ -158,13 +163,6 @@ jobs:
         run: pytest test/foundation/test_unit.py -v
 name: Ensuring foundational infrastructure exists and is properly configured
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/foundation.yml'
-      - 'src/foundation/**'
-      - 'test/foundation/**'
   push:
     branches:
       - main
