@@ -17,6 +17,16 @@ def s3_client(aws_region):
     return boto3.client("s3", region_name=aws_region)
 
 
+@pytest.fixture(scope="module")
+def ecr_client(aws_region):
+    return boto3.client("ecr", region_name=aws_region)
+
+
+@pytest.fixture(scope="module")
+def ecs_client(aws_region):
+    return boto3.client("ecs", region_name=aws_region)
+
+
 def test_lambda_health_handler_exists(lambda_client):
     response = lambda_client.get_function(FunctionName="HealthHandler")
     assert response["Configuration"]["FunctionName"] == "HealthHandler"
@@ -76,3 +86,33 @@ def test_openapi_yml_in_s3(s3_client):
     bucket_name = "api.10ulabs.com"
     response = s3_client.head_object(Bucket=bucket_name, Key="openapi.yml")
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
+
+
+def test_lambda_runners_handler_exists(lambda_client):
+    function_name = "TenULabsWebhookHandler"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response["Configuration"]["FunctionName"] == function_name
+
+
+def test_lambda_runners_handler_runtime(lambda_client):
+    function_name = "TenULabsWebhookHandler"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response["Configuration"]["Runtime"] == "python3.13"
+
+
+def test_ecr_repository_exists(ecr_client):
+    repository_name = "github-runner"
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    assert len(response["repositories"]) == 1
+
+
+def test_ecs_cluster_exists(ecs_client):
+    cluster_name = "TenULabsRunnerCluster"
+    response = ecs_client.describe_clusters(clusters=[cluster_name])
+    assert len(response["clusters"]) == 1
+
+
+def test_ecs_cluster_status_active(ecs_client):
+    cluster_name = "TenULabsRunnerCluster"
+    response = ecs_client.describe_clusters(clusters=[cluster_name])
+    assert response["clusters"][0]["status"] == "ACTIVE"
