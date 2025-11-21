@@ -55,6 +55,11 @@ def cdk_template(api_stack):
 
 
 @pytest.fixture
+def stack_hash(api_stack):
+    return api_stack.stack_hash
+
+
+@pytest.fixture
 def health_handler():
     handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "endpoints" / "health" / "handler.py"
     spec = importlib.util.spec_from_file_location("health_handler", handler_path)

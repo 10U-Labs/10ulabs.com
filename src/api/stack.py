@@ -40,6 +40,7 @@ class ApiStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, config: Dict[str, Any], **kwargs):
         super().__init__(scope, construct_id, **kwargs)
         self.config = config
+        self.stack_hash = hashlib.md5(construct_id.encode('utf-8')).hexdigest().upper()[:8]
 
         self._create_vpc()
         self._create_ecr_and_ecs()
@@ -79,6 +80,11 @@ class ApiStack(Stack):
             enable_dns_hostnames=True,
             enable_dns_support=True
         )
+        self.vpc.node.default_child.override_logical_id(f"RunnerVpc{self.stack_hash}")
+        subnet_index = 1
+        for subnet in self.vpc.public_subnets:
+            subnet.node.default_child.override_logical_id(f"RunnerVpcPublicSubnet{subnet_index}Subnet{self.stack_hash}")
+            subnet_index += 1
         Tags.of(self.vpc).add("Purpose", "10ulabs-api-and-runners")
 
     def _create_ecr_and_ecs(self):
@@ -102,6 +108,7 @@ class ApiStack(Stack):
             vpc=self.vpc,
             container_insights=True
         )
+        self.cluster.node.default_child.override_logical_id(f"RunnerCluster{self.stack_hash}")
 
     def _create_secrets_and_security(self):
         github_token_parameter = ssm.StringParameter(
@@ -111,6 +118,7 @@ class ApiStack(Stack):
             description="GitHub Personal Access Token for self-hosted runners",
             tier=ssm.ParameterTier.STANDARD
         )
+        github_token_parameter.node.default_child.override_logical_id(f"GitHubToken{self.stack_hash}")
         _ami_parameter = ssm.StringParameter(
             self, "LatestAmiParameter",
             parameter_name="/github-runner/ami/latest",
@@ -118,6 +126,7 @@ class ApiStack(Stack):
             description="Latest AMI ID for EC2 GitHub self-hosted runners",
             tier=ssm.ParameterTier.STANDARD
         )
+        _ami_parameter.node.default_child.override_logical_id(f"LatestAmiParameter{self.stack_hash}")
         self.webhook_parameter = ssm.StringParameter(
             self, "WebhookParameter",
             parameter_name=f"/{self.config['naming']['webhook_secret_name']}",
@@ -125,12 +134,14 @@ class ApiStack(Stack):
             description="GitHub webhook secret for signature verification",
             tier=ssm.ParameterTier.STANDARD
         )
+        self.webhook_parameter.node.default_child.override_logical_id(f"WebhookParameter{self.stack_hash}")
         runner_sg = ec2.SecurityGroup(
             self, "SelfHostedRunnerSecurityGroup",
             vpc=self.vpc,
             description="Security group for GitHub self-hosted runner Fargate tasks",
             allow_all_outbound=True
         )
+        runner_sg.node.default_child.override_logical_id(f"SelfHostedRunnerSecurityGroup{self.stack_hash}")
         return github_token_parameter, runner_sg
 
     def _create_fargate_task(self, github_token_parameter):
@@ -140,7 +151,8 @@ class ApiStack(Stack):
             cpu=int(self.config["aws"]["fargate_runners"]["cpu"]),
             memory_limit_mib=int(self.config["aws"]["fargate_runners"]["memory"]),
         )
-        self.task_definition.add_container(
+        self.task_definition.node.default_child.override_logical_id(f"RunnerTaskDefinition{self.stack_hash}")
+        container = self.task_definition.add_container(
             "runner",
             container_name=self.config["naming"]["container_name"],
             image=ecs.ContainerImage.from_ecr_repository(
@@ -161,6 +173,8 @@ class ApiStack(Stack):
                 "RUNNER_NAME_PREFIX": "fargate_runner"
             }
         )
+        self.task_definition.task_role.node.default_child.override_logical_id(f"RunnerTaskDefinitionTaskRole{self.stack_hash}")
+        self.task_definition.execution_role.node.default_child.override_logical_id(f"RunnerTaskDefinitionExecutionRole{self.stack_hash}")
 
     def _create_ec2_runner_role(self):
         ec2_runner_role = iam.Role(
@@ -196,11 +210,13 @@ class ApiStack(Stack):
                 )
             }
         )
+        ec2_runner_role.node.default_child.override_logical_id(f"EC2SelfHostedRunnerRole{self.stack_hash}")
         ec2_instance_profile = iam.CfnInstanceProfile(
             self, "EC2SelfHostedRunnerInstanceProfile",
             instance_profile_name="GitHubSelfHostedRunnerInstanceProfile",
             roles=[ec2_runner_role.role_name]
         )
+        ec2_instance_profile.override_logical_id(f"EC2SelfHostedRunnerInstanceProfile{self.stack_hash}")
         ec2_instance_profile.node.add_dependency(ec2_runner_role)
         return ec2_runner_role
 
@@ -248,17 +264,20 @@ class ApiStack(Stack):
             retention_period=Duration.days(14),
             visibility_timeout=Duration.seconds(300)
         )
+        webhook_dlq.node.default_child.override_logical_id(f"WebhookDLQ{self.stack_hash}")
         job_queue_dlq = sqs.Queue(
             self, "JobQueueDLQ",
             queue_name=f"{self.config['naming']['lambda_function_name']}-job-dlq",
             retention_period=Duration.days(14)
         )
+        job_queue_dlq.node.default_child.override_logical_id(f"JobQueueDLQ{self.stack_hash}")
         job_queue = sqs.Queue(
             self, "JobQueue",
             queue_name=f"{self.config['naming']['lambda_function_name']}-jobs",
             visibility_timeout=Duration.seconds(self.config["aws"]["lambda"]["timeout_seconds"] * 6),
             dead_letter_queue=sqs.DeadLetterQueue(max_receive_count=3, queue=job_queue_dlq)
         )
+        job_queue.node.default_child.override_logical_id(f"JobQueue{self.stack_hash}")
         idempotency_table = dynamodb.Table(
             self, "IdempotencyTable",
             table_name=f"{self.config['naming']['lambda_function_name']}-idempotency",
@@ -384,6 +403,15 @@ class ApiStack(Stack):
             ]
         ))
 
+        health_handler.node.default_child.override_logical_id(f"HealthHandler{self.stack_hash}")
+        health_handler.role.node.default_child.override_logical_id(f"HealthHandlerServiceRole{self.stack_hash}")
+        catchall_handler.node.default_child.override_logical_id(f"CatchAllHandler{self.stack_hash}")
+        catchall_handler.role.node.default_child.override_logical_id(f"CatchAllHandlerServiceRole{self.stack_hash}")
+        runners_handler.node.default_child.override_logical_id(f"RunnersHandler{self.stack_hash}")
+        runners_handler.role.node.default_child.override_logical_id(f"RunnersHandlerServiceRole{self.stack_hash}")
+        v1_handler.node.default_child.override_logical_id(f"V1ApiHandler{self.stack_hash}")
+        v1_handler.role.node.default_child.override_logical_id(f"V1ApiHandlerServiceRole{self.stack_hash}")
+
         return {
             'health': health_handler,
             'catchall': catchall_handler,
@@ -418,6 +446,7 @@ class ApiStack(Stack):
             retention=logs.RetentionDays.ONE_MONTH,
             removal_policy=RemovalPolicy.DESTROY
         )
+        api_log_group.node.default_child.override_logical_id(f"ApiGatewayAccessLogs{self.stack_hash}")
         self.api = apigw.SpecRestApi(
             self, "TenULabsApi",
             api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),

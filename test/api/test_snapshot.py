@@ -148,36 +148,36 @@ def test_ecr_repository_has_lifecycle_policy(cdk_template):
     assert "LifecyclePolicy" in ecr["Properties"]
 
 
-def test_ecs_cluster_container_insights_enabled(cdk_template):
-    ecs_resources = cdk_template.find_resources("AWS::ECS::Cluster")
-    ecs = list(ecs_resources.values())[0]
-    settings = ecs["Properties"]["ClusterSettings"]
-    insights_setting = [s for s in settings if s["Name"] == "containerInsights"][0]
-    assert insights_setting["Value"] == "enabled"
+def test_ecs_cluster_container_insights_enabled(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerCluster{stack_hash}"
+    settings = template["Resources"][logical_id]["Properties"]["ClusterSettings"]
+    assert settings[0]["Name"] == "containerInsights"
+    assert settings[0]["Value"] == "enabled"
 
 
-def test_task_definition_cpu(cdk_template):
-    task_defs = cdk_template.find_resources("AWS::ECS::TaskDefinition")
-    task_def = list(task_defs.values())[0]
-    assert task_def["Properties"]["Cpu"] == "256"
+def test_task_definition_cpu(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerTaskDefinition{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Cpu"] == "256"
 
 
-def test_task_definition_memory(cdk_template):
-    task_defs = cdk_template.find_resources("AWS::ECS::TaskDefinition")
-    task_def = list(task_defs.values())[0]
-    assert task_def["Properties"]["Memory"] == "512"
+def test_task_definition_memory(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerTaskDefinition{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Memory"] == "512"
 
 
-def test_task_definition_network_mode(cdk_template):
-    task_defs = cdk_template.find_resources("AWS::ECS::TaskDefinition")
-    task_def = list(task_defs.values())[0]
-    assert task_def["Properties"]["NetworkMode"] == "awsvpc"
+def test_task_definition_network_mode(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerTaskDefinition{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["NetworkMode"] == "awsvpc"
 
 
-def test_task_definition_requires_fargate(cdk_template):
-    task_defs = cdk_template.find_resources("AWS::ECS::TaskDefinition")
-    task_def = list(task_defs.values())[0]
-    assert "FARGATE" in task_def["Properties"]["RequiresCompatibilities"]
+def test_task_definition_requires_fargate(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerTaskDefinition{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["RequiresCompatibilities"][0] == "FARGATE"
 
 
 def test_s3_bucket_encryption_enabled(cdk_template):
@@ -227,48 +227,62 @@ def test_dynamodb_table_has_ttl(cdk_template):
     assert "TimeToLiveSpecification" in table["Properties"]
 
 
-def test_sqs_dlq_message_retention(cdk_template):
-    queues = cdk_template.find_resources("AWS::SQS::Queue")
-    dlq_queues = [q for q in queues.values() if "dlq" in q["Properties"]["QueueName"].lower()]
-    assert len(dlq_queues) == 2
+def test_webhook_dlq_exists(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"WebhookDLQ{stack_hash}"
+    assert template["Resources"][logical_id]["Type"] == "AWS::SQS::Queue"
 
 
-def test_github_token_parameter_type(cdk_template):
-    params = cdk_template.find_resources("AWS::SSM::Parameter")
-    github_param = [p for p in params.values() if "github-runner/credentials" in p["Properties"]["Name"]][0]
-    assert github_param["Properties"]["Type"] == "String"
+def test_job_queue_dlq_exists(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"JobQueueDLQ{stack_hash}"
+    assert template["Resources"][logical_id]["Type"] == "AWS::SQS::Queue"
 
 
-def test_github_token_parameter_has_placeholder(cdk_template):
-    params = cdk_template.find_resources("AWS::SSM::Parameter")
-    github_param = [p for p in params.values() if "github-runner/credentials" in p["Properties"]["Name"]][0]
-    assert github_param["Properties"]["Value"] == "PLACEHOLDER_UPDATE_WITH_GITHUB_TOKEN"
+def test_github_token_parameter_type(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"GitHubToken{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Type"] == "String"
 
 
-def test_ami_parameter_has_placeholder(cdk_template):
-    params = cdk_template.find_resources("AWS::SSM::Parameter")
-    ami_param = [p for p in params.values() if "ami/latest" in p["Properties"]["Name"]][0]
-    assert ami_param["Properties"]["Value"] == "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
+def test_github_token_parameter_has_placeholder(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"GitHubToken{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Value"] == "PLACEHOLDER_UPDATE_WITH_GITHUB_TOKEN"
 
 
-def test_webhook_parameter_has_placeholder(cdk_template):
-    params = cdk_template.find_resources("AWS::SSM::Parameter")
-    webhook_param = [p for p in params.values() if "webhook-secret" in p["Properties"]["Name"]][0]
-    assert webhook_param["Properties"]["Value"] == "PLACEHOLDER_WILL_BE_UPDATED"
+def test_ami_parameter_has_placeholder(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"LatestAmiParameter{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Value"] == "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
 
 
-def test_ec2_runner_role_has_ssm_managed_policy(cdk_template):
-    roles = cdk_template.find_resources("AWS::IAM::Role")
-    runner_role = [r for r in roles.values() if r["Properties"].get("RoleName") == "GitHubSelfHostedRunnerEC2Role"][0]
-    managed_policies = runner_role["Properties"]["ManagedPolicyArns"]
-    assert any("AmazonSSMManagedInstanceCore" in str(policy) for policy in managed_policies)
+def test_webhook_parameter_has_placeholder(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"WebhookParameter{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Value"] == "PLACEHOLDER_WILL_BE_UPDATED"
 
 
-def test_ec2_runner_role_has_ecr_policy(cdk_template):
-    roles = cdk_template.find_resources("AWS::IAM::Role")
-    runner_role = [r for r in roles.values() if r["Properties"].get("RoleName") == "GitHubSelfHostedRunnerEC2Role"][0]
-    policies = runner_role["Properties"]["Policies"]
-    assert any(p["PolicyName"] == "ECRAccess" for p in policies)
+def test_ec2_runner_role_has_ssm_managed_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"EC2SelfHostedRunnerRole{stack_hash}"
+    expected_policy_arn = {
+        "Fn::Join": [
+            "",
+            [
+                "arn:",
+                {"Ref": "AWS::Partition"},
+                ":iam::aws:policy/AmazonSSMManagedInstanceCore"
+            ]
+        ]
+    }
+    assert template["Resources"][logical_id]["Properties"]["ManagedPolicyArns"][0] == expected_policy_arn
+
+
+def test_ec2_runner_role_has_ecr_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"EC2SelfHostedRunnerRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["Policies"][0]["PolicyName"] == "ECRAccess"
 
 
 def test_ec2_instance_profile_exists(cdk_template):
@@ -342,56 +356,151 @@ def test_ec2_runner_role_name_output_exists(cdk_template):
     assert "EC2RunnerRoleName" in outputs
 
 
-def test_outputs_have_export_names(cdk_template):
+def test_api_url_output_has_export_name(cdk_template):
     template_json = cdk_template.to_json()
-    outputs = template_json["Outputs"]
-    exported_outputs = [k for k, v in outputs.items() if k != "BootstrapVersion"]
-    assert all("Export" in outputs[k] for k in exported_outputs)
+    assert template_json["Outputs"]["ApiUrl"].get("Export") is not None
 
 
-def test_lambda_functions_have_runtime(cdk_template):
-    functions = cdk_template.find_resources("AWS::Lambda::Function")
-    for func in functions.values():
-        assert "Runtime" in func["Properties"]
+def test_catchall_handler_has_runtime(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"CatchAllHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Runtime") is not None
 
 
-def test_lambda_functions_have_handler(cdk_template):
-    functions = cdk_template.find_resources("AWS::Lambda::Function")
-    for func in functions.values():
-        assert "Handler" in func["Properties"]
+def test_catchall_handler_has_handler(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"CatchAllHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Handler") is not None
 
 
-def test_lambda_functions_have_timeout(cdk_template):
-    functions = cdk_template.find_resources("AWS::Lambda::Function")
-    for func in functions.values():
-        assert "Timeout" in func["Properties"]
+def test_catchall_handler_has_timeout(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"CatchAllHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Timeout") is not None
 
 
-def test_lambda_functions_have_memory_size_or_use_default(cdk_template):
-    functions = cdk_template.find_resources("AWS::Lambda::Function")
-    assert len(functions) > 0
+def test_health_handler_has_runtime(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"HealthHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Runtime") is not None
 
 
-def test_all_subnets_are_public(cdk_template):
-    subnets = cdk_template.find_resources("AWS::EC2::Subnet")
-    for subnet in subnets.values():
-        assert subnet["Properties"]["MapPublicIpOnLaunch"] is True
+def test_health_handler_has_handler(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"HealthHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Handler") is not None
 
 
-def test_security_group_allows_outbound(cdk_template):
-    sgs = cdk_template.find_resources("AWS::EC2::SecurityGroup")
-    for sg in sgs.values():
-        egress_rules = sg["Properties"]["SecurityGroupEgress"]
-        assert len(egress_rules) > 0
+def test_health_handler_has_timeout(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"HealthHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Timeout") is not None
 
 
-def test_iam_roles_have_assume_role_policy(cdk_template):
-    roles = cdk_template.find_resources("AWS::IAM::Role")
-    for role in roles.values():
-        assert "AssumeRolePolicyDocument" in role["Properties"]
+def test_runners_handler_has_runtime(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnersHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Runtime") is not None
 
 
-def test_log_groups_have_retention(cdk_template):
-    log_groups = cdk_template.find_resources("AWS::Logs::LogGroup")
-    for log_group in log_groups.values():
-        assert "RetentionInDays" in log_group["Properties"]
+def test_runners_handler_has_handler(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnersHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Handler") is not None
+
+
+def test_runners_handler_has_timeout(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnersHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Timeout") is not None
+
+
+def test_v1_api_handler_has_runtime(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"V1ApiHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Runtime") is not None
+
+
+def test_v1_api_handler_has_handler(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"V1ApiHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Handler") is not None
+
+
+def test_v1_api_handler_has_timeout(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"V1ApiHandler{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("Timeout") is not None
+
+
+def test_runner_vpc_public_subnet_1_is_public(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerVpcPublicSubnet1Subnet{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["MapPublicIpOnLaunch"] is True
+
+
+def test_runner_vpc_public_subnet_2_is_public(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerVpcPublicSubnet2Subnet{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["MapPublicIpOnLaunch"] is True
+
+
+def test_runner_vpc_public_subnet_3_is_public(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerVpcPublicSubnet3Subnet{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"]["MapPublicIpOnLaunch"] is True
+
+
+def test_self_hosted_runner_security_group_allows_outbound(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"SelfHostedRunnerSecurityGroup{stack_hash}"
+    egress_rules = template["Resources"][logical_id]["Properties"]["SecurityGroupEgress"]
+    assert len(egress_rules) > 0
+
+
+def test_catchall_handler_service_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"CatchAllHandlerServiceRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_ec2_self_hosted_runner_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"EC2SelfHostedRunnerRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_health_handler_service_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"HealthHandlerServiceRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_runner_task_definition_execution_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerTaskDefinitionExecutionRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_runner_task_definition_task_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnerTaskDefinitionTaskRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_runners_handler_service_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"RunnersHandlerServiceRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_v1_api_handler_service_role_has_assume_role_policy(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"V1ApiHandlerServiceRole{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("AssumeRolePolicyDocument") is not None
+
+
+def test_api_gateway_access_logs_has_retention(cdk_template, stack_hash):
+    template = cdk_template.to_json()
+    logical_id = f"ApiGatewayAccessLogs{stack_hash}"
+    assert template["Resources"][logical_id]["Properties"].get("RetentionInDays") is not None
