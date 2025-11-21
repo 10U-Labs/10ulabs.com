@@ -1,3 +1,6 @@
+import boto3
+
+
 def test_oidc_provider_exists_in_aws(iam_client, config):
     account_id = config['aws_account_id']
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
@@ -301,15 +304,6 @@ def test_cloudwatch_logs_iam_role_exists(cloudtrail_client, iam_client):
         role_name = trail['CloudWatchLogsRoleArn'].split('/')[-1]
         role = iam_client.get_role(RoleName=role_name)
         assert role['Role']['RoleName'] == role_name
-import boto3
-import pytest
-
-
-@pytest.fixture
-def route53_client(config):
-    return boto3.client('route53', region_name=config['aws']['region'])
-
-
 def test_google_verification_txt_record_exists(route53_client, config):
     domain_name = config['domain_name']
 
@@ -571,12 +565,12 @@ def test_mx_record_priority_equals_one(route53_client, config):
 
 
 def test_terraform_state_exists(config):
-    s3_client = boto3.client('s3', region_name=config['aws']['region'])
+    s3_client = boto3.client('s3', region_name=config['aws_region'])
 
     try:
         s3_client.head_object(
             Bucket='10ulabs-terraform-state',
-            Key='gmail/terraform.tfstate'
+            Key='bootstrap/terraform.tfstate'
         )
         state_exists = True
     except:
