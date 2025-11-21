@@ -286,7 +286,7 @@ jobs:
             --run-id "${{ github.run_id }}" \
             --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
             --tag-key "${{ steps.config.outputs.ami_tag_key }}"
-  static-analysis:
+  performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
@@ -363,7 +363,7 @@ jobs:
             template.pkr.hcl
   unit-testing:
     name: Unit testing
-    needs: static-analysis
+    needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
