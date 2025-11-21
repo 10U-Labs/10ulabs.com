@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install dependencies
-        run: pip install pytest boto3 requests
+        run: pip install pytest && pip install -r src/api/requirements.txt
       - name: Run E2E tests
         run: pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
