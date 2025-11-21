@@ -1,6 +1,6 @@
 data "archive_file" "health_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/endpoints/health"
+  source_dir  = "${path.module}/lambdas/health"
   output_path = "${path.module}/.terraform/lambda_packages/health_handler.zip"
 }
 
@@ -35,7 +35,7 @@ resource "aws_cloudwatch_log_group" "health_handler" {
 
 data "archive_file" "catchall_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/endpoints/catchall"
+  source_dir  = "${path.module}/lambdas/catchall"
   output_path = "${path.module}/.terraform/lambda_packages/catchall_handler.zip"
 }
 
@@ -70,7 +70,7 @@ resource "aws_cloudwatch_log_group" "catchall_handler" {
 
 data "archive_file" "runners_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/endpoints/v1/runners"
+  source_dir  = "${path.module}/lambdas/v1/runners"
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
 }
 
@@ -130,7 +130,7 @@ resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
 
 data "archive_file" "v1_handler" {
   type        = "zip"
-  source_dir  = "${path.module}/endpoints/v1"
+  source_dir  = "${path.module}/lambdas/v1"
   output_path = "${path.module}/.terraform/lambda_packages/v1_handler.zip"
   excludes    = ["runners"]
 }
