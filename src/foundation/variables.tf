@@ -53,3 +53,11 @@ variable "cloudtrail_iam_role_name" {
 variable "github_actions_role_name" {
   type = string
 }
+
+variable "google_site_verification" {
+  type = string
+}
+
+variable "gmail_dns_ttl" {
+  type = number
+}

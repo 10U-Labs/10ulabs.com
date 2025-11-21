@@ -12,3 +12,5 @@ cloudtrail_access_logs_bucket_name = "tenulabsdomainname-cloudtrailaccesslogbuck
 cloudtrail_log_group_name          = "TenULabsDomainName-CloudTrailLogGroup343A29D6-zbja4KQKOvPe"
 cloudtrail_iam_role_name           = "TenULabsDomainName-DomainCloudTrailLogsRole17C97DB2-z0T2x2funtxK"
 github_actions_role_name           = "GitHubActionsRole"
+google_site_verification           = "vkFVA-Ru1PwnePtOWeOt0k5bmzOpHtjfDZU-PfUKjRM"
+gmail_dns_ttl                      = 300
