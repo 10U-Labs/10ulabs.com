@@ -1,10 +1,8 @@
 from aws_cdk import (
     Stack,
-    CfnOutput,
     CustomResource,
     aws_iam as iam,
     aws_lambda as lambda_,
-    aws_ssm as ssm,
 )
 from constructs import Construct
 
@@ -224,21 +222,5 @@ def handler(event, context):
 
         role_arn = iam_role_resource.get_att_string('Arn')
 
-        parameter = ssm.StringParameter(
-            self, 'GitHubPATParameter',
-            parameter_name="/github-runner/credentials",
-            string_value="PLACEHOLDER_WILL_BE_UPDATED",
-            description="GitHub Personal Access Token for runner authentication",
-            tier=ssm.ParameterTier.STANDARD
-        )
-
         self.role_arn = role_arn
-        self.parameter_arn = parameter.parameter_arn
         self.provider_arn = provider_arn
-
-        CfnOutput(
-            self, "GitHubPATParameterName",
-            value=parameter.parameter_name,
-            export_name="GitHubAuth-PATSecretName",
-            description="GitHub Personal Access Token parameter name in SSM Parameter Store"
-        )
