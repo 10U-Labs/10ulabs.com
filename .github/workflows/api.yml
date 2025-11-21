@@ -71,17 +71,29 @@ jobs:
         run: terraform init
       - name: Terraform Apply
         run: terraform apply -auto-approve
+      - name: Check if static files changed
+        id: check_files
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E 'src/api/files/'; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
       - name: Set up Python
+        if: steps.check_files.outputs.changed == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - name: Install Python dependencies
+        if: steps.check_files.outputs.changed == 'true'
         run: pip install boto3
       - name: Extract domain from terraform.tfvars
+        if: steps.check_files.outputs.changed == 'true'
         run: |
           DOMAIN_SUBDOMAIN=$(grep 'domain_subdomain' terraform.tfvars | cut -d'"' -f2)
           echo "DOMAIN_SUBDOMAIN=$DOMAIN_SUBDOMAIN" >> $GITHUB_ENV
       - name: Invalidate CloudFront cache
+        if: steps.check_files.outputs.changed == 'true'
         run: python ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py "${{ env.DOMAIN_SUBDOMAIN }}" ${{ needs.declaring-common-variables.outputs.aws_region }}
   integration-testing:
     name: Integration testing
