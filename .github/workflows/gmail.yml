@@ -196,9 +196,7 @@ jobs:
         run: pytest test/gmail/test_unit.py -v
   concluding-rest-of-workflow-should-run:
     name: Concluding rest of workflow should run
-    needs:
-      - determining-if-rest-of-workflow-should-run
-      - e2e-testing
+    needs: determining-if-rest-of-workflow-should-run
     if: needs.determining-if-rest-of-workflow-should-run.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     steps:
