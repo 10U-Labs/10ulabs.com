@@ -35,7 +35,8 @@
 
 ## Git and GitHub
 
-- Always include `[skip ci]` in commit messages unless explicitly told otherwise by the user.
+- Follow GitOps principles: all infrastructure and deployment changes must go through git commits and CI/CD workflows.
+- Never deploy infrastructure locally (no local `cdk deploy`, `terraform apply`, etc.). Always commit changes and let workflows handle deployments.
 - When troubleshooting GitHub Actions workflows, always check the workflow logs first.
 - If the GitHub CLI is not installed, install it in `~/bin/gh`.
 - When using most `gh` commands, add the repository by using the `--repo` flag.
