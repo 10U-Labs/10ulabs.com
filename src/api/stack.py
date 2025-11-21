@@ -49,17 +49,20 @@ class ApiStack(Stack):
         self._create_fargate_task(secrets_and_security[0])
         ec2_runner_role = self._create_ec2_runner_role()
 
-        parent_domain = config["domain_names"]["parent"]
         subdomain = config["domain_names"]["subdomain"]
-        cert_info = self._create_certificate(parent_domain, subdomain, parent_domain.replace('.', '-'))
+        cert_info = self._create_certificate(
+            config["domain_names"]["parent"],
+            subdomain,
+            config["domain_names"]["parent"].replace('.', '-')
+        )
 
         docs_bucket = self._create_docs_bucket()
         support_infra = self._create_support_infrastructure()
         handlers = self._create_lambda_functions(support_infra, runner_sg)
-        self._create_api_gateway(handlers)
-        cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), docs_bucket)
+        api = self._create_api_gateway(handlers)
+        cf_dist = self._create_cloudfront(subdomain, cert_info[1], self._create_waf(), (docs_bucket, api))
         self._deploy_docs_to_s3(docs_bucket, cf_dist)
-        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (runner_sg, ec2_runner_role))
+        self._create_dns_and_outputs(cert_info[0], subdomain, cf_dist, (runner_sg, ec2_runner_role, api))
 
     def _create_vpc(self):
         max_azs = self.config["aws"]["vpc"].get("max_azs", 99)
@@ -152,7 +155,7 @@ class ApiStack(Stack):
             memory_limit_mib=int(self.config["aws"]["fargate_runners"]["memory"]),
         )
         self.task_definition.node.default_child.override_logical_id(f"RunnerTaskDefinition{self.stack_hash}")
-        container = self.task_definition.add_container(
+        self.task_definition.add_container(
             "runner",
             container_name=self.config["naming"]["container_name"],
             image=ecs.ContainerImage.from_ecr_repository(
@@ -447,7 +450,7 @@ class ApiStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
         api_log_group.node.default_child.override_logical_id(f"ApiGatewayAccessLogs{self.stack_hash}")
-        self.api = apigw.SpecRestApi(
+        api = apigw.SpecRestApi(
             self, "TenULabsApi",
             api_definition=apigw.ApiDefinition.from_inline(yaml.safe_load(openapi_spec_str)),
             deploy=False
@@ -455,7 +458,7 @@ class ApiStack(Stack):
 
         deployment = apigw.Deployment(
             self, f"ApiDeployment{spec_hash}",
-            api=self.api,
+            api=api,
             description=f"Deployment for spec hash {spec_hash}"
         )
 
@@ -469,10 +472,10 @@ class ApiStack(Stack):
         )
 
         stage.node.add_dependency(deployment)
-        self.api.deployment_stage = stage
+        api.deployment_stage = stage
 
         api_version = self.config.get("api", {}).get("version", "v1")
-        base_arn = f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{self.api.rest_api_id}"
+        base_arn = f"arn:aws:execute-api:{self.config['aws']['region']}:{self.config['aws']['account_id']}:{api.rest_api_id}"
 
         handler_permissions = {
             'health': f"{base_arn}/*/GET/health",
@@ -487,6 +490,7 @@ class ApiStack(Stack):
                 principal=iam.ServicePrincipal("apigateway.amazonaws.com"),
                 source_arn=source_arn
             )
+        return api
 
     def _create_waf(self):
         return wafv2.CfnWebACL(
@@ -503,7 +507,8 @@ class ApiStack(Stack):
             rules=[]
         )
 
-    def _create_cloudfront(self, subdomain_name, certificate, web_acl, docs_bucket):
+    def _create_cloudfront(self, subdomain_name, certificate, web_acl, resources):
+        docs_bucket, api = resources
         cf_cache_policy = cloudfront.CachePolicy(
             self, "ApiDocsCachePolicy",
             cache_policy_name="ApiDocsCachePolicy",
@@ -533,7 +538,7 @@ function handler(event) {
 
         s3_origin = origins.S3Origin(docs_bucket)
         api_origin = origins.HttpOrigin(
-            f"{self.api.rest_api_id}.execute-api.{self.config['aws']['region']}.amazonaws.com",
+            f"{api.rest_api_id}.execute-api.{self.config['aws']['region']}.amazonaws.com",
             origin_path="/prod",
             protocol_policy=OriginProtocolPolicy.HTTPS_ONLY,
             connection_timeout=Duration.seconds(10)
@@ -631,7 +636,7 @@ function handler(event) {
         return distribution
 
     def _create_dns_and_outputs(self, parent_zone, subdomain_name, cf_distribution, resources):
-        runner_sg, ec2_runner_role = resources
+        runner_sg, ec2_runner_role, api = resources
         route53.ARecord(
             self, "ApiAliasRecord",
             zone=parent_zone,
@@ -641,7 +646,7 @@ function handler(event) {
 
         CfnOutput(
             self, "ApiUrl",
-            value=self.api.url,
+            value=api.url,
             description=f"API Gateway URL for {subdomain_name}",
             export_name="TenULabsApi-Url"
         )
@@ -662,7 +667,7 @@ function handler(event) {
 
         CfnOutput(
             self, "ApiGatewayRestApiId",
-            value=self.api.rest_api_id,
+            value=api.rest_api_id,
             description="API Gateway REST API ID",
             export_name="TenULabsApi-RestApiId"
         )
