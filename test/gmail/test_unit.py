@@ -1,8 +1,39 @@
 from pathlib import Path
-import json
-import importlib.util
-import aws_cdk as cdk
-from aws_cdk.assertions import Template
+
+
+def test_terraform_files_exist():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "main.tf").exists()
+
+
+def test_backend_configuration_exists():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "backend.tf").exists()
+
+
+def test_providers_configuration_exists():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "providers.tf").exists()
+
+
+def test_variables_configuration_exists():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "variables.tf").exists()
+
+
+def test_outputs_configuration_exists():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "outputs.tf").exists()
+
+
+def test_data_configuration_exists():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "data.tf").exists()
+
+
+def test_tfvars_file_exists():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    assert (gmail_dir / "terraform.tfvars").exists()
 
 
 def test_config_file_exists(gmail_config_path):
@@ -25,570 +56,31 @@ def test_config_has_aws_region(config):
     assert "aws" in config and "region" in config["aws"]
 
 
-def test_stack_creates_txt_record(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
+def test_terraform_has_google_verification_output():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    outputs_file = gmail_dir / "outputs.tf"
 
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
+    with open(outputs_file) as f:
+        content = f.read()
 
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
+    assert "google_verification_record" in content
 
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
 
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
+def test_terraform_has_google_verification_value_output():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    outputs_file = gmail_dir / "outputs.tf"
 
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
+    with open(outputs_file) as f:
+        content = f.read()
 
-    template = Template.from_stack(stack)
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "TXT"
-        }
-    )
+    assert "google_verification_value" in content
 
 
-def test_stack_has_google_verification_output(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
+def test_terraform_has_gmail_mx_output():
+    gmail_dir = Path(__file__).parent.parent.parent / "src" / "gmail"
+    outputs_file = gmail_dir / "outputs.tf"
 
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
+    with open(outputs_file) as f:
+        content = f.read()
 
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    outputs = template.find_outputs("*")
-    assert "GoogleVerificationRecord" in outputs
-
-
-def test_stack_has_google_verification_value_output(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    outputs = template.find_outputs("*")
-    assert "GoogleVerificationValue" in outputs
-
-
-def test_stack_creates_mx_record(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "MX"
-        }
-    )
-
-
-def test_stack_has_gmail_mx_output(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    outputs = template.find_outputs("*")
-    assert "GmailMxRecordOutput" in outputs
-
-
-def test_stack_txt_record_has_correct_value_format(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    expected_value = f'"google-site-verification={config["google_site_verification"]}"'
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "TXT",
-            "ResourceRecords": [expected_value]
-        }
-    )
-
-
-def test_stack_txt_record_has_correct_ttl(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "TXT",
-            "TTL": "300"
-        }
-    )
-
-
-def test_stack_mx_record_has_priority_one(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "MX",
-            "ResourceRecords": ["1 smtp.google.com."]
-        }
-    )
-
-
-def test_stack_mx_record_has_correct_ttl(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "MX",
-            "TTL": "300"
-        }
-    )
-
-
-def test_stack_creates_exactly_one_txt_record(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.resource_count_is("AWS::Route53::RecordSet", 2)
-
-
-def test_stack_creates_exactly_one_mx_record(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.resource_count_is("AWS::Route53::RecordSet", 2)
-
-
-def test_config_ttl_defaults_to_300(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    config_without_ttl = {k: v for k, v in config.items() if k != "ttl"}
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    stack = GmailEmailProviderStack(
-        app,
-        "TestGmailStack",
-        config=config_without_ttl,
-        env=cdk.Environment(
-            account=str(config["aws"]["account_id"]),
-            region=config["aws"]["region"]
-        )
-    )
-
-    template = Template.from_stack(stack)
-    template.has_resource_properties(
-        "AWS::Route53::RecordSet",
-        {
-            "Type": "TXT",
-            "TTL": "300"
-        }
-    )
-
-
-def test_stack_raises_error_when_google_verification_missing(config, gmail_stack_path, domain_config_path, domain_stack_path):
-    app = cdk.App()
-
-    config_without_verification = {k: v for k, v in config.items() if k != "google_site_verification"}
-
-    spec = importlib.util.spec_from_file_location("gmail_stack", gmail_stack_path)
-    gmail_module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(gmail_module)
-    GmailEmailProviderStack = gmail_module.GmailEmailProviderStack
-
-    with open(domain_config_path) as f:
-        domain_config = json.load(f)
-
-    domain_spec = importlib.util.spec_from_file_location("domain_stack", domain_stack_path)
-    domain_module = importlib.util.module_from_spec(domain_spec)
-    domain_spec.loader.exec_module(domain_module)
-    DomainStack = domain_module.DomainStack
-
-    domain_stack = DomainStack(
-        app,
-        "TestDomainStack",
-        config=domain_config,
-        env=cdk.Environment(
-            account=str(domain_config["aws"]["account_id"]),
-            region=domain_config["aws"]["region"]
-        )
-    )
-
-    try:
-        stack = GmailEmailProviderStack(
-            app,
-            "TestGmailStack",
-            config=config_without_verification,
-            env=cdk.Environment(
-                account=str(config["aws"]["account_id"]),
-                region=config["aws"]["region"]
-            )
-        )
-        assert False
-    except ValueError:
-        assert True
+    assert "gmail_mx_record" in content

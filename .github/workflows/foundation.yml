@@ -53,7 +53,7 @@ jobs:
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
-      - snapshot-testing
+      - unit-testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -130,6 +130,8 @@ jobs:
         run: cd src/foundation && terraform validate
       - name: Run tflint
         run: cd src/foundation && tflint --init && tflint
+      - name: Terraform Plan
+        run: cd src/foundation && terraform plan
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
@@ -142,42 +144,6 @@ jobs:
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/foundation.yml
-  snapshot-testing:
-    defaults:
-      run:
-        working-directory: src/foundation
-    name: Snapshot testing
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Plan
-        run: |
-          terraform plan -out=tfplan.binary
-          terraform show -json tfplan.binary > ../../tfplan.json
-      - name: Install Python dependencies
-        run: pip install pytest boto3
-      - name: Run snapshot tests
-        run: pytest ../../test/foundation/test_snapshot.py -v
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis

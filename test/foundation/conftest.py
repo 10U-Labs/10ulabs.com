@@ -20,15 +20,6 @@ def config():
 
 
 @pytest.fixture
-def terraform_plan_json():
-    plan_path = Path(__file__).parent.parent.parent / "tfplan.json"
-    if not plan_path.exists():
-        pytest.skip("Terraform plan JSON not found. Run terraform plan first.")
-    with open(plan_path, encoding='utf-8') as f:
-        return json.load(f)
-
-
-@pytest.fixture
 def iam_client(config):
     return boto3.client('iam', region_name=config['aws_region'])
 

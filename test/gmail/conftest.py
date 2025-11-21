@@ -13,18 +13,3 @@ def config():
 @pytest.fixture
 def gmail_config_path():
     return Path(__file__).parent.parent.parent / "src" / "gmail" / "config.json"
-
-
-@pytest.fixture
-def gmail_stack_path():
-    return Path(__file__).parent.parent.parent / "src" / "gmail" / "stack.py"
-
-
-@pytest.fixture
-def domain_config_path():
-    return Path(__file__).parent.parent.parent / "src" / "cloudtrail_and_domain_name" / "config.json"
-
-
-@pytest.fixture
-def domain_stack_path():
-    return Path(__file__).parent.parent.parent / "src" / "cloudtrail_and_domain_name" / "stack.py"

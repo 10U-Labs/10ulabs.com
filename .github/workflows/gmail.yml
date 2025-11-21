@@ -2,25 +2,43 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  e2e-testing:
-    name: E2E testing
-    needs: integration-testing
+  declaring-common-variables:
+    name: Declaring common variables
+    outputs:
+      aws_account_id: ${{ steps.load_config.outputs.aws_account_id }}
+      aws_region: ${{ steps.load_config.outputs.aws_region }}
+      github_actions_role: GitHubActionsRole
+      terraform_version: ${{ steps.extract_tf_version.outputs.terraform_version }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
+      - id: load_config
         name: Load configuration
         run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json);
-          REGION=$(jq -r '.aws.region' src/gmail/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
+          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json)
+          REGION=$(jq -r '.aws.region' src/gmail/config.json)
+          echo "aws_account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "aws_region=$REGION" >> $GITHUB_OUTPUT
+      - id: extract_tf_version
+        name: Extract Terraform version from providers.tf
+        run: |
+          TF_VERSION=$(grep 'required_version' src/gmail/providers.tf | sed -E 's/.*">= ([0-9.]+)".*/\1/')
+          echo "terraform_version=$TF_VERSION" >> $GITHUB_OUTPUT
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -30,82 +48,44 @@ jobs:
       - name: Run E2E tests
         run: pytest test/gmail/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
+    defaults:
+      run:
+        working-directory: src/gmail
     name: Ensuring infrastructure is in desired state
-    needs: unit-testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json);
-          REGION=$(jq -r '.aws.region' src/gmail/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14'
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install CDK
-        run: npm install -g aws-cdk
-      - name: Install dependencies
-        run: pip install -r src/gmail/requirements.txt
-      - name: CDK Bootstrap (if needed)
-        run: cd src/gmail && cdk bootstrap aws://${{ steps.config.outputs.account_id }}/${{ steps.config.outputs.region }}
-      - name: CDK Diff
-        run: cd src/gmail && cdk diff GmailEmailProvider
-      - id: deploy
-        name: CDK Deploy
-        run: |
-          cd src/gmail && cdk deploy GmailEmailProvider \
-            --require-approval never \
-            --outputs-file ../../gmail-outputs.json 2>&1 | tee /tmp/cdk_deploy.log || true
-          if grep -qE "(failed|ROLLBACK_COMPLETE|CREATE_FAILED)" /tmp/cdk_deploy.log; then
-            echo "deployment_failed=true" >> $GITHUB_OUTPUT
-          else
-            echo "deployment_failed=false" >> $GITHUB_OUTPUT
-          fi
-      - if: ${{ steps.deploy.outputs.deployment_failed == 'true' }}
-        name: Fail if deployment failed
-        run: |
-          echo "CDK deployment failed. See logs above for details."
-          exit 1
-      - if: ${{ steps.deploy.outputs.deployment_failed != 'true' }}
-        name: Display outputs
-        run: |
-          echo "Gmail email provider infrastructure deployed successfully";
-          echo "";
-          echo "Stack Outputs:";
-          cat gmail-outputs.json | jq '.';
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
   integration-testing:
     name: Integration testing
-    needs: ensuring-infrastructure-in-desired-state
+    needs:
+      - declaring-common-variables
+      - ensuring-infrastructure-in-desired-state
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' src/gmail/config.json);
-          REGION=$(jq -r '.aws.region' src/gmail/config.json);
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT;
-          echo "region=$REGION" >> $GITHUB_OUTPUT;
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -115,6 +95,9 @@ jobs:
       - name: Run pytest integration tests
         run: pytest test/gmail/test_integration.py -v
   performing-static-analysis:
+    defaults:
+      run:
+        working-directory: src/gmail
     if: |
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
@@ -122,6 +105,7 @@ jobs:
         (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
       )
     name: Performing static analysis
+    needs: declaring-common-variables
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -130,28 +114,43 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Install tflint
+        run: |
+          TFLINT_INSTALL_URL='https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh'
+          curl -s "$TFLINT_INSTALL_URL" | bash
       - name: Install linting dependencies
-        run: |
-          pip install pylint mypy yamllint && \
-          npm install -g jsonlint
-      - name: Install project dependencies for linting
-        run: pip install -r src/gmail/requirements.txt
-      - name: Linting JSON configuration files
-        run: |
-          echo "Validating JSON syntax..."
-          jsonlint -q src/gmail/config.json && \
-          jsonlint -q src/gmail/cdk.json
-      - name: Linting Python files
-        run: |
-          pylint src/gmail/stack.py src/gmail/app.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-under=10.0
+        run: pip install pylint mypy yamllint
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Validate
+        run: terraform validate
+      - name: Run tflint
+        run: tflint --init && tflint
+      - name: Terraform Plan
+        run: terraform plan
       - name: Linting YAML files
         run: |
-          echo "Running yamllint on workflow files..."
-          yamllint --config-data '{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}' .github/workflows/gmail.yml
-      - name: Static type checking Python files with mypy
-        run: python -m mypy src/gmail
+          DOCUMENT_START='document-start: disable'
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: {max: 300, level: warning}'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            ../../.github/workflows/gmail.yml
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
@@ -163,14 +162,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - name: Set up Node.js (required by aws-cdk-lib/jsii)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - name: Install Python dependencies
-        run: |
-          pip install pytest && \
-          pip install -r src/gmail_email_provider/requirements.txt
+        run: pip install pytest boto3
       - name: Run unit tests
         run: pytest test/gmail/test_unit.py -v
 name: Ensuring DNS allows Gmail to be email provider
@@ -193,7 +186,7 @@ on:
   workflow_run:
     branches: [main]
     types: [completed]
-    workflows: ["Ensuring CloudTrail and domain name exist and are properly configured"]
+    workflows: ["Ensuring foundational infrastructure exists and is properly configured"]
 permissions:
   contents: read
   id-token: write
