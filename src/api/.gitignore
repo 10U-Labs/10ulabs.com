@@ -4,3 +4,9 @@
 .terraform.lock.hcl
 tfplan
 *.tfvars.backup
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+cdk.out/
+cdk.context.json
