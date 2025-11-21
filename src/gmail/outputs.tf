@@ -1,6 +1,6 @@
 output "google_verification_record" {
   value       = aws_route53_record.google_verification.fqdn
-  description = "Google site verification TXT record for ${var.domain_name}"
+  description = "Google site verification TXT record"
 }
 
 output "google_verification_value" {
@@ -10,5 +10,5 @@ output "google_verification_value" {
 
 output "gmail_mx_record" {
   value       = aws_route53_record.gmail_mx.fqdn
-  description = "Gmail MX record for ${var.domain_name}"
+  description = "Gmail MX record"
 }
