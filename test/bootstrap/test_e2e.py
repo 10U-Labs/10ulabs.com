@@ -145,14 +145,8 @@ def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, ho
             )
         except:
             pass
-import boto3
 import dns.resolver
 import pytest
-
-
-@pytest.fixture
-def route53_client(config):
-    return boto3.client('route53', region_name=config['aws']['region'])
 
 
 def test_google_verification_record_resolves_via_public_dns(route53_client, config):
