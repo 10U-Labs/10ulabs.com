@@ -129,7 +129,7 @@ jobs:
         with:
           python-version: '3.14'
       - name: Install Python dependencies
-        run: pip install pytest boto3 requests pyyaml
+        run: pip install pytest && pip install -r src/api/requirements.txt
       - name: Run pytest integration tests
         run: pytest test/api/test_integration.py -v
   performing-static-analysis:
