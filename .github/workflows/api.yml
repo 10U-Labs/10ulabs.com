@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3 requests
+        run: pip install pytest boto3 PyYAML requests
       - name: Run E2E tests
         run: pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
@@ -90,7 +90,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3
+        run: pip install pytest boto3 PyYAML
       - name: Run integration tests
         run: pytest test/api/test_integration.py -v
   performing-static-analysis:
