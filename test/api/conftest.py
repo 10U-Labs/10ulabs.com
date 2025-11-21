@@ -520,6 +520,96 @@ def api_src_path():
     return Path(__file__).parent.parent.parent / "src" / "api"
 
 
+@pytest.fixture
+def mock_urllib_response_factory():
+    def _create_response(read_value=b'', status=200, json_data=None):
+        from unittest.mock import Mock
+        import json as json_module
+
+        mock_response = Mock()
+        if json_data is not None:
+            mock_response.read.return_value = json_module.dumps(json_data).encode()
+        else:
+            mock_response.read.return_value = read_value
+        mock_response.status = status
+        mock_response.__enter__ = Mock(return_value=mock_response)
+        mock_response.__exit__ = Mock(return_value=False)
+        return mock_response
+    return _create_response
+
+
+@pytest.fixture
+def mock_boto3_client_factory():
+    def _create_mock_client(service_name='ec2', method_returns=None):
+        from unittest.mock import MagicMock
+        mock_client = MagicMock()
+        if method_returns:
+            for method_name, return_value in method_returns.items():
+                getattr(mock_client, method_name).return_value = return_value
+        return mock_client
+    return _create_mock_client
+
+
+@pytest.fixture
+def mock_multi_boto3_clients():
+    def _create_clients(*service_names):
+        from unittest.mock import MagicMock
+        clients = {}
+        for service in service_names:
+            clients[service] = MagicMock()
+
+        def client_side_effect(service_name, **kwargs):
+            return clients.get(service_name, MagicMock())
+
+        return clients, client_side_effect
+    return _create_clients
+
+
+@pytest.fixture
+def env_with_ec2_config():
+    from unittest.mock import patch
+    env_vars = {
+        'AWS_REGION': 'us-east-1',
+        'SUBNETS': 'subnet-123,subnet-456,subnet-789',
+        'SECURITY_GROUPS': 'sg-12345',
+        'VPC_ID': 'vpc-test123',
+        'EC2_INSTANCE_TYPES': 't4g.large,t4g.medium',
+        'EC2_IAM_INSTANCE_PROFILE': 'TestInstanceProfile',
+        'EC2_MAX_PRICE': '0.10',
+        'GITHUB_TOKEN': 'ghp_test_token',
+        'API_DOMAIN': 'api.test.com'
+    }
+    with patch.dict('os.environ', env_vars, clear=False):
+        yield env_vars
+
+
+def load_handler_module(relative_path, module_name):
+    base_path = Path(__file__).parent.parent.parent / "src" / "api"
+    handler_path = base_path / relative_path
+    spec = importlib.util.spec_from_file_location(module_name, handler_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def parse_lambda_response_payload(response):
+    return json.loads(response['Payload'].read())
+
+
+@pytest.fixture
+def sqs_receive_message_factory():
+    def _create_response(messages=None):
+        if messages is None:
+            messages = [{
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {},
+                'Attributes': {}
+            }]
+        return {'Messages': messages}
+    return _create_response
+
+
 def find_lambda_by_substring(lambda_client, substring):
     functions = lambda_client.list_functions()
     function_names = [fn['FunctionName'] for fn in functions['Functions']]
