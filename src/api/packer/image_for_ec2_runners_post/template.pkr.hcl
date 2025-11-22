@@ -115,7 +115,7 @@ source "amazon-ebs" "github_runner" {
       Architecture  = var.os_architecture
       RunnerVersion = var.runner_version
       Purpose       = "Github self-hosted EC2 runner"
-      stable        = "true"
+      stable        = "false"
       BuildDate     = local.timestamp
     },
     var.github_repository != "" ? {
@@ -130,7 +130,7 @@ source "amazon-ebs" "github_runner" {
   snapshot_tags = {
     Name    = "${local.ami_name}-snapshot"
     Purpose = "Github self-hosted EC2 runner"
-    stable  = "true"
+    stable  = "false"
   }
 }
 
