@@ -78,14 +78,14 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           packer validate \
+            -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
+            -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
             -var="os_family=${{ steps.config.outputs.os_family }}" \
             -var="os_version=${{ steps.config.outputs.os_version }}" \
-            -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
             -var="runner_version=${{ steps.config.outputs.runner_version }}" \
-            -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
-            -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
             -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
+            -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
             template.pkr.hcl
       - id: build
         name: Build AMI with Packer
@@ -102,14 +102,14 @@ jobs:
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             echo "Build attempt $ATTEMPT of $MAX_ATTEMPTS"
             packer build \
+              -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
+              -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
               -var="os_family=${{ steps.config.outputs.os_family }}" \
               -var="os_version=${{ steps.config.outputs.os_version }}" \
-              -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
               -var="runner_version=${{ steps.config.outputs.runner_version }}" \
-              -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
               -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
-              -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
+              -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
             BUILD_EXIT_CODE=$?
