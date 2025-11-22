@@ -157,7 +157,7 @@ jobs:
         run: |
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE='GitHubActionsRole'
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
