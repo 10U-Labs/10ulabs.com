@@ -1,3 +1,4 @@
+import argparse
 import sys
 import time
 import uuid
@@ -5,8 +6,13 @@ import boto3
 
 
 def main():
-    domain_subdomain = sys.argv[1]
-    aws_region = sys.argv[2]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fqdn", required=True)
+    parser.add_argument("--region", required=True)
+    args = parser.parse_args()
+
+    domain_subdomain = args.fqdn
+    aws_region = args.region
 
     cloudfront = boto3.client("cloudfront", region_name=aws_region)
 
