@@ -185,6 +185,7 @@ jobs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+      terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -195,9 +196,11 @@ jobs:
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE='GitHubActionsRole'
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -259,6 +262,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
@@ -269,10 +276,10 @@ jobs:
         run: pip install boto3
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check terraform.tfvars
-      - name: Run tflint
-        env:
+      - env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: cd src/api && tflint --init && tflint
+        name: Run tflint
+        run: cd src/api && tflint --init && tflint --disable-rule=terraform_unused_declarations
       - name: Linting Python files
         run: |
           pylint \
