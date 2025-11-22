@@ -58,6 +58,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -74,7 +76,9 @@ jobs:
       - id: check_files
         name: Check if static files changed
         run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E 'src/api/files/(index\.html|openapi\.yml|404\.html)'; then
+          set -e
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          if echo "$CHANGED_FILES" | grep -qE 'src/api/files/(index\.html|openapi\.yml|404\.html)'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
