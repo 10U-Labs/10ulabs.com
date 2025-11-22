@@ -19,19 +19,12 @@ jobs:
       - id: config
         name: Load configuration from terraform.tfvars
         run: |
-          OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
-          if [ "$OS_FAMILY" = "debian" ] && [ "$OS_VERSION" = "stable" ]; then
-            RESOLVED_VERSION=$(curl -s https://deb.debian.org/debian/dists/stable/Release | grep -oP '^Version: \K[0-9]+' || echo "13")
-            echo "Resolved Debian stable to version $RESOLVED_VERSION (queried from Debian repository)"
-          else
-            RESOLVED_VERSION="$OS_VERSION"
-          fi
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           INSTANCE_TYPE=$(grep 'packer_instance_type' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          echo "os_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
+          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
