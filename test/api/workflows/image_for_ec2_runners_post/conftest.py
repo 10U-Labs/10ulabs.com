@@ -7,7 +7,7 @@ import pytest
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['AWS_REGION'] = 'us-east-1'
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 
 def load_module(module_name, *path_parts):

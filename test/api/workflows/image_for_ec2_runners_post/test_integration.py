@@ -7,7 +7,7 @@ import pytest
 
 @pytest.fixture(scope="module")
 def tfvars():
-    tfvars_path = os.path.join(os.path.dirname(__file__), "../../../src/api/terraform.tfvars")
+    tfvars_path = os.path.join(os.path.dirname(__file__), "../../../../src/api/terraform.tfvars")
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
