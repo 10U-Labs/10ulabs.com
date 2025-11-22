@@ -224,35 +224,35 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: Linting YAML files
+        run: |
+          echo "Running yamllint on workflow files..."
+          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
+          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_post.yml
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+      - name: Terraform Format Check
+        run: cd src/api && terraform fmt -check terraform.tfvars
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - name: Install linting dependencies
-        run: pip install pylint mypy yamllint boto3-stubs
-      - name: Install project dependencies for linting
-        run: pip install boto3
-      - name: Terraform Format Check
-        run: cd src/api && terraform fmt -check terraform.tfvars
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/api && tflint --init && tflint --disable-rule=terraform_unused_declarations
+      - name: Install Python linting dependencies
+        run: pip install pylint mypy boto3-stubs boto3
       - name: Linting Python files
         run: |
           pylint \
             src/api/packer/image_for_ec2_runners_post/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
-      - name: Linting YAML files
-        run: |
-          echo "Running yamllint on workflow files..."
-          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
-          yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_post.yml
       - name: Static type checking Python files with mypy
         run: python -m mypy src/api/packer/image_for_ec2_runners_post/*.py
       - name: Setup Packer
