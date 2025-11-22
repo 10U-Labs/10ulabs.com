@@ -137,7 +137,7 @@ paths:
       description: Triggers a build of a new EC2 runner AMI
       operationId: buildEC2RunnerAMI
       tags:
-        - AMI
+        - Image for EC2 runners
       responses:
         '200':
           description: AMI build started successfully
@@ -150,7 +150,7 @@ paths:
       description: Lists all available EC2 runner AMIs
       operationId: listEC2RunnerAMIs
       tags:
-        - AMI
+        - Image for EC2 runners
       responses:
         '200':
           description: List of AMIs
@@ -164,7 +164,7 @@ paths:
       description: Returns the latest EC2 runner AMI
       operationId: getLatestEC2RunnerAMI
       tags:
-        - AMI
+        - Image for EC2 runners
       responses:
         '200':
           description: Latest AMI information
@@ -178,7 +178,7 @@ paths:
       description: Deletes a specific EC2 runner AMI
       operationId: deleteEC2RunnerAMI
       tags:
-        - AMI
+        - Image for EC2 runners
       parameters:
         - name: ami_id
           in: path
@@ -198,7 +198,7 @@ paths:
       description: Triggers a build of a new Docker runner image
       operationId: buildDockerRunnerImage
       tags:
-        - Docker Images
+        - Image for Docker runners
       responses:
         '200':
           description: Docker image build started successfully
@@ -211,7 +211,7 @@ paths:
       description: Lists all available Docker runner images
       operationId: listDockerRunnerImages
       tags:
-        - Docker Images
+        - Image for Docker runners
       responses:
         '200':
           description: List of Docker images
@@ -225,7 +225,7 @@ paths:
       description: Returns the latest Docker runner image
       operationId: getLatestDockerRunnerImage
       tags:
-        - Docker Images
+        - Image for Docker runners
       responses:
         '200':
           description: Latest Docker image information
@@ -239,7 +239,7 @@ paths:
       description: Returns a specific Docker runner image by digest
       operationId: getDockerRunnerImageByDigest
       tags:
-        - Docker Images
+        - Image for Docker runners
       parameters:
         - name: digest
           in: path
@@ -258,7 +258,7 @@ paths:
       description: Deletes a specific Docker runner image by digest
       operationId: deleteDockerRunnerImage
       tags:
-        - Docker Images
+        - Image for Docker runners
       parameters:
         - name: digest
           in: path
@@ -358,7 +358,7 @@ tags:
     description: Utility endpoints
   - name: Runners
     description: GitHub runner management endpoints
-  - name: AMI
+  - name: Image for EC2 runners
     description: EC2 runner AMI management endpoints
-  - name: Docker Images
+  - name: Image for Docker runners
     description: Docker runner image management endpoints
