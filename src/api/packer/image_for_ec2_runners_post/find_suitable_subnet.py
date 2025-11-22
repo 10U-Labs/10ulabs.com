@@ -29,12 +29,15 @@ def find_suitable_subnet(instance_types, subnet_ids):
 
 def main():
     parser = argparse.ArgumentParser(description='Find suitable subnet for instance types')
-    parser.add_argument('--instance-types', required=True, help='JSON array of instance types')
-    parser.add_argument('--subnet-ids', required=True, help='Comma-separated list of subnet IDs')
-
     subparsers = parser.add_subparsers(dest='command', required=True)
-    subparsers.add_parser('check', help='Check if suitable subnet exists')
-    subparsers.add_parser('get', help='Get suitable subnet ID')
+
+    check_parser = subparsers.add_parser('check', help='Check if suitable subnet exists')
+    check_parser.add_argument('--instance-types', required=True, help='JSON array of instance types')
+    check_parser.add_argument('--subnet-ids', required=True, help='Comma-separated list of subnet IDs')
+
+    get_parser = subparsers.add_parser('get', help='Get suitable subnet ID')
+    get_parser.add_argument('--instance-types', required=True, help='JSON array of instance types')
+    get_parser.add_argument('--subnet-ids', required=True, help='Comma-separated list of subnet IDs')
 
     args = parser.parse_args()
 

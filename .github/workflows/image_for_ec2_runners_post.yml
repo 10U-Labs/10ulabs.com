@@ -54,13 +54,13 @@ jobs:
         name: Find suitable subnet for instance types
         run: |
           if python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
+            check \
             --instance-types '${{ steps.config.outputs.spot_instance_types }}' \
-            --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}' \
-            check; then
+            --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}'; then
             SUBNET_ID=$(python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
+              get \
               --instance-types '${{ steps.config.outputs.spot_instance_types }}' \
-              --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}' \
-              get)
+              --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
             echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
           else
             echo "ERROR: No suitable subnet found for instance types" >&2
