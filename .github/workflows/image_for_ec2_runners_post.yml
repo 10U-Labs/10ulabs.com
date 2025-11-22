@@ -83,6 +83,7 @@ jobs:
               -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
               -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
               -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
+              -var="stable_tag_key=${{ needs.declaring-common-variables.outputs.stable_tag_key }}" \
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
@@ -147,6 +148,7 @@ jobs:
       os_version: ${{ steps.config.outputs.os_version }}
       runner_version: ${{ steps.config.outputs.runner_version }}
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
+      stable_tag_key: ${{ steps.config.outputs.stable_tag_key }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ubuntu-latest
     steps:
@@ -163,6 +165,7 @@ jobs:
           OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
+          STABLE_TAG_KEY=$(grep 'ami_promotion_stable_tag' src/api/terraform.tfvars | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
@@ -172,6 +175,7 @@ jobs:
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "stable_tag_key=$STABLE_TAG_KEY" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
@@ -287,6 +291,7 @@ jobs:
             -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
             -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
             -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
+            -var="stable_tag_key=${{ needs.declaring-common-variables.outputs.stable_tag_key }}" \
             -var="subnet_id=subnet-dummy" \
             template.pkr.hcl
   promoting-ami:

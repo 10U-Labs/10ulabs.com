@@ -60,6 +60,12 @@ variable "github_run_id" {
   default     = ""
 }
 
+variable "stable_tag_key" {
+  type        = string
+  description = "Tag key name for stable AMI promotion"
+  default     = "Stable"
+}
+
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   ami_name  = "github-ec2-runner-${var.os_family}-${var.os_version}-${var.os_architecture}-${local.timestamp}"
@@ -115,8 +121,10 @@ source "amazon-ebs" "github_runner" {
       OSArchitecture  = var.os_architecture
       RunnerVersion   = var.runner_version
       Purpose         = "GitHub self-hosted EC2 runner"
-      Stable          = "false"
       BuildDate       = local.timestamp
+    },
+    {
+      "${var.stable_tag_key}" = "false"
     },
     var.github_repository != "" ? {
       ManagedBy  = "GitHubActions"
@@ -127,11 +135,15 @@ source "amazon-ebs" "github_runner" {
   )
 
   # Snapshot tags
-  snapshot_tags = {
-    Name    = "snapshot-${local.ami_name}"
-    Purpose = "GitHub self-hosted EC2 runner"
-    Stable  = "false"
-  }
+  snapshot_tags = merge(
+    {
+      Name    = "snapshot-${local.ami_name}"
+      Purpose = "GitHub self-hosted EC2 runner"
+    },
+    {
+      "${var.stable_tag_key}" = "false"
+    }
+  )
 }
 
 build {
