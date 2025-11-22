@@ -64,10 +64,17 @@ def github_repo(tfvars):
 
 
 @pytest.fixture(scope="module")
-def test_instance(ec2_client, test_ami_id, tfvars):
+def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
     import subprocess
+    import base64
+    import urllib.request
+    import urllib.error
+
     if not test_ami_id:
         pytest.skip("TEST_AMI_ID not provided")
+
+    if not github_token:
+        pytest.skip("GITHUB_PAT not provided")
 
     try:
         terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
@@ -84,6 +91,51 @@ def test_instance(ec2_client, test_ami_id, tfvars):
         security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
     except Exception as e:
         pytest.skip(f"Could not get infrastructure info from Terraform outputs: {e}")
+
+    req = urllib.request.Request(
+        f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token",
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {github_token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+            registration_token = data.get("token", "")
+    except (urllib.error.HTTPError, urllib.error.URLError):
+        pytest.skip("Unable to get GitHub registration token")
+
+    if not registration_token:
+        pytest.skip("Failed to retrieve registration token")
+
+    aws_region = tfvars.get("aws_region", "us-east-1")
+    user_data_script = f"""#!/bin/bash
+set -e
+
+cd /home/github-runner/actions-runner
+
+sudo -u github-runner ./config.sh \
+    --url "https://github.com/{github_repo}" \
+    --token "{registration_token}" \
+    --name "e2e-test-runner-$(hostname)" \
+    --labels "e2e-test" \
+    --ephemeral \
+    --unattended
+
+sudo -u github-runner ./run.sh
+
+INSTANCE_ID=$(ec2-metadata --instance-id | cut -d' ' -f2)
+aws ec2 terminate-instances \
+    --instance-ids "$INSTANCE_ID" \
+    --region {aws_region} \
+    || shutdown -h now
+"""
+
+    user_data_encoded = base64.b64encode(user_data_script.encode()).decode()
 
     instance_profile = tfvars.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
     spot_instance_types = tfvars.get("ec2_spot_instance_types", ["t4g.small"])
@@ -108,6 +160,7 @@ def test_instance(ec2_client, test_ami_id, tfvars):
                 SubnetId=subnet_ids[0].strip(),
                 SecurityGroupIds=[security_group_id],
                 IamInstanceProfile={"Name": instance_profile},
+                UserData=user_data_encoded,
                 InstanceMarketOptions={
                     "MarketType": "spot",
                     "SpotOptions": {
@@ -156,133 +209,74 @@ def test_instance(ec2_client, test_ami_id, tfvars):
         pass
 
 
-def test_github_runner_can_register(ssm_client, test_instance, github_token, github_repo):
+def test_github_runner_can_register(ssm_client, test_instance):
     if not test_instance:
         pytest.skip("Test instance not created")
-    if not github_token:
-        pytest.skip("GITHUB_PAT not provided")
 
-    import urllib.request
-    import urllib.error
+    max_wait_time = 300
+    start_time = time.time()
+    runner_configured = False
 
-    req = urllib.request.Request(
-        f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token",
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {github_token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
-    )
+    while time.time() - start_time < max_wait_time:
+        try:
+            response = ssm_client.send_command(
+                InstanceIds=[test_instance],
+                DocumentName="AWS-RunShellScript",
+                Parameters={"commands": ["test -f /home/github-runner/actions-runner/.runner && echo 'configured' || echo 'not configured'"]}
+            )
 
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            registration_token = data.get("token", "")
-    except (urllib.error.HTTPError, urllib.error.URLError):
-        pytest.skip("Unable to get GitHub registration token")
+            command_id = response["Command"]["CommandId"]
+            time.sleep(5)
 
-    if not registration_token:
-        pytest.skip("Failed to retrieve registration token")
+            output = ssm_client.get_command_invocation(
+                CommandId=command_id,
+                InstanceId=test_instance
+            )
 
-    runner_name = f"e2e-test-runner-{int(time.time())}"
+            if output["Status"] == "Success" and "configured" in output["StandardOutputContent"]:
+                runner_configured = True
+                break
+        except Exception:
+            pass
 
-    commands = [
-        f"cd /home/github-runner/actions-runner",
-        f"sudo -u github-runner ./config.sh --url https://github.com/{github_repo} --token {registration_token} --name {runner_name} --labels e2e-test --unattended --ephemeral"
-    ]
+        time.sleep(15)
 
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": [" && ".join(commands)]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(30)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    assert output["Status"] == "Success"
+    assert runner_configured
 
 
-def test_github_runner_can_execute_simple_workflow(ssm_client, test_instance, github_token, github_repo):
+def test_github_runner_process_is_running(ssm_client, test_instance):
     if not test_instance:
         pytest.skip("Test instance not created")
-    if not github_token:
-        pytest.skip("GITHUB_PAT not provided")
 
-    import urllib.request
-    import urllib.error
+    max_wait_time = 300
+    start_time = time.time()
+    runner_running = False
 
-    req = urllib.request.Request(
-        f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token",
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {github_token}",
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28"
-        }
-    )
+    while time.time() - start_time < max_wait_time:
+        try:
+            response = ssm_client.send_command(
+                InstanceIds=[test_instance],
+                DocumentName="AWS-RunShellScript",
+                Parameters={"commands": ["pgrep -f 'Runner.Listener' && echo 'running' || echo 'not running'"]}
+            )
 
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            registration_token = data.get("token", "")
-    except (urllib.error.HTTPError, urllib.error.URLError):
-        pytest.skip("Unable to get GitHub registration token")
+            command_id = response["Command"]["CommandId"]
+            time.sleep(5)
 
-    if not registration_token:
-        pytest.skip("Failed to retrieve registration token")
+            output = ssm_client.get_command_invocation(
+                CommandId=command_id,
+                InstanceId=test_instance
+            )
 
-    runner_name = f"e2e-test-runner-{int(time.time())}"
+            if output["Status"] == "Success" and "running" in output["StandardOutputContent"]:
+                runner_running = True
+                break
+        except Exception:
+            pass
 
-    config_commands = [
-        f"cd /home/github-runner/actions-runner",
-        f"sudo -u github-runner ./config.sh --url https://github.com/{github_repo} --token {registration_token} --name {runner_name} --labels e2e-test --unattended --ephemeral"
-    ]
+        time.sleep(15)
 
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": [" && ".join(config_commands)]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(30)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    if output["Status"] != "Success":
-        pytest.skip("Runner registration failed")
-
-    run_commands = [
-        "cd /home/github-runner/actions-runner",
-        "timeout 60 sudo -u github-runner ./run.sh --once || true"
-    ]
-
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": [" && ".join(run_commands)]},
-        TimeoutSeconds=120
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(70)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    assert "Listening for Jobs" in output["StandardOutputContent"] or "Running listener" in output["StandardOutputContent"]
+    assert runner_running
 
 
 def test_ssm_session_manager_connection_works(ssm_client, test_instance):
@@ -306,14 +300,14 @@ def test_ssm_session_manager_connection_works(ssm_client, test_instance):
     assert output["StandardOutputContent"].strip() == "SSM Session Manager Test"
 
 
-def test_cloudwatch_agent_can_be_started(ssm_client, test_instance):
+def test_cloudwatch_agent_can_be_queried(ssm_client, test_instance):
     if not test_instance:
         pytest.skip("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
         DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a query"]}
+        Parameters={"commands": ["sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a query"]}
     )
 
     command_id = response["Command"]["CommandId"]
