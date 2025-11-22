@@ -194,7 +194,10 @@ on:
     paths:
       - '.github/workflows/api.yml'
       - 'src/api/**'
-      - 'test/api/**'
+      - 'test/api/conftest.py'
+      - 'test/api/test_e2e.py'
+      - 'test/api/test_integration.py'
+      - 'test/api/test_unit.py'
   workflow_dispatch:
   workflow_run:
     branches: [main]
