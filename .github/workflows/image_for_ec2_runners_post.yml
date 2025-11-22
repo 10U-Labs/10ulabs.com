@@ -208,7 +208,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3
       - env:
-          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PAT: ${{ secrets.GH_PAT }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
         name: Run E2E tests
         run: |
