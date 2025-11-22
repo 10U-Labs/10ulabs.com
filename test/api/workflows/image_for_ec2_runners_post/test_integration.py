@@ -56,17 +56,37 @@ def ami_details(ec2_client, test_ami_id):
 
 @pytest.fixture(scope="module")
 def test_instance(ec2_client, test_ami_id, tfvars):
+    import subprocess
+    import json
+
     if not test_ami_id:
         pytest.skip("TEST_AMI_ID not provided")
 
-    subnet_ids = tfvars.get("vpc_public_subnet_ids", "").split(",")
-    security_group_id = tfvars.get("github_runner_security_group_id", "")
+    subnet_id = os.environ.get("TEST_SUBNET_ID", "")
+
+    if not subnet_id:
+        pytest.skip("TEST_SUBNET_ID environment variable not set")
+
+    try:
+        terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
+        result = subprocess.run(
+            ["terraform", "output", "-json"],
+            cwd=terraform_dir,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        terraform_outputs = json.loads(result.stdout)
+        security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
+    except Exception as e:
+        pytest.skip(f"Could not get security group from Terraform outputs: {e}")
+
     instance_profile = tfvars.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
     spot_instance_types = tfvars.get("ec2_spot_instance_types", ["t4g.small"])
     max_spot_price = tfvars.get("ec2_max_spot_price", "0.05")
 
-    if not subnet_ids or not security_group_id:
-        pytest.skip("Required infrastructure not configured")
+    if not security_group_id:
+        pytest.skip(f"Security group not found in Terraform outputs")
 
     if not isinstance(spot_instance_types, list):
         spot_instance_types = [spot_instance_types]
@@ -81,7 +101,7 @@ def test_instance(ec2_client, test_ami_id, tfvars):
                 InstanceType=instance_type,
                 MinCount=1,
                 MaxCount=1,
-                SubnetId=subnet_ids[0].strip(),
+                SubnetId=subnet_id,
                 SecurityGroupIds=[security_group_id],
                 IamInstanceProfile={"Name": instance_profile},
                 InstanceMarketOptions={
