@@ -65,4 +65,9 @@ variable "gmail_dns_ttl" {
 variable "github_pat" {
   type      = string
   sensitive = true
+
+  validation {
+    condition     = length(var.github_pat) > 0
+    error_message = "GitHub PAT must not be empty."
+  }
 }
