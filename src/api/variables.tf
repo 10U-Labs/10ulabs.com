@@ -138,21 +138,6 @@ variable "ami_promotion_stable_tag" {
   description = "Tag key for stable AMI"
 }
 
-variable "debian_os" {
-  type        = string
-  description = "Debian OS name"
-}
-
-variable "debian_version" {
-  type        = string
-  description = "Debian version"
-}
-
-variable "debian_architecture" {
-  type        = string
-  description = "CPU architecture for Debian (arm64 or x86_64)"
-}
-
 variable "github_runner_version" {
   type        = string
   description = "GitHub Actions runner version"
