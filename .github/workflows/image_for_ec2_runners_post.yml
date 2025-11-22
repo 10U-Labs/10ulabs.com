@@ -198,7 +198,10 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3
       - name: Run E2E tests
-        run: pytest test/api/image_for_ec2_runners_post/test_e2e.py -v
+        run: |
+          pytest test/api/workflows/image_for_ec2_runners_post/test_e2e.py \
+            --confcutdir=test/api/workflows/image_for_ec2_runners_post \
+            -v
   integration-testing:
     name: Integration testing
     needs:
@@ -222,7 +225,10 @@ jobs:
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
         name: Run pytest integration tests
-        run: pytest test/api/image_for_ec2_runners_post/test_integration.py -v
+        run: |
+          pytest test/api/workflows/image_for_ec2_runners_post/test_integration.py \
+            --confcutdir=test/api/workflows/image_for_ec2_runners_post \
+            -v
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -351,8 +357,8 @@ jobs:
         run: pip install pytest boto3 botocore
       - name: Run unit tests
         run: |
-          pytest test/api/image_for_ec2_runners_post/test_unit.py \
-            --confcutdir=test/api/image_for_ec2_runners_post \
+          pytest test/api/workflows/image_for_ec2_runners_post/test_unit.py \
+            --confcutdir=test/api/workflows/image_for_ec2_runners_post \
             -v
 name: Building AMI for EC2 self-hosted runners
 on:
@@ -363,7 +369,7 @@ on:
       - '.github/workflows/image_for_ec2_runners_post.yml'
       - 'src/api/packer/image_for_ec2_runners_post/**'
       - 'src/api/terraform.tfvars'
-      - 'test/api/image_for_ec2_runners_post/**'
+      - 'test/api/workflows/image_for_ec2_runners_post/**'
       - '!**/README.md'
   workflow_dispatch:
     inputs:
