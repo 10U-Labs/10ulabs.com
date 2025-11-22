@@ -164,6 +164,15 @@ def test_webhook_secret_parameter_value_not_placeholder(ssm_client):
     assert response["Parameter"]["Value"] != "PLACEHOLDER_WILL_BE_UPDATED"
 
 
+def test_repository_has_at_least_one_webhook(github_pat, tfvars):
+    repo_name = tfvars["github_repo"].split("/")[1]
+    url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req) as response:
+        hooks = json.loads(response.read())
+    assert len(hooks) > 0
+
+
 def test_github_webhook_for_runners_endpoint_exists(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
