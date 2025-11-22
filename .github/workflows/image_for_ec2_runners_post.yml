@@ -71,18 +71,6 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           packer init template.pkr.hcl
-      - name: Validate Packer template
-        run: |
-          cd src/api/packer/image_for_ec2_runners_post
-          packer validate \
-            -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
-            -var="os_family=${{ steps.config.outputs.os_family }}" \
-            -var="os_version=${{ steps.config.outputs.os_version }}" \
-            -var="runner_version=${{ steps.config.outputs.runner_version }}" \
-            -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
-            -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
-            template.pkr.hcl
       - id: build
         name: Build AMI with Packer
         run: |
@@ -287,26 +275,25 @@ jobs:
         name: Load Packer validation config
         run: |
           OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          FIRST_INSTANCE_TYPE=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]' | sed 's/\[//;s/\]//;s/"//g;s/,.*//;s/ //')
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
-          echo "first_instance_type=$FIRST_INSTANCE_TYPE" >> $GITHUB_OUTPUT
       - name: Validating Packer template
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           packer validate \
-            -var="os_version=${{ steps.packer-config.outputs.os_version }}" \
-            -var="os_architecture=${{ steps.packer-config.outputs.os_architecture }}" \
-            -var="runner_version=${{ steps.packer-config.outputs.runner_version }}" \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            -var="instance_type=${{ steps.packer-config.outputs.first_instance_type }}" \
+            -var="os_architecture=${{ steps.packer-config.outputs.os_architecture }}" \
+            -var="os_family=${{ steps.packer-config.outputs.os_family }}" \
+            -var="os_version=${{ steps.packer-config.outputs.os_version }}" \
+            -var="runner_version=${{ steps.packer-config.outputs.runner_version }}" \
             -var='spot_instance_types=${{ steps.packer-config.outputs.spot_instance_types }}' \
-            -var="vpc_id=vpc-dummy" \
             -var="subnet_id=subnet-dummy" \
             template.pkr.hcl
   promoting-ami:
