@@ -1,5 +1,5 @@
 ami_promotion_ssm_parameter = "/github-runner/ami/latest"
-ami_promotion_stable_tag    = "stable"
+ami_promotion_stable_tag    = "Stable"
 api_version                 = "v1"
 aws_account_id              = "781581267945"
 aws_region                  = "us-east-1"
