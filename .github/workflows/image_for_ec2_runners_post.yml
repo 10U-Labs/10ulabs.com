@@ -63,7 +63,7 @@ jobs:
               --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
             echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
           else
-            echo "ERROR: No suitable subnet found for instance types" >&2
+            echo "ERROR: No suitable subnet found for instance types ${{ steps.config.outputs.spot_instance_types }} in region ${{ needs.declaring-common-variables.outputs.aws_region }}" >&2
             exit 1
           fi
       - name: Setup Packer
