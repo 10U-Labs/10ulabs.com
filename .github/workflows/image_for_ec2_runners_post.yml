@@ -16,19 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        name: Load configuration from terraform.tfvars
-        run: |
-          OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
-          OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
-          OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
-          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
-          SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
-          echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
-          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
-          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
-          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -52,15 +39,15 @@ jobs:
         run: |
           if python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
             check \
-            --instance-types '${{ steps.config.outputs.spot_instance_types }}' \
+            --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}'; then
             SUBNET_ID=$(python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
               get \
-              --instance-types '${{ steps.config.outputs.spot_instance_types }}' \
+              --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
               --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
             echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
           else
-            echo "ERROR: No suitable subnet found for instance types ${{ steps.config.outputs.spot_instance_types }} in region ${{ needs.declaring-common-variables.outputs.aws_region }}" >&2
+            echo "ERROR: No suitable subnet found for instance types ${{ needs.declaring-common-variables.outputs.spot_instance_types }} in region ${{ needs.declaring-common-variables.outputs.aws_region }}" >&2
             exit 1
           fi
       - name: Setup Packer
@@ -76,10 +63,10 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           echo "Building GitHub Runner AMI..."
-          echo "OS Family: ${{ steps.config.outputs.os_family }}"
-          echo "OS Version: ${{ steps.config.outputs.os_version }}"
-          echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
-          echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
+          echo "OS Family: ${{ needs.declaring-common-variables.outputs.os_family }}"
+          echo "OS Version: ${{ needs.declaring-common-variables.outputs.os_version }}"
+          echo "Architecture: ${{ needs.declaring-common-variables.outputs.os_architecture }}"
+          echo "Runner Version: ${{ needs.declaring-common-variables.outputs.runner_version }}"
           echo ""
           MAX_ATTEMPTS=3
           ATTEMPT=1
@@ -90,11 +77,11 @@ jobs:
               -var="github_repository=${{ github.repository }}" \
               -var="github_run_id=${{ github.run_id }}" \
               -var="github_workflow=${{ github.workflow }}" \
-              -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
-              -var="os_family=${{ steps.config.outputs.os_family }}" \
-              -var="os_version=${{ steps.config.outputs.os_version }}" \
-              -var="runner_version=${{ steps.config.outputs.runner_version }}" \
-              -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
+              -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
+              -var="os_family=${{ needs.declaring-common-variables.outputs.os_family }}" \
+              -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
+              -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
+              -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
@@ -136,9 +123,9 @@ jobs:
           echo ""
           echo "AMI ID: ${{ steps.build.outputs.ami_id }}"
           echo "Region: ${{ needs.declaring-common-variables.outputs.aws_region }}"
-          echo "OS: ${{ steps.config.outputs.os_family }} ${{ steps.config.outputs.os_version }}"
-          echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
-          echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
+          echo "OS: ${{ needs.declaring-common-variables.outputs.os_family }} ${{ needs.declaring-common-variables.outputs.os_version }}"
+          echo "Architecture: ${{ needs.declaring-common-variables.outputs.os_architecture }}"
+          echo "Runner Version: ${{ needs.declaring-common-variables.outputs.runner_version }}"
           echo ""
           echo "==================================="
   declaring-common-variables:
@@ -147,6 +134,11 @@ jobs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+      os_architecture: ${{ steps.config.outputs.os_architecture }}
+      os_family: ${{ steps.config.outputs.os_family }}
+      os_version: ${{ steps.config.outputs.os_version }}
+      runner_version: ${{ steps.config.outputs.runner_version }}
+      spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ubuntu-latest
     steps:
@@ -158,10 +150,20 @@ jobs:
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
+          OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+          echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
+          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
@@ -270,29 +272,16 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           packer init template.pkr.hcl
-      - id: packer-config
-        name: Load Packer validation config
-        run: |
-          OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
-          OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
-          OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
-          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
-          SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
-          echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
-          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
-          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
-          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
       - name: Validating Packer template
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           packer validate \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            -var="os_architecture=${{ steps.packer-config.outputs.os_architecture }}" \
-            -var="os_family=${{ steps.packer-config.outputs.os_family }}" \
-            -var="os_version=${{ steps.packer-config.outputs.os_version }}" \
-            -var="runner_version=${{ steps.packer-config.outputs.runner_version }}" \
-            -var='spot_instance_types=${{ steps.packer-config.outputs.spot_instance_types }}' \
+            -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
+            -var="os_family=${{ needs.declaring-common-variables.outputs.os_family }}" \
+            -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
+            -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
+            -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             -var="subnet_id=subnet-dummy" \
             template.pkr.hcl
   promoting-ami:
