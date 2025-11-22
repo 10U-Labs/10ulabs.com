@@ -1238,3 +1238,151 @@ def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
     )
     call_args = mock_sqs.receive_message.call_args
     assert call_args[1]['WaitTimeSeconds'] == 5
+
+
+def test_get_docker_runner_status_returns_success_with_no_tasks(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['success'] == True
+
+
+def test_get_docker_runner_status_returns_zero_running_tasks_when_empty(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['running_tasks'] == 0
+
+
+def test_get_docker_runner_status_returns_empty_task_list_when_no_tasks(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['tasks'] == []
+
+
+def test_get_docker_runner_status_returns_cluster_name(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['cluster'] == 'test-cluster'
+
+
+def test_get_docker_runner_status_handles_client_error(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            from botocore.exceptions import ClientError
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.side_effect = ClientError(
+                {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
+                'list_tasks'
+            )
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['success'] == False
+
+
+def test_get_ec2_runner_status_returns_success_with_no_instances(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['success'] == True
+
+
+def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['running_instances'] == 0
+
+
+def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['instances'] == []
+
+
+def test_get_ec2_runner_status_handles_client_error(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        from botocore.exceptions import ClientError
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = ClientError(
+            {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
+            'describe_instances'
+        )
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['success'] == False
+
+
+def test_handle_docker_runner_get_returns_200_status(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_docker_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_response_status(response, 200)
+
+
+def test_handle_docker_runner_get_returns_json_content_type(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_docker_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_json_content_type(response)
+
+
+def test_handle_ec2_runner_get_returns_200_status(v1_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_response_status(response, 200)
+
+
+def test_handle_ec2_runner_get_returns_json_content_type(v1_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_json_content_type(response)

@@ -157,3 +157,86 @@ def test_runner_creation_requires_auth(api_url):
     assert response.status_code == 403
 
 
+def test_docker_runner_status_requires_auth(api_url):
+    response = requests.get(f"{api_url}/v1/docker-runner", timeout=10)
+    assert response.status_code == 403
+
+
+def test_docker_runner_status_accepts_valid_api_key(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    assert response.status_code == 200
+
+
+def test_docker_runner_status_returns_json(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    assert response.headers["Content-Type"] == "application/json"
+
+
+def test_docker_runner_status_has_success_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "success" in data
+
+
+def test_docker_runner_status_has_running_tasks_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "running_tasks" in data
+
+
+def test_docker_runner_status_has_tasks_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "tasks" in data
+
+
+def test_docker_runner_status_has_cluster_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "cluster" in data
+
+
+def test_ec2_runner_status_requires_auth(api_url):
+    response = requests.get(f"{api_url}/v1/ec2-runner", timeout=10)
+    assert response.status_code == 403
+
+
+def test_ec2_runner_status_accepts_valid_api_key(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    assert response.status_code == 200
+
+
+def test_ec2_runner_status_returns_json(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    assert response.headers["Content-Type"] == "application/json"
+
+
+def test_ec2_runner_status_has_success_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "success" in data
+
+
+def test_ec2_runner_status_has_running_instances_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "running_instances" in data
+
+
+def test_ec2_runner_status_has_instances_field(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    data = response.json()
+    assert "instances" in data
+
+
