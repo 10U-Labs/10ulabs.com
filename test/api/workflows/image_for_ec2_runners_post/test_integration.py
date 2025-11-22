@@ -418,7 +418,7 @@ def test_github_runner_user_exists(ssm_client, test_instance, aws_region):
     )
 
     command_id = response["Command"]["CommandId"]
-    time.sleep(5)
+    time.sleep(10)
 
     output = ssm_client.get_command_invocation(
         CommandId=command_id,
