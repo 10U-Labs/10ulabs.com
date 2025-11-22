@@ -126,9 +126,9 @@ jobs:
         run: cd src/bootstrap && terraform init
       - name: Terraform Validate
         run: cd src/bootstrap && terraform validate
-      - name: Run tflint
-        env:
+      - env:
           GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
         run: cd src/bootstrap && tflint --init && tflint
       - name: Terraform Plan
         run: cd src/bootstrap && terraform plan
