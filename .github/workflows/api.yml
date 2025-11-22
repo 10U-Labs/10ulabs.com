@@ -125,7 +125,12 @@ jobs:
         run: pip install pytest boto3 PyYAML
       - name: Fetch GitHub PAT from Parameter Store
         run: |
-          GITHUB_PAT=$(aws ssm get-parameter --name ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }} --with-decryption --query 'Parameter.Value' --output text --region ${{ needs.declaring-common-variables.outputs.aws_region }})
+          GITHUB_PAT=$(aws ssm get-parameter \
+            --name ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }} \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text \
+            --region ${{ needs.declaring-common-variables.outputs.aws_region }})
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run integration tests
         run: pytest test/api/test_integration.py -v
