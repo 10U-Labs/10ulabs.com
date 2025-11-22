@@ -9,8 +9,9 @@ info:
 servers:
   - url: https://api.10ulabs.com
     description: Production API
+x-amazon-apigateway-api-key-source: HEADER
 security:
-  - ApiKeyAuth: []
+  - api_key: []
 paths:
   /health:
     get:
@@ -355,11 +356,10 @@ paths:
         type: aws_proxy
 components:
   securitySchemes:
-    ApiKeyAuth:
+    api_key:
       type: apiKey
       in: header
       name: x-api-key
-      x-amazon-apigateway-authtype: custom
   schemas: {}
 tags:
   - name: Health
