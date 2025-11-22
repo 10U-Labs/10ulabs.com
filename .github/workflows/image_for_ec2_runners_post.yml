@@ -131,6 +131,12 @@ jobs:
           echo ""
           echo "==================================="
   declaring-common-variables:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      )
     name: Declaring common variables
     outputs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
@@ -212,12 +218,6 @@ jobs:
       - name: Run pytest integration tests
         run: pytest test/api/image_for_ec2_runners_post/test_integration.py -v
   performing-static-analysis:
-    if: |
-      github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') ||
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
-      )
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on: ubuntu-latest
