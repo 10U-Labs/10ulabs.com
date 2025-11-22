@@ -320,6 +320,7 @@ jobs:
   promoting-ami:
     name: Promoting AMI
     needs:
+      - building-ami
       - declaring-common-variables
       - e2e-testing
     permissions:
