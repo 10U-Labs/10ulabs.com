@@ -136,7 +136,7 @@ jobs:
           echo ""
           echo "AMI ID: ${{ steps.build.outputs.ami_id }}"
           echo "Region: ${{ needs.declaring-common-variables.outputs.aws_region }}"
-          echo "Debian Version: ${{ steps.config.outputs.os_version }}"
+          echo "OS: ${{ steps.config.outputs.os_family }} ${{ steps.config.outputs.os_version }}"
           echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
           echo ""
