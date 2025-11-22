@@ -604,3 +604,24 @@ def api_key(ssm_client):
         return response['Parameter']['Value']
     except Exception:
         return None
+
+
+@pytest.fixture
+def ecr_client(config):
+    return boto3.client('ecr', region_name=config['aws']['region'])
+
+
+@pytest.fixture
+def ecr_image_count(ecr_client):
+    try:
+        response = ecr_client.describe_images(
+            repositoryName='github-runner',
+            filter={'tagStatus': 'TAGGED'}
+        )
+        stable_images = [
+            img for img in response.get('imageDetails', [])
+            if 'stable' in img.get('imageTags', [])
+        ]
+        return len(stable_images)
+    except Exception:
+        return 0

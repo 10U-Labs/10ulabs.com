@@ -118,7 +118,27 @@ def test_docker_runner_endpoint_accepts_valid_api_key(api_url, api_key):
         pytest.skip("API key not available")
     headers = {"x-api-key": api_key}
     response = requests.get(f"{api_url}/v1/image-for-docker-runners/latest", headers=headers, timeout=10)
-    assert response.status_code in [200, 404, 500]
+    assert response.status_code != 403
+
+
+def test_docker_runner_endpoint_returns_images_when_available(api_url, api_key, ecr_image_count):
+    if ecr_image_count == 0:
+        pytest.skip("No ECR images available")
+    if api_key is None:
+        pytest.skip("API key not available")
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners/latest", headers=headers, timeout=10)
+    assert response.status_code == 200
+
+
+def test_docker_runner_endpoint_returns_error_when_no_images(api_url, api_key, ecr_image_count):
+    if ecr_image_count > 0:
+        pytest.skip("ECR images exist")
+    if api_key is None:
+        pytest.skip("API key not available")
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners/latest", headers=headers, timeout=10)
+    assert response.status_code in [404, 500]
 
 
 def test_ec2_runner_list_requires_auth(api_url):
