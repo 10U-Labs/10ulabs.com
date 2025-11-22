@@ -19,13 +19,11 @@ jobs:
       - id: config
         name: Load configuration from terraform.tfvars
         run: |
-          INSTANCE_TYPE=$(grep 'packer_instance_type' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
@@ -100,7 +98,6 @@ jobs:
             -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
             -var="runner_version=${{ steps.config.outputs.runner_version }}" \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            -var="instance_type=${{ steps.config.outputs.instance_type }}" \
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
             -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
             -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
@@ -110,10 +107,10 @@ jobs:
         run: |
           cd src/api/packer/image_for_ec2_runners_post
           echo "Building GitHub Runner AMI..."
-          echo "Debian Version: ${{ steps.config.outputs.os_version }}"
+          echo "OS Family: ${{ steps.config.outputs.os_family }}"
+          echo "OS Version: ${{ steps.config.outputs.os_version }}"
           echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
-          echo "Instance Type: ${{ steps.config.outputs.instance_type }}"
           echo ""
           MAX_ATTEMPTS=3
           ATTEMPT=1
@@ -125,7 +122,6 @@ jobs:
               -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
               -var="runner_version=${{ steps.config.outputs.runner_version }}" \
               -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-              -var="instance_type=${{ steps.config.outputs.instance_type }}" \
               -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
               -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \

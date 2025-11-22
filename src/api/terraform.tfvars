@@ -23,7 +23,6 @@ log_stream_prefix           = "github-runner"
 os_architecture             = "arm64"
 os_family                   = "debian"
 os_version                  = "13"
-packer_instance_type        = "t4g.small"
 packer_spot_retry_attempts  = 3
 packer_spot_retry_delay     = 30
 public_subnet_cidr_mask     = 24

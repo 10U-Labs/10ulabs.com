@@ -143,11 +143,6 @@ variable "github_runner_version" {
   description = "GitHub Actions runner version"
 }
 
-variable "packer_instance_type" {
-  type        = string
-  description = "EC2 instance type for Packer builds"
-}
-
 variable "packer_spot_retry_attempts" {
   type        = number
   description = "Number of retry attempts for Packer spot instances"

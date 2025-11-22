@@ -32,11 +32,6 @@ variable "aws_region" {
   description = "AWS region"
 }
 
-variable "instance_type" {
-  type        = string
-  description = "Primary EC2 instance type for building (spot instance)"
-}
-
 variable "spot_instance_types" {
   type        = list(string)
   description = "List of instance types for spot diversification (capacity-optimized strategy)"
