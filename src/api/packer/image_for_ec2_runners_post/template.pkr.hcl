@@ -7,6 +7,11 @@ packer {
   }
 }
 
+variable "os_family" {
+  type        = string
+  description = "OS family (debian, ubuntu, etc.)"
+}
+
 variable "os_version" {
   type        = string
   description = "OS version number"
@@ -49,7 +54,7 @@ variable "subnet_id" {
 
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name  = "github-runner-debian-${var.os_version}-${var.os_architecture}-${local.timestamp}"
+  ami_name  = "github-runner-${var.os_family}-${var.os_version}-${var.os_architecture}-${local.timestamp}"
 
   # Map architecture for AMI lookup
   ami_arch = var.os_architecture == "arm64" ? "arm64" : "amd64"
@@ -58,10 +63,10 @@ locals {
   runner_arch = var.os_architecture == "arm64" ? "arm64" : "x64"
 }
 
-# Data source to get the latest Debian AMI
-data "amazon-ami" "debian" {
+# Data source to get the latest base OS AMI
+data "amazon-ami" "base" {
   filters = {
-    name                = "debian-${var.os_version}-${local.ami_arch}-*"
+    name                = "${var.os_family}-${var.os_version}-${local.ami_arch}-*"
     root-device-type    = "ebs"
     virtualization-type = "hvm"
   }
@@ -73,7 +78,7 @@ data "amazon-ami" "debian" {
 source "amazon-ebs" "github_runner" {
   ami_name      = local.ami_name
   region        = var.aws_region
-  source_ami    = data.amazon-ami.debian.id
+  source_ami    = data.amazon-ami.base.id
 
   # Use spot instances for cost savings with capacity-optimized strategy
   # Diversify across instance types for better availability
@@ -105,11 +110,11 @@ source "amazon-ebs" "github_runner" {
   iam_instance_profile = "PackerEC2InstanceProfile"
 
   # AMI configuration
-  ami_description = "GitHub Actions Runner - Debian ${var.os_version} ${var.os_architecture}"
+  ami_description = "GitHub Actions Runner - ${title(var.os_family)} ${var.os_version} ${var.os_architecture}"
 
   tags = {
     Name          = local.ami_name
-    OS            = "Debian"
+    OS            = title(var.os_family)
     Version       = var.os_version
     Architecture  = var.os_architecture
     RunnerVersion = var.runner_version
@@ -172,9 +177,9 @@ build {
       "set -e",
       "export DEBIAN_FRONTEND=noninteractive",
       "sudo install -m 0755 -d /etc/apt/keyrings",
-      "curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
+      "curl -fsSL https://download.docker.com/linux/${var.os_family}/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg",
       "sudo chmod a+r /etc/apt/keyrings/docker.gpg",
-      "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+      "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${var.os_family} $(. /etc/os-release && echo $VERSION_CODENAME) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
       "sudo apt-get update",
       "sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin",
       "sudo systemctl enable docker"
@@ -207,7 +212,7 @@ build {
     inline = [
       "set -e",
       "cd /tmp",
-      "wget -q https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${var.os_architecture}/amazon-ssm-agent.deb",
+      "wget -q https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/${var.os_family}_${var.os_architecture}/amazon-ssm-agent.deb",
       "sudo dpkg -i -E ./amazon-ssm-agent.deb",
       "sudo systemctl enable amazon-ssm-agent",
       "rm amazon-ssm-agent.deb"
@@ -220,7 +225,7 @@ build {
     inline = [
       "set -e",
       "cd /tmp",
-      "wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${var.os_architecture}/latest/amazon-cloudwatch-agent.deb",
+      "wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/${var.os_family}/${var.os_architecture}/latest/amazon-cloudwatch-agent.deb",
       "sudo dpkg -i -E ./amazon-cloudwatch-agent.deb",
       "rm amazon-cloudwatch-agent.deb"
     ]

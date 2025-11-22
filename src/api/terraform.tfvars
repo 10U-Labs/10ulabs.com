@@ -21,6 +21,7 @@ lambda_memory_mb            = 256
 lambda_timeout_seconds      = 30
 log_stream_prefix           = "github-runner"
 os_architecture             = "arm64"
+os_family                   = "debian"
 os_version                  = "13"
 packer_instance_type        = "t4g.small"
 packer_spot_retry_attempts  = 3
