@@ -37,11 +37,6 @@ variable "spot_instance_types" {
   description = "List of instance types for spot diversification (capacity-optimized strategy)"
 }
 
-variable "vpc_id" {
-  type        = string
-  description = "VPC ID for builder instance"
-}
-
 variable "subnet_id" {
   type        = string
   description = "Subnet ID for builder instance (should be in AZ supporting ARM/t4g instances)"
@@ -81,21 +76,8 @@ source "amazon-ebs" "github_runner" {
   spot_instance_types = var.spot_instance_types
   spot_allocation_strategy = "capacity-optimized"
 
-  # Networking - use explicit subnet_id if provided, otherwise use subnet_filter
-  vpc_id = var.vpc_id
-  subnet_id = var.subnet_id != "" ? var.subnet_id : null
-
-  # Only use subnet_filter if subnet_id not provided
-  dynamic "subnet_filter" {
-    for_each = var.subnet_id == "" ? [1] : []
-    content {
-      filters = {
-        "vpc-id": var.vpc_id
-        "map-public-ip-on-launch": "true"
-      }
-      random = true
-    }
-  }
+  # Networking
+  subnet_id = var.subnet_id
 
   # SSH configuration
   ssh_username = "admin"
