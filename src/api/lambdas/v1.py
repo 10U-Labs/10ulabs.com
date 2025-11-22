@@ -664,9 +664,113 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def get_docker_runner_status() -> Dict[str, Any]:
+    cluster = os.environ.get('ECS_CLUSTER', 'github-runner-cluster')
+    try:
+        ecs = get_ecs_client()
+        response = ecs.list_tasks(
+            cluster=cluster,
+            desiredStatus='RUNNING'
+        )
+
+        task_arns = response.get('taskArns', [])
+
+        if not task_arns:
+            result = {
+                'success': True,
+                'running_tasks': 0,
+                'tasks': [],
+                'cluster': cluster
+            }
+        else:
+            task_details = ecs.describe_tasks(
+                cluster=cluster,
+                tasks=task_arns
+            )
+
+            tasks = []
+            for task in task_details.get('tasks', []):
+                task_tags = {tag['key']: tag['value'] for tag in task.get('tags', [])}
+                tasks.append({
+                    'task_arn': task['taskArn'],
+                    'task_id': task['taskArn'].split('/')[-1],
+                    'status': task['lastStatus'],
+                    'desired_status': task['desiredStatus'],
+                    'started_at': task.get('startedAt').isoformat() if task.get('startedAt') else None,
+                    'cpu': task.get('cpu'),
+                    'memory': task.get('memory'),
+                    'job_id': task_tags.get('GitHubJobId'),
+                    'job_labels': task_tags.get('JobLabels'),
+                    'github_repo': task_tags.get('GitHubRepo')
+                })
+
+            result = {
+                'success': True,
+                'running_tasks': len(tasks),
+                'tasks': tasks,
+                'cluster': cluster
+            }
+
+        logger.info("Docker runner status: %d running tasks", len(task_arns))
+        return result
+    except ClientError as e:
+        logger.error("Error getting docker runner status: %s", e)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+def get_ec2_runner_status() -> Dict[str, Any]:
+    try:
+        ec2 = get_ec2_client()
+        response = ec2.describe_instances(
+            Filters=[
+                {'Name': 'tag:Type', 'Values': ['ephemeral-runner']},
+                {'Name': 'tag:ManagedBy', 'Values': ['api-ec2-spot-runner']},
+                {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
+            ]
+        )
+
+        instances = []
+        for reservation in response['Reservations']:
+            for instance in reservation['Instances']:
+                instance_tags = {tag['Key']: tag['Value'] for tag in instance.get('Tags', [])}
+                instances.append({
+                    'instance_id': instance['InstanceId'],
+                    'instance_type': instance['InstanceType'],
+                    'state': instance['State']['Name'],
+                    'availability_zone': instance['Placement']['AvailabilityZone'],
+                    'launch_time': instance['LaunchTime'].isoformat(),
+                    'public_ip': instance.get('PublicIpAddress'),
+                    'job_id': instance_tags.get('GitHubJobId'),
+                    'job_labels': instance_tags.get('JobLabels'),
+                    'github_repo': instance_tags.get('GitHubRepo')
+                })
+
+        result = {
+            'success': True,
+            'running_instances': len(instances),
+            'instances': instances
+        }
+        logger.info("EC2 runner status: %d running instances", len(instances))
+        return result
+    except ClientError as e:
+        logger.error("Error getting EC2 runner status: %s", e)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
 def handle_docker_runner_get(event: Dict[str, Any]) -> Dict[str, Any]:
-    path = event.get('path', '')
-    result = get_latest_ecr_image() if path.endswith('/latest') else list_ecr_images()
+    result = get_docker_runner_status()
+    response = success_response(result)
+    return response
+
+
+def handle_ec2_runner_get(event: Dict[str, Any]) -> Dict[str, Any]:
+    result = get_ec2_runner_status()
     response = success_response(result)
     return response
 
@@ -736,6 +840,7 @@ ROUTE_MAP = {
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,
+    ('/v1/ec2-runner', 'GET'): handle_ec2_runner_get,
     ('/v1/image-for-docker-runners', 'POST'): lambda e: handle_post_request(e, trigger_docker_image_build),
     ('/v1/image-for-docker-runners', 'GET'): handle_docker_image_get,
     ('/v1/image-for-docker-runners/latest', 'GET'): handle_docker_image_get,

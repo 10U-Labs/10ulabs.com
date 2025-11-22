@@ -312,7 +312,7 @@ paths:
         type: aws_proxy
     get:
       summary: Get Docker Runner Status
-      description: Returns the status of Docker runners
+      description: Returns the status of currently running Docker (Fargate) runner instances
       operationId: getDockerRunnerStatus
       tags:
         - Runners
@@ -320,11 +320,55 @@ paths:
         - api_key: []
       responses:
         '200':
-          description: Docker runner status
+          description: Docker runner status including running tasks count and task details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - running_tasks
+                  - tasks
+                  - cluster
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  running_tasks:
+                    type: integer
+                    example: 2
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        task_arn:
+                          type: string
+                        task_id:
+                          type: string
+                        status:
+                          type: string
+                        desired_status:
+                          type: string
+                        started_at:
+                          type: string
+                        cpu:
+                          type: string
+                        memory:
+                          type: string
+                        job_id:
+                          type: string
+                        job_labels:
+                          type: string
+                        github_repo:
+                          type: string
+                  cluster:
+                    type: string
       x-amazon-apigateway-integration:
         uri: ${V1HandlerArn}
         httpMethod: POST
         type: aws_proxy
+      x-amazon-apigateway-api-key-required: true
   /v1/ec2-runner:
     post:
       summary: Create EC2 Runner
@@ -341,6 +385,60 @@ paths:
         uri: ${V1HandlerArn}
         httpMethod: POST
         type: aws_proxy
+    get:
+      summary: Get EC2 Runner Status
+      description: Returns the status of currently running EC2 runner instances
+      operationId: getEC2RunnerStatus
+      tags:
+        - Runners
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: EC2 runner status including running instances count and instance details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - running_instances
+                  - instances
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  running_instances:
+                    type: integer
+                    example: 1
+                  instances:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        instance_id:
+                          type: string
+                        instance_type:
+                          type: string
+                        state:
+                          type: string
+                        availability_zone:
+                          type: string
+                        launch_time:
+                          type: string
+                        public_ip:
+                          type: string
+                        job_id:
+                          type: string
+                        job_labels:
+                          type: string
+                        github_repo:
+                          type: string
+      x-amazon-apigateway-integration:
+        uri: ${V1HandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+      x-amazon-apigateway-api-key-required: true
   /{proxy+}:
     x-amazon-apigateway-any-method:
       summary: Catch-all for undefined routes
