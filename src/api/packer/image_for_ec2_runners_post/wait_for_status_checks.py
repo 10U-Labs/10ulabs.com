@@ -59,8 +59,8 @@ def main():
                 instance_status = statuses[0]
                 system_status = statuses[1]
 
-                print(f"  Instance Status: {instance_status}")
                 print(f"  System Status: {system_status}")
+                print(f"  Instance Status: {instance_status}")
 
                 if instance_status == 'ok' and system_status == 'ok':
                     print("All status checks passed")
