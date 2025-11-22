@@ -219,7 +219,9 @@ jobs:
           python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3
-      - name: Run pytest integration tests
+      - env:
+          TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
+        name: Run pytest integration tests
         run: pytest test/api/image_for_ec2_runners_post/test_integration.py -v
   performing-static-analysis:
     name: Performing static analysis
