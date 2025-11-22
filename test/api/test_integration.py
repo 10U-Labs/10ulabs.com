@@ -53,7 +53,7 @@ def ssm_client(aws_region):
 
 @pytest.fixture(scope="module")
 def github_token():
-    github_token = os.environ.get("GITHUB_PAT")
+    github_token = os.environ.get("GITHUB_TOKEN")
     assert github_token is not None
     return github_token
 
