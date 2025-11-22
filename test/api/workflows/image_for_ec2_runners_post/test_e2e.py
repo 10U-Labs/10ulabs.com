@@ -75,11 +75,10 @@ def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
     if not github_token:
         pytest.fail("GITHUB_PAT not provided")
 
-    subnet_ids_str = os.environ.get("TEST_SUBNET_IDS", "")
-    subnet_ids = subnet_ids_str.split(",") if subnet_ids_str else []
+    subnet_id = os.environ.get("TEST_SUBNET_ID", "")
 
-    if not subnet_ids:
-        pytest.fail("TEST_SUBNET_IDS environment variable not set")
+    if not subnet_id:
+        pytest.fail("TEST_SUBNET_ID environment variable not set")
 
     security_group_id = os.environ.get("TEST_SECURITY_GROUP_ID", "")
 
@@ -135,9 +134,6 @@ aws ec2 terminate-instances \
     spot_instance_types = tfvars.get("ec2_spot_instance_types", ["t4g.small"])
     max_spot_price = tfvars.get("ec2_max_spot_price", "0.05")
 
-    if not subnet_ids or not security_group_id:
-        pytest.fail("Required infrastructure not configured")
-
     if not isinstance(spot_instance_types, list):
         spot_instance_types = [spot_instance_types]
 
@@ -151,7 +147,7 @@ aws ec2 terminate-instances \
                 InstanceType=instance_type,
                 MinCount=1,
                 MaxCount=1,
-                SubnetId=subnet_ids[0].strip(),
+                SubnetId=subnet_id,
                 SecurityGroupIds=[security_group_id],
                 IamInstanceProfile={"Name": instance_profile},
                 UserData=user_data_encoded,
