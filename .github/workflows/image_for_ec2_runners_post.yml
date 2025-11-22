@@ -216,6 +216,15 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Initialize Terraform
+        run: |
+          cd src/api
+          terraform init -backend=true -input=false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
