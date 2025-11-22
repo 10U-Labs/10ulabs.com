@@ -51,36 +51,12 @@ jobs:
           echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
       - id: network
-        name: Find suitable subnet for instance type
+        name: Find suitable subnet for instance types
         run: |
-          PRIMARY_INSTANCE_TYPE="${{ steps.config.outputs.instance_type }}"
-          echo "Querying AWS for AZs that support instance type: $PRIMARY_INSTANCE_TYPE"
-          SUPPORTED_AZS=$(aws ec2 describe-instance-type-offerings \
-            --location-type availability-zone \
-            --filters "Name=instance-type,Values=$PRIMARY_INSTANCE_TYPE" \
-            --query 'InstanceTypeOfferings[].Location' \
-            --output json --no-cli-pager | jq -r '.[]')
-          if [ -z "$SUPPORTED_AZS" ]; then
-            echo "ERROR: No AZs found supporting instance type $PRIMARY_INSTANCE_TYPE"
-            exit 1
-          fi
-          echo "AZs supporting $PRIMARY_INSTANCE_TYPE:"
-          echo "$SUPPORTED_AZS"
-          IFS=',' read -ra SUBNET_ARRAY <<< "${{ steps.terraform.outputs.subnet_ids }}"
-          for SUBNET_ID in "${SUBNET_ARRAY[@]}"; do
-            SUBNET_AZ=$(aws ec2 describe-subnets \
-              --subnet-ids "$SUBNET_ID" \
-              --query 'Subnets[0].AvailabilityZone' \
-              --output text --no-cli-pager)
-            echo "Checking subnet $SUBNET_ID in AZ $SUBNET_AZ"
-            if echo "$SUPPORTED_AZS" | grep -q "$SUBNET_AZ"; then
-              echo "Found suitable subnet $SUBNET_ID in supported AZ $SUBNET_AZ"
-              echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-          done
-          echo "ERROR: No suitable subnet found in any supported AZ"
-          exit 1
+          SUBNET_ID=$(python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
+            '${{ steps.config.outputs.spot_instance_types }}' \
+            '${{ steps.terraform.outputs.subnet_ids }}')
+          echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
