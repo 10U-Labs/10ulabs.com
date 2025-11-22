@@ -63,6 +63,11 @@ def hosted_zone(route53_client, config):
 
 
 @pytest.fixture
+def ssm_client(config):
+    return boto3.client('ssm', region_name=config['aws_region'])
+
+
+@pytest.fixture
 def expected_resource_count(bootstrap_dir):
     tf_files = list(bootstrap_dir.glob('*.tf'))
     module_files = list(bootstrap_dir.glob('modules/**/*.tf'))
