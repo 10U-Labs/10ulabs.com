@@ -182,7 +182,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install dependencies
-        run: pip install pytest boto3 requests
+        run: pip install pytest boto3
       - name: Run E2E tests
         run: pytest test/api/image_for_ec2_runners_post/test_e2e.py -v
   integration-testing:
@@ -204,7 +204,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3 requests
+        run: pip install pytest boto3
       - name: Run pytest integration tests
         run: pytest test/api/image_for_ec2_runners_post/test_integration.py -v
   performing-static-analysis:
