@@ -85,11 +85,11 @@ jobs:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/packer/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners_post
           packer init template.pkr.hcl
       - name: Validate Packer template
         run: |
-          cd src/api/packer/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners_post
           packer validate \
             -var="os_version=${{ steps.config.outputs.os_version }}" \
             -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
@@ -103,7 +103,7 @@ jobs:
       - id: build
         name: Build AMI with Packer
         run: |
-          cd src/api/packer/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners_post
           echo "Building GitHub Runner AMI..."
           echo "Debian Version: ${{ steps.config.outputs.os_version }}"
           echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
@@ -219,7 +219,7 @@ jobs:
       - name: Install dependencies
         run: pip install pytest boto3 requests
       - name: Run E2E tests
-        run: pytest test/api/image_for_ec2_runners/test_e2e.py -v
+        run: pytest test/api/image_for_ec2_runners_post/test_e2e.py -v
   integration-testing:
     name: Integration testing
     needs:
@@ -241,7 +241,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install pytest boto3 requests
       - name: Run pytest integration tests
-        run: pytest test/api/image_for_ec2_runners/test_integration.py -v
+        run: pytest test/api/image_for_ec2_runners_post/test_integration.py -v
   performing-static-analysis:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -259,10 +259,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install tflint
-        run: |
-          TFLINT_INSTALL_URL='https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh'
-          curl -s "$TFLINT_INSTALL_URL" | bash
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
       - name: Install linting dependencies
         run: pip install pylint mypy yamllint boto3-stubs
       - name: Install project dependencies for linting
@@ -270,11 +270,13 @@ jobs:
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check terraform.tfvars
       - name: Run tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: cd src/api && tflint --init && tflint
       - name: Linting Python files
         run: |
           pylint \
-            src/api/packer/image_for_ec2_runners/*.py \
+            src/api/packer/image_for_ec2_runners_post/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Linting YAML files
@@ -283,14 +285,14 @@ jobs:
           CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
           yamllint --config-data "$CONFIG" .github/workflows/image_for_ec2_runners_post.yml
       - name: Static type checking Python files with mypy
-        run: python -m mypy src/api/packer/image_for_ec2_runners/*.py
+        run: python -m mypy src/api/packer/image_for_ec2_runners_post/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/packer/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners_post
           packer init template.pkr.hcl
       - id: packer-config
         name: Load Packer validation config
@@ -307,7 +309,7 @@ jobs:
           echo "first_instance_type=$FIRST_INSTANCE_TYPE" >> $GITHUB_OUTPUT
       - name: Validating Packer template
         run: |
-          cd src/api/packer/image_for_ec2_runners
+          cd src/api/packer/image_for_ec2_runners_post
           packer validate \
             -var="os_version=${{ steps.packer-config.outputs.os_version }}" \
             -var="os_architecture=${{ steps.packer-config.outputs.os_architecture }}" \
@@ -350,7 +352,7 @@ jobs:
         run: pip install boto3
       - name: Promote AMI
         run: |
-          python src/api/packer/image_for_ec2_runners/promote_ami.py \
+          python src/api/packer/image_for_ec2_runners_post/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \
@@ -378,7 +380,7 @@ jobs:
           pip install pytest boto3 moto &&
           pip install aws-cdk-lib constructs
       - name: Run unit tests
-        run: pytest test/api/image_for_ec2_runners/test_unit.py -v
+        run: pytest test/api/image_for_ec2_runners_post/test_unit.py -v
 name: Building AMI for EC2 self-hosted runners
 on:
   push:
@@ -386,9 +388,9 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_ec2_runners_post.yml'
-      - 'src/api/packer/image_for_ec2_runners/**'
+      - 'src/api/packer/image_for_ec2_runners_post/**'
       - 'src/api/terraform.tfvars'
-      - 'test/api/image_for_ec2_runners/**'
+      - 'test/api/image_for_ec2_runners_post/**'
       - '!**/README.md'
   workflow_dispatch:
     inputs:

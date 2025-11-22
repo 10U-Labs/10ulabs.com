@@ -138,10 +138,10 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Install tflint
-        run: |
-          TFLINT_INSTALL_URL='https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh'
-          curl -s "$TFLINT_INSTALL_URL" | bash
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
       - name: Install linting dependencies
         run: pip install pylint mypy yamllint
       - name: Terraform Format Check
@@ -151,6 +151,8 @@ jobs:
       - name: Terraform Validate
         run: cd src/api && terraform validate
       - name: Run tflint
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: cd src/api && tflint --init && tflint
       - name: Terraform Plan
         run: cd src/api && terraform plan
