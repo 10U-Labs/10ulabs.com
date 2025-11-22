@@ -96,3 +96,39 @@ resource "aws_lambda_permission" "catchall_handler" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }
+
+resource "random_password" "api_key" {
+  length  = 32
+  special = false
+}
+
+resource "aws_api_gateway_api_key" "main" {
+  name    = "${var.stack_name}-api-key"
+  enabled = true
+  value   = random_password.api_key.result
+}
+
+resource "aws_api_gateway_usage_plan" "main" {
+  name = "${var.stack_name}-usage-plan"
+
+  api_stages {
+    api_id = aws_api_gateway_rest_api.main.id
+    stage  = aws_api_gateway_stage.prod.stage_name
+  }
+
+  quota_settings {
+    limit  = 10000
+    period = "DAY"
+  }
+
+  throttle_settings {
+    burst_limit = 100
+    rate_limit  = 50
+  }
+}
+
+resource "aws_api_gateway_usage_plan_key" "main" {
+  key_id        = aws_api_gateway_api_key.main.id
+  key_type      = "API_KEY"
+  usage_plan_id = aws_api_gateway_usage_plan.main.id
+}

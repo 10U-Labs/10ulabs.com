@@ -102,3 +102,13 @@ output "cloudfront_domain_name" {
   description = "CloudFront distribution domain name"
   value       = aws_cloudfront_distribution.main.domain_name
 }
+
+output "api_key_id" {
+  description = "API Gateway API Key ID"
+  value       = aws_api_gateway_api_key.main.id
+}
+
+output "api_key_ssm_parameter" {
+  description = "SSM Parameter name containing the API key"
+  value       = aws_ssm_parameter.api_key.name
+}

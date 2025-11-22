@@ -9,12 +9,15 @@ info:
 servers:
   - url: https://api.10ulabs.com
     description: Production API
+security:
+  - ApiKeyAuth: []
 paths:
   /health:
     get:
       summary: Health Check
       description: Returns the health status of the API
       operationId: healthCheck
+      security: []
       tags:
         - Health
       responses:
@@ -47,6 +50,7 @@ paths:
       summary: Echo Endpoint
       description: Echoes back the request body
       operationId: echo
+      security: []
       tags:
         - Utilities
       requestBody:
@@ -350,6 +354,12 @@ paths:
         httpMethod: POST
         type: aws_proxy
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      x-amazon-apigateway-authtype: custom
   schemas: {}
 tags:
   - name: Health

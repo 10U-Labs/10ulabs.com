@@ -29,3 +29,15 @@ resource "aws_ssm_parameter" "webhook_secret" {
     Name = var.webhook_secret_name
   }
 }
+
+resource "aws_ssm_parameter" "api_key" {
+  name        = "/api/key"
+  type        = "SecureString"
+  value       = random_password.api_key.result
+  description = "API key for 10U Labs API authentication"
+  tier        = "Standard"
+
+  tags = {
+    Name = "api-key"
+  }
+}
