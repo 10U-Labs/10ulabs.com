@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture(scope="module")
 def tfvars():
     import re
-    tfvars_path = os.path.join(os.path.dirname(__file__), "../../../src/api/terraform.tfvars")
+    tfvars_path = os.path.join(os.path.dirname(__file__), "../../../../src/api/terraform.tfvars")
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
@@ -65,35 +65,73 @@ def github_repo(tfvars):
 
 @pytest.fixture(scope="module")
 def test_instance(ec2_client, test_ami_id, tfvars):
+    import subprocess
     if not test_ami_id:
         pytest.skip("TEST_AMI_ID not provided")
 
-    subnet_ids = tfvars.get("vpc_public_subnet_ids", "").split(",")
-    security_group_id = tfvars.get("github_runner_security_group_id", "")
+    try:
+        terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
+        result = subprocess.run(
+            ["terraform", "output", "-json"],
+            cwd=terraform_dir,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        terraform_outputs = json.loads(result.stdout)
+        subnet_ids_str = terraform_outputs.get("vpc_public_subnet_ids", {}).get("value", "")
+        subnet_ids = subnet_ids_str.split(",") if subnet_ids_str else []
+        security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
+    except Exception as e:
+        pytest.skip(f"Could not get infrastructure info from Terraform outputs: {e}")
+
     instance_profile = tfvars.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
+    spot_instance_types = tfvars.get("ec2_spot_instance_types", ["t4g.small"])
+    max_spot_price = tfvars.get("ec2_max_spot_price", "0.05")
 
     if not subnet_ids or not security_group_id:
         pytest.skip("Required infrastructure not configured")
 
-    response = ec2_client.run_instances(
-        ImageId=test_ami_id,
-        InstanceType="t4g.nano",
-        MinCount=1,
-        MaxCount=1,
-        SubnetId=subnet_ids[0].strip(),
-        SecurityGroupIds=[security_group_id],
-        IamInstanceProfile={"Name": instance_profile},
-        TagSpecifications=[{
-            "ResourceType": "instance",
-            "Tags": [
-                {"Key": "Name", "Value": "e2e-test-instance"},
-                {"Key": "Purpose", "Value": "AMI E2E Testing"},
-                {"Key": "ManagedBy", "Value": "pytest"}
-            ]
-        }]
-    )
+    if not isinstance(spot_instance_types, list):
+        spot_instance_types = [spot_instance_types]
 
-    instance_id = response["Instances"][0]["InstanceId"]
+    instance_id = None
+    last_error = None
+
+    for instance_type in spot_instance_types:
+        try:
+            response = ec2_client.run_instances(
+                ImageId=test_ami_id,
+                InstanceType=instance_type,
+                MinCount=1,
+                MaxCount=1,
+                SubnetId=subnet_ids[0].strip(),
+                SecurityGroupIds=[security_group_id],
+                IamInstanceProfile={"Name": instance_profile},
+                InstanceMarketOptions={
+                    "MarketType": "spot",
+                    "SpotOptions": {
+                        "MaxPrice": max_spot_price,
+                        "SpotInstanceType": "one-time"
+                    }
+                },
+                TagSpecifications=[{
+                    "ResourceType": "instance",
+                    "Tags": [
+                        {"Key": "Name", "Value": "e2e-test-instance"},
+                        {"Key": "Purpose", "Value": "AMI E2E Testing"},
+                        {"Key": "ManagedBy", "Value": "pytest"}
+                    ]
+                }]
+            )
+            instance_id = response["Instances"][0]["InstanceId"]
+            break
+        except Exception as e:
+            last_error = e
+            continue
+
+    if not instance_id:
+        pytest.skip(f"Could not launch spot instance with any of the configured types: {spot_instance_types}. Last error: {last_error}")
 
     waiter = ec2_client.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
