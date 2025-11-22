@@ -60,12 +60,12 @@ def test_instance(ec2_client, test_ami_id, tfvars):
     import json
 
     if not test_ami_id:
-        pytest.skip("TEST_AMI_ID not provided")
+        pytest.fail("TEST_AMI_ID not provided")
 
     subnet_id = os.environ.get("TEST_SUBNET_ID", "")
 
     if not subnet_id:
-        pytest.skip("TEST_SUBNET_ID environment variable not set")
+        pytest.fail("TEST_SUBNET_ID environment variable not set")
 
     try:
         terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
@@ -79,14 +79,14 @@ def test_instance(ec2_client, test_ami_id, tfvars):
         terraform_outputs = json.loads(result.stdout)
         security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
     except Exception as e:
-        pytest.skip(f"Could not get security group from Terraform outputs: {e}")
+        pytest.fail(f"Could not get security group from Terraform outputs: {e}")
 
     instance_profile = tfvars.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
     spot_instance_types = tfvars.get("ec2_spot_instance_types", ["t4g.small"])
     max_spot_price = tfvars.get("ec2_max_spot_price", "0.05")
 
     if not security_group_id:
-        pytest.skip(f"Security group not found in Terraform outputs")
+        pytest.fail(f"Security group not found in Terraform outputs")
 
     if not isinstance(spot_instance_types, list):
         spot_instance_types = [spot_instance_types]
@@ -127,7 +127,7 @@ def test_instance(ec2_client, test_ami_id, tfvars):
             continue
 
     if not instance_id:
-        pytest.skip(f"Could not launch spot instance with any of the configured types: {spot_instance_types}. Last error: {last_error}")
+        pytest.fail(f"Could not launch spot instance with any of the configured types: {spot_instance_types}. Last error: {last_error}")
 
     yield instance_id
 
@@ -143,7 +143,7 @@ def test_ami_id_provided(test_ami_id):
 
 def test_ami_exists_in_ec2(ec2_client, test_ami_id):
     if not test_ami_id:
-        pytest.skip("TEST_AMI_ID not provided")
+        pytest.fail("TEST_AMI_ID not provided")
 
     response = ec2_client.describe_images(ImageIds=[test_ami_id])
 
@@ -152,14 +152,14 @@ def test_ami_exists_in_ec2(ec2_client, test_ami_id):
 
 def test_ami_state_is_available(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     assert ami_details["State"] == "available"
 
 
 def test_ami_architecture_matches_expected(ami_details, tfvars):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     expected_architecture = tfvars["os_architecture"]
 
@@ -168,7 +168,7 @@ def test_ami_architecture_matches_expected(ami_details, tfvars):
 
 def test_ami_has_purpose_tag(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
 
@@ -177,7 +177,7 @@ def test_ami_has_purpose_tag(ami_details):
 
 def test_ami_purpose_tag_value(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     purpose = tags.get("Purpose", "")
@@ -187,7 +187,7 @@ def test_ami_purpose_tag_value(ami_details):
 
 def test_ami_has_runner_version_tag(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
 
@@ -196,7 +196,7 @@ def test_ami_has_runner_version_tag(ami_details):
 
 def test_ami_runner_version_matches_expected(ami_details, tfvars):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     expected_version = tfvars["github_runner_version"]
@@ -207,7 +207,7 @@ def test_ami_runner_version_matches_expected(ami_details, tfvars):
 
 def test_ami_has_os_family_tag(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
 
@@ -216,7 +216,7 @@ def test_ami_has_os_family_tag(ami_details):
 
 def test_ami_os_family_matches_expected(ami_details, tfvars):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     expected_os_family = tfvars["os_family"].title()
@@ -227,7 +227,7 @@ def test_ami_os_family_matches_expected(ami_details, tfvars):
 
 def test_ami_has_os_version_tag(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
 
@@ -236,7 +236,7 @@ def test_ami_has_os_version_tag(ami_details):
 
 def test_ami_os_version_matches_expected(ami_details, tfvars):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     expected_os_version = tfvars["os_version"]
@@ -247,21 +247,21 @@ def test_ami_os_version_matches_expected(ami_details, tfvars):
 
 def test_ami_has_root_device_mapping(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     assert "BlockDeviceMappings" in ami_details
 
 
 def test_ami_root_device_is_ebs(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     assert ami_details["RootDeviceType"] == "ebs"
 
 
 def test_ami_name_follows_convention(ami_details):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     ami_name = ami_details.get("Name", "")
 
@@ -270,7 +270,7 @@ def test_ami_name_follows_convention(ami_details):
 
 def test_ami_name_contains_architecture(ami_details, tfvars):
     if not ami_details:
-        pytest.skip("AMI details not available")
+        pytest.fail("AMI details not available")
 
     ami_name = ami_details.get("Name", "")
     expected_architecture = tfvars["os_architecture"]
@@ -284,7 +284,7 @@ def test_instance_launches_from_ami(test_instance):
 
 def test_instance_reaches_running_state(ec2_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     waiter = ec2_client.get_waiter("instance_running")
     waiter.wait(InstanceIds=[test_instance], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
@@ -297,7 +297,7 @@ def test_instance_reaches_running_state(ec2_client, test_instance):
 
 def test_instance_passes_system_status_checks(ec2_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     max_wait_time = 600
     start_time = time.time()
@@ -320,7 +320,7 @@ def test_instance_passes_system_status_checks(ec2_client, test_instance):
 
 def test_instance_passes_instance_status_checks(ec2_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     max_wait_time = 600
     start_time = time.time()
@@ -343,7 +343,7 @@ def test_instance_passes_instance_status_checks(ec2_client, test_instance):
 
 def test_promote_ami_can_tag_ami(ec2_client, test_ami_id, promote_ami, tfvars):
     if not test_ami_id:
-        pytest.skip("TEST_AMI_ID not provided")
+        pytest.fail("TEST_AMI_ID not provided")
 
     test_tag_key = "TestPromotionTag"
     test_tag_value = "test-value"
@@ -361,7 +361,7 @@ def test_promote_ami_can_tag_ami(ec2_client, test_ami_id, promote_ami, tfvars):
 
 def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id, promote_ami, tfvars):
     if not test_ami_id:
-        pytest.skip("TEST_AMI_ID not provided")
+        pytest.fail("TEST_AMI_ID not provided")
 
     test_parameter_name = "/github-runner/ami/integration-test"
 
@@ -424,7 +424,7 @@ def test_promote_ami_function_signature_has_tag_key(promote_ami):
 
 def test_github_runner_user_exists(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -445,7 +445,7 @@ def test_github_runner_user_exists(ssm_client, test_instance, aws_region):
 
 def test_github_runner_directory_exists(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -466,7 +466,7 @@ def test_github_runner_directory_exists(ssm_client, test_instance, aws_region):
 
 def test_github_runner_binary_exists(ssm_client, test_instance, aws_region, tfvars):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     runner_version = tfvars["github_runner_version"]
     os_arch = tfvars["os_architecture"]
@@ -491,7 +491,7 @@ def test_github_runner_binary_exists(ssm_client, test_instance, aws_region, tfva
 
 def test_github_runner_config_script_exists(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -512,7 +512,7 @@ def test_github_runner_config_script_exists(ssm_client, test_instance, aws_regio
 
 def test_github_runner_run_script_exists(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -533,7 +533,7 @@ def test_github_runner_run_script_exists(ssm_client, test_instance, aws_region):
 
 def test_ssm_agent_is_installed(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -554,7 +554,7 @@ def test_ssm_agent_is_installed(ssm_client, test_instance, aws_region):
 
 def test_ssm_agent_service_is_running(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -575,7 +575,7 @@ def test_ssm_agent_service_is_running(ssm_client, test_instance, aws_region):
 
 def test_cloudwatch_agent_is_installed(ssm_client, test_instance, aws_region):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],

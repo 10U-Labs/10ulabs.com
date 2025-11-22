@@ -71,10 +71,10 @@ def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
     import urllib.error
 
     if not test_ami_id:
-        pytest.skip("TEST_AMI_ID not provided")
+        pytest.fail("TEST_AMI_ID not provided")
 
     if not github_token:
-        pytest.skip("GITHUB_PAT not provided")
+        pytest.fail("GITHUB_PAT not provided")
 
     try:
         terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
@@ -90,7 +90,7 @@ def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
         subnet_ids = subnet_ids_str.split(",") if subnet_ids_str else []
         security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
     except Exception as e:
-        pytest.skip(f"Could not get infrastructure info from Terraform outputs: {e}")
+        pytest.fail(f"Could not get infrastructure info from Terraform outputs: {e}")
 
     req = urllib.request.Request(
         f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token",
@@ -107,10 +107,10 @@ def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
             data = json.loads(response.read().decode())
             registration_token = data.get("token", "")
     except (urllib.error.HTTPError, urllib.error.URLError):
-        pytest.skip("Unable to get GitHub registration token")
+        pytest.fail("Unable to get GitHub registration token")
 
     if not registration_token:
-        pytest.skip("Failed to retrieve registration token")
+        pytest.fail("Failed to retrieve registration token")
 
     aws_region = tfvars.get("aws_region", "us-east-1")
     user_data_script = f"""#!/bin/bash
@@ -142,7 +142,7 @@ aws ec2 terminate-instances \
     max_spot_price = tfvars.get("ec2_max_spot_price", "0.05")
 
     if not subnet_ids or not security_group_id:
-        pytest.skip("Required infrastructure not configured")
+        pytest.fail("Required infrastructure not configured")
 
     if not isinstance(spot_instance_types, list):
         spot_instance_types = [spot_instance_types]
@@ -184,7 +184,7 @@ aws ec2 terminate-instances \
             continue
 
     if not instance_id:
-        pytest.skip(f"Could not launch spot instance with any of the configured types: {spot_instance_types}. Last error: {last_error}")
+        pytest.fail(f"Could not launch spot instance with any of the configured types: {spot_instance_types}. Last error: {last_error}")
 
     waiter = ec2_client.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
@@ -211,7 +211,7 @@ aws ec2 terminate-instances \
 
 def test_github_runner_can_register(ssm_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     max_wait_time = 300
     start_time = time.time()
@@ -246,7 +246,7 @@ def test_github_runner_can_register(ssm_client, test_instance):
 
 def test_github_runner_process_is_running(ssm_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     max_wait_time = 300
     start_time = time.time()
@@ -281,7 +281,7 @@ def test_github_runner_process_is_running(ssm_client, test_instance):
 
 def test_ssm_session_manager_connection_works(ssm_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
@@ -302,7 +302,7 @@ def test_ssm_session_manager_connection_works(ssm_client, test_instance):
 
 def test_cloudwatch_agent_status_check(ssm_client, test_instance):
     if not test_instance:
-        pytest.skip("Test instance not created")
+        pytest.fail("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],

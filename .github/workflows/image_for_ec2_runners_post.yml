@@ -9,6 +9,7 @@ jobs:
       - unit-testing
     outputs:
       ami_id: ${{ steps.build.outputs.ami_id }}
+      subnet_id: ${{ steps.network.outputs.subnet_id }}
     permissions:
       contents: read
       id-token: write
@@ -224,6 +225,7 @@ jobs:
         run: pip install pytest boto3
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
+          TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run pytest integration tests
         run: |
           pytest test/api/workflows/image_for_ec2_runners_post/test_integration.py \
