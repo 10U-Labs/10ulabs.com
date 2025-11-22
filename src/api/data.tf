@@ -7,3 +7,8 @@ data "terraform_remote_state" "bootstrap" {
     region = "us-east-1"
   }
 }
+
+data "aws_ssm_parameter" "github_pat" {
+  name            = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_name
+  with_decryption = true
+}

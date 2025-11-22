@@ -24,3 +24,8 @@ provider "aws" {
     }
   }
 }
+
+provider "github" {
+  token = data.aws_ssm_parameter.github_pat.value
+  owner = "10U-Labs-LLC"
+}
