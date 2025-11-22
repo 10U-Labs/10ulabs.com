@@ -52,10 +52,10 @@ def ssm_client(aws_region):
 
 
 @pytest.fixture(scope="module")
-def github_token():
-    github_token = os.environ.get("GITHUB_PAT")
-    assert github_token is not None
-    return github_token
+def github_pat():
+    github_pat = os.environ.get("GITHUB_PAT")
+    assert github_pat is not None
+    return github_pat
 
 
 def test_lambda_health_handler_exists(lambda_client):
@@ -164,19 +164,19 @@ def test_webhook_secret_parameter_value_not_placeholder(ssm_client):
     assert response["Parameter"]["Value"] != "PLACEHOLDER_WILL_BE_UPDATED"
 
 
-def test_github_webhook_exists(github_token, tfvars):
+def test_github_webhook_exists(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     assert len(hooks) > 0
 
 
-def test_github_webhook_points_to_correct_url(github_token, tfvars):
+def test_github_webhook_points_to_correct_url(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
@@ -184,10 +184,10 @@ def test_github_webhook_points_to_correct_url(github_token, tfvars):
     assert len(matching_hooks) == 1
 
 
-def test_github_webhook_listens_for_workflow_job_events(github_token, tfvars):
+def test_github_webhook_listens_for_workflow_job_events(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
@@ -195,10 +195,10 @@ def test_github_webhook_listens_for_workflow_job_events(github_token, tfvars):
     assert "workflow_job" in matching_hooks[0]["events"]
 
 
-def test_github_webhook_is_active(github_token, tfvars):
+def test_github_webhook_is_active(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
