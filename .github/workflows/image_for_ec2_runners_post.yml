@@ -19,7 +19,6 @@ jobs:
       - id: config
         name: Load configuration from terraform.tfvars
         run: |
-          VPC_NAME=$(grep 'vpc_name' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_FAMILY=$(grep 'os_family' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_VERSION=$(grep 'os_version' src/api/terraform.tfvars | cut -d'"' -f2)
           OS_ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
@@ -32,24 +31,35 @@ jobs:
           RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
           INSTANCE_TYPE=$(grep 'packer_instance_type' src/api/terraform.tfvars | cut -d'"' -f2)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          echo "vpc_name=$VPC_NAME" >> $GITHUB_OUTPUT
           echo "os_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "instance_type=$INSTANCE_TYPE" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - id: network
-        name: Get VPC info from deployed infrastructure
+      - id: terraform
+        name: Get VPC and subnet info from Terraform state
         run: |
-          VPC_ID=$(aws ec2 describe-vpcs \
-            --filters "Name=tag:Name,Values=${{ steps.config.outputs.vpc_name }}" \
-            --query 'Vpcs[0].VpcId' \
-            --output json --no-cli-pager | jq -r '.')
+          cd src/api
+          terraform init -backend=true -input=false
+          VPC_ID=$(terraform output -raw vpc_id)
+          SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
+          echo "VPC ID from Terraform: $VPC_ID"
+          echo "Subnet IDs from Terraform: $SUBNET_IDS"
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+      - id: network
+        name: Find suitable subnet for instance type
+        run: |
           PRIMARY_INSTANCE_TYPE="${{ steps.config.outputs.instance_type }}"
           echo "Querying AWS for AZs that support instance type: $PRIMARY_INSTANCE_TYPE"
           SUPPORTED_AZS=$(aws ec2 describe-instance-type-offerings \
@@ -63,16 +73,15 @@ jobs:
           fi
           echo "AZs supporting $PRIMARY_INSTANCE_TYPE:"
           echo "$SUPPORTED_AZS"
-          for AZ in $SUPPORTED_AZS; do
-            SUBNET_ID=$(aws ec2 describe-subnets \
-              --filters "Name=vpc-id,Values=$VPC_ID" \
-                        "Name=map-public-ip-on-launch,Values=true" \
-                        "Name=availability-zone,Values=$AZ" \
-              --query 'Subnets[0].SubnetId' \
+          IFS=',' read -ra SUBNET_ARRAY <<< "${{ steps.terraform.outputs.subnet_ids }}"
+          for SUBNET_ID in "${SUBNET_ARRAY[@]}"; do
+            SUBNET_AZ=$(aws ec2 describe-subnets \
+              --subnet-ids "$SUBNET_ID" \
+              --query 'Subnets[0].AvailabilityZone' \
               --output text --no-cli-pager)
-            if [ -n "$SUBNET_ID" ] && [ "$SUBNET_ID" != "None" ]; then
-              echo "Found subnet $SUBNET_ID in AZ $AZ"
-              echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+            echo "Checking subnet $SUBNET_ID in AZ $SUBNET_AZ"
+            if echo "$SUPPORTED_AZS" | grep -q "$SUBNET_AZ"; then
+              echo "Found suitable subnet $SUBNET_ID in supported AZ $SUBNET_AZ"
               echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
               exit 0
             fi
@@ -97,7 +106,7 @@ jobs:
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="instance_type=${{ steps.config.outputs.instance_type }}" \
             -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
-            -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
+            -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
             -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
             template.pkr.hcl
       - id: build
@@ -121,7 +130,7 @@ jobs:
               -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
               -var="instance_type=${{ steps.config.outputs.instance_type }}" \
               -var='spot_instance_types=${{ steps.config.outputs.spot_instance_types }}' \
-              -var="vpc_id=${{ steps.network.outputs.vpc_id }}" \
+              -var="vpc_id=${{ steps.terraform.outputs.vpc_id }}" \
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
