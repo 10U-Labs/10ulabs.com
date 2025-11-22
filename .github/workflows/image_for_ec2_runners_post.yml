@@ -378,14 +378,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - name: Install Python dependencies
-        run: |
-          pip install pytest boto3 moto &&
-          pip install aws-cdk-lib constructs
+        run: pip install pytest boto3
       - name: Run unit tests
         run: pytest test/api/image_for_ec2_runners_post/test_unit.py -v
 name: Building AMI for EC2 self-hosted runners

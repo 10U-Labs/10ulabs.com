@@ -7,32 +7,30 @@ import pytest
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['AWS_REGION'] = 'us-east-1'
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
-@pytest.fixture
-def v1_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "handler.py"
-    spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
+
+def load_module(module_name, *path_parts):
+    module_path = PROJECT_ROOT / "src" / "api" / Path(*path_parts)
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture
+def v1_handler():
+    return load_module("v1_handler", "lambdas", "v1.py")
 
 
 @pytest.fixture
 def wait_for_status_checks():
-    handler_path = Path(__file__).parent.parent.parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_ec2_runners" / "wait_for_status_checks.py"
-    spec = importlib.util.spec_from_file_location("wait_for_status_checks", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module("wait_for_status_checks", "packer", "image_for_ec2_runners_post", "wait_for_status_checks.py")
 
 
 @pytest.fixture
 def promote_ami():
-    handler_path = Path(__file__).parent.parent.parent.parent.parent.parent / "src" / "api" / "endpoints" / "v1" / "image_for_ec2_runners" / "promote_ami.py"
-    spec = importlib.util.spec_from_file_location("promote_ami", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_module("promote_ami", "packer", "image_for_ec2_runners_post", "promote_ami.py")
 
 
 @pytest.fixture
