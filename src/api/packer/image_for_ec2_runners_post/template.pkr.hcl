@@ -42,6 +42,24 @@ variable "subnet_id" {
   description = "Subnet ID for builder instance (should be in AZ supporting ARM/t4g instances)"
 }
 
+variable "github_repository" {
+  type        = string
+  description = "GitHub repository (org/repo format)"
+  default     = ""
+}
+
+variable "github_workflow" {
+  type        = string
+  description = "GitHub workflow name"
+  default     = ""
+}
+
+variable "github_run_id" {
+  type        = string
+  description = "GitHub workflow run ID"
+  default     = ""
+}
+
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
   ami_name  = "github-runner-${var.os_family}-${var.os_version}-${var.os_architecture}-${local.timestamp}"
@@ -89,16 +107,24 @@ source "amazon-ebs" "github_runner" {
   # AMI configuration
   ami_description = "GitHub Actions Runner - ${title(var.os_family)} ${var.os_version} ${var.os_architecture}"
 
-  tags = {
-    Name          = local.ami_name
-    OS            = title(var.os_family)
-    Version       = var.os_version
-    Architecture  = var.os_architecture
-    RunnerVersion = var.runner_version
-    Purpose       = "Github self-hosted EC2 runner"
-    stable        = "true"
-    BuildDate     = local.timestamp
-  }
+  tags = merge(
+    {
+      Name          = local.ami_name
+      OS            = title(var.os_family)
+      Version       = var.os_version
+      Architecture  = var.os_architecture
+      RunnerVersion = var.runner_version
+      Purpose       = "Github self-hosted EC2 runner"
+      stable        = "true"
+      BuildDate     = local.timestamp
+    },
+    var.github_repository != "" ? {
+      ManagedBy  = "GitHubActions"
+      Repository = var.github_repository
+      Workflow   = var.github_workflow
+      RunId      = var.github_run_id
+    } : {}
+  )
 
   # Snapshot tags
   snapshot_tags = {

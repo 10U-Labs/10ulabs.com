@@ -87,6 +87,9 @@ jobs:
             echo "Build attempt $ATTEMPT of $MAX_ATTEMPTS"
             packer build \
               -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
+              -var="github_repository=${{ github.repository }}" \
+              -var="github_run_id=${{ github.run_id }}" \
+              -var="github_workflow=${{ github.workflow }}" \
               -var="os_architecture=${{ steps.config.outputs.os_architecture }}" \
               -var="os_family=${{ steps.config.outputs.os_family }}" \
               -var="os_version=${{ steps.config.outputs.os_version }}" \
@@ -124,14 +127,6 @@ jobs:
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
           echo ""
           echo "AMI built successfully: $AMI_ID"
-      - if: steps.build.outputs.ami_id != ''
-        name: Tag AMI
-        run: |
-          aws ec2 create-tags \
-            --resources ${{ steps.build.outputs.ami_id }} \
-            --tags Key=ManagedBy,Value=GitHubActions Key=Repository,Value=${{ github.repository }} Key=Workflow,Value="${{ github.workflow }}" Key=RunId,Value=${{ github.run_id }} \
-            --region ${{ needs.declaring-common-variables.outputs.aws_region }}
-          echo "Tagged AMI ${{ steps.build.outputs.ami_id }}"
       - if: steps.build.outputs.ami_id != ''
         name: Output AMI details
         run: |
