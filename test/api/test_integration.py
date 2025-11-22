@@ -164,16 +164,7 @@ def test_webhook_secret_parameter_value_not_placeholder(ssm_client):
     assert response["Parameter"]["Value"] != "PLACEHOLDER_WILL_BE_UPDATED"
 
 
-def test_github_webhook_exists(github_pat, tfvars):
-    repo_name = tfvars["github_repo"].split("/")[1]
-    url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
-    with urllib.request.urlopen(req) as response:
-        hooks = json.loads(response.read())
-    assert len(hooks) > 0
-
-
-def test_github_webhook_points_to_correct_url(github_pat, tfvars):
+def test_github_webhook_for_runners_endpoint_exists(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
@@ -184,7 +175,7 @@ def test_github_webhook_points_to_correct_url(github_pat, tfvars):
     assert len(matching_hooks) == 1
 
 
-def test_github_webhook_listens_for_workflow_job_events(github_pat, tfvars):
+def test_github_webhook_for_runners_endpoint_listens_for_workflow_job_events(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
@@ -195,7 +186,7 @@ def test_github_webhook_listens_for_workflow_job_events(github_pat, tfvars):
     assert "workflow_job" in matching_hooks[0]["events"]
 
 
-def test_github_webhook_is_active(github_pat, tfvars):
+def test_github_webhook_for_runners_endpoint_is_active(github_pat, tfvars):
     repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
