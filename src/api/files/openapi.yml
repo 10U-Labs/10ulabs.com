@@ -133,7 +133,7 @@ paths:
         type: aws_proxy
   /v1/image-for-ec2-runners:
     post:
-      summary: Build EC2 Runner AMI
+      summary: Build Image for EC2 Runners
       description: Triggers a build of a new EC2 runner AMI
       operationId: buildEC2RunnerAMI
       tags:
@@ -146,7 +146,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
     get:
-      summary: List EC2 Runner AMIs
+      summary: List Images for EC2 Runners
       description: Lists all available EC2 runner AMIs
       operationId: listEC2RunnerAMIs
       tags:
@@ -160,7 +160,7 @@ paths:
         type: aws_proxy
   /v1/image-for-ec2-runners/latest:
     get:
-      summary: Get Latest EC2 Runner AMI
+      summary: Get Latest Image for EC2 Runners
       description: Returns the latest EC2 runner AMI
       operationId: getLatestEC2RunnerAMI
       tags:
@@ -174,7 +174,7 @@ paths:
         type: aws_proxy
   /v1/image-for-ec2-runners/{ami_id}:
     delete:
-      summary: Delete EC2 Runner AMI
+      summary: Delete Image for EC2 Runners
       description: Deletes a specific EC2 runner AMI
       operationId: deleteEC2RunnerAMI
       tags:
@@ -194,7 +194,7 @@ paths:
         type: aws_proxy
   /v1/image-for-docker-runners:
     post:
-      summary: Build Docker Runner Image
+      summary: Build Image for Docker Runners
       description: Triggers a build of a new Docker runner image
       operationId: buildDockerRunnerImage
       tags:
@@ -207,7 +207,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
     get:
-      summary: List Docker Runner Images
+      summary: List Images for Docker Runners
       description: Lists all available Docker runner images
       operationId: listDockerRunnerImages
       tags:
@@ -221,7 +221,7 @@ paths:
         type: aws_proxy
   /v1/image-for-docker-runners/latest:
     get:
-      summary: Get Latest Docker Runner Image
+      summary: Get Latest Image for Docker Runners
       description: Returns the latest Docker runner image
       operationId: getLatestDockerRunnerImage
       tags:
@@ -235,7 +235,7 @@ paths:
         type: aws_proxy
   /v1/image-for-docker-runners/{digest}:
     get:
-      summary: Get Docker Runner Image by Digest
+      summary: Get Image for Docker Runners by Digest
       description: Returns a specific Docker runner image by digest
       operationId: getDockerRunnerImageByDigest
       tags:
@@ -254,7 +254,7 @@ paths:
         httpMethod: POST
         type: aws_proxy
     delete:
-      summary: Delete Docker Runner Image
+      summary: Delete Image for Docker Runners
       description: Deletes a specific Docker runner image by digest
       operationId: deleteDockerRunnerImage
       tags:
