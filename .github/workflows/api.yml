@@ -77,12 +77,13 @@ jobs:
         name: Check if static files changed
         run: |
           set -e
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          if echo "$CHANGED_FILES" | grep -qE 'src/api/files/(index\.html|openapi\.yml|404\.html)'; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
+          set -o pipefail
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | \
+            if grep -qE 'src/api/files/(index\.html|openapi\.yml|404\.html)'; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
       - if: steps.check_files.outputs.changed == 'true'
         name: Set up Python
         uses: actions/setup-python@v5
