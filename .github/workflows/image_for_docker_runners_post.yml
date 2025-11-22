@@ -86,41 +86,18 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Clean up old ECR images
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install boto3
+      - name: Clean up Docker runner resources
         run: |
           ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
-          REGION="${{ needs.declaring-common-variables.outputs.aws_region }}"
-          IMAGE_IDS=$(aws ecr list-images \
-            --repository-name $ECR_REPO \
-            --region $REGION \
-            --filter "tagStatus=UNTAGGED" \
-            --query 'imageIds[*]' \
-            --output json)
-          if [ "$IMAGE_IDS" != "[]" ] && [ "$IMAGE_IDS" != "null" ]; then
-            aws ecr batch-delete-image \
-              --repository-name $ECR_REPO \
-              --region $REGION \
-              --image-ids "$IMAGE_IDS"
-            echo "✓ Cleaned up untagged images"
-          else
-            echo "No untagged images to clean up"
-          fi
-          OLD_IMAGES=$(aws ecr describe-images \
-            --repository-name $ECR_REPO \
-            --region $REGION \
-            --query 'sort_by(imageDetails,& imagePushedAt)[:-10].[imageDigest]' \
-            --output json)
-          if [ "$OLD_IMAGES" != "[]" ] && [ "$OLD_IMAGES" != "null" ]; then
-            for digest in $(echo "$OLD_IMAGES" | jq -r '.[] | @json'); do
-              aws ecr batch-delete-image \
-                --repository-name $ECR_REPO \
-                --region $REGION \
-                --image-ids imageDigest=$(echo $digest | jq -r '.')
-            done
-            echo "✓ Cleaned up old images (kept last 10)"
-          else
-            echo "No old images to clean up"
-          fi
+          python scripts/cleanup_packer_artifacts/cleanup_packer_artifacts.py docker \
+            --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
+            --repository "$ECR_REPO"
   e2e-testing:
     name: E2E testing
     needs:

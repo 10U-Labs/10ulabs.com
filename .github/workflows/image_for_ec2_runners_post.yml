@@ -158,7 +158,7 @@ jobs:
         run: pip install boto3
       - name: Clean up Packer artifacts
         run: |
-          python scripts/cleanup_packer_artifacts/cleanup_packer_artifacts.py \
+          python scripts/cleanup_packer_artifacts/cleanup_packer_artifacts.py ec2 \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --ssm-parameter-name "${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
   declaring-common-variables:

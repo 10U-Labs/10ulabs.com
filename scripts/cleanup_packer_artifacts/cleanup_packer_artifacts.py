@@ -233,33 +233,80 @@ def cleanup_volumes(ec2_client, dry_run):
         return 0
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Cleanup lingering Packer artifacts from AWS'
-    )
-    parser.add_argument(
-        '--region',
-        required=True,
-        help='AWS region to clean up'
-    )
-    parser.add_argument(
-        '--ssm-parameter-name',
-        required=True,
-        help='SSM parameter name containing latest AMI ID'
-    )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Show what would be deleted without actually deleting'
-    )
-    parser.add_argument(
-        '--resource-types',
-        default='all',
-        help='Comma-separated list of resource types to clean (amis,snapshots,security-groups,instances,key-pairs,volumes) or "all" (default: all)'
-    )
+def cleanup_ecr_old_images(ecr_client, repository_name, dry_run):
+    try:
+        response = ecr_client.describe_images(
+            repositoryName=repository_name
+        )
 
-    args = parser.parse_args()
+        image_details = response.get('imageDetails', [])
+        sorted_images = sorted(image_details, key=lambda x: x.get('imagePushedAt'), reverse=True)
+        images_to_delete = sorted_images[1:]
 
+        deleted_count = 0
+
+        if not images_to_delete:
+            print("No old images to clean up (keeping latest image)")
+            return deleted_count
+
+        image_ids = [{'imageDigest': img['imageDigest']} for img in images_to_delete]
+
+        if dry_run:
+            print(f"[DRY RUN] Would delete {len(image_ids)} old images (keeping latest)")
+            deleted_count = len(image_ids)
+        else:
+            batch_response = ecr_client.batch_delete_image(
+                repositoryName=repository_name,
+                imageIds=image_ids
+            )
+            deleted_count = len(batch_response.get('imageIds', []))
+            print(f"Deleted {deleted_count} old images (kept latest)")
+
+        return deleted_count
+    except ClientError as e:
+        print(f"Error cleaning up old images: {e}")
+        return 0
+
+
+def cleanup_docker_build_resources(ec2_client, dry_run):
+    total_deleted = 0
+
+    print("-" * 80)
+    print("CLEANING UP DOCKER BUILD INSTANCES")
+    print("-" * 80)
+    count = cleanup_instances(ec2_client, dry_run)
+    total_deleted += count
+    print(f"Instances cleaned: {count}")
+    print()
+
+    print("-" * 80)
+    print("CLEANING UP DOCKER BUILD VOLUMES")
+    print("-" * 80)
+    count = cleanup_volumes(ec2_client, dry_run)
+    total_deleted += count
+    print(f"Volumes cleaned: {count}")
+    print()
+
+    print("-" * 80)
+    print("CLEANING UP DOCKER BUILD SECURITY GROUPS")
+    print("-" * 80)
+    count = cleanup_security_groups(ec2_client, dry_run)
+    total_deleted += count
+    print(f"Security groups cleaned: {count}")
+    print()
+
+    print("-" * 80)
+    print("CLEANING UP DOCKER BUILD KEY PAIRS")
+    print("-" * 80)
+    count = cleanup_key_pairs(ec2_client, dry_run)
+    total_deleted += count
+    print(f"Key pairs cleaned: {count}")
+    print()
+
+    return total_deleted
+
+
+def handle_ami_cleanup(args):
     ec2_client = boto3.client('ec2', region_name=args.region)
     ssm_client = boto3.client('ssm', region_name=args.region)
 
@@ -357,6 +404,99 @@ def main():
     print()
 
     return 0
+
+
+def handle_docker_cleanup(args):
+    ecr_client = boto3.client('ecr', region_name=args.region)
+    ec2_client = boto3.client('ec2', region_name=args.region)
+
+    print("=" * 80)
+    print("DOCKER RUNNER CLEANUP")
+    print("=" * 80)
+    print(f"Region: {args.region}")
+    print(f"Repository: {args.repository}")
+    print(f"Dry Run: {args.dry_run}")
+    print()
+
+    total_deleted = 0
+
+    print("-" * 80)
+    print("CLEANING UP OLD ECR IMAGES")
+    print("-" * 80)
+    count = cleanup_ecr_old_images(ecr_client, args.repository, args.dry_run)
+    total_deleted += count
+    print()
+
+    count = cleanup_docker_build_resources(ec2_client, args.dry_run)
+    total_deleted += count
+
+    print("=" * 80)
+    print("CLEANUP SUMMARY")
+    print("=" * 80)
+    print(f"Total resources cleaned: {total_deleted}")
+    if args.dry_run:
+        print("\n[DRY RUN MODE - No resources were actually deleted]")
+    print()
+
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Cleanup AWS resources for GitHub runners'
+    )
+    subparsers = parser.add_subparsers(dest='command', help='Runner type to clean up')
+
+    ec2_parser = subparsers.add_parser('ec2', help='Clean up EC2 runner artifacts (AMIs and Packer resources)')
+    ec2_parser.add_argument(
+        '--region',
+        required=True,
+        help='AWS region to clean up'
+    )
+    ec2_parser.add_argument(
+        '--ssm-parameter-name',
+        required=True,
+        help='SSM parameter name containing latest AMI ID'
+    )
+    ec2_parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Show what would be deleted without actually deleting'
+    )
+    ec2_parser.add_argument(
+        '--resource-types',
+        default='all',
+        help='Comma-separated list of resource types to clean (amis,snapshots,security-groups,instances,key-pairs,volumes) or "all" (default: all)'
+    )
+
+    docker_parser = subparsers.add_parser('docker', help='Clean up Docker runner images and build resources')
+    docker_parser.add_argument(
+        '--region',
+        required=True,
+        help='AWS region of ECR repository'
+    )
+    docker_parser.add_argument(
+        '--repository',
+        required=True,
+        help='ECR repository name'
+    )
+    docker_parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Show what would be deleted without actually deleting'
+    )
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        return 1
+
+    if args.command == 'ec2':
+        return handle_ami_cleanup(args)
+    if args.command == 'docker':
+        return handle_docker_cleanup(args)
+    return 1
 
 
 if __name__ == '__main__':
