@@ -74,7 +74,7 @@ resource "aws_ecs_task_definition" "runner" {
 
     secrets = [{
       name      = "GITHUB_TOKEN"
-      valueFrom = aws_ssm_parameter.github_token.arn
+      valueFrom = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
     }]
 
     environment = [

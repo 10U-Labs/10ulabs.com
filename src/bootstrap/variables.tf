@@ -61,3 +61,8 @@ variable "google_site_verification" {
 variable "gmail_dns_ttl" {
   type = number
 }
+
+variable "github_pat" {
+  type      = string
+  sensitive = true
+}

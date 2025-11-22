@@ -54,8 +54,25 @@ resource "aws_iam_role_policy" "ecs_execution_ssm_access" {
         "ssm:GetParameters"
       ]
       Resource = [
-        aws_ssm_parameter.github_token.arn
+        data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
       ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_execution_kms_access" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.ecs_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
     }]
   })
 }
@@ -396,8 +413,26 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ssm" {
       Effect = "Allow"
       Action = ["ssm:GetParameter"]
       Resource = [
-        "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/github-runner/*"
+        "arn:aws:ssm:${var.aws_region}:${var.aws_account_id}:parameter/github-runner/*",
+        data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
       ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_v1_handler_kms" {
+  name = "KMSDecrypt"
+  role = aws_iam_role.lambda_v1_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = ["*"]
     }]
   })
 }

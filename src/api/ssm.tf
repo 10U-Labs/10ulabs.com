@@ -1,19 +1,3 @@
-resource "aws_ssm_parameter" "github_token" {
-  name        = "/github-runner/credentials"
-  type        = "String"
-  value       = "PLACEHOLDER_UPDATE_WITH_GITHUB_TOKEN"
-  description = "GitHub Personal Access Token for self-hosted runners"
-  tier        = "Standard"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-
-  tags = {
-    Name = "github-runner-credentials"
-  }
-}
-
 resource "aws_ssm_parameter" "latest_ami" {
   name        = "/github-runner/ami/latest"
   type        = "String"

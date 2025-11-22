@@ -25,3 +25,11 @@ output "state_bucket_arn" {
 output "state_bucket_name" {
   value = aws_s3_bucket.terraform_state.id
 }
+
+output "github_pat_parameter_arn" {
+  value = aws_ssm_parameter.github_pat.arn
+}
+
+output "github_pat_parameter_name" {
+  value = aws_ssm_parameter.github_pat.name
+}
