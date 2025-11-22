@@ -303,11 +303,11 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
                 'containerOverrides': [
                     {
                         'name': os.environ.get('CONTAINER_NAME', 'github-runner'),
-                        'environment': [
-                            {'name': 'RUNNER_TOKEN', 'value': registration_token},
-                            {'name': 'RUNNER_NAME', 'value': runner_name},
-                            {'name': 'RUNNER_LABELS', 'value': runner_labels},
-                            {'name': 'GITHUB_REPO', 'value': github_repo}
+                        'command': [
+                            '--repo', github_repo,
+                            '--name', runner_name,
+                            '--labels', runner_labels,
+                            '--token', registration_token
                         ]
                     }
                 ]

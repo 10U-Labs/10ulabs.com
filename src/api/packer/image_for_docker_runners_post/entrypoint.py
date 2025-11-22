@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os
+import argparse
 import signal
 import subprocess
 import sys
@@ -14,18 +14,17 @@ def cleanup_runner(registration_token):
 
 
 def main():
-    registration_token = os.environ.get('RUNNER_TOKEN')
-    if not registration_token:
-        print("Error: RUNNER_TOKEN is not set")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='GitHub Actions self-hosted runner for Fargate')
+    parser.add_argument('--repo', required=True, help='GitHub repository (org/repo)')
+    parser.add_argument('--name', required=True, help='Runner name')
+    parser.add_argument('--labels', required=True, help='Comma-separated runner labels')
+    parser.add_argument('--token', required=True, help='GitHub runner registration token')
+    args = parser.parse_args()
 
-    repo = os.environ.get('GITHUB_REPO')
-    if not repo:
-        print("Error: GITHUB_REPO is not set")
-        sys.exit(1)
-
-    runner_labels = os.environ.get('RUNNER_LABELS', 'fargate,general')
-    runner_name = os.environ.get('RUNNER_NAME', 'fargate-runner')
+    repo = args.repo
+    runner_name = args.name
+    runner_labels = args.labels
+    registration_token = args.token
 
     print("Registering GitHub Actions runner...")
     print(f"Repository: {repo}")

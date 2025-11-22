@@ -92,3 +92,4 @@ USER runner
 WORKDIR /home/runner
 
 ENTRYPOINT ["/home/runner/entrypoint.py"]
+CMD ["--repo", "", "--name", "", "--labels", "", "--token", ""]
