@@ -300,14 +300,14 @@ def test_ssm_session_manager_connection_works(ssm_client, test_instance):
     assert output["StandardOutputContent"].strip() == "SSM Session Manager Test"
 
 
-def test_cloudwatch_agent_can_be_queried(ssm_client, test_instance):
+def test_cloudwatch_agent_status_check(ssm_client, test_instance):
     if not test_instance:
         pytest.skip("Test instance not created")
 
     response = ssm_client.send_command(
         InstanceIds=[test_instance],
         DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a query"]}
+        Parameters={"commands": ["sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -m ec2 -a status"]}
     )
 
     command_id = response["Command"]["CommandId"]
@@ -319,3 +319,4 @@ def test_cloudwatch_agent_can_be_queried(ssm_client, test_instance):
     )
 
     assert output["Status"] == "Success"
+    assert "status" in output["StandardOutputContent"]
