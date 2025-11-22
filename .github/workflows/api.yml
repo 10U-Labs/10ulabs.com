@@ -120,6 +120,10 @@ jobs:
           python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3 PyYAML
+      - name: Fetch GitHub PAT from Parameter Store
+        run: |
+          GITHUB_TOKEN=$(aws ssm get-parameter --name /github/pat --with-decryption --query 'Parameter.Value' --output text --region ${{ needs.declaring-common-variables.outputs.aws_region }})
+          echo "GITHUB_TOKEN=$GITHUB_TOKEN" >> $GITHUB_ENV
       - name: Run integration tests
         run: pytest test/api/test_integration.py -v
   performing-static-analysis:
