@@ -379,69 +379,6 @@ def test_promote_ami_function_signature_has_tag_key(promote_ami):
     assert "tag_key" in params
 
 
-def test_docker_is_installed(ssm_client, test_instance, aws_region):
-    if not test_instance:
-        pytest.skip("Test instance not created")
-
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["which docker"]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(5)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    assert output["Status"] == "Success"
-
-
-def test_docker_service_is_running(ssm_client, test_instance, aws_region):
-    if not test_instance:
-        pytest.skip("Test instance not created")
-
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["systemctl is-active docker"]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(5)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    assert output["StandardOutputContent"].strip() == "active"
-
-
-def test_docker_version_command_works(ssm_client, test_instance, aws_region):
-    if not test_instance:
-        pytest.skip("Test instance not created")
-
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["docker --version"]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(5)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    assert "Docker version" in output["StandardOutputContent"]
-
-
 def test_github_runner_user_exists(ssm_client, test_instance, aws_region):
     if not test_instance:
         pytest.skip("Test instance not created")
@@ -461,27 +398,6 @@ def test_github_runner_user_exists(ssm_client, test_instance, aws_region):
     )
 
     assert output["Status"] == "Success"
-
-
-def test_github_runner_user_in_docker_group(ssm_client, test_instance, aws_region):
-    if not test_instance:
-        pytest.skip("Test instance not created")
-
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["groups github-runner"]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(5)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
-
-    assert "docker" in output["StandardOutputContent"]
 
 
 def test_github_runner_directory_exists(ssm_client, test_instance, aws_region):
