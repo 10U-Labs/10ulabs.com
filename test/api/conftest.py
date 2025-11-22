@@ -590,3 +590,17 @@ def find_lambda_by_substring(lambda_client, substring):
     function_names = [fn['FunctionName'] for fn in functions['Functions']]
     matches = [name for name in function_names if substring in name]
     return matches[0] if matches else None
+
+
+@pytest.fixture
+def ssm_client(config):
+    return boto3.client('ssm', region_name=config['aws']['region'])
+
+
+@pytest.fixture
+def api_key(ssm_client):
+    try:
+        response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
+        return response['Parameter']['Value']
+    except Exception:
+        return None
