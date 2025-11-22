@@ -4,7 +4,9 @@ concurrency:
 jobs:
   building-image:
     name: Building image
-    needs: unit-testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
     runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
@@ -46,21 +48,47 @@ jobs:
           echo "  Repository: $ECR_URL"
           echo "  Tags: latest, stable, $BUILD_TAG"
           echo "  Built on native ARM64 (no emulation)"
+  declaring-common-variables:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
+    name: Declaring common variables
+    outputs:
+      aws_account_id: ${{ steps.config.outputs.aws_account_id }}
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Extract configuration values
+        run: |
+          AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
+          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
-    needs: integration-testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.unit-testing.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ needs.unit-testing.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Verify Fargate infrastructure exists
         run: |
           CLUSTER=$(aws ecs describe-clusters \
@@ -76,17 +104,20 @@ jobs:
           echo "✓ Docker image ready for Fargate deployment"
   integration-testing:
     name: Integration testing
-    needs: building-image
+    needs:
+      - building-image
+      - declaring-common-variables
+      - unit-testing
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.unit-testing.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ needs.unit-testing.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Pull Docker image from ECR
         run: |
           aws ecr get-login-password | \
@@ -105,13 +136,9 @@ jobs:
           fi
           echo "✓ Image is ARM64 as expected"
   performing-static-analysis:
-    if: |
-      github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
-      )
     name: Performing static analysis
-    runs-on: ubuntu-latest
+    needs: declaring-common-variables
+    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -156,7 +183,9 @@ jobs:
           python -m mypy endpoints/v1/runners
   unit-testing:
     name: Unit testing
-    needs: performing-static-analysis
+    needs:
+      - declaring-common-variables
+      - performing-static-analysis
     outputs:
       account_id: ${{ steps.config.outputs.account_id }}
       ecr_repo: ${{ steps.config.outputs.ecr_repo }}
@@ -164,7 +193,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -180,8 +209,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ steps.config.outputs.region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.account_id }}:role/GitHubActionsRole
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Verify image exists in ECR
         run: |
           aws ecr describe-images \
