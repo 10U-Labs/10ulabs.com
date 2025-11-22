@@ -53,6 +53,7 @@ jobs:
       - id: network
         name: Find suitable subnet for instance types
         run: |
+          set -e
           SUBNET_ID=$(python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
             --instance-types '${{ steps.config.outputs.spot_instance_types }}' \
             --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
