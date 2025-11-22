@@ -136,8 +136,7 @@ jobs:
     if: |
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') ||
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
       )
     name: Declaring common variables
     outputs:
@@ -380,10 +379,6 @@ on:
         description: Dry run mode (show structure without executing)
         required: false
         type: boolean
-  workflow_run:
-    branches: [main]
-    types: [completed]
-    workflows: ["Ensuring API exists and is properly configured"]
 permissions:
   contents: read
   id-token: write

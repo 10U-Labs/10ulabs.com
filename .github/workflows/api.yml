@@ -200,10 +200,6 @@ on:
       - 'test/api/test_integration.py'
       - 'test/api/test_unit.py'
   workflow_dispatch:
-  workflow_run:
-    branches: [main]
-    types: [completed]
-    workflows: ["Ensuring bootstrap infrastructure exists and is properly configured"]
 permissions:
   contents: read
   id-token: write

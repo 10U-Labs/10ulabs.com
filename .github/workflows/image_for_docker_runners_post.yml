@@ -108,8 +108,7 @@ jobs:
     if: |
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true') ||
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
       )
     name: Performing static analysis
     runs-on: ubuntu-latest
@@ -216,7 +215,3 @@ on:
         description: Dry run mode (show structure without executing)
         required: false
         type: boolean
-  workflow_run:
-    branches: [main]
-    types: [completed]
-    workflows: ["Building AMI for EC2 self-hosted runners"]
