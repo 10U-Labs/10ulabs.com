@@ -8,7 +8,7 @@ from conftest import parse_response_body, assert_response_status, assert_json_co
 
 
 def test_config_file_exists_in_correct_location():
-    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "packer" / "ec2_runner" / "config.json"
+    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
     assert config_path.exists()
 
 

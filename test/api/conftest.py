@@ -8,9 +8,33 @@ import yaml
 
 @pytest.fixture
 def config():
-    config_path = Path(__file__).parent.parent.parent / "src" / "api" / "packer" / "ec2_runner" / "config.json"
-    with open(config_path, encoding='utf-8') as f:
-        return json.load(f)
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
+    tfvars = {}
+    with open(tfvars_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                if value.startswith('['):
+                    value = eval(value)
+                elif value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                tfvars[key] = value
+
+    return {
+        "aws": {
+            "account_id": tfvars.get("aws_account_id"),
+            "region": tfvars.get("aws_region")
+        },
+        "naming": {
+            "vpc_name": tfvars.get("vpc_name")
+        },
+        "github": {
+            "runner_version": tfvars.get("github_runner_version")
+        }
+    }
 
 
 @pytest.fixture
