@@ -418,14 +418,24 @@ def test_github_runner_user_exists(ssm_client, test_instance, aws_region):
     )
 
     command_id = response["Command"]["CommandId"]
-    time.sleep(10)
 
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
+    for attempt in range(8):
+        wait_time = 2 ** attempt
+        time.sleep(wait_time)
 
-    assert output["Status"] == "Success"
+        output = ssm_client.get_command_invocation(
+            CommandId=command_id,
+            InstanceId=test_instance
+        )
+
+        if output["Status"] == "Success":
+            assert output["Status"] == "Success"
+            return
+
+        if output["Status"] == "Failed":
+            pytest.fail(f"SSM command failed: {output.get('StandardErrorContent', '')}")
+
+    pytest.fail("SSM command did not complete within timeout")
 
 
 def test_github_runner_directory_exists(ssm_client, test_instance, aws_region):
