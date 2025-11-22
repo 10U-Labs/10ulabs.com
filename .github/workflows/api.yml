@@ -8,6 +8,7 @@ jobs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+      github_pat_parameter_name: ${{ steps.config.outputs.github_pat_parameter_name }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ubuntu-latest
     steps:
@@ -19,10 +20,12 @@ jobs:
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          GITHUB_PAT_PARAMETER_NAME=$(grep 'name.*=' src/bootstrap/github_pat.tf | grep -v '#' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+          echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
@@ -122,7 +125,7 @@ jobs:
         run: pip install pytest boto3 PyYAML
       - name: Fetch GitHub PAT from Parameter Store
         run: |
-          GITHUB_PAT=$(aws ssm get-parameter --name /github/pat --with-decryption --query 'Parameter.Value' --output text --region ${{ needs.declaring-common-variables.outputs.aws_region }})
+          GITHUB_PAT=$(aws ssm get-parameter --name ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }} --with-decryption --query 'Parameter.Value' --output text --region ${{ needs.declaring-common-variables.outputs.aws_region }})
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run integration tests
         run: pytest test/api/test_integration.py -v
