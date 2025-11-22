@@ -140,9 +140,6 @@ jobs:
           echo "Architecture: ${{ steps.config.outputs.os_architecture }}"
           echo "Runner Version: ${{ steps.config.outputs.runner_version }}"
           echo ""
-          echo "To use this AMI, update your CloudFormation template or"
-          echo "add it to the config file under docker_builder.custom_ami"
-          echo ""
           echo "==================================="
   declaring-common-variables:
     name: Declaring common variables
