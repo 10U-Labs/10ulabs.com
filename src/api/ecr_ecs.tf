@@ -72,29 +72,7 @@ resource "aws_ecs_task_definition" "runner" {
       }
     }
 
-    secrets = [{
-      name      = "GITHUB_TOKEN"
-      valueFrom = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
-    }]
-
-    environment = [
-      {
-        name  = "GITHUB_REPO"
-        value = var.github_repo
-      },
-      {
-        name  = "RUNNER_LABELS"
-        value = join(",", var.fargate_runner_labels)
-      },
-      {
-        name  = "EPHEMERAL"
-        value = "true"
-      },
-      {
-        name  = "RUNNER_NAME_PREFIX"
-        value = "fargate_runner"
-      }
-    ]
+    environment = []
   }])
 
   tags = {

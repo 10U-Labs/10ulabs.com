@@ -1,35 +1,8 @@
 #!/usr/bin/env python3
-import json
 import os
 import signal
-import socket
 import subprocess
 import sys
-import urllib.error
-import urllib.request
-
-
-def get_registration_token(github_token, repo):
-    headers = {
-        'Authorization': f'token {github_token}',
-        'Accept': 'application/vnd.github.v3+json'
-    }
-    req = urllib.request.Request(
-        f'https://api.github.com/repos/{repo}/actions/runners/registration-token',
-        method='POST',
-        headers=headers
-    )
-
-    try:
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read())
-            token = data.get('token')
-            if not token or token == 'null':
-                return None
-            return token
-    except (urllib.error.URLError, ValueError) as e:
-        print(f"Error getting registration token: {e}")
-        return None
 
 
 def cleanup_runner(registration_token):
@@ -41,9 +14,9 @@ def cleanup_runner(registration_token):
 
 
 def main():
-    github_token = os.environ.get('GITHUB_TOKEN')
-    if not github_token:
-        print("Error: GITHUB_TOKEN is not set")
+    registration_token = os.environ.get('RUNNER_TOKEN')
+    if not registration_token:
+        print("Error: RUNNER_TOKEN is not set")
         sys.exit(1)
 
     repo = os.environ.get('GITHUB_REPO')
@@ -52,17 +25,12 @@ def main():
         sys.exit(1)
 
     runner_labels = os.environ.get('RUNNER_LABELS', 'fargate,general')
-    runner_name = os.environ.get('RUNNER_NAME', f'fargate-runner-{socket.gethostname()}')
+    runner_name = os.environ.get('RUNNER_NAME', 'fargate-runner')
 
     print("Registering GitHub Actions runner...")
     print(f"Repository: {repo}")
     print(f"Runner Name: {runner_name}")
     print(f"Labels: {runner_labels}")
-
-    registration_token = get_registration_token(github_token, repo)
-    if not registration_token:
-        print("Error: Failed to get registration token")
-        sys.exit(1)
 
     def signal_handler(_signum, _frame):
         cleanup_runner(registration_token)

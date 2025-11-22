@@ -267,6 +267,19 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
 
     result = {'success': False, 'job_id': job_id, 'error': 'Unknown error'}
 
+    github_token = get_github_token()
+    if not github_token:
+        logger.error("GITHUB_TOKEN not set - cannot register runner")
+        return {'success': False, 'job_id': job_id, 'error': 'GITHUB_TOKEN not configured'}
+
+    registration_token = get_runner_registration_token(github_token, github_repo)
+    if not registration_token:
+        logger.error("Failed to get runner registration token")
+        return {'success': False, 'job_id': job_id, 'error': 'Failed to get runner registration token'}
+
+    runner_name = f'fargate-runner-{job_id}'
+    runner_labels = ','.join(job_labels)
+
     try:
         response = get_ecs_client().run_task(
             cluster=cluster,
@@ -286,6 +299,19 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
                     'base': 0
                 }
             ],
+            overrides={
+                'containerOverrides': [
+                    {
+                        'name': os.environ.get('CONTAINER_NAME', 'github-runner'),
+                        'environment': [
+                            {'name': 'RUNNER_TOKEN', 'value': registration_token},
+                            {'name': 'RUNNER_NAME', 'value': runner_name},
+                            {'name': 'RUNNER_LABELS', 'value': runner_labels},
+                            {'name': 'GITHUB_REPO', 'value': github_repo}
+                        ]
+                    }
+                ]
+            },
             tags=[
                 {'key': 'Type', 'value': 'ephemeral-runner'},
                 {'key': 'ManagedBy', 'value': 'docker-runner-api'},

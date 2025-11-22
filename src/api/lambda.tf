@@ -152,6 +152,7 @@ resource "aws_lambda_function" "v1_handler" {
       VPC_ID                   = aws_vpc.runner_vpc.id
       ECS_CLUSTER              = aws_ecs_cluster.runner.arn
       TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
+      CONTAINER_NAME           = var.container_name
       EC2_INSTANCE_TYPES       = join(",", var.ec2_spot_instance_types)
       EC2_IAM_INSTANCE_PROFILE = aws_iam_instance_profile.ec2_runner.name
       EC2_MAX_PRICE            = var.ec2_max_spot_price
