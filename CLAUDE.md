@@ -10,6 +10,7 @@
 
 ## Code Quality Standards
 
+- Functions must have single exit point (single return statement).
 - Functions must have single return statement.
 - If comments already exist in the original code, remove them.
 - If linters fail, fix the actual code.
