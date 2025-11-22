@@ -364,7 +364,7 @@ on:
   workflow_run:
     branches: [main]
     types: [completed]
-    workflows: ["Ensuring API infrastructure exists and is properly configured"]
+    workflows: ["Ensuring API exists and is properly configured"]
 permissions:
   contents: read
   id-token: write
