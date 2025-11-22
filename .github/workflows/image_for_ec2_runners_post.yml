@@ -54,8 +54,8 @@ jobs:
         name: Find suitable subnet for instance types
         run: |
           SUBNET_ID=$(python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
-            '${{ steps.config.outputs.spot_instance_types }}' \
-            '${{ steps.terraform.outputs.subnet_ids }}')
+            --instance-types '${{ steps.config.outputs.spot_instance_types }}' \
+            --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
           echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
       - name: Setup Packer
         uses: hashicorp/setup-packer@main

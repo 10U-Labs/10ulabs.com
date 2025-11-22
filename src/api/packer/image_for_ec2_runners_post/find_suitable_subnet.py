@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-import sys
+import argparse
 import json
 import boto3
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: find_suitable_subnet.py <instance_types_json> <subnet_ids_csv>", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Find suitable subnet for instance types')
+    parser.add_argument('--instance-types', required=True, help='JSON array of instance types')
+    parser.add_argument('--subnet-ids', required=True, help='Comma-separated list of subnet IDs')
+    args = parser.parse_args()
 
-    instance_types = json.loads(sys.argv[1])
-    subnet_ids = sys.argv[2].split(',')
+    instance_types = json.loads(args.instance_types)
+    subnet_ids = args.subnet_ids.split(',')
 
     ec2 = boto3.client('ec2')
 
