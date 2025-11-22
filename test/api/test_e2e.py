@@ -89,3 +89,51 @@ def test_echo_endpoint_returns_echoed_data(api_url):
     assert data["echo"] == test_data
 
 
+def test_protected_endpoint_requires_auth(api_url):
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners/latest", timeout=10)
+    assert response.status_code == 403
+
+
+def test_protected_endpoint_rejects_invalid_api_key(api_url):
+    headers = {"x-api-key": "invalid-key-12345"}
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners/latest", headers=headers, timeout=10)
+    assert response.status_code == 403
+
+
+def test_protected_endpoint_accepts_valid_api_key(api_url, api_key):
+    if api_key is None:
+        pytest.skip("API key not available")
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners/latest", headers=headers, timeout=10)
+    assert response.status_code == 200
+
+
+def test_docker_runner_endpoint_requires_auth(api_url):
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners/latest", timeout=10)
+    assert response.status_code == 403
+
+
+def test_docker_runner_endpoint_accepts_valid_api_key(api_url, api_key):
+    if api_key is None:
+        pytest.skip("API key not available")
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners/latest", headers=headers, timeout=10)
+    assert response.status_code == 200
+
+
+def test_ec2_runner_list_requires_auth(api_url):
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners", timeout=10)
+    assert response.status_code == 403
+
+
+def test_docker_runner_list_requires_auth(api_url):
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners", timeout=10)
+    assert response.status_code == 403
+
+
+def test_runner_creation_requires_auth(api_url):
+    payload = {"job_id": 123, "github_repo": "test/repo", "job_labels": ["test"]}
+    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, timeout=10)
+    assert response.status_code == 403
+
+
