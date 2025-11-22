@@ -19,8 +19,8 @@ RUN apt-get update && \
         unzip \
         wget \
         xz-utils \
-        zlib1g \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+        zlib1g && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
