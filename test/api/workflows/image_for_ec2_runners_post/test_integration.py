@@ -56,9 +56,6 @@ def ami_details(ec2_client, test_ami_id):
 
 @pytest.fixture(scope="module")
 def test_instance(ec2_client, test_ami_id, tfvars):
-    import subprocess
-    import json
-
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
 
@@ -67,26 +64,14 @@ def test_instance(ec2_client, test_ami_id, tfvars):
     if not subnet_id:
         pytest.fail("TEST_SUBNET_ID environment variable not set")
 
-    try:
-        terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
-        result = subprocess.run(
-            ["terraform", "output", "-json"],
-            cwd=terraform_dir,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        terraform_outputs = json.loads(result.stdout)
-        security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
-    except Exception as e:
-        pytest.fail(f"Could not get security group from Terraform outputs: {e}")
+    security_group_id = os.environ.get("TEST_SECURITY_GROUP_ID", "")
+
+    if not security_group_id:
+        pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
     instance_profile = tfvars.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
     spot_instance_types = tfvars.get("ec2_spot_instance_types", ["t4g.small"])
     max_spot_price = tfvars.get("ec2_max_spot_price", "0.05")
-
-    if not security_group_id:
-        pytest.fail(f"Security group not found in Terraform outputs")
 
     if not isinstance(spot_instance_types, list):
         spot_instance_types = [spot_instance_types]

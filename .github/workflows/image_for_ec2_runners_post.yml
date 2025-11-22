@@ -9,7 +9,9 @@ jobs:
       - unit-testing
     outputs:
       ami_id: ${{ steps.build.outputs.ami_id }}
+      security_group_id: ${{ steps.terraform.outputs.security_group_id }}
       subnet_id: ${{ steps.network.outputs.subnet_id }}
+      subnet_ids: ${{ steps.terraform.outputs.subnet_ids }}
     permissions:
       contents: read
       id-token: write
@@ -28,13 +30,16 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - id: terraform
-        name: Get subnet info from Terraform state
+        name: Get infrastructure info from Terraform state
         run: |
           cd src/api
           terraform init -backend=true -input=false
           SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
+          SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
           echo "Subnet IDs from Terraform: $SUBNET_IDS"
+          echo "Security Group ID from Terraform: $SECURITY_GROUP_ID"
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
       - id: network
         name: Find suitable subnet for instance types
         run: |
@@ -192,15 +197,6 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Initialize Terraform
-        run: |
-          cd src/api
-          terraform init -backend=true -input=false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -213,6 +209,8 @@ jobs:
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
+          TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run E2E tests
         run: |
           pytest test/api/workflows/image_for_ec2_runners_post/test_e2e.py \
@@ -232,15 +230,6 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Initialize Terraform
-        run: |
-          cd src/api
-          terraform init -backend=true -input=false
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -249,6 +238,7 @@ jobs:
         run: pip install pytest boto3
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run pytest integration tests
         run: |

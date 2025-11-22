@@ -65,7 +65,6 @@ def github_repo(tfvars):
 
 @pytest.fixture(scope="module")
 def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
-    import subprocess
     import base64
     import urllib.request
     import urllib.error
@@ -76,21 +75,16 @@ def test_instance(ec2_client, test_ami_id, tfvars, github_token, github_repo):
     if not github_token:
         pytest.fail("GITHUB_PAT not provided")
 
-    try:
-        terraform_dir = os.path.join(os.path.dirname(__file__), "../../../../src/api")
-        result = subprocess.run(
-            ["terraform", "output", "-json"],
-            cwd=terraform_dir,
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        terraform_outputs = json.loads(result.stdout)
-        subnet_ids_str = terraform_outputs.get("vpc_public_subnet_ids", {}).get("value", "")
-        subnet_ids = subnet_ids_str.split(",") if subnet_ids_str else []
-        security_group_id = terraform_outputs.get("runner_security_group_id", {}).get("value", "")
-    except Exception as e:
-        pytest.fail(f"Could not get infrastructure info from Terraform outputs: {e}")
+    subnet_ids_str = os.environ.get("TEST_SUBNET_IDS", "")
+    subnet_ids = subnet_ids_str.split(",") if subnet_ids_str else []
+
+    if not subnet_ids:
+        pytest.fail("TEST_SUBNET_IDS environment variable not set")
+
+    security_group_id = os.environ.get("TEST_SECURITY_GROUP_ID", "")
+
+    if not security_group_id:
+        pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
     req = urllib.request.Request(
         f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token",
