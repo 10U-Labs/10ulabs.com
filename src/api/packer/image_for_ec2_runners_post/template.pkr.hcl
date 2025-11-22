@@ -62,7 +62,7 @@ variable "github_run_id" {
 
 locals {
   timestamp = regex_replace(timestamp(), "[- TZ:]", "")
-  ami_name  = "github-runner-${var.os_family}-${var.os_version}-${var.os_architecture}-${local.timestamp}"
+  ami_name  = "github-ec2-runner-${var.os_family}-${var.os_version}-${var.os_architecture}-${local.timestamp}"
 
   # Map architecture for AMI lookup
   ami_arch = var.os_architecture == "arm64" ? "arm64" : "amd64"
@@ -109,14 +109,14 @@ source "amazon-ebs" "github_runner" {
 
   tags = merge(
     {
-      Name          = local.ami_name
-      OS            = title(var.os_family)
-      Version       = var.os_version
-      Architecture  = var.os_architecture
-      RunnerVersion = var.runner_version
-      Purpose       = "Github self-hosted EC2 runner"
-      stable        = "false"
-      BuildDate     = local.timestamp
+      Name            = "ami-${local.ami_name}"
+      OSFamily        = title(var.os_family)
+      OSVersion       = var.os_version
+      OSArchitecture  = var.os_architecture
+      RunnerVersion   = var.runner_version
+      Purpose         = "GitHub self-hosted EC2 runner"
+      Stable          = "false"
+      BuildDate       = local.timestamp
     },
     var.github_repository != "" ? {
       ManagedBy  = "GitHubActions"
@@ -128,9 +128,9 @@ source "amazon-ebs" "github_runner" {
 
   # Snapshot tags
   snapshot_tags = {
-    Name    = "${local.ami_name}-snapshot"
-    Purpose = "Github self-hosted EC2 runner"
-    stable  = "false"
+    Name    = "snapshot-${local.ami_name}"
+    Purpose = "GitHub self-hosted EC2 runner"
+    Stable  = "false"
   }
 }
 
@@ -140,7 +140,8 @@ build {
 
   # Wait for EC2 status checks to pass with exponential backoff
   provisioner "shell" {
-    script = "${path.root}/wait_for_status_checks.py"
+    environment_vars = ["PYTHONUNBUFFERED=1"]
+    script           = "${path.root}/wait_for_status_checks.py"
   }
 
   # Update system
