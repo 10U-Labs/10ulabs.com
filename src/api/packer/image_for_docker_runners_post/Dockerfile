@@ -1,24 +1,25 @@
 FROM debian:stable-slim
 
-RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    git \
-    jq \
-    unzip \
-    tar \
-    ca-certificates \
-    gnupg \
-    sudo \
-    procps \
-    libicu72 \
-    libssl3 \
-    liblttng-ust1 \
-    zlib1g \
-    python3 \
-    python3-pip \
-    python3-venv \
-    xz-utils \
+RUN apt-get update && \
+    apt-get install -y \
+        ca-certificates \
+        curl \
+        git \
+        gnupg \
+        jq \
+        libicu72 \
+        libssl3 \
+        liblttng-ust1 \
+        procps \
+        python3 \
+        python3-pip \
+        python3-venv \
+        sudo \
+        tar \
+        unzip \
+        wget \
+        xz-utils \
+        zlib1g \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
