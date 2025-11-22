@@ -7,6 +7,7 @@ def main():
     parser = argparse.ArgumentParser(description='Find suitable subnet for instance types')
     parser.add_argument('--instance-types', required=True, help='JSON array of instance types')
     parser.add_argument('--subnet-ids', required=True, help='Comma-separated list of subnet IDs')
+    parser.add_argument('--output-file', required=True, help='File to write subnet ID to')
     args = parser.parse_args()
 
     instance_types = json.loads(args.instance_types)
@@ -35,7 +36,8 @@ def main():
         print(f"Checking subnet {subnet_id} in AZ {subnet_az}", file=sys.stderr)
         if subnet_az in supported_azs_set:
             print(f"Found suitable subnet {subnet_id} in supported AZ {subnet_az}", file=sys.stderr)
-            print(subnet_id)
+            with open(args.output_file, 'w') as f:
+                f.write(subnet_id.strip())
             sys.exit(0)
 
     print("ERROR: No suitable subnet found in any supported AZ", file=sys.stderr)
