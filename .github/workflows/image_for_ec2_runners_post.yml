@@ -254,7 +254,10 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api && tflint --init && tflint --disable-rule=terraform_unused_declarations
+        run: |
+          cd src/api && \
+            tflint --init && \
+            tflint --disable-rule=terraform_unused_declarations
       - name: Install Python linting dependencies
         run: pip install pylint mypy boto3-stubs boto3
       - name: Linting Python files
