@@ -1,5 +1,7 @@
 import os
 import re
+import urllib.request
+import json
 import boto3
 import pytest
 
@@ -42,6 +44,18 @@ def ecr_client(aws_region):
 @pytest.fixture(scope="module")
 def ecs_client(aws_region):
     return boto3.client("ecs", region_name=aws_region)
+
+
+@pytest.fixture(scope="module")
+def ssm_client(aws_region):
+    return boto3.client("ssm", region_name=aws_region)
+
+
+@pytest.fixture(scope="module")
+def github_token():
+    github_token = os.environ.get("GITHUB_PAT")
+    assert github_token is not None
+    return github_token
 
 
 def test_lambda_health_handler_exists(lambda_client):
@@ -133,3 +147,60 @@ def test_ecs_cluster_status_active(ecs_client, tfvars):
     cluster_name = tfvars["cluster_name"]
     response = ecs_client.describe_clusters(clusters=[cluster_name])
     assert response["clusters"][0]["status"] == "ACTIVE"
+
+
+def test_webhook_secret_parameter_exists(ssm_client):
+    response = ssm_client.get_parameter(Name="/api-webhook-secret")
+    assert response["Parameter"]["Name"] == "/api-webhook-secret"
+
+
+def test_webhook_secret_parameter_type(ssm_client):
+    response = ssm_client.get_parameter(Name="/api-webhook-secret")
+    assert response["Parameter"]["Type"] == "String"
+
+
+def test_webhook_secret_parameter_value_not_placeholder(ssm_client):
+    response = ssm_client.get_parameter(Name="/api-webhook-secret", WithDecryption=True)
+    assert response["Parameter"]["Value"] != "PLACEHOLDER_WILL_BE_UPDATED"
+
+
+def test_github_webhook_exists(github_token, tfvars):
+    repo_name = tfvars["github_repo"].split("/")[1]
+    url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req) as response:
+        hooks = json.loads(response.read())
+    assert len(hooks) > 0
+
+
+def test_github_webhook_points_to_correct_url(github_token, tfvars):
+    repo_name = tfvars["github_repo"].split("/")[1]
+    url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req) as response:
+        hooks = json.loads(response.read())
+    webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
+    matching_hooks = [hook for hook in hooks if hook["config"]["url"] == webhook_url]
+    assert len(matching_hooks) == 1
+
+
+def test_github_webhook_listens_for_workflow_job_events(github_token, tfvars):
+    repo_name = tfvars["github_repo"].split("/")[1]
+    url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req) as response:
+        hooks = json.loads(response.read())
+    webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
+    matching_hooks = [hook for hook in hooks if hook["config"]["url"] == webhook_url]
+    assert "workflow_job" in matching_hooks[0]["events"]
+
+
+def test_github_webhook_is_active(github_token, tfvars):
+    repo_name = tfvars["github_repo"].split("/")[1]
+    url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_token}", "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req) as response:
+        hooks = json.loads(response.read())
+    webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
+    matching_hooks = [hook for hook in hooks if hook["config"]["url"] == webhook_url]
+    assert matching_hooks[0]["active"] is True
