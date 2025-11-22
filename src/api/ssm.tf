@@ -17,13 +17,9 @@ resource "aws_ssm_parameter" "latest_ami" {
 resource "aws_ssm_parameter" "webhook_secret" {
   name        = "/${var.webhook_secret_name}"
   type        = "String"
-  value       = "PLACEHOLDER_WILL_BE_UPDATED"
+  value       = random_password.webhook_secret.result
   description = "GitHub webhook secret for signature verification"
   tier        = "Standard"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
 
   tags = {
     Name = var.webhook_secret_name
