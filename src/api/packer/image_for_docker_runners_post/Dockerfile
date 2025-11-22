@@ -1,6 +1,5 @@
 FROM debian:stable-slim
 
-# Install dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -16,7 +15,11 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     liblttng-ust1 \
     zlib1g \
-    && rm -rf /var/lib/apt/lists/*
+    python3 \
+    python3-pip \
+    python3-venv \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
@@ -38,21 +41,13 @@ RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L \
     rm actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz && \
     chown -R runner:runner /home/runner
 
-# Install Node.js (required by many actions)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
+ARG NODE_VERSION=20.18.1
+RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz | \
+    tar -xJ -C /usr/local --strip-components=1 && \
+    npm install -g jsonlint && \
+    npm cache clean --force
 
-RUN npm install -g jsonlint
-
-# Install Python (for Actions that need it)
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pip3 install --no-cache-dir --break-system-packages \
+RUN pip3 install --no-cache-dir \
     pytest \
     boto3 \
     boto3-stubs \
@@ -62,26 +57,21 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     yamllint \
     PyYAML \
     dnspython \
-    requests
+    requests \
+    && rm -rf /root/.cache/pip
 
 ARG TERRAFORM_VERSION=1.14.0
-RUN wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
-    unzip terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
-    mv terraform /usr/local/bin/ && \
-    rm terraform_${TERRAFORM_VERSION}_linux_arm64.zip
-
 ARG PACKER_VERSION=latest
 RUN PACKER_LATEST=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/packer | jq -r '.current_version') && \
+    TFLINT_LATEST=$(curl -s https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
+    wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
     wget https://releases.hashicorp.com/packer/${PACKER_LATEST}/packer_${PACKER_LATEST}_linux_arm64.zip && \
-    unzip packer_${PACKER_LATEST}_linux_arm64.zip && \
-    mv packer /usr/local/bin/ && \
-    rm packer_${PACKER_LATEST}_linux_arm64.zip
-
-RUN TFLINT_LATEST=$(curl -s https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
     wget https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_LATEST}/tflint_linux_arm64.zip && \
+    unzip terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
+    unzip packer_${PACKER_LATEST}_linux_arm64.zip && \
     unzip tflint_linux_arm64.zip && \
-    mv tflint /usr/local/bin/ && \
-    rm tflint_linux_arm64.zip
+    mv terraform packer tflint /usr/local/bin/ && \
+    rm -f *.zip
 
 # Copy entrypoint script
 COPY entrypoint.py /home/runner/entrypoint.py
