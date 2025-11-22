@@ -323,6 +323,8 @@ jobs:
       - building-ami
       - declaring-common-variables
       - e2e-testing
+    outputs:
+      ami_ssm_parameter: ${{ steps.config.outputs.ami_ssm_parameter }}
     permissions:
       contents: read
       id-token: write
@@ -356,6 +358,31 @@ jobs:
             --run-id "${{ github.run_id }}" \
             --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
             --tag-key "${{ steps.config.outputs.ami_tag_key }}"
+  cleaning-up:
+    name: Cleaning up
+    needs:
+      - declaring-common-variables
+      - promoting-ami
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install boto3
+      - name: Clean up Packer artifacts
+        run: |
+          python scripts/cleanup_packer_artifacts/cleanup_packer_artifacts.py \
+            --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
+            --ssm-parameter-name "${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
   unit-testing:
     name: Unit testing
     needs:
