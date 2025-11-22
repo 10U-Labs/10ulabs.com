@@ -340,9 +340,12 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3
+        run: pip install pytest boto3 botocore
       - name: Run unit tests
-        run: pytest test/api/image_for_ec2_runners_post/test_unit.py -v
+        run: |
+          pytest test/api/image_for_ec2_runners_post/test_unit.py \
+            --confcutdir=test/api/image_for_ec2_runners_post \
+            -v
 name: Building AMI for EC2 self-hosted runners
 on:
   push:
