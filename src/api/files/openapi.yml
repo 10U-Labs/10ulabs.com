@@ -10,17 +10,15 @@ servers:
   - url: https://api.10ulabs.com
     description: Production API
 x-amazon-apigateway-api-key-source: HEADER
-security:
-  - api_key: []
 paths:
   /health:
     get:
       summary: Health Check
       description: Returns the health status of the API
       operationId: healthCheck
-      security: []
       tags:
         - Health
+      x-amazon-apigateway-api-key-required: false
       responses:
         '200':
           description: Service is healthy
@@ -51,9 +49,9 @@ paths:
       summary: Echo Endpoint
       description: Echoes back the request body
       operationId: echo
-      security: []
       tags:
         - Utilities
+      x-amazon-apigateway-api-key-required: false
       requestBody:
         required: true
         content:
@@ -115,6 +113,7 @@ paths:
       operationId: createRunner
       tags:
         - Runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: Runner created successfully
@@ -129,6 +128,7 @@ paths:
       operationId: runnersHealth
       tags:
         - Runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: Service is healthy
@@ -143,6 +143,7 @@ paths:
       operationId: buildEC2RunnerAMI
       tags:
         - Image for EC2 runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: AMI build started successfully
@@ -150,6 +151,7 @@ paths:
         uri: ${V1HandlerArn}
         httpMethod: POST
         type: aws_proxy
+      x-amazon-apigateway-api-key-required: true
     get:
       summary: List Images for EC2 Runners
       description: Lists all available EC2 runner AMIs
@@ -170,6 +172,7 @@ paths:
       operationId: getLatestEC2RunnerAMI
       tags:
         - Image for EC2 runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: Latest AMI information
@@ -184,6 +187,7 @@ paths:
       operationId: deleteEC2RunnerAMI
       tags:
         - Image for EC2 runners
+      x-amazon-apigateway-api-key-required: true
       parameters:
         - name: ami_id
           in: path
@@ -204,6 +208,7 @@ paths:
       operationId: buildDockerRunnerImage
       tags:
         - Image for Docker runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: Docker image build started successfully
@@ -231,6 +236,7 @@ paths:
       operationId: getLatestDockerRunnerImage
       tags:
         - Image for Docker runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: Latest Docker image information
@@ -245,6 +251,7 @@ paths:
       operationId: getDockerRunnerImageByDigest
       tags:
         - Image for Docker runners
+      x-amazon-apigateway-api-key-required: true
       parameters:
         - name: digest
           in: path
@@ -284,6 +291,7 @@ paths:
       operationId: createDockerRunner
       tags:
         - Runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: Docker runner created successfully
@@ -311,6 +319,7 @@ paths:
       operationId: createEC2Runner
       tags:
         - Runners
+      x-amazon-apigateway-api-key-required: true
       responses:
         '200':
           description: EC2 runner created successfully
@@ -355,11 +364,6 @@ paths:
         httpMethod: POST
         type: aws_proxy
 components:
-  securitySchemes:
-    api_key:
-      type: apiKey
-      in: header
-      name: x-api-key
   schemas: {}
 tags:
   - name: Health
