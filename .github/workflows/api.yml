@@ -102,7 +102,10 @@ jobs:
           echo "DOMAIN_SUBDOMAIN=$DOMAIN_SUBDOMAIN" >> $GITHUB_ENV
       - if: steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
-        run: python ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py "${{ env.DOMAIN_SUBDOMAIN }}" ${{ needs.declaring-common-variables.outputs.aws_region }}
+        run: |
+          python ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py \
+            "${{ env.DOMAIN_SUBDOMAIN }}" \
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
   integration-testing:
     name: Integration testing
     needs:
