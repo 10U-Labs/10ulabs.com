@@ -1,4 +1,5 @@
 FROM debian:stable-slim
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update && \
     apt-get install -y \
@@ -63,9 +64,9 @@ ARG TERRAFORM_VERSION=1.14.0
 ARG PACKER_VERSION=latest
 RUN PACKER_LATEST=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/packer | jq -r '.current_version') && \
     TFLINT_LATEST=$(curl -s https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
-    wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
-    wget https://releases.hashicorp.com/packer/${PACKER_LATEST}/packer_${PACKER_LATEST}_linux_arm64.zip && \
-    wget https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_LATEST}/tflint_linux_arm64.zip && \
+    curl -L -o terraform_${TERRAFORM_VERSION}_linux_arm64.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
+    curl -L -o packer_${PACKER_LATEST}_linux_arm64.zip https://releases.hashicorp.com/packer/${PACKER_LATEST}/packer_${PACKER_LATEST}_linux_arm64.zip && \
+    curl -L -o tflint_linux_arm64.zip https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_LATEST}/tflint_linux_arm64.zip && \
     unzip terraform_${TERRAFORM_VERSION}_linux_arm64.zip && \
     unzip packer_${PACKER_LATEST}_linux_arm64.zip && \
     unzip tflint_linux_arm64.zip && \
