@@ -206,7 +206,7 @@ jobs:
         run: pip install pytest boto3 PyYAML
       - name: Run unit tests
         run: pytest test/api/test_unit.py -v
-name: Ensuring API exists and is properly configured
+name: Ensuring API exists and is properly configured [test]
 on:
   push:
     branches:
