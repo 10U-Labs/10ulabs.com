@@ -105,7 +105,8 @@ def docker_image():
         ["docker", "build", "-t", tag, "-f", path, build_context],
         check=False,
         capture_output=True,
-        text=True
+        text=True,
+        errors='replace'
     )
 
     if result.returncode != 0:
