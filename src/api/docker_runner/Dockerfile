@@ -71,7 +71,7 @@ RUN PACKER_LATEST=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/packer
     unzip packer_${PACKER_LATEST}_linux_arm64.zip && \
     unzip tflint_linux_arm64.zip && \
     mv terraform packer tflint /usr/local/bin/ && \
-    rm -f *.zip
+    rm -f ./*.zip
 
 COPY entrypoint.py /home/runner/entrypoint.py
 RUN chmod +x /home/runner/entrypoint.py && \

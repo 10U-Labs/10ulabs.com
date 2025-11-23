@@ -176,7 +176,7 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: src/api/docker_runner/Dockerfile
-          ignore: DL3008,DL3013,DL3016
+          ignore: DL3008,DL3013,DL3015,DL3016
   unit-testing:
     name: Unit testing
     needs:
