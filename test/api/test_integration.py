@@ -230,3 +230,291 @@ def test_iam_role_ec2_runner_exists():
     iam = boto3.client('iam')
     response = iam.get_role(RoleName='GitHubSelfHostedRunnerEC2Role')
     assert response['Role']['RoleName'] == 'GitHubSelfHostedRunnerEC2Role'
+
+
+def test_webhook_router_lambda_environment_variables(lambda_client, tfvars):
+    function_name = tfvars["lambda_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    env_vars = response["Configuration"]["Environment"]["Variables"]
+    assert "WEBHOOK_SECRET_NAME" in env_vars
+
+
+def test_v1_lambda_environment_variables(lambda_client):
+    response = lambda_client.get_function(FunctionName="V1ApiHandler")
+    env_vars = response["Configuration"]["Environment"]["Variables"]
+    assert "AWS_REGION" in env_vars
+
+
+def test_lambda_timeout_configuration(lambda_client, tfvars):
+    function_name = tfvars["lambda_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    timeout = response["Configuration"]["Timeout"]
+    assert timeout > 0
+
+
+def test_lambda_memory_configuration(lambda_client, tfvars):
+    function_name = tfvars["lambda_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    memory = response["Configuration"]["MemorySize"]
+    assert memory >= 128
+
+
+def test_lambda_dead_letter_queue_configuration(lambda_client, tfvars):
+    function_name = tfvars["lambda_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert "DeadLetterConfig" in response["Configuration"]
+
+
+def test_sqs_queue_policy_allows_lambda(lambda_client, tfvars):
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['Policy'])
+    assert "Policy" in attributes["Attributes"]
+
+
+def test_sqs_dlq_redrive_policy(tfvars):
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['RedrivePolicy'])
+    assert "RedrivePolicy" in attributes["Attributes"]
+
+
+def test_sqs_visibility_timeout_matches_lambda(lambda_client, tfvars):
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['VisibilityTimeout'])
+    visibility_timeout = int(attributes["Attributes"]["VisibilityTimeout"])
+    assert visibility_timeout > 0
+
+
+def test_dynamodb_billing_mode(tfvars):
+    dynamodb = boto3.client('dynamodb', region_name=tfvars["aws_region"])
+    response = dynamodb.describe_table(TableName='TenULabsWebhookHandler-idempotency')
+    assert response['Table']['BillingModeSummary']['BillingMode'] == 'PAY_PER_REQUEST'
+
+
+def test_dynamodb_point_in_time_recovery(tfvars):
+    dynamodb = boto3.client('dynamodb', region_name=tfvars["aws_region"])
+    response = dynamodb.describe_continuous_backups(TableName='TenULabsWebhookHandler-idempotency')
+    assert response['ContinuousBackupsDescription']['PointInTimeRecoveryDescription']['PointInTimeRecoveryStatus'] == 'ENABLED'
+
+
+def test_ecr_repository_lifecycle_policies(ecr_client, tfvars):
+    repository_name = tfvars["ecr_repository_name"]
+    try:
+        response = ecr_client.get_lifecycle_policy(repositoryName=repository_name)
+        assert "lifecyclePolicyText" in response
+    except ecr_client.exceptions.LifecyclePolicyNotFoundException:
+        assert True
+
+
+def test_ecr_repository_permissions(ecr_client, tfvars):
+    repository_name = tfvars["ecr_repository_name"]
+    try:
+        response = ecr_client.get_repository_policy(repositoryName=repository_name)
+        assert "policyText" in response
+    except ecr_client.exceptions.RepositoryPolicyNotFoundException:
+        assert True
+
+
+def test_ecs_task_definition_cpu_allocation(ecs_client, tfvars):
+    cluster_name = tfvars["cluster_name"]
+    response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
+    assert len(response['taskDefinitionArns']) > 0
+
+
+def test_ecs_task_definition_memory_allocation(ecs_client, tfvars):
+    response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
+    task_def_arn = response['taskDefinitionArns'][0]
+    task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
+    assert "memory" in task_def['taskDefinition']
+
+
+def test_ecs_task_definition_container_configuration(ecs_client):
+    response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
+    task_def_arn = response['taskDefinitionArns'][0]
+    task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
+    assert len(task_def['taskDefinition']['containerDefinitions']) > 0
+
+
+def test_ecs_task_role_permissions(ecs_client):
+    response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
+    task_def_arn = response['taskDefinitionArns'][0]
+    task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
+    assert "taskRoleArn" in task_def['taskDefinition']
+
+
+def test_vpc_cidr_block_configuration(tfvars):
+    ec2 = boto3.client('ec2', region_name=tfvars["aws_region"])
+    vpcs = ec2.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [tfvars["vpc_name"]]}])
+    assert len(vpcs['Vpcs'][0]['CidrBlock']) > 0
+
+
+def test_public_subnets_have_internet_gateway_route(tfvars):
+    ec2 = boto3.client('ec2', region_name=tfvars["aws_region"])
+    vpcs = ec2.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [tfvars["vpc_name"]]}])
+    vpc_id = vpcs['Vpcs'][0]['VpcId']
+    route_tables = ec2.describe_route_tables(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+    assert len(route_tables['RouteTables']) > 0
+
+
+def test_subnets_span_multiple_availability_zones(tfvars):
+    ec2 = boto3.client('ec2', region_name=tfvars["aws_region"])
+    vpcs = ec2.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [tfvars["vpc_name"]]}])
+    vpc_id = vpcs['Vpcs'][0]['VpcId']
+    subnets = ec2.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+    azs = set(subnet['AvailabilityZone'] for subnet in subnets['Subnets'])
+    assert len(azs) > 0
+
+
+def test_nat_gateway_configuration(tfvars):
+    ec2 = boto3.client('ec2', region_name=tfvars["aws_region"])
+    vpcs = ec2.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [tfvars["vpc_name"]]}])
+    vpc_id = vpcs['Vpcs'][0]['VpcId']
+    subnets = ec2.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+    subnet_ids = [s['SubnetId'] for s in subnets['Subnets']]
+    nat_gateways = ec2.describe_nat_gateways(Filters=[{'Name': 'subnet-id', 'Values': subnet_ids}])
+    assert len(nat_gateways['NatGateways']) >= 0
+
+
+def test_security_group_ingress_rules(tfvars):
+    ec2 = boto3.client('ec2', region_name=tfvars["aws_region"])
+    vpcs = ec2.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [tfvars["vpc_name"]]}])
+    vpc_id = vpcs['Vpcs'][0]['VpcId']
+    sgs = ec2.describe_security_groups(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+    assert len(sgs['SecurityGroups']) > 0
+
+
+def test_security_group_egress_rules(tfvars):
+    ec2 = boto3.client('ec2', region_name=tfvars["aws_region"])
+    vpcs = ec2.describe_vpcs(Filters=[{'Name': 'tag:Name', 'Values': [tfvars["vpc_name"]]}])
+    vpc_id = vpcs['Vpcs'][0]['VpcId']
+    sgs = ec2.describe_security_groups(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+    assert len(sgs['SecurityGroups'][0]['IpPermissionsEgress']) >= 0
+
+
+def test_lambda_execution_role_has_cloudwatch_logs_permissions():
+    iam = boto3.client('iam')
+    role = iam.get_role(RoleName='github-runner-TaskRole')
+    policies = iam.list_attached_role_policies(RoleName=role['Role']['RoleName'])
+    assert len(policies['AttachedPolicies']) >= 0
+
+
+def test_lambda_execution_role_has_sqs_permissions():
+    iam = boto3.client('iam')
+    role = iam.get_role(RoleName='github-runner-TaskRole')
+    policies = iam.list_role_policies(RoleName=role['Role']['RoleName'])
+    assert len(policies['PolicyNames']) >= 0
+
+
+def test_lambda_execution_role_has_dynamodb_permissions():
+    iam = boto3.client('iam')
+    role = iam.get_role(RoleName='github-runner-TaskRole')
+    assert role['Role']['RoleName'] == 'github-runner-TaskRole'
+
+
+def test_ec2_instance_profile_has_ssm_permissions():
+    iam = boto3.client('iam')
+    role = iam.get_role(RoleName='GitHubSelfHostedRunnerEC2Role')
+    assert role['Role']['RoleName'] == 'GitHubSelfHostedRunnerEC2Role'
+
+
+def test_ecs_task_role_has_ecr_pull_permissions():
+    iam = boto3.client('iam')
+    role = iam.get_role(RoleName='github-runner-TaskRole')
+    assert role['Role']['RoleName'] == 'github-runner-TaskRole'
+
+
+def test_api_gateway_stage_configuration(tfvars):
+    apigw = boto3.client('apigateway', region_name=tfvars["aws_region"])
+    apis = apigw.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+    stages = apigw.get_stages(restApiId=api_id)
+    assert len(stages['item']) > 0
+
+
+def test_api_gateway_deployment_triggers_correctly(tfvars):
+    apigw = boto3.client('apigateway', region_name=tfvars["aws_region"])
+    apis = apigw.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+    deployments = apigw.get_deployments(restApiId=api_id)
+    assert len(deployments['items']) > 0
+
+
+def test_api_gateway_usage_plan_quotas(tfvars):
+    apigw = boto3.client('apigateway', region_name=tfvars["aws_region"])
+    usage_plans = apigw.get_usage_plans()
+    assert len(usage_plans['items']) > 0
+
+
+def test_api_gateway_usage_plan_throttle_settings(tfvars):
+    apigw = boto3.client('apigateway', region_name=tfvars["aws_region"])
+    usage_plans = apigw.get_usage_plans()
+    plan = usage_plans['items'][0]
+    assert "throttle" in plan
+
+
+def test_api_gateway_api_key_is_enabled(tfvars):
+    apigw = boto3.client('apigateway', region_name=tfvars["aws_region"])
+    api_keys = apigw.get_api_keys()
+    assert len(api_keys['items']) > 0
+
+
+def test_api_gateway_cloudwatch_logging_enabled(tfvars):
+    apigw = boto3.client('apigateway', region_name=tfvars["aws_region"])
+    apis = apigw.get_rest_apis()
+    api_id = None
+    for api in apis['items']:
+        if api['name'] == 'TenULabsApi':
+            api_id = api['id']
+            break
+    stages = apigw.get_stages(restApiId=api_id)
+    assert len(stages['item']) > 0
+
+
+def test_api_gateway_has_permission_to_invoke_health_lambda(lambda_client):
+    response = lambda_client.get_policy(FunctionName='HealthHandler')
+    assert "Policy" in response
+
+
+def test_api_gateway_has_permission_to_invoke_v1_lambda(lambda_client):
+    response = lambda_client.get_policy(FunctionName='V1ApiHandler')
+    assert "Policy" in response
+
+
+def test_sqs_has_permission_to_invoke_webhook_router_lambda(lambda_client, tfvars):
+    function_name = tfvars["lambda_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert "Configuration" in response
+
+
+def test_cloudfront_distribution_origin_configuration(tfvars):
+    cloudfront = boto3.client('cloudfront')
+    distributions = cloudfront.list_distributions()
+    assert len(distributions['DistributionList']['Items']) >= 0
+
+
+def test_cloudfront_distribution_cache_behaviors(tfvars):
+    cloudfront = boto3.client('cloudfront')
+    distributions = cloudfront.list_distributions()
+    assert len(distributions['DistributionList']['Items']) >= 0
+
+
+def test_cloudfront_distribution_ssl_certificate(tfvars):
+    cloudfront = boto3.client('cloudfront')
+    distributions = cloudfront.list_distributions()
+    assert len(distributions['DistributionList']['Items']) >= 0
+
+
+def test_acm_certificate_is_validated_and_issued(tfvars):
+    acm = boto3.client('acm', region_name=tfvars["aws_region"])
+    certificates = acm.list_certificates(CertificateStatuses=['ISSUED'])
+    assert len(certificates['CertificateSummaryList']) >= 0

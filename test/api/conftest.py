@@ -653,3 +653,8 @@ def ecr_image_count_fixture(ecr_client):
         return len(stable_images)
     except ClientError:
         return 0
+
+
+@pytest.fixture(name="ecs_client")
+def ecs_client_fixture(cfg):
+    return boto3.client('ecs', region_name=cfg['aws']['region'])

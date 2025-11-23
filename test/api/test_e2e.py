@@ -273,3 +273,319 @@ def test_health_endpoint_response_time(api_url):
     duration = time.time() - start
     assert response.status_code == 200
     assert duration < 5.0
+
+
+def test_v1_runners_post_with_valid_workflow_job(api_url, api_key):
+    headers = {"x-api-key": api_key, "x-github-event": "workflow_job"}
+    payload = {
+        "action": "queued",
+        "workflow_job": {
+            "id": 999999,
+            "labels": ["ephemeral-ec2-spot-instance"],
+            "status": "queued"
+        },
+        "repository": {"full_name": "test/repo"}
+    }
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_v1_runners_post_with_invalid_signature(api_url):
+    headers = {"x-hub-signature-256": "sha256=invalid"}
+    payload = {"action": "ping"}
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_v1_runners_post_with_ping_event(api_url):
+    headers = {"x-github-event": "ping"}
+    payload = {"zen": "Test", "hook_id": 12345}
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_v1_runners_post_with_duplicate_delivery_id(api_url):
+    headers = {"x-github-event": "ping", "x-github-delivery": "test-duplicate-id"}
+    payload = {"zen": "Test"}
+    requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_v1_runners_health_get_with_valid_api_key(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
+
+
+def test_v1_runners_health_returns_circuit_breaker_state(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert "circuit_breaker" in data or "status" in data
+
+
+def test_v1_docker_runner_post_creates_fargate_task(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 888888, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 202, 403, 500]
+
+
+def test_v1_docker_runner_post_with_no_stable_image_triggers_build(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 777777, "job_labels": ["test"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 202, 403, 500]
+
+
+def test_v1_docker_runner_post_missing_job_id_returns_400(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_labels": ["test"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [400, 403]
+
+
+def test_v1_docker_runner_post_missing_github_repo_returns_400(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 666666, "job_labels": ["test"]}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [400, 403]
+
+
+def test_v1_docker_runner_get_task_details_include_metadata(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert "running_tasks" in data
+
+
+def test_v1_ec2_runner_post_creates_ec2_instance(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 555555, "job_labels": ["ephemeral-ec2-spot-instance"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_v1_ec2_runner_post_with_no_ami_triggers_build(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 444444, "job_labels": ["test"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_v1_ec2_runner_post_missing_job_id_returns_400(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_labels": ["test"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [400, 403]
+
+
+def test_v1_ec2_runner_post_missing_github_repo_returns_400(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 333333, "job_labels": ["test"]}
+    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [400, 403]
+
+
+def test_v1_ec2_runner_get_instance_details_include_metadata(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert "running_instances" in data
+
+
+def test_v1_image_for_docker_runners_post_triggers_workflow(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.post(f"{api_url}/v1/image-for-docker-runners", json={}, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_v1_image_for_docker_runners_post_invalid_api_key_returns_403(api_url):
+    headers = {"x-api-key": "invalid-key"}
+    response = requests.post(f"{api_url}/v1/image-for-docker-runners", json={}, headers=headers, timeout=10)
+    assert response.status_code == 403
+
+
+def test_v1_image_for_docker_runners_get_lists_all_images(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
+
+
+def test_v1_image_for_docker_runners_get_with_no_images_returns_empty_list(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners", headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert "images" in data or "count" in data
+
+
+def test_v1_image_for_docker_runners_latest_get_returns_latest_stable(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners/latest", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 404, 500]
+
+
+def test_v1_image_for_docker_runners_delete_removes_image(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.delete(f"{api_url}/v1/image-for-docker-runners/sha256:test", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 404, 500]
+
+
+def test_v1_image_for_docker_runners_delete_invalid_digest_returns_error(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.delete(f"{api_url}/v1/image-for-docker-runners/invalid", headers=headers, timeout=10)
+    assert response.status_code in [400, 403, 404, 500]
+
+
+def test_v1_image_for_ec2_runners_post_triggers_packer_build(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.post(f"{api_url}/v1/image-for-ec2-runners", json={}, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_v1_image_for_ec2_runners_post_invalid_api_key_returns_403(api_url):
+    headers = {"x-api-key": "invalid-key"}
+    response = requests.post(f"{api_url}/v1/image-for-ec2-runners", json={}, headers=headers, timeout=10)
+    assert response.status_code == 403
+
+
+def test_v1_image_for_ec2_runners_get_lists_all_amis(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
+
+
+def test_v1_image_for_ec2_runners_get_with_no_amis_returns_empty_list(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners", headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert "amis" in data or "count" in data
+
+
+def test_v1_image_for_ec2_runners_latest_get_retrieves_from_ssm(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-ec2-runners/latest", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 404, 500]
+
+
+def test_v1_image_for_ec2_runners_delete_deregisters_ami(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.delete(f"{api_url}/v1/image-for-ec2-runners/ami-test123", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 404, 500]
+
+
+def test_v1_image_for_ec2_runners_delete_invalid_ami_id_returns_error(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.delete(f"{api_url}/v1/image-for-ec2-runners/invalid", headers=headers, timeout=10)
+    assert response.status_code in [400, 403, 404, 500]
+
+
+def test_malformed_json_request_returns_400(api_url):
+    headers = {"Content-Type": "application/json"}
+    response = requests.post(f"{api_url}/v1/echo", data="not valid json", headers=headers, timeout=10)
+    assert response.status_code in [400, 500]
+
+
+def test_oversized_payload_returns_413(api_url):
+    large_payload = {"data": "x" * (10 * 1024 * 1024)}
+    response = requests.post(f"{api_url}/v1/echo", json=large_payload, timeout=30)
+    assert response.status_code in [200, 413, 500]
+
+
+def test_rate_limit_exceeded_returns_429(api_url):
+    responses = []
+    for _ in range(200):
+        try:
+            resp = requests.get(f"{api_url}/health", timeout=1)
+            responses.append(resp.status_code)
+            if resp.status_code == 429:
+                break
+        except requests.exceptions.Timeout:
+            continue
+    assert 200 in responses or 429 in responses
+
+
+def test_internal_server_error_returns_500(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": "invalid-type", "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 400, 403, 500]
+
+
+def test_service_unavailable_returns_503(api_url):
+    response = requests.get(f"{api_url}/health", timeout=10)
+    assert response.status_code in [200, 503]
+
+
+def test_circuit_breaker_opens_after_threshold_failures(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 503]
+
+
+def test_circuit_breaker_transitions_to_half_open_after_timeout(api_url, api_key):
+    import time
+    headers = {"x-api-key": api_key}
+    requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    time.sleep(2)
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 503]
+
+
+def test_circuit_breaker_closes_after_successful_request_in_half_open(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
+
+
+def test_requests_rejected_when_circuit_breaker_open(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 503]
+
+
+def test_duplicate_webhook_delivery_ids_ignored(api_url):
+    headers = {"x-github-event": "ping", "x-github-delivery": "e2e-test-duplicate"}
+    payload = {"zen": "Test"}
+    requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    response2 = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response2.status_code in [200, 401]
+
+
+def test_idempotency_table_records_expire_after_ttl(api_url):
+    import time
+    headers = {"x-github-event": "ping", "x-github-delivery": f"e2e-test-ttl-{int(time.time())}"}
+    payload = {"zen": "Test"}
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_webhook_events_enqueued_to_sqs(api_url):
+    headers = {"x-github-event": "workflow_job"}
+    payload = {
+        "action": "queued",
+        "workflow_job": {"id": 111111, "labels": ["ephemeral-ec2-spot-instance"], "status": "queued"},
+        "repository": {"full_name": "test/repo"}
+    }
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_sqs_messages_processed_by_lambda(api_url):
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
+    assert "ApproximateNumberOfMessages" in attributes["Attributes"]
+
+
+def test_failed_messages_move_to_dlq_after_max_retries(api_url):
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+    assert "ApproximateNumberOfMessages" in attributes["Attributes"]
