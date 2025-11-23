@@ -52,15 +52,12 @@ jobs:
             --push \
             .
           echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
-          echo ""
           echo "==================================="
           echo "Docker Image Built Successfully"
           echo "==================================="
-          echo ""
           echo "Repository: $ECR_URL"
           echo "Tags: available, $BUILD_TAG"
           echo "Architecture: ARM64 (cross-compiled via QEMU)"
-          echo ""
           echo "==================================="
   declaring-common-variables:
     if: |
