@@ -90,66 +90,63 @@ jobs:
       - building-image
       - declaring-common-variables
       - integration-testing
-    permissions:
-      contents: read
-      id-token: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Verify Fargate infrastructure exists
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: pip install pytest boto3
+      - name: Get GitHub PAT from Parameter Store
         run: |
-          CLUSTER=$(aws ecs describe-clusters \
-            --clusters github-runners-cluster \
-            --query 'clusters[0].clusterName' \
-            --output text 2>/dev/null || echo "")
-          if [ -z "$CLUSTER" ] || [ "$CLUSTER" == "None" ]; then
-            echo "SKIP: ECS cluster not deployed yet"
-            echo "Image is built and in ECR, ready for when infrastructure is deployed"
-            exit 0
-          fi
-          echo "✓ ECS cluster exists"
-          echo "✓ Docker image ready for Fargate deployment"
+          GITHUB_PAT=$(aws ssm get-parameter --name /github/pat --with-decryption --query 'Parameter.Value' --output text)
+          echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
+      - env:
+          TEST_AMI_ID: ${{ needs.building-image.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ needs.building-image.outputs.security_group_id }}
+          TEST_SUBNET_ID: ${{ needs.building-image.outputs.subnet_id }}
+        name: Run E2E tests
+        run: |
+          pytest test/api/workflows/image_for_docker_runners_post/test_e2e.py \
+            --confcutdir=test/api/workflows/image_for_docker_runners_post \
+            -v
   integration-testing:
     name: Integration testing
     needs:
       - building-image
       - declaring-common-variables
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ubuntu-24.04-arm64
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-      - name: Pull Docker image from ECR
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install pytest boto3
+      - env:
+          TEST_AMI_ID: ${{ needs.building-image.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ needs.building-image.outputs.security_group_id }}
+          TEST_SUBNET_ID: ${{ needs.building-image.outputs.subnet_id }}
+        name: Run pytest integration tests
         run: |
-          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.building-image.outputs.ecr_repository }}"
-          docker pull $ECR_URL:latest
-          echo "✓ Successfully pulled image from ECR"
-      - name: Inspect image architecture
-        run: |
-          IMAGE="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.building-image.outputs.ecr_repository }}:latest"
-          docker inspect $IMAGE
-          ARCH=$(docker inspect $IMAGE --format='{{.Architecture}}')
-          echo "Image architecture: $ARCH"
-          if [ "$ARCH" != "arm64" ]; then
-            echo "ERROR: Expected arm64, got $ARCH"
-            exit 1
-          fi
-          echo "✓ Image is ARM64 as expected"
+          pytest test/api/workflows/image_for_docker_runners_post/test_integration.py \
+            --confcutdir=test/api/workflows/image_for_docker_runners_post \
+            -v
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -193,17 +190,13 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest
+        run: pip install pytest boto3 botocore
       - name: Run unit tests
         run: |
-          if [ -d "test/api/workflows/image_for_docker_runners_post" ]; then
-            pytest test/api/workflows/image_for_docker_runners_post/test_unit.py \
-              --confcutdir=test/api/workflows/image_for_docker_runners_post \
-              -v
-          else
-            echo "No unit tests found, skipping..."
-          fi
-name: Building Docker image for Fargate self-hosted runners
+          pytest test/api/workflows/image_for_docker_runners_post/test_unit.py \
+            --confcutdir=test/api/workflows/image_for_docker_runners_post \
+            -v
+name: Building Docker image for runners
 on:
   push:
     branches:

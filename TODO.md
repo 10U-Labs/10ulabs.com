@@ -1,0 +1,1 @@
+- Ensure ECR only keeps latest images
