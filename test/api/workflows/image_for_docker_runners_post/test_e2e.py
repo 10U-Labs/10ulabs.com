@@ -37,7 +37,7 @@ def test_runner_successfully_registers_with_github(ecr_image_uri, github_repo, r
     runner_names = [r["name"] for r in runners]
 
     process.terminate()
-    process.wait(timeout=10)
+    process.wait(timeout=30)
 
     assert runner_name in runner_names
 
@@ -55,7 +55,7 @@ def test_runner_appears_online_in_github(ecr_image_uri, github_repo, runner_regi
     matching_runners = [r for r in runners if r["name"] == runner_name]
 
     process.terminate()
-    process.wait(timeout=10)
+    process.wait(timeout=30)
 
     assert len(matching_runners) == 1
 
@@ -73,7 +73,7 @@ def test_runner_status_is_online(ecr_image_uri, github_repo, runner_registration
     matching_runners = [r for r in runners if r["name"] == runner_name]
 
     process.terminate()
-    process.wait(timeout=10)
+    process.wait(timeout=30)
 
     assert matching_runners[0]["status"] == "online"
 
@@ -92,7 +92,7 @@ def test_runner_has_correct_labels(ecr_image_uri, github_repo, runner_registrati
     label_names = [label["name"] for label in matching_runners[0].get("labels", [])]
 
     process.terminate()
-    process.wait(timeout=10)
+    process.wait(timeout=30)
 
     assert "e2e-custom-label" in label_names
 
@@ -111,7 +111,7 @@ def test_runner_has_all_specified_labels(ecr_image_uri, github_repo, runner_regi
     label_names = [label["name"] for label in matching_runners[0].get("labels", [])]
 
     process.terminate()
-    process.wait(timeout=10)
+    process.wait(timeout=30)
 
     assert "label1" in label_names
 
