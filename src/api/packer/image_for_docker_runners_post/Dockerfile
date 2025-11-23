@@ -49,16 +49,16 @@ RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-li
     npm cache clean --force
 
 RUN pip3 install --no-cache-dir \
-        pytest \
         boto3 \
         boto3-stubs \
         botocore \
-        pylint \
-        mypy \
-        yamllint \
-        PyYAML \
         dnspython \
-        requests && \
+        mypy \
+        pylint \
+        pytest \
+        PyYAML \
+        requests \
+        yamllint && \
     rm -rf /root/.cache/pip
 
 ARG TERRAFORM_VERSION=1.14.0
