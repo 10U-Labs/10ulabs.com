@@ -105,13 +105,11 @@ paths:
         type: aws_proxy
   /v1/runners:
     post:
-      summary: Create GitHub Runner
-      description: Creates a new GitHub runner instance
+      summary: GitHub Webhook for Runner Requests
+      description: Receives GitHub workflow_job webhook events and creates runners (secured via GitHub webhook signature validation)
       operationId: createRunner
       tags:
         - Runners
-      security:
-        - api_key: []
       responses:
         '200':
           description: Runner created successfully
