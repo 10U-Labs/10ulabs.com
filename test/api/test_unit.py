@@ -1,9 +1,15 @@
-from pathlib import Path
+import base64
 import json
 import os
 import time
+import urllib.error
+import urllib.parse
+from pathlib import Path
 from unittest.mock import patch, MagicMock
+
+from botocore.exceptions import ClientError
 import pytest
+
 from conftest import parse_response_body, assert_response_status, assert_json_content_type, assert_cors_headers
 
 
@@ -475,7 +481,6 @@ def test_lambda_handler_with_invalid_json_returns_400(webhook_router, lambda_con
 
 
 def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, lambda_context):
-    from unittest.mock import patch
     mock_sqs.send_message.return_value = {'MessageId': 'test-message-id'}
     mock_sqs.get_queue_attributes.return_value = {'Attributes': {'ApproximateNumberOfMessages': '5'}}
     event = workflow_job_event_factory(action='queued', labels=['ephemeral-ec2-spot-instance'])
@@ -486,7 +491,6 @@ def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, w
 
 
 def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
-    from unittest.mock import patch
     event = workflow_job_event_factory(action='completed', labels=['ephemeral-ec2-spot-instance'])
     with patch.object(webhook_router, 'verify_signature', return_value=True):
         with patch('boto3.client'):
@@ -495,7 +499,6 @@ def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_route
 
 
 def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
-    from unittest.mock import patch
     event = workflow_job_event_factory(action='queued', labels=['some-other-label'])
     with patch.object(webhook_router, 'verify_signature', return_value=True):
         with patch('boto3.client'):
@@ -504,7 +507,6 @@ def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook
 
 
 def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
-    from unittest.mock import patch
     event = {
         'path': '/v1/runners',
         'httpMethod': 'POST',
@@ -518,7 +520,6 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
 
 @patch('boto3.client')
 def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, webhook_router, sqs_event_factory, mock_github_api_success, lambda_context):
-    from unittest.mock import MagicMock
     event = sqs_event_factory(records=[{
         'messageId': 'test-message-id',
         'eventSource': 'aws:sqs',
@@ -623,7 +624,6 @@ def test_check_and_record_idempotency_with_new_request_returns_false(webhook_rou
 
 
 def test_check_and_record_idempotency_with_duplicate_request_returns_true(webhook_router):
-    from botocore.exceptions import ClientError
     with patch('boto3.client') as mock_boto:
         mock_dynamodb = MagicMock()
         mock_boto.return_value = mock_dynamodb
@@ -757,25 +757,23 @@ def test_handle_sqs_message_with_invalid_json_returns_error(webhook_router):
 
 def test_parse_event_body_with_json_string_returns_dict(webhook_router):
     event = {'body': json.dumps({'key': 'value'})}
-    body_str, payload = webhook_router.parse_event_body(event)
+    _body_str, payload = webhook_router.parse_event_body(event)
     assert payload['key'] == 'value'
 
 
 def test_parse_event_body_with_base64_encoded_body_decodes_correctly(webhook_router):
-    import base64
     body = json.dumps({'key': 'value'})
     encoded = base64.b64encode(body.encode()).decode()
     event = {'body': encoded, 'isBase64Encoded': True}
-    body_str, payload = webhook_router.parse_event_body(event)
+    _body_str, payload = webhook_router.parse_event_body(event)
     assert payload['key'] == 'value'
 
 
 def test_parse_event_body_with_form_urlencoded_payload_parses_correctly(webhook_router):
-    import urllib.parse
     payload = {'key': 'value'}
     encoded = 'payload=' + urllib.parse.quote(json.dumps(payload))
     event = {'body': encoded}
-    body_str, parsed_payload = webhook_router.parse_event_body(event)
+    _body_str, parsed_payload = webhook_router.parse_event_body(event)
     assert parsed_payload['key'] == 'value'
 
 
@@ -811,23 +809,21 @@ def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router):
         mock_response.read.return_value = json.dumps({'result': 'success'}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        success, data, error = webhook_router.make_http_request_with_retry('http://test.com', {})
+        success, _data, _error = webhook_router.make_http_request_with_retry('http://test.com', {})
     assert success is True
 
 
 def test_make_http_request_with_retry_retries_on_server_error(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
-        import urllib.error
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
-        success, data, error = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
+        success, _data, _error = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert success is False
 
 
 def test_make_http_request_with_retry_fails_immediately_on_client_error(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
-        import urllib.error
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
-        success, data, error = webhook_router.make_http_request_with_retry('http://test.com', {})
+        success, _data, _error = webhook_router.make_http_request_with_retry('http://test.com', {})
     assert success is False
 
 
@@ -904,7 +900,6 @@ def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_route
 
 
 def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
-    from unittest.mock import MagicMock, patch
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -920,7 +915,6 @@ def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, env_
 
 
 def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
-    from unittest.mock import MagicMock, patch
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -937,7 +931,6 @@ def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, env_
 
 
 def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
-    from unittest.mock import MagicMock, patch
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -954,7 +947,6 @@ def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, env_
 
 
 def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
-    from unittest.mock import MagicMock, patch
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -971,7 +963,6 @@ def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, en
 
 
 def test_handler_returns_500_when_function_name_not_set(circuit_breaker_remediation, lambda_context):
-    from unittest.mock import patch
     event = {}
     with patch.dict('os.environ', {}, clear=True):
         response = circuit_breaker_remediation.handler(event, lambda_context)
@@ -988,7 +979,7 @@ def test_check_circuit_breaker_health_invokes_lambda(circuit_breaker_remediation
                 'body': json.dumps({'circuit_breaker_state': 'closed'})
             }).encode())
         }
-        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+        circuit_breaker_remediation.check_circuit_breaker_health('test-function')
     assert mock_lambda.invoke.called
 
 
@@ -1021,7 +1012,6 @@ def test_check_circuit_breaker_health_handles_non_200_response(circuit_breaker_r
 
 
 def test_check_circuit_breaker_health_handles_lambda_error(circuit_breaker_remediation):
-    from botocore.exceptions import ClientError
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_boto_client.return_value = mock_lambda
@@ -1034,7 +1024,6 @@ def test_check_circuit_breaker_health_handles_lambda_error(circuit_breaker_remed
 
 
 def test_check_circuit_breaker_health_includes_error_message(circuit_breaker_remediation):
-    from botocore.exceptions import ClientError
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_boto_client.return_value = mock_lambda
@@ -1047,7 +1036,6 @@ def test_check_circuit_breaker_health_includes_error_message(circuit_breaker_rem
 
 
 def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
-    from unittest.mock import patch
     event = {}
     mock_sqs.receive_message.return_value = {
         'Messages': [dlq_message_factory(body={'job_id': 123})]
@@ -1061,7 +1049,6 @@ def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sq
 
 
 def test_handler_returns_reprocessed_count(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
-    from unittest.mock import patch
     event = {}
     mock_sqs.receive_message.return_value = {
         'Messages': [dlq_message_factory(body={'job_id': 123})]
@@ -1076,7 +1063,6 @@ def test_handler_returns_reprocessed_count(dlq_reprocessor, dlq_message_factory,
 
 
 def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
-    from unittest.mock import patch
     event = {}
     with patch.dict('os.environ', {
         'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/webhook-dlq'
@@ -1087,7 +1073,6 @@ def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
 
 
 def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor, lambda_context):
-    from unittest.mock import patch
     event = {}
     with patch.dict('os.environ', {}, clear=True):
         response = dlq_reprocessor.handler(event, lambda_context)
@@ -1096,7 +1081,6 @@ def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor, lambda_conte
 
 
 def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor, lambda_context):
-    from unittest.mock import patch
     event = {}
     with patch.dict('os.environ', {}, clear=True):
         response = dlq_reprocessor.handler(event, lambda_context)
@@ -1192,7 +1176,6 @@ def test_reprocess_dlq_messages_processes_multiple_messages(dlq_reprocessor, moc
 
 
 def test_reprocess_dlq_messages_counts_failures(dlq_reprocessor, mock_sqs):
-    from botocore.exceptions import ClientError
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -1252,7 +1235,6 @@ def test_reprocess_dlq_messages_preserves_message_attributes(dlq_reprocessor, mo
 
 
 def test_reprocess_dlq_messages_handles_receive_error(dlq_reprocessor, mock_sqs):
-    from botocore.exceptions import ClientError
     mock_sqs.receive_message.side_effect = ClientError(
         {'Error': {'Code': 'QueueDoesNotExist'}},
         'ReceiveMessage'
@@ -1265,7 +1247,6 @@ def test_reprocess_dlq_messages_handles_receive_error(dlq_reprocessor, mock_sqs)
 
 
 def test_reprocess_dlq_messages_continues_on_individual_failure(dlq_reprocessor, mock_sqs):
-    from botocore.exceptions import ClientError
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -1310,7 +1291,7 @@ def test_get_docker_runner_status_returns_success_with_no_tasks(v1_handler):
 
             result = v1_handler.get_docker_runner_status()
 
-            assert result['success'] == True
+            assert result['success'] is True
 
 
 def test_get_docker_runner_status_returns_zero_running_tasks_when_empty(v1_handler):
@@ -1352,7 +1333,6 @@ def test_get_docker_runner_status_returns_cluster_name(v1_handler):
 def test_get_docker_runner_status_handles_client_error(v1_handler):
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
-            from botocore.exceptions import ClientError
             mock_ecs = MagicMock()
             mock_ecs.list_tasks.side_effect = ClientError(
                 {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
@@ -1362,7 +1342,7 @@ def test_get_docker_runner_status_handles_client_error(v1_handler):
 
             result = v1_handler.get_docker_runner_status()
 
-            assert result['success'] == False
+            assert result['success'] is False
 
 
 def test_get_ec2_runner_status_returns_success_with_no_instances(v1_handler):
@@ -1373,7 +1353,7 @@ def test_get_ec2_runner_status_returns_success_with_no_instances(v1_handler):
 
         result = v1_handler.get_ec2_runner_status()
 
-        assert result['success'] == True
+        assert result['success'] is True
 
 
 def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(v1_handler):
@@ -1400,7 +1380,6 @@ def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(v1_
 
 def test_get_ec2_runner_status_handles_client_error(v1_handler):
     with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
-        from botocore.exceptions import ClientError
         mock_ec2 = MagicMock()
         mock_ec2.describe_instances.side_effect = ClientError(
             {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
@@ -1410,7 +1389,7 @@ def test_get_ec2_runner_status_handles_client_error(v1_handler):
 
         result = v1_handler.get_ec2_runner_status()
 
-        assert result['success'] == False
+        assert result['success'] is False
 
 
 def test_handle_docker_runner_get_returns_200_status(v1_handler, lambda_context):

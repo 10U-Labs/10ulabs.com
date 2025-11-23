@@ -75,33 +75,33 @@ def catchall_handler():
     return module
 
 
-@pytest.fixture
-def apigw_client(cfg):
+@pytest.fixture(name="apigw_client")
+def apigw_client_fixture(cfg):
     return boto3.client('apigateway', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def lambda_client(cfg):
+@pytest.fixture(name="lambda_client")
+def lambda_client_fixture(cfg):
     return boto3.client('lambda', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def cloudformation_client(cfg):
+@pytest.fixture(name="cloudformation_client")
+def cloudformation_client_fixture(cfg):
     return boto3.client('cloudformation', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def acm_client(cfg):
+@pytest.fixture(name="acm_client")
+def acm_client_fixture(cfg):
     return boto3.client('acm', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def s3_client(cfg):
+@pytest.fixture(name="s3_client")
+def s3_client_fixture(cfg):
     return boto3.client('s3', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def api_id(apigw_client):
+@pytest.fixture(name="api_id")
+def api_id_fixture(apigw_client):
     apis = apigw_client.get_rest_apis()
     for api in apis['items']:
         if api['name'] == 'TenULabsApi':
@@ -109,24 +109,24 @@ def api_id(apigw_client):
     return None
 
 
-@pytest.fixture
-def health_function_name(lambda_client):
+@pytest.fixture(name="health_function_name")
+def health_function_name_fixture(lambda_client):
     return find_lambda_by_substring(lambda_client, 'HealthHandler')
 
 
-@pytest.fixture
-def echo_function_name(lambda_client):
+@pytest.fixture(name="echo_function_name")
+def echo_function_name_fixture(lambda_client):
     return find_lambda_by_substring(lambda_client, 'V1ApiHandler')
 
 
-@pytest.fixture
-def stack_outputs(cloudformation_client):
+@pytest.fixture(name="stack_outputs")
+def stack_outputs_fixture(cloudformation_client):
     stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
     return stacks['Stacks'][0].get('Outputs', [])
 
 
-@pytest.fixture
-def certificate_arn(acm_client):
+@pytest.fixture(name="certificate_arn")
+def certificate_arn_fixture(acm_client):
     subdomain = "api.10ulabs.com"
     certificates = acm_client.list_certificates()
     for cert in certificates['CertificateSummaryList']:
@@ -135,13 +135,13 @@ def certificate_arn(acm_client):
     return None
 
 
-@pytest.fixture
-def bucket_name():
+@pytest.fixture(name="bucket_name")
+def bucket_name_fixture():
     return "api.10ulabs.com"
 
 
-@pytest.fixture
-def api_endpoint(cloudformation_client):
+@pytest.fixture(name="api_endpoint")
+def api_endpoint_fixture(cloudformation_client):
     stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
     outputs = stacks['Stacks'][0].get('Outputs', [])
 
@@ -584,13 +584,13 @@ def find_lambda_by_substring(lambda_client, substring):
     return matches[0] if matches else None
 
 
-@pytest.fixture
-def ssm_client(cfg):
+@pytest.fixture(name="ssm_client")
+def ssm_client_fixture(cfg):
     return boto3.client('ssm', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def api_key(ssm_client):
+@pytest.fixture(name="api_key")
+def api_key_fixture(ssm_client):
     try:
         response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
         return response['Parameter']['Value']
@@ -598,13 +598,13 @@ def api_key(ssm_client):
         return None
 
 
-@pytest.fixture
-def ecr_client(cfg):
+@pytest.fixture(name="ecr_client")
+def ecr_client_fixture(cfg):
     return boto3.client('ecr', region_name=cfg['aws']['region'])
 
 
-@pytest.fixture
-def ecr_image_count(ecr_client):
+@pytest.fixture(name="ecr_image_count")
+def ecr_image_count_fixture(ecr_client):
     try:
         response = ecr_client.describe_images(
             repositoryName='github-runner',
