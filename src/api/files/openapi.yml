@@ -110,8 +110,6 @@ paths:
       operationId: createRunner
       tags:
         - Runners
-      security:
-        - api_key: []
       responses:
         '200':
           description: Runner created successfully
