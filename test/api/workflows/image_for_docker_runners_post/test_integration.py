@@ -1,5 +1,4 @@
 import subprocess
-import pytest
 import boto3
 from conftest import run_command_in_container, login_to_ecr
 
@@ -309,7 +308,7 @@ def test_entrypoint_accepts_token_argument(docker_image):
     assert result.returncode == 0
 
 
-def test_ecr_image_exists(ecr_image_uri, aws_region, ecr_repository, image_tag):
+def test_ecr_image_exists(aws_region, ecr_repository, image_tag):
     client = boto3.client("ecr", region_name=aws_region)
     response = client.describe_images(
         repositoryName=ecr_repository,
@@ -318,7 +317,7 @@ def test_ecr_image_exists(ecr_image_uri, aws_region, ecr_repository, image_tag):
     assert len(response["imageDetails"]) == 1
 
 
-def test_ecr_image_is_arm64(ecr_image_uri, aws_region, ecr_repository, image_tag):
+def test_ecr_image_is_arm64(aws_region, ecr_repository, image_tag):
     client = boto3.client("ecr", region_name=aws_region)
     response = client.describe_images(
         repositoryName=ecr_repository,

@@ -3,25 +3,11 @@ import os
 import subprocess
 import pytest
 import boto3
-from dockerfile_parse import DockerfileParser
 
 
 @pytest.fixture(scope="module")
 def dockerfile_path():
     return os.path.join(os.path.dirname(__file__), "../../../../src/api/docker_runner/Dockerfile")
-
-
-@pytest.fixture
-def dockerfile_parser(dockerfile_path):
-    dfp = DockerfileParser()
-    with open(dockerfile_path, 'r') as f:
-        dfp.content = f.read()
-    return dfp
-
-
-@pytest.fixture(scope="module")
-def entrypoint_path():
-    return os.path.join(os.path.dirname(__file__), "../../../../src/api/docker_runner/entrypoint.py")
 
 
 @pytest.fixture(scope="module")
@@ -67,7 +53,7 @@ def docker_image_tag():
 
 
 @pytest.fixture(scope="module")
-def docker_image(dockerfile_path, entrypoint_path, docker_image_tag):
+def docker_image(dockerfile_path, docker_image_tag):
     build_context = os.path.dirname(dockerfile_path)
 
     result = subprocess.run(
@@ -86,7 +72,7 @@ def docker_image(dockerfile_path, entrypoint_path, docker_image_tag):
 
 
 @pytest.fixture(scope="module")
-def image_tag(aws_region, aws_account_id, ecr_repository):
+def image_tag(aws_region, ecr_repository):
     client = boto3.client("ecr", region_name=aws_region)
     response = client.describe_images(
         repositoryName=ecr_repository,

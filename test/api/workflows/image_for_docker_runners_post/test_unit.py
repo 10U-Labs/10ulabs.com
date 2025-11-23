@@ -1,7 +1,6 @@
-import argparse
 import os
 import sys
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner'))
 import entrypoint

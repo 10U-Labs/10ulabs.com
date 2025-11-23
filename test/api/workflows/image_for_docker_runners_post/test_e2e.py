@@ -1,6 +1,5 @@
 import subprocess
 import time
-import pytest
 from conftest import login_to_ecr, start_runner_container, get_github_runners
 
 
