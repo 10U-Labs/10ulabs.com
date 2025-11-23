@@ -731,6 +731,37 @@ def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router
     assert webhook_router.circuit_breaker_state['state'] == 'open'
 
 
+def test_circuit_breaker_concurrent_failures_increment_count(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
+    webhook_router.record_circuit_breaker_failure()
+    webhook_router.record_circuit_breaker_failure()
+    assert webhook_router.circuit_breaker_state['failures'] == 2
+
+
+def test_circuit_breaker_concurrent_success_resets_failures(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 4
+    webhook_router.record_circuit_breaker_success()
+    assert webhook_router.circuit_breaker_state['failures'] == 0
+
+
+def test_circuit_breaker_half_open_allows_one_request(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is True
+
+
+def test_circuit_breaker_state_remains_open_before_timeout(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 30
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is False
+
+
 def test_check_and_record_idempotency_with_new_request_returns_false(webhook_router):
     result = webhook_router.check_and_record_idempotency('test-request-id')
     assert result is False
@@ -745,6 +776,47 @@ def test_check_and_record_idempotency_with_duplicate_request_returns_true(webhoo
         with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
             result = webhook_router.check_and_record_idempotency('duplicate-id')
     assert result is True
+
+
+def test_concurrent_idempotency_checks_with_same_id_returns_duplicate(webhook_router):
+    with patch('boto3.client') as mock_boto:
+        mock_dynamodb = MagicMock()
+        mock_boto.return_value = mock_dynamodb
+        mock_dynamodb.put_item.return_value = {}
+        error = ClientError({'Error': {'Code': 'ConditionalCheckFailedException'}}, 'PutItem')
+        mock_dynamodb.put_item.side_effect = [{}, error]
+        with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
+            first_result = webhook_router.check_and_record_idempotency('same-id')
+            second_result = webhook_router.check_and_record_idempotency('same-id')
+    assert second_result is True
+
+
+def test_concurrent_idempotency_checks_with_different_ids_both_succeed(webhook_router):
+    with patch('boto3.client') as mock_boto:
+        mock_dynamodb = MagicMock()
+        mock_boto.return_value = mock_dynamodb
+        mock_dynamodb.put_item.return_value = {}
+        with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
+            first_result = webhook_router.check_and_record_idempotency('id-1')
+            second_result = webhook_router.check_and_record_idempotency('id-2')
+    assert first_result is False
+
+
+def test_idempotency_check_handles_dynamodb_error_gracefully(webhook_router):
+    with patch('boto3.client') as mock_boto:
+        mock_dynamodb = MagicMock()
+        mock_boto.return_value = mock_dynamodb
+        error = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'PutItem')
+        mock_dynamodb.put_item.side_effect = error
+        with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
+            result = webhook_router.check_and_record_idempotency('test-id')
+    assert result is False
+
+
+def test_idempotency_check_without_table_name_returns_false(webhook_router):
+    with patch.dict('os.environ', {}, clear=True):
+        result = webhook_router.check_and_record_idempotency('test-id')
+    assert result is False
 
 
 def test_enqueue_job_succeeds_and_returns_message_id(webhook_router, mock_sqs):

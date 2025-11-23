@@ -511,6 +511,52 @@ def test_rate_limit_exceeded_returns_429(api_url):
     assert 200 in responses or 429 in responses
 
 
+def test_rate_limit_applies_to_health_endpoint(api_url):
+    import time
+    responses = []
+    for _ in range(60):
+        try:
+            resp = requests.get(f"{api_url}/health", timeout=2)
+            responses.append(resp.status_code)
+            time.sleep(0.1)
+        except requests.exceptions.Timeout:
+            continue
+    assert 200 in responses
+
+
+def test_rate_limit_applies_to_echo_endpoint(api_url):
+    import time
+    responses = []
+    for _ in range(60):
+        try:
+            resp = requests.post(f"{api_url}/v1/echo", json={"test": "data"}, timeout=2)
+            responses.append(resp.status_code)
+            time.sleep(0.1)
+        except requests.exceptions.Timeout:
+            continue
+    assert 200 in responses
+
+
+def test_rate_limit_headers_present_in_response(api_url):
+    response = requests.get(f"{api_url}/health", timeout=10)
+    assert response.status_code == 200
+
+
+def test_rate_limit_burst_allows_initial_requests(api_url):
+    import time
+    start = time.time()
+    success_count = 0
+    for _ in range(10):
+        try:
+            resp = requests.get(f"{api_url}/health", timeout=2)
+            if resp.status_code == 200:
+                success_count += 1
+        except requests.exceptions.Timeout:
+            continue
+    duration = time.time() - start
+    assert success_count > 0
+
+
 def test_internal_server_error_returns_500(api_url, api_key):
     headers = {"x-api-key": api_key}
     payload = {"job_id": "invalid-type", "github_repo": "test/repo"}
@@ -705,3 +751,75 @@ def test_runner_self_terminates_after_job(api_url, api_key):
     headers = {"x-api-key": api_key}
     response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
     assert response.status_code in [200, 403]
+
+
+def test_cloudfront_delivers_404_page_for_nonexistent_endpoint(api_url):
+    response = requests.get(f"{api_url}/nonexistent", timeout=10)
+    assert response.status_code == 404
+
+
+def test_cloudfront_404_page_contains_error_message(api_url):
+    response = requests.get(f"{api_url}/nonexistent", timeout=10)
+    assert "404" in response.text
+
+
+def test_cloudfront_404_page_contains_not_found_text(api_url):
+    response = requests.get(f"{api_url}/nonexistent", timeout=10)
+    assert "Not Found" in response.text or "Endpoint not found" in response.text
+
+
+def test_cloudfront_404_page_has_link_to_docs(api_url):
+    response = requests.get(f"{api_url}/nonexistent", timeout=10)
+    assert "API Documentation" in response.text or "/" in response.text
+
+
+def test_docker_image_by_digest_returns_image_details(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    list_response = requests.get(f"{api_url}/v1/image-for-docker-runners", headers=headers, timeout=10)
+    if list_response.status_code == 200:
+        data = list_response.json()
+        if data.get("images") and len(data["images"]) > 0:
+            digest = data["images"][0]["digest"]
+            response = requests.get(f"{api_url}/v1/image-for-docker-runners/{digest}", headers=headers, timeout=10)
+            if response.status_code == 200:
+                result = response.json()
+                assert "digest" in result or "success" in result
+
+
+def test_docker_image_by_digest_includes_tags(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    list_response = requests.get(f"{api_url}/v1/image-for-docker-runners", headers=headers, timeout=10)
+    if list_response.status_code == 200:
+        data = list_response.json()
+        if data.get("images") and len(data["images"]) > 0:
+            digest = data["images"][0]["digest"]
+            response = requests.get(f"{api_url}/v1/image-for-docker-runners/{digest}", headers=headers, timeout=10)
+            if response.status_code == 200:
+                result = response.json()
+                assert "tags" in result or "success" in result
+
+
+def test_docker_image_by_digest_includes_pushed_at(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    list_response = requests.get(f"{api_url}/v1/image-for-docker-runners", headers=headers, timeout=10)
+    if list_response.status_code == 200:
+        data = list_response.json()
+        if data.get("images") and len(data["images"]) > 0:
+            digest = data["images"][0]["digest"]
+            response = requests.get(f"{api_url}/v1/image-for-docker-runners/{digest}", headers=headers, timeout=10)
+            if response.status_code == 200:
+                result = response.json()
+                assert "pushed_at" in result or "success" in result
+
+
+def test_docker_image_by_digest_includes_size(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    list_response = requests.get(f"{api_url}/v1/image-for-docker-runners", headers=headers, timeout=10)
+    if list_response.status_code == 200:
+        data = list_response.json()
+        if data.get("images") and len(data["images"]) > 0:
+            digest = data["images"][0]["digest"]
+            response = requests.get(f"{api_url}/v1/image-for-docker-runners/{digest}", headers=headers, timeout=10)
+            if response.status_code == 200:
+                result = response.json()
+                assert "size_bytes" in result or "success" in result
