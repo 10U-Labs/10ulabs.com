@@ -8,8 +8,8 @@ RUN apt-get update && \
         git \
         gnupg \
         jq \
-        libicu72 \
-        libssl3 \
+        libicu76 \
+        libssl3t64 \
         liblttng-ust1 \
         procps \
         python3 \
