@@ -18,20 +18,20 @@ def test_config_file_exists_in_correct_location():
     assert config_path.exists()
 
 
-def test_config_has_aws_account_id(config):
-    assert "account_id" in config["aws"]
+def test_config_has_aws_account_id(cfg):
+    assert "account_id" in cfg["aws"]
 
 
-def test_config_has_aws_region(config):
-    assert "region" in config["aws"]
+def test_config_has_aws_region(cfg):
+    assert "region" in cfg["aws"]
 
 
-def test_config_has_vpc_name(config):
-    assert "vpc_name" in config["naming"]
+def test_config_has_vpc_name(cfg):
+    assert "vpc_name" in cfg["naming"]
 
 
-def test_config_has_github_runner_version(config):
-    assert "runner_version" in config["github"]
+def test_config_has_github_runner_version(cfg):
+    assert "runner_version" in cfg["github"]
 
 
 def test_terraform_tfvars_has_github_repo():
@@ -311,13 +311,43 @@ def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(v1_hand
     assert_response_status(response, 400)
 
 
-def test_lambda_handler_docker_runner_post_returns_json_content_type(v1_handler, docker_runner_post_event_factory, lambda_context):
+@patch('boto3.client')
+def test_lambda_handler_docker_runner_post_returns_json_content_type(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': '2024-01-01'}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
     event = docker_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
 
 
-def test_lambda_handler_docker_runner_get_returns_json_content_type(v1_handler, lambda_context):
+@patch('boto3.client')
+def test_lambda_handler_docker_runner_get_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.return_value = {'taskArns': []}
+
+    def mock_client(service_name):
+        if service_name == 'ecs':
+            return mock_ecs
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
     event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -376,7 +406,25 @@ def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(
     assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(v1_handler, image_docker_event_factory, lambda_context):
+@patch('boto3.client')
+def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_docker_event_factory, lambda_context):
+    from datetime import datetime
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageTags': ['stable'],
+            'imagePushedAt': datetime(2024, 1, 1),
+            'imageDigest': 'sha256:abc123',
+            'imageSizeInBytes': 1024000
+        }]
+    }
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
     event = image_docker_event_factory(method='GET')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -392,7 +440,17 @@ def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_4
     assert_response_status(response, 400)
 
 
-def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(v1_handler, lambda_context):
+@patch('boto3.client')
+def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.batch_delete_image.return_value = {'imageIds': [{'imageDigest': 'sha256:abc123'}]}
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
     event = {
         'path': '/v1/image-for-docker-runners/sha256:abc123',
         'httpMethod': 'DELETE',
@@ -415,7 +473,26 @@ def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_
     assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
+@patch('boto3.client')
+def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_ec2_event_factory, lambda_context):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{
+            'ImageId': 'ami-test123',
+            'CreationDate': '2024-01-01T00:00:00',
+            'Name': 'test-image',
+            'State': 'available',
+            'Architecture': 'x86_64',
+            'Tags': [{'Key': 'stable', 'Value': 'true'}]
+        }]
+    }
+
+    def mock_client(service_name):
+        if service_name == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
     event = image_ec2_event_factory(method='GET', ami_id=None)
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -431,7 +508,21 @@ def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(
     assert_response_status(response, 400)
 
 
-def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(v1_handler, lambda_context):
+@patch('boto3.client')
+def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+    mock_ec2 = MagicMock()
+    mock_ec2.deregister_image.return_value = {}
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
+    }
+    mock_ec2.delete_snapshot.return_value = {}
+
+    def mock_client(service_name):
+        if service_name == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
     event = {
         'path': '/v1/image-for-ec2-runners/ami-abc123',
         'httpMethod': 'DELETE',
@@ -512,7 +603,31 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
     assert_response_status(response, 200)
 
 
-def test_lambda_handler_sqs_event_processes_successfully(webhook_router, sqs_event_factory, lambda_context):
+@patch('urllib.request.urlopen')
+@patch('boto3.client')
+def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test123', 'CreationDate': '2024-01-01'}]
+    }
+    mock_ec2.run_instances.return_value = {'Instances': [{'InstanceId': 'i-test123'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    def mock_client(service_name):
+        if service_name == 'ec2':
+            return mock_ec2
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+
+    mock_response = MagicMock()
+    mock_response.status = 200
+    mock_response.read.return_value = b'{"success": true}'
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
     event = sqs_event_factory(records=[{
         'messageId': 'test-message-id',
         'eventSource': 'aws:sqs',
@@ -894,64 +1009,68 @@ def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_route
 
 def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, lambda_context):
     event = {}
-    with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_boto_client.return_value = mock_lambda
-        mock_lambda.invoke.return_value = {
-            'Payload': MagicMock(read=lambda: json.dumps({
-                'statusCode': 200,
-                'body': json.dumps({'circuit_breaker_state': 'closed'})
-            }).encode())
-        }
-        response = circuit_breaker_remediation.handler(event, lambda_context)
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
     assert_response_status(response, 200)
 
 
 def test_handler_returnscircuit_breaker_state(circuit_breaker_remediation, lambda_context):
     event = {}
-    with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_boto_client.return_value = mock_lambda
-        mock_lambda.invoke.return_value = {
-            'Payload': MagicMock(read=lambda: json.dumps({
-                'statusCode': 200,
-                'body': json.dumps({'circuit_breaker_state': 'closed'})
-            }).encode())
-        }
-        response = circuit_breaker_remediation.handler(event, lambda_context)
-        body = parse_response_body(response)
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+            body = parse_response_body(response)
     assert 'circuit_breaker_state' in body
 
 
 def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, lambda_context):
     event = {}
-    with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_boto_client.return_value = mock_lambda
-        mock_lambda.invoke.return_value = {
-            'Payload': MagicMock(read=lambda: json.dumps({
-                'statusCode': 200,
-                'body': json.dumps({'circuit_breaker_state': 'open'})
-            }).encode())
-        }
-        response = circuit_breaker_remediation.handler(event, lambda_context)
-        body = parse_response_body(response)
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'open'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+            body = parse_response_body(response)
     assert body['action'] == 'monitored'
 
 
 def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, lambda_context):
     event = {}
-    with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_boto_client.return_value = mock_lambda
-        mock_lambda.invoke.return_value = {
-            'Payload': MagicMock(read=lambda: json.dumps({
-                'statusCode': 200,
-                'body': json.dumps({'circuit_breaker_state': 'closed'})
-            }).encode())
-        }
-        response = circuit_breaker_remediation.handler(event, lambda_context)
-        body = parse_response_body(response)
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+            body = parse_response_body(response)
     assert body['action'] == 'none'
 
 
