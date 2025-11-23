@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install Docker
+        run: |
+          brew install docker
+          brew install colima
+          colima start --arch aarch64 --cpu 4 --memory 8
       - id: config
         name: Load configuration
         run: |
