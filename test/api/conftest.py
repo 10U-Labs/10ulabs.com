@@ -154,6 +154,9 @@ def webhook_router():
     spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    module._clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+    module._webhook_secret_cache = {'value': None}
+    module._circuit_breaker_state = {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'}
     return module
 
 
