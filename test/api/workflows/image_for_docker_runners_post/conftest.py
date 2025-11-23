@@ -102,7 +102,7 @@ def docker_image():
     build_context = os.path.dirname(path)
 
     result = subprocess.run(
-        ["docker", "build", "-t", tag, "-f", path, build_context],
+        ["docker", "build", "--platform", "linux/arm64", "-t", tag, "-f", path, build_context],
         check=False,
         capture_output=True,
         text=True,
