@@ -121,8 +121,8 @@ jobs:
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run E2E tests
         run: |
-          pytest test/api/workflows/image_for_docker_runners_post/test_e2e.py \
-            --confcutdir=test/api/workflows/image_for_docker_runners_post \
+          pytest test/api/build/image_for_docker_runners/test_e2e.py \
+            --confcutdir=test/api/build/image_for_docker_runners \
             -v
   integration-testing:
     name: Integration testing
@@ -150,8 +150,8 @@ jobs:
         run: pip install pytest boto3
       - name: Run pytest integration tests
         run: |
-          pytest test/api/workflows/image_for_docker_runners_post/test_integration.py \
-            --confcutdir=test/api/workflows/image_for_docker_runners_post \
+          pytest test/api/build/image_for_docker_runners/test_integration.py \
+            --confcutdir=test/api/build/image_for_docker_runners \
             -v
   performing-static-analysis:
     name: Performing static analysis
@@ -183,14 +183,14 @@ jobs:
         run: |
           pylint \
             src/api/build/image_for_docker_runners/entrypoint.py \
-            test/api/workflows/image_for_docker_runners_post/ \
+            test/api/build/image_for_docker_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Run mypy
         run: |
           python -m mypy \
             src/api/build/image_for_docker_runners/entrypoint.py \
-            test/api/workflows/image_for_docker_runners_post/
+            test/api/build/image_for_docker_runners/
       - name: Validate Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
@@ -243,8 +243,8 @@ jobs:
         run: pip install pytest boto3 botocore dockerfile-parse
       - name: Run unit tests
         run: |
-          pytest test/api/workflows/image_for_docker_runners_post/test_unit.py \
-            --confcutdir=test/api/workflows/image_for_docker_runners_post \
+          pytest test/api/build/image_for_docker_runners/test_unit.py \
+            --confcutdir=test/api/build/image_for_docker_runners \
             -v
 name: Building Docker image for runners
 on:
@@ -254,7 +254,7 @@ on:
     paths:
       - '.github/workflows/image_for_docker_runners_post.yml'
       - 'src/api/build/image_for_docker_runners/**'
-      - 'test/api/workflows/image_for_docker_runners_post/**'
+      - 'test/api/build/image_for_docker_runners/**'
       - '!**/README.md'
   workflow_dispatch:
     inputs:
