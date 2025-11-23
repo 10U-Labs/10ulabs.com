@@ -171,17 +171,20 @@ def api_endpoint_fixture(cloudformation_client):
 
 @pytest.fixture
 def webhook_router():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
-    spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    if hasattr(module, '_clients'):
-        setattr(module, '_clients', {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None})
-    if hasattr(module, '_webhook_secret_cache'):
-        setattr(module, '_webhook_secret_cache', {'value': None})
-    if hasattr(module, '_circuit_breaker_state'):
-        setattr(module, '_circuit_breaker_state', {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'})
-    return module
+    with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': '/api/key'}):
+        handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
+        spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if hasattr(module, '_clients'):
+            setattr(module, '_clients', {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None})
+        if hasattr(module, '_webhook_secret_cache'):
+            setattr(module, '_webhook_secret_cache', {'value': None})
+        if hasattr(module, '_api_key_cache'):
+            setattr(module, '_api_key_cache', {'value': None})
+        if hasattr(module, '_circuit_breaker_state'):
+            setattr(module, '_circuit_breaker_state', {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'})
+        yield module
 
 
 @pytest.fixture
