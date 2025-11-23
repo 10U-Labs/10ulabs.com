@@ -219,9 +219,12 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ssm" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["ssm:GetParameter"]
-      Resource = [aws_ssm_parameter.webhook_secret.arn]
+      Effect = "Allow"
+      Action = ["ssm:GetParameter"]
+      Resource = [
+        aws_ssm_parameter.webhook_secret.arn,
+        aws_ssm_parameter.api_key.arn
+      ]
     }]
   })
 }

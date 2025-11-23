@@ -118,6 +118,11 @@ variable "lambda_function_name" {
   description = "Lambda function name"
 }
 
+variable "api_key_parameter_name" {
+  type        = string
+  description = "API key parameter name"
+}
+
 variable "webhook_secret_name" {
   type        = string
   description = "Webhook secret parameter name"

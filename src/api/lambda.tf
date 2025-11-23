@@ -88,6 +88,7 @@ resource "aws_lambda_function" "runners_handler" {
   environment {
     variables = {
       WEBHOOK_SECRET_NAME    = aws_ssm_parameter.webhook_secret.name
+      API_KEY_PARAMETER_NAME = aws_ssm_parameter.api_key.name
       API_BASE_URL           = "https://${var.domain_subdomain}"
       IDEMPOTENCY_TABLE_NAME = aws_dynamodb_table.idempotency.name
       JOB_QUEUE_URL          = aws_sqs_queue.job_queue.url

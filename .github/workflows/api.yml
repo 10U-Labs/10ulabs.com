@@ -231,9 +231,9 @@ on:
   workflow_dispatch:
     inputs:
       github_hosted:
-        type: boolean
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
 permissions:
   contents: read
   id-token: write

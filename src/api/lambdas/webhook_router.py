@@ -17,6 +17,7 @@ logger.setLevel(logging.INFO)
 
 clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
 webhook_secret_cache = {'value': None}
+api_key_cache = {'value': None}
 circuit_breaker_state: Dict[str, Any] = {
     'failures': 0,
     'last_failure_time': 0.0,
@@ -180,6 +181,27 @@ def get_webhook_secret(force_refresh: bool = False) -> str:
     return secret
 
 
+def get_api_key(force_refresh: bool = False) -> str:
+    if force_refresh:
+        api_key_cache['value'] = None
+
+    api_key = api_key_cache['value']
+    if not api_key:
+        parameter_name = os.environ['API_KEY_PARAMETER_NAME']
+        try:
+            ssm = get_ssm_client()
+            response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+            api_key = response['Parameter']['Value']
+            api_key_cache['value'] = api_key
+        except ClientError as e:
+            logger.error("Failed to retrieve API key: %s", e)
+            raise RuntimeError(f"Cannot retrieve API key: {e}") from e
+        except KeyError as e:
+            logger.error("API_KEY_PARAMETER_NAME environment variable not set")
+            raise RuntimeError("API_KEY_PARAMETER_NAME environment variable not set") from e
+    return api_key
+
+
 def verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
     if not signature_header:
         return False
@@ -195,11 +217,14 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
     return hmac.compare_digest(computed_signature, github_signature)
 
 
-def make_http_request_with_retry(endpoint: str, payload: dict, max_retries: int = 3) -> tuple:
+def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict = None, max_retries: int = 3) -> tuple:
     base_delay = 1.0
+    if headers is None:
+        headers = {}
+    headers['Content-Type'] = 'application/json'
     for attempt in range(max_retries + 1):
         try:
-            req = urllib.request.Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'}, method='POST')
+            req = urllib.request.Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req, timeout=30) as response:
                 return (True, json.loads(response.read()), None)
         except urllib.error.HTTPError as e:
@@ -229,10 +254,17 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
         logger.error("No matching runner type for labels: %s", job_labels)
         return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
 
+    try:
+        api_key = get_api_key()
+    except RuntimeError as e:
+        logger.error("Cannot route job %s: %s", job_id, e)
+        return {'success': False, 'error': str(e)}
+
     payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo}
+    headers = {'x-api-key': api_key}
     logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
 
-    success, response_data, error = make_http_request_with_retry(endpoint, payload)
+    success, response_data, error = make_http_request_with_retry(endpoint, payload, headers)
     if success:
         logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
         record_circuit_breaker_success()

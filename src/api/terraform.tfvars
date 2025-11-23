@@ -1,5 +1,6 @@
 ami_promotion_ssm_parameter = "/github-runner/ami/latest"
 ami_promotion_stable_tag    = "Stable"
+api_key_parameter_name      = "/api/key"
 api_version                 = "v1"
 aws_account_id              = "781581267945"
 aws_region                  = "us-east-1"
@@ -31,4 +32,4 @@ task_family                 = "github-runner"
 vpc_cidr                    = "10.0.0.0/16"
 vpc_max_azs                 = 99
 vpc_name                    = "TenULabsApiVpc"
-webhook_secret_name         = "api-webhook-secret"
+webhook_secret_name         = "/api/webhook-secret"
