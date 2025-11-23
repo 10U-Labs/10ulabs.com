@@ -4,6 +4,7 @@ import os
 import time
 import urllib.error
 import urllib.parse
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -408,7 +409,6 @@ def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(
 
 @patch('boto3.client')
 def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_docker_event_factory, lambda_context):
-    from datetime import datetime
     mock_ecr = MagicMock()
     mock_ecr.describe_images.return_value = {
         'imageDetails': [{
