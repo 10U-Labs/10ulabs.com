@@ -42,11 +42,11 @@ jobs:
       - id: network
         name: Find suitable subnet for instance types
         run: |
-          if python3 src/api/build/image_for_ec2_runners/find_suitable_subnet.py \
+          if python3 src/build/image_for_ec2_runners/find_suitable_subnet.py \
             check \
             --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}'; then
-            SUBNET_ID=$(python3 src/api/build/image_for_ec2_runners/find_suitable_subnet.py \
+            SUBNET_ID=$(python3 src/build/image_for_ec2_runners/find_suitable_subnet.py \
               get \
               --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
               --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
@@ -62,12 +62,12 @@ jobs:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/build/image_for_ec2_runners
+          cd src/build/image_for_ec2_runners
           packer init template.pkr.hcl
       - id: build
         name: Build AMI with Packer
         run: |
-          cd src/api/build/image_for_ec2_runners
+          cd src/build/image_for_ec2_runners
           echo "Building GitHub Runner AMI..."
           echo "OS Family: ${{ needs.declaring-common-variables.outputs.os_family }}"
           echo "OS Version: ${{ needs.declaring-common-variables.outputs.os_version }}"
@@ -196,12 +196,12 @@ jobs:
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
-          OS_ARCHITECTURE=$(yq '.architecture' src/api/build/image_for_ec2_runners/config.yml)
-          OS_FAMILY=$(yq '.os_family' src/api/build/image_for_ec2_runners/config.yml)
-          OS_VERSION=$(yq '.os_version' src/api/build/image_for_ec2_runners/config.yml)
-          RUNNER_VERSION=$(yq '.runner_version' src/api/build/image_for_ec2_runners/config.yml)
+          OS_ARCHITECTURE=$(yq '.architecture' src/build/image_for_ec2_runners/config.yml)
+          OS_FAMILY=$(yq '.os_family' src/build/image_for_ec2_runners/config.yml)
+          OS_VERSION=$(yq '.os_version' src/build/image_for_ec2_runners/config.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_ec2_runners/config.yml)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          STABLE_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/api/build/image_for_ec2_runners/config.yml)
+          STABLE_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/build/image_for_ec2_runners/config.yml)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
@@ -244,8 +244,8 @@ jobs:
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run E2E tests
         run: |
-          pytest test/api/build/image_for_ec2_runners/test_e2e.py \
-            --confcutdir=test/api/build/image_for_ec2_runners \
+          pytest test/build/image_for_ec2_runners/test_e2e.py \
+            --confcutdir=test/build/image_for_ec2_runners \
             -v
   integration-testing:
     name: Integration testing
@@ -273,8 +273,8 @@ jobs:
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run pytest integration tests
         run: |
-          pytest test/api/build/image_for_ec2_runners/test_integration.py \
-            --confcutdir=test/api/build/image_for_ec2_runners \
+          pytest test/build/image_for_ec2_runners/test_integration.py \
+            --confcutdir=test/build/image_for_ec2_runners \
             -v
   performing-static-analysis:
     name: Performing static analysis
@@ -300,8 +300,8 @@ jobs:
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/image_for_ec2_runners_post.yml \
-            src/api/build/image_for_ec2_runners/config.yml
+            .github/workflows/image_for_ec2_runners.yml \
+            src/build/image_for_ec2_runners/config.yml
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -324,22 +324,22 @@ jobs:
       - name: Linting Python files
         run: |
           pylint \
-            src/api/build/image_for_ec2_runners/*.py \
+            src/build/image_for_ec2_runners/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
-        run: python -m mypy src/api/build/image_for_ec2_runners/*.py
+        run: python -m mypy src/build/image_for_ec2_runners/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/build/image_for_ec2_runners
+          cd src/build/image_for_ec2_runners
           packer init template.pkr.hcl
       - name: Validating Packer template
         run: |
-          cd src/api/build/image_for_ec2_runners
+          cd src/build/image_for_ec2_runners
           packer validate \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
@@ -375,8 +375,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          AMI_SSM_PARAMETER=$(yq '.ami.promotion_ssm_parameter' src/api/build/image_for_ec2_runners/config.yml)
-          AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/api/build/image_for_ec2_runners/config.yml)
+          AMI_SSM_PARAMETER=$(yq '.ami.promotion_ssm_parameter' src/build/image_for_ec2_runners/config.yml)
+          AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/build/image_for_ec2_runners/config.yml)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
           echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -392,7 +392,7 @@ jobs:
         run: pip install boto3
       - name: Promote AMI
         run: |
-          python src/api/build/image_for_ec2_runners/promote_ami.py \
+          python src/build/image_for_ec2_runners/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \
@@ -415,8 +415,8 @@ jobs:
         run: pip install pytest boto3 botocore
       - name: Run unit tests
         run: |
-          pytest test/api/build/image_for_ec2_runners/test_unit.py \
-            --confcutdir=test/api/build/image_for_ec2_runners \
+          pytest test/build/image_for_ec2_runners/test_unit.py \
+            --confcutdir=test/build/image_for_ec2_runners \
             -v
 name: Building AMI for EC2 self-hosted runners
 on:
@@ -424,9 +424,9 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/image_for_ec2_runners_post.yml'
-      - 'src/api/build/image_for_ec2_runners/**'
-      - 'test/api/build/image_for_ec2_runners/**'
+      - '.github/workflows/image_for_ec2_runners.yml'
+      - 'src/build/image_for_ec2_runners/**'
+      - 'test/build/image_for_ec2_runners/**'
       - '!**/README.md'
   workflow_dispatch:
     inputs:

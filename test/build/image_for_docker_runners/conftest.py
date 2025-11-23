@@ -7,7 +7,7 @@ import boto3
 
 
 def get_dockerfile_path():
-    return os.path.join(os.path.dirname(__file__), "../../../../src/api/build/image_for_docker_runners/Dockerfile")
+    return os.path.join(os.path.dirname(__file__), "../../../src/build/image_for_docker_runners/Dockerfile")
 
 
 def get_aws_region():
