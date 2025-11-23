@@ -27,9 +27,9 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ARCHITECTURE=$(yq '.architecture' src/api/config/image_for_docker_runners.yml)
-          ECR_REPO=$(yq '.ecr_repository_name' src/api/config/image_for_docker_runners.yml)
-          RUNNER_VERSION=$(yq '.runner_version' src/api/config/image_for_docker_runners.yml)
+          ARCHITECTURE=$(yq '.architecture' src/api/build/image_for_docker_runners/config.yml)
+          ECR_REPO=$(yq '.ecr_repository_name' src/api/build/image_for_docker_runners/config.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/api/build/image_for_docker_runners/config.yml)
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
@@ -178,7 +178,7 @@ jobs:
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_docker_runners_post.yml \
-            src/api/config/image_for_docker_runners.yml
+            src/api/build/image_for_docker_runners/config.yml
       - name: Run pylint
         run: |
           pylint \
@@ -253,7 +253,6 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_docker_runners_post.yml'
-      - 'src/api/config/image_for_docker_runners.yml'
       - 'src/api/build/image_for_docker_runners/**'
       - 'test/api/workflows/image_for_docker_runners_post/**'
       - '!**/README.md'

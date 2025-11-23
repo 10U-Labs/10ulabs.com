@@ -196,12 +196,12 @@ jobs:
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
-          OS_ARCHITECTURE=$(yq '.architecture' src/api/config/image_for_ec2_runners.yml)
-          OS_FAMILY=$(yq '.os_family' src/api/config/image_for_ec2_runners.yml)
-          OS_VERSION=$(yq '.os_version' src/api/config/image_for_ec2_runners.yml)
-          RUNNER_VERSION=$(yq '.runner_version' src/api/config/image_for_ec2_runners.yml)
+          OS_ARCHITECTURE=$(yq '.architecture' src/api/build/image_for_ec2_runners/config.yml)
+          OS_FAMILY=$(yq '.os_family' src/api/build/image_for_ec2_runners/config.yml)
+          OS_VERSION=$(yq '.os_version' src/api/build/image_for_ec2_runners/config.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/api/build/image_for_ec2_runners/config.yml)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          STABLE_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/api/config/image_for_ec2_runners.yml)
+          STABLE_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/api/build/image_for_ec2_runners/config.yml)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
@@ -301,7 +301,7 @@ jobs:
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners_post.yml \
-            src/api/config/image_for_ec2_runners.yml
+            src/api/build/image_for_ec2_runners/config.yml
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -375,8 +375,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          AMI_SSM_PARAMETER=$(yq '.ami.promotion_ssm_parameter' src/api/config/image_for_ec2_runners.yml)
-          AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/api/config/image_for_ec2_runners.yml)
+          AMI_SSM_PARAMETER=$(yq '.ami.promotion_ssm_parameter' src/api/build/image_for_ec2_runners/config.yml)
+          AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/api/build/image_for_ec2_runners/config.yml)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
           echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
@@ -425,7 +425,6 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_ec2_runners_post.yml'
-      - 'src/api/config/image_for_ec2_runners.yml'
       - 'src/api/build/image_for_ec2_runners/**'
       - 'test/api/workflows/image_for_ec2_runners_post/**'
       - '!**/README.md'
