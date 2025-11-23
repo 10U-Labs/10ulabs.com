@@ -85,9 +85,11 @@ def test_sigint_signal_registered(mock_run, mock_signal):
     assert mock_signal.call_args_list[1][0][0] == entrypoint.signal.SIGINT
 
 
+@patch('entrypoint.subprocess.run')
 @patch('entrypoint.cleanup_runner')
 @patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
-def test_signal_handler_calls_cleanup_runner(mock_cleanup):
+def test_signal_handler_calls_cleanup_runner(mock_cleanup, mock_run):
+    mock_run.return_value = Mock(returncode=0)
     with pytest.raises(SystemExit):
         entrypoint.main()
 
