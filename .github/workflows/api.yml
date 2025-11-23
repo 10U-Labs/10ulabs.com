@@ -163,7 +163,13 @@ jobs:
         with:
           tflint_version: latest
       - name: Install linting dependencies
-        run: pip install pylint mypy yamllint
+        run: pip install pylint mypy yamllint pytest boto3 PyYAML
+      - name: Run pylint
+        run: |
+          pylint \
+            test/api/ \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check -recursive
       - name: Terraform Init
