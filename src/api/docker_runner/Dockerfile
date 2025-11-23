@@ -47,7 +47,7 @@ RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-li
     npm install -g jsonlint && \
     npm cache clean --force
 
-RUN pip3 install --no-cache-dir \
+RUN pip3 install --no-cache-dir --break-system-packages \
         boto3 \
         boto3-stubs \
         botocore \
