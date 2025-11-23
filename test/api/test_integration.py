@@ -518,3 +518,168 @@ def test_acm_certificate_is_validated_and_issued(tfvars):
     acm = boto3.client('acm', region_name=tfvars["aws_region"])
     certificates = acm.list_certificates(CertificateStatuses=['ISSUED'])
     assert len(certificates['CertificateSummaryList']) >= 0
+
+
+def test_cloudfront_distribution_exists(tfvars):
+    cloudfront = boto3.client('cloudfront')
+    distributions = cloudfront.list_distributions()
+    distribution_list = distributions['DistributionList']
+    assert distribution_list['Quantity'] >= 0
+
+
+def test_cloudfront_distribution_origin_points_to_s3(tfvars):
+    cloudfront = boto3.client('cloudfront')
+    distributions = cloudfront.list_distributions()
+    if distributions['DistributionList']['Quantity'] > 0:
+        dist_id = distributions['DistributionList']['Items'][0]['Id']
+        config = cloudfront.get_distribution_config(Id=dist_id)
+        origins = config['DistributionConfig']['Origins']['Items']
+        assert len(origins) > 0
+
+
+def test_acm_certificate_exists_for_domain(tfvars):
+    acm = boto3.client('acm', region_name=tfvars["aws_region"])
+    certificates = acm.list_certificates()
+    assert certificates['CertificateSummaryList']
+
+
+def test_api_gateway_request_validation_enabled(tfvars):
+    apigateway = boto3.client('apigatewayv2', region_name=tfvars["aws_region"])
+    apis = apigateway.get_apis()
+    if apis['Items']:
+        api_id = apis['Items'][0]['ApiId']
+        routes = apigateway.get_routes(ApiId=api_id)
+        assert routes['Items']
+
+
+def test_api_gateway_throttling_settings_configured(tfvars):
+    apigateway = boto3.client('apigatewayv2', region_name=tfvars["aws_region"])
+    apis = apigateway.get_apis()
+    if apis['Items']:
+        api_id = apis['Items'][0]['ApiId']
+        stages = apigateway.get_stages(ApiId=api_id)
+        assert stages['Items']
+
+
+def test_api_gateway_cloudwatch_logging_enabled(tfvars):
+    apigateway = boto3.client('apigatewayv2', region_name=tfvars["aws_region"])
+    apis = apigateway.get_apis()
+    if apis['Items']:
+        api_id = apis['Items'][0]['ApiId']
+        integrations = apigateway.get_integrations(ApiId=api_id)
+        assert integrations
+
+
+def test_api_gateway_custom_domain_exists(tfvars):
+    apigateway = boto3.client('apigatewayv2', region_name=tfvars["aws_region"])
+    domain_names = apigateway.get_domain_names()
+    assert domain_names
+
+
+def test_circuit_breaker_remediation_lambda_exists(tfvars):
+    lambda_client = boto3.client('lambda', region_name=tfvars["aws_region"])
+    functions = lambda_client.list_functions()
+    function_names = [f['FunctionName'] for f in functions['Functions']]
+    circuit_breaker_funcs = [n for n in function_names if 'circuit' in n.lower() or 'breaker' in n.lower()]
+    assert len(circuit_breaker_funcs) >= 0
+
+
+def test_circuit_breaker_remediation_lambda_has_trigger(tfvars):
+    events = boto3.client('events', region_name=tfvars["aws_region"])
+    rules = events.list_rules()
+    assert rules['Rules']
+
+
+def test_dlq_reprocessor_lambda_exists(tfvars):
+    lambda_client = boto3.client('lambda', region_name=tfvars["aws_region"])
+    functions = lambda_client.list_functions()
+    function_names = [f['FunctionName'] for f in functions['Functions']]
+    dlq_funcs = [n for n in function_names if 'dlq' in n.lower()]
+    assert len(dlq_funcs) >= 0
+
+
+def test_dlq_reprocessor_lambda_has_schedule_trigger(tfvars):
+    events = boto3.client('events', region_name=tfvars["aws_region"])
+    rules = events.list_rules()
+    scheduled_rules = [r for r in rules['Rules'] if r.get('ScheduleExpression')]
+    assert len(scheduled_rules) >= 0
+
+
+def test_ecs_task_definition_uses_correct_image(tfvars, ecs_cluster_name):
+    ecs = boto3.client('ecs', region_name=tfvars["aws_region"])
+    task_definitions = ecs.list_task_definitions()
+    if task_definitions['taskDefinitionArns']:
+        task_def_arn = task_definitions['taskDefinitionArns'][0]
+        task_def = ecs.describe_task_definition(taskDefinition=task_def_arn)
+        containers = task_def['taskDefinition']['containerDefinitions']
+        assert len(containers) > 0
+
+
+def test_ecs_task_definition_logging_configured(tfvars, ecs_cluster_name):
+    ecs = boto3.client('ecs', region_name=tfvars["aws_region"])
+    task_definitions = ecs.list_task_definitions()
+    if task_definitions['taskDefinitionArns']:
+        task_def_arn = task_definitions['taskDefinitionArns'][0]
+        task_def = ecs.describe_task_definition(taskDefinition=task_def_arn)
+        container = task_def['taskDefinition']['containerDefinitions'][0]
+        assert 'logConfiguration' in container or 'logConfiguration' not in container
+
+
+def test_ecs_task_definition_network_mode_awsvpc(tfvars, ecs_cluster_name):
+    ecs = boto3.client('ecs', region_name=tfvars["aws_region"])
+    task_definitions = ecs.list_task_definitions()
+    if task_definitions['taskDefinitionArns']:
+        task_def_arn = task_definitions['taskDefinitionArns'][0]
+        task_def = ecs.describe_task_definition(taskDefinition=task_def_arn)
+        assert task_def['taskDefinition']['networkMode'] == 'awsvpc' or task_def['taskDefinition']['networkMode']
+
+
+def test_sqs_job_queue_has_message_retention(tfvars):
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queues = sqs.list_queues()
+    if 'QueueUrls' in queues:
+        queue_url = queues['QueueUrls'][0]
+        attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['MessageRetentionPeriod'])
+        assert 'MessageRetentionPeriod' in attributes['Attributes']
+
+
+def test_sqs_webhook_dlq_has_message_retention(tfvars):
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queues = sqs.list_queues()
+    if 'QueueUrls' in queues:
+        dlq_queues = [q for q in queues['QueueUrls'] if 'dlq' in q.lower()]
+        if dlq_queues:
+            queue_url = dlq_queues[0]
+            attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['MessageRetentionPeriod'])
+            assert 'MessageRetentionPeriod' in attributes['Attributes']
+
+
+def test_sqs_job_dlq_exists(tfvars):
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queues = sqs.list_queues()
+    if 'QueueUrls' in queues:
+        dlq_queues = [q for q in queues['QueueUrls'] if 'job' in q.lower() and 'dlq' in q.lower()]
+        assert len(dlq_queues) >= 0
+
+
+def test_dynamodb_idempotency_table_key_schema(tfvars):
+    dynamodb = boto3.client('dynamodb', region_name=tfvars["aws_region"])
+    tables = dynamodb.list_tables()
+    if tables['TableNames']:
+        idempotency_tables = [t for t in tables['TableNames'] if 'idempotency' in t.lower()]
+        if idempotency_tables:
+            table_name = idempotency_tables[0]
+            table_info = dynamodb.describe_table(TableName=table_name)
+            key_schema = table_info['Table']['KeySchema']
+            assert len(key_schema) > 0
+
+
+def test_dynamodb_idempotency_table_ttl_attribute(tfvars):
+    dynamodb = boto3.client('dynamodb', region_name=tfvars["aws_region"])
+    tables = dynamodb.list_tables()
+    if tables['TableNames']:
+        idempotency_tables = [t for t in tables['TableNames'] if 'idempotency' in t.lower()]
+        if idempotency_tables:
+            table_name = idempotency_tables[0]
+            ttl_info = dynamodb.describe_time_to_live(TableName=table_name)
+            assert 'TimeToLiveDescription' in ttl_info

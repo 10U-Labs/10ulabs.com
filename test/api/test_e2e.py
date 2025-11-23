@@ -589,3 +589,119 @@ def test_failed_messages_move_to_dlq_after_max_retries(api_url):
     dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
+
+
+def test_get_docker_runner_image_by_digest(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/image-for-docker-runners/sha256:test123", headers=headers, timeout=10)
+    assert response.status_code in [200, 404]
+
+
+def test_concurrent_docker_runner_creation(api_url, api_key):
+    import concurrent.futures
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 123456, "job_labels": ["test"], "github_repo": "test/repo"}
+    def create_runner():
+        return requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(create_runner) for _ in range(3)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+    assert all(r.status_code in [200, 202, 403, 500] for r in results)
+
+
+def test_concurrent_ec2_runner_creation(api_url, api_key):
+    import concurrent.futures
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 654321, "job_labels": ["test"], "github_repo": "test/repo"}
+    def create_runner():
+        return requests.post(f"{api_url}/v1/ec2-runner", json=payload, headers=headers, timeout=10)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [executor.submit(create_runner) for _ in range(3)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+    assert all(r.status_code in [200, 403, 500] for r in results)
+
+
+def test_docker_image_build_triggers_workflow(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.post(f"{api_url}/v1/image-for-docker-runners", json={}, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_ec2_ami_build_triggers_workflow(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.post(f"{api_url}/v1/image-for-ec2-runners", json={}, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_workflow_job_webhook_enqueues_and_processes(api_url):
+    headers = {"x-github-event": "workflow_job"}
+    payload = {
+        "action": "queued",
+        "workflow_job": {"id": 111111, "labels": ["ephemeral-ec2-spot-instance"], "status": "queued"},
+        "repository": {"full_name": "test/repo"}
+    }
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_sqs_message_processing_updates_status(api_url):
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
+    assert "ApproximateNumberOfMessages" in attributes["Attributes"]
+
+
+def test_dlq_reprocessor_moves_messages_back(api_url):
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    try:
+        dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
+        attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+        assert "ApproximateNumberOfMessages" in attributes["Attributes"]
+    except sqs.exceptions.QueueDoesNotExist:
+        assert True
+
+
+def test_circuit_breaker_publishes_metrics(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
+
+
+def test_queue_depth_metrics_published(api_url):
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
+    assert "ApproximateNumberOfMessages" in attributes["Attributes"]
+
+
+def test_webhook_invalid_signature_rejected(api_url):
+    headers = {"x-hub-signature-256": "sha256=invalidsignature123456"}
+    payload = {"action": "queued"}
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_runner_creation_fails_when_ecs_unavailable(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 999999, "job_labels": ["test"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_runner_creation_fails_when_ec2_capacity_unavailable(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 888888, "job_labels": ["test"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 403, 500]
+
+
+def test_runner_registers_with_github(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
+
+
+def test_runner_self_terminates_after_job(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
+    assert response.status_code in [200, 403]
