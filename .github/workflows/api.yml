@@ -10,7 +10,7 @@ jobs:
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
       github_pat_parameter_name: ${{ steps.config.outputs.github_pat_parameter_name }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
     needs:
       - declaring-common-variables
       - integration-testing
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
     needs:
       - declaring-common-variables
       - unit-testing
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,7 +111,7 @@ jobs:
     needs:
       - ensuring-infrastructure-in-desired-state
       - declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -194,7 +194,7 @@ jobs:
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -206,7 +206,7 @@ jobs:
         run: pip install pytest boto3 PyYAML
       - name: Run unit tests
         run: pytest test/api/test_unit.py -v
-name: Ensuring API exists and is properly configured [test]
+name: Ensuring API exists and is properly configured
 on:
   push:
     branches:
