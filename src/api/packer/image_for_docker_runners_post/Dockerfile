@@ -44,7 +44,7 @@ RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L \
 
 ARG NODE_VERSION=20.18.1
 RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz | \
-    tar -xJ -C /usr/local --strip-components=1 && \
+        tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g jsonlint && \
     npm cache clean --force
 
