@@ -1,15 +1,15 @@
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
+# Build outputs
+*.zip
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Build outputs
-*.zip
-
 # Python
 __pycache__/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
