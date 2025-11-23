@@ -427,7 +427,6 @@ on:
       - '.github/workflows/image_for_ec2_runners.yml'
       - 'src/build/image_for_ec2_runners/**'
       - 'test/build/image_for_ec2_runners/**'
-      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:

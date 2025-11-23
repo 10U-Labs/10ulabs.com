@@ -255,7 +255,6 @@ on:
       - '.github/workflows/image_for_docker_runners.yml'
       - 'src/build/image_for_docker_runners/**'
       - 'test/build/image_for_docker_runners/**'
-      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:
