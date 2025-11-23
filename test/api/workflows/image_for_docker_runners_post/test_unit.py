@@ -4,14 +4,14 @@ import sys
 from unittest.mock import MagicMock, Mock, call, patch
 import pytest
 from dockerfile_parse import DockerfileParser
-sys.path.insert(0, '/Users/jdrowne/Git/10ulabs.com/src/api/docker_runner')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner'))
 import entrypoint
 
 
 @pytest.fixture
 def dockerfile_parser():
     dfp = DockerfileParser()
-    dockerfile_path = '/Users/jdrowne/Git/10ulabs.com/src/api/docker_runner/Dockerfile'
+    dockerfile_path = os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner/Dockerfile')
     with open(dockerfile_path, 'r') as f:
         dfp.content = f.read()
     return dfp
