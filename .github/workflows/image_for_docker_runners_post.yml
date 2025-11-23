@@ -191,7 +191,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3 botocore
+        run: pip install pytest boto3 botocore dockerfile-parse
       - name: Run unit tests
         run: |
           pytest test/api/workflows/image_for_docker_runners_post/test_unit.py \
