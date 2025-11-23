@@ -175,9 +175,15 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_docker_runners_post.yml
       - name: Run pylint
-        run: pylint src/api/docker_runner/entrypoint.py test/api/workflows/image_for_docker_runners_post/
+        run: |
+          pylint \
+            src/api/docker_runner/entrypoint.py \
+            test/api/workflows/image_for_docker_runners_post/
       - name: Run mypy
-        run: mypy src/api/docker_runner/entrypoint.py test/api/workflows/image_for_docker_runners_post/
+        run: |
+          mypy \
+            src/api/docker_runner/entrypoint.py \
+            test/api/workflows/image_for_docker_runners_post/
       - name: Validate Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
