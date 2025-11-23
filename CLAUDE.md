@@ -31,6 +31,9 @@
 - Follow GitOps principles: all infrastructure and deployment changes must go through git commits and CI/CD workflows.
 - Never deploy infrastructure locally (no local `cdk deploy`, `terraform apply`, etc.). Always commit changes and let workflows handle deployments.
 - When troubleshooting GitHub Actions workflows, always check the workflow logs first.
+- Never use `gh run watch` as it requires interactive input.
+- Never use `sleep` command as it blocks user interaction.
+- Never run commands in the background.
 
 ## Testing Standards
 
