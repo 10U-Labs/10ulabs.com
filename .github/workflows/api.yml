@@ -223,11 +223,7 @@ on:
     paths:
       - '.github/workflows/api.yml'
       - 'src/api/**'
-      - '!src/build/**'
-      - 'test/api/conftest.py'
-      - 'test/api/test_e2e.py'
-      - 'test/api/test_integration.py'
-      - 'test/api/test_unit.py'
+      - 'test/api/**'
   workflow_dispatch:
     inputs:
       github_hosted:
