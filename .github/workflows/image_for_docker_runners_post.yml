@@ -70,7 +70,7 @@ jobs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -149,7 +149,7 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -197,7 +197,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -223,7 +223,7 @@ jobs:
     needs:
       - declaring-common-variables
       - performing-static-analysis
-    runs-on: ubuntu-latest
+    runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
