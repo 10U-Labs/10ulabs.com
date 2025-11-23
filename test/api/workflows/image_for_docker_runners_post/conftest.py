@@ -213,6 +213,7 @@ def login_to_ecr(region):
 def start_runner_container(uri, repo, name, labels, token):
     args = [
         "docker", "run", "--rm",
+        "--platform", "linux/arm64",
         uri,
         "--repo", repo,
         "--name", name,

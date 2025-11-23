@@ -9,6 +9,7 @@ def test_runner_fails_with_invalid_registration_token(ecr_image_uri, github_repo
     result = subprocess.run(
         [
             "docker", "run", "--rm",
+            "--platform", "linux/arm64",
             ecr_image_uri,
             "--repo", github_repo,
             "--name", "e2e-test-runner-invalid",
