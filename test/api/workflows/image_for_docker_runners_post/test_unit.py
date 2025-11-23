@@ -283,6 +283,66 @@ def test_dockerfile_installs_sudo(dockerfile_parser):
     assert content.find('sudo') != -1
 
 
+def test_dockerfile_installs_ca_certificates(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('ca-certificates') != -1
+
+
+def test_dockerfile_installs_gnupg(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('gnupg') != -1
+
+
+def test_dockerfile_installs_libicu76(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('libicu76') != -1
+
+
+def test_dockerfile_installs_libssl3t64(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('libssl3t64') != -1
+
+
+def test_dockerfile_installs_liblttng_ust1(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('liblttng-ust1') != -1
+
+
+def test_dockerfile_installs_procps(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('procps') != -1
+
+
+def test_dockerfile_installs_python3_venv(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('python3-venv') != -1
+
+
+def test_dockerfile_installs_tar(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('tar') != -1
+
+
+def test_dockerfile_installs_unzip(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('unzip') != -1
+
+
+def test_dockerfile_installs_wget(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('wget') != -1
+
+
+def test_dockerfile_installs_xz_utils(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('xz-utils') != -1
+
+
+def test_dockerfile_installs_zlib1g(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('zlib1g') != -1
+
+
 def test_dockerfile_cleans_apt_lists(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('rm -rf /var/lib/apt/lists/*') != -1
@@ -301,6 +361,11 @@ def test_dockerfile_aws_cli_targets_aarch64(dockerfile_parser):
 def test_dockerfile_downloads_awscliv2_zip(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('awscliv2.zip') != -1
+
+
+def test_dockerfile_installs_aws_cli(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('./aws/install') != -1
 
 
 def test_dockerfile_cleans_up_awscliv2_zip(dockerfile_parser):
@@ -373,6 +438,11 @@ def test_dockerfile_nodejs_targets_linux_arm64(dockerfile_parser):
     assert content.find('node-v${NODE_VERSION}-linux-arm64.tar.xz') != -1
 
 
+def test_dockerfile_nodejs_extracts_to_usr_local(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('tar -xJ -C /usr/local --strip-components=1') != -1
+
+
 def test_dockerfile_npm_installs_jsonlint_globally(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('npm install -g jsonlint') != -1
@@ -391,6 +461,26 @@ def test_dockerfile_pip3_installs_boto3(dockerfile_parser):
 def test_dockerfile_pip3_installs_botocore(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('botocore') != -1
+
+
+def test_dockerfile_pip3_installs_boto3_stubs(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('boto3-stubs') != -1
+
+
+def test_dockerfile_pip3_installs_dnspython(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('dnspython') != -1
+
+
+def test_dockerfile_pip3_installs_pyyaml(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('PyYAML') != -1
+
+
+def test_dockerfile_pip3_installs_requests(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('requests') != -1
 
 
 def test_dockerfile_pip3_installs_mypy(dockerfile_parser):
@@ -418,6 +508,11 @@ def test_dockerfile_pip3_uses_no_cache_dir(dockerfile_parser):
     assert content.find('--no-cache-dir') != -1
 
 
+def test_dockerfile_pip3_uses_break_system_packages(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('--break-system-packages') != -1
+
+
 def test_dockerfile_pip_cache_cleanup(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('rm -rf /root/.cache/pip') != -1
@@ -433,9 +528,19 @@ def test_dockerfile_terraform_targets_linux_arm64(dockerfile_parser):
     assert content.find('terraform_${TERRAFORM_VERSION}_linux_arm64.zip') != -1
 
 
+def test_dockerfile_terraform_unzips(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('unzip "terraform_${TERRAFORM_VERSION}_linux_arm64.zip"') != -1
+
+
 def test_dockerfile_tflint_uses_tflint_latest(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('${TFLINT_LATEST}') != -1
+
+
+def test_dockerfile_tflint_unzips(dockerfile_parser):
+    content = dockerfile_parser.content
+    assert content.find('unzip "tflint_linux_arm64.zip"') != -1
 
 
 def test_dockerfile_tools_moved_to_usr_local_bin(dockerfile_parser):
