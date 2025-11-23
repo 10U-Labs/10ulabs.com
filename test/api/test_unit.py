@@ -454,7 +454,7 @@ def test_lambda_handler_health_check_returns_200(webhook_router, lambda_context)
     assert_response_status(response, 200)
 
 
-def test_lambda_handler_health_check_returns_circuit_breaker_state(webhook_router, lambda_context):
+def test_lambda_handler_health_check_returnscircuit_breaker_state(webhook_router, lambda_context):
     event = {'path': '/v1/runners/health', 'httpMethod': 'GET'}
     response = webhook_router.lambda_handler(event, lambda_context)
     body = parse_response_body(response)
@@ -556,59 +556,59 @@ def test_verify_signature_with_malformed_header_returns_false(webhook_router):
 
 
 def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'closed'
-    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'):
         result = webhook_router.check_circuit_breaker()
     assert result is True
 
 
 def test_check_circuit_breaker_open_state_returns_false(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'open'
-    webhook_router._circuit_breaker_state['last_failure_time'] = time.time()
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time()
     with patch('boto3.client'):
         result = webhook_router.check_circuit_breaker()
     assert result is False
 
 
 def test_check_circuit_breaker_transitions_to_half_open_after_timeout(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'open'
-    webhook_router._circuit_breaker_state['last_failure_time'] = time.time() - 61
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
     with patch('boto3.client'):
         result = webhook_router.check_circuit_breaker()
     assert result is True
 
 
 def test_check_circuit_breaker_opens_after_threshold_failures(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'closed'
-    webhook_router._circuit_breaker_state['failures'] = 5
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 5
     with patch('boto3.client'):
         result = webhook_router.check_circuit_breaker()
     assert result is False
 
 
 def test_record_circuit_breaker_success_resets_failures(webhook_router):
-    webhook_router._circuit_breaker_state['failures'] = 3
+    webhook_router.circuit_breaker_state['failures'] = 3
     webhook_router.record_circuit_breaker_success()
-    assert webhook_router._circuit_breaker_state['failures'] == 0
+    assert webhook_router.circuit_breaker_state['failures'] == 0
 
 
 def test_record_circuit_breaker_success_closes_half_open_circuit(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'half-open'
+    webhook_router.circuit_breaker_state['state'] = 'half-open'
     webhook_router.record_circuit_breaker_success()
-    assert webhook_router._circuit_breaker_state['state'] == 'closed'
+    assert webhook_router.circuit_breaker_state['state'] == 'closed'
 
 
 def test_record_circuit_breaker_failure_increments_count(webhook_router):
-    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.circuit_breaker_state['failures'] = 0
     webhook_router.record_circuit_breaker_failure()
-    assert webhook_router._circuit_breaker_state['failures'] == 1
+    assert webhook_router.circuit_breaker_state['failures'] == 1
 
 
 def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'half-open'
+    webhook_router.circuit_breaker_state['state'] = 'half-open'
     webhook_router.record_circuit_breaker_failure()
-    assert webhook_router._circuit_breaker_state['state'] == 'open'
+    assert webhook_router.circuit_breaker_state['state'] == 'open'
 
 
 def test_check_and_record_idempotency_with_new_request_returns_false(webhook_router):
@@ -644,8 +644,8 @@ def test_enqueue_job_returns_error_when_queue_url_not_set(webhook_router):
 
 
 def test_route_runner_request_with_ec2_label_calls_ec2_endpoint(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'closed'
-    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({'success': True}).encode()
@@ -656,8 +656,8 @@ def test_route_runner_request_with_ec2_label_calls_ec2_endpoint(webhook_router):
 
 
 def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'closed'
-    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({'success': True}).encode()
@@ -668,16 +668,16 @@ def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_r
 
 
 def test_route_runner_request_with_no_matching_labels_returns_error(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'closed'
-    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'):
         result = webhook_router.route_runner_request(123, ['other-label'], 'test/repo')
     assert result['success'] is False
 
 
 def test_route_runner_request_rejected_when_circuit_breaker_open(webhook_router):
-    webhook_router._circuit_breaker_state['state'] = 'open'
-    webhook_router._circuit_breaker_state['last_failure_time'] = time.time()
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time()
     with patch('boto3.client'):
         result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
     assert result['success'] is False
@@ -731,8 +731,8 @@ def test_handle_sqs_message_processes_valid_message(webhook_router):
             'github_repo': 'test/repo'
         })
     }
-    webhook_router._circuit_breaker_state['state'] = 'closed'
-    webhook_router._circuit_breaker_state['failures'] = 0
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.read.return_value = json.dumps({'success': True}).encode()
@@ -778,7 +778,7 @@ def test_get_webhook_secret_retrieves_from_ssm(webhook_router, mock_ssm):
     assert secret == 'test-secret'
 
 
-def test_get_webhook_secret_caches_value(webhook_router, mock_ssm):
+def test_getwebhook_secret_caches_value(webhook_router, mock_ssm):
     mock_ssm.get_parameter.return_value = {
         'Parameter': {'Value': 'test-secret'}
     }
@@ -791,7 +791,7 @@ def test_get_webhook_secret_force_refresh_clears_cache(webhook_router, mock_ssm)
     mock_ssm.get_parameter.return_value = {
         'Parameter': {'Value': 'test-secret'}
     }
-    webhook_router._webhook_secret_cache['value'] = 'old-secret'
+    webhook_router.webhook_secret_cache['value'] = 'old-secret'
     secret = webhook_router.get_webhook_secret(force_refresh=True)
     assert secret == 'test-secret'
 
@@ -829,7 +829,7 @@ def test_verify_webhook_signature_with_valid_signature_returns_empty_dict(webhoo
     mock_ssm.get_parameter.return_value = {
         'Parameter': {'Value': 'test-secret'}
     }
-    webhook_router._webhook_secret_cache['value'] = None
+    webhook_router.webhook_secret_cache['value'] = None
     payload = 'test payload'
     signature = webhook_router.hmac.new(
         'test-secret'.encode('utf-8'),
@@ -845,7 +845,7 @@ def test_verify_webhook_signature_with_invalid_signature_returns_401(webhook_rou
     mock_ssm.get_parameter.return_value = {
         'Parameter': {'Value': 'test-secret'}
     }
-    webhook_router._webhook_secret_cache['value'] = None
+    webhook_router.webhook_secret_cache['value'] = None
     result = webhook_router.verify_webhook_signature('payload', 'sha256=invalid')
     assert result['statusCode'] == 401
 
@@ -865,7 +865,7 @@ def test_handle_api_gateway_event_with_workflow_job_processes_correctly(webhook_
         }),
         'headers': {'x-github-event': 'workflow_job'}
     }
-    webhook_router._clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+    webhook_router.clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
     with patch('boto3.client') as mock_boto:
         mock_sqs = MagicMock()
         mock_boto.return_value = mock_sqs
@@ -907,7 +907,7 @@ def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, lamb
     assert_response_status(response, 200)
 
 
-def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, lambda_context):
+def test_handler_returnscircuit_breaker_state(circuit_breaker_remediation, lambda_context):
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()

@@ -1,6 +1,8 @@
 import ast
 import importlib.util
 import json
+import os
+import re
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
@@ -8,6 +10,21 @@ import boto3
 from botocore.exceptions import ClientError
 import pytest
 import yaml
+
+
+@pytest.fixture(name="tfvars", scope="module")
+def tfvars_fixture():
+    tfvars_path = os.path.join(os.path.dirname(__file__), "../../src/api/terraform.tfvars")
+    config = {}
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+                if match:
+                    key, value = match.groups()
+                    config[key] = value.strip('"')
+    return config
 
 
 @pytest.fixture(name="cfg")

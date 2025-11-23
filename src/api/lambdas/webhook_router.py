@@ -15,9 +15,9 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
-_webhook_secret_cache = {'value': None}
-_circuit_breaker_state: Dict[str, Any] = {
+clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+webhook_secret_cache = {'value': None}
+circuit_breaker_state: Dict[str, Any] = {
     'failures': 0,
     'last_failure_time': 0.0,
     'state': 'closed'
@@ -25,27 +25,27 @@ _circuit_breaker_state: Dict[str, Any] = {
 
 
 def get_ssm_client():
-    if _clients['ssm'] is None:
-        _clients['ssm'] = boto3.client('ssm')
-    return _clients['ssm']
+    if clients['ssm'] is None:
+        clients['ssm'] = boto3.client('ssm')
+    return clients['ssm']
 
 
 def get_dynamodb_client():
-    if _clients['dynamodb'] is None:
-        _clients['dynamodb'] = boto3.client('dynamodb')
-    return _clients['dynamodb']
+    if clients['dynamodb'] is None:
+        clients['dynamodb'] = boto3.client('dynamodb')
+    return clients['dynamodb']
 
 
 def get_sqs_client():
-    if _clients['sqs'] is None:
-        _clients['sqs'] = boto3.client('sqs')
-    return _clients['sqs']
+    if clients['sqs'] is None:
+        clients['sqs'] = boto3.client('sqs')
+    return clients['sqs']
 
 
 def get_cloudwatch_client():
-    if _clients['cloudwatch'] is None:
-        _clients['cloudwatch'] = boto3.client('cloudwatch')
-    return _clients['cloudwatch']
+    if clients['cloudwatch'] is None:
+        clients['cloudwatch'] = boto3.client('cloudwatch')
+    return clients['cloudwatch']
 
 
 def publish_metric(metric_name: str, value: float, unit: str = 'None'):
@@ -99,20 +99,20 @@ def check_circuit_breaker() -> bool:
     failure_threshold = 5
     timeout_seconds = 60
 
-    if _circuit_breaker_state['state'] == 'open':
-        if current_time - _circuit_breaker_state['last_failure_time'] > timeout_seconds:
+    if circuit_breaker_state['state'] == 'open':
+        if current_time - circuit_breaker_state['last_failure_time'] > timeout_seconds:
             logger.info("Circuit breaker transitioning to half-open state")
-            _circuit_breaker_state['state'] = 'half-open'
-            _circuit_breaker_state['failures'] = 0
+            circuit_breaker_state['state'] = 'half-open'
+            circuit_breaker_state['failures'] = 0
             publish_metric('CircuitBreakerState', 1.0, 'Count')
             return True
         publish_metric('CircuitBreakerState', 2.0, 'Count')
         return False
 
-    if _circuit_breaker_state['failures'] >= failure_threshold:
-        logger.warning("Circuit breaker opening due to %d failures", _circuit_breaker_state['failures'])
-        _circuit_breaker_state['state'] = 'open'
-        _circuit_breaker_state['last_failure_time'] = current_time
+    if circuit_breaker_state['failures'] >= failure_threshold:
+        logger.warning("Circuit breaker opening due to %d failures", circuit_breaker_state['failures'])
+        circuit_breaker_state['state'] = 'open'
+        circuit_breaker_state['last_failure_time'] = current_time
         publish_metric('CircuitBreakerState', 2.0, 'Count')
         return False
 
@@ -121,18 +121,18 @@ def check_circuit_breaker() -> bool:
 
 
 def record_circuit_breaker_success():
-    if _circuit_breaker_state['state'] == 'half-open':
+    if circuit_breaker_state['state'] == 'half-open':
         logger.info("Circuit breaker closing after successful request")
-        _circuit_breaker_state['state'] = 'closed'
-    _circuit_breaker_state['failures'] = 0
+        circuit_breaker_state['state'] = 'closed'
+    circuit_breaker_state['failures'] = 0
 
 
 def record_circuit_breaker_failure():
-    _circuit_breaker_state['failures'] += 1
-    _circuit_breaker_state['last_failure_time'] = time.time()
-    if _circuit_breaker_state['state'] == 'half-open':
+    circuit_breaker_state['failures'] += 1
+    circuit_breaker_state['last_failure_time'] = time.time()
+    if circuit_breaker_state['state'] == 'half-open':
         logger.warning("Circuit breaker reopening after failed request in half-open state")
-        _circuit_breaker_state['state'] = 'open'
+        circuit_breaker_state['state'] = 'open'
 
 
 def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -164,16 +164,16 @@ def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_webhook_secret(force_refresh: bool = False) -> str:
     if force_refresh:
-        _webhook_secret_cache['value'] = None
+        webhook_secret_cache['value'] = None
 
-    secret = _webhook_secret_cache['value']
+    secret = webhook_secret_cache['value']
     if not secret:
         parameter_name = os.environ.get('WEBHOOK_SECRET_NAME', '/api-webhook-secret')
         try:
             ssm = get_ssm_client()
             response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
             secret = response['Parameter']['Value']
-            _webhook_secret_cache['value'] = secret
+            webhook_secret_cache['value'] = secret
         except ClientError as e:
             logger.error("Failed to retrieve webhook secret: %s", e)
             raise RuntimeError(f"Cannot retrieve webhook secret: {e}") from e
@@ -327,7 +327,7 @@ def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
 def handle_health_check() -> Dict[str, Any]:
     health_status = {
         'status': 'healthy',
-        'circuit_breaker': _circuit_breaker_state['state'],
+        'circuit_breaker': circuit_breaker_state['state'],
         'timestamp': int(time.time())
     }
     return {

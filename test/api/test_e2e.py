@@ -1,24 +1,6 @@
-import os
-import re
 import boto3
 import pytest
 import requests
-from botocore.exceptions import ClientError
-
-
-@pytest.fixture(name="tfvars", scope="module")
-def tfvars_fixture():
-    tfvars_path = os.path.join(os.path.dirname(__file__), "../../src/api/terraform.tfvars")
-    config = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    config[key] = value.strip('"')
-    return config
 
 
 @pytest.fixture(name="api_url", scope="module")
@@ -28,12 +10,10 @@ def api_url_fixture(tfvars):
 
 @pytest.fixture(name="api_key", scope="module")
 def api_key_fixture(tfvars):
-    ssm_client = boto3.client('ssm', region_name=tfvars.get('aws_region', 'us-east-1'))
-    try:
-        response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
-        return response['Parameter']['Value']
-    except ClientError:
-        return None
+    region = tfvars.get('aws_region', 'us-east-1')
+    client = boto3.client('ssm', region_name=region)
+    param_response = client.get_parameter(Name='/api/key', WithDecryption=True)
+    return param_response['Parameter']['Value'] if param_response else None
 
 
 def test_health_endpoint_responds(api_url):
