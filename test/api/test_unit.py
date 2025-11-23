@@ -2673,3 +2673,468 @@ def test_lambda_handler_unknown_route_returns_404(v1_handler, lambda_context):
     event = {'path': '/v1/unknown', 'httpMethod': 'GET'}
     response = v1_handler.lambda_handler(event, lambda_context)
     assert response['statusCode'] == 404
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'closed'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    assert response['statusCode'] == 200
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_without_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    assert response['statusCode'] == 500
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'closed'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'closed'
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'open'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'open'
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'half-open'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'half-open'
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.side_effect = ClientError({'Error': {'Code': 'ServiceException', 'Message': 'Test error'}}, 'Invoke')
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'unknown'
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 500, 'body': json.dumps({'error': 'Internal error'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'unknown'
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'open'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['action'] == 'monitored'
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'closed'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['action'] == 'none'
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {'Messages': []}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    assert response['statusCode'] == 200
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['job_dlq']['reprocessed'] == 1
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    dlq_reprocessor.handler({}, lambda_context)
+    assert mock_sqs.delete_message.called
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'SendMessage')
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['job_dlq']['failed'] == 1
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage')
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert 'error' in body['job_dlq']
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {'Messages': []}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['webhook_dlq']['note'] == 'Manual intervention required'
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data1"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}},
+            {'Body': '{"test": "data2"}', 'ReceiptHandle': 'handle2', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['job_dlq']['reprocessed'] == 2
+
+
+@patch('boto3.client')
+def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {'attr1': {'StringValue': 'value1'}}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    dlq_reprocessor.handler({}, lambda_context)
+    call_args = mock_sqs.send_message.call_args
+    assert 'MessageAttributes' in call_args[1]
+
+
+@patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+@patch('boto3.client')
+def test_v1_get_github_token_failure(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound', 'Message': 'Not found'}}, 'GetParameter')
+    mock_boto_client.return_value = mock_ssm
+    token = v1_handler.get_github_token()
+    assert token == ''
+
+
+@patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+@patch('boto3.client')
+def test_v1_get_github_token_success_caches_value(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    mock_boto_client.return_value = mock_ssm
+    token1 = v1_handler.get_github_token()
+    token2 = v1_handler.get_github_token()
+    assert token1 == 'test-token'
+    assert mock_ssm.get_parameter.call_count == 1
+
+
+@patch('urllib.request.urlopen')
+def test_v1_get_runner_registration_token_failure(mock_urlopen, v1_handler):
+    mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Internal Server Error', {}, None)
+    token = v1_handler.get_runner_registration_token('test-token', 'test/repo')
+    assert token == ''
+
+
+@patch('urllib.request.urlopen')
+def test_v1_get_runner_registration_token_invalid_json(mock_urlopen, v1_handler):
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'invalid json'
+    mock_response.__enter__.return_value = mock_response
+    mock_urlopen.return_value = mock_response
+    token = v1_handler.get_runner_registration_token('test-token', 'test/repo')
+    assert token == ''
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token', 'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't3.small', 'EC2_IAM_INSTANCE_PROFILE': 'test-profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1'})
+def test_v1_launch_ec2_spot_runner_capacity_exhaustion_all_azs(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z', 'State': 'available', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
+    }
+    mock_ec2.run_instances.side_effect = ClientError({'Error': {'Code': 'InsufficientInstanceCapacity', 'Message': 'No capacity'}}, 'RunInstances')
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'})
+def test_v1_trigger_ami_creation_failure(mock_boto_client, v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
+        result = v1_handler.trigger_ami_creation()
+        assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_v1_get_latest_ami_no_images_available(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    ami_id = v1_handler.get_latest_ami()
+    assert ami_id == ''
+
+
+@patch('boto3.client')
+def test_v1_get_latest_ami_ec2_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    ami_id = v1_handler.get_latest_ami()
+    assert ami_id == ''
+
+
+@patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'})
+def test_v1_trigger_image_creation_http_error(v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
+        result = v1_handler.trigger_image_creation()
+        assert result['success'] is False
+
+
+@patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'})
+def test_v1_trigger_image_creation_url_error(v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+        result = v1_handler.trigger_image_creation()
+        assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_get_latest_ecr_image_no_stable_images(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [
+            {'imageTags': ['latest'], 'imageDigest': 'sha256:abc', 'imagePushedAt': datetime(2024, 1, 1), 'imageSizeInBytes': 1000}
+        ]
+    }
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.get_latest_ecr_image()
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_get_latest_ecr_image_ecr_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'RepositoryNotFoundException', 'Message': 'Not found'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.get_latest_ecr_image()
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_delete_ecr_image_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.batch_delete_image.side_effect = ClientError({'Error': {'Code': 'InvalidParameterException', 'Message': 'Invalid'}}, 'BatchDeleteImage')
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.delete_ecr_image('sha256:test')
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'})
+def test_v1_get_docker_runner_status_ecs_error(mock_boto_client, v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.side_effect = ClientError({'Error': {'Code': 'ClusterNotFoundException', 'Message': 'Not found'}}, 'ListTasks')
+    mock_boto_client.return_value = mock_ecs
+    result = v1_handler.get_docker_runner_status()
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_v1_get_ec2_runner_status_ec2_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeInstances')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_ec2_runner_status()
+    assert result['success'] is False
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_create_ec2_user_data_script_format(v1_handler):
+    user_data = v1_handler._create_ec2_user_data('test-token', ['label1', 'label2'], 'owner/repo')
+    assert 'config.sh' in user_data
+    assert 'test-token' in user_data
+    assert 'label1,label2' in user_data
+    assert 'owner/repo' in user_data
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
+def test_v1_create_ec2_user_data_includes_region(v1_handler):
+    user_data = v1_handler._create_ec2_user_data('token', ['label'], 'repo')
+    assert 'us-east-1' in user_data
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
+def test_v1_create_ec2_user_data_includes_self_termination(v1_handler):
+    user_data = v1_handler._create_ec2_user_data('token', ['label'], 'repo')
+    assert 'terminate-instances' in user_data
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECS_CLUSTER': 'test', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_launch_fargate_runner_ecs_error(mock_boto_client, v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'RunTask')
+    mock_boto_client.return_value = mock_ecs
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['label'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECS_CLUSTER': 'test', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_launch_fargate_runner_no_tasks_in_response(mock_boto_client, v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [], 'failures': [{'reason': 'RESOURCE:CPU', 'arn': 'arn:task'}]}
+    mock_boto_client.return_value = mock_ecs
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['label'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_v1_deregister_ami_snapshot_deletion_failure(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
+    }
+    mock_ec2.deregister_image.return_value = {}
+    mock_ec2.delete_snapshot.side_effect = ClientError({'Error': {'Code': 'InvalidSnapshot.InUse', 'Message': 'In use'}}, 'DeleteSnapshot')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.deregister_ami('ami-123')
+    assert result['success'] is True
+
+
+@patch('boto3.client')
+def test_v1_deregister_ami_image_not_found(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.deregister_ami('ami-123')
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_list_ecr_images_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'RepositoryNotFoundException', 'Message': 'Not found'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.list_ecr_images()
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_v1_list_amis_client_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.list_amis()
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_v1_get_latest_ami_details_ssm_parameter_not_found_fallback(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound', 'Message': 'Not found'}}, 'GetParameter')
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-123', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01T00:00:00.000Z', 'Architecture': 'x86_64', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
+    }
+    def client_side_effect(service_name):
+        return mock_ssm if service_name == 'ssm' else mock_ec2
+    mock_boto_client.side_effect = client_side_effect
+    result = v1_handler.get_latest_ami_details()
+    assert result['success'] is True

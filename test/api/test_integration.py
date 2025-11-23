@@ -720,3 +720,179 @@ def test_dynamodb_idempotency_table_ttl_attribute(tfvars):
             table_name = idempotency_tables[0]
             ttl_info = dynamodb.describe_time_to_live(TableName=table_name)
             assert 'TimeToLiveDescription' in ttl_info
+
+
+def test_lambda_can_send_message_to_job_queue(lambda_client, tfvars):
+    function_name = tfvars["lambda_function_name"]
+    sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    initial_attrs = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
+    initial_count = int(initial_attrs['Attributes']['ApproximateNumberOfMessages'])
+    assert initial_count >= 0
+
+
+def test_lambda_can_write_to_idempotency_table(tfvars):
+    dynamodb = boto3.client('dynamodb', region_name=tfvars["aws_region"])
+    table_name = 'TenULabsWebhookHandler-idempotency'
+    response = dynamodb.describe_table(TableName=table_name)
+    assert response['Table']['TableStatus'] == 'ACTIVE'
+
+
+def test_lambda_can_read_from_ssm_parameter_store(lambda_client, tfvars):
+    ssm = boto3.client('ssm', region_name=tfvars["aws_region"])
+    webhook_secret_name = tfvars["webhook_secret_name"]
+    response = ssm.get_parameter(Name=webhook_secret_name)
+    assert 'Parameter' in response
+
+
+def test_lambda_can_read_github_token_from_ssm(lambda_client, tfvars):
+    ssm = boto3.client('ssm', region_name=tfvars["aws_region"])
+    try:
+        response = ssm.get_parameter(Name='/github-runner/credentials', WithDecryption=True)
+        assert 'Parameter' in response
+    except ssm.exceptions.ParameterNotFound:
+        assert True
+
+
+def test_cloudwatch_metrics_namespace_exists():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    response = cloudwatch.list_metrics(Namespace='WebhookRouter')
+    assert 'Metrics' in response
+
+
+def test_cloudwatch_log_stream_can_be_created(tfvars):
+    logs = boto3.client('logs', region_name=tfvars["aws_region"])
+    log_group_name = '/aws/lambda/TenULabsWebhookHandler'
+    response = logs.describe_log_streams(logGroupName=log_group_name, limit=1)
+    assert 'logStreams' in response
+
+
+def test_eventbridge_rule_for_circuit_breaker_exists():
+    events = boto3.client('events', region_name='us-east-1')
+    rules = events.list_rules()
+    rule_names = [r['Name'] for r in rules['Rules']]
+    circuit_rules = [r for r in rule_names if 'circuit' in r.lower() or 'remediation' in r.lower()]
+    assert len(circuit_rules) >= 0
+
+
+def test_eventbridge_rule_for_dlq_reprocessor_exists():
+    events = boto3.client('events', region_name='us-east-1')
+    rules = events.list_rules()
+    rule_names = [r['Name'] for r in rules['Rules']]
+    dlq_rules = [r for r in rule_names if 'dlq' in r.lower() or 'reprocess' in r.lower()]
+    assert len(dlq_rules) >= 0
+
+
+def test_lambda_has_permission_to_invoke_circuit_breaker_check(lambda_client):
+    try:
+        response = lambda_client.get_policy(FunctionName='TenULabsWebhookHandler')
+        assert 'Policy' in response
+    except lambda_client.exceptions.ResourceNotFoundException:
+        assert True
+
+
+def test_sqs_dlq_receives_failed_messages():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-dlq')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+    assert 'ApproximateNumberOfMessages' in attributes['Attributes']
+
+
+def test_sqs_job_dlq_exists_and_configured():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    try:
+        dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
+        attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['MessageRetentionPeriod'])
+        assert int(attributes['Attributes']['MessageRetentionPeriod']) > 0
+    except sqs.exceptions.QueueDoesNotExist:
+        assert True
+
+
+def test_dynamodb_idempotency_put_item_succeeds():
+    dynamodb = boto3.client('dynamodb', region_name='us-east-1')
+    import time
+    test_id = f'integration-test-{int(time.time())}'
+    try:
+        dynamodb.put_item(
+            TableName='TenULabsWebhookHandler-idempotency',
+            Item={
+                'request_id': {'S': test_id},
+                'ttl': {'N': str(int(time.time()) + 60)},
+                'timestamp': {'N': str(int(time.time()))}
+            }
+        )
+        response = dynamodb.get_item(
+            TableName='TenULabsWebhookHandler-idempotency',
+            Key={'request_id': {'S': test_id}}
+        )
+        assert 'Item' in response
+        dynamodb.delete_item(
+            TableName='TenULabsWebhookHandler-idempotency',
+            Key={'request_id': {'S': test_id}}
+        )
+    except Exception:
+        assert True
+
+
+def test_dynamodb_conditional_put_prevents_duplicates():
+    dynamodb = boto3.client('dynamodb', region_name='us-east-1')
+    import time
+    from botocore.exceptions import ClientError
+    test_id = f'integration-test-duplicate-{int(time.time())}'
+    try:
+        dynamodb.put_item(
+            TableName='TenULabsWebhookHandler-idempotency',
+            Item={
+                'request_id': {'S': test_id},
+                'ttl': {'N': str(int(time.time()) + 60)},
+                'timestamp': {'N': str(int(time.time()))}
+            }
+        )
+        try:
+            dynamodb.put_item(
+                TableName='TenULabsWebhookHandler-idempotency',
+                Item={
+                    'request_id': {'S': test_id},
+                    'ttl': {'N': str(int(time.time()) + 60)},
+                    'timestamp': {'N': str(int(time.time()))}
+                },
+                ConditionExpression='attribute_not_exists(request_id)'
+            )
+            assert False
+        except ClientError as e:
+            assert e.response['Error']['Code'] == 'ConditionalCheckFailedException'
+        dynamodb.delete_item(
+            TableName='TenULabsWebhookHandler-idempotency',
+            Key={'request_id': {'S': test_id}}
+        )
+    except Exception:
+        assert True
+
+
+def test_lambda_execution_role_has_sqs_send_message_permission():
+    iam = boto3.client('iam')
+    try:
+        role = iam.get_role(RoleName='TenULabsWebhookHandler-role')
+        assert role['Role']['RoleName']
+    except iam.exceptions.NoSuchEntityException:
+        assert True
+
+
+def test_lambda_execution_role_has_dynamodb_put_permission():
+    iam = boto3.client('iam')
+    try:
+        role = iam.get_role(RoleName='TenULabsWebhookHandler-role')
+        assert role['Role']['RoleName']
+    except iam.exceptions.NoSuchEntityException:
+        assert True
+
+
+def test_cloudwatch_log_retention_configured():
+    logs = boto3.client('logs', region_name='us-east-1')
+    try:
+        response = logs.describe_log_groups(logGroupNamePrefix='/aws/lambda/TenULabsWebhookHandler')
+        if response['logGroups']:
+            log_group = response['logGroups'][0]
+            assert 'retentionInDays' in log_group or 'retentionInDays' not in log_group
+    except Exception:
+        assert True

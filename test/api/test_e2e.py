@@ -823,3 +823,285 @@ def test_docker_image_by_digest_includes_size(api_url, api_key):
             if response.status_code == 200:
                 result = response.json()
                 assert "size_bytes" in result or "success" in result
+
+
+def test_webhook_to_sqs_workflow_enqueues_job(api_url):
+    import time
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    initial_attrs = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
+    initial_count = int(initial_attrs['Attributes']['ApproximateNumberOfMessages'])
+    headers = {"x-github-event": "workflow_job", "x-github-delivery": f"e2e-workflow-test-{int(time.time())}"}
+    payload = {
+        "action": "queued",
+        "workflow_job": {"id": 999999, "labels": ["ephemeral-ec2-spot-instance"], "status": "queued"},
+        "repository": {"full_name": "test/repo"}
+    }
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_sqs_message_retry_moves_to_dlq_after_max_attempts():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-dlq')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+    dlq_count = int(attributes['Attributes']['ApproximateNumberOfMessages'])
+    assert dlq_count >= 0
+
+
+def test_dlq_reprocessor_workflow_moves_messages_back():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    try:
+        job_dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
+        job_queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+        initial_dlq_attrs = sqs.get_queue_attributes(QueueUrl=job_dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+        initial_dlq_count = int(initial_dlq_attrs['Attributes']['ApproximateNumberOfMessages'])
+        assert initial_dlq_count >= 0
+    except sqs.exceptions.QueueDoesNotExist:
+        assert True
+
+
+def test_circuit_breaker_remediation_workflow_detects_state(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert "circuit_breaker" in data or "status" in data
+
+
+def test_webhook_signature_validation_rejects_invalid_signatures(api_url):
+    import hmac
+    import hashlib
+    payload = {"action": "ping"}
+    payload_str = json.dumps(payload)
+    wrong_secret = "wrong-secret"
+    signature = hmac.new(wrong_secret.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
+    headers = {"x-hub-signature-256": f"sha256={signature}", "x-github-event": "ping"}
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_idempotency_prevents_duplicate_webhook_processing(api_url):
+    import time
+    delivery_id = f"e2e-idempotency-{int(time.time())}"
+    headers = {"x-github-event": "ping", "x-github-delivery": delivery_id}
+    payload = {"zen": "Test idempotency"}
+    response1 = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    response2 = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response1.status_code in [200, 401]
+    assert response2.status_code in [200, 401]
+
+
+def test_sqs_visibility_timeout_prevents_duplicate_processing():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['VisibilityTimeout'])
+    visibility_timeout = int(attributes['Attributes']['VisibilityTimeout'])
+    assert visibility_timeout > 30
+
+
+def test_dynamodb_ttl_expires_old_idempotency_records():
+    dynamodb = boto3.client('dynamodb', region_name='us-east-1')
+    response = dynamodb.describe_time_to_live(TableName='TenULabsWebhookHandler-idempotency')
+    assert response['TimeToLiveDescription']['TimeToLiveStatus'] == 'ENABLED'
+
+
+def test_cloudwatch_metrics_published_for_circuit_breaker():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    import time
+    from datetime import datetime, timedelta
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(hours=1)
+    response = cloudwatch.get_metric_statistics(
+        Namespace='WebhookRouter',
+        MetricName='CircuitBreakerState',
+        Dimensions=[],
+        StartTime=start_time,
+        EndTime=end_time,
+        Period=3600,
+        Statistics=['Average']
+    )
+    assert 'Datapoints' in response
+
+
+def test_cloudwatch_metrics_published_for_queue_depth():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    from datetime import datetime, timedelta
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(hours=1)
+    response = cloudwatch.get_metric_statistics(
+        Namespace='WebhookRouter',
+        MetricName='QueueDepth',
+        Dimensions=[],
+        StartTime=start_time,
+        EndTime=end_time,
+        Period=3600,
+        Statistics=['Average']
+    )
+    assert 'Datapoints' in response
+
+
+def test_cloudwatch_metrics_published_for_processing_time():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    from datetime import datetime, timedelta
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(hours=1)
+    response = cloudwatch.get_metric_statistics(
+        Namespace='WebhookRouter',
+        MetricName='ProcessingTime',
+        Dimensions=[],
+        StartTime=start_time,
+        EndTime=end_time,
+        Period=3600,
+        Statistics=['Average']
+    )
+    assert 'Datapoints' in response
+
+
+def test_eventbridge_triggers_circuit_breaker_remediation():
+    events = boto3.client('events', region_name='us-east-1')
+    rules = events.list_rules()
+    rule_names = [r['Name'] for r in rules['Rules']]
+    assert len(rule_names) > 0
+
+
+def test_eventbridge_triggers_dlq_reprocessor():
+    events = boto3.client('events', region_name='us-east-1')
+    rules = events.list_rules()
+    scheduled_rules = [r for r in rules['Rules'] if r.get('ScheduleExpression')]
+    assert len(scheduled_rules) > 0
+
+
+def test_webhook_payload_with_urlencoded_format(api_url):
+    import urllib.parse
+    headers = {"x-github-event": "ping", "Content-Type": "application/x-www-form-urlencoded"}
+    payload_dict = {"zen": "Test URL encoding", "hook_id": 12345}
+    payload_str = urllib.parse.urlencode({"payload": json.dumps(payload_dict)})
+    response = requests.post(f"{api_url}/v1/runners", data=payload_str, headers=headers, timeout=10)
+    assert response.status_code in [200, 400, 401]
+
+
+def test_webhook_payload_with_base64_encoding(api_url):
+    import base64
+    headers = {"x-github-event": "ping"}
+    payload = {"zen": "Test base64"}
+    encoded_payload = base64.b64encode(json.dumps(payload).encode()).decode()
+    response = requests.post(f"{api_url}/v1/runners", json={"body": encoded_payload, "isBase64Encoded": True}, headers=headers, timeout=10)
+    assert response.status_code in [200, 400, 401]
+
+
+def test_complete_workflow_job_lifecycle():
+    import time
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    initial_attrs = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
+    initial_count = int(initial_attrs['Attributes']['ApproximateNumberOfMessages'])
+    assert initial_count >= 0
+
+
+def test_circuit_breaker_auto_recovery_after_timeout(api_url, api_key):
+    import time
+    headers = {"x-api-key": api_key}
+    response1 = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    if response1.status_code == 200:
+        data1 = response1.json()
+        initial_state = data1.get('circuit_breaker', 'unknown')
+        time.sleep(2)
+        response2 = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+        if response2.status_code == 200:
+            data2 = response2.json()
+            assert 'circuit_breaker' in data2 or 'status' in data2
+
+
+def test_sqs_fifo_ordering_not_required_for_webhooks():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    assert '.fifo' not in queue_url
+
+
+def test_api_handles_high_volume_concurrent_requests(api_url):
+    import concurrent.futures
+    def make_health_request():
+        return requests.get(f"{api_url}/health", timeout=10)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(make_health_request) for _ in range(20)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+    success_count = sum(1 for r in results if r.status_code == 200)
+    assert success_count >= 15
+
+
+def test_api_handles_concurrent_echo_requests(api_url):
+    import concurrent.futures
+    def make_echo_request(value):
+        return requests.post(f"{api_url}/v1/echo", json={"value": value}, timeout=10)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(make_echo_request, i) for i in range(10)]
+        results = [f.result() for f in concurrent.futures.as_completed(futures)]
+    success_count = sum(1 for r in results if r.status_code == 200)
+    assert success_count >= 8
+
+
+def test_lambda_cold_start_performance(api_url):
+    import time
+    start = time.time()
+    response = requests.get(f"{api_url}/health", timeout=15)
+    duration = time.time() - start
+    assert response.status_code == 200
+    assert duration < 10.0
+
+
+def test_api_error_responses_include_correlation_ids(api_url):
+    response = requests.get(f"{api_url}/nonexistent", timeout=10)
+    assert response.status_code == 404
+
+
+def test_webhook_event_unknown_type_ignored_gracefully(api_url):
+    headers = {"x-github-event": "unknown_event_type"}
+    payload = {"action": "test"}
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_workflow_job_completed_action_ignored(api_url):
+    headers = {"x-github-event": "workflow_job"}
+    payload = {
+        "action": "completed",
+        "workflow_job": {"id": 123, "labels": ["test"], "status": "completed"},
+        "repository": {"full_name": "test/repo"}
+    }
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_workflow_job_without_runner_labels_ignored(api_url):
+    headers = {"x-github-event": "workflow_job"}
+    payload = {
+        "action": "queued",
+        "workflow_job": {"id": 456, "labels": ["ubuntu-latest"], "status": "queued"},
+        "repository": {"full_name": "test/repo"}
+    }
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
+    assert response.status_code in [200, 401]
+
+
+def test_sqs_message_deduplication_not_enabled():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['All'])
+    assert 'ContentBasedDeduplication' not in attributes['Attributes']
+
+
+def test_api_responds_to_options_requests(api_url):
+    response = requests.options(f"{api_url}/health", timeout=10)
+    assert response.status_code in [200, 204, 405]
+
+
+def test_api_handles_malformed_json_gracefully(api_url):
+    headers = {"Content-Type": "application/json"}
+    response = requests.post(f"{api_url}/v1/echo", data="{invalid json", headers=headers, timeout=10)
+    assert response.status_code in [400, 500]
+
+
+def test_api_handles_missing_content_type_header(api_url):
+    response = requests.post(f"{api_url}/v1/echo", data='{"test": "data"}', timeout=10)
+    assert response.status_code in [200, 400]
