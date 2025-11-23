@@ -1,9 +1,16 @@
+import importlib.util
 import os
 import sys
 from unittest.mock import Mock, patch
 import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner'))
-import entrypoint
+entrypoint_path = os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner/entrypoint.py')
+entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)
+if entrypoint_spec is None or entrypoint_spec.loader is None:
+    raise ImportError("Could not load entrypoint module")
+entrypoint = importlib.util.module_from_spec(entrypoint_spec)
+entrypoint_spec.loader.exec_module(entrypoint)
 
 
 @patch('entrypoint.subprocess.run')
@@ -21,7 +28,7 @@ def test_cleanup_runner_uses_registration_token_parameter(mock_run):
 @patch('entrypoint.subprocess.run')
 def test_cleanup_runner_uses_check_false_parameter(mock_run):
     entrypoint.cleanup_runner('token')
-    assert mock_run.call_args[1]['check'] == False
+    assert mock_run.call_args[1]['check'] is False
 
 
 @patch('entrypoint.signal.signal')
@@ -149,7 +156,7 @@ def test_run_sh_uses_check_false_parameter(mock_run):
     mock_run.return_value = Mock(returncode=0)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[1][1]['check'] == False
+    assert mock_run.call_args_list[1][1]['check'] is False
 
 
 @patch('builtins.print')
