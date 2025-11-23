@@ -33,8 +33,9 @@ def test_parser_raises_error_when_repo_argument_missing():
     parser.add_argument('--name', required=True)
     parser.add_argument('--labels', required=True)
     parser.add_argument('--token', required=True)
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         parser.parse_args(['--name', 'test-runner', '--labels', 'label1', '--token', 'test-token'])
+    assert exc_info.value.code == 2
 
 
 def test_parsed_arguments_assigned_to_repo_variable():
@@ -83,15 +84,6 @@ def test_sigint_signal_registered(mock_run, mock_signal):
     with pytest.raises(SystemExit):
         entrypoint.main()
     assert mock_signal.call_args_list[1][0][0] == entrypoint.signal.SIGINT
-
-
-@patch('entrypoint.subprocess.run')
-@patch('entrypoint.cleanup_runner')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
-def test_signal_handler_calls_cleanup_runner(mock_cleanup, mock_run):
-    mock_run.return_value = Mock(returncode=0)
-    with pytest.raises(SystemExit):
-        entrypoint.main()
 
 
 @patch('entrypoint.subprocess.run')
@@ -346,11 +338,6 @@ def test_dockerfile_defines_terraform_version_arg(dockerfile_parser):
     assert content.find('ARG TERRAFORM_VERSION') != -1
 
 
-def test_dockerfile_defines_packer_version_arg(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('ARG PACKER_VERSION') != -1
-
-
 def test_dockerfile_runner_url_includes_runner_version(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('${RUNNER_VERSION}') != -1
@@ -446,11 +433,6 @@ def test_dockerfile_terraform_targets_linux_arm64(dockerfile_parser):
     assert content.find('terraform_${TERRAFORM_VERSION}_linux_arm64.zip') != -1
 
 
-def test_dockerfile_packer_uses_packer_latest(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('${PACKER_LATEST}') != -1
-
-
 def test_dockerfile_tflint_uses_tflint_latest(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('${TFLINT_LATEST}') != -1
@@ -458,7 +440,7 @@ def test_dockerfile_tflint_uses_tflint_latest(dockerfile_parser):
 
 def test_dockerfile_tools_moved_to_usr_local_bin(dockerfile_parser):
     content = dockerfile_parser.content
-    assert content.find('mv terraform packer tflint /usr/local/bin/') != -1
+    assert content.find('mv terraform tflint /usr/local/bin/') != -1
 
 
 def test_dockerfile_zip_files_cleaned_up(dockerfile_parser):
