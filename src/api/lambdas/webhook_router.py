@@ -360,6 +360,14 @@ def verify_webhook_signature(body_str: str, signature_header: str) -> dict:
         return {'statusCode': 500, 'body': json.dumps({'error': 'Authentication system unavailable'})}
 
 
+def get_header_case_insensitive(headers: dict, key: str) -> str:
+    lower_key = key.lower()
+    for header_name, header_value in headers.items():
+        if header_name.lower() == lower_key:
+            return header_value
+    return None
+
+
 def handle_api_gateway_event(event: dict, start_time: float) -> dict:
     path = event.get('path', event.get('rawPath', ''))
     if path == '/v1/runners/health':
@@ -372,7 +380,8 @@ def handle_api_gateway_event(event: dict, start_time: float) -> dict:
         logger.error("Body content (first 500 chars): %s", str(event.get('body', ''))[:500])
         return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid JSON payload'})}
 
-    signature_header = event.get('headers', {}).get('x-hub-signature-256')
+    headers = event.get('headers', {})
+    signature_header = get_header_case_insensitive(headers, 'x-hub-signature-256')
     if signature_header:
         error_response = verify_webhook_signature(body_str, signature_header)
         if error_response:
@@ -380,13 +389,13 @@ def handle_api_gateway_event(event: dict, start_time: float) -> dict:
     else:
         logger.warning("No signature header found, proceeding without verification")
 
-    delivery_id = event.get('headers', {}).get('x-github-delivery')
+    delivery_id = get_header_case_insensitive(headers, 'x-github-delivery')
     if delivery_id and check_and_record_idempotency(delivery_id):
         logger.info("Duplicate webhook delivery detected, returning success")
         publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
         return {'statusCode': 200, 'body': json.dumps({'message': 'Duplicate request ignored'})}
 
-    event_type = event.get('headers', {}).get('x-github-event', payload.get('event_type'))
+    event_type = get_header_case_insensitive(headers, 'x-github-event') or payload.get('event_type')
     logger.info("GitHub event type: %s", event_type)
     publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
 
