@@ -4,8 +4,8 @@ import sys
 from unittest.mock import Mock, patch
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner'))
-entrypoint_path = os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner/entrypoint.py')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../src/api/build/image_for_docker_runners'))
+entrypoint_path = os.path.join(os.path.dirname(__file__), '../../../../src/api/build/image_for_docker_runners/entrypoint.py')
 entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)
 if entrypoint_spec is None or entrypoint_spec.loader is None:
     raise ImportError("Could not load entrypoint module")

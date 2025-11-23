@@ -170,8 +170,8 @@ def api_endpoint_fixture(cloudformation_client):
 
 
 @pytest.fixture
-def webhook_router():
-    with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': '/api/key'}):
+def webhook_router(tfvars):
+    with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': tfvars['api_key_parameter_name']}):
         handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
         spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
         module = importlib.util.module_from_spec(spec)

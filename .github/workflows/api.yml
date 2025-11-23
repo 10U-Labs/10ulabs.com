@@ -223,7 +223,7 @@ on:
     paths:
       - '.github/workflows/api.yml'
       - 'src/api/**'
-      - '!src/api/docker_runner/**'
+      - '!src/api/build/image_for_docker_runners/**'
       - 'test/api/conftest.py'
       - 'test/api/test_e2e.py'
       - 'test/api/test_integration.py'

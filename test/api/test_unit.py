@@ -540,8 +540,7 @@ def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_
 
 
 def test_webhook_router_fixture_sets_api_key_parameter_name(webhook_router):
-    value = os.environ['API_KEY_PARAMETER_NAME']
-    assert value
+    assert hasattr(webhook_router, 'lambda_handler') and os.environ['API_KEY_PARAMETER_NAME']
 
 
 def test_lambda_handler_health_check_returns_200(webhook_router, lambda_context):

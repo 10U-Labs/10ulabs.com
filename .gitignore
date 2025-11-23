@@ -43,6 +43,7 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
+!src/api/build/
 *.zip
 
 # Temporary files

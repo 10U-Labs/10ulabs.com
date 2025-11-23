@@ -17,12 +17,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Install yq
+        run: |
+          VERSION=v4.44.1
+          BINARY=yq_linux_amd64
+          wget "https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY}" -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+        shell: bash
       - id: config
         name: Load configuration
         run: |
-          ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
-          ECR_REPO=$(grep 'ecr_repository_name' src/api/terraform.tfvars | cut -d'"' -f2)
-          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          ARCHITECTURE=$(yq '.architecture' src/api/config/image_for_docker_runners.yml)
+          ECR_REPO=$(yq '.ecr_repository_name' src/api/config/image_for_docker_runners.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/api/config/image_for_docker_runners.yml)
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
@@ -40,7 +47,7 @@ jobs:
       - id: build
         name: Build and push Docker image for ARM64
         run: |
-          cd src/api/docker_runner
+          cd src/api/build/image_for_docker_runners
           BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
           ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
           docker buildx build \
@@ -170,23 +177,24 @@ jobs:
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/image_for_docker_runners_post.yml
+            .github/workflows/image_for_docker_runners_post.yml \
+            src/api/config/image_for_docker_runners.yml
       - name: Run pylint
         run: |
           pylint \
-            src/api/docker_runner/entrypoint.py \
+            src/api/build/image_for_docker_runners/entrypoint.py \
             test/api/workflows/image_for_docker_runners_post/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Run mypy
         run: |
           python -m mypy \
-            src/api/docker_runner/entrypoint.py \
+            src/api/build/image_for_docker_runners/entrypoint.py \
             test/api/workflows/image_for_docker_runners_post/
       - name: Validate Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: src/api/docker_runner/Dockerfile
+          dockerfile: src/api/build/image_for_docker_runners/Dockerfile
           ignore: DL3008,DL3013,DL3015,DL3016
   promoting-image:
     name: Promoting image
@@ -245,8 +253,8 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_docker_runners_post.yml'
-      - 'src/api/docker_runner/**'
-      - 'src/api/terraform.tfvars'
+      - 'src/api/config/image_for_docker_runners.yml'
+      - 'src/api/build/image_for_docker_runners/**'
       - 'test/api/workflows/image_for_docker_runners_post/**'
       - '!**/README.md'
   workflow_dispatch:

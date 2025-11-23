@@ -1,0 +1,10 @@
+ami:
+  promotion_ssm_parameter: /github-runner/ami/latest
+  promotion_stable_tag: Stable
+architecture: arm64
+os_family: debian
+os_version: "13"
+packer:
+  spot_retry_attempts: 3
+  spot_retry_delay: 30
+runner_version: "2.329.0"
