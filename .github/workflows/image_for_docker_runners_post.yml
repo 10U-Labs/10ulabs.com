@@ -173,9 +173,7 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_docker_runners_post.yml
       - name: Validate Dockerfile
-        run: |
-          docker run --rm -i hadolint/hadolint < src/api/docker_runner/Dockerfile || true
-          echo "✓ Dockerfile validated"
+        run: docker run --rm -i hadolint/hadolint < src/api/docker_runner/Dockerfile
   unit-testing:
     name: Unit testing
     needs:
