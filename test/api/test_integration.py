@@ -1,8 +1,10 @@
-import os
-import urllib.request
 import json
+import os
+import time
+import urllib.request
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 
 
 @pytest.fixture(name="aws_region", scope="module")
@@ -265,7 +267,7 @@ def test_lambda_dead_letter_queue_configuration(lambda_client, tfvars):
     assert "DeadLetterConfig" in response["Configuration"]
 
 
-def test_sqs_queue_policy_allows_lambda(lambda_client, tfvars):
+def test_sqs_queue_policy_allows_lambda(_lambda_client, tfvars):
     sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['Policy'])
@@ -317,13 +319,12 @@ def test_ecr_repository_permissions(ecr_client, tfvars):
         assert True
 
 
-def test_ecs_task_definition_cpu_allocation(ecs_client, tfvars):
-    cluster_name = tfvars["cluster_name"]
+def test_ecs_task_definition_cpu_allocation(ecs_client, _tfvars):
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     assert len(response['taskDefinitionArns']) > 0
 
 
-def test_ecs_task_definition_memory_allocation(ecs_client, tfvars):
+def test_ecs_task_definition_memory_allocation(ecs_client, _tfvars):
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][0]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -598,7 +599,7 @@ def test_api_gateway_throttling_settings_configured(tfvars):
         assert stages['Items']
 
 
-def test_api_gateway_cloudwatch_logging_enabled(tfvars):
+def test_api_gateway_v2_cloudwatch_logging_enabled(tfvars):
     apigateway = boto3.client('apigatewayv2', region_name=tfvars["aws_region"])
     apis = apigateway.get_apis()
     if apis['Items']:
@@ -722,8 +723,7 @@ def test_dynamodb_idempotency_table_ttl_attribute(tfvars):
             assert 'TimeToLiveDescription' in ttl_info
 
 
-def test_lambda_can_send_message_to_job_queue(lambda_client, tfvars):
-    function_name = tfvars["lambda_function_name"]
+def test_lambda_can_send_message_to_job_queue(_lambda_client, tfvars):
     sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     initial_attrs = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
@@ -810,7 +810,6 @@ def test_sqs_job_dlq_exists_and_configured():
 
 def test_dynamodb_idempotency_put_item_succeeds():
     dynamodb = boto3.client('dynamodb', region_name='us-east-1')
-    import time
     test_id = f'integration-test-{int(time.time())}'
     try:
         dynamodb.put_item(
@@ -830,14 +829,12 @@ def test_dynamodb_idempotency_put_item_succeeds():
             TableName='TenULabsWebhookHandler-idempotency',
             Key={'request_id': {'S': test_id}}
         )
-    except Exception:
+    except ClientError:
         assert True
 
 
 def test_dynamodb_conditional_put_prevents_duplicates():
     dynamodb = boto3.client('dynamodb', region_name='us-east-1')
-    import time
-    from botocore.exceptions import ClientError
     test_id = f'integration-test-duplicate-{int(time.time())}'
     try:
         dynamodb.put_item(
@@ -865,7 +862,7 @@ def test_dynamodb_conditional_put_prevents_duplicates():
             TableName='TenULabsWebhookHandler-idempotency',
             Key={'request_id': {'S': test_id}}
         )
-    except Exception:
+    except ClientError:
         assert True
 
 
@@ -894,5 +891,5 @@ def test_cloudwatch_log_retention_configured():
         if response['logGroups']:
             log_group = response['logGroups'][0]
             assert 'retentionInDays' in log_group or 'retentionInDays' not in log_group
-    except Exception:
+    except ClientError:
         assert True

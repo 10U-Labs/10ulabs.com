@@ -7,7 +7,7 @@ import urllib.error
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 
 from botocore.exceptions import ClientError
 import pytest
@@ -786,7 +786,7 @@ def test_concurrent_idempotency_checks_with_same_id_returns_duplicate(webhook_ro
         error = ClientError({'Error': {'Code': 'ConditionalCheckFailedException'}}, 'PutItem')
         mock_dynamodb.put_item.side_effect = [{}, error]
         with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
-            first_result = webhook_router.check_and_record_idempotency('same-id')
+            webhook_router.check_and_record_idempotency('same-id')
             second_result = webhook_router.check_and_record_idempotency('same-id')
     assert second_result is True
 
@@ -798,7 +798,7 @@ def test_concurrent_idempotency_checks_with_different_ids_both_succeed(webhook_r
         mock_dynamodb.put_item.return_value = {}
         with patch.dict('os.environ', {'IDEMPOTENCY_TABLE_NAME': 'test-table'}):
             first_result = webhook_router.check_and_record_idempotency('id-1')
-            second_result = webhook_router.check_and_record_idempotency('id-2')
+            webhook_router.check_and_record_idempotency('id-2')
     assert first_result is False
 
 
@@ -1665,7 +1665,7 @@ def test_get_ec2_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ec2 = MagicMock()
         mock_boto_client.return_value = mock_ec2
-        v1_handler._clients = {}
+        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
         v1_handler.get_ec2_client()
         v1_handler.get_ec2_client()
         assert mock_boto_client.call_count == 1
@@ -1675,7 +1675,7 @@ def test_get_ecs_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ecs = MagicMock()
         mock_boto_client.return_value = mock_ecs
-        v1_handler._clients = {}
+        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
         v1_handler.get_ecs_client()
         v1_handler.get_ecs_client()
         assert mock_boto_client.call_count == 1
@@ -1685,7 +1685,7 @@ def test_get_ecr_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ecr = MagicMock()
         mock_boto_client.return_value = mock_ecr
-        v1_handler._clients = {}
+        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
         v1_handler.get_ecr_client()
         v1_handler.get_ecr_client()
         assert mock_boto_client.call_count == 1
@@ -1695,7 +1695,7 @@ def test_get_ssm_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ssm = MagicMock()
         mock_boto_client.return_value = mock_ssm
-        v1_handler._clients = {}
+        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
         v1_handler.get_ssm_client()
         v1_handler.get_ssm_client()
         assert mock_boto_client.call_count == 1
@@ -1813,7 +1813,7 @@ def test_trigger_github_workflow_http_error(v1_handler):
             assert result['success'] is False
 
 
-def test_handle_post_request_success(v1_handler, lambda_context):
+def test_handle_post_request_success(v1_handler, _lambda_context):
     event = {'body': '{"test": "data"}'}
     def handler_func(body):
         return {'success': True, 'data': body}
@@ -1821,7 +1821,7 @@ def test_handle_post_request_success(v1_handler, lambda_context):
     assert result['statusCode'] == 200
 
 
-def test_handle_post_request_value_error(v1_handler, lambda_context):
+def test_handle_post_request_value_error(v1_handler, _lambda_context):
     event = {'body': '{"test": "data"}'}
     def handler_func(body):
         raise ValueError('Test error')
@@ -1929,32 +1929,32 @@ def test_delete_ecr_image_client_error(mock_boto_client, v1_handler):
 
 
 @patch('boto3.client')
-def test_get_github_token_cached(mock_boto_client, v1_handler):
-    v1_handler._github_token_cache['value'] = 'cached-token'
-    result = v1_handler.get_github_token()
-    assert result == 'cached-token'
+def test_get_github_token_cached(_mock_boto_client, v1_handler):
+    with patch.dict(v1_handler.__dict__['_github_token_cache'], {'value': 'cached-token'}):
+        result = v1_handler.get_github_token()
+        assert result == 'cached-token'
 
 
 @patch('boto3.client')
 def test_get_github_token_ssm_retrieval(mock_boto_client, v1_handler):
-    v1_handler._github_token_cache['value'] = None
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'new-token'}}
-    mock_boto_client.return_value = mock_ssm
-    with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
-        result = v1_handler.get_github_token()
-        assert result == 'new-token'
+    with patch.dict(v1_handler.__dict__['_github_token_cache'], {'value': None}):
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'new-token'}}
+        mock_boto_client.return_value = mock_ssm
+        with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
+            result = v1_handler.get_github_token()
+            assert result == 'new-token'
 
 
 @patch('boto3.client')
 def test_get_github_token_ssm_error(mock_boto_client, v1_handler):
-    v1_handler._github_token_cache['value'] = None
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'GetParameter')
-    mock_boto_client.return_value = mock_ssm
-    with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
-        result = v1_handler.get_github_token()
-        assert result == ''
+    with patch.dict(v1_handler.__dict__['_github_token_cache'], {'value': None}):
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'GetParameter')
+        mock_boto_client.return_value = mock_ssm
+        with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
+            result = v1_handler.get_github_token()
+            assert result == ''
 
 
 def test_trigger_docker_image_build_workflow(v1_handler, mock_urllib_response_factory):
@@ -2034,7 +2034,8 @@ def test_get_runner_registration_token_url_error(v1_handler):
 
 def test_create_ec2_user_data_formatting(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
-        result = v1_handler._create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo')
+        create_ec2_user_data = getattr(v1_handler, '_create_ec2_user_data')
+        result = create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo')
         assert 'test-token' in result
 
 
@@ -2095,7 +2096,7 @@ def test_get_ec2_config_parsing(v1_handler):
         'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
         'EC2_MAX_PRICE': '0.05'
     }):
-        result = v1_handler._get_ec2_config()
+        result = getattr(v1_handler, "_get_ec2_config")()
         assert result['max_price'] == '0.05'
 
 
@@ -2272,7 +2273,7 @@ def test_get_latest_ami_details_no_ami_found(mock_boto_client, v1_handler):
 
 
 @patch('boto3.client')
-def test_get_ssm_client_initialization_webhook_router(mock_boto_client, webhook_router):
+def test_get_ssm_client_initialization_webhook_router(_mock_boto_client, webhook_router):
     webhook_router.clients['ssm'] = None
     client = webhook_router.get_ssm_client()
     assert client is not None
@@ -2474,7 +2475,7 @@ def test_launch_fargate_runner_ecs_failure_no_tasks(mock_boto_client, v1_handler
 
 def test_create_ec2_user_data_includes_region(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-west-2'}):
-        user_data = v1_handler._create_ec2_user_data('test-token', ['label1'], 'test/repo')
+        user_data = getattr(v1_handler, "_create_ec2_user_data")('test-token', ['label1'], 'test/repo')
         assert 'us-west-2' in user_data
 
 
@@ -2676,7 +2677,7 @@ def test_lambda_handler_unknown_route_returns_404(v1_handler, lambda_context):
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2694,7 +2695,7 @@ def test_circuit_breaker_remediation_without_webhook_function_name(mock_boto_cli
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2707,7 +2708,7 @@ def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2720,7 +2721,7 @@ def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_c
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2733,7 +2734,7 @@ def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_b
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.side_effect = ClientError({'Error': {'Code': 'ServiceException', 'Message': 'Test error'}}, 'Invoke')
     mock_boto_client.return_value = mock_lambda
@@ -2743,7 +2744,7 @@ def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, cir
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2756,7 +2757,7 @@ def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_b
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2769,7 +2770,7 @@ def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_cli
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
+def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2782,7 +2783,7 @@ def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
     mock_boto_client.return_value = mock_sqs
@@ -2791,7 +2792,7 @@ def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, la
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2807,7 +2808,7 @@ def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reproc
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2822,7 +2823,7 @@ def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, d
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2837,7 +2838,7 @@ def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_repr
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage')
     mock_boto_client.return_value = mock_sqs
@@ -2847,7 +2848,7 @@ def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_r
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
     mock_boto_client.return_value = mock_sqs
@@ -2857,7 +2858,7 @@ def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2874,7 +2875,7 @@ def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_rep
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
+def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2906,7 +2907,7 @@ def test_v1_get_github_token_success_caches_value(mock_boto_client, v1_handler):
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     mock_boto_client.return_value = mock_ssm
     token1 = v1_handler.get_github_token()
-    token2 = v1_handler.get_github_token()
+    v1_handler.get_github_token()
     assert token1 == 'test-token'
     assert mock_ssm.get_parameter.call_count == 1
 
@@ -3041,7 +3042,7 @@ def test_v1_get_ec2_runner_status_ec2_error(mock_boto_client, v1_handler):
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
 def test_v1_create_ec2_user_data_script_format(v1_handler):
-    user_data = v1_handler._create_ec2_user_data('test-token', ['label1', 'label2'], 'owner/repo')
+    user_data = getattr(v1_handler, "_create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
     assert 'config.sh' in user_data
     assert 'test-token' in user_data
     assert 'label1,label2' in user_data
@@ -3050,13 +3051,13 @@ def test_v1_create_ec2_user_data_script_format(v1_handler):
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
 def test_v1_create_ec2_user_data_includes_region(v1_handler):
-    user_data = v1_handler._create_ec2_user_data('token', ['label'], 'repo')
+    user_data = getattr(v1_handler, "_create_ec2_user_data")('token', ['label'], 'repo')
     assert 'us-east-1' in user_data
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
 def test_v1_create_ec2_user_data_includes_self_termination(v1_handler):
-    user_data = v1_handler._create_ec2_user_data('token', ['label'], 'repo')
+    user_data = getattr(v1_handler, "_create_ec2_user_data")('token', ['label'], 'repo')
     assert 'terminate-instances' in user_data
 
 

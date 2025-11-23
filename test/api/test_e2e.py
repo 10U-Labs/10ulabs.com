@@ -1,3 +1,11 @@
+import base64
+import concurrent.futures
+import hashlib
+import hmac
+import json
+import time
+import urllib.parse
+from datetime import datetime, timedelta
 import boto3
 import pytest
 import requests
@@ -254,20 +262,15 @@ def test_echo_endpoint_preserves_data_types(api_url):
 
 
 def test_concurrent_health_requests(api_url):
-    import concurrent.futures
-    
     def make_request():
         return requests.get(f"{api_url}/health", timeout=10)
-    
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = [executor.submit(make_request) for _ in range(5)]
         results = [f.result() for f in concurrent.futures.as_completed(futures)]
-    
     assert all(r.status_code == 200 for r in results)
 
 
 def test_health_endpoint_response_time(api_url):
-    import time
     start = time.time()
     response = requests.get(f"{api_url}/health", timeout=10)
     duration = time.time() - start
@@ -512,7 +515,6 @@ def test_rate_limit_exceeded_returns_429(api_url):
 
 
 def test_rate_limit_applies_to_health_endpoint(api_url):
-    import time
     responses = []
     for _ in range(60):
         try:
@@ -525,7 +527,6 @@ def test_rate_limit_applies_to_health_endpoint(api_url):
 
 
 def test_rate_limit_applies_to_echo_endpoint(api_url):
-    import time
     responses = []
     for _ in range(60):
         try:
@@ -543,8 +544,6 @@ def test_rate_limit_headers_present_in_response(api_url):
 
 
 def test_rate_limit_burst_allows_initial_requests(api_url):
-    import time
-    start = time.time()
     success_count = 0
     for _ in range(10):
         try:
@@ -553,7 +552,6 @@ def test_rate_limit_burst_allows_initial_requests(api_url):
                 success_count += 1
         except requests.exceptions.Timeout:
             continue
-    duration = time.time() - start
     assert success_count > 0
 
 
@@ -576,7 +574,6 @@ def test_circuit_breaker_opens_after_threshold_failures(api_url, api_key):
 
 
 def test_circuit_breaker_transitions_to_half_open_after_timeout(api_url, api_key):
-    import time
     headers = {"x-api-key": api_key}
     requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
     time.sleep(2)
@@ -605,7 +602,6 @@ def test_duplicate_webhook_delivery_ids_ignored(api_url):
 
 
 def test_idempotency_table_records_expire_after_ttl(api_url):
-    import time
     headers = {"x-github-event": "ping", "x-github-delivery": f"e2e-test-ttl-{int(time.time())}"}
     payload = {"zen": "Test"}
     response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
@@ -623,14 +619,14 @@ def test_webhook_events_enqueued_to_sqs(api_url):
     assert response.status_code in [200, 401]
 
 
-def test_sqs_messages_processed_by_lambda(api_url):
+def test_sqs_messages_processed_by_lambda(_api_url):
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
 
 
-def test_failed_messages_move_to_dlq_after_max_retries(api_url):
+def test_failed_messages_move_to_dlq_after_max_retries(_api_url):
     sqs = boto3.client('sqs', region_name='us-east-1')
     dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
@@ -644,7 +640,6 @@ def test_get_docker_runner_image_by_digest(api_url, api_key):
 
 
 def test_concurrent_docker_runner_creation(api_url, api_key):
-    import concurrent.futures
     headers = {"x-api-key": api_key}
     payload = {"job_id": 123456, "job_labels": ["test"], "github_repo": "test/repo"}
     def create_runner():
@@ -656,7 +651,6 @@ def test_concurrent_docker_runner_creation(api_url, api_key):
 
 
 def test_concurrent_ec2_runner_creation(api_url, api_key):
-    import concurrent.futures
     headers = {"x-api-key": api_key}
     payload = {"job_id": 654321, "job_labels": ["test"], "github_repo": "test/repo"}
     def create_runner():
@@ -690,14 +684,14 @@ def test_workflow_job_webhook_enqueues_and_processes(api_url):
     assert response.status_code in [200, 401]
 
 
-def test_sqs_message_processing_updates_status(api_url):
+def test_sqs_message_processing_updates_status(_api_url):
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
 
 
-def test_dlq_reprocessor_moves_messages_back(api_url):
+def test_dlq_reprocessor_moves_messages_back(_api_url):
     sqs = boto3.client('sqs', region_name='us-east-1')
     try:
         dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
@@ -713,7 +707,7 @@ def test_circuit_breaker_publishes_metrics(api_url, api_key):
     assert response.status_code in [200, 403]
 
 
-def test_queue_depth_metrics_published(api_url):
+def test_queue_depth_metrics_published(_api_url):
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
@@ -826,11 +820,6 @@ def test_docker_image_by_digest_includes_size(api_url, api_key):
 
 
 def test_webhook_to_sqs_workflow_enqueues_job(api_url):
-    import time
-    sqs = boto3.client('sqs', region_name='us-east-1')
-    queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
-    initial_attrs = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
-    initial_count = int(initial_attrs['Attributes']['ApproximateNumberOfMessages'])
     headers = {"x-github-event": "workflow_job", "x-github-delivery": f"e2e-workflow-test-{int(time.time())}"}
     payload = {
         "action": "queued",
@@ -853,7 +842,6 @@ def test_dlq_reprocessor_workflow_moves_messages_back():
     sqs = boto3.client('sqs', region_name='us-east-1')
     try:
         job_dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
-        job_queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
         initial_dlq_attrs = sqs.get_queue_attributes(QueueUrl=job_dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
         initial_dlq_count = int(initial_dlq_attrs['Attributes']['ApproximateNumberOfMessages'])
         assert initial_dlq_count >= 0
@@ -870,8 +858,6 @@ def test_circuit_breaker_remediation_workflow_detects_state(api_url, api_key):
 
 
 def test_webhook_signature_validation_rejects_invalid_signatures(api_url):
-    import hmac
-    import hashlib
     payload = {"action": "ping"}
     payload_str = json.dumps(payload)
     wrong_secret = "wrong-secret"
@@ -882,7 +868,6 @@ def test_webhook_signature_validation_rejects_invalid_signatures(api_url):
 
 
 def test_idempotency_prevents_duplicate_webhook_processing(api_url):
-    import time
     delivery_id = f"e2e-idempotency-{int(time.time())}"
     headers = {"x-github-event": "ping", "x-github-delivery": delivery_id}
     payload = {"zen": "Test idempotency"}
@@ -908,8 +893,6 @@ def test_dynamodb_ttl_expires_old_idempotency_records():
 
 def test_cloudwatch_metrics_published_for_circuit_breaker():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    import time
-    from datetime import datetime, timedelta
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
@@ -926,7 +909,6 @@ def test_cloudwatch_metrics_published_for_circuit_breaker():
 
 def test_cloudwatch_metrics_published_for_queue_depth():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    from datetime import datetime, timedelta
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
@@ -943,7 +925,6 @@ def test_cloudwatch_metrics_published_for_queue_depth():
 
 def test_cloudwatch_metrics_published_for_processing_time():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    from datetime import datetime, timedelta
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
@@ -973,7 +954,6 @@ def test_eventbridge_triggers_dlq_reprocessor():
 
 
 def test_webhook_payload_with_urlencoded_format(api_url):
-    import urllib.parse
     headers = {"x-github-event": "ping", "Content-Type": "application/x-www-form-urlencoded"}
     payload_dict = {"zen": "Test URL encoding", "hook_id": 12345}
     payload_str = urllib.parse.urlencode({"payload": json.dumps(payload_dict)})
@@ -982,7 +962,6 @@ def test_webhook_payload_with_urlencoded_format(api_url):
 
 
 def test_webhook_payload_with_base64_encoding(api_url):
-    import base64
     headers = {"x-github-event": "ping"}
     payload = {"zen": "Test base64"}
     encoded_payload = base64.b64encode(json.dumps(payload).encode()).decode()
@@ -991,7 +970,6 @@ def test_webhook_payload_with_base64_encoding(api_url):
 
 
 def test_complete_workflow_job_lifecycle():
-    import time
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     initial_attrs = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
@@ -1000,12 +978,9 @@ def test_complete_workflow_job_lifecycle():
 
 
 def test_circuit_breaker_auto_recovery_after_timeout(api_url, api_key):
-    import time
     headers = {"x-api-key": api_key}
     response1 = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
     if response1.status_code == 200:
-        data1 = response1.json()
-        initial_state = data1.get('circuit_breaker', 'unknown')
         time.sleep(2)
         response2 = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
         if response2.status_code == 200:
@@ -1020,7 +995,6 @@ def test_sqs_fifo_ordering_not_required_for_webhooks():
 
 
 def test_api_handles_high_volume_concurrent_requests(api_url):
-    import concurrent.futures
     def make_health_request():
         return requests.get(f"{api_url}/health", timeout=10)
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
@@ -1031,7 +1005,6 @@ def test_api_handles_high_volume_concurrent_requests(api_url):
 
 
 def test_api_handles_concurrent_echo_requests(api_url):
-    import concurrent.futures
     def make_echo_request(value):
         return requests.post(f"{api_url}/v1/echo", json={"value": value}, timeout=10)
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -1042,7 +1015,6 @@ def test_api_handles_concurrent_echo_requests(api_url):
 
 
 def test_lambda_cold_start_performance(api_url):
-    import time
     start = time.time()
     response = requests.get(f"{api_url}/health", timeout=15)
     duration = time.time() - start

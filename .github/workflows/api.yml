@@ -178,11 +178,7 @@ jobs:
             .github/workflows/api.yml
       - name: Run pylint
         run: |
-          pylint \
-            test/api/conftest.py \
-            test/api/test_e2e.py \
-            test/api/test_integration.py \
-            test/api/test_unit.py \
+          pylint test/api/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Terraform Format Check
