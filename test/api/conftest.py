@@ -1,13 +1,17 @@
-import json
-from pathlib import Path
+import ast
 import importlib.util
+import json
+import time
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 import boto3
+from botocore.exceptions import ClientError
 import pytest
 import yaml
 
 
 @pytest.fixture
-def config():
+def cfg():
     tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
     tfvars = {}
     with open(tfvars_path, 'r', encoding='utf-8') as f:
@@ -18,7 +22,7 @@ def config():
                 key = key.strip()
                 value = value.strip()
                 if value.startswith('['):
-                    value = eval(value)
+                    value = ast.literal_eval(value)
                 elif value.startswith('"') and value.endswith('"'):
                     value = value[1:-1]
                 tfvars[key] = value
@@ -72,28 +76,28 @@ def catchall_handler():
 
 
 @pytest.fixture
-def apigw_client(config):
-    return boto3.client('apigateway', region_name=config['aws']['region'])
+def apigw_client(cfg):
+    return boto3.client('apigateway', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
-def lambda_client(config):
-    return boto3.client('lambda', region_name=config['aws']['region'])
+def lambda_client(cfg):
+    return boto3.client('lambda', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
-def cloudformation_client(config):
-    return boto3.client('cloudformation', region_name=config['aws']['region'])
+def cloudformation_client(cfg):
+    return boto3.client('cloudformation', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
-def acm_client(config):
-    return boto3.client('acm', region_name=config['aws']['region'])
+def acm_client(cfg):
+    return boto3.client('acm', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
-def s3_client(config):
-    return boto3.client('s3', region_name=config['aws']['region'])
+def s3_client(cfg):
+    return boto3.client('s3', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
@@ -122,7 +126,7 @@ def stack_outputs(cloudformation_client):
 
 
 @pytest.fixture
-def certificate_arn(acm_client, config):
+def certificate_arn(acm_client):
     subdomain = "api.10ulabs.com"
     certificates = acm_client.list_certificates()
     for cert in certificates['CertificateSummaryList']:
@@ -132,12 +136,12 @@ def certificate_arn(acm_client, config):
 
 
 @pytest.fixture
-def bucket_name(config):
+def bucket_name():
     return "api.10ulabs.com"
 
 
 @pytest.fixture
-def api_endpoint(cloudformation_client, config):
+def api_endpoint(cloudformation_client):
     stacks = cloudformation_client.describe_stacks(StackName='TenULabsApi')
     outputs = stacks['Stacks'][0].get('Outputs', [])
 
@@ -154,9 +158,12 @@ def webhook_router():
     spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module._clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
-    module._webhook_secret_cache = {'value': None}
-    module._circuit_breaker_state = {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'}
+    if hasattr(module, '_clients'):
+        setattr(module, '_clients', {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None})
+    if hasattr(module, '_webhook_secret_cache'):
+        setattr(module, '_webhook_secret_cache', {'value': None})
+    if hasattr(module, '_circuit_breaker_state'):
+        setattr(module, '_circuit_breaker_state', {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'})
     return module
 
 
@@ -180,7 +187,6 @@ def dlq_reprocessor():
 
 @pytest.fixture
 def mock_sqs():
-    from unittest.mock import MagicMock, patch
     with patch('boto3.client') as mock_boto_client:
         mock_sqs_client = MagicMock()
         mock_boto_client.return_value = mock_sqs_client
@@ -189,7 +195,6 @@ def mock_sqs():
 
 @pytest.fixture
 def mock_dynamodb():
-    from unittest.mock import MagicMock, patch
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb_client = MagicMock()
         mock_boto_client.return_value = mock_dynamodb_client
@@ -198,7 +203,6 @@ def mock_dynamodb():
 
 @pytest.fixture
 def mock_ssm():
-    from unittest.mock import MagicMock, patch
     with patch('boto3.client') as mock_boto_client:
         mock_ssm_client = MagicMock()
         mock_ssm_client.get_parameter.return_value = {
@@ -210,7 +214,6 @@ def mock_ssm():
 
 @pytest.fixture
 def mock_cloudwatch():
-    from unittest.mock import MagicMock, patch
     with patch('boto3.client') as mock_boto_client:
         mock_cw_client = MagicMock()
         mock_boto_client.return_value = mock_cw_client
@@ -219,7 +222,6 @@ def mock_cloudwatch():
 
 @pytest.fixture
 def lambda_context():
-    from unittest.mock import Mock
     return Mock()
 
 
@@ -250,7 +252,6 @@ def assert_cors_headers(response):
 
 
 def create_client_error(error_code, operation_name='TestOperation'):
-    from botocore.exceptions import ClientError
     return ClientError(
         {
             'Error': {
@@ -433,7 +434,6 @@ def circuit_breaker_closed_state():
 
 @pytest.fixture
 def circuit_breaker_open_state():
-    import time
     return {
         'state': 'open',
         'failure_count': 5,
@@ -443,7 +443,6 @@ def circuit_breaker_open_state():
 
 @pytest.fixture
 def mock_github_api_success():
-    from unittest.mock import MagicMock, patch
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_response = MagicMock()
         mock_response.status = 204
@@ -455,7 +454,6 @@ def mock_github_api_success():
 
 @pytest.fixture
 def env_with_queue_urls():
-    from unittest.mock import patch
     env_vars = {
         'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
         'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
@@ -467,14 +465,12 @@ def env_with_queue_urls():
 
 @pytest.fixture
 def env_with_function_name():
-    from unittest.mock import patch
     with patch.dict('os.environ', {'FUNCTION_NAME': 'test-function'}):
         yield
 
 
 @pytest.fixture
 def env_with_webhook_function_name():
-    from unittest.mock import patch
     with patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
         yield
 
@@ -482,7 +478,6 @@ def env_with_webhook_function_name():
 @pytest.fixture
 def mock_lambda_invoke_factory():
     def _create_response(status_code=200, payload=None):
-        from unittest.mock import MagicMock
         if payload is None:
             payload = {'statusCode': status_code, 'body': json.dumps({'status': 'healthy'})}
         response = MagicMock()
@@ -501,12 +496,9 @@ def api_src_path():
 @pytest.fixture
 def mock_urllib_response_factory():
     def _create_response(read_value=b'', status=200, json_data=None):
-        from unittest.mock import Mock
-        import json as json_module
-
         mock_response = Mock()
         if json_data is not None:
-            mock_response.read.return_value = json_module.dumps(json_data).encode()
+            mock_response.read.return_value = json.dumps(json_data).encode()
         else:
             mock_response.read.return_value = read_value
         mock_response.status = status
@@ -518,8 +510,7 @@ def mock_urllib_response_factory():
 
 @pytest.fixture
 def mock_boto3_client_factory():
-    def _create_mock_client(service_name='ec2', method_returns=None):
-        from unittest.mock import MagicMock
+    def _create_mock_client(method_returns=None):
         mock_client = MagicMock()
         if method_returns:
             for method_name, return_value in method_returns.items():
@@ -531,12 +522,11 @@ def mock_boto3_client_factory():
 @pytest.fixture
 def mock_multi_boto3_clients():
     def _create_clients(*service_names):
-        from unittest.mock import MagicMock
         clients = {}
         for service in service_names:
             clients[service] = MagicMock()
 
-        def client_side_effect(service_name, **kwargs):
+        def client_side_effect(service_name):
             return clients.get(service_name, MagicMock())
 
         return clients, client_side_effect
@@ -545,7 +535,6 @@ def mock_multi_boto3_clients():
 
 @pytest.fixture
 def env_with_ec2_config():
-    from unittest.mock import patch
     env_vars = {
         'AWS_REGION': 'us-east-1',
         'SUBNETS': 'subnet-123,subnet-456,subnet-789',
@@ -596,8 +585,8 @@ def find_lambda_by_substring(lambda_client, substring):
 
 
 @pytest.fixture
-def ssm_client(config):
-    return boto3.client('ssm', region_name=config['aws']['region'])
+def ssm_client(cfg):
+    return boto3.client('ssm', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
@@ -605,13 +594,13 @@ def api_key(ssm_client):
     try:
         response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
         return response['Parameter']['Value']
-    except Exception:
+    except ClientError:
         return None
 
 
 @pytest.fixture
-def ecr_client(config):
-    return boto3.client('ecr', region_name=config['aws']['region'])
+def ecr_client(cfg):
+    return boto3.client('ecr', region_name=cfg['aws']['region'])
 
 
 @pytest.fixture
@@ -626,5 +615,5 @@ def ecr_image_count(ecr_client):
             if 'stable' in img.get('imageTags', [])
         ]
         return len(stable_images)
-    except Exception:
+    except ClientError:
         return 0

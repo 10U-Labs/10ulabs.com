@@ -238,5 +238,3 @@ def test_ec2_runner_status_has_instances_field(api_url, api_key):
     response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
     data = response.json()
     assert "instances" in data
-
-
