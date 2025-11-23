@@ -27,11 +27,9 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv
     ./aws/install && \
     rm -rf awscliv2.zip aws
 
-# Set up runner user
 RUN useradd -m -s /bin/bash runner && \
     echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Install GitHub Actions runner
 ARG RUNNER_VERSION=2.311.0
 ARG RUNNER_ARCH=arm64
 WORKDIR /home/runner
@@ -74,7 +72,6 @@ RUN PACKER_LATEST=$(curl -s https://checkpoint-api.hashicorp.com/v1/check/packer
     mv terraform packer tflint /usr/local/bin/ && \
     rm -f *.zip
 
-# Copy entrypoint script
 COPY entrypoint.py /home/runner/entrypoint.py
 RUN chmod +x /home/runner/entrypoint.py && \
     chown runner:runner /home/runner/entrypoint.py
