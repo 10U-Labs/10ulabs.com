@@ -402,7 +402,7 @@ def test_ecr_image_can_be_pulled(ecr_image_uri, aws_region):
     login_to_ecr(aws_region)
 
     result = subprocess.run(
-        ["docker", "pull", ecr_image_uri],
+        ["docker", "pull", "--platform", "linux/arm64", ecr_image_uri],
         check=False,
         capture_output=True,
         text=True
