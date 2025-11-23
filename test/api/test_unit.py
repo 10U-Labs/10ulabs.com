@@ -474,7 +474,7 @@ def test_lambda_handler_with_invalid_json_returns_400(webhook_router, lambda_con
     assert_response_status(response, 400)
 
 
-def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, lambda_context):
+def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, mock_ssm, lambda_context):
     from unittest.mock import patch
     event = workflow_job_event_factory(action='queued', labels=['ephemeral-ec2-spot-instance'])
     with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
@@ -482,7 +482,7 @@ def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, w
     assert_response_status(response, 200)
 
 
-def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
+def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_ssm, lambda_context):
     from unittest.mock import patch
     event = workflow_job_event_factory(action='completed', labels=['ephemeral-ec2-spot-instance'])
     with patch('boto3.client'):
@@ -490,7 +490,7 @@ def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_route
     assert_response_status(response, 200)
 
 
-def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
+def test_lambda_handler_workflow_job_without_matching_labels_returns_200(webhook_router, workflow_job_event_factory, mock_ssm, lambda_context):
     from unittest.mock import patch
     event = workflow_job_event_factory(action='queued', labels=['some-other-label'])
     with patch('boto3.client'):
