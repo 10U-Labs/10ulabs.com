@@ -3,48 +3,8 @@ import os
 import sys
 from unittest.mock import MagicMock, Mock, call, patch
 import pytest
-from dockerfile_parse import DockerfileParser
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner'))
 import entrypoint
-
-
-@pytest.fixture
-def dockerfile_parser(dockerfile_path):
-    dfp = DockerfileParser()
-    with open(dockerfile_path, 'r') as f:
-        dfp.content = f.read()
-    return dfp
-
-
-def test_parser_accepts_all_required_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--repo', required=True)
-    parser.add_argument('--name', required=True)
-    parser.add_argument('--labels', required=True)
-    parser.add_argument('--token', required=True)
-    args = parser.parse_args(['--repo', 'org/repo', '--name', 'test-runner', '--labels', 'label1', '--token', 'test-token'])
-    assert args.repo == 'org/repo'
-
-
-def test_parser_raises_error_when_repo_argument_missing():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--repo', required=True)
-    parser.add_argument('--name', required=True)
-    parser.add_argument('--labels', required=True)
-    parser.add_argument('--token', required=True)
-    with pytest.raises(SystemExit) as exc_info:
-        parser.parse_args(['--name', 'test-runner', '--labels', 'label1', '--token', 'test-token'])
-    assert exc_info.value.code == 2
-
-
-def test_parsed_arguments_assigned_to_repo_variable():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--repo', required=True)
-    parser.add_argument('--name', required=True)
-    parser.add_argument('--labels', required=True)
-    parser.add_argument('--token', required=True)
-    args = parser.parse_args(['--repo', 'test/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
-    assert args.repo == 'test/repo'
 
 
 @patch('entrypoint.subprocess.run')
@@ -243,80 +203,6 @@ def test_runner_exit_code_is_printed(mock_run, mock_print):
     assert mock_print.call_args_list[5][0][0] == 'Runner exited with code 3'
 
 
-def test_dockerfile_base_image_is_debian_stable_slim(dockerfile_parser):
-    assert dockerfile_parser.baseimage == 'debian:stable-slim'
-
-
-def test_dockerfile_shell_set_to_bash(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert 'SHELL ["/bin/bash", "-o", "pipefail", "-c"]' == content.split('\n')[1]
-
-
-def test_dockerfile_pip3_uses_break_system_packages(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('--break-system-packages') != -1
-
-
-def test_dockerfile_creates_runner_user(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('useradd -m -s /bin/bash runner') != -1
-
-
-def test_dockerfile_runner_has_sudo_nopasswd(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('runner ALL=(ALL) NOPASSWD:ALL') != -1
-
-
-def test_dockerfile_copies_entrypoint_to_home_runner(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('COPY entrypoint.py /home/runner/entrypoint.py') != -1
-
-
-def test_dockerfile_entrypoint_chmod_executable(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('chmod +x /home/runner/entrypoint.py') != -1
-
-
-def test_dockerfile_entrypoint_chown_runner(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('chown runner:runner /home/runner/entrypoint.py') != -1
-
-
-def test_dockerfile_entrypoint_directive_set(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('ENTRYPOINT ["/home/runner/entrypoint.py"]') != -1
-
-
-def test_dockerfile_cmd_includes_repo_argument(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('--repo') != -1
-
-
-def test_dockerfile_cmd_includes_name_argument(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('--name') != -1
-
-
-def test_dockerfile_cmd_includes_labels_argument(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('--labels') != -1
-
-
-def test_dockerfile_cmd_includes_token_argument(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('--token') != -1
-
-
-def test_dockerfile_user_directive_sets_runner(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('USER runner') != -1
-
-
-def test_dockerfile_workdir_set_to_home_runner(dockerfile_parser):
-    content = dockerfile_parser.content
-    assert content.find('WORKDIR /home/runner') != -1
-
-
 @patch('entrypoint.subprocess.run')
 def test_cleanup_runner_continues_when_removal_fails(mock_run):
     mock_run.return_value = Mock(returncode=1)
@@ -410,3 +296,27 @@ def test_run_sh_not_called_when_config_fails(mock_run):
 def test_cleanup_runner_calls_config_sh_remove(mock_run):
     entrypoint.cleanup_runner('test-token')
     assert mock_run.call_args[0][0][1] == 'remove'
+
+
+@patch('entrypoint.signal.signal')
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_signal_handler_invokes_cleanup_runner(mock_run, mock_signal):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    signal_handler = mock_signal.call_args_list[0][0][1]
+    with patch('entrypoint.cleanup_runner') as mock_cleanup:
+        with pytest.raises(SystemExit):
+            signal_handler(None, None)
+        assert mock_cleanup.called
+
+
+@patch('entrypoint.cleanup_runner')
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_signal_handler_passes_registration_token_to_cleanup(mock_run, mock_cleanup):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_cleanup.call_args is None

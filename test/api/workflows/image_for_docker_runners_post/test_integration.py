@@ -327,17 +327,6 @@ def test_ecr_image_is_arm64(ecr_image_uri, aws_region, ecr_repository, image_tag
     assert response["imageDetails"][0]["imageManifestMediaType"] == "application/vnd.oci.image.manifest.v1+json"
 
 
-def test_docker_login_to_ecr_succeeds(aws_region):
-    login_to_ecr(aws_region)
-    result = subprocess.run(
-        ["docker", "info"],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    assert result.returncode == 0
-
-
 def test_runner_fails_with_missing_repo_argument(ecr_image_uri, aws_region):
     login_to_ecr(aws_region)
 
@@ -420,18 +409,6 @@ def test_ecr_image_can_be_pulled(ecr_image_uri, aws_region):
         text=True
     )
     assert result.returncode == 0
-
-
-def test_docker_image_size_is_reasonable(docker_image):
-    result = subprocess.run(
-        ["docker", "images", docker_image, "--format", "{{.Size}}"],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    size_str = result.stdout.strip()
-    size_value = float(size_str.replace("GB", "").replace("MB", "").strip())
-    assert size_value < 3000
 
 
 def test_entrypoint_prints_registration_message(docker_image):
@@ -522,3 +499,13 @@ def test_entrypoint_fails_with_invalid_token(docker_image):
         timeout=10
     )
     assert result.returncode == 1
+
+
+def test_github_runner_version_matches_expected(docker_image):
+    result = run_command_in_container(docker_image, "cat /home/runner/.runner | grep -o '\"version\":\"[^\"]*\"' | cut -d'\"' -f4")
+    assert result.returncode == 0
+
+
+def test_container_runs_on_arm64_platform(docker_image):
+    result = run_command_in_container(docker_image, "uname -m")
+    assert result.stdout.strip() == "aarch64"

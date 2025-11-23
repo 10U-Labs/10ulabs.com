@@ -3,11 +3,20 @@ import os
 import subprocess
 import pytest
 import boto3
+from dockerfile_parse import DockerfileParser
 
 
 @pytest.fixture(scope="module")
 def dockerfile_path():
     return os.path.join(os.path.dirname(__file__), "../../../../src/api/docker_runner/Dockerfile")
+
+
+@pytest.fixture
+def dockerfile_parser(dockerfile_path):
+    dfp = DockerfileParser()
+    with open(dockerfile_path, 'r') as f:
+        dfp.content = f.read()
+    return dfp
 
 
 @pytest.fixture(scope="module")
@@ -83,7 +92,11 @@ def image_tag(aws_region, aws_account_id, ecr_repository):
         repositoryName=ecr_repository,
         imageIds=[{"imageTag": "available"}]
     )
-    return "available"
+    tags = response["imageDetails"][0].get("imageTags", [])
+    available_tag = next((tag for tag in tags if tag == "available"), None)
+    if not available_tag:
+        pytest.fail("Image with tag 'available' not found in ECR")
+    return available_tag
 
 
 @pytest.fixture(scope="module")
@@ -120,12 +133,25 @@ def run_command_in_container(image_tag, command):
 
 
 def login_to_ecr(aws_region):
-    subprocess.run(
+    password_result = subprocess.run(
         ["aws", "ecr", "get-login-password", "--region", aws_region],
-        check=False,
+        check=True,
         capture_output=True,
-        text=True,
-        stdout=subprocess.PIPE
+        text=True
+    )
+    ecr_url = subprocess.run(
+        ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
+        check=True,
+        capture_output=True,
+        text=True
+    )
+    account_id = ecr_url.stdout.strip()
+    subprocess.run(
+        ["docker", "login", "--username", "AWS", "--password-stdin",
+         f"{account_id}.dkr.ecr.{aws_region}.amazonaws.com"],
+        input=password_result.stdout,
+        check=True,
+        text=True
     )
 
 
