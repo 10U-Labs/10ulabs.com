@@ -1,12 +1,13 @@
 import os
 import re
-import requests
-import pytest
 import boto3
+import pytest
+import requests
+from botocore.exceptions import ClientError
 
 
-@pytest.fixture(scope="module")
-def tfvars():
+@pytest.fixture(name="tfvars", scope="module")
+def tfvars_fixture():
     tfvars_path = os.path.join(os.path.dirname(__file__), "../../src/api/terraform.tfvars")
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
@@ -20,18 +21,18 @@ def tfvars():
     return config
 
 
-@pytest.fixture(scope="module")
-def api_url(tfvars):
+@pytest.fixture(name="api_url", scope="module")
+def api_url_fixture(tfvars):
     return f"https://{tfvars['domain_subdomain']}"
 
 
-@pytest.fixture(scope="module")
-def api_key(tfvars):
+@pytest.fixture(name="api_key", scope="module")
+def api_key_fixture(tfvars):
     ssm_client = boto3.client('ssm', region_name=tfvars.get('aws_region', 'us-east-1'))
     try:
         response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
         return response['Parameter']['Value']
-    except Exception:
+    except ClientError:
         return None
 
 

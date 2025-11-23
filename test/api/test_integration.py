@@ -6,8 +6,8 @@ import boto3
 import pytest
 
 
-@pytest.fixture(scope="module")
-def tfvars():
+@pytest.fixture(name="tfvars", scope="module")
+def tfvars_fixture():
     tfvars_path = os.path.join(os.path.dirname(__file__), "../../src/api/terraform.tfvars")
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
@@ -21,41 +21,41 @@ def tfvars():
     return config
 
 
-@pytest.fixture(scope="module")
-def aws_region(tfvars):
+@pytest.fixture(name="aws_region", scope="module")
+def aws_region_fixture(tfvars):
     return tfvars["aws_region"]
 
 
-@pytest.fixture(scope="module")
-def lambda_client(aws_region):
+@pytest.fixture(name="lambda_client", scope="module")
+def lambda_client_fixture(aws_region):
     return boto3.client("lambda", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
-def s3_client(aws_region):
+@pytest.fixture(name="s3_client", scope="module")
+def s3_client_fixture(aws_region):
     return boto3.client("s3", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
-def ecr_client(aws_region):
+@pytest.fixture(name="ecr_client", scope="module")
+def ecr_client_fixture(aws_region):
     return boto3.client("ecr", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
-def ecs_client(aws_region):
+@pytest.fixture(name="ecs_client", scope="module")
+def ecs_client_fixture(aws_region):
     return boto3.client("ecs", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
-def ssm_client(aws_region):
+@pytest.fixture(name="ssm_client", scope="module")
+def ssm_client_fixture(aws_region):
     return boto3.client("ssm", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
-def github_pat():
-    github_pat = os.environ.get("GITHUB_PAT")
-    assert github_pat is not None
-    return github_pat
+@pytest.fixture(name="github_pat", scope="module")
+def github_pat_fixture():
+    pat = os.environ.get("GITHUB_PAT")
+    assert pat is not None
+    return pat
 
 
 def test_lambda_health_handler_exists(lambda_client):
@@ -165,7 +165,6 @@ def test_webhook_secret_parameter_value_not_placeholder(ssm_client):
 
 
 def test_repository_has_at_least_one_webhook(github_pat, tfvars):
-    repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
@@ -174,7 +173,6 @@ def test_repository_has_at_least_one_webhook(github_pat, tfvars):
 
 
 def test_github_webhook_for_runners_endpoint_exists(github_pat, tfvars):
-    repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
@@ -185,7 +183,6 @@ def test_github_webhook_for_runners_endpoint_exists(github_pat, tfvars):
 
 
 def test_github_webhook_for_runners_endpoint_listens_for_workflow_job_events(github_pat, tfvars):
-    repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:
@@ -196,7 +193,6 @@ def test_github_webhook_for_runners_endpoint_listens_for_workflow_job_events(git
 
 
 def test_github_webhook_for_runners_endpoint_is_active(github_pat, tfvars):
-    repo_name = tfvars["github_repo"].split("/")[1]
     url = f"https://api.github.com/repos/{tfvars['github_repo']}/hooks"
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(req) as response:

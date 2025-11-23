@@ -311,15 +311,13 @@ def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(v1_hand
     assert_response_status(response, 400)
 
 
-@patch('boto3.client')
-def test_lambda_handler_docker_runner_post_returns_json_content_type(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+def test_lambda_handler_docker_runner_post_returns_json_content_type(v1_handler, docker_runner_post_event_factory, lambda_context):
     event = docker_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
 
 
-@patch('boto3.client')
-def test_lambda_handler_docker_runner_get_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+def test_lambda_handler_docker_runner_get_returns_json_content_type(v1_handler, lambda_context):
     event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -359,10 +357,10 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(mock_boto_clie
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
 
-    def mock_client(service_name, **kwargs):
+    def mock_client(service_name):
         if service_name == 'ec2':
             return mock_ec2
-        elif service_name == 'ssm':
+        if service_name == 'ssm':
             return mock_ssm
         return MagicMock()
 
@@ -378,8 +376,7 @@ def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(
     assert_json_content_type(response)
 
 
-@patch('boto3.client')
-def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_docker_event_factory, lambda_context):
+def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(v1_handler, image_docker_event_factory, lambda_context):
     event = image_docker_event_factory(method='GET')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -395,8 +392,7 @@ def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_4
     assert_response_status(response, 400)
 
 
-@patch('boto3.client')
-def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(v1_handler, lambda_context):
     event = {
         'path': '/v1/image-for-docker-runners/sha256:abc123',
         'httpMethod': 'DELETE',
@@ -419,8 +415,7 @@ def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_
     assert_json_content_type(response)
 
 
-@patch('boto3.client')
-def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_ec2_event_factory, lambda_context):
+def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
     event = image_ec2_event_factory(method='GET', ami_id=None)
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -436,8 +431,7 @@ def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(
     assert_response_status(response, 400)
 
 
-@patch('boto3.client')
-def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(v1_handler, lambda_context):
     event = {
         'path': '/v1/image-for-ec2-runners/ami-abc123',
         'httpMethod': 'DELETE',
@@ -518,8 +512,7 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
     assert_response_status(response, 200)
 
 
-@patch('boto3.client')
-def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, webhook_router, sqs_event_factory, mock_github_api_success, lambda_context):
+def test_lambda_handler_sqs_event_processes_successfully(webhook_router, sqs_event_factory, lambda_context):
     event = sqs_event_factory(records=[{
         'messageId': 'test-message-id',
         'eventSource': 'aws:sqs',
@@ -618,7 +611,7 @@ def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router
     assert webhook_router._circuit_breaker_state['state'] == 'open'
 
 
-def test_check_and_record_idempotency_with_new_request_returns_false(webhook_router, mock_dynamodb):
+def test_check_and_record_idempotency_with_new_request_returns_false(webhook_router):
     result = webhook_router.check_and_record_idempotency('test-request-id')
     assert result is False
 
@@ -899,7 +892,7 @@ def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_route
 
 
 
-def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, lambda_context):
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -914,7 +907,7 @@ def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, env_
     assert_response_status(response, 200)
 
 
-def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, lambda_context):
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -930,7 +923,7 @@ def test_handler_returns_circuit_breaker_state(circuit_breaker_remediation, env_
     assert 'circuit_breaker_state' in body
 
 
-def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, lambda_context):
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
@@ -946,7 +939,7 @@ def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, env_
     assert body['action'] == 'monitored'
 
 
-def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, env_with_webhook_function_name, lambda_context):
+def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, lambda_context):
     event = {}
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
