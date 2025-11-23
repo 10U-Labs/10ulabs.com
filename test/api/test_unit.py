@@ -476,6 +476,8 @@ def test_lambda_handler_with_invalid_json_returns_400(webhook_router, lambda_con
 
 def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, lambda_context):
     from unittest.mock import patch
+    mock_sqs.send_message.return_value = {'MessageId': 'test-message-id'}
+    mock_sqs.get_queue_attributes.return_value = {'Attributes': {'ApproximateNumberOfMessages': '5'}}
     event = workflow_job_event_factory(action='queued', labels=['ephemeral-ec2-spot-instance'])
     with patch.object(webhook_router, 'verify_signature', return_value=True):
         with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
