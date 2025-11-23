@@ -115,11 +115,7 @@ jobs:
         run: |
           GITHUB_PAT=$(aws ssm get-parameter --name /github/pat --with-decryption --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
-      - env:
-          TEST_AMI_ID: ${{ needs.building-image.outputs.ami_id }}
-          TEST_SECURITY_GROUP_ID: ${{ needs.building-image.outputs.security_group_id }}
-          TEST_SUBNET_ID: ${{ needs.building-image.outputs.subnet_id }}
-        name: Run E2E tests
+      - name: Run E2E tests
         run: |
           pytest test/api/workflows/image_for_docker_runners_post/test_e2e.py \
             --confcutdir=test/api/workflows/image_for_docker_runners_post \
@@ -148,11 +144,7 @@ jobs:
           python-version: '3.13'
       - name: Install Python dependencies
         run: pip install pytest boto3
-      - env:
-          TEST_AMI_ID: ${{ needs.building-image.outputs.ami_id }}
-          TEST_SECURITY_GROUP_ID: ${{ needs.building-image.outputs.security_group_id }}
-          TEST_SUBNET_ID: ${{ needs.building-image.outputs.subnet_id }}
-        name: Run pytest integration tests
+      - name: Run pytest integration tests
         run: |
           pytest test/api/workflows/image_for_docker_runners_post/test_integration.py \
             --confcutdir=test/api/workflows/image_for_docker_runners_post \
