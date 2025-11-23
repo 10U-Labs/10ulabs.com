@@ -13,15 +13,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install Docker
-        run: |
-          brew install docker
-          brew install colima
-          colima start --arch aarch64 --cpu 4 --memory 8
       - id: config
         name: Load configuration
         run: |
@@ -38,22 +33,25 @@ jobs:
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - id: build
-        name: Build and push Docker image (native ARM64 on macOS)
+        name: Build and push Docker image for ARM64
         run: |
           cd src/api/docker_runner
           BUILD_TAG="${{ github.run_number }}-$(git rev-parse --short HEAD)"
           ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
-          docker build \
+          docker buildx build \
+            --platform linux/arm64 \
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
             --build-arg RUNNER_ARCH=${{ steps.config.outputs.architecture }} \
             -t $ECR_URL:latest \
             -t $ECR_URL:stable \
             -t $ECR_URL:$BUILD_TAG \
+            --push \
             .
-          docker push $ECR_URL:latest
-          docker push $ECR_URL:stable
-          docker push $ECR_URL:$BUILD_TAG
           echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
           echo ""
           echo "==================================="
@@ -62,7 +60,7 @@ jobs:
           echo ""
           echo "Repository: $ECR_URL"
           echo "Tags: latest, stable, $BUILD_TAG"
-          echo "Architecture: ARM64 (native build on macOS)"
+          echo "Architecture: ARM64 (cross-compiled via QEMU)"
           echo ""
           echo "==================================="
   declaring-common-variables:
