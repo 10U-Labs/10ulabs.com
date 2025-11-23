@@ -10,7 +10,7 @@ jobs:
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
       github_pat_parameter_name: ${{ steps.config.outputs.github_pat_parameter_name }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
     needs:
       - declaring-common-variables
       - integration-testing
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
     needs:
       - declaring-common-variables
       - unit-testing
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -111,7 +111,7 @@ jobs:
     needs:
       - ensuring-infrastructure-in-desired-state
       - declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -203,7 +203,7 @@ jobs:
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -229,6 +229,11 @@ on:
       - 'test/api/test_integration.py'
       - 'test/api/test_unit.py'
   workflow_dispatch:
+    inputs:
+      github_hosted:
+        type: boolean
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
 permissions:
   contents: read
   id-token: write
