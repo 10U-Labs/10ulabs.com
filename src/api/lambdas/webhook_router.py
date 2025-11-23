@@ -169,7 +169,7 @@ def get_webhook_secret(force_refresh: bool = False) -> str:
 
     secret = webhook_secret_cache['value']
     if not secret:
-        parameter_name = os.environ.get('WEBHOOK_SECRET_NAME', '/api-webhook-secret')
+        parameter_name = os.environ['WEBHOOK_SECRET_NAME']
         try:
             ssm = get_ssm_client()
             response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
@@ -245,7 +245,7 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
         logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
         return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
 
-    api_base_url = os.environ.get('API_BASE_URL', 'https://api.10ulabs.com')
+    api_base_url = os.environ['API_BASE_URL']
     if 'ephemeral-ec2-spot-instance' in job_labels:
         endpoint, runner_type = f"{api_base_url}/v1/ec2-runner", "ec2"
     elif 'ephemeral-ecs-fargate-spot' in job_labels:

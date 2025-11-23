@@ -1542,3 +1542,51 @@ def test_handle_ec2_runner_get_returns_json_content_type(v1_handler, lambda_cont
         response = v1_handler.lambda_handler(event, lambda_context)
 
         assert_json_content_type(response)
+
+
+def test_no_hardcoded_defaults_in_webhook_router():
+    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+
+    import re
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0
+
+
+def test_no_hardcoded_defaults_in_v1():
+    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+
+    import re
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0
+
+
+def test_no_hardcoded_defaults_in_dlq_reprocessor():
+    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+
+    import re
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0
+
+
+def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
+    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+
+    import re
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0

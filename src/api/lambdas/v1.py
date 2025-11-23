@@ -65,7 +65,7 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    github_repo = os.environ.get('GITHUB_REPO', '10U-Labs-LLC/10ulabs.com')
+    github_repo = os.environ['GITHUB_REPO']
     github_token = os.environ.get('GITHUB_TOKEN')
 
     if not github_token:
@@ -113,7 +113,7 @@ def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
 
 
 def list_ecr_images() -> Dict[str, Any]:
-    ecr_repo = os.environ.get('ECR_REPOSITORY', 'github-runner')
+    ecr_repo = os.environ['ECR_REPOSITORY']
     try:
         response = get_ecr_client().describe_images(
             repositoryName=ecr_repo,
@@ -150,7 +150,7 @@ def list_ecr_images() -> Dict[str, Any]:
 
 
 def get_latest_ecr_image() -> Dict[str, Any]:
-    ecr_repo = os.environ.get('ECR_REPOSITORY', 'github-runner')
+    ecr_repo = os.environ['ECR_REPOSITORY']
     try:
         response = get_ecr_client().describe_images(
             repositoryName=ecr_repo,
@@ -195,7 +195,7 @@ def get_latest_ecr_image() -> Dict[str, Any]:
 
 
 def delete_ecr_image(image_digest: str) -> Dict[str, Any]:
-    ecr_repo = os.environ.get('ECR_REPOSITORY', 'github-runner')
+    ecr_repo = os.environ['ECR_REPOSITORY']
     try:
         get_ecr_client().batch_delete_image(
             repositoryName=ecr_repo,
@@ -220,7 +220,7 @@ def get_github_token() -> str:
     if _github_token_cache['value']:
         return _github_token_cache['value']
 
-    parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '/github-runner/credentials')
+    parameter_name = os.environ['GITHUB_TOKEN_SECRET_NAME']
     try:
         response = get_ssm_client().get_parameter(Name=parameter_name, WithDecryption=True)
         token = response['Parameter']['Value']
@@ -238,7 +238,7 @@ def trigger_docker_image_build(_config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def trigger_image_creation() -> Dict[str, Any]:
-    api_endpoint = os.environ.get('IMAGE_API_ENDPOINT', 'https://api.10ulabs.com')
+    api_endpoint = os.environ['IMAGE_API_ENDPOINT']
     image_endpoint = f'{api_endpoint}/v1/image-for-docker-runner'
 
     try:
@@ -302,7 +302,7 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
             overrides={
                 'containerOverrides': [
                     {
-                        'name': os.environ.get('CONTAINER_NAME', 'github-runner'),
+                        'name': os.environ['CONTAINER_NAME'],
                         'command': [
                             '--repo', github_repo,
                             '--name', runner_name,
@@ -370,7 +370,7 @@ def get_runner_registration_token(github_token: str, github_repo: str) -> str:
 
 
 def _create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str) -> str:
-    aws_region = os.environ.get('AWS_REGION', 'us-east-1')
+    aws_region = os.environ['AWS_REGION']
     runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
 set -e
@@ -420,7 +420,7 @@ def get_latest_ami() -> str:
 
 
 def trigger_ami_creation() -> Dict[str, Any]:
-    api_domain = os.environ.get('API_DOMAIN', 'api.10ulabs.com')
+    api_domain = os.environ['API_DOMAIN']
     ami_creation_url = f"https://{api_domain}/v1/image-for-ec2-runners"
 
     try:
@@ -444,9 +444,9 @@ def _get_ec2_config() -> Dict[str, Any]:
     return {
         'subnet_ids': os.environ['SUBNETS'].split(','),
         'security_group_id': os.environ['SECURITY_GROUPS'],
-        'instance_types': os.environ.get('EC2_INSTANCE_TYPES', 't4g.large,t4g.medium,t4g.small').split(','),
-        'iam_instance_profile': os.environ.get('EC2_IAM_INSTANCE_PROFILE', 'GitHubSelfHostedRunnerInstanceProfile'),
-        'max_price': os.environ.get('EC2_MAX_PRICE', '0.05')
+        'instance_types': os.environ['EC2_INSTANCE_TYPES'].split(','),
+        'iam_instance_profile': os.environ['EC2_IAM_INSTANCE_PROFILE'],
+        'max_price': os.environ['EC2_MAX_PRICE']
     }
 
 

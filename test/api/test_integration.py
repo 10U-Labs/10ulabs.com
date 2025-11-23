@@ -133,18 +133,21 @@ def test_ecs_cluster_status_active(ecs_client, tfvars):
     assert response["clusters"][0]["status"] == "ACTIVE"
 
 
-def test_webhook_secret_parameter_exists(ssm_client):
-    response = ssm_client.get_parameter(Name="/api-webhook-secret")
-    assert response["Parameter"]["Name"] == "/api-webhook-secret"
+def test_webhook_secret_parameter_exists(ssm_client, tfvars):
+    webhook_secret_name = tfvars["webhook_secret_name"]
+    response = ssm_client.get_parameter(Name=webhook_secret_name)
+    assert response["Parameter"]["Name"] == webhook_secret_name
 
 
-def test_webhook_secret_parameter_type(ssm_client):
-    response = ssm_client.get_parameter(Name="/api-webhook-secret")
+def test_webhook_secret_parameter_type(ssm_client, tfvars):
+    webhook_secret_name = tfvars["webhook_secret_name"]
+    response = ssm_client.get_parameter(Name=webhook_secret_name)
     assert response["Parameter"]["Type"] == "String"
 
 
-def test_webhook_secret_parameter_value_not_placeholder(ssm_client):
-    response = ssm_client.get_parameter(Name="/api-webhook-secret", WithDecryption=True)
+def test_webhook_secret_parameter_value_not_placeholder(ssm_client, tfvars):
+    webhook_secret_name = tfvars["webhook_secret_name"]
+    response = ssm_client.get_parameter(Name=webhook_secret_name, WithDecryption=True)
     assert response["Parameter"]["Value"] != "PLACEHOLDER_WILL_BE_UPDATED"
 
 

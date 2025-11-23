@@ -148,6 +148,7 @@ resource "aws_lambda_function" "v1_handler" {
 
   environment {
     variables = {
+      AWS_REGION               = var.aws_region
       SUBNETS                  = join(",", aws_subnet.public[*].id)
       SECURITY_GROUPS          = aws_security_group.runner_sg.id
       VPC_ID                   = aws_vpc.runner_vpc.id
@@ -161,6 +162,7 @@ resource "aws_lambda_function" "v1_handler" {
       GITHUB_REPO              = var.github_repo
       ECR_REPOSITORY           = aws_ecr_repository.runner.name
       IMAGE_API_ENDPOINT       = "https://${var.domain_subdomain}"
+      API_DOMAIN               = var.domain_subdomain
     }
   }
 

@@ -143,8 +143,13 @@ def stack_outputs_fixture(cloudformation_client):
 
 
 @pytest.fixture(name="certificate_arn")
-def certificate_arn_fixture(acm_client):
-    subdomain = "api.10ulabs.com"
+def certificate_arn_fixture(acm_client, cfg):
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
+    with open(tfvars_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if 'domain_subdomain' in line and '=' in line:
+                subdomain = line.split('=')[1].strip().strip('"')
+                break
     certificates = acm_client.list_certificates()
     for cert in certificates['CertificateSummaryList']:
         if cert['DomainName'] == subdomain:
@@ -154,7 +159,12 @@ def certificate_arn_fixture(acm_client):
 
 @pytest.fixture(name="bucket_name")
 def bucket_name_fixture():
-    return "api.10ulabs.com"
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
+    with open(tfvars_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if 'domain_subdomain' in line and '=' in line:
+                return line.split('=')[1].strip().strip('"')
+    return None
 
 
 @pytest.fixture(name="api_endpoint")
@@ -166,7 +176,13 @@ def api_endpoint_fixture(cloudformation_client):
         if output['OutputKey'] == 'ApiEndpoint':
             return output['OutputValue']
 
-    return "https://api.10ulabs.com"
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
+    with open(tfvars_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if 'domain_subdomain' in line and '=' in line:
+                subdomain = line.split('=')[1].strip().strip('"')
+                return f"https://{subdomain}"
+    return None
 
 
 @pytest.fixture
