@@ -42,11 +42,11 @@ jobs:
       - id: network
         name: Find suitable subnet for instance types
         run: |
-          if python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
+          if python3 src/api/ec2_runner/find_suitable_subnet.py \
             check \
             --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}'; then
-            SUBNET_ID=$(python3 src/api/packer/image_for_ec2_runners_post/find_suitable_subnet.py \
+            SUBNET_ID=$(python3 src/api/ec2_runner/find_suitable_subnet.py \
               get \
               --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
               --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
@@ -62,12 +62,12 @@ jobs:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/packer/image_for_ec2_runners_post
+          cd src/api/ec2_runner
           packer init template.pkr.hcl
       - id: build
         name: Build AMI with Packer
         run: |
-          cd src/api/packer/image_for_ec2_runners_post
+          cd src/api/ec2_runner
           echo "Building GitHub Runner AMI..."
           echo "OS Family: ${{ needs.declaring-common-variables.outputs.os_family }}"
           echo "OS Version: ${{ needs.declaring-common-variables.outputs.os_version }}"
@@ -316,22 +316,22 @@ jobs:
       - name: Linting Python files
         run: |
           pylint \
-            src/api/packer/image_for_ec2_runners_post/*.py \
+            src/api/ec2_runner/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
-        run: python -m mypy src/api/packer/image_for_ec2_runners_post/*.py
+        run: python -m mypy src/api/ec2_runner/*.py
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "latest"
       - name: Initialize Packer
         run: |
-          cd src/api/packer/image_for_ec2_runners_post
+          cd src/api/ec2_runner
           packer init template.pkr.hcl
       - name: Validating Packer template
         run: |
-          cd src/api/packer/image_for_ec2_runners_post
+          cd src/api/ec2_runner
           packer validate \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
@@ -377,7 +377,7 @@ jobs:
         run: pip install boto3
       - name: Promote AMI
         run: |
-          python src/api/packer/image_for_ec2_runners_post/promote_ami.py \
+          python src/api/ec2_runner/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \
@@ -410,7 +410,7 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_ec2_runners_post.yml'
-      - 'src/api/packer/image_for_ec2_runners_post/**'
+      - 'src/api/ec2_runner/**'
       - 'src/api/terraform.tfvars'
       - 'test/api/workflows/image_for_ec2_runners_post/**'
       - '!**/README.md'

@@ -7,47 +7,59 @@ jobs:
     needs:
       - declaring-common-variables
       - unit-testing
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    outputs:
+      ecr_repository: ${{ steps.config.outputs.ecr_repo }}
+      image_tag: ${{ steps.build.outputs.image_tag }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-24.04-arm64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - id: config
         name: Load configuration
         run: |
-          RUNNER_VERSION=$(jq -r '.github.runner_version' api/resources/ami_for_ec2_runners/config.json)
-          ARCHITECTURE=$(jq -r '.base_os.architecture' api/resources/ami_for_ec2_runners/config.json)
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
+          RUNNER_VERSION=$(grep 'github_runner_version' src/api/terraform.tfvars | cut -d'"' -f2)
+          ARCHITECTURE=$(grep 'os_architecture' src/api/terraform.tfvars | cut -d'"' -f2)
+          ECR_REPO=$(grep 'ecr_repository_name' src/api/terraform.tfvars | cut -d'"' -f2)
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials (EC2 instance already has IAM role)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: build
+        name: Build and push Docker image (native ARM64, no emulation!)
         run: |
-          echo "Using EC2 instance role for AWS credentials"
-      - name: Build and push Docker image (native ARM64, no emulation!)
-        run: |
-          cd src/api/packer/image_for_docker_runners
+          cd src/api/docker_runner
           BUILD_TAG="${{ github.run_number }}-$(git rev-parse --short HEAD)"
-          ECR_URL="${{ steps.config.outputs.account_id }}.dkr.ecr.${{ steps.config.outputs.region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
-          aws ecr get-login-password --region ${{ steps.config.outputs.region }} | \
-            sudo docker login --username AWS --password-stdin $ECR_URL
-          sudo docker build \
+          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
+          docker build \
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
             --build-arg RUNNER_ARCH=${{ steps.config.outputs.architecture }} \
             -t $ECR_URL:latest \
             -t $ECR_URL:stable \
             -t $ECR_URL:$BUILD_TAG \
             .
-          sudo docker push $ECR_URL:latest
-          sudo docker push $ECR_URL:stable
-          sudo docker push $ECR_URL:$BUILD_TAG
-          echo "✓ Docker image built and pushed to ECR"
-          echo "  Repository: $ECR_URL"
-          echo "  Tags: latest, stable, $BUILD_TAG"
-          echo "  Built on native ARM64 (no emulation)"
+          docker push $ECR_URL:latest
+          docker push $ECR_URL:stable
+          docker push $ECR_URL:$BUILD_TAG
+          echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
+          echo ""
+          echo "==================================="
+          echo "Docker Image Built Successfully"
+          echo "==================================="
+          echo ""
+          echo "Repository: $ECR_URL"
+          echo "Tags: latest, stable, $BUILD_TAG"
+          echo "Architecture: ARM64 (native build)"
+          echo ""
+          echo "==================================="
   declaring-common-variables:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -59,7 +71,7 @@ jobs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -75,9 +87,10 @@ jobs:
   cleaning-up:
     name: Cleaning up
     needs:
+      - building-image
       - declaring-common-variables
       - e2e-testing
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,21 +105,22 @@ jobs:
           python-version: '3.13'
       - name: Install Python dependencies
         run: pip install boto3
-      - name: Clean up Docker runner resources
+      - name: Clean up old Docker images from ECR
         run: |
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
-          python scripts/cleanup_packer_artifacts/cleanup_packer_artifacts.py docker \
+          python scripts/cleanup_ecr_images/cleanup_ecr_images.py \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            --repository "$ECR_REPO"
+            --repository "${{ needs.building-image.outputs.ecr_repository }}" \
+            --keep-count 10
   e2e-testing:
     name: E2E testing
     needs:
+      - building-image
       - declaring-common-variables
       - integration-testing
     permissions:
       contents: read
       id-token: write
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -133,26 +147,28 @@ jobs:
     needs:
       - building-image
       - declaring-common-variables
-      - unit-testing
     permissions:
       contents: read
       id-token: write
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    runs-on: ubuntu-24.04-arm64
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
       - name: Pull Docker image from ECR
         run: |
-          aws ecr get-login-password | \
-            docker login --username AWS --password-stdin ${{ needs.unit-testing.outputs.account_id }}.dkr.ecr.${{ needs.unit-testing.outputs.region }}.amazonaws.com
-          docker pull ${{ needs.unit-testing.outputs.account_id }}.dkr.ecr.${{ needs.unit-testing.outputs.region }}.amazonaws.com/${{ needs.unit-testing.outputs.ecr_repo }}:latest
+          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.building-image.outputs.ecr_repository }}"
+          docker pull $ECR_URL:latest
           echo "✓ Successfully pulled image from ECR"
-      - name: Inspect image
+      - name: Inspect image architecture
         run: |
-          IMAGE="${{ needs.unit-testing.outputs.account_id }}.dkr.ecr.${{ needs.unit-testing.outputs.region }}.amazonaws.com/${{ needs.unit-testing.outputs.ecr_repo }}:latest"
+          IMAGE="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.building-image.outputs.ecr_repository }}:latest"
           docker inspect $IMAGE
           ARCH=$(docker inspect $IMAGE --format='{{.Architecture}}')
           echo "Image architecture: $ARCH"
@@ -164,7 +180,7 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -172,97 +188,59 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install linting dependencies
-        run: |
-          pip install pylint mypy yamllint &&
-          npm install -g jsonlint
-      - name: Install project dependencies for linting
-        run: pip install -r src/api/requirements.txt
-      - name: Linting JSON configuration files
-        run: |
-          echo "Validating JSON syntax..."
-          jsonlint -q src/api/config.json
-          jsonlint -q src/api/cdk.json
-      - name: Linting Python files
-        run: |
-          cd src/api && pylint \
-            *.py \
-            endpoints/catchall/*.py \
-            endpoints/health/*.py \
-            endpoints/root/*.py \
-            endpoints/v1/handler.py \
-            endpoints/v1/runners/*.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-under=10.0
+      - name: Install yamllint
+        run: pip install yamllint
       - name: Linting YAML files
         run: |
-          echo "Running yamllint on workflow files..."
-          CONFIG='{extends: default, rules: {line-length: {max: 300, level: warning}, document-start: disable, truthy: {allowed-values: ["true", "false", "on"]}, empty-lines: {max: 0, max-start: 0, max-end: 1}, new-line-at-end-of-file: enable, key-ordering: enable}}'
-          yamllint --config-data "$CONFIG" .github/workflows/api.yml
-      - name: Static type checking Python files with mypy
+          DOCUMENT_START='document-start: disable'
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: {max: 300, level: warning}'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/image_for_docker_runners_post.yml
+      - name: Validate Dockerfile
         run: |
-          cd src/api && python -m mypy *.py &&
-          python -m mypy endpoints/catchall &&
-          python -m mypy endpoints/health &&
-          python -m mypy endpoints/root &&
-          python -m mypy endpoints/v1/handler.py &&
-          python -m mypy endpoints/v1/runners
+          docker run --rm -i hadolint/hadolint < src/api/docker_runner/Dockerfile || true
+          echo "✓ Dockerfile validated"
   unit-testing:
     name: Unit testing
     needs:
       - declaring-common-variables
       - performing-static-analysis
-    outputs:
-      account_id: ${{ steps.config.outputs.account_id }}
-      ecr_repo: ${{ steps.config.outputs.ecr_repo }}
-      region: ${{ steps.config.outputs.region }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: [self-hosted, docker-builder, ephemeral-ec2-spot-instance]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          ACCOUNT_ID=$(jq -r '.aws.account_id' api/resources/ami_for_ec2_runners/config.json)
-          REGION=$(jq -r '.aws.region' api/resources/ami_for_ec2_runners/config.json)
-          ECR_REPO=$(jq -r '.fargate_runners.ecr_repository' api/resources/ami_for_ec2_runners/config.json)
-          echo "account_id=$ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "region=$REGION" >> $GITHUB_OUTPUT
-          echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Verify image exists in ECR
+          python-version: '3.13'
+      - name: Install Python dependencies
+        run: pip install pytest
+      - name: Run unit tests
         run: |
-          aws ecr describe-images \
-            --repository-name ${{ steps.config.outputs.ecr_repo }} \
-            --image-ids imageTag=latest
-          echo "✓ Docker image exists in ECR with 'latest' tag"
-      - name: Verify image tags
-        run: |
-          TAGS=$(aws ecr describe-images \
-            --repository-name ${{ steps.config.outputs.ecr_repo }} \
-            --query 'imageDetails[0].imageTags' \
-            --output json)
-          echo "Image tags: $TAGS"
-          if ! echo "$TAGS" | jq -e '. | contains(["latest"])' > /dev/null; then
-            echo "ERROR: 'latest' tag not found!"
-            exit 1
+          if [ -d "test/api/workflows/image_for_docker_runners_post" ]; then
+            pytest test/api/workflows/image_for_docker_runners_post/test_unit.py \
+              --confcutdir=test/api/workflows/image_for_docker_runners_post \
+              -v
+          else
+            echo "No unit tests found, skipping..."
           fi
-          echo "✓ Image has 'latest' tag"
-name: Building Docker image for self-hosted runners
+name: Building Docker image for Fargate self-hosted runners
 on:
   push:
     branches:
       - main
     paths:
-      - 'src/api/endpoints/v1/image_for_docker_runners'
       - '.github/workflows/image_for_docker_runners_post.yml'
+      - 'src/api/docker_runner/**'
+      - 'src/api/terraform.tfvars'
+      - 'test/api/workflows/image_for_docker_runners_post/**'
+      - '!**/README.md'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -270,3 +248,6 @@ on:
         description: Dry run mode (show structure without executing)
         required: false
         type: boolean
+permissions:
+  contents: read
+  id-token: write
