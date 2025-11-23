@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 import pytest
 import boto3
 
@@ -227,6 +228,18 @@ def start_runner_container(uri, repo, name, labels, token):
         text=True,
         close_fds=True
     )
+
+
+def wait_for_process_with_backoff(process, max_attempts=7):
+    for attempt in range(max_attempts):
+        wait_time = 2 ** attempt
+        returncode = process.poll()
+        if returncode is not None:
+            return
+        time.sleep(wait_time)
+    process.kill()
+    process.wait()
+    raise subprocess.TimeoutExpired(process.args, sum(2**i for i in range(max_attempts)))
 
 
 def get_github_runners(pat, repo):
