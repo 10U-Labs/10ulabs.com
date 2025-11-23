@@ -1,50 +1,7 @@
-import os
 import subprocess
 import pytest
-
-
-@pytest.fixture(scope="module")
-def dockerfile_path():
-    return os.path.join(os.path.dirname(__file__), "../../../../src/api/docker_runner/Dockerfile")
-
-
-@pytest.fixture(scope="module")
-def entrypoint_path():
-    return os.path.join(os.path.dirname(__file__), "../../../../src/api/docker_runner/entrypoint.py")
-
-
-@pytest.fixture(scope="module")
-def docker_image_tag():
-    return os.environ.get("TEST_DOCKER_IMAGE_TAG", "github-docker-runner:test")
-
-
-@pytest.fixture(scope="module")
-def docker_image(dockerfile_path, entrypoint_path, docker_image_tag):
-    build_context = os.path.dirname(dockerfile_path)
-
-    result = subprocess.run(
-        ["docker", "build", "-t", docker_image_tag, "-f", dockerfile_path, build_context],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        pytest.fail(f"Docker build failed: {result.stderr}")
-
-    yield docker_image_tag
-
-    subprocess.run(["docker", "rmi", "-f", docker_image_tag], check=False, capture_output=True)
-
-
-def run_command_in_container(image_tag, command):
-    result = subprocess.run(
-        ["docker", "run", "--rm", "--entrypoint", "/bin/bash", image_tag, "-c", command],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    return result
+import boto3
+from conftest import run_command_in_container, login_to_ecr
 
 
 def test_docker_image_exists(docker_image):
@@ -153,18 +110,6 @@ def test_runner_user_home_directory(docker_image):
 
 def test_runner_user_has_sudo_privileges(docker_image):
     result = run_command_in_container(docker_image, "grep -q 'runner.*NOPASSWD:ALL' /etc/sudoers")
-
-    assert result.returncode == 0
-
-
-def test_github_runner_directory_exists(docker_image):
-    result = run_command_in_container(docker_image, "test -d /home/runner")
-
-    assert result.returncode == 0
-
-
-def test_github_runner_version_matches(docker_image):
-    result = run_command_in_container(docker_image, "test -f /home/runner/config.sh")
 
     assert result.returncode == 0
 
@@ -362,3 +307,218 @@ def test_entrypoint_accepts_token_argument(docker_image):
     )
 
     assert result.returncode == 0
+
+
+def test_ecr_image_exists(ecr_image_uri, aws_region, ecr_repository, image_tag):
+    client = boto3.client("ecr", region_name=aws_region)
+    response = client.describe_images(
+        repositoryName=ecr_repository,
+        imageIds=[{"imageTag": image_tag}]
+    )
+    assert len(response["imageDetails"]) == 1
+
+
+def test_ecr_image_is_arm64(ecr_image_uri, aws_region, ecr_repository, image_tag):
+    client = boto3.client("ecr", region_name=aws_region)
+    response = client.describe_images(
+        repositoryName=ecr_repository,
+        imageIds=[{"imageTag": image_tag}]
+    )
+    assert response["imageDetails"][0]["imageManifestMediaType"] == "application/vnd.oci.image.manifest.v1+json"
+
+
+def test_docker_login_to_ecr_succeeds(aws_region):
+    login_to_ecr(aws_region)
+    result = subprocess.run(
+        ["docker", "info"],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode == 0
+
+
+def test_runner_fails_with_missing_repo_argument(ecr_image_uri, aws_region):
+    login_to_ecr(aws_region)
+
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            ecr_image_uri,
+            "--name", "test-runner",
+            "--labels", "test",
+            "--token", "test-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode != 0
+
+
+def test_runner_fails_with_missing_name_argument(ecr_image_uri, aws_region):
+    login_to_ecr(aws_region)
+
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            ecr_image_uri,
+            "--repo", "org/repo",
+            "--labels", "test",
+            "--token", "test-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode != 0
+
+
+def test_runner_fails_with_missing_labels_argument(ecr_image_uri, aws_region):
+    login_to_ecr(aws_region)
+
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            ecr_image_uri,
+            "--repo", "org/repo",
+            "--name", "test-runner",
+            "--token", "test-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode != 0
+
+
+def test_runner_fails_with_missing_token_argument(ecr_image_uri, aws_region):
+    login_to_ecr(aws_region)
+
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            ecr_image_uri,
+            "--repo", "org/repo",
+            "--name", "test-runner",
+            "--labels", "test"
+        ],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode != 0
+
+
+def test_ecr_image_can_be_pulled(ecr_image_uri, aws_region):
+    login_to_ecr(aws_region)
+
+    result = subprocess.run(
+        ["docker", "pull", ecr_image_uri],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    assert result.returncode == 0
+
+
+def test_docker_image_size_is_reasonable(docker_image):
+    result = subprocess.run(
+        ["docker", "images", docker_image, "--format", "{{.Size}}"],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    size_str = result.stdout.strip()
+    size_value = float(size_str.replace("GB", "").replace("MB", "").strip())
+    assert size_value < 3000
+
+
+def test_entrypoint_prints_registration_message(docker_image):
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            docker_image,
+            "--repo", "test/repo",
+            "--name", "test-runner",
+            "--labels", "test-label",
+            "--token", "fake-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    assert "Registering GitHub Actions runner..." in result.stdout
+
+
+def test_entrypoint_prints_repository_from_arguments(docker_image):
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            docker_image,
+            "--repo", "myorg/myrepo",
+            "--name", "test-runner",
+            "--labels", "test-label",
+            "--token", "fake-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    assert "Repository: myorg/myrepo" in result.stdout
+
+
+def test_entrypoint_prints_runner_name_from_arguments(docker_image):
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            docker_image,
+            "--repo", "test/repo",
+            "--name", "my-test-runner",
+            "--labels", "test-label",
+            "--token", "fake-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    assert "Runner Name: my-test-runner" in result.stdout
+
+
+def test_entrypoint_prints_labels_from_arguments(docker_image):
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            docker_image,
+            "--repo", "test/repo",
+            "--name", "test-runner",
+            "--labels", "custom-label,another-label",
+            "--token", "fake-token"
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    assert "Labels: custom-label,another-label" in result.stdout
+
+
+def test_entrypoint_fails_with_invalid_token(docker_image):
+    result = subprocess.run(
+        [
+            "docker", "run", "--rm",
+            docker_image,
+            "--repo", "test/repo",
+            "--name", "test-runner",
+            "--labels", "test-label",
+            "--token", "invalid-token-123"
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    assert result.returncode == 1

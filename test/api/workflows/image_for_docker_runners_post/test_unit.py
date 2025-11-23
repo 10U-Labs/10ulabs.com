@@ -9,9 +9,8 @@ import entrypoint
 
 
 @pytest.fixture
-def dockerfile_parser():
+def dockerfile_parser(dockerfile_path):
     dfp = DockerfileParser()
-    dockerfile_path = os.path.join(os.path.dirname(__file__), '../../../../src/api/docker_runner/Dockerfile')
     with open(dockerfile_path, 'r') as f:
         dfp.content = f.read()
     return dfp
@@ -316,3 +315,98 @@ def test_dockerfile_user_directive_sets_runner(dockerfile_parser):
 def test_dockerfile_workdir_set_to_home_runner(dockerfile_parser):
     content = dockerfile_parser.content
     assert content.find('WORKDIR /home/runner') != -1
+
+
+@patch('entrypoint.subprocess.run')
+def test_cleanup_runner_continues_when_removal_fails(mock_run):
+    mock_run.return_value = Mock(returncode=1)
+    entrypoint.cleanup_runner('token')
+    assert mock_run.called
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', '', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_parser_accepts_empty_string_for_repo(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_args_list[0][0][0][2] == 'https://github.com/'
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', '', '--labels', 'lbl', '--token', 'tok'])
+def test_parser_accepts_empty_string_for_name(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_args_list[0][0][0][6] == ''
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', '', '--token', 'tok'])
+def test_parser_accepts_empty_string_for_labels(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_args_list[0][0][0][8] == ''
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'my-org/my-repo-with-dashes_underscores', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_parser_accepts_special_characters_in_repo(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_args_list[0][0][0][2] == 'https://github.com/my-org/my-repo-with-dashes_underscores'
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner-with-dashes_123', '--labels', 'lbl', '--token', 'tok'])
+def test_parser_accepts_special_characters_in_name(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_args_list[0][0][0][6] == 'runner-with-dashes_123'
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'label1,label2,label-3_test', '--token', 'tok'])
+def test_parser_accepts_comma_separated_labels(mock_run):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_args_list[0][0][0][8] == 'label1,label2,label-3_test'
+
+
+@patch('entrypoint.signal.signal')
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_signal_handler_function_registered(mock_run, mock_signal):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert callable(mock_signal.call_args_list[0][0][1])
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_config_sh_returns_non_zero_exit_code(mock_run):
+    mock_run.return_value = Mock(returncode=127)
+    with pytest.raises(SystemExit) as exc_info:
+        entrypoint.main()
+    assert exc_info.value.code == 1
+
+
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_run_sh_not_called_when_config_fails(mock_run):
+    mock_run.return_value = Mock(returncode=1)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    assert mock_run.call_count == 1
+
+
+@patch('entrypoint.subprocess.run')
+def test_cleanup_runner_calls_config_sh_remove(mock_run):
+    entrypoint.cleanup_runner('test-token')
+    assert mock_run.call_args[0][0][1] == 'remove'
