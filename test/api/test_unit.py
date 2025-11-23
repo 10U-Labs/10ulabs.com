@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -1551,7 +1552,6 @@ def test_no_hardcoded_defaults_in_webhook_router():
 
     os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
 
-    import re
     matches = re.findall(os_environ_get_pattern_with_default, content)
     assert len(matches) == 0
 
@@ -1563,7 +1563,6 @@ def test_no_hardcoded_defaults_in_v1():
 
     os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
 
-    import re
     matches = re.findall(os_environ_get_pattern_with_default, content)
     assert len(matches) == 0
 
@@ -1575,7 +1574,6 @@ def test_no_hardcoded_defaults_in_dlq_reprocessor():
 
     os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
 
-    import re
     matches = re.findall(os_environ_get_pattern_with_default, content)
     assert len(matches) == 0
 
@@ -1587,6 +1585,5 @@ def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
 
     os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
 
-    import re
     matches = re.findall(os_environ_get_pattern_with_default, content)
     assert len(matches) == 0

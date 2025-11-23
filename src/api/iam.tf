@@ -91,13 +91,14 @@ resource "aws_iam_role" "ec2_runner_role" {
     }]
   })
 
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  ]
-
   tags = {
     Name = "GitHubSelfHostedRunnerEC2Role"
   }
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_runner_ssm_policy" {
+  role       = aws_iam_role.ec2_runner_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_role_policy" "ec2_runner_ecr_access" {
@@ -156,13 +157,14 @@ resource "aws_iam_role" "lambda_health_handler" {
     }]
   })
 
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  ]
-
   tags = {
     Name = "HealthHandler-ServiceRole"
   }
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_health_handler_basic" {
+  role       = aws_iam_role.lambda_health_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_role" "lambda_catchall_handler" {
@@ -179,13 +181,14 @@ resource "aws_iam_role" "lambda_catchall_handler" {
     }]
   })
 
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  ]
-
   tags = {
     Name = "CatchAllHandler-ServiceRole"
   }
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_catchall_handler_basic" {
+  role       = aws_iam_role.lambda_catchall_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_role" "lambda_runners_handler" {
@@ -202,14 +205,19 @@ resource "aws_iam_role" "lambda_runners_handler" {
     }]
   })
 
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
-    "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
-  ]
-
   tags = {
     Name = "${var.lambda_function_name}-ServiceRole"
   }
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_runners_handler_basic" {
+  role       = aws_iam_role.lambda_runners_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_runners_handler_xray" {
+  role       = aws_iam_role.lambda_runners_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
 
 resource "aws_iam_role_policy" "lambda_runners_handler_ssm" {
@@ -307,13 +315,14 @@ resource "aws_iam_role" "lambda_v1_handler" {
     }]
   })
 
-  managed_policy_arns = [
-    "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-  ]
-
   tags = {
     Name = "V1ApiHandler-ServiceRole"
   }
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_v1_handler_basic" {
+  role       = aws_iam_role.lambda_v1_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_iam_role_policy" "lambda_v1_handler_ecs" {

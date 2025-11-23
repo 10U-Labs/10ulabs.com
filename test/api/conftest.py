@@ -143,7 +143,7 @@ def stack_outputs_fixture(cloudformation_client):
 
 
 @pytest.fixture(name="certificate_arn")
-def certificate_arn_fixture(acm_client, cfg):
+def certificate_arn_fixture(acm_client):
     tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
     with open(tfvars_path, 'r', encoding='utf-8') as f:
         for line in f:
