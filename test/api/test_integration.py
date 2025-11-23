@@ -187,3 +187,46 @@ def test_github_webhook_for_runners_endpoint_is_active(github_pat, tfvars):
     webhook_url = f"https://{tfvars['domain_subdomain']}/v1/runners"
     matching_hooks = [hook for hook in hooks if hook["config"]["url"] == webhook_url]
     assert matching_hooks[0]["active"] is True
+
+
+def test_sqs_job_queue_exists():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    response = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')
+    assert 'QueueUrl' in response
+
+
+def test_sqs_webhook_dlq_exists():
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    response = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-dlq')
+    assert 'QueueUrl' in response
+
+
+def test_dynamodb_idempotency_table_exists():
+    dynamodb = boto3.client('dynamodb', region_name='us-east-1')
+    response = dynamodb.describe_table(TableName='TenULabsWebhookHandler-idempotency')
+    assert response['Table']['TableName'] == 'TenULabsWebhookHandler-idempotency'
+
+
+def test_dynamodb_idempotency_table_has_ttl():
+    dynamodb = boto3.client('dynamodb', region_name='us-east-1')
+    response = dynamodb.describe_time_to_live(TableName='TenULabsWebhookHandler-idempotency')
+    assert response['TimeToLiveDescription']['TimeToLiveStatus'] == 'ENABLED'
+
+
+def test_cloudwatch_log_group_webhook_handler_exists():
+    logs = boto3.client('logs', region_name='us-east-1')
+    response = logs.describe_log_groups(logGroupNamePrefix='/aws/lambda/TenULabsWebhookHandler')
+    log_groups = [lg for lg in response['logGroups'] if lg['logGroupName'] == '/aws/lambda/TenULabsWebhookHandler']
+    assert len(log_groups) == 1
+
+
+def test_iam_role_ecs_task_exists():
+    iam = boto3.client('iam')
+    response = iam.get_role(RoleName='github-runner-TaskRole')
+    assert response['Role']['RoleName'] == 'github-runner-TaskRole'
+
+
+def test_iam_role_ec2_runner_exists():
+    iam = boto3.client('iam')
+    response = iam.get_role(RoleName='GitHubSelfHostedRunnerEC2Role')
+    assert response['Role']['RoleName'] == 'GitHubSelfHostedRunnerEC2Role'
