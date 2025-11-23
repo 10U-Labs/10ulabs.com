@@ -312,10 +312,11 @@ def test_signal_handler_invokes_cleanup_runner(mock_run, mock_signal):
     with pytest.raises(SystemExit):
         entrypoint.main()
     signal_handler = mock_signal.call_args_list[0][0][1]
-    with patch('entrypoint.cleanup_runner') as mock_cleanup:
-        with pytest.raises(SystemExit):
-            signal_handler(None, None)
-        assert mock_cleanup.called
+    initial_call_count = mock_run.call_count
+    with pytest.raises(SystemExit):
+        signal_handler(None, None)
+    assert mock_run.call_count > initial_call_count
+    assert any('remove' in str(call) for call in mock_run.call_args_list[initial_call_count:])
 
 
 @patch('entrypoint.cleanup_runner')

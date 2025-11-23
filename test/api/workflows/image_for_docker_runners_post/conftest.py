@@ -34,7 +34,22 @@ def get_ecr_repository():
 
 
 def get_github_repo():
-    return "10ulabs/10ulabs.com"
+    result = subprocess.run(
+        ["git", "remote", "get-url", "origin"],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    url = result.stdout.strip()
+    if "github.com" in url:
+        if url.startswith("git@github.com:"):
+            repo = url.replace("git@github.com:", "").replace(".git", "")
+        elif url.startswith("https://github.com/"):
+            repo = url.replace("https://github.com/", "").replace(".git", "")
+        else:
+            raise ValueError(f"Unexpected GitHub URL format: {url}")
+        return repo
+    raise ValueError(f"Not a GitHub repository: {url}")
 
 
 def get_github_pat():

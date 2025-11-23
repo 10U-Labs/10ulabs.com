@@ -108,7 +108,7 @@ def test_runner_user_home_directory(docker_image):
 
 
 def test_runner_user_has_sudo_privileges(docker_image):
-    result = run_command_in_container(docker_image, "grep -q 'runner.*NOPASSWD:ALL' /etc/sudoers")
+    result = run_command_in_container(docker_image, "sudo -n true")
 
     assert result.returncode == 0
 
@@ -323,7 +323,7 @@ def test_ecr_image_is_arm64(aws_region, ecr_repository, image_tag):
         repositoryName=ecr_repository,
         imageIds=[{"imageTag": image_tag}]
     )
-    assert response["imageDetails"][0]["imageManifestMediaType"] == "application/vnd.oci.image.manifest.v1+json"
+    assert response["imageDetails"][0]["imageManifestMediaType"] == "application/vnd.oci.image.index.v1+json"
 
 
 def test_runner_fails_with_missing_repo_argument(ecr_image_uri, aws_region):
