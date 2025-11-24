@@ -284,7 +284,6 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
         response = get_ecs_client().run_task(
             cluster=cluster,
             taskDefinition=task_definition,
-            launchType='FARGATE',
             networkConfiguration={
                 'awsvpcConfiguration': {
                     'subnets': subnets,
