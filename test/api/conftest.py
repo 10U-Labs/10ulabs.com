@@ -75,12 +75,34 @@ def health_handler():
 
 
 @pytest.fixture
-def v1_handler():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
-    spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def v1_handler(tfvars):
+    env_vars = {
+        'AWS_REGION': tfvars['aws_region'],
+        'ECR_REPOSITORY': tfvars['ecr_repository_name'],
+        'GITHUB_REPO': tfvars['github_repo'],
+        'GITHUB_TOKEN_SECRET_NAME': tfvars['github_token_secret_name'],
+        'ECS_CLUSTER': tfvars['cluster_name'],
+        'CONTAINER_NAME': tfvars['container_name'],
+        'TASK_DEFINITION': tfvars['task_family'],
+        'EC2_INSTANCE_TYPES': ','.join(tfvars['ec2_spot_instance_types']),
+        'EC2_MAX_PRICE': tfvars['ec2_max_spot_price'],
+        'API_DOMAIN': tfvars['domain_subdomain'],
+        'IMAGE_API_ENDPOINT': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}",
+        'SUBNETS': 'subnet-test1,subnet-test2',
+        'SECURITY_GROUPS': 'sg-test',
+        'VPC_ID': 'vpc-test',
+        'EC2_IAM_INSTANCE_PROFILE': 'test-profile'
+    }
+    with patch.dict('os.environ', env_vars):
+        handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
+        spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if hasattr(module, '_clients'):
+            setattr(module, '_clients', {})
+        if hasattr(module, '_github_token_cache'):
+            setattr(module, '_github_token_cache', {'value': None})
+        yield module
 
 
 @pytest.fixture
@@ -187,7 +209,12 @@ def api_endpoint_fixture(cloudformation_client):
 
 @pytest.fixture
 def webhook_router(tfvars):
-    with patch.dict('os.environ', {'API_KEY_PARAMETER_NAME': tfvars['api_key_parameter_name']}):
+    env_vars = {
+        'API_KEY_PARAMETER_NAME': tfvars['api_key_parameter_name'],
+        'WEBHOOK_SECRET_NAME': tfvars['webhook_secret_name'],
+        'API_BASE_URL': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}"
+    }
+    with patch.dict('os.environ', env_vars):
         handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
         spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
         module = importlib.util.module_from_spec(spec)
@@ -204,21 +231,29 @@ def webhook_router(tfvars):
 
 
 @pytest.fixture
-def circuit_breaker_remediation():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
-    spec = importlib.util.spec_from_file_location("circuit_breaker_remediation", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def circuit_breaker_remediation(tfvars):
+    env_vars = {
+        'AWS_REGION': tfvars['aws_region']
+    }
+    with patch.dict('os.environ', env_vars):
+        handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
+        spec = importlib.util.spec_from_file_location("circuit_breaker_remediation", handler_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
 
 
 @pytest.fixture
-def dlq_reprocessor():
-    handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
-    spec = importlib.util.spec_from_file_location("dlq_reprocessor", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def dlq_reprocessor(tfvars):
+    env_vars = {
+        'AWS_REGION': tfvars['aws_region']
+    }
+    with patch.dict('os.environ', env_vars):
+        handler_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
+        spec = importlib.util.spec_from_file_location("dlq_reprocessor", handler_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
 
 
 @pytest.fixture

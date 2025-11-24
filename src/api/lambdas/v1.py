@@ -538,7 +538,7 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
 def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
     subnet_ids = os.environ['SUBNETS'].split(',')
     vpc_id = os.environ['VPC_ID']
-    region = os.environ.get('AWS_REGION', 'us-east-1')
+    region = os.environ['AWS_REGION']
 
     payload = {
         'ref': 'main',
@@ -691,7 +691,7 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_docker_runner_status() -> Dict[str, Any]:
-    cluster = os.environ.get('ECS_CLUSTER', 'github-runner-cluster')
+    cluster = os.environ['ECS_CLUSTER']
     try:
         ecs = get_ecs_client()
         response = ecs.list_tasks(

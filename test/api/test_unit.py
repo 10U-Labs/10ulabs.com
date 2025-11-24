@@ -1817,7 +1817,7 @@ def test_trigger_github_workflow_http_error(v1_handler):
             assert result['success'] is False
 
 
-def test_handle_post_request_success(v1_handler, _lambda_context):
+def test_handle_post_request_success(v1_handler, lambda_context):
     event = {'body': '{"test": "data"}'}
     def handler_func(body):
         return {'success': True, 'data': body}
@@ -1825,7 +1825,7 @@ def test_handle_post_request_success(v1_handler, _lambda_context):
     assert result['statusCode'] == 200
 
 
-def test_handle_post_request_value_error(v1_handler, _lambda_context):
+def test_handle_post_request_value_error(v1_handler, lambda_context):
     event = {'body': '{"test": "data"}'}
     def handler_func(body):
         raise ValueError('Test error')
@@ -2681,7 +2681,7 @@ def test_lambda_handler_unknown_route_returns_404(v1_handler, lambda_context):
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2699,7 +2699,7 @@ def test_circuit_breaker_remediation_without_webhook_function_name(_mock_boto_cl
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2712,7 +2712,7 @@ def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2725,7 +2725,7 @@ def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_c
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2738,7 +2738,7 @@ def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_b
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.side_effect = ClientError({'Error': {'Code': 'ServiceException', 'Message': 'Test error'}}, 'Invoke')
     mock_boto_client.return_value = mock_lambda
@@ -2748,7 +2748,7 @@ def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, cir
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2761,7 +2761,7 @@ def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_b
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2774,7 +2774,7 @@ def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_cli
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client, circuit_breaker_remediation, lambda_context, _env_with_webhook_function_name):
+def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client, circuit_breaker_remediation, lambda_context, env_with_webhook_function_name):
     mock_lambda = MagicMock()
     mock_lambda.invoke.return_value = {
         'StatusCode': 200,
@@ -2787,7 +2787,7 @@ def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
     mock_boto_client.return_value = mock_sqs
@@ -2796,7 +2796,7 @@ def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, la
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2812,7 +2812,7 @@ def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reproc
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2827,7 +2827,7 @@ def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, d
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2842,7 +2842,7 @@ def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_repr
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage')
     mock_boto_client.return_value = mock_sqs
@@ -2852,7 +2852,7 @@ def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_r
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
     mock_boto_client.return_value = mock_sqs
@@ -2862,7 +2862,7 @@ def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -2879,7 +2879,7 @@ def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_rep
 
 
 @patch('boto3.client')
-def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context, _env_with_queue_urls):
+def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context, env_with_queue_urls):
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [

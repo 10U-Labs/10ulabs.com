@@ -187,8 +187,8 @@ def get_api_key(force_refresh: bool = False) -> str:
 
     api_key = api_key_cache['value']
     if not api_key:
-        parameter_name = os.environ['API_KEY_PARAMETER_NAME']
         try:
+            parameter_name = os.environ['API_KEY_PARAMETER_NAME']
             ssm = get_ssm_client()
             response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
             api_key = response['Parameter']['Value']
