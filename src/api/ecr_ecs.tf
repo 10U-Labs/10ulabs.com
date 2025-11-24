@@ -21,18 +21,48 @@ resource "aws_ecr_lifecycle_policy" "runner" {
   repository = aws_ecr_repository.runner.name
 
   policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Keep only last 3 images"
-      selection = {
-        tagStatus   = "any"
-        countType   = "imageCountMoreThan"
-        countNumber = 3
+    rules = [
+      {
+        rulePriority = 1
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["latest"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 1
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 2
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["stable"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 1
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 10
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 1
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 20
+        selection = {
+          tagStatus   = "any"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 1
+        }
+        action = { type = "expire" }
       }
-      action = {
-        type = "expire"
-      }
-    }]
+    ]
   })
 }
 

@@ -34,6 +34,55 @@ def test_ecr_lifecycle_policy_exists():
     assert 'resource "aws_ecr_lifecycle_policy" "runner"' in content
 
 
+def test_ecr_lifecycle_policy_has_latest_tag_rule():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'tagPrefixList = ["latest"]' in content
+
+
+def test_ecr_lifecycle_policy_has_stable_tag_rule():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'tagPrefixList = ["stable"]' in content
+
+
+def test_ecr_lifecycle_policy_has_untagged_rule():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'tagStatus   = "untagged"' in content
+
+
+def test_ecr_lifecycle_policy_has_any_tag_catchall_rule():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'tagStatus   = "any"' in content
+
+
+def test_ecr_lifecycle_policy_latest_rule_keeps_one():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert content.count('countNumber   = 1') >= 2
+
+
+def test_ecr_lifecycle_policy_untagged_expires_after_one_day():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'countUnit   = "days"' in content
+
+
+def test_ecr_lifecycle_policy_has_four_rules():
+    ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
+    with open(ecr_ecs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert content.count('rulePriority') == 4
+
+
 def test_ecs_cluster_resource_exists():
     ecr_ecs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "ecr_ecs.tf"
     with open(ecr_ecs_file, encoding="utf-8") as f:
