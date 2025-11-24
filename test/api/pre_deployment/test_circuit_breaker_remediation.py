@@ -1,7 +1,13 @@
-import json
 import os
 from unittest.mock import patch, MagicMock
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status
+from test.api.pre_deployment.conftest import (
+    parse_response_body,
+    assert_response_status,
+    create_mock_lambda_list_mappings_error,
+    create_mock_lambda_put_concurrency_error,
+    create_mock_sns_publish_error,
+    create_mock_lambda_with_mappings
+)
 from botocore.exceptions import ClientError
 
 
@@ -52,12 +58,7 @@ def test_disable_sqs_event_source_handles_no_mappings(circuit_breaker_remediatio
 
 def test_disable_sqs_event_source_handles_api_error(circuit_breaker_remediation):
     with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_lambda.list_event_source_mappings.side_effect = ClientError(
-            {'Error': {'Code': 'ServiceUnavailable'}},
-            'ListEventSourceMappings'
-        )
-        mock_boto_client.return_value = mock_lambda
+        mock_boto_client.return_value = create_mock_lambda_list_mappings_error()
         result = circuit_breaker_remediation.disable_sqs_event_source('test-function')
     assert result['success'] is False
 
@@ -72,12 +73,7 @@ def test_set_lambda_reserved_concurrency_sets_to_zero(circuit_breaker_remediatio
 
 def test_set_lambda_reserved_concurrency_handles_api_error(circuit_breaker_remediation):
     with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_lambda.put_function_concurrency.side_effect = ClientError(
-            {'Error': {'Code': 'ServiceUnavailable'}},
-            'PutFunctionConcurrency'
-        )
-        mock_boto_client.return_value = mock_lambda
+        mock_boto_client.return_value = create_mock_lambda_put_concurrency_error()
         result = circuit_breaker_remediation.set_lambda_reserved_concurrency('test-function', 0)
     assert result['success'] is False
 
@@ -103,12 +99,7 @@ def test_send_sns_notification_includes_subject(circuit_breaker_remediation):
 
 def test_send_sns_notification_handles_api_error(circuit_breaker_remediation):
     with patch('boto3.client') as mock_boto_client:
-        mock_sns = MagicMock()
-        mock_sns.publish.side_effect = ClientError(
-            {'Error': {'Code': 'ServiceUnavailable'}},
-            'Publish'
-        )
-        mock_boto_client.return_value = mock_sns
+        mock_boto_client.return_value = create_mock_sns_publish_error()
         result = circuit_breaker_remediation.send_sns_notification('arn:aws:sns:test', 'Subject', 'Message')
     assert result['success'] is False
 
@@ -231,11 +222,7 @@ def test_handle_cloudwatch_alarm_event_disables_event_sources(circuit_breaker_re
         'STATE_TABLE_NAME': 'test-state'
     }):
         with patch('boto3.client') as mock_boto_client:
-            mock_lambda = MagicMock()
-            mock_lambda.list_event_source_mappings.return_value = {
-                'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Enabled'}]
-            }
-            mock_boto_client.return_value = mock_lambda
+            mock_boto_client.return_value = create_mock_lambda_with_mappings()
             result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
     assert any('Disabled SQS event sources' in action for action in result.get('actions_taken', []))
 

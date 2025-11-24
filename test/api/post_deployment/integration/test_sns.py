@@ -1,8 +1,9 @@
+from test.api.conftest import find_sns_topic_arns
+
+
 def test_sns_circuit_breaker_alerts_topic_exists(sns_client, tfvars):
     topic_name = f"{tfvars['resource_prefix']}-circuit-breaker-alerts"
-    topics = sns_client.list_topics()
-    topic_arns = [t['TopicArn'] for t in topics['Topics']]
-    matching_topics = [t for t in topic_arns if topic_name in t]
+    matching_topics = find_sns_topic_arns(sns_client, topic_name)
     assert len(matching_topics) == 1
 
 

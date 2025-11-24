@@ -1,7 +1,15 @@
 import json
 import os
+import time
 from unittest.mock import patch, MagicMock
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status
+from test.api.pre_deployment.conftest import (
+    parse_response_body,
+    assert_response_status,
+    create_mock_lambda_list_mappings_error,
+    create_mock_lambda_put_concurrency_error,
+    create_mock_sns_publish_error,
+    create_mock_lambda_with_mappings
+)
 from botocore.exceptions import ClientError
 
 
@@ -185,10 +193,7 @@ def test_enable_event_source_mappings_enables_disabled_sources(circuit_breaker_r
 
 def test_enable_event_source_mappings_skips_already_enabled(circuit_breaker_recovery):
     with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_lambda.list_event_source_mappings.return_value = {
-            'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Enabled'}]
-        }
+        mock_lambda = create_mock_lambda_with_mappings()
         mock_boto_client.return_value = mock_lambda
         circuit_breaker_recovery.enable_event_source_mappings('test-function')
     assert not mock_lambda.update_event_source_mapping.called
@@ -219,12 +224,7 @@ def test_enable_event_source_mappings_handles_no_mappings(circuit_breaker_recove
 
 def test_enable_event_source_mappings_handles_api_error(circuit_breaker_recovery):
     with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_lambda.list_event_source_mappings.side_effect = ClientError(
-            {'Error': {'Code': 'ServiceUnavailable'}},
-            'ListEventSourceMappings'
-        )
-        mock_boto_client.return_value = mock_lambda
+        mock_boto_client.return_value = create_mock_lambda_list_mappings_error()
         result = circuit_breaker_recovery.enable_event_source_mappings('test-function')
     assert result['success'] is False
 
@@ -247,12 +247,7 @@ def test_set_lambda_reserved_concurrency_removes_limit_when_zero(circuit_breaker
 
 def test_set_lambda_reserved_concurrency_handles_api_error(circuit_breaker_recovery):
     with patch('boto3.client') as mock_boto_client:
-        mock_lambda = MagicMock()
-        mock_lambda.put_function_concurrency.side_effect = ClientError(
-            {'Error': {'Code': 'ServiceUnavailable'}},
-            'PutFunctionConcurrency'
-        )
-        mock_boto_client.return_value = mock_lambda
+        mock_boto_client.return_value = create_mock_lambda_put_concurrency_error()
         result = circuit_breaker_recovery.set_lambda_reserved_concurrency('test-function', 5)
     assert result['success'] is False
 
@@ -275,7 +270,6 @@ def test_attempt_recovery_skips_when_not_in_open_state(circuit_breaker_recovery)
 
 
 def test_attempt_recovery_waits_for_backoff_period(circuit_breaker_recovery):
-    import time
     current_time = int(time.time())
     with patch.dict(os.environ, {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}):
         with patch('boto3.client') as mock_boto_client:
@@ -566,11 +560,6 @@ def test_send_recovery_notification_includes_recovery_attempts(circuit_breaker_r
 
 def test_send_recovery_notification_handles_api_error(circuit_breaker_recovery):
     with patch('boto3.client') as mock_boto_client:
-        mock_sns = MagicMock()
-        mock_sns.publish.side_effect = ClientError(
-            {'Error': {'Code': 'ServiceUnavailable'}},
-            'Publish'
-        )
-        mock_boto_client.return_value = mock_sns
+        mock_boto_client.return_value = create_mock_sns_publish_error()
         result = circuit_breaker_recovery.send_recovery_notification('arn:aws:sns:test', 'half-open', 2, [])
     assert result['success'] is False

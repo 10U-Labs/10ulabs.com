@@ -1,7 +1,8 @@
 import ast
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
+import boto3
 import pytest
 
 
@@ -49,3 +50,40 @@ def cfg_fixture() -> Dict[str, Any]:
             "runner_version": tfvars.get("github_runner_version")
         }
     }
+
+
+@pytest.fixture
+def sns_client():
+    return boto3.client('sns', region_name='us-east-1')
+
+
+@pytest.fixture
+def dynamodb_client():
+    return boto3.client('dynamodb', region_name='us-east-1')
+
+
+@pytest.fixture
+def lambda_client():
+    return boto3.client('lambda', region_name='us-east-1')
+
+
+@pytest.fixture
+def cloudwatch_client():
+    return boto3.client('cloudwatch', region_name='us-east-1')
+
+
+@pytest.fixture
+def events_client():
+    return boto3.client('events', region_name='us-east-1')
+
+
+@pytest.fixture
+def logs_client():
+    return boto3.client('logs', region_name='us-east-1')
+
+
+def find_sns_topic_arns(client: Any, topic_name: str) -> List[str]:
+    topics = client.list_topics()
+    topic_arns = [t['TopicArn'] for t in topics['Topics']]
+    matching_topics = [t for t in topic_arns if topic_name in t]
+    return matching_topics

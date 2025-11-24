@@ -467,3 +467,38 @@ def reset_module_state(module: ModuleType, **state_vars: Any) -> None:
     for var_name, default_value in state_vars.items():
         if hasattr(module, var_name):
             setattr(module, var_name, default_value)
+
+
+def create_mock_lambda_list_mappings_error():
+    mock_lambda = MagicMock()
+    mock_lambda.list_event_source_mappings.side_effect = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable'}},
+        'ListEventSourceMappings'
+    )
+    return mock_lambda
+
+
+def create_mock_lambda_put_concurrency_error():
+    mock_lambda = MagicMock()
+    mock_lambda.put_function_concurrency.side_effect = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable'}},
+        'PutFunctionConcurrency'
+    )
+    return mock_lambda
+
+
+def create_mock_sns_publish_error():
+    mock_sns = MagicMock()
+    mock_sns.publish.side_effect = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable'}},
+        'Publish'
+    )
+    return mock_sns
+
+
+def create_mock_lambda_with_mappings():
+    mock_lambda = MagicMock()
+    mock_lambda.list_event_source_mappings.return_value = {
+        'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Enabled'}]
+    }
+    return mock_lambda
