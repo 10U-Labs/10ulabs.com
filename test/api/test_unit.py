@@ -1706,27 +1706,43 @@ def test_get_ssm_client_caches_on_second_call(v1_handler):
 
 
 def test_get_ec2_client_initialization(v1_handler):
-    with patch.object(v1_handler, '_clients', {}):
-        client = v1_handler.get_ec2_client()
-        assert client is not None
+    with patch('boto3.client') as mock_boto_client:
+        mock_ec2 = MagicMock()
+        mock_boto_client.return_value = mock_ec2
+        with patch.object(v1_handler, '_clients', {}):
+            client = v1_handler.get_ec2_client()
+            assert client is not None
+            mock_boto_client.assert_called_once_with('ec2')
 
 
 def test_get_ecs_client_initialization(v1_handler):
-    with patch.object(v1_handler, '_clients', {}):
-        client = v1_handler.get_ecs_client()
-        assert client is not None
+    with patch('boto3.client') as mock_boto_client:
+        mock_ecs = MagicMock()
+        mock_boto_client.return_value = mock_ecs
+        with patch.object(v1_handler, '_clients', {}):
+            client = v1_handler.get_ecs_client()
+            assert client is not None
+            mock_boto_client.assert_called_once_with('ecs')
 
 
 def test_get_ecr_client_initialization(v1_handler):
-    with patch.object(v1_handler, '_clients', {}):
-        client = v1_handler.get_ecr_client()
-        assert client is not None
+    with patch('boto3.client') as mock_boto_client:
+        mock_ecr = MagicMock()
+        mock_boto_client.return_value = mock_ecr
+        with patch.object(v1_handler, '_clients', {}):
+            client = v1_handler.get_ecr_client()
+            assert client is not None
+            mock_boto_client.assert_called_once_with('ecr')
 
 
 def test_get_ssm_client_initialization(v1_handler):
-    with patch.object(v1_handler, '_clients', {}):
-        client = v1_handler.get_ssm_client()
-        assert client is not None
+    with patch('boto3.client') as mock_boto_client:
+        mock_ssm = MagicMock()
+        mock_boto_client.return_value = mock_ssm
+        with patch.object(v1_handler, '_clients', {}):
+            client = v1_handler.get_ssm_client()
+            assert client is not None
+            mock_boto_client.assert_called_once_with('ssm')
 
 
 def test_json_response_formats_correctly(v1_handler):
@@ -2345,10 +2361,11 @@ def test_get_api_key_missing_env_var(_mock_boto_client, webhook_router):
 def test_route_runner_request_ssm_failure(webhook_router):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
-    with patch.object(webhook_router, 'get_api_key', side_effect=RuntimeError('SSM error')):
-        with patch.dict('os.environ', {'API_BASE_URL': 'https://api.test.com'}):
-            result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
-            assert result['success'] is False
+    with patch('boto3.client'):
+        with patch.object(webhook_router, 'get_api_key', side_effect=RuntimeError('SSM error')):
+            with patch.dict('os.environ', {'API_BASE_URL': 'https://api.test.com'}):
+                result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+                assert result['success'] is False
 
 
 @patch('boto3.client')
