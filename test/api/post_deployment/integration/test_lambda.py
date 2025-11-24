@@ -91,29 +91,79 @@ def test_sqs_has_permission_to_invoke_webhook_router_lambda(lambda_client, tfvar
     assert "Configuration" in response
 
 
-def test_circuit_breaker_remediation_lambda_exists(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [f['FunctionName'] for f in functions['Functions']]
-    circuit_breaker_funcs = [n for n in function_names if 'circuit' in n.lower() or 'breaker' in n.lower()]
-    assert len(circuit_breaker_funcs) >= 0
+def test_circuit_breaker_remediation_lambda_exists(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['FunctionName'] == function_name
 
 
-def test_circuit_breaker_remediation_lambda_has_trigger(events_client):
-    rules = events_client.list_rules()
-    assert rules['Rules']
+def test_circuit_breaker_remediation_lambda_runtime(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['Runtime'] == 'python3.13'
 
 
-def test_dlq_reprocessor_lambda_exists(lambda_client):
-    functions = lambda_client.list_functions()
-    function_names = [f['FunctionName'] for f in functions['Functions']]
-    dlq_funcs = [n for n in function_names if 'dlq' in n.lower()]
-    assert len(dlq_funcs) >= 0
+def test_circuit_breaker_remediation_lambda_has_environment_vars(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation"
+    response = lambda_client.get_function(FunctionName=function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'WEBHOOK_FUNCTION_NAME' in env_vars
 
 
-def test_dlq_reprocessor_lambda_has_schedule_trigger(events_client):
-    rules = events_client.list_rules()
-    scheduled_rules = [r for r in rules['Rules'] if r.get('ScheduleExpression')]
-    assert len(scheduled_rules) >= 0
+def test_circuit_breaker_remediation_lambda_timeout(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['Timeout'] == 60
+
+
+def test_circuit_breaker_recovery_lambda_exists(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['FunctionName'] == function_name
+
+
+def test_circuit_breaker_recovery_lambda_runtime(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['Runtime'] == 'python3.13'
+
+
+def test_circuit_breaker_recovery_lambda_has_environment_vars(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery"
+    response = lambda_client.get_function(FunctionName=function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'STATE_TABLE_NAME' in env_vars
+
+
+def test_circuit_breaker_recovery_lambda_timeout(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['Timeout'] == 60
+
+
+def test_dlq_reprocessor_lambda_exists(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-DLQReprocessor"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['FunctionName'] == function_name
+
+
+def test_dlq_reprocessor_lambda_runtime(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-DLQReprocessor"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['Runtime'] == 'python3.13'
+
+
+def test_dlq_reprocessor_lambda_has_environment_vars(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-DLQReprocessor"
+    response = lambda_client.get_function(FunctionName=function_name)
+    env_vars = response['Configuration']['Environment']['Variables']
+    assert 'JOB_QUEUE_URL' in env_vars
+
+
+def test_dlq_reprocessor_lambda_timeout(lambda_client, tfvars):
+    function_name = f"{tfvars['resource_prefix']}-DLQReprocessor"
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response['Configuration']['Timeout'] == 300
 
 
 def test_lambda_can_send_message_to_job_queue(sqs_client, tfvars):

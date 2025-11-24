@@ -183,3 +183,137 @@ resource "aws_cloudwatch_log_group" "v1_handler" {
     Name = "${var.v1_handler_function_name}-logs"
   }
 }
+
+data "archive_file" "circuit_breaker_remediation" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/circuit_breaker_remediation.py"
+  output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_remediation.zip"
+}
+
+resource "aws_lambda_function" "circuit_breaker_remediation" {
+  filename         = data.archive_file.circuit_breaker_remediation.output_path
+  function_name    = "${var.resource_prefix}-CircuitBreakerRemediation"
+  role             = aws_iam_role.circuit_breaker_remediation.arn
+  handler          = "circuit_breaker_remediation.lambda_handler"
+  source_code_hash = data.archive_file.circuit_breaker_remediation.output_base64sha256
+  runtime          = "python3.13"
+  timeout          = 60
+  memory_size      = 256
+  description      = "Automatic remediation for circuit breaker alarms"
+
+  environment {
+    variables = {
+      WEBHOOK_FUNCTION_NAME = aws_lambda_function.runners_handler.function_name
+      SNS_TOPIC_ARN         = aws_sns_topic.circuit_breaker_alerts.arn
+      INCIDENT_TABLE_NAME   = aws_dynamodb_table.incidents.name
+      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_breaker_state.name
+    }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.circuit_breaker_remediation.name
+  }
+
+  tags = {
+    Name = "${var.resource_prefix}-CircuitBreakerRemediation"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
+  name              = "/aws/lambda/${var.resource_prefix}-CircuitBreakerRemediation"
+  retention_in_days = 30
+
+  tags = {
+    Name = "${var.resource_prefix}-CircuitBreakerRemediation-logs"
+  }
+}
+
+data "archive_file" "dlq_reprocessor" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/dlq_reprocessor.py"
+  output_path = "${path.module}/.terraform/lambda_packages/dlq_reprocessor.zip"
+}
+
+resource "aws_lambda_function" "dlq_reprocessor" {
+  filename         = data.archive_file.dlq_reprocessor.output_path
+  function_name    = "${var.resource_prefix}-DLQReprocessor"
+  role             = aws_iam_role.dlq_reprocessor.arn
+  handler          = "dlq_reprocessor.handler"
+  source_code_hash = data.archive_file.dlq_reprocessor.output_base64sha256
+  runtime          = "python3.13"
+  timeout          = 300
+  memory_size      = 256
+  description      = "Reprocesses messages from DLQs"
+
+  environment {
+    variables = {
+      WEBHOOK_DLQ_URL = aws_sqs_queue.webhook_dlq.url
+      JOB_DLQ_URL     = aws_sqs_queue.job_queue_dlq.url
+      JOB_QUEUE_URL   = aws_sqs_queue.job_queue.url
+    }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.dlq_reprocessor.name
+  }
+
+  tags = {
+    Name = "${var.resource_prefix}-DLQReprocessor"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
+  name              = "/aws/lambda/${var.resource_prefix}-DLQReprocessor"
+  retention_in_days = 30
+
+  tags = {
+    Name = "${var.resource_prefix}-DLQReprocessor-logs"
+  }
+}
+
+data "archive_file" "circuit_breaker_recovery" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/circuit_breaker_recovery.py"
+  output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_recovery.zip"
+}
+
+resource "aws_lambda_function" "circuit_breaker_recovery" {
+  filename         = data.archive_file.circuit_breaker_recovery.output_path
+  function_name    = "${var.resource_prefix}-CircuitBreakerRecovery"
+  role             = aws_iam_role.circuit_breaker_recovery.arn
+  handler          = "circuit_breaker_recovery.lambda_handler"
+  source_code_hash = data.archive_file.circuit_breaker_recovery.output_base64sha256
+  runtime          = "python3.13"
+  timeout          = 60
+  memory_size      = 256
+  description      = "Automatic self-healing recovery for circuit breaker"
+
+  environment {
+    variables = {
+      WEBHOOK_FUNCTION_NAME = aws_lambda_function.runners_handler.function_name
+      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_breaker_state.name
+      SNS_TOPIC_ARN         = aws_sns_topic.circuit_breaker_alerts.arn
+      MAX_RECOVERY_ATTEMPTS = "5"
+    }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.circuit_breaker_recovery.name
+  }
+
+  tags = {
+    Name = "${var.resource_prefix}-CircuitBreakerRecovery"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
+  name              = "/aws/lambda/${var.resource_prefix}-CircuitBreakerRecovery"
+  retention_in_days = 30
+
+  tags = {
+    Name = "${var.resource_prefix}-CircuitBreakerRecovery-logs"
+  }
+}

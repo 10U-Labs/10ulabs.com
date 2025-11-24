@@ -448,3 +448,191 @@ resource "aws_iam_role_policy" "lambda_v1_handler_kms" {
     }]
   })
 }
+
+resource "aws_iam_role" "circuit_breaker_remediation" {
+  name = "${var.resource_prefix}-CircuitBreakerRemediation-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "${var.resource_prefix}-CircuitBreakerRemediation-Role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "circuit_breaker_remediation_basic" {
+  role       = aws_iam_role.circuit_breaker_remediation.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
+  name = "RemediationPermissions"
+  role = aws_iam_role.circuit_breaker_remediation.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:ListEventSourceMappings",
+          "lambda:UpdateEventSourceMapping",
+          "lambda:PutFunctionConcurrency",
+          "lambda:GetFunction",
+          "lambda:InvokeFunction"
+        ]
+        Resource = [
+          aws_lambda_function.runners_handler.arn,
+          "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:event-source-mapping:*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem"
+        ]
+        Resource = [
+          aws_dynamodb_table.incidents.arn,
+          aws_dynamodb_table.circuit_breaker_state.arn
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "dlq_reprocessor" {
+  name = "${var.resource_prefix}-DLQReprocessor-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "${var.resource_prefix}-DLQReprocessor-Role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "dlq_reprocessor_basic" {
+  role       = aws_iam_role.dlq_reprocessor.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
+  name = "DLQReprocessorPermissions"
+  role = aws_iam_role.dlq_reprocessor.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = [
+          aws_sqs_queue.webhook_dlq.arn,
+          aws_sqs_queue.job_queue_dlq.arn
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:SendMessage",
+          "sqs:GetQueueUrl"
+        ]
+        Resource = [aws_sqs_queue.job_queue.arn]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "circuit_breaker_recovery" {
+  name = "${var.resource_prefix}-CircuitBreakerRecovery-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "${var.resource_prefix}-CircuitBreakerRecovery-Role"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "circuit_breaker_recovery_basic" {
+  role       = aws_iam_role.circuit_breaker_recovery.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
+  name = "RecoveryPermissions"
+  role = aws_iam_role.circuit_breaker_recovery.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:ListEventSourceMappings",
+          "lambda:UpdateEventSourceMapping",
+          "lambda:PutFunctionConcurrency",
+          "lambda:DeleteFunctionConcurrency",
+          "lambda:GetFunction",
+          "lambda:InvokeFunction"
+        ]
+        Resource = [
+          aws_lambda_function.runners_handler.arn,
+          "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:event-source-mapping:*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem"
+        ]
+        Resource = [aws_dynamodb_table.circuit_breaker_state.arn]
+      }
+    ]
+  })
+}

@@ -49,3 +49,60 @@ def test_lambda_execution_role_has_dynamodb_put_permission(iam_client):
         assert role['Role']['RoleName']
     except iam_client.exceptions.NoSuchEntityException:
         assert True
+
+
+def test_circuit_breaker_remediation_role_exists(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation-Role"
+    response = iam_client.get_role(RoleName=role_name)
+    assert response['Role']['RoleName'] == role_name
+
+
+def test_circuit_breaker_remediation_role_has_basic_execution_policy(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation-Role"
+    policies = iam_client.list_attached_role_policies(RoleName=role_name)
+    policy_arns = [p['PolicyArn'] for p in policies['AttachedPolicies']]
+    assert 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole' in policy_arns
+
+
+def test_circuit_breaker_remediation_role_has_inline_policies(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-CircuitBreakerRemediation-Role"
+    policies = iam_client.list_role_policies(RoleName=role_name)
+    assert len(policies['PolicyNames']) >= 1
+
+
+def test_circuit_breaker_recovery_role_exists(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery-Role"
+    response = iam_client.get_role(RoleName=role_name)
+    assert response['Role']['RoleName'] == role_name
+
+
+def test_circuit_breaker_recovery_role_has_basic_execution_policy(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery-Role"
+    policies = iam_client.list_attached_role_policies(RoleName=role_name)
+    policy_arns = [p['PolicyArn'] for p in policies['AttachedPolicies']]
+    assert 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole' in policy_arns
+
+
+def test_circuit_breaker_recovery_role_has_inline_policies(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-CircuitBreakerRecovery-Role"
+    policies = iam_client.list_role_policies(RoleName=role_name)
+    assert len(policies['PolicyNames']) >= 1
+
+
+def test_dlq_reprocessor_role_exists(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-DLQReprocessor-Role"
+    response = iam_client.get_role(RoleName=role_name)
+    assert response['Role']['RoleName'] == role_name
+
+
+def test_dlq_reprocessor_role_has_basic_execution_policy(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-DLQReprocessor-Role"
+    policies = iam_client.list_attached_role_policies(RoleName=role_name)
+    policy_arns = [p['PolicyArn'] for p in policies['AttachedPolicies']]
+    assert 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole' in policy_arns
+
+
+def test_dlq_reprocessor_role_has_sqs_permissions(iam_client, tfvars):
+    role_name = f"{tfvars['resource_prefix']}-DLQReprocessor-Role"
+    policies = iam_client.list_role_policies(RoleName=role_name)
+    assert len(policies['PolicyNames']) >= 1

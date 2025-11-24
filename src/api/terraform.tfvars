@@ -44,3 +44,4 @@ vpc_cidr                        = "10.0.0.0/16"
 vpc_max_azs                     = 99
 vpc_name                        = "TenULabsApiVpc"
 webhook_secret_name             = "/api/webhook-secret"
+circuit_breaker_alert_email     = "jdrowne@10ulabs.com"

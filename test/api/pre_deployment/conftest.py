@@ -161,6 +161,16 @@ def dlq_reprocessor(tfvars):
 
 
 @pytest.fixture
+def circuit_breaker_recovery(tfvars):
+    env_vars = {
+        'AWS_REGION': tfvars['aws_region']
+    }
+    with patch.dict('os.environ', env_vars):
+        module = load_lambda_module("circuit_breaker_recovery.py", "circuit_breaker_recovery")
+        yield module
+
+
+@pytest.fixture
 def mock_sqs():
     with patch('boto3.client') as mock_boto_client:
         mock_sqs_client = MagicMock()

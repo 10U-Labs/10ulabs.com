@@ -227,3 +227,8 @@ variable "packer_spot_retry_delay" {
   type        = number
   description = "Delay in seconds between Packer spot retry attempts"
 }
+
+variable "circuit_breaker_alert_email" {
+  type        = string
+  description = "Email address for circuit breaker alert notifications"
+}

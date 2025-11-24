@@ -54,3 +54,51 @@ resource "aws_dynamodb_table" "idempotency" {
     Name = var.idempotency_table_name
   }
 }
+
+resource "aws_dynamodb_table" "incidents" {
+  name         = "${var.resource_prefix}-incidents"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "incident_id"
+
+  attribute {
+    name = "incident_id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.resource_prefix}-incidents"
+  }
+}
+
+resource "aws_dynamodb_table" "circuit_breaker_state" {
+  name         = "${var.resource_prefix}-circuit-breaker-state"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "state_id"
+
+  attribute {
+    name = "state_id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl"
+    enabled        = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
+
+  tags = {
+    Name = "${var.resource_prefix}-circuit-breaker-state"
+  }
+}

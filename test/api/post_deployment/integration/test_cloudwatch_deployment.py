@@ -19,18 +19,43 @@ def test_cloudwatch_log_stream_can_be_created(logs_client, tfvars):
     assert 'logStreams' in response
 
 
-def test_eventbridge_rule_for_circuit_breaker_exists(events_client):
+def test_eventbridge_rule_for_circuit_breaker_remediation_exists(events_client, tfvars):
     rules = events_client.list_rules()
     rule_names = [r['Name'] for r in rules['Rules']]
-    circuit_rules = [r for r in rule_names if 'circuit' in r.lower() or 'remediation' in r.lower()]
-    assert len(circuit_rules) >= 0
+    remediation_rule_name = f"{tfvars['resource_prefix']}-circuit-breaker-remediation"
+    assert remediation_rule_name in rule_names
 
 
-def test_eventbridge_rule_for_dlq_reprocessor_exists(events_client):
+def test_eventbridge_rule_for_circuit_breaker_recovery_exists(events_client, tfvars):
     rules = events_client.list_rules()
     rule_names = [r['Name'] for r in rules['Rules']]
-    dlq_rules = [r for r in rule_names if 'dlq' in r.lower() or 'reprocess' in r.lower()]
-    assert len(dlq_rules) >= 0
+    recovery_rule_name = f"{tfvars['resource_prefix']}-circuit-breaker-recovery"
+    assert recovery_rule_name in rule_names
+
+
+def test_eventbridge_rule_for_dlq_reprocessor_exists(events_client, tfvars):
+    rules = events_client.list_rules()
+    rule_names = [r['Name'] for r in rules['Rules']]
+    dlq_rule_name = f"{tfvars['resource_prefix']}-dlq-reprocessor"
+    assert dlq_rule_name in rule_names
+
+
+def test_cloudwatch_alarm_circuit_breaker_open_exists(cloudwatch_client, tfvars):
+    alarm_name = f"{tfvars['resource_prefix']}-circuit-breaker-open"
+    alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(alarms['MetricAlarms']) == 1
+
+
+def test_cloudwatch_alarm_webhook_handler_errors_exists(cloudwatch_client, tfvars):
+    alarm_name = f"{tfvars['resource_prefix']}-webhook-handler-errors"
+    alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(alarms['MetricAlarms']) == 1
+
+
+def test_cloudwatch_alarm_job_queue_dlq_messages_exists(cloudwatch_client, tfvars):
+    alarm_name = f"{tfvars['resource_prefix']}-job-queue-dlq-messages"
+    alarms = cloudwatch_client.describe_alarms(AlarmNames=[alarm_name])
+    assert len(alarms['MetricAlarms']) == 1
 
 
 def test_cloudwatch_log_retention_configured(logs_client, tfvars):

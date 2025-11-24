@@ -73,6 +73,11 @@ def iam_client_fixture():
     return boto3.client("iam")
 
 
+@pytest.fixture(name="sns_client", scope="module")
+def sns_client_fixture(aws_region):
+    return boto3.client("sns", region_name=aws_region)
+
+
 @pytest.fixture(name="github_pat", scope="module")
 def github_pat_fixture():
     pat = os.environ.get("GITHUB_PAT")
