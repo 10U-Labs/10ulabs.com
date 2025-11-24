@@ -181,6 +181,8 @@ jobs:
           pylint test/api/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
+      - name: Static type checking Python files with mypy
+        run: python -m mypy test/api/*.py
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check -recursive
       - name: Terraform Init
