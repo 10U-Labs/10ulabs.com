@@ -1,11 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import boto3
 
 
 def test_cloudwatch_metrics_published_for_circuit_breaker():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    end_time = datetime.utcnow()
+    end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
         Namespace='WebhookRouter',
@@ -21,7 +21,7 @@ def test_cloudwatch_metrics_published_for_circuit_breaker():
 
 def test_cloudwatch_metrics_published_for_queue_depth():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    end_time = datetime.utcnow()
+    end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
         Namespace='WebhookRouter',
@@ -37,7 +37,7 @@ def test_cloudwatch_metrics_published_for_queue_depth():
 
 def test_cloudwatch_metrics_published_for_processing_time():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    end_time = datetime.utcnow()
+    end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
         Namespace='WebhookRouter',
