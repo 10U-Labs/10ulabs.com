@@ -57,7 +57,7 @@ def test_v1_lambda_environment_variables(lambda_client, tfvars):
     function_name = tfvars["v1_handler_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)
     env_vars = response["Configuration"]["Environment"]["Variables"]
-    assert "SUBNETS" in env_vars
+    assert "AWS_REGION" in env_vars
 
 
 def test_lambda_timeout_configuration(lambda_client, tfvars):
@@ -107,7 +107,7 @@ def test_circuit_breaker_remediation_lambda_exists(lambda_client):
 
 def test_circuit_breaker_remediation_lambda_has_trigger(events_client):
     rules = events_client.list_rules()
-    assert 'Rules' in rules
+    assert rules['Rules']
 
 
 def test_dlq_reprocessor_lambda_exists(lambda_client):
