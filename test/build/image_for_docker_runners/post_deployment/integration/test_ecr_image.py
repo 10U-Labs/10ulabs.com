@@ -1,6 +1,6 @@
 import subprocess
 import boto3
-from conftest import login_to_ecr
+from ..conftest import login_to_ecr
 
 
 def test_ecr_image_exists(aws_region, ecr_repository, image_tag):

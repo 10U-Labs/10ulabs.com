@@ -1,5 +1,5 @@
 import subprocess
-from conftest import login_to_ecr
+from ..conftest import login_to_ecr
 
 
 def test_runner_fails_with_missing_repo_argument(ecr_image_uri, aws_region):

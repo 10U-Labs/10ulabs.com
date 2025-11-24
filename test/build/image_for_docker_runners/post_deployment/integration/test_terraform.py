@@ -1,4 +1,4 @@
-from conftest import run_command_in_container
+from .conftest import run_command_in_container
 
 
 def test_terraform_installed(docker_image):

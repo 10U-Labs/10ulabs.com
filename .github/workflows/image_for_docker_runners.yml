@@ -190,7 +190,7 @@ jobs:
           pylint \
             src/build/image_for_docker_runners/entrypoint.py \
             test/build/image_for_docker_runners/ \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,redefined-outer-name,duplicate-code \
             --fail-under=10.0
       - name: Run mypy
         run: |

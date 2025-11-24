@@ -1,7 +1,6 @@
 from unittest.mock import Mock, patch
-import pytest
-import sys
 import entrypoint
+import pytest
 
 
 @patch('entrypoint.subprocess.run')

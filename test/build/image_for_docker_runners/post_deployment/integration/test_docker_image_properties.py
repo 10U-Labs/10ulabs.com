@@ -1,5 +1,5 @@
 import subprocess
-from conftest import run_command_in_container
+from .conftest import run_command_in_container
 
 
 def test_docker_image_exists(docker_image):

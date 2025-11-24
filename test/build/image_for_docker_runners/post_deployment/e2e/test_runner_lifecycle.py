@@ -1,5 +1,6 @@
 import time
-from conftest import login_to_ecr, start_runner_container, get_github_runners, wait_for_process_with_backoff
+from ..conftest import login_to_ecr
+from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff
 
 
 def test_runner_cleanup_on_sigterm(ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat):
