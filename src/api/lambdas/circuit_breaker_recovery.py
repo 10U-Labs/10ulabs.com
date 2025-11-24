@@ -93,7 +93,7 @@ def check_health(function_name: str) -> dict:
         logger.warning("Health check returned status %d", status_code)
         return {'healthy': False, 'reason': f'Status code {status_code}'}
 
-    except ClientError as e:
+    except (ClientError, json.JSONDecodeError) as e:
         logger.error("Health check failed: %s", e)
         return {'healthy': False, 'reason': str(e)}
 
