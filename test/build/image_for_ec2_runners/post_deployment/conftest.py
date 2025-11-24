@@ -1,6 +1,27 @@
 import os
+import time
 import boto3
 import pytest
+
+
+def execute_ssm_command(client, instance_id, command, wait_seconds=5):
+    response = client.send_command(
+        InstanceIds=[instance_id],
+        DocumentName="AWS-RunShellScript",
+        Parameters={"commands": [command]}
+    )
+    command_id = response["Command"]["CommandId"]
+    time.sleep(wait_seconds)
+    output = client.get_command_invocation(
+        CommandId=command_id,
+        InstanceId=instance_id
+    )
+    return output
+
+
+@pytest.fixture
+def run_ssm_command():
+    return execute_ssm_command
 
 
 @pytest.fixture(scope="module")
@@ -29,5 +50,5 @@ def github_token():
 
 
 @pytest.fixture(scope="module")
-def github_repo(tfvars):
+def github_repo():
     return os.environ.get("GITHUB_REPOSITORY", "10U-Labs-LLC/10ulabs.com")

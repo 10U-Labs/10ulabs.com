@@ -1,4 +1,5 @@
 import time
+from botocore.exceptions import ClientError
 import pytest
 
 
@@ -29,7 +30,7 @@ def test_github_runner_can_register(ssm_client, e2e_test_instance):
             if output["Status"] == "Success" and "configured" in output["StandardOutputContent"]:
                 runner_configured = True
                 break
-        except Exception:
+        except ClientError:
             pass
 
         time.sleep(15)
@@ -64,7 +65,7 @@ def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
             if output["Status"] == "Success" and "running" in output["StandardOutputContent"]:
                 runner_running = True
                 break
-        except Exception:
+        except ClientError:
             pass
 
         time.sleep(15)

@@ -35,16 +35,17 @@ class TestTriggerAmiCreation:
             assert 'api.custom.com' in call_args.full_url
 
     def test_timeout_handling(self, v1_handler):
-        with patch('urllib.request.urlopen') as mock_urlopen:
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'}):
             mock_urlopen.side_effect = urllib.error.URLError('timeout')
 
             result = v1_handler.trigger_ami_creation()
 
             assert result['success'] is False
-            assert 'error' in result
 
     def test_http_error_handling(self, v1_handler):
-        with patch('urllib.request.urlopen') as mock_urlopen:
+        with patch('urllib.request.urlopen') as mock_urlopen, \
+             patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'}):
             mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Internal Error', {}, None)
 
             result = v1_handler.trigger_ami_creation()

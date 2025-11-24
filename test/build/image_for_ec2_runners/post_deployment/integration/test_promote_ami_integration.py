@@ -1,7 +1,8 @@
+import inspect
 import pytest
 
 
-def test_promote_ami_can_tag_ami(ec2_client, test_ami_id, promote_ami, tfvars):
+def test_promote_ami_can_tag_ami(ec2_client, test_ami_id):
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
 
@@ -19,7 +20,7 @@ def test_promote_ami_can_tag_ami(ec2_client, test_ami_id, promote_ami, tfvars):
     assert tags.get(test_tag_key) == test_tag_value
 
 
-def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id, promote_ami, tfvars):
+def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
 
@@ -51,7 +52,6 @@ def test_promote_ami_function_exists(promote_ami):
 
 
 def test_promote_ami_function_signature(promote_ami):
-    import inspect
     sig = inspect.signature(promote_ami.promote_ami)
     params = list(sig.parameters.keys())
 
@@ -59,7 +59,6 @@ def test_promote_ami_function_signature(promote_ami):
 
 
 def test_promote_ami_function_signature_has_region(promote_ami):
-    import inspect
     sig = inspect.signature(promote_ami.promote_ami)
     params = list(sig.parameters.keys())
 
@@ -67,7 +66,6 @@ def test_promote_ami_function_signature_has_region(promote_ami):
 
 
 def test_promote_ami_function_signature_has_ssm_parameter_name(promote_ami):
-    import inspect
     sig = inspect.signature(promote_ami.promote_ami)
     params = list(sig.parameters.keys())
 
@@ -75,7 +73,6 @@ def test_promote_ami_function_signature_has_ssm_parameter_name(promote_ami):
 
 
 def test_promote_ami_function_signature_has_tag_key(promote_ami):
-    import inspect
     sig = inspect.signature(promote_ami.promote_ami)
     params = list(sig.parameters.keys())
 

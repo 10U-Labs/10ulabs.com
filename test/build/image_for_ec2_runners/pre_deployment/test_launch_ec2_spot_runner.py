@@ -1,14 +1,16 @@
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
+import pytest
 
 
+@pytest.mark.usefixtures("mock_env_vars")
 class TestLaunchEc2SpotRunner:
 
-    def test_successful_launch_returns_success(self, v1_handler, mock_env_vars):
+    def test_successful_launch_returns_success(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
-             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
              patch('boto3.client') as mock_boto_client:
 
             mock_ec2 = MagicMock()
@@ -28,11 +30,11 @@ class TestLaunchEc2SpotRunner:
 
             assert result['success'] is True
 
-    def test_successful_launch_returns_instance_id(self, v1_handler, mock_env_vars):
+    def test_successful_launch_returns_instance_id(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
-             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
              patch('boto3.client') as mock_boto_client:
 
             mock_ec2 = MagicMock()
@@ -52,7 +54,7 @@ class TestLaunchEc2SpotRunner:
 
             assert result['instance_id'] == 'i-123'
 
-    def test_no_ami_returns_failure(self, v1_handler, mock_env_vars):
+    def test_no_ami_returns_failure(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
@@ -61,7 +63,7 @@ class TestLaunchEc2SpotRunner:
 
             assert result['success'] is False
 
-    def test_no_ami_triggers_creation(self, v1_handler, mock_env_vars):
+    def test_no_ami_triggers_creation(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
@@ -70,7 +72,7 @@ class TestLaunchEc2SpotRunner:
 
             assert 'ami_creation_triggered' in result
 
-    def test_no_github_token_returns_failure(self, v1_handler, mock_env_vars):
+    def test_no_github_token_returns_failure(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value=''):
 
@@ -78,7 +80,7 @@ class TestLaunchEc2SpotRunner:
 
             assert result['success'] is False
 
-    def test_no_github_token_returns_error_message(self, v1_handler, mock_env_vars):
+    def test_no_github_token_returns_error_message(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value=''):
 
@@ -86,7 +88,7 @@ class TestLaunchEc2SpotRunner:
 
             assert 'GITHUB_TOKEN' in result['error']
 
-    def test_registration_token_failure_returns_failure(self, v1_handler, mock_env_vars):
+    def test_registration_token_failure_returns_failure(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
@@ -95,7 +97,7 @@ class TestLaunchEc2SpotRunner:
 
             assert result['success'] is False
 
-    def test_registration_token_failure_returns_error_message(self, v1_handler, mock_env_vars):
+    def test_registration_token_failure_returns_error_message(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
@@ -104,11 +106,11 @@ class TestLaunchEc2SpotRunner:
 
             assert 'registration token' in result['error']
 
-    def test_subnet_iteration_on_capacity_error_returns_success(self, v1_handler, mock_env_vars):
+    def test_subnet_iteration_on_capacity_error_returns_success(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
-             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
              patch('boto3.client') as mock_boto_client:
 
             mock_ec2 = MagicMock()
@@ -131,11 +133,11 @@ class TestLaunchEc2SpotRunner:
 
             assert result['success'] is True
 
-    def test_subnet_iteration_on_capacity_error_retries(self, v1_handler, mock_env_vars):
+    def test_subnet_iteration_on_capacity_error_retries(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
-             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
              patch('boto3.client') as mock_boto_client:
 
             mock_ec2 = MagicMock()
@@ -158,11 +160,11 @@ class TestLaunchEc2SpotRunner:
 
             assert mock_ec2.run_instances.call_count == 2
 
-    def test_applies_name_tag(self, v1_handler, mock_env_vars):
+    def test_applies_name_tag(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
-             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
              patch('boto3.client') as mock_boto_client:
 
             mock_ec2 = MagicMock()
@@ -186,11 +188,11 @@ class TestLaunchEc2SpotRunner:
 
             assert tags_dict['Name'] == 'github-runner-ec2-456'
 
-    def test_applies_github_job_id_tag(self, v1_handler, mock_env_vars):
+    def test_applies_github_job_id_tag(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
-             patch.object(v1_handler, '_create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
              patch('boto3.client') as mock_boto_client:
 
             mock_ec2 = MagicMock()

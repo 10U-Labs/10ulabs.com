@@ -1,44 +1,19 @@
-import time
 import pytest
 
 
-def test_ssm_agent_is_installed(ssm_client, test_instance, aws_region):
+def test_ssm_agent_is_installed(ssm_client, test_instance, run_ssm_command):
     if not test_instance:
         pytest.fail("Test instance not created")
 
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["which amazon-ssm-agent"]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(5)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
+    output = run_ssm_command(ssm_client, test_instance, "which amazon-ssm-agent")
 
     assert output["Status"] == "Success"
 
 
-def test_ssm_agent_service_is_running(ssm_client, test_instance, aws_region):
+def test_ssm_agent_service_is_running(ssm_client, test_instance, run_ssm_command):
     if not test_instance:
         pytest.fail("Test instance not created")
 
-    response = ssm_client.send_command(
-        InstanceIds=[test_instance],
-        DocumentName="AWS-RunShellScript",
-        Parameters={"commands": ["systemctl is-active amazon-ssm-agent"]}
-    )
-
-    command_id = response["Command"]["CommandId"]
-    time.sleep(5)
-
-    output = ssm_client.get_command_invocation(
-        CommandId=command_id,
-        InstanceId=test_instance
-    )
+    output = run_ssm_command(ssm_client, test_instance, "systemctl is-active amazon-ssm-agent")
 
     assert output["StandardOutputContent"].strip() == "active"

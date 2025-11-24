@@ -1,5 +1,14 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import pytest
+
+
+@pytest.fixture
+def mock_ec2(v1_handler):
+    with patch('boto3.client') as mock_boto_client:
+        mock_ec2_client = MagicMock()
+        mock_boto_client.return_value = mock_ec2_client
+        v1_handler.ec2 = mock_ec2_client
+        yield mock_ec2_client
 
 
 @pytest.fixture

@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import os
 import re
@@ -11,8 +12,7 @@ os.environ['AWS_REGION'] = 'us-east-1'
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
-def load_module(module_name, *path_parts):
-    module_path = PROJECT_ROOT / "src" / "api" / Path(*path_parts)
+def load_module_from_path(module_name, module_path):
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -31,7 +31,7 @@ def get_tfvars():
                     key, value = match.groups()
                     value = value.strip()
                     if value.startswith('['):
-                        value = eval(value)
+                        value = ast.literal_eval(value)
                     elif value.startswith('"') and value.endswith('"'):
                         value = value[1:-1]
                     config[key] = value
@@ -39,28 +39,29 @@ def get_tfvars():
 
 
 @pytest.fixture(scope="module")
-def tfvars():
+def tfvars_data():
     return get_tfvars()
 
 
 @pytest.fixture(scope="module")
-def aws_region(tfvars):
-    return tfvars["aws_region"]
+def aws_region(request):
+    data = request.getfixturevalue("tfvars_data")
+    return data["aws_region"]
 
 
 @pytest.fixture
 def v1_handler():
-    return load_module("v1_handler", "lambdas", "v1.py")
+    return load_module_from_path("v1_handler", PROJECT_ROOT / "src" / "api" / "lambdas" / "v1.py")
 
 
 @pytest.fixture
 def wait_for_status_checks():
-    return load_module("wait_for_status_checks", "packer", "image_for_ec2_runners_post", "wait_for_status_checks.py")
+    return load_module_from_path("wait_for_status_checks", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "wait_for_status_checks.py")
 
 
 @pytest.fixture
 def promote_ami():
-    return load_module("promote_ami", "packer", "image_for_ec2_runners_post", "promote_ami.py")
+    return load_module_from_path("promote_ami", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "promote_ami.py")
 
 
 @pytest.fixture

@@ -369,7 +369,7 @@ def get_runner_registration_token(github_token: str, github_repo: str) -> str:
         return ''
 
 
-def _create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str) -> str:
+def create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str) -> str:
     aws_region = os.environ['AWS_REGION']
     runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
@@ -440,7 +440,7 @@ def trigger_ami_creation() -> Dict[str, Any]:
         return {'success': False, 'error': str(e)}
 
 
-def _get_ec2_config() -> Dict[str, Any]:
+def get_ec2_config() -> Dict[str, Any]:
     return {
         'subnet_ids': os.environ['SUBNETS'].split(','),
         'security_group_id': os.environ['SECURITY_GROUPS'],
@@ -453,7 +453,7 @@ def _get_ec2_config() -> Dict[str, Any]:
 def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
     ami_id = get_latest_ami()
     github_token = get_github_token()
-    config = _get_ec2_config()
+    config = get_ec2_config()
 
     if not ami_id:
         logger.warning("No AMI available - triggering AMI creation")
@@ -474,7 +474,7 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
         logger.error("Failed to get runner registration token")
         return {'success': False, 'job_id': job_id, 'error': 'Failed to get runner registration token'}
 
-    user_data = _create_ec2_user_data(registration_token, job_labels, github_repo)
+    user_data = create_ec2_user_data(registration_token, job_labels, github_repo)
     response = None
     last_error = None
 
