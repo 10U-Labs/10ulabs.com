@@ -40,4 +40,4 @@ vpc_max_azs                     = 99
 vpc_name                        = "TenULabsApiVpc"
 webhook_dlq_name                = "TenULabsWebhookHandler-dlq"
 webhook_handler_log_group_name  = "/aws/lambda/TenULabsWebhookHandler"
-webhook_secret_name             = "/api/webhook-secret"
+ssm_parameter_name_for_webhook_secret = "/api/webhook-secret"

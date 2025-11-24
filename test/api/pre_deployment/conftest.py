@@ -124,7 +124,7 @@ def catchall_handler():
 def webhook_router(tfvars):
     env_vars = {
         'API_KEY_PARAMETER_NAME': tfvars['ssm_parameter_name_for_api_key'],
-        'WEBHOOK_SECRET_NAME': tfvars['webhook_secret_name'],
+        'WEBHOOK_SECRET_NAME': tfvars['ssm_parameter_name_for_webhook_secret'],
         'API_BASE_URL': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}"
     }
     with patch.dict('os.environ', env_vars):

@@ -188,7 +188,7 @@ variable "ssm_parameter_name_for_api_key" {
   description = "API key parameter name"
 }
 
-variable "webhook_secret_name" {
+variable "ssm_parameter_name_for_webhook_secret" {
   type        = string
   description = "Webhook secret parameter name"
 }

@@ -181,8 +181,8 @@ def test_lambda_can_write_to_idempotency_table(dynamodb_client, tfvars):
 
 
 def test_lambda_can_read_from_ssm_parameter_store(ssm_client, tfvars):
-    webhook_secret_name = tfvars["webhook_secret_name"]
-    response = ssm_client.get_parameter(Name=webhook_secret_name)
+    ssm_parameter_name_for_webhook_secret = tfvars["ssm_parameter_name_for_webhook_secret"]
+    response = ssm_client.get_parameter(Name=ssm_parameter_name_for_webhook_secret)
     assert 'Parameter' in response
 
 
