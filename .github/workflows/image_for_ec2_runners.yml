@@ -244,7 +244,7 @@ jobs:
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run E2E tests
         run: |
-          pytest test/build/image_for_ec2_runners/test_e2e.py \
+          pytest test/build/image_for_ec2_runners/post_deployment/e2e/ \
             --confcutdir=test/build/image_for_ec2_runners \
             -v
   integration-testing:
@@ -273,7 +273,7 @@ jobs:
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run pytest integration tests
         run: |
-          pytest test/build/image_for_ec2_runners/test_integration.py \
+          pytest test/build/image_for_ec2_runners/post_deployment/integration/ \
             --confcutdir=test/build/image_for_ec2_runners \
             -v
   performing-static-analysis:
@@ -415,7 +415,7 @@ jobs:
         run: pip install pytest boto3 botocore
       - name: Run unit tests
         run: |
-          pytest test/build/image_for_ec2_runners/test_unit.py \
+          pytest test/build/image_for_ec2_runners/pre_deployment/ \
             --confcutdir=test/build/image_for_ec2_runners \
             -v
 name: Building AMI for EC2 self-hosted runners
