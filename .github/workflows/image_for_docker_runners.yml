@@ -27,8 +27,8 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ARCHITECTURE=$(yq '.architecture' src/build/image_for_docker_runners/config.yml)
-          ECR_REPO=$(yq '.ecr_repository_name' src/build/image_for_docker_runners/config.yml)
+          ARCHITECTURE=$(grep 'fargate_cpu_architecture' src/api/terraform.tfvars | cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
+          ECR_REPO=$(grep 'ecr_repository_name' src/api/terraform.tfvars | cut -d'"' -f2)
           RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_docker_runners/config.yml)
           echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
