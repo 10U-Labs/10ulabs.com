@@ -163,7 +163,7 @@ jobs:
         with:
           tflint_version: latest
       - name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3 PyYAML requests
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs PyYAML types-PyYAML requests types-requests
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
