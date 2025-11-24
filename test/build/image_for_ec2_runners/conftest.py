@@ -1,13 +1,14 @@
 import importlib.util
 import os
+import re
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 import pytest
 
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['AWS_REGION'] = 'us-east-1'
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 def load_module(module_name, *path_parts):
@@ -16,6 +17,35 @@ def load_module(module_name, *path_parts):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def get_tfvars():
+    tfvars_path = PROJECT_ROOT / "src" / "api" / "terraform.tfvars"
+    config = {}
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                match = re.match(r'(\w+)\s*=\s*(.+)', line)
+                if match:
+                    key, value = match.groups()
+                    value = value.strip()
+                    if value.startswith('['):
+                        value = eval(value)
+                    elif value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    config[key] = value
+    return config
+
+
+@pytest.fixture(scope="module")
+def tfvars():
+    return get_tfvars()
+
+
+@pytest.fixture(scope="module")
+def aws_region(tfvars):
+    return tfvars["aws_region"]
 
 
 @pytest.fixture
@@ -35,45 +65,4 @@ def promote_ami():
 
 @pytest.fixture
 def mock_ec2_client():
-    client = MagicMock()
-    return client
-
-
-@pytest.fixture
-def mock_urllib_urlopen():
-    from unittest.mock import patch
-    with patch('urllib.request.urlopen') as mock:
-        yield mock
-
-
-@pytest.fixture
-def mock_subprocess_run():
-    from unittest.mock import patch
-    with patch('subprocess.run') as mock:
-        yield mock
-
-
-@pytest.fixture
-def mock_env_vars():
-    from unittest.mock import patch
-    env_vars = {
-        'AWS_REGION': 'us-east-1',
-        'SUBNETS': 'subnet-123,subnet-456,subnet-789',
-        'VPC_ID': 'vpc-test123',
-        'SECURITY_GROUPS': 'sg-12345',
-        'EC2_INSTANCE_TYPES': 't4g.large,t4g.medium',
-        'EC2_IAM_INSTANCE_PROFILE': 'TestInstanceProfile',
-        'EC2_MAX_PRICE': '0.10',
-        'GITHUB_TOKEN': 'ghp_test_token',
-        'API_DOMAIN': 'api.test.com'
-    }
-    with patch.dict('os.environ', env_vars, clear=False):
-        yield env_vars
-
-
-@pytest.fixture
-def mock_github_token():
-    from unittest.mock import patch
-    with patch('os.environ.get') as mock_get:
-        mock_get.return_value = 'ghp_test_token'
-        yield 'ghp_test_token'
+    return MagicMock()
