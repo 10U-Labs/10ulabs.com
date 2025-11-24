@@ -93,6 +93,34 @@ def test_lambda_handler_docker_runner_post_returns_json_content_type(mock_boto_c
     assert_json_content_type(response)
 
 
+@patch('boto3.client')
+def test_lambda_handler_docker_runner_does_not_specify_launch_type_and_capacity_provider(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': '2024-01-01'}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = docker_runner_post_event_factory(job_id=12346, github_repo='10U-Labs-LLC/10ulabs.com')
+    v1_handler.lambda_handler(event, lambda_context)
+    call_kwargs = mock_ecs.run_task.call_args[1]
+    has_launch_type = 'launchType' in call_kwargs
+    has_capacity_provider = 'capacityProviderStrategy' in call_kwargs
+    assert not (has_launch_type and has_capacity_provider)
+
 
 @patch('boto3.client')
 def test_lambda_handler_docker_runner_get_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
