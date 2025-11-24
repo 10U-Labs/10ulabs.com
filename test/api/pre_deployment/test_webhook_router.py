@@ -12,10 +12,7 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from conftest import parse_response_body, assert_response_status, assert_json_content_type
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_lambda_handler_health_check_returns_200(webhook_router, lambda_context):

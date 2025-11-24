@@ -2,29 +2,31 @@ import importlib.util
 import json
 import time
 from pathlib import Path
+from typing import Any, Dict
+from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
 from botocore.exceptions import ClientError
 import pytest
 import yaml
 
 
-def parse_response_body(response):
+def parse_response_body(response: Dict[str, Any]) -> Any:
     return json.loads(response['body'])
 
 
-def assert_response_status(response, expected_code):
+def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
     assert response['statusCode'] == expected_code
 
 
-def assert_json_content_type(response):
+def assert_json_content_type(response: Dict[str, Any]) -> None:
     assert response['headers']['Content-Type'] == 'application/json'
 
 
-def assert_cors_headers(response):
+def assert_cors_headers(response: Dict[str, Any]) -> None:
     assert 'Access-Control-Allow-Origin' in response['headers']
 
 
-def create_client_error(error_code, operation_name='TestOperation'):
+def create_client_error(error_code: str, operation_name: str = 'TestOperation') -> ClientError:
     return ClientError(
         {
             'Error': {
@@ -33,44 +35,51 @@ def create_client_error(error_code, operation_name='TestOperation'):
             },
             'ResponseMetadata': {
                 'RequestId': 'test-request-id',
-                'HTTPStatusCode': 400
+                'HTTPStatusCode': 400,
+                'HTTPHeaders': {},
+                'RetryAttempts': 0,
+                'HostId': ''
             }
         },
         operation_name
     )
 
 
-def load_handler_module(relative_path, module_name):
+def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
     base_path = Path(__file__).parent.parent.parent.parent / "src" / "api"
     handler_path = base_path / relative_path
     spec = importlib.util.spec_from_file_location(module_name, handler_path)
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-def parse_lambda_response_payload(response):
+def parse_lambda_response_payload(response: Any) -> Any:
     return json.loads(response['Payload'].read())
 
 
 @pytest.fixture
-def openapi_spec():
+def openapi_spec() -> Dict[str, Any]:
     openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "files" / "openapi.yml"
     with open(openapi_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
 
 @pytest.fixture
-def health_handler():
+def health_handler() -> ModuleType:
     handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "health.py"
     spec = importlib.util.spec_from_file_location("health_handler", handler_path)
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
 @pytest.fixture
-def v1_handler(tfvars):
+def v1_handler(tfvars: Dict[str, str]) -> Any:
     env_vars = {
         'AWS_REGION': tfvars['aws_region'],
         'ECR_REPOSITORY': tfvars['ecr_repository_name'],
@@ -91,6 +100,8 @@ def v1_handler(tfvars):
     with patch.dict('os.environ', env_vars):
         handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
         spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
+        assert spec is not None
+        assert spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         if hasattr(module, '_clients'):

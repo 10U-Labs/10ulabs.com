@@ -7,10 +7,7 @@ from unittest.mock import patch, MagicMock
 from botocore.exceptions import ClientError
 import time
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from conftest import parse_response_body, assert_response_status, assert_json_content_type
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_check_circuit_breaker_closed_state_returns_true(webhook_router):

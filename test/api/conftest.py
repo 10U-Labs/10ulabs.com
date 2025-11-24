@@ -1,11 +1,12 @@
 import ast
 import re
 from pathlib import Path
+from typing import Any, Dict
 import pytest
 
 
 @pytest.fixture(name="tfvars", scope="module")
-def tfvars_fixture():
+def tfvars_fixture() -> Dict[str, str]:
     tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
@@ -20,7 +21,7 @@ def tfvars_fixture():
 
 
 @pytest.fixture(name="cfg")
-def cfg_fixture():
+def cfg_fixture() -> Dict[str, Any]:
     tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
     tfvars = {}
     with open(tfvars_path, 'r', encoding='utf-8') as f:

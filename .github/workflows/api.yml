@@ -48,7 +48,7 @@ jobs:
       - name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run E2E tests
-        run: python3 -m pytest test/api/test_e2e.py -v
+        run: python3 -m pytest test/api/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -136,7 +136,7 @@ jobs:
             --region ${{ needs.declaring-common-variables.outputs.aws_region }})
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run integration tests
-        run: python3 -m pytest test/api/test_integration.py -v
+        run: python3 -m pytest test/api/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -178,11 +178,11 @@ jobs:
             .github/workflows/api.yml
       - name: Run pylint
         run: |
-          python3 -m pylint test/api/*.py \
+          python3 -m pylint test/api/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
-        run: python3 -m mypy test/api/*.py
+        run: python3 -m mypy test/api/
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check -recursive
       - name: Terraform Init
@@ -210,7 +210,7 @@ jobs:
       - name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests
-        run: python3 -m pytest test/api/test_unit.py -v
+        run: python3 -m pytest test/api/pre_deployment/ -v
 name: Ensuring API exists and is properly configured
 on:
   push:

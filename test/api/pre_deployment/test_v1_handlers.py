@@ -7,10 +7,7 @@ from unittest.mock import patch, MagicMock, Mock
 
 from botocore.exceptions import ClientError
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from conftest import parse_response_body, assert_response_status, assert_json_content_type
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler, echo_post_event_factory, lambda_context):
