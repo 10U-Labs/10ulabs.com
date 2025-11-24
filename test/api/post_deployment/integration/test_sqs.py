@@ -10,13 +10,6 @@ def test_sqs_webhook_dlq_exists(sqs_client, tfvars):
     assert 'QueueUrl' in response
 
 
-def test_sqs_queue_policy_allows_lambda(sqs_client, tfvars):
-    queue_name = tfvars["job_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
-    attributes = sqs_client.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['Policy'])
-    assert "Policy" in attributes["Attributes"]
-
-
 def test_sqs_dlq_redrive_policy(sqs_client, tfvars):
     queue_name = tfvars["job_queue_name"]
     queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']

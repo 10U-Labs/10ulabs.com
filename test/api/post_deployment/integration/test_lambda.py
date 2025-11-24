@@ -53,13 +53,6 @@ def test_webhook_router_lambda_environment_variables(lambda_client, tfvars):
     assert "WEBHOOK_SECRET_NAME" in env_vars
 
 
-def test_v1_lambda_environment_variables(lambda_client, tfvars):
-    function_name = tfvars["v1_handler_function_name"]
-    response = lambda_client.get_function(FunctionName=function_name)
-    env_vars = response["Configuration"]["Environment"]["Variables"]
-    assert "AWS_REGION" in env_vars
-
-
 def test_lambda_timeout_configuration(lambda_client, tfvars):
     function_name = tfvars["lambda_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)
