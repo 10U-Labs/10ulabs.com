@@ -123,7 +123,7 @@ jobs:
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run E2E tests
         run: |
-          pytest test/build/image_for_docker_runners/test_e2e.py \
+          pytest test/build/image_for_docker_runners/post_deployment/e2e/ \
             --confcutdir=test/build/image_for_docker_runners \
             -v
   integration-testing:
@@ -154,7 +154,7 @@ jobs:
         run: pip install pytest boto3
       - name: Run pytest integration tests
         run: |
-          pytest test/build/image_for_docker_runners/test_integration.py \
+          pytest test/build/image_for_docker_runners/post_deployment/integration/ \
             --confcutdir=test/build/image_for_docker_runners \
             -v
   performing-static-analysis:
@@ -253,7 +253,7 @@ jobs:
         run: pip install pytest boto3 botocore dockerfile-parse
       - name: Run unit tests
         run: |
-          pytest test/build/image_for_docker_runners/test_unit.py \
+          pytest test/build/image_for_docker_runners/pre_deployment/ \
             --confcutdir=test/build/image_for_docker_runners \
             -v
 name: Building Docker image for runners
