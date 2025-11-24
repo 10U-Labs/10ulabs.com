@@ -25,7 +25,9 @@ def test_image_has_entrypoint(docker_image):
         text=True
     )
 
-    assert "/home/runner/entrypoint.py" in result.stdout
+    expected = "/home/runner/entrypoint.py"
+    start_index = result.stdout.find(expected)
+    assert start_index != -1
 
 
 def test_debian_base_image(docker_image):

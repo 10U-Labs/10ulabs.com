@@ -1,7 +1,7 @@
 import subprocess
 import time
 from ..conftest import login_to_ecr
-from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff, run_runner_and_wait, get_matching_runner
+from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff, run_runner_and_wait, find_runner_by_name, runner_exists_with_name
 
 
 def test_runner_fails_with_invalid_registration_token(ecr_image_uri, github_repo, aws_region):
@@ -35,17 +35,18 @@ def test_runner_successfully_registers_with_github(ecr_image_uri, github_repo, r
     time.sleep(30)
 
     runners = get_github_runners(github_pat, github_repo)
-    runner_names = [r["name"] for r in runners]
+    exists = runner_exists_with_name(runners, runner_name)
 
     process.terminate()
     wait_for_process_with_backoff(process)
 
-    assert runner_name in runner_names
+    assert exists
 
 
 def test_runner_appears_online_in_github(ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat):
     login_to_ecr(aws_region)
     runner_name = f"e2e-test-runner-online-{int(time.time())}"
     run_runner_and_wait(ecr_image_uri, github_repo, runner_name, "e2e-test-online", runner_registration_token)
-    matching_runners = get_matching_runner(github_pat, github_repo, runner_name)
-    assert len(matching_runners) == 1
+    runners = get_github_runners(github_pat, github_repo)
+    runner = find_runner_by_name(runners, runner_name)
+    assert runner is not None

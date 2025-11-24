@@ -1,6 +1,6 @@
 import time
 from ..conftest import login_to_ecr
-from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff
+from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff, runner_exists_with_name
 
 
 def test_runner_cleanup_on_sigterm(ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat):
@@ -18,6 +18,6 @@ def test_runner_cleanup_on_sigterm(ecr_image_uri, github_repo, runner_registrati
     time.sleep(10)
 
     runners = get_github_runners(github_pat, github_repo)
-    runner_names = [r["name"] for r in runners]
+    exists = runner_exists_with_name(runners, runner_name)
 
-    assert runner_name not in runner_names
+    assert not exists

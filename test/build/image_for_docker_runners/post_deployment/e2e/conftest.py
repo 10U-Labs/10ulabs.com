@@ -19,7 +19,9 @@ def runner_registration_token(github_pat, github_repo):
         text=True
     )
     response = json.loads(result.stdout)
-    return response.get("token", "")
+    if "token" not in response:
+        return ""
+    return response["token"]
 
 
 def start_runner_container(uri, repo, name, labels, token):
@@ -42,15 +44,19 @@ def start_runner_container(uri, repo, name, labels, token):
 
 
 def wait_for_process_with_backoff(process, max_attempts=7):
-    for attempt in range(max_attempts):
+    attempt = 0
+    total_wait = 0
+    while attempt < max_attempts:
         wait_time = 2 ** attempt
         returncode = process.poll()
         if returncode is not None:
             return
         time.sleep(wait_time)
+        total_wait = total_wait + wait_time
+        attempt = attempt + 1
     process.kill()
     process.wait()
-    raise subprocess.TimeoutExpired(process.args, sum(2**i for i in range(max_attempts)))
+    raise subprocess.TimeoutExpired(process.args, total_wait)
 
 
 def get_github_runners(pat, repo):
@@ -66,7 +72,9 @@ def get_github_runners(pat, repo):
         text=True
     )
     runners = json.loads(result.stdout)
-    return runners.get("runners", [])
+    if "runners" not in runners:
+        return []
+    return runners["runners"]
 
 
 def run_runner_and_wait(uri, repo, name, labels, token):
@@ -76,6 +84,31 @@ def run_runner_and_wait(uri, repo, name, labels, token):
     wait_for_process_with_backoff(process)
 
 
-def get_matching_runner(pat, repo, name):
-    runners = get_github_runners(pat, repo)
-    return [r for r in runners if r["name"] == name]
+def find_runner_by_name(runners, target_name):
+    index = 0
+    while index < len(runners):
+        runner = runners[index]
+        if runner["name"] == target_name:
+            return runner
+        index = index + 1
+    return None
+
+
+def runner_exists_with_name(runners, target_name):
+    index = 0
+    while index < len(runners):
+        runner = runners[index]
+        if runner["name"] == target_name:
+            return True
+        index = index + 1
+    return False
+
+
+def get_label_by_name(labels, target_name):
+    index = 0
+    while index < len(labels):
+        label = labels[index]
+        if label["name"] == target_name:
+            return label
+        index = index + 1
+    return None

@@ -27,7 +27,9 @@ def test_entrypoint_prints_registration_message(docker_image):
         text=True,
         timeout=10
     )
-    assert "Registering GitHub Actions runner..." in result.stdout
+    expected = "Registering GitHub Actions runner..."
+    start_index = result.stdout.find(expected)
+    assert start_index != -1
 
 
 def test_entrypoint_prints_repository_from_arguments(docker_image):
@@ -45,7 +47,9 @@ def test_entrypoint_prints_repository_from_arguments(docker_image):
         text=True,
         timeout=10
     )
-    assert "Repository: myorg/myrepo" in result.stdout
+    expected = "Repository: myorg/myrepo"
+    start_index = result.stdout.find(expected)
+    assert start_index != -1
 
 
 def test_entrypoint_prints_runner_name_from_arguments(docker_image):
@@ -63,7 +67,9 @@ def test_entrypoint_prints_runner_name_from_arguments(docker_image):
         text=True,
         timeout=10
     )
-    assert "Runner Name: my-test-runner" in result.stdout
+    expected = "Runner Name: my-test-runner"
+    start_index = result.stdout.find(expected)
+    assert start_index != -1
 
 
 def test_entrypoint_prints_labels_from_arguments(docker_image):
@@ -81,7 +87,9 @@ def test_entrypoint_prints_labels_from_arguments(docker_image):
         text=True,
         timeout=10
     )
-    assert "Labels: custom-label,another-label" in result.stdout
+    expected = "Labels: custom-label,another-label"
+    start_index = result.stdout.find(expected)
+    assert start_index != -1
 
 
 def test_entrypoint_fails_with_invalid_token(docker_image):

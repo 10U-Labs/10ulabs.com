@@ -1,6 +1,7 @@
 import time
+import pytest
 from ..conftest import login_to_ecr
-from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff
+from .conftest import start_runner_container, get_github_runners, wait_for_process_with_backoff, find_runner_by_name, get_label_by_name
 
 
 def test_runner_has_correct_labels(ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat):
@@ -13,13 +14,16 @@ def test_runner_has_correct_labels(ecr_image_uri, github_repo, runner_registrati
     time.sleep(30)
 
     runners = get_github_runners(github_pat, github_repo)
-    matching_runners = [r for r in runners if r["name"] == runner_name]
-    label_names = [label["name"] for label in matching_runners[0].get("labels", [])]
+    runner = find_runner_by_name(runners, runner_name)
 
     process.terminate()
     wait_for_process_with_backoff(process)
 
-    assert "e2e-custom-label" in label_names
+    if "labels" not in runner:
+        pytest.fail("Runner has no labels")
+    labels = runner["labels"]
+    label = get_label_by_name(labels, "e2e-custom-label")
+    assert label is not None
 
 
 def test_runner_has_all_specified_labels(ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat):
@@ -32,10 +36,13 @@ def test_runner_has_all_specified_labels(ecr_image_uri, github_repo, runner_regi
     time.sleep(30)
 
     runners = get_github_runners(github_pat, github_repo)
-    matching_runners = [r for r in runners if r["name"] == runner_name]
-    label_names = [label["name"] for label in matching_runners[0].get("labels", [])]
+    runner = find_runner_by_name(runners, runner_name)
 
     process.terminate()
     wait_for_process_with_backoff(process)
 
-    assert "label1" in label_names
+    if "labels" not in runner:
+        pytest.fail("Runner has no labels")
+    labels = runner["labels"]
+    label = get_label_by_name(labels, "label1")
+    assert label is not None
