@@ -125,7 +125,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: python3 -m pip install pytest boto3 PyYAML
+        run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Fetch GitHub PAT from Parameter Store
         run: |
           GITHUB_PAT=$(aws ssm get-parameter \
