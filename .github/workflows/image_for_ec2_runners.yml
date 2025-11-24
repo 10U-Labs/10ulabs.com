@@ -196,7 +196,7 @@ jobs:
           AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE=$(grep 'github_actions_role_name' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
-          OS_ARCHITECTURE=$(yq '.architecture' src/build/image_for_ec2_runners/config.yml)
+          OS_ARCHITECTURE=$(grep 'fargate_cpu_architecture' src/api/terraform.tfvars | cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
           OS_FAMILY=$(yq '.os_family' src/build/image_for_ec2_runners/config.yml)
           OS_VERSION=$(yq '.os_version' src/build/image_for_ec2_runners/config.yml)
           RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_ec2_runners/config.yml)
@@ -325,6 +325,7 @@ jobs:
         run: |
           pylint \
             src/build/image_for_ec2_runners/*.py \
+            test/build/image_for_ec2_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
@@ -375,7 +376,7 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          AMI_SSM_PARAMETER=$(yq '.ami.promotion_ssm_parameter' src/build/image_for_ec2_runners/config.yml)
+          AMI_SSM_PARAMETER=$(grep 'ami_ssm_parameter_name' src/api/terraform.tfvars | cut -d'"' -f2)
           AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/build/image_for_ec2_runners/config.yml)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
           echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT

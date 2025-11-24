@@ -207,3 +207,8 @@ variable "fargate_operating_system_family" {
   type        = string
   description = "Operating system family for Fargate tasks"
 }
+
+variable "ami_ssm_parameter_name" {
+  type        = string
+  description = "SSM parameter name for latest AMI ID"
+}

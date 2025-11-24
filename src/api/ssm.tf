@@ -1,5 +1,5 @@
 resource "aws_ssm_parameter" "latest_ami" {
-  name        = "/github-runner/ami/latest"
+  name        = var.ami_ssm_parameter_name
   type        = "String"
   value       = "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
   description = "Latest AMI ID for EC2 GitHub self-hosted runners"
@@ -10,7 +10,7 @@ resource "aws_ssm_parameter" "latest_ami" {
   }
 
   tags = {
-    Name = "github-runner-ami-latest"
+    Name = var.ami_ssm_parameter_name
   }
 }
 
