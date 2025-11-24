@@ -338,7 +338,7 @@ jobs:
         run: |
           cd src/build/image_for_ec2_runners
           packer init template.pkr.hcl
-      - name: Validating Packer template
+      - name: Validate Packer template
         run: |
           cd src/build/image_for_ec2_runners
           packer validate \
