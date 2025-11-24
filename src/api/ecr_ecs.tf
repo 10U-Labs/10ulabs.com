@@ -70,6 +70,11 @@ resource "aws_ecs_task_definition" "runner" {
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+  runtime_platform {
+    cpu_architecture        = var.fargate_cpu_architecture
+    operating_system_family = var.fargate_operating_system_family
+  }
+
   container_definitions = jsonencode([{
     name      = var.container_name
     image     = "${aws_ecr_repository.runner.repository_url}:latest"

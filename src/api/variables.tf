@@ -227,3 +227,13 @@ variable "circuit_breaker_alert_email" {
   type        = string
   description = "Email address for circuit breaker alert notifications"
 }
+
+variable "fargate_cpu_architecture" {
+  type        = string
+  description = "CPU architecture for Fargate tasks"
+}
+
+variable "fargate_operating_system_family" {
+  type        = string
+  description = "Operating system family for Fargate tasks"
+}
