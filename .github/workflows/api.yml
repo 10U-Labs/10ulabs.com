@@ -178,7 +178,7 @@ jobs:
             .github/workflows/api.yml
       - name: Run pylint
         run: |
-          pylint test/api/*.py \
+          python3 -m pylint test/api/*.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
