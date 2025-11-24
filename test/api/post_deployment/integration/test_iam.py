@@ -106,3 +106,41 @@ def test_dlq_reprocessor_role_has_sqs_permissions(iam_client, tfvars):
     role_name = f"{tfvars['resource_prefix']}-DLQReprocessor-Role"
     policies = iam_client.list_role_policies(RoleName=role_name)
     assert len(policies['PolicyNames']) >= 1
+
+
+def test_v1_handler_role_has_ecs_run_task_permission(iam_client):
+    role_name = 'V1ApiHandler-ServiceRole'
+    policies = iam_client.list_role_policies(RoleName=role_name)
+    has_run_task = False
+    for policy_name in policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_document = policy_doc['PolicyDocument']
+        for statement in policy_document.get('Statement', []):
+            actions = statement.get('Action', [])
+            if isinstance(actions, str):
+                actions = [actions]
+            if 'ecs:RunTask' in actions:
+                has_run_task = True
+                break
+        if has_run_task:
+            break
+    assert has_run_task
+
+
+def test_v1_handler_role_has_ecs_tag_resource_permission(iam_client):
+    role_name = 'V1ApiHandler-ServiceRole'
+    policies = iam_client.list_role_policies(RoleName=role_name)
+    has_tag_resource = False
+    for policy_name in policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_document = policy_doc['PolicyDocument']
+        for statement in policy_document.get('Statement', []):
+            actions = statement.get('Action', [])
+            if isinstance(actions, str):
+                actions = [actions]
+            if 'ecs:TagResource' in actions:
+                has_tag_resource = True
+                break
+        if has_tag_resource:
+            break
+    assert has_tag_resource

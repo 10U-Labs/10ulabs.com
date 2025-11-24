@@ -90,14 +90,23 @@ def test_v1_docker_runner_post_creates_fargate_task(api_url, api_key):
     headers = {"x-api-key": api_key}
     payload = {"job_id": 888888, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": "test/repo"}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
-    assert response.status_code in [200, 202, 403, 500]
+    assert response.status_code in [200, 202]
+
+
+def test_v1_docker_runner_post_returns_success_true(api_url, api_key):
+    headers = {"x-api-key": api_key}
+    payload = {"job_id": 888889, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": "test/repo"}
+    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    if response.status_code == 200:
+        data = response.json()
+        assert data.get('success') is True
 
 
 def test_v1_docker_runner_post_with_no_stable_image_triggers_build(api_url, api_key):
     headers = {"x-api-key": api_key}
     payload = {"job_id": 777777, "job_labels": ["test"], "github_repo": "test/repo"}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
-    assert response.status_code in [200, 202, 403, 500]
+    assert response.status_code in [200, 202]
 
 
 def test_v1_docker_runner_post_missing_job_id_returns_400(api_url, api_key):
@@ -130,17 +139,17 @@ def test_concurrent_docker_runner_creation(api_url, api_key):
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         futures = [executor.submit(create_runner) for _ in range(3)]
         results = [f.result() for f in concurrent.futures.as_completed(futures)]
-    assert all(r.status_code in [200, 202, 403, 500] for r in results)
+    assert all(r.status_code in [200, 202] for r in results)
 
 
 def test_runner_creation_fails_when_ecs_unavailable(api_url, api_key):
     headers = {"x-api-key": api_key}
     payload = {"job_id": 999999, "job_labels": ["test"], "github_repo": "test/repo"}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
-    assert response.status_code in [200, 403, 500]
+    assert response.status_code in [200, 202]
 
 
 def test_runner_self_terminates_after_job(api_url, api_key):
     headers = {"x-api-key": api_key}
     response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
-    assert response.status_code in [200, 403]
+    assert response.status_code == 200
