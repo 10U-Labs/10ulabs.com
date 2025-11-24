@@ -86,25 +86,25 @@ def test_docker_runner_status_has_cluster_field(api_url, api_key):
     assert "cluster" in data
 
 
-def test_v1_docker_runner_post_creates_fargate_task(api_url, api_key):
+def test_v1_docker_runner_post_creates_fargate_task(api_url, api_key, github_repo):
     headers = {"x-api-key": api_key}
-    payload = {"job_id": 888888, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": "test/repo"}
+    payload = {"job_id": 888888, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": github_repo}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
     assert response.status_code in [200, 202]
 
 
-def test_v1_docker_runner_post_returns_success_true(api_url, api_key):
+def test_v1_docker_runner_post_returns_success_true(api_url, api_key, github_repo):
     headers = {"x-api-key": api_key}
-    payload = {"job_id": 888889, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": "test/repo"}
+    payload = {"job_id": 888889, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": github_repo}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
     if response.status_code == 200:
         data = response.json()
         assert data.get('success') is True
 
 
-def test_v1_docker_runner_post_with_no_stable_image_triggers_build(api_url, api_key):
+def test_v1_docker_runner_post_with_no_stable_image_triggers_build(api_url, api_key, github_repo):
     headers = {"x-api-key": api_key}
-    payload = {"job_id": 777777, "job_labels": ["test"], "github_repo": "test/repo"}
+    payload = {"job_id": 777777, "job_labels": ["test"], "github_repo": github_repo}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
     assert response.status_code in [200, 202]
 
@@ -131,9 +131,9 @@ def test_v1_docker_runner_get_task_details_include_metadata(api_url, api_key):
         assert "running_tasks" in data
 
 
-def test_concurrent_docker_runner_creation(api_url, api_key):
+def test_concurrent_docker_runner_creation(api_url, api_key, github_repo):
     headers = {"x-api-key": api_key}
-    payload = {"job_id": 123456, "job_labels": ["test"], "github_repo": "test/repo"}
+    payload = {"job_id": 123456, "job_labels": ["test"], "github_repo": github_repo}
     def create_runner():
         return requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
@@ -142,9 +142,9 @@ def test_concurrent_docker_runner_creation(api_url, api_key):
     assert all(r.status_code in [200, 202] for r in results)
 
 
-def test_runner_creation_fails_when_ecs_unavailable(api_url, api_key):
+def test_runner_creation_fails_when_ecs_unavailable(api_url, api_key, github_repo):
     headers = {"x-api-key": api_key}
-    payload = {"job_id": 999999, "job_labels": ["test"], "github_repo": "test/repo"}
+    payload = {"job_id": 999999, "job_labels": ["test"], "github_repo": github_repo}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
     assert response.status_code in [200, 202]
 

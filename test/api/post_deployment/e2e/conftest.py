@@ -41,3 +41,8 @@ def run_concurrent_requests(request_func, num_requests, max_workers=None):
         futures = [executor.submit(request_func) for _ in range(num_requests)]
         results = [f.result() for f in concurrent.futures.as_completed(futures)]
     return results
+
+
+@pytest.fixture(name="github_repo", scope="module")
+def github_repo_fixture(tfvars):
+    return tfvars["github_repo"]
