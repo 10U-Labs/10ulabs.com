@@ -394,3 +394,66 @@ def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
     os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
     matches = re.findall(os_environ_get_pattern_with_default, content)
     assert len(matches) == 0
+
+
+TEST_CONSTANTS = {
+    'queue_url': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue',
+    'dynamodb_table': 'test-table',
+    'lambda_function': 'test-function',
+    'instance_id': 'i-test123',
+    'instance_id_2': 'i-123',
+    'instance_id_3': 'i-456',
+    'ami_id': 'ami-test123',
+    'ami_id_2': 'ami-123',
+    'ecr_digest': 'sha256:test',
+    'ecr_digest_2': 'sha256:abc123',
+    'task_arn': 'test-task',
+    'task_arn_full': 'arn:aws:ecs:us-east-1:123456789012:task/test',
+    'test_timestamp': '2024-01-01T00:00:00',
+    'aws_account_id': '123456789012',
+    'aws_region': 'us-east-1',
+}
+
+
+ENV_VAR_PRESETS = {
+    'base': {
+        'AWS_REGION': 'us-east-1',
+    },
+    'v1_handler': {
+        'AWS_REGION': 'us-east-1',
+        'ECR_REPOSITORY': 'test-ecr-repo',
+        'GITHUB_REPO': 'test/repo',
+        'GITHUB_TOKEN_SECRET_NAME': 'test-github-token',
+        'ECS_CLUSTER': 'test-cluster',
+        'CONTAINER_NAME': 'test-container',
+        'TASK_DEFINITION': 'test-task-family',
+        'EC2_INSTANCE_TYPES': 't3.micro,t3.small',
+        'EC2_MAX_PRICE': '0.05',
+        'API_DOMAIN': 'api.test.com',
+        'IMAGE_API_ENDPOINT': 'https://api.test.com/v1',
+        'SUBNETS': 'subnet-test1,subnet-test2',
+        'SECURITY_GROUPS': 'sg-test',
+        'VPC_ID': 'vpc-test',
+        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
+    },
+    'webhook_router': {
+        'AWS_REGION': 'us-east-1',
+        'API_KEY_PARAMETER_NAME': 'test-api-key-param',
+        'WEBHOOK_SECRET_NAME': 'test-webhook-secret',
+        'API_BASE_URL': 'https://api.test.com/v1',
+        'IDEMPOTENCY_TABLE_NAME': 'test-table',
+        'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue',
+    },
+}
+
+
+def create_boto_client_mock(**service_mocks: Any) -> Callable:
+    def mock_client(service_name: str) -> Any:
+        return service_mocks.get(service_name, MagicMock())
+    return mock_client
+
+
+def reset_module_state(module: ModuleType, **state_vars: Any) -> None:
+    for var_name, default_value in state_vars.items():
+        if hasattr(module, var_name):
+            setattr(module, var_name, default_value)
