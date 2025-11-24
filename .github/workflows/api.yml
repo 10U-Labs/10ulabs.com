@@ -41,11 +41,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run E2E tests
         run: python3 -m pytest test/api/post_deployment/e2e/ -v
@@ -68,7 +70,8 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Setup Terraform
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
@@ -92,12 +95,12 @@ jobs:
             else
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
-      - if: steps.check_files.outputs.changed == 'true'
+      - if: steps.check_files.outputs.changed == 'true' && (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: steps.check_files.outputs.changed == 'true'
+      - if: steps.check_files.outputs.changed == 'true' && (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
         name: Install Python dependencies
         run: python3 -m pip install boto3
       - if: steps.check_files.outputs.changed == 'true'
@@ -125,11 +128,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Fetch GitHub PAT from Parameter Store
         run: |
@@ -150,11 +155,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Setup Terraform
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
@@ -163,11 +170,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Setup TFLint
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - name: Install linting dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install linting dependencies
         run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs PyYAML types-PyYAML requests types-requests
       - name: Linting YAML files
         run: |
@@ -208,11 +217,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests
         run: python3 -m pytest test/api/pre_deployment/ -v
