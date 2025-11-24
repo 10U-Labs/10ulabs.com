@@ -123,7 +123,7 @@ def catchall_handler():
 @pytest.fixture
 def webhook_router(tfvars):
     env_vars = {
-        'API_KEY_PARAMETER_NAME': tfvars['api_key_parameter_name'],
+        'API_KEY_PARAMETER_NAME': tfvars['ssm_parameter_name_for_api_key'],
         'WEBHOOK_SECRET_NAME': tfvars['webhook_secret_name'],
         'API_BASE_URL': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}"
     }

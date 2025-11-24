@@ -1,8 +1,7 @@
 resource "aws_ssm_parameter" "latest_ami" {
-  name        = var.ami_ssm_parameter_name
+  name        = var.ssm_parameter_name_for_ami
   type        = "String"
   value       = "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
-  description = "Latest AMI ID for EC2 GitHub self-hosted runners"
   tier        = "Standard"
 
   lifecycle {
@@ -10,7 +9,7 @@ resource "aws_ssm_parameter" "latest_ami" {
   }
 
   tags = {
-    Name = var.ami_ssm_parameter_name
+    Name = var.ssm_parameter_name_for_ami
   }
 }
 
@@ -27,13 +26,12 @@ resource "aws_ssm_parameter" "webhook_secret" {
 }
 
 resource "aws_ssm_parameter" "api_key" {
-  name        = var.api_key_parameter_name
+  name        = var.ssm_parameter_name_for_api_key
   type        = "SecureString"
   value       = random_password.api_key.result
-  description = "API key for 10U Labs API authentication"
   tier        = "Standard"
 
   tags = {
-    Name = var.api_key_parameter_name
+    Name = var.ssm_parameter_name_for_api_key
   }
 }

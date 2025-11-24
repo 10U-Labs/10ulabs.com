@@ -376,7 +376,7 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          AMI_SSM_PARAMETER=$(grep 'ami_ssm_parameter_name' src/api/terraform.tfvars | cut -d'"' -f2)
+          AMI_SSM_PARAMETER=$(grep 'ssm_parameter_name_for_ami' src/api/terraform.tfvars | cut -d'"' -f2)
           AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/build/image_for_ec2_runners/config.yml)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
           echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT

@@ -183,7 +183,7 @@ variable "lambda_function_name" {
   description = "Lambda function name"
 }
 
-variable "api_key_parameter_name" {
+variable "ssm_parameter_name_for_api_key" {
   type        = string
   description = "API key parameter name"
 }
@@ -208,7 +208,7 @@ variable "fargate_operating_system_family" {
   description = "Operating system family for Fargate tasks"
 }
 
-variable "ami_ssm_parameter_name" {
+variable "ssm_parameter_name_for_ami" {
   type        = string
   description = "SSM parameter name for latest AMI ID"
 }
