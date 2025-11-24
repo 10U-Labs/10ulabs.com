@@ -74,7 +74,7 @@ def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client):
     manifest_text = ecr_response['images'][0]['imageManifest']
     manifest = json.loads(manifest_text)
     ecs_response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
-    task_def_arn = ecs_response['taskDefinitionArns'][0]
+    task_def_arn = ecs_response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
     task_arch = task_def['taskDefinition']['runtimePlatform']['cpuArchitecture'].lower()
     if 'manifests' in manifest:
