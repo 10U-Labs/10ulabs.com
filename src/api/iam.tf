@@ -337,7 +337,8 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ecs" {
         "ecs:RunTask",
         "ecs:DescribeTasks",
         "ecs:ListTasks",
-        "ecs:StopTask"
+        "ecs:StopTask",
+        "ecs:TagResource"
       ]
       Resource = ["*"]
     }]
