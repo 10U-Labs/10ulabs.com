@@ -123,11 +123,6 @@ variable "fargate_memory" {
   description = "Fargate task memory in MB"
 }
 
-variable "fargate_runner_labels" {
-  type        = list(string)
-  description = "Labels for Fargate runners"
-}
-
 variable "ec2_spot_instance_types" {
   type        = list(string)
   description = "EC2 spot instance types for runners"
@@ -196,31 +191,6 @@ variable "api_key_parameter_name" {
 variable "webhook_secret_name" {
   type        = string
   description = "Webhook secret parameter name"
-}
-
-variable "ami_promotion_ssm_parameter" {
-  type        = string
-  description = "SSM parameter name for promoted AMI"
-}
-
-variable "ami_promotion_stable_tag" {
-  type        = string
-  description = "Tag key for stable AMI"
-}
-
-variable "github_runner_version" {
-  type        = string
-  description = "GitHub Actions runner version"
-}
-
-variable "packer_spot_retry_attempts" {
-  type        = number
-  description = "Number of retry attempts for Packer spot instances"
-}
-
-variable "packer_spot_retry_delay" {
-  type        = number
-  description = "Delay in seconds between Packer spot retry attempts"
 }
 
 variable "circuit_breaker_alert_email" {
