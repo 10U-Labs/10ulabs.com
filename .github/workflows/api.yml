@@ -81,7 +81,12 @@ jobs:
         run: |
           set -e
           set -o pipefail
-          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | \
+          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
+            BASE_COMMIT="${{ github.event.before }}"
+          else
+            BASE_COMMIT="HEAD^"
+          fi
+          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
             if grep -qE 'src/api/files/(index\.html|openapi\.yml|404\.html)'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
