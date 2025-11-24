@@ -243,7 +243,7 @@ resource "aws_cloudfront_distribution" "main" {
     path_pattern           = "/health"
     target_origin_id       = "api-gateway"
     viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD"]
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 

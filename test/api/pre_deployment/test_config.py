@@ -76,3 +76,23 @@ def test_ssm_parameter_webhook_secret_uses_random_password():
     with open(ssm_file, encoding="utf-8") as f:
         content = f.read()
     assert 'random_password.webhook_secret.result' in content
+
+
+def test_github_token_secret_name_has_leading_slash():
+    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            if line.strip().startswith('github_token_secret_name'):
+                value = line.split('=')[1].strip().strip('"')
+                assert value.startswith('/')
+
+
+def test_cloudfront_health_endpoint_allows_options():
+    cloudfront_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "cloudfront_s3.tf"
+    with open(cloudfront_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'path_pattern           = "/health"' in content
+    health_section_start = content.find('path_pattern           = "/health"')
+    assert health_section_start != -1
+    health_section = content[health_section_start:health_section_start + 500]
+    assert 'OPTIONS' in health_section
