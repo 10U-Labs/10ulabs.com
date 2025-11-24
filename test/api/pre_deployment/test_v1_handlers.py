@@ -1108,6 +1108,27 @@ def test_launch_fargate_runner_includes_tags(mock_boto_client, v1_handler):
 
 
 @patch('boto3.client')
+def test_launch_fargate_runner_enables_ecs_managed_tags(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            v1_handler.launch_fargate_runner(789, ['test-label'], 'test/repo')
+            call_args = mock_ecs.run_task.call_args
+            assert call_args[1]['enableECSManagedTags'] is True
+
+
+
+@patch('boto3.client')
 def test_launch_fargate_runner_ecs_failure_no_tasks(mock_boto_client, v1_handler):
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
         mock_ecs = MagicMock()
