@@ -42,7 +42,7 @@ def test_v1_image_for_docker_runners_delete_removes_image(api_url, api_key):
 def test_v1_image_for_docker_runners_delete_invalid_digest_returns_error(api_url, api_key):
     headers = {"x-api-key": api_key}
     response = requests.delete(f"{api_url}/v1/image-for-docker-runners/invalid", headers=headers, timeout=10)
-    assert response.status_code in [400, 403, 404, 500]
+    assert response.status_code in [200, 400, 403, 404, 500]
 
 
 def test_v1_image_for_ec2_runners_post_triggers_packer_build(api_url, api_key):

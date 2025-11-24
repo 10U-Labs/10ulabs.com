@@ -42,6 +42,36 @@ paths:
         uri: ${HealthHandlerArn}
         httpMethod: POST
         type: aws_proxy
+    options:
+      summary: CORS preflight for health endpoint
+      description: Handles CORS preflight requests
+      operationId: healthOptions
+      tags:
+        - Health
+      responses:
+        '200':
+          description: CORS headers
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
   /v1/echo:
     post:
       summary: Echo Endpoint

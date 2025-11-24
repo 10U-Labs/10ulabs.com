@@ -1,3 +1,4 @@
+import json
 import requests
 
 
@@ -8,7 +9,8 @@ def test_cloudfront_delivers_404_page_for_nonexistent_endpoint(api_url):
 
 def test_cloudfront_404_page_contains_error_message(api_url):
     response = requests.get(f"{api_url}/nonexistent", timeout=10)
-    assert "404" in response.text
+    data = json.loads(response.text)
+    assert "error" in data
 
 
 def test_cloudfront_404_page_contains_not_found_text(api_url):

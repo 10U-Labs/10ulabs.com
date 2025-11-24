@@ -32,7 +32,7 @@ def test_service_unavailable_returns_503(api_url):
 
 def test_api_responds_to_options_requests(api_url):
     response = requests.options(f"{api_url}/health", timeout=10)
-    assert response.status_code in [200, 204, 405]
+    assert response.status_code in [200, 204]
 
 
 def test_api_handles_malformed_json_gracefully(api_url):

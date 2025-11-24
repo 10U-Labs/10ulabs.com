@@ -120,3 +120,32 @@ def test_openapi_spec_ec2_runner_has_post_method(openapi_spec):
 
 def test_openapi_spec_has_catchall_endpoint(openapi_spec):
     assert '/{proxy+}' in openapi_spec['paths']
+
+
+def test_openapi_spec_health_has_options_method(openapi_spec):
+    assert 'options' in openapi_spec['paths']['/health']
+
+
+def test_openapi_spec_health_options_has_mock_integration(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    assert 'x-amazon-apigateway-integration' in options
+    assert options['x-amazon-apigateway-integration']['type'] == 'mock'
+
+
+def test_openapi_spec_health_options_returns_cors_headers(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    integration = options['x-amazon-apigateway-integration']
+    assert 'responses' in integration
+    assert 'default' in integration['responses']
+    response_params = integration['responses']['default'].get('responseParameters', {})
+    assert 'method.response.header.Access-Control-Allow-Origin' in response_params
+    assert 'method.response.header.Access-Control-Allow-Methods' in response_params
+    assert 'method.response.header.Access-Control-Allow-Headers' in response_params
+
+
+def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    integration = options['x-amazon-apigateway-integration']
+    response_params = integration['responses']['default']['responseParameters']
+    origin_value = response_params['method.response.header.Access-Control-Allow-Origin']
+    assert "'*'" in origin_value
