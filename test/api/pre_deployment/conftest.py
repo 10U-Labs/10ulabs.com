@@ -46,9 +46,23 @@ def create_client_error(error_code: str, operation_name: str = 'TestOperation') 
     )
 
 
+def get_lambda_path(filename: str) -> Path:
+    return Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / filename
+
+
 def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
     base_path = Path(__file__).parent.parent.parent.parent / "src" / "api"
     handler_path = base_path / relative_path
+    spec = importlib.util.spec_from_file_location(module_name, handler_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_lambda_module(filename: str, module_name: str) -> ModuleType:
+    handler_path = get_lambda_path(filename)
     spec = importlib.util.spec_from_file_location(module_name, handler_path)
     assert spec is not None
     assert spec.loader is not None
@@ -70,13 +84,7 @@ def openapi_spec() -> Dict[str, Any]:
 
 @pytest.fixture
 def health_handler() -> ModuleType:
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "health.py"
-    spec = importlib.util.spec_from_file_location("health_handler", handler_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_lambda_module("health.py", "health_handler")
 
 
 @pytest.fixture
@@ -99,12 +107,7 @@ def v1_handler(tfvars: Dict[str, str]) -> Any:
         'EC2_IAM_INSTANCE_PROFILE': 'test-profile'
     }
     with patch.dict('os.environ', env_vars):
-        handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
-        spec = importlib.util.spec_from_file_location("v1_handler", handler_path)
-        assert spec is not None
-        assert spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_lambda_module("v1.py", "v1_handler")
         if hasattr(module, '_clients'):
             setattr(module, '_clients', {})
         if hasattr(module, '_github_token_cache'):
@@ -114,11 +117,7 @@ def v1_handler(tfvars: Dict[str, str]) -> Any:
 
 @pytest.fixture
 def catchall_handler():
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "catchall.py"
-    spec = importlib.util.spec_from_file_location("catchall_handler", handler_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_lambda_module("catchall.py", "catchall_handler")
 
 
 @pytest.fixture
@@ -129,10 +128,7 @@ def webhook_router(tfvars):
         'API_BASE_URL': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}"
     }
     with patch.dict('os.environ', env_vars):
-        handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
-        spec = importlib.util.spec_from_file_location("webhook_router", handler_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_lambda_module("webhook_router.py", "webhook_router")
         if hasattr(module, '_clients'):
             setattr(module, '_clients', {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None})
         if hasattr(module, '_webhook_secret_cache'):
@@ -150,10 +146,7 @@ def circuit_breaker_remediation(tfvars):
         'AWS_REGION': tfvars['aws_region']
     }
     with patch.dict('os.environ', env_vars):
-        handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
-        spec = importlib.util.spec_from_file_location("circuit_breaker_remediation", handler_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_lambda_module("circuit_breaker_remediation.py", "circuit_breaker_remediation")
         yield module
 
 
@@ -163,10 +156,7 @@ def dlq_reprocessor(tfvars):
         'AWS_REGION': tfvars['aws_region']
     }
     with patch.dict('os.environ', env_vars):
-        handler_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
-        spec = importlib.util.spec_from_file_location("dlq_reprocessor", handler_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load_lambda_module("dlq_reprocessor.py", "dlq_reprocessor")
         yield module
 
 

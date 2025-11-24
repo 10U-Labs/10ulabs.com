@@ -4,9 +4,8 @@ import os
 import time
 import urllib.error
 import urllib.parse
-from pathlib import Path
 from unittest.mock import patch, MagicMock
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, create_multi_client_mock, assert_no_hardcoded_env_defaults
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, create_multi_client_mock, assert_no_hardcoded_env_defaults, get_lambda_path
 
 import pytest
 from botocore.exceptions import ClientError
@@ -470,8 +469,7 @@ def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_route
 
 
 def test_no_hardcoded_defaults_in_webhook_router():
-    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
-    assert_no_hardcoded_env_defaults(lambda_path)
+    assert_no_hardcoded_env_defaults(get_lambda_path("webhook_router.py"))
 
 
 

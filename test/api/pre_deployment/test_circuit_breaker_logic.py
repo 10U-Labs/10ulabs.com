@@ -1,9 +1,8 @@
 import json
 import os
 import time
-from pathlib import Path
 from unittest.mock import patch, MagicMock
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_no_hardcoded_env_defaults
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_no_hardcoded_env_defaults, get_lambda_path
 
 from botocore.exceptions import ClientError
 
@@ -521,14 +520,12 @@ def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
 
 
 def test_no_hardcoded_defaults_in_dlq_reprocessor():
-    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
-    assert_no_hardcoded_env_defaults(lambda_path)
+    assert_no_hardcoded_env_defaults(get_lambda_path("dlq_reprocessor.py"))
 
 
 
 def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
-    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
-    assert_no_hardcoded_env_defaults(lambda_path)
+    assert_no_hardcoded_env_defaults(get_lambda_path("circuit_breaker_remediation.py"))
 
 
 

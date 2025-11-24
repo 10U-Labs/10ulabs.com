@@ -1,104 +1,38 @@
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from test.api.pre_deployment.conftest import parse_response_body, assert_no_hardcoded_env_defaults
+import pytest
+from test.api.pre_deployment.conftest import parse_response_body, assert_no_hardcoded_env_defaults, get_lambda_path
 
 
 def test_no_hardcoded_defaults_in_v1():
-    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
-    assert_no_hardcoded_env_defaults(lambda_path)
+    assert_no_hardcoded_env_defaults(get_lambda_path("v1.py"))
 
 
 
-def test_get_ec2_client_caches_on_second_call(v1_handler):
+@pytest.mark.parametrize("client_name", ["ec2", "ecs", "ecr", "ssm"])
+def test_client_caches_on_second_call(v1_handler, client_name):
     with patch('boto3.client') as mock_boto_client:
-        mock_ec2 = MagicMock()
-        mock_boto_client.return_value = mock_ec2
+        mock_client = MagicMock()
+        mock_boto_client.return_value = mock_client
         clients_dict = getattr(v1_handler, "_clients")
         clients_dict.clear()
-        v1_handler.get_ec2_client()
-        v1_handler.get_ec2_client()
+        get_client_method = getattr(v1_handler, f"get_{client_name}_client")
+        get_client_method()
+        get_client_method()
         assert mock_boto_client.call_count == 1
 
 
 
-def test_get_ecs_client_caches_on_second_call(v1_handler):
+@pytest.mark.parametrize("client_name", ["ec2", "ecs", "ecr", "ssm"])
+def test_client_initialization(v1_handler, client_name):
     with patch('boto3.client') as mock_boto_client:
-        mock_ecs = MagicMock()
-        mock_boto_client.return_value = mock_ecs
-        clients_dict = getattr(v1_handler, "_clients")
-        clients_dict.clear()
-        v1_handler.get_ecs_client()
-        v1_handler.get_ecs_client()
-        assert mock_boto_client.call_count == 1
-
-
-
-def test_get_ecr_client_caches_on_second_call(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ecr = MagicMock()
-        mock_boto_client.return_value = mock_ecr
-        clients_dict = getattr(v1_handler, "_clients")
-        clients_dict.clear()
-        v1_handler.get_ecr_client()
-        v1_handler.get_ecr_client()
-        assert mock_boto_client.call_count == 1
-
-
-
-def test_get_ssm_client_caches_on_second_call(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ssm = MagicMock()
-        mock_boto_client.return_value = mock_ssm
-        clients_dict = getattr(v1_handler, "_clients")
-        clients_dict.clear()
-        v1_handler.get_ssm_client()
-        v1_handler.get_ssm_client()
-        assert mock_boto_client.call_count == 1
-
-
-
-def test_get_ec2_client_initialization(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ec2 = MagicMock()
-        mock_boto_client.return_value = mock_ec2
+        mock_client = MagicMock()
+        mock_boto_client.return_value = mock_client
         with patch.object(v1_handler, '_clients', {}):
-            client = v1_handler.get_ec2_client()
+            get_client_method = getattr(v1_handler, f"get_{client_name}_client")
+            client = get_client_method()
             assert client is not None
-            mock_boto_client.assert_called_once_with('ec2')
-
-
-
-def test_get_ecs_client_initialization(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ecs = MagicMock()
-        mock_boto_client.return_value = mock_ecs
-        with patch.object(v1_handler, '_clients', {}):
-            client = v1_handler.get_ecs_client()
-            assert client is not None
-            mock_boto_client.assert_called_once_with('ecs')
-
-
-
-def test_get_ecr_client_initialization(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ecr = MagicMock()
-        mock_boto_client.return_value = mock_ecr
-        with patch.object(v1_handler, '_clients', {}):
-            client = v1_handler.get_ecr_client()
-            assert client is not None
-            mock_boto_client.assert_called_once_with('ecr')
-
-
-
-def test_get_ssm_client_initialization(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ssm = MagicMock()
-        mock_boto_client.return_value = mock_ssm
-        with patch.object(v1_handler, '_clients', {}):
-            client = v1_handler.get_ssm_client()
-            assert client is not None
-            mock_boto_client.assert_called_once_with('ssm')
+            mock_boto_client.assert_called_once_with(client_name)
 
 
 
