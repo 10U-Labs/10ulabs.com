@@ -1,24 +1,12 @@
-import json
-import os
-import re
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from botocore.exceptions import ClientError
-
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
+from test.api.pre_deployment.conftest import parse_response_body, assert_no_hardcoded_env_defaults
 
 
 def test_no_hardcoded_defaults_in_v1():
     lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
-    with open(lambda_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
-
-    matches = re.findall(os_environ_get_pattern_with_default, content)
-    assert len(matches) == 0
+    assert_no_hardcoded_env_defaults(lambda_path)
 
 
 
@@ -157,6 +145,3 @@ def test_parse_body_with_dict_body(v1_handler):
     event = {'body': {'key': 'value'}}
     result = v1_handler.parse_body(event)
     assert result['key'] == 'value'
-
-
-

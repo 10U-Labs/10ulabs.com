@@ -2,12 +2,10 @@ import json
 import os
 import urllib.error
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch, MagicMock, Mock
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type, create_multi_client_mock
 
 from botocore.exceptions import ClientError
-
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler, echo_post_event_factory, lambda_context):
@@ -149,15 +147,7 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(mock_boto_clie
     }
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-
-    def mock_client(service_name):
-        if service_name == 'ec2':
-            return mock_ec2
-        if service_name == 'ssm':
-            return mock_ssm
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
+    mock_boto_client.side_effect = create_multi_client_mock(mock_ec2, mock_ssm)
     event = ec2_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
@@ -1599,5 +1589,3 @@ def test_v1_get_latest_ami_details_ssm_parameter_not_found_fallback(mock_boto_cl
     mock_boto_client.side_effect = client_side_effect
     result = v1_handler.get_latest_ami_details()
     assert result['success'] is True
-
-

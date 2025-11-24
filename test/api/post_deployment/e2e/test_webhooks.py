@@ -4,6 +4,8 @@ import hmac
 import json
 import time
 import urllib.parse
+from test.api.post_deployment.conftest import make_health_check_request, assert_circuit_breaker_state_in_response
+
 import requests
 
 
@@ -45,17 +47,13 @@ def test_v1_runners_post_with_duplicate_delivery_id(api_url):
 
 
 def test_v1_runners_health_get_with_valid_api_key(api_url, api_key):
-    headers = {"x-api-key": api_key}
-    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
+    response = make_health_check_request(api_url, api_key)
     assert response.status_code in [200, 403]
 
 
 def test_v1_runners_health_returns_circuit_breaker_state(api_url, api_key):
-    headers = {"x-api-key": api_key}
-    response = requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
-    if response.status_code == 200:
-        data = response.json()
-        assert "circuit_breaker" in data or "status" in data
+    response = make_health_check_request(api_url, api_key)
+    assert_circuit_breaker_state_in_response(response)
 
 
 def test_duplicate_webhook_delivery_ids_ignored(api_url):

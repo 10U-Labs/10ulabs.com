@@ -1,5 +1,6 @@
-import boto3
 from datetime import datetime, timedelta
+
+import boto3
 
 
 def test_cloudwatch_metrics_published_for_circuit_breaker():

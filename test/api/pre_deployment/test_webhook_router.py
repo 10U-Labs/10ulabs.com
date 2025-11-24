@@ -1,18 +1,15 @@
 import base64
 import json
 import os
-import pytest
-import re
 import time
 import urllib.error
 import urllib.parse
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, create_multi_client_mock, assert_no_hardcoded_env_defaults
 
+import pytest
 from botocore.exceptions import ClientError
-
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_lambda_handler_health_check_returns_200(webhook_router, lambda_context):
@@ -101,15 +98,7 @@ def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_
     mock_ec2.run_instances.return_value = {'Instances': [{'InstanceId': 'i-test123'}]}
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-
-    def mock_client(service_name):
-        if service_name == 'ec2':
-            return mock_ec2
-        if service_name == 'ssm':
-            return mock_ssm
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
+    mock_boto_client.side_effect = create_multi_client_mock(mock_ec2, mock_ssm)
 
     mock_response = MagicMock()
     mock_response.status = 200
@@ -482,13 +471,7 @@ def test_lambda_handler_sqs_event_with_failed_message_raises_error(webhook_route
 
 def test_no_hardcoded_defaults_in_webhook_router():
     lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "webhook_router.py"
-    with open(lambda_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
-
-    matches = re.findall(os_environ_get_pattern_with_default, content)
-    assert len(matches) == 0
+    assert_no_hardcoded_env_defaults(lambda_path)
 
 
 
@@ -663,4 +646,3 @@ def test_verify_signature_with_empty_header_returns_false(webhook_router):
 def test_verify_signature_with_malformed_header_returns_false(webhook_router):
     result = webhook_router.verify_signature('payload', 'malformed', 'secret')
     assert result is False
-

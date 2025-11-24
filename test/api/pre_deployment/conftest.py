@@ -1,8 +1,9 @@
 import importlib.util
 import json
+import re
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Callable
 from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
 from botocore.exceptions import ClientError
@@ -385,3 +386,21 @@ def mock_urllib_response_factory():
         mock_response.__exit__ = Mock(return_value=False)
         return mock_response
     return _create_response
+
+
+def create_multi_client_mock(ec2_mock: Any, ssm_mock: Any) -> Callable:
+    def mock_client(service_name: str) -> Any:
+        if service_name == 'ec2':
+            return ec2_mock
+        if service_name == 'ssm':
+            return ssm_mock
+        return MagicMock()
+    return mock_client
+
+
+def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0

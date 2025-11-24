@@ -1,13 +1,11 @@
 import json
 import os
-from datetime import datetime
+import time
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_no_hardcoded_env_defaults
 
 from botocore.exceptions import ClientError
-import time
-
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
@@ -524,25 +522,13 @@ def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
 
 def test_no_hardcoded_defaults_in_dlq_reprocessor():
     lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
-    with open(lambda_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
-
-    matches = re.findall(os_environ_get_pattern_with_default, content)
-    assert len(matches) == 0
+    assert_no_hardcoded_env_defaults(lambda_path)
 
 
 
 def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
     lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
-    with open(lambda_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
-
-    matches = re.findall(os_environ_get_pattern_with_default, content)
-    assert len(matches) == 0
+    assert_no_hardcoded_env_defaults(lambda_path)
 
 
 
@@ -822,6 +808,3 @@ def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_repr
     dlq_reprocessor.handler({}, lambda_context)
     call_args = mock_sqs.send_message.call_args
     assert 'MessageAttributes' in call_args[1]
-
-
-
