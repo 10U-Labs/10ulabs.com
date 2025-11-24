@@ -132,32 +132,20 @@ def test_cloudwatch_log_group_resource_exists():
     assert 'resource "aws_cloudwatch_log_group" "runner"' in content
 
 
-def test_terraform_tfvars_has_fargate_cpu_architecture():
-    tfvars_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'fargate_cpu_architecture' in content
+def test_terraform_tfvars_has_fargate_cpu_architecture(tfvars):
+    assert 'fargate_cpu_architecture' in tfvars
 
 
-def test_terraform_tfvars_fargate_cpu_architecture_is_arm64():
-    tfvars_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'fargate_cpu_architecture        = "ARM64"' in content
+def test_terraform_tfvars_fargate_cpu_architecture_is_arm64(tfvars):
+    assert tfvars['fargate_cpu_architecture'] == 'ARM64'
 
 
-def test_terraform_tfvars_has_fargate_operating_system_family():
-    tfvars_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'fargate_operating_system_family' in content
+def test_terraform_tfvars_has_fargate_operating_system_family(tfvars):
+    assert 'fargate_operating_system_family' in tfvars
 
 
-def test_terraform_tfvars_fargate_operating_system_family_is_linux():
-    tfvars_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'fargate_operating_system_family = "LINUX"' in content
+def test_terraform_tfvars_fargate_operating_system_family_is_linux(tfvars):
+    assert tfvars['fargate_operating_system_family'] == 'LINUX'
 
 
 def test_variables_tf_has_fargate_cpu_architecture():
