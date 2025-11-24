@@ -18,10 +18,14 @@ entrypoint_spec.loader.exec_module(entrypoint)
 DOCKERFILE_PATH = os.path.join(BASE_DIR, 'Dockerfile')
 
 
-@pytest.fixture
-def dockerfile_content():
+def _read_dockerfile():
     with open(DOCKERFILE_PATH, 'r', encoding='utf-8') as f:
         return f.read()
+
+
+@pytest.fixture
+def dockerfile_content():
+    return _read_dockerfile()
 
 
 @pytest.fixture
@@ -30,65 +34,73 @@ def dockerfile_parser():
 
 
 @pytest.fixture
-def apt_get_install_packages(dockerfile_content):
-    match = re.search(r'apt-get install.*?(?=&&\s*rm|$)', dockerfile_content, re.DOTALL)
+def apt_get_install_packages():
+    content = _read_dockerfile()
+    match = re.search(r'apt-get install.*?(?=&&\s*rm|$)', content, re.DOTALL)
     if match:
         return match.group(0)
     return ""
 
 
 @pytest.fixture
-def pip3_install_packages(dockerfile_content):
-    match = re.search(r'pip3 install.*?(?=&&\s*rm|$)', dockerfile_content, re.DOTALL)
+def pip3_install_packages():
+    content = _read_dockerfile()
+    match = re.search(r'pip3 install.*?(?=&&\s*rm|$)', content, re.DOTALL)
     if match:
         return match.group(0)
     return ""
 
 
 @pytest.fixture
-def npm_install_packages(dockerfile_content):
-    match = re.search(r'npm install.*', dockerfile_content)
+def npm_install_packages():
+    content = _read_dockerfile()
+    match = re.search(r'npm install.*', content)
     if match:
         return match.group(0)
     return ""
 
 
 @pytest.fixture
-def dockerfile_node_version(dockerfile_content):
-    match = re.search(r'ARG\s+NODE_VERSION=(.+)', dockerfile_content)
+def dockerfile_node_version():
+    content = _read_dockerfile()
+    match = re.search(r'ARG\s+NODE_VERSION=(.+)', content)
     if match:
         return match.group(1)
     return ""
 
 
 @pytest.fixture
-def dockerfile_terraform_version(dockerfile_content):
-    match = re.search(r'ARG\s+TERRAFORM_VERSION=(.+)', dockerfile_content)
+def dockerfile_terraform_version():
+    content = _read_dockerfile()
+    match = re.search(r'ARG\s+TERRAFORM_VERSION=(.+)', content)
     if match:
         return match.group(1)
     return ""
 
 
 @pytest.fixture
-def dockerfile_runner_version(dockerfile_content):
-    match = re.search(r'ARG\s+RUNNER_VERSION=(.+)', dockerfile_content)
+def dockerfile_runner_version():
+    content = _read_dockerfile()
+    match = re.search(r'ARG\s+RUNNER_VERSION=(.+)', content)
     if match:
         return match.group(1)
     return ""
 
 
 @pytest.fixture
-def dockerfile_runner_arch(dockerfile_content):
-    match = re.search(r'ARG\s+RUNNER_ARCH=(.+)', dockerfile_content)
+def dockerfile_runner_arch():
+    content = _read_dockerfile()
+    match = re.search(r'ARG\s+RUNNER_ARCH=(.+)', content)
     if match:
         return match.group(1)
     return ""
 
 
 @pytest.fixture
-def dockerfile_run_commands_joined(dockerfile_parser):
+def dockerfile_run_commands_joined():
+    parser = DockerfileParser(path=DOCKERFILE_PATH)
     commands = []
-    structure = dockerfile_parser.structure
+    structure = parser.structure
     i = 0
     while i < len(structure):
         if structure[i]['instruction'] == 'RUN':

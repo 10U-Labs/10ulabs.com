@@ -171,7 +171,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: pip install pylint mypy yamllint pytest boto3 boto3-stubs[ecr] botocore dockerfile-parse
+        run: pip install pylint mypy yamllint pytest boto3 boto3-stubs[ecr] botocore dockerfile-parse types-dockerfile-parse
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
@@ -190,7 +190,7 @@ jobs:
           pylint \
             src/build/image_for_docker_runners/entrypoint.py \
             test/build/image_for_docker_runners/ \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines,redefined-outer-name,duplicate-code \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Run mypy
         run: |
