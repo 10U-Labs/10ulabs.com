@@ -48,7 +48,7 @@ jobs:
       - name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run E2E tests
-        run: pytest test/api/test_e2e.py -v
+        run: python3 -m pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -136,7 +136,7 @@ jobs:
             --region ${{ needs.declaring-common-variables.outputs.aws_region }})
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run integration tests
-        run: pytest test/api/test_integration.py -v
+        run: python3 -m pytest test/api/test_integration.py -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -173,7 +173,7 @@ jobs:
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
-          yamllint \
+          python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api.yml
       - name: Run pylint
@@ -210,7 +210,7 @@ jobs:
       - name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests
-        run: pytest test/api/test_unit.py -v
+        run: python3 -m pytest test/api/test_unit.py -v
 name: Ensuring API exists and is properly configured
 on:
   push:
