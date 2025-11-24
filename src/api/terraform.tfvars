@@ -30,7 +30,6 @@ fargate_memory                  = "512"
 fargate_runner_labels           = ["ephemeral-ecs-fargate-spot"]
 github_repo                     = "10U-Labs-LLC/10ulabs.com"
 github_runner_version           = "2.329.0"
-github_token_secret_name        = "/github-runner/credentials"
 lambda_function_name            = "TenULabsWebhookHandler"
 lambda_memory_mb                = 256
 lambda_timeout_seconds          = 30

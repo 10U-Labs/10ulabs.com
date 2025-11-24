@@ -198,11 +198,6 @@ variable "webhook_secret_name" {
   description = "Webhook secret parameter name"
 }
 
-variable "github_token_secret_name" {
-  type        = string
-  description = "GitHub token secret parameter name"
-}
-
 variable "ami_promotion_ssm_parameter" {
   type        = string
   description = "SSM parameter name for promoted AMI"

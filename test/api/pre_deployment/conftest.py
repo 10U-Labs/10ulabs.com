@@ -93,7 +93,7 @@ def v1_handler(tfvars: Dict[str, str]) -> Any:
         'AWS_REGION': tfvars['aws_region'],
         'ECR_REPOSITORY': tfvars['ecr_repository_name'],
         'GITHUB_REPO': tfvars['github_repo'],
-        'GITHUB_TOKEN_SECRET_NAME': tfvars['github_token_secret_name'],
+        'GITHUB_TOKEN_SECRET_NAME': '/github/pat',
         'ECS_CLUSTER': tfvars['cluster_name'],
         'CONTAINER_NAME': tfvars['container_name'],
         'TASK_DEFINITION': tfvars['task_family'],

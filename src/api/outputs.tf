@@ -80,7 +80,7 @@ output "webhook_parameter_arn" {
 
 output "github_token_secret_name" {
   description = "GitHub token secret name in SSM Parameter Store"
-  value       = var.github_token_secret_name
+  value       = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_name
 }
 
 output "ec2_runner_role_name" {

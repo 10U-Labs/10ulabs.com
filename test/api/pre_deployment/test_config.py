@@ -78,13 +78,11 @@ def test_ssm_parameter_webhook_secret_uses_random_password():
     assert 'random_password.webhook_secret.result' in content
 
 
-def test_github_token_secret_name_has_leading_slash():
-    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            if line.strip().startswith('github_token_secret_name'):
-                value = line.split('=')[1].strip().strip('"')
-                assert value.startswith('/')
+def test_lambda_uses_bootstrap_github_token_parameter():
+    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_name' in content
 
 
 def test_cloudfront_health_endpoint_allows_options():
