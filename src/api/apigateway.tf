@@ -9,16 +9,16 @@ locals {
 }
 
 resource "aws_cloudwatch_log_group" "api_gateway" {
-  name              = "/aws/apigateway/${var.stack_name}"
+  name              = var.api_gateway_log_group_name
   retention_in_days = 30
 
   tags = {
-    Name = "${var.stack_name}-api-gateway-logs"
+    Name = "${var.api_gateway_name}-logs"
   }
 }
 
 resource "aws_api_gateway_rest_api" "main" {
-  name        = "TenULabsApi"
+  name        = var.api_gateway_name
   description = "API Gateway for api.10ulabs.com"
 
   body = local.openapi_spec
@@ -28,7 +28,7 @@ resource "aws_api_gateway_rest_api" "main" {
   }
 
   tags = {
-    Name = "TenULabsApi"
+    Name = var.api_gateway_name
   }
 }
 

@@ -1,24 +1,24 @@
 resource "aws_sqs_queue" "webhook_dlq" {
-  name                       = "${var.lambda_function_name}-dlq"
+  name                       = var.webhook_dlq_name
   message_retention_seconds  = 1209600
   visibility_timeout_seconds = 300
 
   tags = {
-    Name = "${var.lambda_function_name}-dlq"
+    Name = var.webhook_dlq_name
   }
 }
 
 resource "aws_sqs_queue" "job_queue_dlq" {
-  name                      = "${var.lambda_function_name}-job-dlq"
+  name                      = var.job_queue_dlq_name
   message_retention_seconds = 1209600
 
   tags = {
-    Name = "${var.lambda_function_name}-job-dlq"
+    Name = var.job_queue_dlq_name
   }
 }
 
 resource "aws_sqs_queue" "job_queue" {
-  name                       = "${var.lambda_function_name}-jobs"
+  name                       = var.job_queue_name
   visibility_timeout_seconds = var.lambda_timeout_seconds * 6
 
   redrive_policy = jsonencode({
@@ -27,12 +27,12 @@ resource "aws_sqs_queue" "job_queue" {
   })
 
   tags = {
-    Name = "${var.lambda_function_name}-jobs"
+    Name = var.job_queue_name
   }
 }
 
 resource "aws_dynamodb_table" "idempotency" {
-  name         = "${var.lambda_function_name}-idempotency"
+  name         = var.idempotency_table_name
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "request_id"
 
@@ -51,6 +51,6 @@ resource "aws_dynamodb_table" "idempotency" {
   }
 
   tags = {
-    Name = "${var.lambda_function_name}-idempotency"
+    Name = var.idempotency_table_name
   }
 }

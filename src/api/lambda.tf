@@ -6,7 +6,7 @@ data "archive_file" "health_handler" {
 
 resource "aws_lambda_function" "health_handler" {
   filename         = data.archive_file.health_handler.output_path
-  function_name    = "HealthHandler"
+  function_name    = var.health_handler_function_name
   role             = aws_iam_role.lambda_health_handler.arn
   handler          = "health.handler"
   source_code_hash = data.archive_file.health_handler.output_base64sha256
@@ -20,16 +20,16 @@ resource "aws_lambda_function" "health_handler" {
   }
 
   tags = {
-    Name = "HealthHandler"
+    Name = var.health_handler_function_name
   }
 }
 
 resource "aws_cloudwatch_log_group" "health_handler" {
-  name              = "/aws/lambda/HealthHandler"
+  name              = var.health_handler_log_group_name
   retention_in_days = 7
 
   tags = {
-    Name = "HealthHandler-logs"
+    Name = "${var.health_handler_function_name}-logs"
   }
 }
 
@@ -41,7 +41,7 @@ data "archive_file" "catchall_handler" {
 
 resource "aws_lambda_function" "catchall_handler" {
   filename         = data.archive_file.catchall_handler.output_path
-  function_name    = "CatchAllHandler"
+  function_name    = var.catchall_handler_function_name
   role             = aws_iam_role.lambda_catchall_handler.arn
   handler          = "catchall.handler"
   source_code_hash = data.archive_file.catchall_handler.output_base64sha256
@@ -55,16 +55,16 @@ resource "aws_lambda_function" "catchall_handler" {
   }
 
   tags = {
-    Name = "CatchAllHandler"
+    Name = var.catchall_handler_function_name
   }
 }
 
 resource "aws_cloudwatch_log_group" "catchall_handler" {
-  name              = "/aws/lambda/CatchAllHandler"
+  name              = var.catchall_handler_log_group_name
   retention_in_days = 7
 
   tags = {
-    Name = "CatchAllHandler-logs"
+    Name = "${var.catchall_handler_function_name}-logs"
   }
 }
 
@@ -114,7 +114,7 @@ resource "aws_lambda_function" "runners_handler" {
 }
 
 resource "aws_cloudwatch_log_group" "runners_handler" {
-  name              = "/aws/lambda/${var.lambda_function_name}"
+  name              = var.webhook_handler_log_group_name
   retention_in_days = 7
 
   tags = {
@@ -137,7 +137,7 @@ data "archive_file" "v1_handler" {
 
 resource "aws_lambda_function" "v1_handler" {
   filename         = data.archive_file.v1_handler.output_path
-  function_name    = "V1ApiHandler"
+  function_name    = var.v1_handler_function_name
   role             = aws_iam_role.lambda_v1_handler.arn
   handler          = "v1.lambda_handler"
   source_code_hash = data.archive_file.v1_handler.output_base64sha256
@@ -172,15 +172,15 @@ resource "aws_lambda_function" "v1_handler" {
   }
 
   tags = {
-    Name = "V1ApiHandler"
+    Name = var.v1_handler_function_name
   }
 }
 
 resource "aws_cloudwatch_log_group" "v1_handler" {
-  name              = "/aws/lambda/V1ApiHandler"
+  name              = var.v1_handler_log_group_name
   retention_in_days = 7
 
   tags = {
-    Name = "V1ApiHandler-logs"
+    Name = "${var.v1_handler_function_name}-logs"
   }
 }

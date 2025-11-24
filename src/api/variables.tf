@@ -1,3 +1,73 @@
+variable "resource_prefix" {
+  type        = string
+  description = "Prefix for resource names"
+}
+
+variable "health_handler_function_name" {
+  type        = string
+  description = "Health handler Lambda function name"
+}
+
+variable "health_handler_log_group_name" {
+  type        = string
+  description = "Health handler CloudWatch log group name"
+}
+
+variable "catchall_handler_function_name" {
+  type        = string
+  description = "Catchall handler Lambda function name"
+}
+
+variable "catchall_handler_log_group_name" {
+  type        = string
+  description = "Catchall handler CloudWatch log group name"
+}
+
+variable "v1_handler_function_name" {
+  type        = string
+  description = "V1 handler Lambda function name"
+}
+
+variable "v1_handler_log_group_name" {
+  type        = string
+  description = "V1 handler CloudWatch log group name"
+}
+
+variable "webhook_handler_log_group_name" {
+  type        = string
+  description = "Webhook handler CloudWatch log group name"
+}
+
+variable "idempotency_table_name" {
+  type        = string
+  description = "DynamoDB idempotency table name"
+}
+
+variable "job_queue_name" {
+  type        = string
+  description = "SQS job queue name"
+}
+
+variable "webhook_dlq_name" {
+  type        = string
+  description = "SQS webhook DLQ name"
+}
+
+variable "job_queue_dlq_name" {
+  type        = string
+  description = "SQS job queue DLQ name"
+}
+
+variable "api_gateway_name" {
+  type        = string
+  description = "API Gateway name"
+}
+
+variable "api_gateway_log_group_name" {
+  type        = string
+  description = "API Gateway CloudWatch log group name"
+}
+
 variable "aws_account_id" {
   type        = string
   description = "AWS account ID"
