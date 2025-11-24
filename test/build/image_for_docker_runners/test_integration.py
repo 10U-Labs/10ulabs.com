@@ -1,6 +1,6 @@
 import subprocess
 import boto3
-from conftest import run_command_in_container, login_to_ecr
+from .conftest import run_command_in_container, login_to_ecr
 
 
 def test_docker_image_exists(docker_image):

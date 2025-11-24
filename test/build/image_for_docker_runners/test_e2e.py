@@ -1,6 +1,6 @@
 import subprocess
 import time
-from conftest import login_to_ecr, start_runner_container, get_github_runners, wait_for_process_with_backoff
+from .conftest import login_to_ecr, start_runner_container, get_github_runners, wait_for_process_with_backoff
 
 
 def test_runner_fails_with_invalid_registration_token(ecr_image_uri, github_repo, aws_region):
