@@ -1589,3 +1589,40 @@ def test_v1_get_latest_ami_details_ssm_parameter_not_found_fallback(mock_boto_cl
     mock_boto_client.side_effect = client_side_effect
     result = v1_handler.get_latest_ami_details()
     assert result['success'] is True
+
+
+
+def test_lambda_handler_options_request_returns_200(v1_handler, lambda_context):
+    event = {'path': '/v1/echo', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+
+def test_lambda_handler_options_request_returns_cors_headers(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    assert 'Access-Control-Allow-Origin' in headers
+    assert 'Access-Control-Allow-Methods' in headers
+    assert 'Access-Control-Allow-Headers' in headers
+
+
+
+def test_lambda_handler_options_request_allows_wildcard_origin(v1_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    assert headers['Access-Control-Allow-Origin'] == '*'
+
+
+
+def test_lambda_handler_options_request_allows_required_methods(v1_handler, lambda_context):
+    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
+    assert 'GET' in allowed_methods
+    assert 'POST' in allowed_methods
+    assert 'DELETE' in allowed_methods
+    assert 'OPTIONS' in allowed_methods

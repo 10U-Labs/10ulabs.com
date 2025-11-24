@@ -644,3 +644,39 @@ def test_verify_signature_with_empty_header_returns_false(webhook_router):
 def test_verify_signature_with_malformed_header_returns_false(webhook_router):
     result = webhook_router.verify_signature('payload', 'malformed', 'secret')
     assert result is False
+
+
+
+def test_lambda_handler_options_request_returns_200(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+
+def test_lambda_handler_options_request_returns_cors_headers(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    assert 'Access-Control-Allow-Origin' in headers
+    assert 'Access-Control-Allow-Methods' in headers
+    assert 'Access-Control-Allow-Headers' in headers
+
+
+
+def test_lambda_handler_options_request_allows_wildcard_origin(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    assert headers['Access-Control-Allow-Origin'] == '*'
+
+
+
+def test_lambda_handler_options_request_allows_required_methods(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
+    assert 'GET' in allowed_methods
+    assert 'POST' in allowed_methods
+    assert 'OPTIONS' in allowed_methods
