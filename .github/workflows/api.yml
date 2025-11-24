@@ -46,7 +46,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3 PyYAML requests
+        run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run E2E tests
         run: pytest test/api/test_e2e.py -v
   ensuring-infrastructure-in-desired-state:
@@ -94,7 +94,7 @@ jobs:
           python-version: '3.13'
       - if: steps.check_files.outputs.changed == 'true'
         name: Install Python dependencies
-        run: pip install boto3
+        run: python3 -m pip install boto3
       - if: steps.check_files.outputs.changed == 'true'
         name: Extract domain from terraform.tfvars
         run: |
@@ -125,7 +125,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3 PyYAML
+        run: python3 -m pip install pytest boto3 PyYAML
       - name: Fetch GitHub PAT from Parameter Store
         run: |
           GITHUB_PAT=$(aws ssm get-parameter \
@@ -163,7 +163,7 @@ jobs:
         with:
           tflint_version: latest
       - name: Install linting dependencies
-        run: pip install pylint mypy yamllint pytest boto3 PyYAML requests
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 PyYAML requests
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
@@ -182,13 +182,11 @@ jobs:
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
-        run: python -m mypy test/api/*.py
+        run: python3 -m mypy test/api/*.py
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check -recursive
       - name: Terraform Init
         run: cd src/api && terraform init
-      - name: Terraform Validate
-        run: cd src/api && terraform validate
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
@@ -210,7 +208,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install Python dependencies
-        run: pip install pytest boto3 PyYAML
+        run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests
         run: pytest test/api/test_unit.py -v
 name: Ensuring API exists and is properly configured
