@@ -1,0 +1,1606 @@
+import json
+import os
+import urllib.error
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch, MagicMock, Mock
+
+from botocore.exceptions import ClientError
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from conftest import parse_response_body, assert_response_status, assert_json_content_type
+
+
+def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+
+def test_lambda_handler_echo_endpoint_returns_json_content_type(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_echo_endpoint_echoes_input_data(v1_handler, echo_post_event_factory, lambda_context):
+    payload = {'message': 'hello', 'number': 42}
+    event = echo_post_event_factory(body_data=payload)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['echo'] == payload
+
+
+
+def test_lambda_handler_echo_endpoint_includes_received_at(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert 'received_at' in body
+
+
+
+def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400(v1_handler, echo_post_event_factory, lambda_context):
+    event = echo_post_event_factory()
+    event['body'] = 'not valid json'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(v1_handler, docker_runner_post_event_factory, lambda_context):
+    event = docker_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['job_id']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+def test_lambda_handler_docker_runner_post_with_missing_repo_returns_400(v1_handler, docker_runner_post_event_factory, lambda_context):
+    event = docker_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['github_repo']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+@patch('boto3.client')
+def test_lambda_handler_docker_runner_post_returns_json_content_type(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': '2024-01-01'}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = docker_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+@patch('boto3.client')
+def test_lambda_handler_docker_runner_get_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.return_value = {'taskArns': []}
+
+    def mock_client(service_name):
+        if service_name == 'ecs':
+            return mock_ecs
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_docker_runner_unsupported_method_returns_404(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'DELETE'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
+
+
+
+def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(v1_handler, ec2_runner_post_event_factory, lambda_context):
+    event = ec2_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['job_id']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(v1_handler, ec2_runner_post_event_factory, lambda_context):
+    event = ec2_runner_post_event_factory()
+    body = parse_response_body({'body': event['body']})
+    del body['github_repo']
+    event['body'] = json.dumps(body)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+@patch.dict(os.environ, {'SUBNETS': 'subnet-123', 'SECURITY_GROUPS': 'sg-123', 'GITHUB_TOKEN_PARAM': '/github/token'})
+@patch('boto3.client')
+def test_lambda_handler_ec2_runner_post_returns_json_content_type(mock_boto_client, v1_handler, ec2_runner_post_event_factory, lambda_context):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test123', 'CreationDate': '2024-01-01'}]
+    }
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    def mock_client(service_name):
+        if service_name == 'ec2':
+            return mock_ec2
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = ec2_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(v1_handler, image_docker_event_factory, lambda_context):
+    event = image_docker_event_factory(method='POST')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+@patch('boto3.client')
+def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_docker_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageTags': ['stable'],
+            'imagePushedAt': datetime(2024, 1, 1),
+            'imageDigest': 'sha256:abc123',
+            'imageSizeInBytes': 1024000
+        }]
+    }
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = image_docker_event_factory(method='GET')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_image_for_docker_runners_delete_without_digest_returns_400(v1_handler, lambda_context):
+    event = {
+        'path': '/v1/image-for-docker-runners/sha256:abc123',
+        'httpMethod': 'DELETE',
+        'pathParameters': {}
+    }
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+@patch('boto3.client')
+def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.batch_delete_image.return_value = {'imageIds': [{'imageDigest': 'sha256:abc123'}]}
+
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = {
+        'path': '/v1/image-for-docker-runners/sha256:abc123',
+        'httpMethod': 'DELETE',
+        'pathParameters': {'digest': 'sha256:abc123'}
+    }
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_image_for_docker_runners_unsupported_method_returns_404(v1_handler, image_docker_event_factory, lambda_context):
+    event = image_docker_event_factory()
+    event['httpMethod'] = 'PUT'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
+
+
+
+def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
+    event = image_ec2_event_factory(method='POST')
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+@patch('boto3.client')
+def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_ec2_event_factory, lambda_context):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{
+            'ImageId': 'ami-test123',
+            'CreationDate': '2024-01-01T00:00:00',
+            'Name': 'test-image',
+            'State': 'available',
+            'Architecture': 'x86_64',
+            'Tags': [{'Key': 'stable', 'Value': 'true'}]
+        }]
+    }
+
+    def mock_client(service_name):
+        if service_name == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = image_ec2_event_factory(method='GET', ami_id=None)
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(v1_handler, lambda_context):
+    event = {
+        'path': '/v1/image-for-ec2-runners/ami-abc123',
+        'httpMethod': 'DELETE',
+        'pathParameters': {}
+    }
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+
+@patch('boto3.client')
+def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
+    mock_ec2 = MagicMock()
+    mock_ec2.deregister_image.return_value = {}
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
+    }
+    mock_ec2.delete_snapshot.return_value = {}
+
+    def mock_client(service_name):
+        if service_name == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    event = {
+        'path': '/v1/image-for-ec2-runners/ami-abc123',
+        'httpMethod': 'DELETE',
+        'pathParameters': {'ami_id': 'ami-abc123'}
+    }
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+
+def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_handler, image_ec2_event_factory, lambda_context):
+    event = image_ec2_event_factory(ami_id=None)
+    event['httpMethod'] = 'PATCH'
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
+
+
+
+def test_get_docker_runner_status_returns_success_with_no_tasks(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['success'] is True
+
+
+
+def test_get_docker_runner_status_returns_zero_running_tasks_when_empty(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['running_tasks'] == 0
+
+
+
+def test_get_docker_runner_status_returns_empty_task_list_when_no_tasks(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['tasks'] == []
+
+
+
+def test_get_docker_runner_status_returns_cluster_name(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.return_value = {'taskArns': []}
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['cluster'] == 'test-cluster'
+
+
+
+def test_get_docker_runner_status_handles_client_error(v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:
+            mock_ecs = MagicMock()
+            mock_ecs.list_tasks.side_effect = ClientError(
+                {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
+                'list_tasks'
+            )
+            mock_get_client.return_value = mock_ecs
+
+            result = v1_handler.get_docker_runner_status()
+
+            assert result['success'] is False
+
+
+
+def test_get_ec2_runner_status_returns_success_with_no_instances(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['success'] is True
+
+
+
+def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['running_instances'] == 0
+
+
+
+def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['instances'] == []
+
+
+
+def test_get_ec2_runner_status_handles_client_error(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = ClientError(
+            {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
+            'describe_instances'
+        )
+        mock_get_client.return_value = mock_ec2
+
+        result = v1_handler.get_ec2_runner_status()
+
+        assert result['success'] is False
+
+
+
+def test_handle_docker_runner_get_returns_200_status(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_docker_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_response_status(response, 200)
+
+
+
+def test_handle_docker_runner_get_returns_json_content_type(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_docker_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_json_content_type(response)
+
+
+
+def test_handle_ec2_runner_get_returns_200_status(v1_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_response_status(response, 200)
+
+
+
+def test_handle_ec2_runner_get_returns_json_content_type(v1_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        response = v1_handler.lambda_handler(event, lambda_context)
+
+        assert_json_content_type(response)
+
+
+
+def test_trigger_github_workflow_success(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(status=204)
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.trigger_github_workflow('test.yml', {'ref': 'main'})
+            assert result['success'] is True
+
+
+
+def test_trigger_github_workflow_missing_token(v1_handler):
+    with patch.dict('os.environ', {'GITHUB_REPO': 'test/repo'}, clear=True):
+        result = v1_handler.trigger_github_workflow('test.yml', {'ref': 'main'})
+        assert result['success'] is False
+
+
+
+def test_trigger_github_workflow_http_204_response(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(status=204)
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.trigger_github_workflow('test.yml', {'ref': 'main'})
+            assert 'workflow triggered via GitHub Actions' in result['message']
+
+
+
+def test_trigger_github_workflow_unexpected_status(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(status=500)
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.trigger_github_workflow('test.yml', {'ref': 'main'})
+            assert result['success'] is False
+
+
+
+def test_trigger_github_workflow_url_error(v1_handler):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+            result = v1_handler.trigger_github_workflow('test.yml', {'ref': 'main'})
+            assert result['success'] is False
+
+
+
+def test_trigger_github_workflow_http_error(v1_handler):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError('url', 403, 'Forbidden', {}, None)
+            result = v1_handler.trigger_github_workflow('test.yml', {'ref': 'main'})
+            assert result['success'] is False
+
+
+
+def test_handle_post_request_success(v1_handler):
+    event = {'body': '{"test": "data"}'}
+    def handler_func(body):
+        return {'success': True, 'data': body}
+    result = v1_handler.handle_post_request(event, handler_func)
+    assert result['statusCode'] == 200
+
+
+
+def test_handle_post_request_value_error(v1_handler):
+    event = {'body': '{"test": "data"}'}
+    def handler_func(body):
+        raise ValueError('Test error')
+    result = v1_handler.handle_post_request(event, handler_func)
+    assert result['statusCode'] == 500
+
+
+
+@patch('boto3.client')
+def test_list_ecr_images_multiple_images(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [
+            {'imageTags': ['v1'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:abc', 'imageSizeInBytes': 1024},
+            {'imageTags': ['v2'], 'imagePushedAt': datetime(2024, 1, 2), 'imageDigest': 'sha256:def', 'imageSizeInBytes': 2048}
+        ]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.list_ecr_images()
+        assert result['count'] == 2
+
+
+
+@patch('boto3.client')
+def test_list_ecr_images_no_images(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {'imageDetails': []}
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.list_ecr_images()
+        assert result['count'] == 0
+
+
+
+@patch('boto3.client')
+def test_list_ecr_images_sorted_by_pushed_at(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [
+            {'imageTags': ['old'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:old', 'imageSizeInBytes': 1024},
+            {'imageTags': ['new'], 'imagePushedAt': datetime(2024, 1, 5), 'imageDigest': 'sha256:new', 'imageSizeInBytes': 2048}
+        ]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.list_ecr_images()
+        assert result['images'][0]['tags'][0] == 'new'
+
+
+
+@patch('boto3.client')
+def test_list_ecr_images_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.list_ecr_images()
+        assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_get_latest_ecr_image_multiple_stable(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [
+            {'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:old', 'imageSizeInBytes': 1024},
+            {'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 5), 'imageDigest': 'sha256:new', 'imageSizeInBytes': 2048}
+        ]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_latest_ecr_image()
+        assert result['digest'] == 'sha256:new'
+
+
+
+@patch('boto3.client')
+def test_get_latest_ecr_image_no_stable(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [
+            {'imageTags': ['dev'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:dev', 'imageSizeInBytes': 1024}
+        ]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_latest_ecr_image()
+        assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_delete_ecr_image_success(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.batch_delete_image.return_value = {'imageIds': [{'imageDigest': 'sha256:test'}]}
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.delete_ecr_image('sha256:test')
+        assert result['success'] is True
+
+
+
+@patch('boto3.client')
+def test_delete_ecr_image_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.batch_delete_image.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'BatchDeleteImage')
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.delete_ecr_image('sha256:test')
+        assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_get_github_token_cached(_mock_boto_client, v1_handler):
+    with patch.dict(v1_handler.__dict__['_github_token_cache'], {'value': 'cached-token'}):
+        result = v1_handler.get_github_token()
+        assert result == 'cached-token'
+
+
+
+@patch('boto3.client')
+def test_get_github_token_ssm_retrieval(mock_boto_client, v1_handler):
+    with patch.dict(v1_handler.__dict__['_github_token_cache'], {'value': None}):
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'new-token'}}
+        mock_boto_client.return_value = mock_ssm
+        with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
+            result = v1_handler.get_github_token()
+            assert result == 'new-token'
+
+
+
+@patch('boto3.client')
+def test_get_github_token_ssm_error(mock_boto_client, v1_handler):
+    with patch.dict(v1_handler.__dict__['_github_token_cache'], {'value': None}):
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'GetParameter')
+        mock_boto_client.return_value = mock_ssm
+        with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/github/token'}):
+            result = v1_handler.get_github_token()
+            assert result == ''
+
+
+
+def test_trigger_docker_image_build_workflow(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(status=204)
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.trigger_docker_image_build({})
+            assert result['success'] is True
+
+
+
+def test_trigger_image_creation_success(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(json_data={'success': True})
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.trigger_image_creation()
+            assert result['success'] is True
+
+
+
+def test_trigger_image_creation_url_error(v1_handler):
+    with patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+            result = v1_handler.trigger_image_creation()
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_no_github_token(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1)}]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo', 'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'runner'}):
+        with patch.object(v1_handler, 'get_github_token', return_value=''):
+            result = v1_handler.launch_fargate_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_failed_registration(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1)}]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo', 'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'runner'}):
+        with patch.object(v1_handler, 'get_github_token', return_value='token'):
+            with patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
+                result = v1_handler.launch_fargate_runner(123, ['test'], 'test/repo')
+                assert result['success'] is False
+
+
+
+def test_get_runner_registration_token_success(v1_handler, mock_urllib_response_factory):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = mock_urllib_response_factory(json_data={'token': 'test-token'})
+        mock_urlopen.return_value = mock_response
+        result = v1_handler.get_runner_registration_token('github-token', 'test/repo')
+        assert result == 'test-token'
+
+
+
+def test_get_runner_registration_token_http_error(v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 403, 'Forbidden', {}, None)
+        result = v1_handler.get_runner_registration_token('github-token', 'test/repo')
+        assert result == ''
+
+
+
+def test_get_runner_registration_token_url_error(v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+        result = v1_handler.get_runner_registration_token('github-token', 'test/repo')
+        assert result == ''
+
+
+
+def test_create_ec2_user_data_formatting(v1_handler):
+    with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
+        create_ec2_user_data = getattr(v1_handler, '_create_ec2_user_data')
+        result = create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo')
+        assert 'test-token' in result
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_multiple_amis(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [
+            {'ImageId': 'ami-old', 'CreationDate': '2024-01-01T00:00:00'},
+            {'ImageId': 'ami-new', 'CreationDate': '2024-01-05T00:00:00'}
+        ]
+    }
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_latest_ami()
+    assert result == 'ami-new'
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_no_amis(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_latest_ami()
+    assert result == ''
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_client_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_latest_ami()
+    assert result == ''
+
+
+
+def test_trigger_ami_creation_success(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(json_data={'success': True})
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.trigger_ami_creation()
+            assert result['success'] is True
+
+
+
+def test_trigger_ami_creation_url_error(v1_handler):
+    with patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+            result = v1_handler.trigger_ami_creation()
+            assert result['success'] is False
+
+
+
+def test_get_ec2_config_parsing(v1_handler):
+    with patch.dict('os.environ', {
+        'SUBNETS': 'subnet-1,subnet-2',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small,t3.medium',
+        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
+        'EC2_MAX_PRICE': '0.05'
+    }):
+        result = getattr(v1_handler, "_get_ec2_config")()
+        assert result['max_price'] == '0.05'
+
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_no_ami(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    with patch.dict('os.environ', {'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't3.small', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.05', 'API_DOMAIN': 'api.test.com'}):
+        with patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    mock_ec2.run_instances.side_effect = ClientError(
+        {'Error': {'Code': 'InsufficientInstanceCapacity'}}, 'RunInstances'
+    )
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    def mock_client(service):
+        if service == 'ec2':
+            return mock_ec2
+        if service == 'ssm':
+            return mock_ssm
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+
+    with patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't3.small', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.05', 'GITHUB_TOKEN_SECRET_NAME': '/token'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = MagicMock()
+            mock_response.read.return_value = json.dumps({'token': 'reg-token'}).encode()
+            mock_response.__enter__ = Mock(return_value=mock_response)
+            mock_response.__exit__ = Mock(return_value=False)
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_no_github_token(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    mock_boto_client.return_value = mock_ec2
+    with patch.dict('os.environ', {'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't3.small', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.05'}):
+        with patch.object(v1_handler, 'get_github_token', return_value=''):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    mock_boto_client.return_value = mock_ec2
+    with patch.dict('os.environ', {'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't3.small', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.05'}):
+        with patch.object(v1_handler, 'get_github_token', return_value='token'):
+            with patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
+                result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+                assert result['success'] is False
+
+
+
+def test_launch_packer_builder_workflow(v1_handler, mock_urllib_response_factory):
+    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-123', 'AWS_REGION': 'us-east-1'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = mock_urllib_response_factory(status=204)
+            mock_urlopen.return_value = mock_response
+            result = v1_handler.launch_packer_builder({})
+            assert result['success'] is True
+
+
+
+@patch('boto3.client')
+def test_list_amis_multiple_amis(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [
+            {'ImageId': 'ami-1', 'Name': 'test-1', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': []},
+            {'ImageId': 'ami-2', 'Name': 'test-2', 'State': 'available', 'CreationDate': '2024-01-02', 'Architecture': 'x86_64', 'Tags': []}
+        ]
+    }
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.list_amis()
+    assert result['count'] == 2
+
+
+
+@patch('boto3.client')
+def test_list_amis_no_amis(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.list_amis()
+    assert result['count'] == 0
+
+
+
+@patch('boto3.client')
+def test_list_amis_client_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.list_amis()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_details_from_ssm(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'ami-ssm'}}
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-ssm', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': []}]
+    }
+
+    def mock_client(service):
+        if service == 'ssm':
+            return mock_ssm
+        if service == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    result = v1_handler.get_latest_ami_details()
+    assert result['ami_id'] == 'ami-ssm'
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_details_fallback_to_ec2(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-ec2', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
+    }
+
+    def mock_client(service):
+        if service == 'ssm':
+            return mock_ssm
+        if service == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    result = v1_handler.get_latest_ami_details()
+    assert result['ami_id'] == 'ami-ec2'
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_details_no_ami_found(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+
+    def mock_client(service):
+        if service == 'ssm':
+            return mock_ssm
+        if service == 'ec2':
+            return mock_ec2
+        return MagicMock()
+
+    mock_boto_client.side_effect = mock_client
+    result = v1_handler.get_latest_ami_details()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_ecs_run_task_success(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123456789012:task/test'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            assert result['success'] is True
+
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_uses_fargate_spot(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            call_args = mock_ecs.run_task.call_args
+            assert call_args[1]['capacityProviderStrategy'][0]['capacityProvider'] == 'FARGATE_SPOT'
+
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_includes_tags(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            v1_handler.launch_fargate_runner(456, ['fargate-label'], 'owner/repository')
+            call_args = mock_ecs.run_task.call_args
+            tags = call_args[1]['tags']
+            tag_dict = {tag['key']: tag['value'] for tag in tags}
+            assert tag_dict['GitHubJobId'] == '456'
+
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_ecs_failure_no_tasks(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecs.run_task.return_value = {'tasks': [], 'failures': ['Capacity unavailable']}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            assert result['success'] is False
+
+
+
+def test_create_ec2_user_data_includes_region(v1_handler):
+    with patch.dict('os.environ', {'AWS_REGION': 'us-west-2'}):
+        user_data = getattr(v1_handler, "_create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        assert 'us-west-2' in user_data
+
+
+
+@patch('boto3.client')
+def test_list_amis_sorts_by_creation_date(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [
+            {'ImageId': 'ami-old', 'Name': 'old', 'State': 'available', 'CreationDate': '2023-01-01', 'Architecture': 'x86_64', 'Tags': []},
+            {'ImageId': 'ami-new', 'Name': 'new', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': []}
+        ]
+    }
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.list_amis()
+    assert result['amis'][0]['ami_id'] == 'ami-new'
+
+
+
+@patch('boto3.client')
+def test_trigger_ami_creation_http_error(_mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'API_DOMAIN': 'test.com', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-1'}):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+            result = v1_handler.trigger_ami_creation()
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_filters_by_purpose(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01'}]}
+    mock_boto_client.return_value = mock_ec2
+    v1_handler.get_latest_ami()
+    call_args = mock_ec2.describe_images.call_args
+    filters = call_args[1]['Filters']
+    purpose_filter = next(f for f in filters if f['Name'] == 'tag:Purpose')
+    assert purpose_filter['Values'][0] == 'Github self-hosted EC2 runner'
+
+
+
+@patch('boto3.client')
+def test_get_latest_ami_filters_by_stable_tag(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01'}]}
+    mock_boto_client.return_value = mock_ec2
+    v1_handler.get_latest_ami()
+    call_args = mock_ec2.describe_images.call_args
+    filters = call_args[1]['Filters']
+    stable_filter = next(f for f in filters if f['Name'] == 'tag:stable')
+    assert stable_filter['Values'][0] == 'true'
+
+
+
+@patch('boto3.client')
+def test_deregister_ami_deletes_snapshot(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
+    }
+    mock_boto_client.return_value = mock_ec2
+    v1_handler.deregister_ami('ami-123')
+    assert mock_ec2.delete_snapshot.called
+
+
+
+@patch('boto3.client')
+def test_deregister_ami_handles_multiple_snapshots(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [
+            {'Ebs': {'SnapshotId': 'snap-1'}},
+            {'Ebs': {'SnapshotId': 'snap-2'}}
+        ]}]
+    }
+    mock_boto_client.return_value = mock_ec2
+    v1_handler.deregister_ami('ami-123')
+    assert mock_ec2.delete_snapshot.call_count == 2
+
+
+
+@patch('boto3.client')
+def test_deregister_ami_continues_on_snapshot_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [
+            {'Ebs': {'SnapshotId': 'snap-1'}},
+            {'Ebs': {'SnapshotId': 'snap-2'}}
+        ]}]
+    }
+    mock_ec2.delete_snapshot.side_effect = [ClientError({'Error': {'Code': 'SnapshotInUse'}}, 'DeleteSnapshot'), None]
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.deregister_ami('ami-123')
+    assert result['success'] is True
+
+
+
+@patch('boto3.client')
+def test_get_docker_runner_status_with_tasks(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        mock_ecs = MagicMock()
+        mock_ecs.list_tasks.return_value = {'taskArns': ['arn1']}
+        mock_ecs.describe_tasks.return_value = {
+            'tasks': [{
+                'taskArn': 'arn1',
+                'lastStatus': 'RUNNING',
+                'desiredStatus': 'RUNNING',
+                'startedAt': datetime(2024, 1, 1),
+                'cpu': '1024',
+                'memory': '2048',
+                'tags': [
+                    {'key': 'GitHubJobId', 'value': '123'},
+                    {'key': 'JobLabels', 'value': 'test'},
+                    {'key': 'GitHubRepo', 'value': 'test/repo'}
+                ]
+            }]
+        }
+        mock_boto_client.return_value = mock_ecs
+        result = v1_handler.get_docker_runner_status()
+        assert result['running_tasks'] == 1
+
+
+
+@patch('boto3.client')
+def test_get_docker_runner_status_extracts_metadata(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        mock_ecs = MagicMock()
+        mock_ecs.list_tasks.return_value = {'taskArns': ['arn1']}
+        mock_ecs.describe_tasks.return_value = {
+            'tasks': [{
+                'taskArn': 'arn1',
+                'lastStatus': 'RUNNING',
+                'desiredStatus': 'RUNNING',
+                'cpu': '1024',
+                'memory': '2048',
+                'tags': [{'key': 'GitHubJobId', 'value': '456'}]
+            }]
+        }
+        mock_boto_client.return_value = mock_ecs
+        result = v1_handler.get_docker_runner_status()
+        assert result['tasks'][0]['job_id'] == '456'
+
+
+
+@patch('boto3.client')
+def test_get_ec2_runner_status_with_instances(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {
+        'Reservations': [{
+            'Instances': [{
+                'InstanceId': 'i-123',
+                'InstanceType': 't3.micro',
+                'State': {'Name': 'running'},
+                'Placement': {'AvailabilityZone': 'us-east-1a'},
+                'LaunchTime': datetime(2024, 1, 1),
+                'PublicIpAddress': '1.2.3.4',
+                'Tags': [
+                    {'Key': 'GitHubJobId', 'Value': '789'},
+                    {'Key': 'JobLabels', 'Value': 'test-label'},
+                    {'Key': 'GitHubRepo', 'Value': 'owner/repo'}
+                ]
+            }]
+        }]
+    }
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_ec2_runner_status()
+    assert result['running_instances'] == 1
+
+
+
+@patch('boto3.client')
+def test_get_ec2_runner_status_extracts_metadata(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {
+        'Reservations': [{
+            'Instances': [{
+                'InstanceId': 'i-456',
+                'InstanceType': 't3.small',
+                'State': {'Name': 'running'},
+                'Placement': {'AvailabilityZone': 'us-east-1b'},
+                'LaunchTime': datetime(2024, 1, 1),
+                'Tags': [{'Key': 'GitHubJobId', 'Value': '999'}]
+            }]
+        }]
+    }
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_ec2_runner_status()
+    assert result['instances'][0]['job_id'] == '999'
+
+
+
+def test_lambda_handler_routes_to_echo(v1_handler, lambda_context):
+    event = {'path': '/v1/echo', 'httpMethod': 'POST', 'body': '{"test": "data"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert 'echo' in body
+
+
+
+def test_lambda_handler_routes_to_docker_runner_get(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
+    with patch.object(v1_handler, 'get_docker_runner_status', return_value={'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}):
+        response = v1_handler.lambda_handler(event, lambda_context)
+        assert response['statusCode'] == 200
+
+
+
+def test_lambda_handler_unknown_route_returns_404(v1_handler, lambda_context):
+    event = {'path': '/v1/unknown', 'httpMethod': 'GET'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert response['statusCode'] == 404
+
+
+
+@patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+@patch('boto3.client')
+def test_v1_get_github_token_failure(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound', 'Message': 'Not found'}}, 'GetParameter')
+    mock_boto_client.return_value = mock_ssm
+    token = v1_handler.get_github_token()
+    assert token == ''
+
+
+
+@patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+@patch('boto3.client')
+def test_v1_get_github_token_success_caches_value(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    mock_boto_client.return_value = mock_ssm
+    token1 = v1_handler.get_github_token()
+    v1_handler.get_github_token()
+    assert token1 == 'test-token'
+    assert mock_ssm.get_parameter.call_count == 1
+
+
+
+@patch('urllib.request.urlopen')
+def test_v1_get_runner_registration_token_failure(mock_urlopen, v1_handler):
+    mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Internal Server Error', {}, None)
+    token = v1_handler.get_runner_registration_token('test-token', 'test/repo')
+    assert token == ''
+
+
+
+@patch('urllib.request.urlopen')
+def test_v1_get_runner_registration_token_invalid_json(mock_urlopen, v1_handler):
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'invalid json'
+    mock_response.__enter__.return_value = mock_response
+    mock_urlopen.return_value = mock_response
+    token = v1_handler.get_runner_registration_token('test-token', 'test/repo')
+    assert token == ''
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token', 'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't3.small', 'EC2_IAM_INSTANCE_PROFILE': 'test-profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1'})
+def test_v1_launch_ec2_spot_runner_capacity_exhaustion_all_azs(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z', 'State': 'available', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
+    }
+    mock_ec2.run_instances.side_effect = ClientError({'Error': {'Code': 'InsufficientInstanceCapacity', 'Message': 'No capacity'}}, 'RunInstances')
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'})
+def test_v1_trigger_ami_creation_failure(_mock_boto_client, v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
+        result = v1_handler.trigger_ami_creation()
+        assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_v1_get_latest_ami_no_images_available(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    ami_id = v1_handler.get_latest_ami()
+    assert ami_id == ''
+
+
+
+@patch('boto3.client')
+def test_v1_get_latest_ami_ec2_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    ami_id = v1_handler.get_latest_ami()
+    assert ami_id == ''
+
+
+
+@patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'})
+def test_v1_trigger_image_creation_http_error(v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
+        result = v1_handler.trigger_image_creation()
+        assert result['success'] is False
+
+
+
+@patch.dict('os.environ', {'IMAGE_API_ENDPOINT': 'https://api.test.com'})
+def test_v1_trigger_image_creation_url_error(v1_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+        result = v1_handler.trigger_image_creation()
+        assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_get_latest_ecr_image_no_stable_images(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [
+            {'imageTags': ['latest'], 'imageDigest': 'sha256:abc', 'imagePushedAt': datetime(2024, 1, 1), 'imageSizeInBytes': 1000}
+        ]
+    }
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.get_latest_ecr_image()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_get_latest_ecr_image_ecr_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'RepositoryNotFoundException', 'Message': 'Not found'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.get_latest_ecr_image()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_delete_ecr_image_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.batch_delete_image.side_effect = ClientError({'Error': {'Code': 'InvalidParameterException', 'Message': 'Invalid'}}, 'BatchDeleteImage')
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.delete_ecr_image('sha256:test')
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'})
+def test_v1_get_docker_runner_status_ecs_error(mock_boto_client, v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.list_tasks.side_effect = ClientError({'Error': {'Code': 'ClusterNotFoundException', 'Message': 'Not found'}}, 'ListTasks')
+    mock_boto_client.return_value = mock_ecs
+    result = v1_handler.get_docker_runner_status()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_v1_get_ec2_runner_status_ec2_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeInstances')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.get_ec2_runner_status()
+    assert result['success'] is False
+
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_create_ec2_user_data_script_format(v1_handler):
+    user_data = getattr(v1_handler, "_create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
+    assert 'config.sh' in user_data
+    assert 'test-token' in user_data
+    assert 'label1,label2' in user_data
+    assert 'owner/repo' in user_data
+
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
+def test_v1_create_ec2_user_data_includes_region(v1_handler):
+    user_data = getattr(v1_handler, "_create_ec2_user_data")('token', ['label'], 'repo')
+    assert 'us-east-1' in user_data
+
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
+def test_v1_create_ec2_user_data_includes_self_termination(v1_handler):
+    user_data = getattr(v1_handler, "_create_ec2_user_data")('token', ['label'], 'repo')
+    assert 'terminate-instances' in user_data
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECS_CLUSTER': 'test', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_launch_fargate_runner_ecs_error(mock_boto_client, v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'RunTask')
+    mock_boto_client.return_value = mock_ecs
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['label'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECS_CLUSTER': 'test', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_launch_fargate_runner_no_tasks_in_response(mock_boto_client, v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [], 'failures': [{'reason': 'RESOURCE:CPU', 'arn': 'arn:task'}]}
+    mock_boto_client.return_value = mock_ecs
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['label'], 'test/repo')
+            assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_v1_deregister_ami_snapshot_deletion_failure(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
+    }
+    mock_ec2.deregister_image.return_value = {}
+    mock_ec2.delete_snapshot.side_effect = ClientError({'Error': {'Code': 'InvalidSnapshot.InUse', 'Message': 'In use'}}, 'DeleteSnapshot')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.deregister_ami('ami-123')
+    assert result['success'] is True
+
+
+
+@patch('boto3.client')
+def test_v1_deregister_ami_image_not_found(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.deregister_ami('ami-123')
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_v1_list_ecr_images_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'RepositoryNotFoundException', 'Message': 'Not found'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    result = v1_handler.list_ecr_images()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_v1_list_amis_client_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    result = v1_handler.list_amis()
+    assert result['success'] is False
+
+
+
+@patch('boto3.client')
+def test_v1_get_latest_ami_details_ssm_parameter_not_found_fallback(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound', 'Message': 'Not found'}}, 'GetParameter')
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-123', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01T00:00:00.000Z', 'Architecture': 'x86_64', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
+    }
+    def client_side_effect(service_name):
+        return mock_ssm if service_name == 'ssm' else mock_ec2
+    mock_boto_client.side_effect = client_side_effect
+    result = v1_handler.get_latest_ami_details()
+    assert result['success'] is True
+
+

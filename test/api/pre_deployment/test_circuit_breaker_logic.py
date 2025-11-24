@@ -1,0 +1,830 @@
+import json
+import os
+from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+
+from botocore.exceptions import ClientError
+import time
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from conftest import parse_response_body, assert_response_status, assert_json_content_type
+
+
+def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is True
+
+
+
+def test_check_circuit_breaker_open_state_returns_false(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time()
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is False
+
+
+
+def test_check_circuit_breaker_transitions_to_half_open_after_timeout(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is True
+
+
+
+def test_check_circuit_breaker_opens_after_threshold_failures(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 5
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is False
+
+
+
+def test_record_circuit_breaker_success_resets_failures(webhook_router):
+    webhook_router.circuit_breaker_state['failures'] = 3
+    webhook_router.record_circuit_breaker_success()
+    assert webhook_router.circuit_breaker_state['failures'] == 0
+
+
+
+def test_record_circuit_breaker_success_closes_half_open_circuit(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'half-open'
+    webhook_router.record_circuit_breaker_success()
+    assert webhook_router.circuit_breaker_state['state'] == 'closed'
+
+
+
+def test_record_circuit_breaker_failure_increments_count(webhook_router):
+    webhook_router.circuit_breaker_state['failures'] = 0
+    webhook_router.record_circuit_breaker_failure()
+    assert webhook_router.circuit_breaker_state['failures'] == 1
+
+
+
+def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'half-open'
+    webhook_router.record_circuit_breaker_failure()
+    assert webhook_router.circuit_breaker_state['state'] == 'open'
+
+
+
+def test_circuit_breaker_concurrent_failures_increment_count(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
+    webhook_router.record_circuit_breaker_failure()
+    webhook_router.record_circuit_breaker_failure()
+    assert webhook_router.circuit_breaker_state['failures'] == 2
+
+
+
+def test_circuit_breaker_concurrent_success_resets_failures(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 4
+    webhook_router.record_circuit_breaker_success()
+    assert webhook_router.circuit_breaker_state['failures'] == 0
+
+
+
+def test_circuit_breaker_half_open_allows_one_request(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is True
+
+
+
+def test_circuit_breaker_state_remains_open_before_timeout(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'open'
+    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 30
+    with patch('boto3.client'):
+        result = webhook_router.check_circuit_breaker()
+    assert result is False
+
+
+
+def test_handler_checks_circuit_breaker_health(circuit_breaker_remediation, lambda_context):
+    event = {}
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+
+def test_handler_returnscircuit_breaker_state(circuit_breaker_remediation, lambda_context):
+    event = {}
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+            body = parse_response_body(response)
+    assert 'circuit_breaker_state' in body
+
+
+
+def test_handler_monitors_open_circuit_breaker(circuit_breaker_remediation, lambda_context):
+    event = {}
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'open'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+            body = parse_response_body(response)
+    assert body['action'] == 'monitored'
+
+
+
+def test_handler_does_nothing_for_closed_circuit(circuit_breaker_remediation, lambda_context):
+    event = {}
+    with patch.dict(os.environ, {'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+        with patch('boto3.client') as mock_boto_client:
+            mock_lambda = MagicMock()
+            mock_boto_client.return_value = mock_lambda
+            mock_lambda.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker_state': 'closed'})
+                }).encode())
+            }
+            response = circuit_breaker_remediation.handler(event, lambda_context)
+            body = parse_response_body(response)
+    assert body['action'] == 'none'
+
+
+
+def test_handler_returns_500_when_function_name_not_set(circuit_breaker_remediation, lambda_context):
+    event = {}
+    with patch.dict('os.environ', {}, clear=True):
+        response = circuit_breaker_remediation.handler(event, lambda_context)
+    assert_response_status(response, 500)
+
+
+
+def test_check_circuit_breaker_health_invokes_lambda(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert mock_lambda.invoke.called
+
+
+
+def test_check_circuit_breaker_health_returns_state(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 200,
+                'body': json.dumps({'circuit_breaker_state': 'closed'})
+            }).encode())
+        }
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert result['circuit_breaker_state'] == 'closed'
+
+
+
+def test_check_circuit_breaker_health_handles_non_200_response(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.return_value = {
+            'Payload': MagicMock(read=lambda: json.dumps({
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Internal error'})
+            }).encode())
+        }
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert result['circuit_breaker_state'] == 'unknown'
+
+
+
+def test_check_circuit_breaker_health_handles_lambda_error(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.side_effect = ClientError(
+            {'Error': {'Code': 'FunctionNotFound'}},
+            'Invoke'
+        )
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert result['circuit_breaker_state'] == 'unknown'
+
+
+
+def test_check_circuit_breaker_health_includes_error_message(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        mock_lambda.invoke.side_effect = ClientError(
+            {'Error': {'Code': 'FunctionNotFound'}},
+            'Invoke'
+        )
+        result = circuit_breaker_remediation.check_circuit_breaker_health('test-function')
+    assert 'error' in result
+
+
+
+def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
+    event = {}
+    mock_sqs.receive_message.return_value = {
+        'Messages': [dlq_message_factory(body={'job_id': 123})]
+    }
+    with patch.dict('os.environ', {
+        'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-dlq',
+        'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-queue'
+    }):
+        response = dlq_reprocessor.handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+
+def test_handler_returns_reprocessed_count(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
+    event = {}
+    mock_sqs.receive_message.return_value = {
+        'Messages': [dlq_message_factory(body={'job_id': 123})]
+    }
+    with patch.dict('os.environ', {
+        'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-dlq',
+        'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/job-queue'
+    }):
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
+    assert body['job_dlq']['reprocessed'] == 1
+
+
+
+def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
+    event = {}
+    with patch.dict('os.environ', {
+        'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/webhook-dlq'
+    }):
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
+    assert 'note' in body['webhook_dlq']
+
+
+
+def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor, lambda_context):
+    event = {}
+    with patch.dict('os.environ', {}, clear=True):
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
+    assert 'job_dlq' not in body
+
+
+
+def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor, lambda_context):
+    event = {}
+    with patch.dict('os.environ', {}, clear=True):
+        response = dlq_reprocessor.handler(event, lambda_context)
+        body = parse_response_body(response)
+    assert 'webhook_dlq' not in body
+
+
+
+def test_reprocess_dlq_messages_receives_messages(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 1
+
+
+
+def test_reprocess_dlq_messages_sends_to_target_queue(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert mock_sqs.send_message.called
+
+
+
+def test_reprocess_dlq_messages_deletes_from_dlq(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'test': 'data'}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert mock_sqs.delete_message.called
+
+
+
+def test_reprocess_dlq_messages_handles_empty_queue(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {}
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 0
+
+
+
+def test_reprocess_dlq_messages_processes_multiple_messages(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            },
+            {
+                'Body': json.dumps({'id': 2}),
+                'ReceiptHandle': 'receipt-2',
+                'MessageAttributes': {}
+            },
+            {
+                'Body': json.dumps({'id': 3}),
+                'ReceiptHandle': 'receipt-3',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 3
+
+
+
+def test_reprocess_dlq_messages_counts_failures(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    mock_sqs.send_message.side_effect = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable'}},
+        'SendMessage'
+    )
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['failed'] == 1
+
+
+
+def test_reprocess_dlq_messages_respects_max_messages_limit(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': i}),
+                'ReceiptHandle': f'receipt-{i}',
+                'MessageAttributes': {}
+            }
+            for i in range(5)
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target',
+        max_messages=5
+    )
+    call_args = mock_sqs.receive_message.call_args
+    assert call_args[1]['MaxNumberOfMessages'] == 5
+
+
+
+def test_reprocess_dlq_messages_preserves_message_attributes(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {'key': {'StringValue': 'value', 'DataType': 'String'}}
+            }
+        ]
+    }
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    call_args = mock_sqs.send_message.call_args
+    assert 'MessageAttributes' in call_args[1]
+
+
+
+def test_reprocess_dlq_messages_handles_receive_error(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.side_effect = ClientError(
+        {'Error': {'Code': 'QueueDoesNotExist'}},
+        'ReceiveMessage'
+    )
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert 'error' in result
+
+
+
+def test_reprocess_dlq_messages_continues_on_individual_failure(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {
+                'Body': json.dumps({'id': 1}),
+                'ReceiptHandle': 'receipt-1',
+                'MessageAttributes': {}
+            },
+            {
+                'Body': json.dumps({'id': 2}),
+                'ReceiptHandle': 'receipt-2',
+                'MessageAttributes': {}
+            }
+        ]
+    }
+    mock_sqs.send_message.side_effect = [
+        ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'SendMessage'),
+        {'MessageId': 'msg-2'}
+    ]
+    result = dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    assert result['reprocessed'] == 1
+
+
+
+def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
+    mock_sqs.receive_message.return_value = {}
+    dlq_reprocessor.reprocess_dlq_messages(
+        'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
+        'https://sqs.us-east-1.amazonaws.com/123456789012/target'
+    )
+    call_args = mock_sqs.receive_message.call_args
+    assert call_args[1]['WaitTimeSeconds'] == 5
+
+
+
+def test_no_hardcoded_defaults_in_dlq_reprocessor():
+    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "dlq_reprocessor.py"
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0
+
+
+
+def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
+    lambda_path = Path(__file__).parent.parent.parent / "src" / "api" / "lambdas" / "circuit_breaker_remediation.py"
+    with open(lambda_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
+
+    matches = re.findall(os_environ_get_pattern_with_default, content)
+    assert len(matches) == 0
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'closed'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    assert response['statusCode'] == 200
+
+
+
+@patch('boto3.client')
+def test_circuit_breaker_remediation_without_webhook_function_name(_mock_boto_client, circuit_breaker_remediation, lambda_context):
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    assert response['statusCode'] == 500
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_health_check_returns_closed_state(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'closed'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'closed'
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_health_check_returns_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'open'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'open'
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_health_check_returns_half_open_state(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'half-open'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'half-open'
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_lambda_invoke_failure(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.side_effect = ClientError({'Error': {'Code': 'ServiceException', 'Message': 'Test error'}}, 'Invoke')
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'unknown'
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_health_check_failure_returns_unknown(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 500, 'body': json.dumps({'error': 'Internal error'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['circuit_breaker_state'] == 'unknown'
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_action_is_monitored_when_open(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'open'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['action'] == 'monitored'
+
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'WEBHOOK_FUNCTION_NAME': 'test-function'})
+def test_circuit_breaker_remediation_action_is_none_when_closed(mock_boto_client, circuit_breaker_remediation, lambda_context):
+    mock_lambda = MagicMock()
+    mock_lambda.invoke.return_value = {
+        'StatusCode': 200,
+        'Payload': MagicMock(read=lambda: json.dumps({'statusCode': 200, 'body': json.dumps({'circuit_breaker_state': 'closed'})}).encode())
+    }
+    mock_boto_client.return_value = mock_lambda
+    response = circuit_breaker_remediation.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['action'] == 'none'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {'Messages': []}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    assert response['statusCode'] == 200
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['job_dlq']['reprocessed'] == 1
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    dlq_reprocessor.handler({}, lambda_context)
+    assert mock_sqs.delete_message.called
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'SendMessage')
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['job_dlq']['failed'] == 1
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage')
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert 'error' in body['job_dlq']
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {'Messages': []}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['webhook_dlq']['note'] == 'Manual intervention required'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data1"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}},
+            {'Body': '{"test": "data2"}', 'ReceiptHandle': 'handle2', 'MessageAttributes': {}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    response = dlq_reprocessor.handler({}, lambda_context)
+    body = json.loads(response['body'])
+    assert body['job_dlq']['reprocessed'] == 2
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {
+    'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-queue',
+    'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/webhook-dlq',
+    'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
+})
+
+def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context):
+    mock_sqs = MagicMock()
+    mock_sqs.receive_message.return_value = {
+        'Messages': [
+            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {'attr1': {'StringValue': 'value1'}}}
+        ]
+    }
+    mock_sqs.send_message.return_value = {'MessageId': 'msg1'}
+    mock_sqs.delete_message.return_value = {}
+    mock_boto_client.return_value = mock_sqs
+    dlq_reprocessor.handler({}, lambda_context)
+    call_args = mock_sqs.send_message.call_args
+    assert 'MessageAttributes' in call_args[1]
+
+
+
