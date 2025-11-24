@@ -1665,7 +1665,8 @@ def test_get_ec2_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ec2 = MagicMock()
         mock_boto_client.return_value = mock_ec2
-        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
+        clients_dict = getattr(v1_handler, "_clients")
+        clients_dict.clear()
         v1_handler.get_ec2_client()
         v1_handler.get_ec2_client()
         assert mock_boto_client.call_count == 1
@@ -1675,7 +1676,8 @@ def test_get_ecs_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ecs = MagicMock()
         mock_boto_client.return_value = mock_ecs
-        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
+        clients_dict = getattr(v1_handler, "_clients")
+        clients_dict.clear()
         v1_handler.get_ecs_client()
         v1_handler.get_ecs_client()
         assert mock_boto_client.call_count == 1
@@ -1685,7 +1687,8 @@ def test_get_ecr_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ecr = MagicMock()
         mock_boto_client.return_value = mock_ecr
-        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
+        clients_dict = getattr(v1_handler, "_clients")
+        clients_dict.clear()
         v1_handler.get_ecr_client()
         v1_handler.get_ecr_client()
         assert mock_boto_client.call_count == 1
@@ -1695,7 +1698,8 @@ def test_get_ssm_client_caches_on_second_call(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ssm = MagicMock()
         mock_boto_client.return_value = mock_ssm
-        clients_dict = getattr(v1_handler, "_clients"); clients_dict.clear()
+        clients_dict = getattr(v1_handler, "_clients")
+        clients_dict.clear()
         v1_handler.get_ssm_client()
         v1_handler.get_ssm_client()
         assert mock_boto_client.call_count == 1
@@ -2290,14 +2294,14 @@ def test_get_ssm_client_caching_webhook_router(mock_boto_client, webhook_router)
 
 
 @patch('boto3.client')
-def test_get_dynamodb_client_initialization_webhook_router(mock_boto_client, webhook_router):
+def test_get_dynamodb_client_initialization_webhook_router(_mock_boto_client, webhook_router):
     webhook_router.clients['dynamodb'] = None
     client = webhook_router.get_dynamodb_client()
     assert client is not None
 
 
 @patch('boto3.client')
-def test_get_cloudwatch_client_initialization_webhook_router(mock_boto_client, webhook_router):
+def test_get_cloudwatch_client_initialization_webhook_router(_mock_boto_client, webhook_router):
     webhook_router.clients['cloudwatch'] = None
     client = webhook_router.get_cloudwatch_client()
     assert client is not None
@@ -2328,7 +2332,7 @@ def test_get_api_key_cached_value(webhook_router):
 
 
 @patch('boto3.client')
-def test_get_api_key_missing_env_var(mock_boto_client, webhook_router):
+def test_get_api_key_missing_env_var(_mock_boto_client, webhook_router):
     webhook_router.api_key_cache['value'] = None
     with patch.dict('os.environ', {}, clear=True):
         try:
@@ -2494,7 +2498,7 @@ def test_list_amis_sorts_by_creation_date(mock_boto_client, v1_handler):
 
 
 @patch('boto3.client')
-def test_trigger_ami_creation_http_error(mock_boto_client, v1_handler):
+def test_trigger_ami_creation_http_error(_mock_boto_client, v1_handler):
     with patch.dict('os.environ', {'API_DOMAIN': 'test.com', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-1'}):
         with patch('urllib.request.urlopen') as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
@@ -2689,7 +2693,7 @@ def test_circuit_breaker_remediation_with_webhook_function_name(mock_boto_client
 
 
 @patch('boto3.client')
-def test_circuit_breaker_remediation_without_webhook_function_name(mock_boto_client, circuit_breaker_remediation, lambda_context):
+def test_circuit_breaker_remediation_without_webhook_function_name(_mock_boto_client, circuit_breaker_remediation, lambda_context):
     response = circuit_breaker_remediation.handler({}, lambda_context)
     assert response['statusCode'] == 500
 
@@ -2946,7 +2950,7 @@ def test_v1_launch_ec2_spot_runner_capacity_exhaustion_all_azs(mock_boto_client,
 
 @patch('boto3.client')
 @patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'})
-def test_v1_trigger_ami_creation_failure(mock_boto_client, v1_handler):
+def test_v1_trigger_ami_creation_failure(_mock_boto_client, v1_handler):
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
         result = v1_handler.trigger_ami_creation()

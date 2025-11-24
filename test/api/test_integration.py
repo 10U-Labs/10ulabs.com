@@ -281,7 +281,7 @@ def test_sqs_dlq_redrive_policy(tfvars):
     assert "RedrivePolicy" in attributes["Attributes"]
 
 
-def test_sqs_visibility_timeout_matches_lambda(lambda_client, tfvars):
+def test_sqs_visibility_timeout_matches_lambda(_lambda_client, tfvars):
     sqs = boto3.client('sqs', region_name=tfvars["aws_region"])
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['VisibilityTimeout'])
@@ -497,19 +497,19 @@ def test_sqs_has_permission_to_invoke_webhook_router_lambda(lambda_client, tfvar
     assert "Configuration" in response
 
 
-def test_cloudfront_distribution_origin_configuration(tfvars):
+def test_cloudfront_distribution_origin_configuration(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     assert len(distributions['DistributionList']['Items']) >= 0
 
 
-def test_cloudfront_distribution_cache_behaviors(tfvars):
+def test_cloudfront_distribution_cache_behaviors(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     assert len(distributions['DistributionList']['Items']) >= 0
 
 
-def test_cloudfront_distribution_ssl_certificate(tfvars):
+def test_cloudfront_distribution_ssl_certificate(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     assert len(distributions['DistributionList']['Items']) >= 0
@@ -521,14 +521,14 @@ def test_acm_certificate_is_validated_and_issued(tfvars):
     assert len(certificates['CertificateSummaryList']) >= 0
 
 
-def test_cloudfront_distribution_exists(tfvars):
+def test_cloudfront_distribution_exists(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     distribution_list = distributions['DistributionList']
     assert distribution_list['Quantity'] >= 0
 
 
-def test_cloudfront_distribution_origin_points_to_s3(tfvars):
+def test_cloudfront_distribution_origin_points_to_s3(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
@@ -538,7 +538,7 @@ def test_cloudfront_distribution_origin_points_to_s3(tfvars):
         assert len(origins) > 0
 
 
-def test_cloudfront_distribution_has_default_cache_behavior(tfvars):
+def test_cloudfront_distribution_has_default_cache_behavior(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
@@ -547,7 +547,7 @@ def test_cloudfront_distribution_has_default_cache_behavior(tfvars):
         assert 'DefaultCacheBehavior' in config['DistributionConfig']
 
 
-def test_cloudfront_distribution_cache_behavior_allows_get_head(tfvars):
+def test_cloudfront_distribution_cache_behavior_allows_get_head(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
@@ -557,7 +557,7 @@ def test_cloudfront_distribution_cache_behavior_allows_get_head(tfvars):
         assert 'GET' in allowed_methods
 
 
-def test_cloudfront_distribution_has_viewer_protocol_policy(tfvars):
+def test_cloudfront_distribution_has_viewer_protocol_policy(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
@@ -566,7 +566,7 @@ def test_cloudfront_distribution_has_viewer_protocol_policy(tfvars):
         assert 'ViewerProtocolPolicy' in config['DistributionConfig']['DefaultCacheBehavior']
 
 
-def test_cloudfront_distribution_compression_enabled(tfvars):
+def test_cloudfront_distribution_compression_enabled(_tfvars):
     cloudfront = boto3.client('cloudfront')
     distributions = cloudfront.list_distributions()
     if distributions['DistributionList']['Quantity'] > 0:
@@ -643,7 +643,7 @@ def test_dlq_reprocessor_lambda_has_schedule_trigger(tfvars):
     assert len(scheduled_rules) >= 0
 
 
-def test_ecs_task_definition_uses_correct_image(tfvars, ecs_cluster_name):
+def test_ecs_task_definition_uses_correct_image(tfvars, _ecs_cluster_name):
     ecs = boto3.client('ecs', region_name=tfvars["aws_region"])
     task_definitions = ecs.list_task_definitions()
     if task_definitions['taskDefinitionArns']:
@@ -653,7 +653,7 @@ def test_ecs_task_definition_uses_correct_image(tfvars, ecs_cluster_name):
         assert len(containers) > 0
 
 
-def test_ecs_task_definition_logging_configured(tfvars, ecs_cluster_name):
+def test_ecs_task_definition_logging_configured(tfvars, _ecs_cluster_name):
     ecs = boto3.client('ecs', region_name=tfvars["aws_region"])
     task_definitions = ecs.list_task_definitions()
     if task_definitions['taskDefinitionArns']:
@@ -663,7 +663,7 @@ def test_ecs_task_definition_logging_configured(tfvars, ecs_cluster_name):
         assert 'logConfiguration' in container or 'logConfiguration' not in container
 
 
-def test_ecs_task_definition_network_mode_awsvpc(tfvars, ecs_cluster_name):
+def test_ecs_task_definition_network_mode_awsvpc(tfvars, _ecs_cluster_name):
     ecs = boto3.client('ecs', region_name=tfvars["aws_region"])
     task_definitions = ecs.list_task_definitions()
     if task_definitions['taskDefinitionArns']:
@@ -738,14 +738,14 @@ def test_lambda_can_write_to_idempotency_table(tfvars):
     assert response['Table']['TableStatus'] == 'ACTIVE'
 
 
-def test_lambda_can_read_from_ssm_parameter_store(lambda_client, tfvars):
+def test_lambda_can_read_from_ssm_parameter_store(_lambda_client, tfvars):
     ssm = boto3.client('ssm', region_name=tfvars["aws_region"])
     webhook_secret_name = tfvars["webhook_secret_name"]
     response = ssm.get_parameter(Name=webhook_secret_name)
     assert 'Parameter' in response
 
 
-def test_lambda_can_read_github_token_from_ssm(lambda_client, tfvars):
+def test_lambda_can_read_github_token_from_ssm(_lambda_client, tfvars):
     ssm = boto3.client('ssm', region_name=tfvars["aws_region"])
     try:
         response = ssm.get_parameter(Name='/github-runner/credentials', WithDecryption=True)
