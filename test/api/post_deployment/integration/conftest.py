@@ -92,9 +92,7 @@ def get_api_gateway_id_by_name(client, api_name):
 
 def create_test_dynamodb_item(client, table_name, item):
     client.put_item(TableName=table_name, Item=item)
-    return None
 
 
 def cleanup_test_dynamodb_item(client, table_name, key):
     client.delete_item(TableName=table_name, Key=key)
-    return None

@@ -1,7 +1,8 @@
-from botocore.exceptions import ClientError
 import concurrent.futures
+
 import pytest
 import requests
+from botocore.exceptions import ClientError
 
 
 DEFAULT_REQUEST_TIMEOUT = 10
