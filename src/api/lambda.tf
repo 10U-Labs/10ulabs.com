@@ -148,7 +148,6 @@ resource "aws_lambda_function" "v1_handler" {
 
   environment {
     variables = {
-      AWS_REGION               = var.aws_region
       SUBNETS                  = join(",", aws_subnet.public[*].id)
       SECURITY_GROUPS          = aws_security_group.runner_sg.id
       VPC_ID                   = aws_vpc.runner_vpc.id
