@@ -401,6 +401,18 @@ def get_header_case_insensitive(headers: dict, key: str) -> str:
 
 
 def handle_api_gateway_event(event: dict, start_time: float) -> dict:
+    http_method = event.get('httpMethod', event.get('requestContext', {}).get('http', {}).get('method', ''))
+    if http_method == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-github-event,x-hub-signature-256,x-github-delivery'
+            },
+            'body': ''
+        }
+
     path = event.get('path', event.get('rawPath', ''))
     if path == '/v1/runners/health':
         return handle_health_check()

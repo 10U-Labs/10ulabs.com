@@ -879,8 +879,19 @@ ROUTE_MAP = {
 def lambda_handler(event, _context):
     logger.info("Received API request: %s", json.dumps(event))
 
-    path = event.get('path', '')
     method = event.get('httpMethod', '')
+    if method == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type,x-api-key'
+            },
+            'body': ''
+        }
+
+    path = event.get('path', '')
     handler = ROUTE_MAP.get((path, method))
 
     if not handler:

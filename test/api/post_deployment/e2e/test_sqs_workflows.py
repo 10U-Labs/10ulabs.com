@@ -1,28 +1,28 @@
 import boto3
 
 
-def test_sqs_messages_processed_by_lambda(_api_url):
+def test_sqs_messages_processed_by_lambda():
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
 
 
-def test_failed_messages_move_to_dlq_after_max_retries(_api_url):
+def test_failed_messages_move_to_dlq_after_max_retries():
     sqs = boto3.client('sqs', region_name='us-east-1')
     dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
 
 
-def test_sqs_message_processing_updates_status(_api_url):
+def test_sqs_message_processing_updates_status():
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
 
 
-def test_dlq_reprocessor_moves_messages_back(_api_url):
+def test_dlq_reprocessor_moves_messages_back():
     sqs = boto3.client('sqs', region_name='us-east-1')
     try:
         dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
@@ -32,7 +32,7 @@ def test_dlq_reprocessor_moves_messages_back(_api_url):
         assert True
 
 
-def test_queue_depth_metrics_published(_api_url):
+def test_queue_depth_metrics_published():
     sqs = boto3.client('sqs', region_name='us-east-1')
     queue_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-jobs')['QueueUrl']
     attributes = sqs.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['ApproximateNumberOfMessages'])
