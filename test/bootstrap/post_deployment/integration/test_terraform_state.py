@@ -1,4 +1,5 @@
 import boto3
+from botocore.exceptions import ClientError
 
 
 def test_terraform_state_exists(config):
@@ -10,7 +11,7 @@ def test_terraform_state_exists(config):
             Key='bootstrap/terraform.tfstate'
         )
         state_exists = True
-    except:
+    except ClientError:
         state_exists = False
 
     assert state_exists

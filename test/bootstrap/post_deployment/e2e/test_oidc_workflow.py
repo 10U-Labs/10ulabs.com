@@ -60,7 +60,7 @@ class TestCompleteOIDCWorkflow:
             oidc_token
         )
 
-    def test_complete_oidc_workflow(self, config, oidc_token, aws_creds):
+    def test_complete_oidc_workflow(self, oidc_token, aws_creds):
         assert oidc_token is not None
         assert len(oidc_token) > 0
         assert aws_creds['access_key_id'] is not None

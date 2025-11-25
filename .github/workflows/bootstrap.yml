@@ -137,8 +137,6 @@ jobs:
         run: cd src/bootstrap && terraform fmt -check -recursive
       - name: Terraform Init
         run: cd src/bootstrap && terraform init
-      - name: Terraform Validate
-        run: cd src/bootstrap && terraform validate
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint

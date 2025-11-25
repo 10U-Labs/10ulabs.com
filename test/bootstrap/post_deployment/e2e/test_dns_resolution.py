@@ -1,16 +1,16 @@
 import time
+from botocore.exceptions import ClientError
 import dns.resolver
 import pytest
 
 
 def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
-    ns_response = route53_client.get_hosted_zone(Id=hosted_zone['Id'])
-    name_servers = ns_response['DelegationSet']['NameServers']
+    name_servers = route53_client.get_hosted_zone(Id=hosted_zone['Id'])['DelegationSet']['NameServers']
     test_record_name = f"e2e-test.{domain_name}"
     test_value = "e2e-test-value-12345"
     try:
-        change_response = route53_client.change_resource_record_sets(
+        change_id = route53_client.change_resource_record_sets(
             HostedZoneId=hosted_zone['Id'],
             ChangeBatch={
                 'Changes': [{
@@ -23,21 +23,16 @@ def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, ho
                     }
                 }]
             }
-        )
-        change_id = change_response['ChangeInfo']['Id']
-        max_attempts = 30
+        )['ChangeInfo']['Id']
         attempt = 0
-        while attempt < max_attempts:
-            change_status = route53_client.get_change(Id=change_id)
-            if change_status['ChangeInfo']['Status'] == 'INSYNC':
+        while attempt < 30:
+            if route53_client.get_change(Id=change_id)['ChangeInfo']['Status'] == 'INSYNC':
                 break
             time.sleep(1)
             attempt = attempt + 1
-        ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
         resolver = dns.resolver.Resolver()
-        resolver.nameservers = [ns_ip]
-        answers = resolver.resolve(test_record_name, 'TXT')
-        resolved_value = str(answers[0]).strip('"')
+        resolver.nameservers = [dns.resolver.resolve(name_servers[0], 'A')[0].to_text()]
+        resolved_value = str(resolver.resolve(test_record_name, 'TXT')[0]).strip('"')
         assert resolved_value == test_value
     finally:
         try:
@@ -55,25 +50,15 @@ def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, ho
                     }]
                 }
             )
-        except:
+        except ClientError:
             pass
 
 
-def test_google_verification_record_resolves_via_public_dns(route53_client, config):
+def test_google_verification_record_resolves_via_public_dns(zone_nameservers, config):
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]
@@ -90,21 +75,11 @@ def test_google_verification_record_resolves_via_public_dns(route53_client, conf
         pytest.fail(f"No TXT records found for {domain_name}")
 
 
-def test_google_verification_record_has_correct_content(route53_client, config):
+def test_google_verification_record_has_correct_content(zone_nameservers, config):
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]
@@ -116,20 +91,10 @@ def test_google_verification_record_has_correct_content(route53_client, config):
     assert any(expected_prefix in txt for txt in txt_values)
 
 
-def test_mx_record_resolves_via_public_dns(route53_client, config):
+def test_mx_record_resolves_via_public_dns(zone_nameservers, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]
@@ -143,20 +108,10 @@ def test_mx_record_resolves_via_public_dns(route53_client, config):
         pytest.fail(f"No MX records found for {domain_name}")
 
 
-def test_mx_record_returns_correct_priority_via_dns(route53_client, config):
+def test_mx_record_returns_correct_priority_via_dns(zone_nameservers, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]
@@ -166,20 +121,10 @@ def test_mx_record_returns_correct_priority_via_dns(route53_client, config):
     assert 1 in priorities
 
 
-def test_mx_record_returns_smtp_hostname_via_dns(route53_client, config):
+def test_mx_record_returns_smtp_hostname_via_dns(zone_nameservers, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]
@@ -189,20 +134,10 @@ def test_mx_record_returns_smtp_hostname_via_dns(route53_client, config):
     assert any('smtp.google.com' in exchange for exchange in exchanges)
 
 
-def test_mx_record_has_correct_ttl_in_dns_response(route53_client, config):
+def test_mx_record_has_correct_ttl_in_dns_response(zone_nameservers, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]
@@ -211,20 +146,10 @@ def test_mx_record_has_correct_ttl_in_dns_response(route53_client, config):
     assert answers.rrset.ttl == 300
 
 
-def test_txt_record_has_correct_ttl_in_dns_response(route53_client, config):
+def test_txt_record_has_correct_ttl_in_dns_response(zone_nameservers, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    zone_details = route53_client.get_hosted_zone(Id=zone['Id'])
-    name_servers = zone_details['DelegationSet']['NameServers']
-
-    ns_ip = dns.resolver.resolve(name_servers[0], 'A')[0].to_text()
+    ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
 
     resolver = dns.resolver.Resolver()
     resolver.nameservers = [ns_ip]

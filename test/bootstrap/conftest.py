@@ -2,14 +2,14 @@ from pathlib import Path
 import pytest
 
 
-@pytest.fixture
-def bootstrap_dir():
+@pytest.fixture(name='bootstrap_dir')
+def bootstrap_dir_fixture():
     return Path(__file__).parent.parent.parent / "src" / "bootstrap"
 
 
 @pytest.fixture
-def config(bootstrap_dir):
-    tfvars_path = bootstrap_dir / "terraform.tfvars"
+def config(request):
+    tfvars_path = request.getfixturevalue('bootstrap_dir') / "terraform.tfvars"
     config_dict = {}
     with open(tfvars_path, encoding='utf-8') as f:
         for line in f:

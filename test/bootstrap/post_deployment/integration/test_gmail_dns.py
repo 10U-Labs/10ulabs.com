@@ -1,17 +1,8 @@
-def test_google_verification_txt_record_exists(route53_client, config):
+def test_google_verification_txt_record_exists(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    assert zone is not None
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='TXT'
     )
@@ -25,19 +16,12 @@ def test_google_verification_txt_record_exists(route53_client, config):
     assert txt_record is not None
 
 
-def test_google_verification_txt_record_has_correct_value(route53_client, config):
+def test_google_verification_txt_record_has_correct_value(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='TXT'
     )
@@ -53,18 +37,11 @@ def test_google_verification_txt_record_has_correct_value(route53_client, config
     assert expected_value in record_values
 
 
-def test_google_verification_txt_record_has_ttl(route53_client, config):
+def test_google_verification_txt_record_has_ttl(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='TXT'
     )
@@ -78,20 +55,11 @@ def test_google_verification_txt_record_has_ttl(route53_client, config):
     assert 'TTL' in txt_record
 
 
-def test_gmail_mx_record_exists(route53_client, config):
+def test_gmail_mx_record_exists(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
-    assert zone is not None
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='MX'
     )
@@ -105,18 +73,11 @@ def test_gmail_mx_record_exists(route53_client, config):
     assert mx_record is not None
 
 
-def test_gmail_mx_record_has_correct_priority(route53_client, config):
+def test_gmail_mx_record_has_correct_priority(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='MX'
     )
@@ -131,18 +92,11 @@ def test_gmail_mx_record_has_correct_priority(route53_client, config):
     assert any('1 smtp.google.com' in val for val in record_values)
 
 
-def test_gmail_mx_record_has_ttl(route53_client, config):
+def test_gmail_mx_record_has_ttl(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='MX'
     )
@@ -156,18 +110,11 @@ def test_gmail_mx_record_has_ttl(route53_client, config):
     assert 'TTL' in mx_record
 
 
-def test_txt_record_ttl_equals_300(route53_client, config):
+def test_txt_record_ttl_equals_300(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='TXT'
     )
@@ -181,18 +128,11 @@ def test_txt_record_ttl_equals_300(route53_client, config):
     assert txt_record['TTL'] == 300
 
 
-def test_mx_record_ttl_equals_300(route53_client, config):
+def test_mx_record_ttl_equals_300(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='MX'
     )
@@ -206,18 +146,11 @@ def test_mx_record_ttl_equals_300(route53_client, config):
     assert mx_record['TTL'] == 300
 
 
-def test_mx_record_hostname_has_trailing_dot(route53_client, config):
+def test_mx_record_hostname_has_trailing_dot(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='MX'
     )
@@ -232,18 +165,11 @@ def test_mx_record_hostname_has_trailing_dot(route53_client, config):
     assert any('smtp.google.com.' in val for val in record_values)
 
 
-def test_mx_record_priority_equals_one(route53_client, config):
+def test_mx_record_priority_equals_one(route53_client, hosted_zone, config):
     domain_name = config['domain_name']
 
-    zones = route53_client.list_hosted_zones_by_name(DNSName=f"{domain_name}.")
-    zone = None
-    for z in zones['HostedZones']:
-        if z['Name'] == f"{domain_name}.":
-            zone = z
-            break
-
     records = route53_client.list_resource_record_sets(
-        HostedZoneId=zone['Id'],
+        HostedZoneId=hosted_zone['Id'],
         StartRecordName=f"{domain_name}.",
         StartRecordType='MX'
     )
