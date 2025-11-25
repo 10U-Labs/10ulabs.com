@@ -13,11 +13,6 @@ def s3_client_fixture(aws_region):
     return boto3.client("s3", region_name=aws_region)
 
 
-@pytest.fixture(name="ecs_client", scope="module")
-def ecs_client_fixture(aws_region):
-    return boto3.client("ecs", region_name=aws_region)
-
-
 @pytest.fixture(name="dynamodb_client", scope="module")
 def dynamodb_client_fixture(aws_region):
     return boto3.client("dynamodb", region_name=aws_region)

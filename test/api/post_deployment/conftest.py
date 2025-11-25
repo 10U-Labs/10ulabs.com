@@ -18,6 +18,11 @@ def ecr_client_fixture(aws_region):
     return boto3.client("ecr", region_name=aws_region)
 
 
+@pytest.fixture(name="ecs_client", scope="module")
+def ecs_client_fixture(aws_region):
+    return boto3.client("ecs", region_name=aws_region)
+
+
 @pytest.fixture(name="api_url", scope="module")
 def api_url_fixture(tfvars):
     return f"https://{tfvars['domain_subdomain']}"
