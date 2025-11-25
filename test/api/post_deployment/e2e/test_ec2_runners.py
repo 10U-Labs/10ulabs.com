@@ -1,4 +1,8 @@
-from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
+from test.api.post_deployment.conftest import (
+    create_runner_job_payload,
+    make_authenticated_get,
+    make_authenticated_post,
+)
 import time
 import pytest
 from botocore.exceptions import ClientError
@@ -44,12 +48,7 @@ def test_ec2_runner_instance_fixture(
     if not latest_ami_exists:
         yield None
         return
-    job_id = int(time.time())
-    payload = {
-        "job_id": job_id,
-        "job_labels": ["ephemeral-ec2-spot-instance"],
-        "github_repo": github_repo
-    }
+    job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ec2-spot-instance"])
     response = make_authenticated_post(
         f"{api_url}/v1/ec2-runner", api_key, json=payload
     )

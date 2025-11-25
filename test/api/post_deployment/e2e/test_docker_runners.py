@@ -1,4 +1,8 @@
-from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
+from test.api.post_deployment.conftest import (
+    create_runner_job_payload,
+    make_authenticated_get,
+    make_authenticated_post,
+)
 import time
 import pytest
 from botocore.exceptions import ClientError
@@ -38,12 +42,7 @@ def test_fargate_task_fixture(
     if ecr_image_count == 0:
         yield None
         return
-    job_id = int(time.time())
-    payload = {
-        "job_id": job_id,
-        "job_labels": ["ephemeral-ecs-fargate-spot"],
-        "github_repo": github_repo
-    }
+    job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ecs-fargate-spot"])
     response = make_authenticated_post(
         f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload
     )

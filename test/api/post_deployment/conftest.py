@@ -1,3 +1,4 @@
+import time
 import boto3
 import pytest
 import requests
@@ -81,3 +82,13 @@ def api_credentials_fixture(api_url, api_key):
 def ecr_image_count_fixture(ecr_client, config):
     response = ecr_client.describe_images(repositoryName=config["ecr_repository"])
     return len(response.get("imageDetails", []))
+
+
+def create_runner_job_payload(github_repo, job_labels):
+    job_id = int(time.time())
+    payload = {
+        "job_id": job_id,
+        "job_labels": job_labels,
+        "github_repo": github_repo
+    }
+    return job_id, payload
