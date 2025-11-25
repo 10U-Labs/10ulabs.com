@@ -132,7 +132,7 @@ jobs:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: pip install pylint mypy yamllint
+        run: pip install pylint mypy yamllint pytest boto3 dnspython
       - name: Terraform Format Check
         run: cd src/bootstrap && terraform fmt -check -recursive
       - name: Terraform Init
@@ -160,6 +160,16 @@ jobs:
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/bootstrap.yml
+      - name: Run pylint
+        run: |
+          pylint \
+            test/bootstrap/ \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-under=10.0
+      - name: Run mypy
+        run: |
+          python -m mypy \
+            test/bootstrap/
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
