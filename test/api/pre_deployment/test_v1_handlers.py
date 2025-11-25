@@ -124,6 +124,118 @@ def test_lambda_handler_docker_runner_does_not_specify_launch_type_and_capacity_
 
 
 @patch('boto3.client')
+def test_launch_fargate_runner_tags_use_pascalcase_key_for_type(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:test', 'imageSizeInBytes': 1000}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+    mock_boto_client.side_effect = mock_client
+    with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-registration-token'):
+        event = docker_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
+        v1_handler.lambda_handler(event, lambda_context)
+    call_kwargs = mock_ecs.run_task.call_args[1]
+    tags = call_kwargs.get('tags', [])
+    type_tag = next((t for t in tags if t.get('Key') == 'Type'), None)
+    assert type_tag is not None
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_tags_use_pascalcase_key_for_managed_by(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:test', 'imageSizeInBytes': 1000}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+    mock_boto_client.side_effect = mock_client
+    with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-registration-token'):
+        event = docker_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
+        v1_handler.lambda_handler(event, lambda_context)
+    call_kwargs = mock_ecs.run_task.call_args[1]
+    tags = call_kwargs.get('tags', [])
+    managed_by_tag = next((t for t in tags if t.get('Key') == 'ManagedBy'), None)
+    assert managed_by_tag is not None
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_tags_use_pascalcase_key_for_job_id(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:test', 'imageSizeInBytes': 1000}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+    mock_boto_client.side_effect = mock_client
+    with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-registration-token'):
+        event = docker_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
+        v1_handler.lambda_handler(event, lambda_context)
+    call_kwargs = mock_ecs.run_task.call_args[1]
+    tags = call_kwargs.get('tags', [])
+    job_id_tag = next((t for t in tags if t.get('Key') == 'GitHubJobId'), None)
+    assert job_id_tag is not None
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_tags_use_pascalcase_key_for_repo(mock_boto_client, v1_handler, docker_runner_post_event_factory, lambda_context):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{'imageTags': ['stable'], 'imagePushedAt': datetime(2024, 1, 1), 'imageDigest': 'sha256:test', 'imageSizeInBytes': 1000}]
+    }
+    mock_ecs = MagicMock()
+    mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-task'}]}
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    def mock_client(service_name):
+        if service_name == 'ecr':
+            return mock_ecr
+        if service_name == 'ecs':
+            return mock_ecs
+        if service_name == 'ssm':
+            return mock_ssm
+        return MagicMock()
+    mock_boto_client.side_effect = mock_client
+    with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-registration-token'):
+        event = docker_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
+        v1_handler.lambda_handler(event, lambda_context)
+    call_kwargs = mock_ecs.run_task.call_args[1]
+    tags = call_kwargs.get('tags', [])
+    repo_tag = next((t for t in tags if t.get('Key') == 'GitHubRepo'), None)
+    assert repo_tag is not None
+
+
+@patch('boto3.client')
 def test_lambda_handler_docker_runner_get_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
     mock_ecs = MagicMock()
     mock_ecs.list_tasks.return_value = {'taskArns': []}
@@ -1102,7 +1214,7 @@ def test_launch_fargate_runner_includes_tags(mock_boto_client, v1_handler):
             v1_handler.launch_fargate_runner(456, ['fargate-label'], 'owner/repository')
             call_args = mock_ecs.run_task.call_args
             tags = call_args[1]['tags']
-            tag_dict = {tag['key']: tag['value'] for tag in tags}
+            tag_dict = {tag['Key']: tag['Value'] for tag in tags}
             assert tag_dict['GitHubJobId'] == '456'
 
 

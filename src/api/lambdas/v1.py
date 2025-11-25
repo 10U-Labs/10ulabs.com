@@ -322,11 +322,11 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
                     ]
                 },
                 tags=[
-                    {'key': 'Type', 'value': 'ephemeral-runner'},
-                    {'key': 'ManagedBy', 'value': 'docker-runner-api'},
-                    {'key': 'GitHubJobId', 'value': str(job_id)},
-                    {'key': 'JobLabels', 'value': ','.join(job_labels)},
-                    {'key': 'GitHubRepo', 'value': github_repo}
+                    {'Key': 'Type', 'Value': 'ephemeral-runner'},
+                    {'Key': 'ManagedBy', 'Value': 'docker-runner-api'},
+                    {'Key': 'GitHubJobId', 'Value': str(job_id)},
+                    {'Key': 'JobLabels', 'Value': ','.join(job_labels)},
+                    {'Key': 'GitHubRepo', 'Value': github_repo}
                 ]
             )
 
