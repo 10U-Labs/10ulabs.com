@@ -196,6 +196,7 @@ jobs:
         run: |
           python3 -m pylint test/api/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-on=W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: python3 -m mypy test/api/

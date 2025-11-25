@@ -1171,17 +1171,17 @@ def test_launch_fargate_runner_retries_on_capacity_error(mock_boto_client, v1_ha
 
 def test_is_capacity_error_with_capacity_string(v1_handler):
     result = {'success': False, 'error': 'No capacity in any availability zone'}
-    assert v1_handler._is_capacity_error(result) is True
+    assert v1_handler.is_capacity_error(result) is True
 
 
 def test_is_capacity_error_with_capacity_list(v1_handler):
     result = {'success': False, 'error': [{'reason': 'Capacity is unavailable'}]}
-    assert v1_handler._is_capacity_error(result) is True
+    assert v1_handler.is_capacity_error(result) is True
 
 
 def test_is_capacity_error_with_non_capacity_error(v1_handler):
     result = {'success': False, 'error': 'Connection timeout'}
-    assert v1_handler._is_capacity_error(result) is False
+    assert v1_handler.is_capacity_error(result) is False
 
 
 @patch('boto3.client')
