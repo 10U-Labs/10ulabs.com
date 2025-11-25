@@ -17,13 +17,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install yq
-        run: |
-          VERSION=v4.44.1
-          BINARY=yq_linux_arm64
-          wget "https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY}" -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-        shell: bash
       - id: config
         name: Load configuration
         run: |

@@ -90,14 +90,14 @@ data "amazon-ami" "base" {
 }
 
 source "amazon-ebs" "github_runner" {
-  ami_name      = local.ami_name
-  region        = var.aws_region
-  source_ami    = data.amazon-ami.base.id
+  ami_name   = local.ami_name
+  region     = var.aws_region
+  source_ami = data.amazon-ami.base.id
 
   # Use spot instances for cost savings with capacity-optimized strategy
   # Diversify across instance types for better availability
-  spot_price = "auto"
-  spot_instance_types = var.spot_instance_types
+  spot_price               = "auto"
+  spot_instance_types      = var.spot_instance_types
   spot_allocation_strategy = "capacity-optimized"
 
   # Networking
@@ -115,13 +115,13 @@ source "amazon-ebs" "github_runner" {
 
   tags = merge(
     {
-      Name            = "ami-${local.ami_name}"
-      OSFamily        = title(var.os_family)
-      OSVersion       = var.os_version
-      OSArchitecture  = var.os_architecture
-      RunnerVersion   = var.runner_version
-      Purpose         = "GitHub self-hosted EC2 runner"
-      BuildDate       = local.timestamp
+      Name           = "ami-${local.ami_name}"
+      OSFamily       = title(var.os_family)
+      OSVersion      = var.os_version
+      OSArchitecture = var.os_architecture
+      RunnerVersion  = var.runner_version
+      Purpose        = "GitHub self-hosted EC2 runner"
+      BuildDate      = local.timestamp
     },
     {
       "${var.stable_tag_key}" = "false"
@@ -147,7 +147,7 @@ source "amazon-ebs" "github_runner" {
 }
 
 build {
-  name = "github-runner-ami"
+  name    = "github-runner-ami"
   sources = ["source.amazon-ebs.github_runner"]
 
   # Wait for EC2 status checks to pass with exponential backoff
@@ -183,6 +183,18 @@ build {
       "  ca-certificates \\",
       "  gnupg \\",
       "  lsb-release"
+    ]
+  }
+
+  # Install yq for YAML parsing
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "set -e",
+      "YQ_VERSION=v4.44.1",
+      "YQ_BINARY=yq_linux_${var.os_architecture}",
+      "sudo wget -q \"https://github.com/mikefarah/yq/releases/download/$${YQ_VERSION}/$${YQ_BINARY}\" -O /usr/local/bin/yq",
+      "sudo chmod +x /usr/local/bin/yq"
     ]
   }
 
