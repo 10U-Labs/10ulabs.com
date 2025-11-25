@@ -29,12 +29,12 @@ def test_ami_has_runner_version_tag(ami_details):
     assert "RunnerVersion" in tags
 
 
-def test_ami_runner_version_matches_expected(ami_details, tfvars):
+def test_ami_runner_version_matches_expected(ami_details, tfvars_data):
     if not ami_details:
         pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-    expected_version = tfvars["github_runner_version"]
+    expected_version = tfvars_data["runner_version"]
     runner_version = tags.get("RunnerVersion", "")
 
     assert runner_version == expected_version
@@ -49,12 +49,12 @@ def test_ami_has_os_family_tag(ami_details):
     assert "OSFamily" in tags
 
 
-def test_ami_os_family_matches_expected(ami_details, tfvars):
+def test_ami_os_family_matches_expected(ami_details, tfvars_data):
     if not ami_details:
         pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-    expected_os_family = tfvars["os_family"].title()
+    expected_os_family = tfvars_data["os_family"].title()
     os_family = tags.get("OSFamily", "")
 
     assert os_family == expected_os_family
@@ -69,12 +69,12 @@ def test_ami_has_os_version_tag(ami_details):
     assert "OSVersion" in tags
 
 
-def test_ami_os_version_matches_expected(ami_details, tfvars):
+def test_ami_os_version_matches_expected(ami_details, tfvars_data):
     if not ami_details:
         pytest.fail("AMI details not available")
 
     tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-    expected_os_version = tfvars["os_version"]
+    expected_os_version = tfvars_data["os_version"]
     os_version = tags.get("OSVersion", "")
 
     assert os_version == expected_os_version
