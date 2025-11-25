@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -141,7 +141,7 @@ jobs:
     needs:
       - declaring-common-variables
       - promoting-ami
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,11 +150,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install boto3
       - name: Clean up Packer artifacts
         run: |
@@ -179,7 +181,7 @@ jobs:
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       stable_tag_key: ${{ steps.config.outputs.stable_tag_key }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -219,7 +221,7 @@ jobs:
       - building-ami
       - declaring-common-variables
       - integration-testing
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -228,11 +230,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install dependencies
         run: pip install pytest boto3
       - name: Get GitHub PAT from Parameter Store
         run: |
@@ -252,7 +256,7 @@ jobs:
     needs:
       - building-ami
       - declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -261,11 +265,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install pytest boto3
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
@@ -279,15 +285,17 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install yamllint
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install yamllint
         run: pip install yamllint
       - name: Linting YAML files
         run: |
@@ -319,7 +327,8 @@ jobs:
           cd src/api && \
             tflint --init && \
             tflint --disable-rule=terraform_unused_declarations
-      - name: Install Python linting dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python linting dependencies
         run: pip install pylint mypy boto3-stubs boto3
       - name: Linting Python files
         run: |
@@ -362,7 +371,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -385,11 +394,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install boto3
       - name: Promote AMI
         run: |
@@ -404,15 +415,17 @@ jobs:
     needs:
       - declaring-common-variables
       - performing-static-analysis
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install pytest boto3 botocore
       - name: Run unit tests
         run: |
@@ -434,6 +447,10 @@ on:
         default: false
         description: Dry run mode (show structure without executing)
         required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
 permissions:
   contents: read
