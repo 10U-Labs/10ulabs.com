@@ -75,15 +75,16 @@ data "archive_file" "runners_handler" {
 }
 
 resource "aws_lambda_function" "runners_handler" {
-  filename         = data.archive_file.runners_handler.output_path
-  function_name    = var.lambda_function_name
-  role             = aws_iam_role.lambda_runners_handler.arn
-  handler          = "webhook_router.lambda_handler"
-  source_code_hash = data.archive_file.runners_handler.output_base64sha256
-  runtime          = "python3.13"
-  timeout          = var.lambda_timeout_seconds
-  memory_size      = var.lambda_memory_mb
-  description      = "GitHub webhook router for GitHub self-hosted runners"
+  filename                       = data.archive_file.runners_handler.output_path
+  function_name                  = var.lambda_function_name
+  role                           = aws_iam_role.lambda_runners_handler.arn
+  handler                        = "webhook_router.lambda_handler"
+  source_code_hash               = data.archive_file.runners_handler.output_base64sha256
+  runtime                        = "python3.13"
+  timeout                        = var.lambda_timeout_seconds
+  memory_size                    = var.lambda_memory_mb
+  reserved_concurrent_executions = -1
+  description                    = "GitHub webhook router for GitHub self-hosted runners"
 
   environment {
     variables = {
