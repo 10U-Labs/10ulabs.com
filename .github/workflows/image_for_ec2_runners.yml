@@ -356,7 +356,9 @@ jobs:
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
         run: pip install boto3 boto3-stubs mypy pylint pytest
-      - name: Linting Python files
+      - env:
+          PYTHONPATH: test/build/image_for_ec2_runners/post_deployment
+        name: Linting Python files
         run: |
           pylint \
             src/build/image_for_ec2_runners/*.py \
