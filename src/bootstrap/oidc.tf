@@ -2,7 +2,7 @@ module "github_oidc" {
   source = "./modules/github-oidc"
 
   github_org                   = local.github_org
-  github_repo                  = local.github_repo_name
+  github_repo                  = local.name_for_github_repo
   aws_account_id               = local.aws_account_id
   name_for_github_actions_role = local.name_for_github_actions_role
 

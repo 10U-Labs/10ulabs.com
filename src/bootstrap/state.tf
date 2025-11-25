@@ -9,7 +9,7 @@ resource "aws_kms_alias" "terraform_state" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = local.terraform_state_bucket_name
+  bucket = local.name_for_terraform_state_bucket
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
