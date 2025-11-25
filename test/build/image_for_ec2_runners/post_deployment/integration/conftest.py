@@ -14,6 +14,79 @@ def ami_details(ec2_client, test_ami_id):
     return None
 
 
+def _get_tag_value(tags, key):
+    if not tags:
+        return None
+    for tag in tags:
+        if tag["Key"] == key:
+            return tag["Value"]
+    return None
+
+
+@pytest.fixture(scope="module")
+def ami_tags_dict(ami_details):
+    if not ami_details:
+        return {}
+    tags = ami_details.get("Tags", [])
+    result = {}
+    for tag in tags:
+        result[tag["Key"]] = tag["Value"]
+    return result
+
+
+@pytest.fixture(scope="module")
+def ami_purpose_tag(ami_details):
+    if not ami_details:
+        return None
+    return _get_tag_value(ami_details.get("Tags", []), "Purpose")
+
+
+@pytest.fixture(scope="module")
+def ami_runner_version_tag(ami_details):
+    if not ami_details:
+        return None
+    return _get_tag_value(ami_details.get("Tags", []), "RunnerVersion")
+
+
+@pytest.fixture(scope="module")
+def ami_os_family_tag(ami_details):
+    if not ami_details:
+        return None
+    return _get_tag_value(ami_details.get("Tags", []), "OSFamily")
+
+
+@pytest.fixture(scope="module")
+def ami_os_version_tag(ami_details):
+    if not ami_details:
+        return None
+    return _get_tag_value(ami_details.get("Tags", []), "OSVersion")
+
+
+@pytest.fixture
+def run_ssm_command():
+    def _run_command(ssm_client, instance_id, command, retries=8):
+        import time
+        response = ssm_client.send_command(
+            InstanceIds=[instance_id],
+            DocumentName="AWS-RunShellScript",
+            Parameters={"commands": [command]}
+        )
+        command_id = response["Command"]["CommandId"]
+        for attempt in range(retries):
+            wait_time = 2 ** attempt
+            time.sleep(wait_time)
+            output = ssm_client.get_command_invocation(
+                CommandId=command_id,
+                InstanceId=instance_id
+            )
+            if output["Status"] == "Success":
+                return output
+            if output["Status"] == "Failed":
+                return output
+        return {"Status": "Timeout", "StandardOutputContent": "", "StandardErrorContent": "Command timed out"}
+    return _run_command
+
+
 def launch_spot_instance(ec2_client, config):
     response = ec2_client.run_instances(
         ImageId=config["ami_id"],

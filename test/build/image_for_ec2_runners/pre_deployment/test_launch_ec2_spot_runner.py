@@ -3,6 +3,13 @@ from botocore.exceptions import ClientError
 import pytest
 
 
+def _find_tag_value(tags, key):
+    for tag in tags:
+        if tag['Key'] == key:
+            return tag['Value']
+    return None
+
+
 @pytest.mark.usefixtures("mock_env_vars")
 class TestLaunchEc2SpotRunner:
 
@@ -184,9 +191,9 @@ class TestLaunchEc2SpotRunner:
 
             call_args = mock_ec2.run_instances.call_args
             tag_specs = call_args[1]['TagSpecifications'][0]['Tags']
-            tags_dict = {tag['Key']: tag['Value'] for tag in tag_specs}
+            name_tag_value = _find_tag_value(tag_specs, 'Name')
 
-            assert tags_dict['Name'] == 'github-runner-ec2-456'
+            assert name_tag_value == 'github-runner-ec2-456'
 
     def test_applies_github_job_id_tag(self, v1_handler):
         with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
@@ -212,6 +219,6 @@ class TestLaunchEc2SpotRunner:
 
             call_args = mock_ec2.run_instances.call_args
             tag_specs = call_args[1]['TagSpecifications'][0]['Tags']
-            tags_dict = {tag['Key']: tag['Value'] for tag in tag_specs}
+            job_id_tag_value = _find_tag_value(tag_specs, 'GitHubJobId')
 
-            assert tags_dict['GitHubJobId'] == '456'
+            assert job_id_tag_value == '456'

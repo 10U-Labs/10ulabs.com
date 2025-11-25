@@ -90,3 +90,8 @@ def promote_ami():
 @pytest.fixture
 def mock_ec2_client():
     return MagicMock()
+
+
+@pytest.fixture
+def find_suitable_subnet():
+    return load_module_from_path("find_suitable_subnet", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "find_suitable_subnet.py")

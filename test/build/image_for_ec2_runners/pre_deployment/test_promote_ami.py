@@ -1,5 +1,36 @@
+import inspect
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
+
+
+class TestPromoteAmiFunction:
+
+    def test_function_exists(self, promote_ami):
+        assert hasattr(promote_ami, "promote_ami")
+
+    def test_signature_has_ami_id(self, promote_ami):
+        sig = inspect.signature(promote_ami.promote_ami)
+        params = list(sig.parameters.keys())
+
+        assert "ami_id" in params
+
+    def test_signature_has_region(self, promote_ami):
+        sig = inspect.signature(promote_ami.promote_ami)
+        params = list(sig.parameters.keys())
+
+        assert "region" in params
+
+    def test_signature_has_ssm_parameter_name(self, promote_ami):
+        sig = inspect.signature(promote_ami.promote_ami)
+        params = list(sig.parameters.keys())
+
+        assert "ssm_parameter_name" in params
+
+    def test_signature_has_tag_key(self, promote_ami):
+        sig = inspect.signature(promote_ami.promote_ami)
+        params = list(sig.parameters.keys())
+
+        assert "tag_key" in params
 
 
 class TestPromoteAmi:

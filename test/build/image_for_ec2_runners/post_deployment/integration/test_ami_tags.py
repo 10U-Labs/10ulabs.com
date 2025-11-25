@@ -1,80 +1,63 @@
 import pytest
 
 
-def test_ami_has_purpose_tag(ami_details):
-    if not ami_details:
+def test_ami_has_purpose_tag(ami_tags_dict):
+    if not ami_tags_dict:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-
-    assert "Purpose" in tags
+    assert "Purpose" in ami_tags_dict
 
 
-def test_ami_purpose_tag_value(ami_details):
-    if not ami_details:
+def test_ami_purpose_tag_value(ami_purpose_tag):
+    if ami_purpose_tag is None:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-    purpose = tags.get("Purpose", "")
-
-    assert "GitHub" in purpose or "Github" in purpose or "github" in purpose
+    assert "GitHub" in ami_purpose_tag or "Github" in ami_purpose_tag or "github" in ami_purpose_tag
 
 
-def test_ami_has_runner_version_tag(ami_details):
-    if not ami_details:
+def test_ami_has_runner_version_tag(ami_tags_dict):
+    if not ami_tags_dict:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-
-    assert "RunnerVersion" in tags
+    assert "RunnerVersion" in ami_tags_dict
 
 
-def test_ami_runner_version_matches_expected(ami_details, config):
-    if not ami_details:
+def test_ami_runner_version_matches_expected(ami_runner_version_tag, config):
+    if ami_runner_version_tag is None:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     expected_version = config["runner_version"]
-    runner_version = tags.get("RunnerVersion", "")
 
-    assert runner_version == expected_version
+    assert ami_runner_version_tag == expected_version
 
 
-def test_ami_has_os_family_tag(ami_details):
-    if not ami_details:
+def test_ami_has_os_family_tag(ami_tags_dict):
+    if not ami_tags_dict:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-
-    assert "OSFamily" in tags
+    assert "OSFamily" in ami_tags_dict
 
 
-def test_ami_os_family_matches_expected(ami_details, config):
-    if not ami_details:
+def test_ami_os_family_matches_expected(ami_os_family_tag, config):
+    if ami_os_family_tag is None:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     expected_os_family = config["os_family"].title()
-    os_family = tags.get("OSFamily", "")
 
-    assert os_family == expected_os_family
+    assert ami_os_family_tag == expected_os_family
 
 
-def test_ami_has_os_version_tag(ami_details):
-    if not ami_details:
+def test_ami_has_os_version_tag(ami_tags_dict):
+    if not ami_tags_dict:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
-
-    assert "OSVersion" in tags
+    assert "OSVersion" in ami_tags_dict
 
 
-def test_ami_os_version_matches_expected(ami_details, config):
-    if not ami_details:
+def test_ami_os_version_matches_expected(ami_os_version_tag, config):
+    if ami_os_version_tag is None:
         pytest.fail("AMI details not available")
 
-    tags = {tag["Key"]: tag["Value"] for tag in ami_details.get("Tags", [])}
     expected_os_version = config["os_version"]
-    os_version = tags.get("OSVersion", "")
 
-    assert os_version == expected_os_version
+    assert ami_os_version_tag == expected_os_version

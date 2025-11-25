@@ -1,5 +1,11 @@
-import inspect
 import pytest
+
+
+def _find_tag_value(tags, key):
+    for tag in tags:
+        if tag["Key"] == key:
+            return tag["Value"]
+    return None
 
 
 def test_promote_ami_can_tag_ami(ec2_client, test_ami_id):
@@ -15,9 +21,10 @@ def test_promote_ami_can_tag_ami(ec2_client, test_ami_id):
     )
 
     response = ec2_client.describe_images(ImageIds=[test_ami_id])
-    tags = {tag["Key"]: tag["Value"] for tag in response["Images"][0].get("Tags", [])}
+    tags = response["Images"][0].get("Tags", [])
+    actual_value = _find_tag_value(tags, test_tag_key)
 
-    assert tags.get(test_tag_key) == test_tag_value
+    assert actual_value == test_tag_value
 
 
 def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
@@ -45,35 +52,3 @@ def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
     assert parameter_value == test_ami_id
 
     ssm_client.delete_parameter(Name=test_parameter_name)
-
-
-def test_promote_ami_function_exists(promote_ami):
-    assert hasattr(promote_ami, "promote_ami")
-
-
-def test_promote_ami_function_signature(promote_ami):
-    sig = inspect.signature(promote_ami.promote_ami)
-    params = list(sig.parameters.keys())
-
-    assert "ami_id" in params
-
-
-def test_promote_ami_function_signature_has_region(promote_ami):
-    sig = inspect.signature(promote_ami.promote_ami)
-    params = list(sig.parameters.keys())
-
-    assert "region" in params
-
-
-def test_promote_ami_function_signature_has_ssm_parameter_name(promote_ami):
-    sig = inspect.signature(promote_ami.promote_ami)
-    params = list(sig.parameters.keys())
-
-    assert "ssm_parameter_name" in params
-
-
-def test_promote_ami_function_signature_has_tag_key(promote_ami):
-    sig = inspect.signature(promote_ami.promote_ami)
-    params = list(sig.parameters.keys())
-
-    assert "tag_key" in params
