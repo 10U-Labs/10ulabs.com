@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 from unittest.mock import MagicMock
 import pytest
+import yaml
 
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['AWS_REGION'] = 'us-east-1'
@@ -19,9 +20,29 @@ def load_module_from_path(module_name, module_path):
     return module
 
 
+def get_shared_outputs():
+    outputs_path = PROJECT_ROOT / "src" / "modules" / "shared" / "outputs.tf"
+    config = {}
+    with open(outputs_path, encoding="utf-8") as f:
+        content = f.read()
+    for match in re.finditer(r'output\s+"(\w+)"\s*\{[^}]*value\s*=\s*"([^"]*)"', content):
+        config[match.group(1)] = match.group(2)
+    return config
+
+
+def get_runner_config():
+    config_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "config.yml"
+    with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
 def get_tfvars():
     tfvars_path = PROJECT_ROOT / "src" / "api" / "terraform.tfvars"
-    config = {}
+    config = get_shared_outputs()
+    runner_config = get_runner_config()
+    config["os_family"] = runner_config.get("os_family", "")
+    config["os_version"] = str(runner_config.get("os_version", ""))
+    config["runner_version"] = runner_config.get("runner_version", "")
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -35,6 +56,8 @@ def get_tfvars():
                     elif value.startswith('"') and value.endswith('"'):
                         value = value[1:-1]
                     config[key] = value
+    if "fargate_cpu_architecture" in config:
+        config["os_architecture"] = config["fargate_cpu_architecture"].lower()
     return config
 
 
