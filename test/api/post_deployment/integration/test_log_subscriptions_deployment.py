@@ -122,3 +122,19 @@ def test_ecs_runner_subscription_destinations_firehose(logs_client):
     response = logs_client.describe_subscription_filters(logGroupName=log_group_name)
     destination_arn = response['subscriptionFilters'][0]['destinationArn']
     assert 'firehose' in destination_arn
+
+
+def test_waf_subscription_filter_exists():
+    logs_client_east = __import__('boto3').client('logs', region_name='us-east-1')
+    log_group_name = 'aws-waf-logs-api'
+    response = logs_client_east.describe_subscription_filters(logGroupName=log_group_name)
+    filter_names = [f['filterName'] for f in response['subscriptionFilters']]
+    assert 'waf-to-firehose' in filter_names
+
+
+def test_waf_subscription_destinations_firehose():
+    logs_client_east = __import__('boto3').client('logs', region_name='us-east-1')
+    log_group_name = 'aws-waf-logs-api'
+    response = logs_client_east.describe_subscription_filters(logGroupName=log_group_name)
+    destination_arn = response['subscriptionFilters'][0]['destinationArn']
+    assert 'firehose' in destination_arn

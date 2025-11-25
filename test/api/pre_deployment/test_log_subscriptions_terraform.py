@@ -151,3 +151,42 @@ def test_subscriptions_use_empty_filter_pattern():
     with open(log_subscriptions_file, encoding="utf-8") as f:
         content = f.read()
     assert 'filter_pattern  = ""' in content
+
+
+def test_waf_subscription_filter_exists():
+    log_subscriptions_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    with open(log_subscriptions_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_cloudwatch_log_subscription_filter" "waf"' in content
+
+
+def test_waf_subscription_has_name():
+    log_subscriptions_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    with open(log_subscriptions_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'name            = "waf-to-firehose"' in content
+
+
+def test_waf_subscription_uses_waf_log_group():
+    log_subscriptions_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    with open(log_subscriptions_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'aws_cloudwatch_log_group.waf.name' in content
+
+
+def test_waf_subscription_uses_firehose_destination():
+    log_subscriptions_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    with open(log_subscriptions_file, encoding="utf-8") as f:
+        content = f.read()
+    waf_section_start = content.find('resource "aws_cloudwatch_log_subscription_filter" "waf"')
+    waf_section = content[waf_section_start:waf_section_start + 500]
+    assert 'aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn' in waf_section
+
+
+def test_waf_subscription_uses_cloudwatch_logs_firehose_role():
+    log_subscriptions_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    with open(log_subscriptions_file, encoding="utf-8") as f:
+        content = f.read()
+    waf_section_start = content.find('resource "aws_cloudwatch_log_subscription_filter" "waf"')
+    waf_section = content[waf_section_start:waf_section_start + 500]
+    assert 'aws_iam_role.cloudwatch_logs_firehose.arn' in waf_section

@@ -43,3 +43,61 @@ def test_s3_cloudwatch_logs_prefix_can_be_listed():
         MaxKeys=1
     )
     assert 'Contents' in response or 'KeyCount' in response
+
+
+def test_s3_cloudfront_logs_prefix_can_be_listed():
+    s3 = boto3.client('s3', region_name='us-east-1')
+    response = s3.list_objects_v2(
+        Bucket='10ulabs-central-logs',
+        Prefix='cloudfront-logs/api/',
+        MaxKeys=1
+    )
+    assert 'Contents' in response or 'KeyCount' in response
+
+
+def test_waf_metrics_are_being_collected():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    end_time = datetime.now(UTC)
+    start_time = end_time - timedelta(hours=24)
+    response = cloudwatch.get_metric_statistics(
+        Namespace='AWS/WAFV2',
+        MetricName='AllowedRequests',
+        Dimensions=[
+            {'Name': 'WebACL', 'Value': 'ApiWafWebAcl'},
+            {'Name': 'Region', 'Value': 'us-east-1'},
+            {'Name': 'Rule', 'Value': 'ALL'}
+        ],
+        StartTime=start_time,
+        EndTime=end_time,
+        Period=3600,
+        Statistics=['Sum']
+    )
+    assert 'Datapoints' in response
+
+
+def test_cloudfront_requests_metric_available():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    end_time = datetime.now(UTC)
+    start_time = end_time - timedelta(hours=24)
+    response = cloudwatch.get_metric_statistics(
+        Namespace='AWS/CloudFront',
+        MetricName='Requests',
+        Dimensions=[{'Name': 'DistributionId', 'Value': 'ALL'}],
+        StartTime=start_time,
+        EndTime=end_time,
+        Period=3600,
+        Statistics=['Sum']
+    )
+    assert 'Datapoints' in response
+
+
+def test_dynamodb_streams_consumed_records_metric():
+    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    end_time = datetime.now(UTC)
+    start_time = end_time - timedelta(hours=24)
+    response = cloudwatch.list_metrics(
+        Namespace='AWS/DynamoDB',
+        MetricName='ConsumedReadCapacityUnits',
+        Dimensions=[{'Name': 'TableName', 'Value': 'TenULabs-circuit-breaker-state'}]
+    )
+    assert 'Metrics' in response

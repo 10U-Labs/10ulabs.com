@@ -80,9 +80,11 @@ resource "aws_dynamodb_table" "incidents" {
 }
 
 resource "aws_dynamodb_table" "circuit_breaker_state" {
-  name         = "${module.shared.resource_prefix}-circuit-breaker-state"
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "state_id"
+  name             = "${module.shared.resource_prefix}-circuit-breaker-state"
+  billing_mode     = "PAY_PER_REQUEST"
+  hash_key         = "state_id"
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
 
   attribute {
     name = "state_id"

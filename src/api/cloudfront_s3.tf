@@ -170,6 +170,12 @@ resource "aws_cloudfront_distribution" "main" {
   aliases             = [local.domain_subdomain]
   web_acl_id          = aws_wafv2_web_acl.api.arn
 
+  logging_config {
+    include_cookies = false
+    bucket          = "${module.shared.name_for_central_logs_bucket}.s3.amazonaws.com"
+    prefix          = "cloudfront-logs/api/"
+  }
+
   origin {
     domain_name         = "${aws_api_gateway_rest_api.main.id}.execute-api.${module.shared.aws_region}.amazonaws.com"
     origin_id           = "api-gateway"
@@ -296,4 +302,22 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
 
 data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
   name = "Managed-CORS-S3Origin"
+}
+
+resource "aws_cloudwatch_log_group" "waf" {
+  provider = aws.us-east-1
+
+  name              = "aws-waf-logs-api"
+  retention_in_days = 30
+
+  tags = {
+    Name = "aws-waf-logs-api"
+  }
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "api" {
+  provider = aws.us-east-1
+
+  log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
+  resource_arn            = aws_wafv2_web_acl.api.arn
 }
