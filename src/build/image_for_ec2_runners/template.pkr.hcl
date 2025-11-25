@@ -198,6 +198,19 @@ build {
     ]
   }
 
+  # Install AWS CLI
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "set -e",
+      "cd /tmp",
+      "curl -fsSL \"https://awscli.amazonaws.com/awscli-exe-linux-${var.os_architecture == "arm64" ? "aarch64" : "x86_64"}.zip\" -o awscliv2.zip",
+      "unzip -q awscliv2.zip",
+      "sudo ./aws/install",
+      "rm -rf aws awscliv2.zip"
+    ]
+  }
+
   # Install Docker
   provisioner "shell" {
     inline_shebang = "/bin/bash -e"

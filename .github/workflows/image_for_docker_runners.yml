@@ -39,14 +39,13 @@ jobs:
           cd src/build/image_for_docker_runners
           BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
           ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
-          docker build \
+          docker buildx build \
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
             --build-arg RUNNER_ARCH=${{ steps.config.outputs.architecture }} \
             -t $ECR_URL:available \
             -t $ECR_URL:$BUILD_TAG \
+            --push \
             .
-          docker push $ECR_URL:available
-          docker push $ECR_URL:$BUILD_TAG
           echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
   declaring-common-variables:
     if: |
