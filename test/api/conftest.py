@@ -60,6 +60,17 @@ def config_fixture() -> Dict[str, str]:
     result['github_org'] = shared.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
+    prefix = result['resource_prefix']
+    lambda_fn = result.get('lambda_function_name', '')
+    result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
+    result['firehose_delivery_stream_name'] = f"{prefix}-CloudWatchLogs"
+    result['firehose_role_name'] = f"{prefix}-FirehoseCloudWatchLogs"
+    result['cloudwatch_logs_firehose_role_name'] = f"{prefix}-CloudWatchLogsFirehose"
+    result['lambda_runners_role_name'] = f"{lambda_fn}-ServiceRole"
+    result['webhook_handler_service_role_name'] = f"{lambda_fn}-ServiceRole"
+    result['circuit_breaker_remediation_log_group_name'] = f"/aws/lambda/{prefix}-CircuitBreakerRemediation"
+    result['dlq_reprocessor_log_group_name'] = f"/aws/lambda/{prefix}-DLQReprocessor"
+    result['circuit_breaker_recovery_log_group_name'] = f"/aws/lambda/{prefix}-CircuitBreakerRecovery"
     return result
 
 
