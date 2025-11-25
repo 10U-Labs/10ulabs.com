@@ -1,24 +1,24 @@
-def test_sqs_job_queue_exists(sqs_client, tfvars):
-    queue_name = tfvars["job_queue_name"]
+def test_sqs_job_queue_exists(sqs_client, config):
+    queue_name = config["job_queue_name"]
     response = sqs_client.get_queue_url(QueueName=queue_name)
     assert 'QueueUrl' in response
 
 
-def test_sqs_webhook_dlq_exists(sqs_client, tfvars):
-    queue_name = tfvars["webhook_dlq_name"]
+def test_sqs_webhook_dlq_exists(sqs_client, config):
+    queue_name = config["webhook_dlq_name"]
     response = sqs_client.get_queue_url(QueueName=queue_name)
     assert 'QueueUrl' in response
 
 
-def test_sqs_dlq_redrive_policy(sqs_client, tfvars):
-    queue_name = tfvars["job_queue_name"]
+def test_sqs_dlq_redrive_policy(sqs_client, config):
+    queue_name = config["job_queue_name"]
     queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
     attributes = sqs_client.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['RedrivePolicy'])
     assert "RedrivePolicy" in attributes["Attributes"]
 
 
-def test_sqs_visibility_timeout_matches_lambda(sqs_client, tfvars):
-    queue_name = tfvars["job_queue_name"]
+def test_sqs_visibility_timeout_matches_lambda(sqs_client, config):
+    queue_name = config["job_queue_name"]
     queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
     attributes = sqs_client.get_queue_attributes(QueueUrl=queue_url, AttributeNames=['VisibilityTimeout'])
     visibility_timeout = int(attributes["Attributes"]["VisibilityTimeout"])
@@ -50,16 +50,16 @@ def test_sqs_job_dlq_exists(sqs_client):
         assert len(dlq_queues) >= 0
 
 
-def test_sqs_dlq_receives_failed_messages(sqs_client, tfvars):
-    queue_name = tfvars["webhook_dlq_name"]
+def test_sqs_dlq_receives_failed_messages(sqs_client, config):
+    queue_name = config["webhook_dlq_name"]
     dlq_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
     attributes = sqs_client.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
     assert 'ApproximateNumberOfMessages' in attributes['Attributes']
 
 
-def test_sqs_job_dlq_exists_and_configured(sqs_client, tfvars):
+def test_sqs_job_dlq_exists_and_configured(sqs_client, config):
     try:
-        queue_name = tfvars["job_queue_dlq_name"]
+        queue_name = config["job_queue_dlq_name"]
         dlq_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
         attributes = sqs_client.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['MessageRetentionPeriod'])
         assert int(attributes['Attributes']['MessageRetentionPeriod']) > 0

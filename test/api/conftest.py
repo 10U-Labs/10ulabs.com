@@ -40,10 +40,10 @@ def parse_api_locals() -> Dict[str, str]:
     return config
 
 
-@pytest.fixture(name="tfvars", scope="module")
-def tfvars_fixture() -> Dict[str, str]:
+@pytest.fixture(name="config", scope="module")
+def config_fixture() -> Dict[str, str]:
     tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    config = {}
+    result = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -51,13 +51,14 @@ def tfvars_fixture() -> Dict[str, str]:
                 match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
                 if match:
                     key, value = match.groups()
-                    config[key] = value.strip('"')
+                    result[key] = value.strip('"')
     api_locals = parse_api_locals()
-    config['aws_region'] = api_locals.get('aws_region', '')
-    config['aws_account_id'] = api_locals.get('aws_account_id', '')
-    config['domain_subdomain'] = api_locals.get('domain_subdomain', '')
-    config['github_repo'] = api_locals.get('github_repo_full', '')
-    return config
+    result['aws_region'] = api_locals.get('aws_region', '')
+    result['aws_account_id'] = api_locals.get('aws_account_id', '')
+    result['domain_subdomain'] = api_locals.get('domain_subdomain', '')
+    result['github_repo'] = api_locals.get('github_repo_full', '')
+    result['resource_prefix'] = api_locals.get('resource_prefix', '')
+    return result
 
 
 @pytest.fixture(name="cfg")

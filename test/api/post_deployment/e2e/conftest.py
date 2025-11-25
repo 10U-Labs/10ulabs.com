@@ -44,5 +44,5 @@ def run_concurrent_requests(request_func, num_requests, max_workers=None):
 
 
 @pytest.fixture(name="github_repo", scope="module")
-def github_repo_fixture(tfvars):
-    return tfvars["github_repo"]
+def github_repo_fixture(config):
+    return config["github_repo"]

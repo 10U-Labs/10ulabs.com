@@ -16,8 +16,8 @@ def test_circuit_breaker_state_table_has_stream_arn(dynamodb_client):
     assert stream_arn is not None
 
 
-def test_idempotency_table_does_not_have_stream_enabled(dynamodb_client, tfvars):
-    table_name = tfvars['idempotency_table_name']
+def test_idempotency_table_does_not_have_stream_enabled(dynamodb_client, config):
+    table_name = config['idempotency_table_name']
     response = dynamodb_client.describe_table(TableName=table_name)
     stream_spec = response['Table'].get('StreamSpecification', {})
     assert stream_spec.get('StreamEnabled', False) is False

@@ -4,8 +4,8 @@ import requests
 
 
 @pytest.fixture(name="aws_region", scope="module")
-def aws_region_fixture(tfvars):
-    return tfvars["aws_region"]
+def aws_region_fixture(config):
+    return config["aws_region"]
 
 
 @pytest.fixture(name="ssm_client", scope="module")
@@ -24,8 +24,8 @@ def ecs_client_fixture(aws_region):
 
 
 @pytest.fixture(name="api_url", scope="module")
-def api_url_fixture(tfvars):
-    return f"https://{tfvars['domain_subdomain']}"
+def api_url_fixture(config):
+    return f"https://{config['domain_subdomain']}"
 
 
 @pytest.fixture(name="api_key", scope="module")

@@ -88,19 +88,19 @@ def health_handler() -> ModuleType:
 
 
 @pytest.fixture
-def v1_handler(tfvars: Dict[str, str]) -> Any:
+def v1_handler(config: Dict[str, str]) -> Any:
     env_vars = {
-        'AWS_REGION': tfvars['aws_region'],
-        'ECR_REPOSITORY': tfvars['ecr_repository_name'],
-        'GITHUB_REPO': tfvars['github_repo'],
+        'AWS_REGION': config['aws_region'],
+        'ECR_REPOSITORY': config['ecr_repository_name'],
+        'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': '/github/pat',
-        'ECS_CLUSTER': tfvars['cluster_name'],
-        'CONTAINER_NAME': tfvars['container_name'],
-        'TASK_DEFINITION': tfvars['task_family'],
-        'EC2_INSTANCE_TYPES': ','.join(tfvars['ec2_spot_instance_types']),
-        'EC2_MAX_PRICE': tfvars['ec2_max_spot_price'],
-        'API_DOMAIN': tfvars['domain_subdomain'],
-        'IMAGE_API_ENDPOINT': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}",
+        'ECS_CLUSTER': config['cluster_name'],
+        'CONTAINER_NAME': config['container_name'],
+        'TASK_DEFINITION': config['task_family'],
+        'EC2_INSTANCE_TYPES': ','.join(config['ec2_spot_instance_types']),
+        'EC2_MAX_PRICE': config['ec2_max_spot_price'],
+        'API_DOMAIN': config['domain_subdomain'],
+        'IMAGE_API_ENDPOINT': f"https://{config['domain_subdomain']}/{config['api_version']}",
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
@@ -121,11 +121,11 @@ def catchall_handler():
 
 
 @pytest.fixture
-def webhook_router(tfvars):
+def webhook_router(config):
     env_vars = {
-        'API_KEY_PARAMETER_NAME': tfvars['ssm_parameter_name_for_api_key'],
-        'WEBHOOK_SECRET_NAME': tfvars['ssm_parameter_name_for_webhook_secret'],
-        'API_BASE_URL': f"https://{tfvars['domain_subdomain']}/{tfvars['api_version']}"
+        'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
+        'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
+        'API_BASE_URL': f"https://{config['domain_subdomain']}/{config['api_version']}"
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("webhook_router.py", "webhook_router")
@@ -141,9 +141,9 @@ def webhook_router(tfvars):
 
 
 @pytest.fixture
-def circuit_breaker_remediation(tfvars):
+def circuit_breaker_remediation(config):
     env_vars = {
-        'AWS_REGION': tfvars['aws_region']
+        'AWS_REGION': config['aws_region']
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("circuit_breaker_remediation.py", "circuit_breaker_remediation")
@@ -151,9 +151,9 @@ def circuit_breaker_remediation(tfvars):
 
 
 @pytest.fixture
-def dlq_reprocessor(tfvars):
+def dlq_reprocessor(config):
     env_vars = {
-        'AWS_REGION': tfvars['aws_region']
+        'AWS_REGION': config['aws_region']
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("dlq_reprocessor.py", "dlq_reprocessor")
@@ -161,9 +161,9 @@ def dlq_reprocessor(tfvars):
 
 
 @pytest.fixture
-def circuit_breaker_recovery(tfvars):
+def circuit_breaker_recovery(config):
     env_vars = {
-        'AWS_REGION': tfvars['aws_region']
+        'AWS_REGION': config['aws_region']
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("circuit_breaker_recovery.py", "circuit_breaker_recovery")

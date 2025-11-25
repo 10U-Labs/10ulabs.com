@@ -1,15 +1,15 @@
 from test.api.post_deployment.integration.conftest import get_api_gateway_id_by_name
 
 
-def test_api_gateway_stage_configuration(apigateway_client, tfvars):
-    api_name = tfvars["api_gateway_name"]
+def test_api_gateway_stage_configuration(apigateway_client, config):
+    api_name = config["api_gateway_name"]
     api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
     stages = apigateway_client.get_stages(restApiId=api_id)
     assert len(stages['item']) > 0
 
 
-def test_api_gateway_deployment_triggers_correctly(apigateway_client, tfvars):
-    api_name = tfvars["api_gateway_name"]
+def test_api_gateway_deployment_triggers_correctly(apigateway_client, config):
+    api_name = config["api_gateway_name"]
     api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
     deployments = apigateway_client.get_deployments(restApiId=api_id)
     assert len(deployments['items']) > 0
@@ -31,8 +31,8 @@ def test_api_gateway_api_key_is_enabled(apigateway_client):
     assert len(api_keys['items']) > 0
 
 
-def test_api_gateway_cloudwatch_logging_enabled(apigateway_client, tfvars):
-    api_name = tfvars["api_gateway_name"]
+def test_api_gateway_cloudwatch_logging_enabled(apigateway_client, config):
+    api_name = config["api_gateway_name"]
     api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
     stages = apigateway_client.get_stages(restApiId=api_id)
     assert len(stages['item']) > 0
