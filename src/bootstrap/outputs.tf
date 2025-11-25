@@ -30,6 +30,6 @@ output "name_for_cloudtrail" {
   value = module.cloudtrail.trail_name
 }
 
-output "name_for_github_pat_parameter" {
+output "ssm_parameter_name_for_github_pat" {
   value = aws_ssm_parameter.github_pat.name
 }

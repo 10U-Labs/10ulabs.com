@@ -158,7 +158,7 @@ resource "aws_lambda_function" "v1_handler" {
       EC2_INSTANCE_TYPES       = join(",", var.ec2_spot_instance_types)
       EC2_IAM_INSTANCE_PROFILE = aws_iam_instance_profile.ec2_runner.name
       EC2_MAX_PRICE            = var.ec2_max_spot_price
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.name_for_github_pat_parameter
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
       GITHUB_REPO              = local.github_repo_full
       ECR_REPOSITORY           = aws_ecr_repository.runner.name
       IMAGE_API_ENDPOINT       = "https://${local.domain_subdomain}"
