@@ -1,53 +1,3 @@
-resource "aws_s3_bucket" "access_logs" {
-  bucket = var.cloudtrail_access_logs_bucket_name
-}
-
-resource "aws_s3_bucket_versioning" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-  versioning_configuration {
-    status = "Disabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  rule {
-    id     = "archive-old-logs"
-    status = "Enabled"
-
-    filter {}
-
-    transition {
-      days          = 90
-      storage_class = "GLACIER"
-    }
-
-    expiration {
-      days = 1825
-    }
-  }
-}
-
 resource "aws_s3_bucket" "cloudtrail" {
   bucket = var.cloudtrail_bucket_name
 }
@@ -81,8 +31,8 @@ resource "aws_s3_bucket_public_access_block" "cloudtrail" {
 resource "aws_s3_bucket_logging" "cloudtrail" {
   bucket = aws_s3_bucket.cloudtrail.id
 
-  target_bucket = aws_s3_bucket.access_logs.id
-  target_prefix = "cloudtrail-bucket-access-logs/"
+  target_bucket = var.central_logs_bucket_name
+  target_prefix = "s3-access/cloudtrail/"
 }
 
 resource "aws_s3_bucket_policy" "cloudtrail" {

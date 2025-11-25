@@ -1,11 +1,11 @@
 provider "aws" {
-  region = var.aws_region
+  region = module.config.aws_region
 
   default_tags {
     tags = {
       ManagedBy  = "Terraform"
       Project    = "10UF"
-      Repository = "10U-Labs-LLC/10ulabs.com"
+      Repository = local.github_repo_full
       Stack      = "api"
     }
   }
@@ -19,7 +19,7 @@ provider "aws" {
     tags = {
       ManagedBy  = "Terraform"
       Project    = "10UF"
-      Repository = "10U-Labs-LLC/10ulabs.com"
+      Repository = local.github_repo_full
       Stack      = "api"
     }
   }
@@ -27,5 +27,5 @@ provider "aws" {
 
 provider "github" {
   token = data.aws_ssm_parameter.github_pat.value
-  owner = "10U-Labs-LLC"
+  owner = module.config.github_org
 }

@@ -1,9 +1,9 @@
 locals {
   openapi_spec = templatefile("${path.module}/files/openapi.yml", {
-    HealthHandlerArn   = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.health_handler.arn}/invocations"
-    V1HandlerArn       = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.v1_handler.arn}/invocations"
-    CatchAllHandlerArn = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
-    RunnersHandlerArn  = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
+    HealthHandlerArn   = "arn:aws:apigateway:${module.config.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.health_handler.arn}/invocations"
+    V1HandlerArn       = "arn:aws:apigateway:${module.config.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.v1_handler.arn}/invocations"
+    CatchAllHandlerArn = "arn:aws:apigateway:${module.config.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
+    RunnersHandlerArn  = "arn:aws:apigateway:${module.config.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }
@@ -18,8 +18,7 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
 }
 
 resource "aws_api_gateway_rest_api" "main" {
-  name        = var.api_gateway_name
-  description = "API Gateway for api.10ulabs.com"
+  name = var.api_gateway_name
 
   body = local.openapi_spec
 
@@ -55,7 +54,7 @@ resource "aws_api_gateway_stage" "prod" {
 
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api_gateway.arn
-    format          = "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] \"$context.httpMethod $context.resourcePath $context.protocol\" $context.status $context.responseLength $context.requestId"
+    format          = "$context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] \"$context.httpMethod $context.resourcePath $context.protocol\" $context.status $context.responseLength $context.requestId $context.integrationErrorMessage"
   }
 
   xray_tracing_enabled = true
@@ -63,6 +62,50 @@ resource "aws_api_gateway_stage" "prod" {
   tags = {
     Name = "prod"
   }
+
+  depends_on = [aws_api_gateway_account.main]
+}
+
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  stage_name  = aws_api_gateway_stage.prod.stage_name
+  method_path = "*/*"
+
+  settings {
+    logging_level      = "INFO"
+    data_trace_enabled = true
+    metrics_enabled    = true
+  }
+}
+
+resource "aws_api_gateway_account" "main" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+}
+
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  name = "${var.stack_name}-api-gateway-cloudwatch"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name = "${var.stack_name}-api-gateway-cloudwatch"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
+  role       = aws_iam_role.api_gateway_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
 resource "aws_lambda_permission" "health_handler" {

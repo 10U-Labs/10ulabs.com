@@ -4,10 +4,10 @@ resource "random_password" "webhook_secret" {
 }
 
 resource "github_repository_webhook" "workflow_job" {
-  repository = "10ulabs.com"
+  repository = module.config.github_repo_name
 
   configuration {
-    url          = "https://${var.domain_subdomain}/v1/runners"
+    url          = "https://${local.domain_subdomain}/v1/runners"
     content_type = "json"
     secret       = random_password.webhook_secret.result
     insecure_ssl = false

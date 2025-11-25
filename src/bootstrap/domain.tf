@@ -1,7 +1,7 @@
 module "domain" {
   source = "./modules/domain"
 
-  domain_name    = var.domain_name
+  domain_name    = module.config.domain_name
   hosted_zone_id = var.hosted_zone_id
 
   depends_on = [module.cloudtrail]

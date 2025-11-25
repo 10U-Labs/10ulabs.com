@@ -1,11 +1,11 @@
 data "aws_route53_zone" "parent" {
-  name = var.domain_parent
+  name = module.config.domain_name
 }
 
 resource "aws_acm_certificate" "api" {
   provider = aws.us-east-1
 
-  domain_name       = var.domain_subdomain
+  domain_name       = local.domain_subdomain
   validation_method = "DNS"
 
   lifecycle {
@@ -13,7 +13,7 @@ resource "aws_acm_certificate" "api" {
   }
 
   tags = {
-    Name = var.domain_subdomain
+    Name = local.domain_subdomain
   }
 }
 
@@ -43,7 +43,7 @@ resource "aws_acm_certificate_validation" "api" {
 
 resource "aws_route53_record" "api" {
   zone_id = data.aws_route53_zone.parent.zone_id
-  name    = var.domain_subdomain
+  name    = local.domain_subdomain
   type    = "A"
 
   alias {

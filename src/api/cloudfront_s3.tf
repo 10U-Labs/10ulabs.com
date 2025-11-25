@@ -1,9 +1,9 @@
 resource "aws_s3_bucket" "docs" {
-  bucket        = var.domain_subdomain
+  bucket        = local.domain_subdomain
   force_destroy = true
 
   tags = {
-    Name = "${var.domain_subdomain}-docs"
+    Name = "${local.domain_subdomain}-docs"
   }
 }
 
@@ -34,6 +34,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "docs" {
   }
 }
 
+resource "aws_s3_bucket_logging" "docs" {
+  bucket = aws_s3_bucket.docs.id
+
+  target_bucket = module.config.central_logs_bucket_name
+  target_prefix = "s3-access/api-docs/"
+}
+
 resource "aws_s3_object" "index_html" {
   bucket       = aws_s3_bucket.docs.id
   key          = "index.html"
@@ -59,8 +66,7 @@ resource "aws_s3_object" "openapi_yml" {
 }
 
 resource "aws_cloudfront_origin_access_control" "s3" {
-  name                              = "${var.domain_subdomain}-oac"
-  description                       = "OAC for S3 docs bucket"
+  name                              = "${local.domain_subdomain}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -145,7 +151,6 @@ resource "aws_cloudfront_cache_policy" "docs" {
 resource "aws_cloudfront_function" "url_rewrite" {
   name    = "RootUrlRewriteFunction"
   runtime = "cloudfront-js-2.0"
-  comment = "Rewrites / to /index.html for S3 origin"
   publish = true
   code    = <<-EOT
 function handler(event) {
@@ -161,13 +166,12 @@ EOT
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "API Gateway + S3 docs distribution v2"
   default_root_object = ""
-  aliases             = [var.domain_subdomain]
+  aliases             = [local.domain_subdomain]
   web_acl_id          = aws_wafv2_web_acl.api.arn
 
   origin {
-    domain_name         = "${aws_api_gateway_rest_api.main.id}.execute-api.${var.aws_region}.amazonaws.com"
+    domain_name         = "${aws_api_gateway_rest_api.main.id}.execute-api.${module.config.aws_region}.amazonaws.com"
     origin_id           = "api-gateway"
     origin_path         = "/prod"
     connection_attempts = 3
@@ -276,7 +280,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   tags = {
-    Name = "${var.domain_subdomain}-distribution"
+    Name = "${local.domain_subdomain}-distribution"
   }
 
   depends_on = [aws_acm_certificate_validation.api]

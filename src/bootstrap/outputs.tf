@@ -33,3 +33,15 @@ output "github_pat_parameter_arn" {
 output "github_pat_parameter_name" {
   value = aws_ssm_parameter.github_pat.name
 }
+
+output "central_logs_bucket_name" {
+  value = module.central_logs.bucket_name
+}
+
+output "central_logs_bucket_arn" {
+  value = module.central_logs.bucket_arn
+}
+
+output "central_logs_write_policy_arn" {
+  value = module.central_logs.write_policy_arn
+}
