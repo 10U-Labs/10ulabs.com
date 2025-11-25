@@ -3,13 +3,18 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   declaring-common-variables:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
     name: Declaring common variables
     outputs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,7 +34,7 @@ jobs:
     needs:
       - declaring-common-variables
       - integration-testing
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,11 +43,13 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install pytest boto3 dnspython
       - name: Run E2E tests
         run: pytest test/bootstrap/test_e2e.py -v
@@ -54,7 +61,7 @@ jobs:
     needs:
       - declaring-common-variables
       - unit-testing
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,7 +86,7 @@ jobs:
     needs:
       - ensuring-infrastructure-in-desired-state
       - declaring-common-variables
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,23 +95,25 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run integration tests
         run: pytest test/bootstrap/test_integration.py -v
   performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -121,7 +130,8 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - name: Install linting dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install linting dependencies
         run: pip install pylint mypy yamllint
       - name: Terraform Format Check
         run: cd src/bootstrap && terraform fmt -check -recursive
@@ -153,15 +163,17 @@ jobs:
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install Python dependencies
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run unit tests
         run: pytest test/bootstrap/test_unit.py -v
@@ -175,6 +187,16 @@ on:
       - 'src/bootstrap/**'
       - 'test/bootstrap/**'
   workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
 permissions:
   contents: read
   id-token: write
