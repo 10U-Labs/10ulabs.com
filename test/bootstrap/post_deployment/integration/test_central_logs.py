@@ -112,3 +112,31 @@ def test_central_logs_write_policy_exists(iam_client):
     response = iam_client.list_policies(Scope='Local')
     policy_names = [p['PolicyName'] for p in response['Policies']]
     assert policy_name in policy_names
+
+
+def test_central_logs_bucket_policy_has_firehose_statement(s3_client, config):
+    bucket_name = config['name_for_central_logs_bucket']
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    policy_doc = policy['Policy']
+    assert 'AllowFirehoseWrite' in policy_doc
+
+
+def test_central_logs_bucket_policy_firehose_allows_put_object(s3_client, config):
+    bucket_name = config['name_for_central_logs_bucket']
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    policy_doc = policy['Policy']
+    assert 's3:PutObject' in policy_doc
+
+
+def test_central_logs_bucket_policy_firehose_restricts_to_cloudwatch_logs_prefix(s3_client, config):
+    bucket_name = config['name_for_central_logs_bucket']
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    policy_doc = policy['Policy']
+    assert 'cloudwatch-logs/*' in policy_doc
+
+
+def test_central_logs_bucket_policy_firehose_requires_service_principal(s3_client, config):
+    bucket_name = config['name_for_central_logs_bucket']
+    policy = s3_client.get_bucket_policy(Bucket=bucket_name)
+    policy_doc = policy['Policy']
+    assert 'firehose.amazonaws.com' in policy_doc
