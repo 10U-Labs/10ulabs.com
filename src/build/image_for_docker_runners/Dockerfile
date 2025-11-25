@@ -49,14 +49,12 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o aw
     unzip -q tflint.zip && \
     unzip -q packer.zip && \
     mv terraform tflint packer /usr/local/bin/ && \
-    rm -rf awscliv2.zip aws terraform.zip tflint.zip packer.zip
-
-RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" | \
+    rm -rf awscliv2.zip aws terraform.zip tflint.zip packer.zip && \
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" | \
         tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g jsonlint && \
-    npm cache clean --force
-
-RUN pip3 install --no-cache-dir --break-system-packages \
+    npm cache clean --force && \
+    pip3 install --no-cache-dir --break-system-packages \
         boto3 \
         boto3-stubs \
         botocore \
