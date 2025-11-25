@@ -1134,7 +1134,7 @@ def test_launch_fargate_runner_ecs_failure_no_tasks(mock_boto_client, v1_handler
         mock_ecs = MagicMock()
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
-        mock_ecs.run_task.return_value = {'tasks': [], 'failures': ['Capacity unavailable']}
+        mock_ecs.run_task.return_value = {'tasks': [], 'failures': [{'reason': 'Resource limit exceeded'}]}
         def mock_client(service):
             if service == 'ecs':
                 return mock_ecs
@@ -1146,6 +1146,27 @@ def test_launch_fargate_runner_ecs_failure_no_tasks(mock_boto_client, v1_handler
             result = v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
             assert result['success'] is False
 
+
+@patch('boto3.client')
+def test_launch_fargate_runner_retries_on_capacity_error(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1,subnet-2,subnet-3', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        capacity_failure = {'tasks': [], 'failures': [{'reason': 'Capacity is unavailable at this time'}]}
+        success_response = {'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id'}], 'failures': []}
+        mock_ecs.run_task.side_effect = [capacity_failure, capacity_failure, success_response]
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            result = v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            assert result['success'] is True
+            assert mock_ecs.run_task.call_count == 3
 
 
 def test_create_ec2_user_data_includes_region(v1_handler):

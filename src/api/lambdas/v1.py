@@ -265,8 +265,6 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
     subnets = os.environ['SUBNETS'].split(',')
     security_groups = os.environ['SECURITY_GROUPS'].split(',')
 
-    result = {'success': False, 'job_id': job_id, 'error': 'Unknown error'}
-
     github_token = get_github_token()
     if not github_token:
         logger.error("GITHUB_TOKEN not set - cannot register runner")
@@ -279,74 +277,77 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
 
     runner_name = f'fargate-runner-{job_id}'
     runner_labels = ','.join(job_labels)
+    last_error = None
 
-    try:
-        response = get_ecs_client().run_task(
-            cluster=cluster,
-            taskDefinition=task_definition,
-            enableECSManagedTags=True,
-            networkConfiguration={
-                'awsvpcConfiguration': {
-                    'subnets': subnets,
-                    'securityGroups': security_groups,
-                    'assignPublicIp': 'ENABLED'
-                }
-            },
-            capacityProviderStrategy=[
-                {
-                    'capacityProvider': 'FARGATE_SPOT',
-                    'weight': 100,
-                    'base': 0
-                }
-            ],
-            overrides={
-                'containerOverrides': [
-                    {
-                        'name': os.environ['CONTAINER_NAME'],
-                        'command': [
-                            '--repo', github_repo,
-                            '--name', runner_name,
-                            '--labels', runner_labels,
-                            '--token', registration_token
-                        ]
+    for subnet in subnets:
+        try:
+            response = get_ecs_client().run_task(
+                cluster=cluster,
+                taskDefinition=task_definition,
+                enableECSManagedTags=True,
+                networkConfiguration={
+                    'awsvpcConfiguration': {
+                        'subnets': [subnet],
+                        'securityGroups': security_groups,
+                        'assignPublicIp': 'ENABLED'
                     }
+                },
+                capacityProviderStrategy=[
+                    {
+                        'capacityProvider': 'FARGATE_SPOT',
+                        'weight': 100,
+                        'base': 0
+                    }
+                ],
+                overrides={
+                    'containerOverrides': [
+                        {
+                            'name': os.environ['CONTAINER_NAME'],
+                            'command': [
+                                '--repo', github_repo,
+                                '--name', runner_name,
+                                '--labels', runner_labels,
+                                '--token', registration_token
+                            ]
+                        }
+                    ]
+                },
+                tags=[
+                    {'key': 'Type', 'value': 'ephemeral-runner'},
+                    {'key': 'ManagedBy', 'value': 'docker-runner-api'},
+                    {'key': 'GitHubJobId', 'value': str(job_id)},
+                    {'key': 'JobLabels', 'value': ','.join(job_labels)},
+                    {'key': 'GitHubRepo', 'value': github_repo}
                 ]
-            },
-            tags=[
-                {'key': 'Type', 'value': 'ephemeral-runner'},
-                {'key': 'ManagedBy', 'value': 'docker-runner-api'},
-                {'key': 'GitHubJobId', 'value': str(job_id)},
-                {'key': 'JobLabels', 'value': ','.join(job_labels)},
-                {'key': 'GitHubRepo', 'value': github_repo}
-            ]
-        )
+            )
 
-        if response['tasks']:
-            task_arn = response['tasks'][0]['taskArn']
-            logger.info("✅ Launched Fargate runner for job %s: %s", job_id, task_arn)
-            result = {
-                'success': True,
-                'task_arn': task_arn,
-                'job_id': job_id,
-                'runner_type': 'fargate-spot'
-            }
-        else:
-            failures = response.get('failures')
+            if response['tasks']:
+                task_arn = response['tasks'][0]['taskArn']
+                logger.info("✅ Launched Fargate runner for job %s: %s", job_id, task_arn)
+                return {
+                    'success': True,
+                    'task_arn': task_arn,
+                    'job_id': job_id,
+                    'runner_type': 'fargate-spot'
+                }
+
+            failures = response.get('failures', [])
+            is_capacity_error = any('Capacity' in str(f.get('reason', '')) for f in failures)
+            if is_capacity_error:
+                logger.warning("No Fargate Spot capacity in subnet %s, trying next AZ...", subnet)
+                last_error = failures
+                continue
+
             logger.error("❌ Failed to launch Fargate runner for job %s: %s", job_id, failures)
-            result = {
-                'success': False,
-                'job_id': job_id,
-                'error': failures
-            }
-    except ClientError as e:
-        logger.error("❌ Error launching Fargate runner for job %s: %s", job_id, e)
-        result = {
-            'success': False,
-            'job_id': job_id,
-            'error': str(e)
-        }
+            return {'success': False, 'job_id': job_id, 'error': failures}
 
-    return result
+        except ClientError as e:
+            logger.error("❌ Error launching Fargate runner for job %s: %s", job_id, e)
+            return {'success': False, 'job_id': job_id, 'error': str(e)}
+
+    logger.error("❌ Failed to launch Fargate runner for job %s: no capacity in any AZ", job_id)
+    error_msg = last_error if last_error else 'No capacity in any availability zone'
+    return {'success': False, 'job_id': job_id, 'error': error_msg}
 
 
 def get_runner_registration_token(github_token: str, github_repo: str) -> str:
