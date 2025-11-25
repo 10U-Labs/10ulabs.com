@@ -81,7 +81,7 @@ def run_ssm_command():
         command_id = response["Command"]["CommandId"]
         result = {"Status": "Timeout", "StandardOutputContent": "", "StandardErrorContent": "Command timed out"}
         for _ in range(retries):
-            time.sleep(15)
+            time.sleep(2)
             output = ssm_client.get_command_invocation(
                 CommandId=command_id,
                 InstanceId=instance_id
