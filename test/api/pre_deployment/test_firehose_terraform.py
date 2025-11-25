@@ -101,7 +101,7 @@ def test_cloudwatch_logs_role_trusts_logs_service():
     firehose_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "firehose.tf"
     with open(firehose_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'logs.${module.shared.aws_region}.amazonaws.com' in content
+    assert 'logs.${local.aws_region}.amazonaws.com' in content
 
 
 def test_firehose_s3_policy_has_put_object():
@@ -164,11 +164,11 @@ def test_firehose_role_has_name_tag():
     firehose_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "firehose.tf"
     with open(firehose_file, encoding="utf-8") as f:
         content = f.read()
-    assert '"${module.shared.resource_prefix}-FirehoseCloudWatchLogs"' in content
+    assert '"${local.resource_prefix}-FirehoseCloudWatchLogs"' in content
 
 
 def test_cloudwatch_logs_role_has_name_tag():
     firehose_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "firehose.tf"
     with open(firehose_file, encoding="utf-8") as f:
         content = f.read()
-    assert '"${module.shared.resource_prefix}-CloudWatchLogsFirehose"' in content
+    assert '"${local.resource_prefix}-CloudWatchLogsFirehose"' in content

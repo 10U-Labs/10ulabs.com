@@ -131,7 +131,7 @@ def test_cloudfront_logging_uses_central_logs_bucket():
     cf_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "cloudfront_s3.tf"
     with open(cf_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'module.shared.name_for_central_logs_bucket' in content
+    assert 'local.name_for_central_logs' in content
 
 
 def test_cloudfront_logging_has_prefix():
