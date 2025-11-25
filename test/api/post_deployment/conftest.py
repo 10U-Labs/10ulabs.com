@@ -65,3 +65,19 @@ def make_authenticated_post(url, api_key, json=None, timeout=DEFAULT_REQUEST_TIM
 @pytest.fixture(name="github_repo", scope="module")
 def github_repo_fixture(config):
     return config["github_repo"]
+
+
+@pytest.fixture(name="cluster_name", scope="module")
+def cluster_name_fixture(config):
+    return config["cluster_name"]
+
+
+@pytest.fixture(name="api_credentials", scope="module")
+def api_credentials_fixture(api_url, api_key):
+    return {"url": api_url, "key": api_key}
+
+
+@pytest.fixture(name="ecr_image_count", scope="module")
+def ecr_image_count_fixture(ecr_client, config):
+    response = ecr_client.describe_images(repositoryName=config["ecr_repository"])
+    return len(response.get("imageDetails", []))

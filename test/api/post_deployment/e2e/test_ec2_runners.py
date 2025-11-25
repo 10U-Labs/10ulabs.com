@@ -1,7 +1,7 @@
+from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
 import time
 import pytest
 from botocore.exceptions import ClientError
-from test.api.post_deployment.conftest import make_authenticated_post, make_authenticated_get
 
 
 @pytest.fixture(name="latest_ami_exists", scope="module")

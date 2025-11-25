@@ -1,7 +1,7 @@
+from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
 import time
 import pytest
 from botocore.exceptions import ClientError
-from test.api.post_deployment.conftest import make_authenticated_post, make_authenticated_get
 
 
 @pytest.fixture(name="stable_ecr_image_exists", scope="module")
@@ -33,7 +33,7 @@ def stop_task_safely(ecs_client, cluster_name, task_arn):
 
 @pytest.fixture(name="test_fargate_task", scope="module")
 def test_fargate_task_fixture(
-    api_url, api_key, github_repo, ecr_image_count, ecs_client, config
+    api_credentials, github_repo, ecr_image_count, ecs_client, cluster_name
 ):
     if ecr_image_count == 0:
         yield None
@@ -45,7 +45,7 @@ def test_fargate_task_fixture(
         "github_repo": github_repo
     }
     response = make_authenticated_post(
-        f"{api_url}/v1/docker-runner", api_key, json=payload
+        f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload
     )
     if response.status_code not in [200, 202]:
         yield None
@@ -55,7 +55,6 @@ def test_fargate_task_fixture(
     if not task_arn:
         yield None
         return
-    cluster_name = config["cluster_name"]
     wait_for_task_running(ecs_client, cluster_name, task_arn)
     yield {
         "task_arn": task_arn,

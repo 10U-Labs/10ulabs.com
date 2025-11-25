@@ -1,6 +1,6 @@
+from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
 import pytest
 import requests
-from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
 
 
 def test_docker_runner_endpoint_requires_auth(api_url):
