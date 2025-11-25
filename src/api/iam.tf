@@ -54,7 +54,7 @@ resource "aws_iam_role_policy" "ecs_execution_ssm_access" {
         "ssm:GetParameters"
       ]
       Resource = [
-        data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
+        data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter
       ]
     }]
   })
@@ -427,7 +427,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ssm" {
       Action = ["ssm:GetParameter"]
       Resource = [
         "arn:aws:ssm:${module.shared.aws_region}:${module.shared.aws_account_id}:parameter/github-runner/*",
-        data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
+        data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter
       ]
     }]
   })

@@ -9,6 +9,6 @@ data "terraform_remote_state" "bootstrap" {
 }
 
 data "aws_ssm_parameter" "github_pat" {
-  name            = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_name
+  name            = data.terraform_remote_state.bootstrap.outputs.name_for_github_pat_parameter
   with_decryption = true
 }

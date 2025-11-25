@@ -63,7 +63,7 @@ output "webhook_parameter_arn" {
 }
 
 output "github_token_secret_name" {
-  value = data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_name
+  value = data.terraform_remote_state.bootstrap.outputs.name_for_github_pat_parameter
 }
 
 output "ec2_runner_role_name" {

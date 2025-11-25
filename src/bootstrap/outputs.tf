@@ -1,35 +1,35 @@
-output "central_logs_bucket_arn" {
+output "arn_for_central_logs_bucket" {
   value = module.central_logs.bucket_arn
 }
 
-output "central_logs_write_policy_arn" {
+output "arn_for_central_logs_write_policy" {
   value = module.central_logs.write_policy_arn
 }
 
-output "cloudtrail_name" {
-  value = module.cloudtrail.trail_name
-}
-
-output "github_actions_role_arn" {
+output "arn_for_github_actions_role" {
   value = module.github_oidc.github_actions_role_arn
 }
 
-output "github_pat_parameter_arn" {
+output "arn_for_github_pat_parameter" {
   value = aws_ssm_parameter.github_pat.arn
 }
 
-output "github_pat_parameter_name" {
-  value = aws_ssm_parameter.github_pat.name
+output "arn_for_oidc_provider" {
+  value = module.github_oidc.oidc_provider_arn
+}
+
+output "arn_for_state_bucket" {
+  value = aws_s3_bucket.terraform_state.arn
 }
 
 output "hosted_zone_id" {
   value = module.domain.hosted_zone_id
 }
 
-output "oidc_provider_arn" {
-  value = module.github_oidc.oidc_provider_arn
+output "name_for_cloudtrail" {
+  value = module.cloudtrail.trail_name
 }
 
-output "state_bucket_arn" {
-  value = aws_s3_bucket.terraform_state.arn
+output "name_for_github_pat_parameter" {
+  value = aws_ssm_parameter.github_pat.name
 }
