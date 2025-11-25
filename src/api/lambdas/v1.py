@@ -441,8 +441,8 @@ def get_latest_ami() -> str:
         response = get_ec2_client().describe_images(
             Owners=['self'],
             Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']},
-                {'Name': 'tag:stable', 'Values': ['true']},
+                {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
+                {'Name': 'tag:Stable', 'Values': ['true']},
                 {'Name': 'state', 'Values': ['available']}
             ]
         )
