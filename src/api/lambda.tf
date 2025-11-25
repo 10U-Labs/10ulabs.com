@@ -250,11 +250,11 @@ resource "aws_lambda_function" "dlq_reprocessor" {
 
   environment {
     variables = {
-      WEBHOOK_DLQ_URL              = aws_sqs_queue.webhook_dlq.url
-      JOB_DLQ_URL                  = aws_sqs_queue.job_queue_dlq.url
-      JOB_QUEUE_URL                = aws_sqs_queue.job_queue.url
-      SNS_TOPIC_ARN                = aws_sns_topic.circuit_breaker_alerts.arn
-      GITHUB_TOKEN_PARAMETER_NAME  = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      WEBHOOK_DLQ_URL             = aws_sqs_queue.webhook_dlq.url
+      JOB_DLQ_URL                 = aws_sqs_queue.job_queue_dlq.url
+      JOB_QUEUE_URL               = aws_sqs_queue.job_queue.url
+      SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
+      GITHUB_TOKEN_PARAMETER_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
     }
   }
 

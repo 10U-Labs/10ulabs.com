@@ -14,6 +14,10 @@ MAX_REPROCESS_ATTEMPTS = 3
 _clients = {}
 
 
+def reset_clients():
+    _clients.clear()
+
+
 def get_sqs_client():
     if 'sqs' not in _clients:
         _clients['sqs'] = boto3.client('sqs')
@@ -77,6 +81,8 @@ def send_poison_pill_alert(message_body: dict, attempt_count: int, reason: str):
         return
     job_id = message_body.get('job_id', 'unknown')
     github_repo = message_body.get('github_repo', 'unknown')
+    dlq_url = os.environ.get('JOB_DLQ_URL')
+    dlq_url_display = dlq_url if dlq_url else 'unknown'
     subject = f"DLQ Poison Pill Alert: Job {job_id}"
     message = f"""A message in the DLQ has exceeded the maximum reprocess attempts and requires manual intervention.
 
@@ -92,7 +98,7 @@ Action Required:
 1. Investigate why this job keeps failing
 2. Either fix the underlying issue and manually reprocess, or delete the message from the DLQ
 
-DLQ URL: {os.environ.get('JOB_DLQ_URL', 'unknown')}
+DLQ URL: {dlq_url_display}
 """
     try:
         sns = get_sns_client()

@@ -941,21 +941,23 @@ def test_get_latest_ami_client_error(mock_boto_client, v1_handler):
 
 
 def test_trigger_ami_creation_success(v1_handler, mock_urllib_response_factory):
-    with patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'}):
-        with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_response = mock_urllib_response_factory(json_data={'success': True})
-            mock_urlopen.return_value = mock_response
-            result = v1_handler.trigger_ami_creation()
-            assert result['success'] is True
+    with patch.dict('os.environ', {'API_DOMAIN': 'api.test.com', 'API_KEY_PARAMETER_NAME': '/test/api-key'}):
+        with patch.object(v1_handler, 'get_api_key', return_value='test-api-key'):
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_response = mock_urllib_response_factory(json_data={'success': True})
+                mock_urlopen.return_value = mock_response
+                result = v1_handler.trigger_ami_creation()
+                assert result['success'] is True
 
 
 
 def test_trigger_ami_creation_url_error(v1_handler):
-    with patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'}):
-        with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
-            result = v1_handler.trigger_ami_creation()
-            assert result['success'] is False
+    with patch.dict('os.environ', {'API_DOMAIN': 'api.test.com', 'API_KEY_PARAMETER_NAME': '/test/api-key'}):
+        with patch.object(v1_handler, 'get_api_key', return_value='test-api-key'):
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_urlopen.side_effect = urllib.error.URLError('Connection failed')
+                result = v1_handler.trigger_ami_creation()
+                assert result['success'] is False
 
 
 
@@ -1368,11 +1370,12 @@ def test_list_amis_sorts_by_creation_date(mock_boto_client, v1_handler):
 
 @patch('boto3.client')
 def test_trigger_ami_creation_http_error(_mock_boto_client, v1_handler):
-    with patch.dict('os.environ', {'API_DOMAIN': 'test.com', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-1'}):
-        with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
-            result = v1_handler.trigger_ami_creation()
-            assert result['success'] is False
+    with patch.dict('os.environ', {'API_DOMAIN': 'test.com', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-1', 'API_KEY_PARAMETER_NAME': '/test/api-key'}):
+        with patch.object(v1_handler, 'get_api_key', return_value='test-api-key'):
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+                result = v1_handler.trigger_ami_creation()
+                assert result['success'] is False
 
 
 
@@ -1630,12 +1633,13 @@ def test_v1_launch_ec2_spot_runner_capacity_exhaustion_all_azs(mock_boto_client,
 
 
 @patch('boto3.client')
-@patch.dict('os.environ', {'API_DOMAIN': 'api.test.com'})
+@patch.dict('os.environ', {'API_DOMAIN': 'api.test.com', 'API_KEY_PARAMETER_NAME': '/test/api-key'})
 def test_v1_trigger_ami_creation_failure(_mock_boto_client, v1_handler):
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
-        result = v1_handler.trigger_ami_creation()
-        assert result['success'] is False
+    with patch.object(v1_handler, 'get_api_key', return_value='test-api-key'):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError('https://test.com', 500, 'Error', {}, None)
+            result = v1_handler.trigger_ami_creation()
+            assert result['success'] is False
 
 
 
@@ -1928,3 +1932,169 @@ def test_lambda_handler_options_request_allows_options_method(v1_handler, lambda
     headers = response.get('headers', {})
     allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'OPTIONS' in allowed_methods
+
+
+def test_is_test_mode_returns_false_by_default(v1_handler):
+    v1_handler.set_test_mode(False)
+    result = v1_handler.is_test_mode()
+    assert result is False
+
+
+def test_is_test_mode_returns_true_when_enabled(v1_handler):
+    v1_handler.set_test_mode(True)
+    result = v1_handler.is_test_mode()
+    assert result is True
+
+
+def test_set_test_mode_enables_test_mode(v1_handler):
+    v1_handler.set_test_mode(False)
+    v1_handler.set_test_mode(True)
+    assert v1_handler.is_test_mode() is True
+
+
+def test_set_test_mode_disables_test_mode(v1_handler):
+    v1_handler.set_test_mode(True)
+    v1_handler.set_test_mode(False)
+    assert v1_handler.is_test_mode() is False
+
+
+def test_get_header_case_insensitive_returns_empty_for_none_headers(v1_handler):
+    result = v1_handler.get_header_case_insensitive(None, 'X-Test')
+    assert result == ''
+
+
+def test_get_header_case_insensitive_returns_empty_for_empty_headers(v1_handler):
+    result = v1_handler.get_header_case_insensitive({}, 'X-Test')
+    assert result == ''
+
+
+def test_get_header_case_insensitive_returns_value_for_exact_match(v1_handler):
+    headers = {'X-Test-Mode': 'true'}
+    result = v1_handler.get_header_case_insensitive(headers, 'X-Test-Mode')
+    assert result == 'true'
+
+
+def test_get_header_case_insensitive_returns_value_for_lowercase_match(v1_handler):
+    headers = {'x-test-mode': 'true'}
+    result = v1_handler.get_header_case_insensitive(headers, 'X-Test-Mode')
+    assert result == 'true'
+
+
+def test_get_header_case_insensitive_returns_value_for_uppercase_match(v1_handler):
+    headers = {'X-TEST-MODE': 'true'}
+    result = v1_handler.get_header_case_insensitive(headers, 'x-test-mode')
+    assert result == 'true'
+
+
+def test_get_header_case_insensitive_returns_empty_for_missing_header(v1_handler):
+    headers = {'X-Other': 'value'}
+    result = v1_handler.get_header_case_insensitive(headers, 'X-Test-Mode')
+    assert result == ''
+
+
+def test_get_header_case_insensitive_returns_empty_for_none_value(v1_handler):
+    headers = {'X-Test-Mode': None}
+    result = v1_handler.get_header_case_insensitive(headers, 'X-Test-Mode')
+    assert result == ''
+
+
+def test_lambda_handler_detects_test_mode_header(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/echo', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{}'}
+    v1_handler.lambda_handler(event, lambda_context)
+    assert v1_handler.is_test_mode() is True
+
+
+def test_lambda_handler_test_mode_not_enabled_without_header(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/echo', 'httpMethod': 'POST', 'headers': {}, 'body': '{}'}
+    v1_handler.lambda_handler(event, lambda_context)
+    assert v1_handler.is_test_mode() is False
+
+
+def test_lambda_handler_test_mode_returns_mock_for_ec2_runner_post(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"job_id": 123, "github_repo": "test/repo"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['test_mode'] is True
+
+
+def test_lambda_handler_test_mode_returns_mock_instance_id_for_ec2(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"job_id": 123, "github_repo": "test/repo"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['instance_id'] == 'i-test-mode-mock'
+
+
+def test_lambda_handler_test_mode_returns_mock_for_docker_runner_post(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"job_id": 123, "github_repo": "test/repo"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['test_mode'] is True
+
+
+def test_lambda_handler_test_mode_returns_mock_task_arn_for_docker(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"job_id": 123, "github_repo": "test/repo"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['task_arn'] == 'arn:aws:ecs:test-mode-mock'
+
+
+def test_lambda_handler_test_mode_returns_mock_for_image_ec2_post(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/image-for-ec2-runners', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['test_mode'] is True
+
+
+def test_lambda_handler_test_mode_returns_mock_for_image_docker_post(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['test_mode'] is True
+
+
+def test_lambda_handler_test_mode_does_not_affect_get_requests(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'GET', 'headers': {'x-test-mode': 'true'}}
+    with patch.object(v1_handler, 'get_docker_runner_status', return_value={'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}):
+        response = v1_handler.lambda_handler(event, lambda_context)
+        body = parse_response_body(response)
+        assert 'test_mode' not in body
+
+
+def test_lambda_handler_test_mode_returns_200_status(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"job_id": 123, "github_repo": "test/repo"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+def test_lambda_handler_test_mode_returns_success_true(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"job_id": 123, "github_repo": "test/repo"}'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body['success'] is True
+
+
+def test_lambda_handler_options_allows_x_test_mode_header(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_headers = headers['Access-Control-Allow-Headers']
+    assert 'x-test-mode' in allowed_headers
+
+
+def test_lambda_handler_test_mode_does_not_affect_echo_endpoint(v1_handler, lambda_context):
+    v1_handler.set_test_mode(False)
+    event = {'path': '/v1/echo', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"test": "data"}', 'requestContext': {'requestId': 'test-id'}}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert 'echo' in body
