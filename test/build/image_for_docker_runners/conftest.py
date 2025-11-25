@@ -1,13 +1,27 @@
 import os
+import re
 import subprocess
 import pytest
+
+
+SHARED_MODULE_PATH = os.path.join(os.path.dirname(__file__), '../../../src/modules/shared/outputs.tf')
+
+
+def _get_terraform_output_value(output_name):
+    with open(SHARED_MODULE_PATH, 'r', encoding='utf-8') as f:
+        content = f.read()
+    pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
+    match = re.search(pattern, content)
+    if match:
+        return match.group(1)
+    return None
 
 
 def get_aws_region():
     try:
         region = os.environ["AWS_REGION"]
     except KeyError:
-        region = "us-east-1"
+        region = _get_terraform_output_value("aws_region")
     return region
 
 
