@@ -460,7 +460,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3 botocore
+        run: pip install pytest boto3 botocore pyyaml
       - name: Run unit tests
         run: |
           pytest test/build/image_for_ec2_runners/pre_deployment/ \
