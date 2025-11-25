@@ -10,10 +10,6 @@ output "aws_region" {
   value = "us-east-1"
 }
 
-output "central_logs_bucket_name" {
-  value = "10ulabs-central-logs"
-}
-
 output "domain_name" {
   value = "10ulabs.com"
 }
@@ -22,14 +18,18 @@ output "github_org" {
   value = "10U-Labs-LLC"
 }
 
-output "github_repo_name" {
+output "name_for_central_logs_bucket" {
+  value = "10ulabs-central-logs"
+}
+
+output "name_for_github_repo" {
   value = "10ulabs.com"
+}
+
+output "name_for_terraform_state_bucket" {
+  value = "10ulabs-terraform-state"
 }
 
 output "resource_prefix" {
   value = "TenULabs"
-}
-
-output "terraform_state_bucket_name" {
-  value = "10ulabs-terraform-state"
 }

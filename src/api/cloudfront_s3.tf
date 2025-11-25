@@ -37,7 +37,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "docs" {
 resource "aws_s3_bucket_logging" "docs" {
   bucket = aws_s3_bucket.docs.id
 
-  target_bucket = module.shared.central_logs_bucket_name
+  target_bucket = module.shared.name_for_central_logs_bucket
   target_prefix = "s3-access/api-docs/"
 }
 
