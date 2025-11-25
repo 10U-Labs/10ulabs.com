@@ -60,10 +60,19 @@ variable "github_run_id" {
   default     = ""
 }
 
-variable "stable_tag_key" {
+variable "ami_purpose_tag" {
+  type        = string
+  description = "Tag key for AMI purpose"
+}
+
+variable "ami_purpose_value" {
+  type        = string
+  description = "Tag value for AMI purpose"
+}
+
+variable "ami_stable_tag" {
   type        = string
   description = "Tag key name for stable AMI promotion"
-  default     = "Stable"
 }
 
 locals {
@@ -115,16 +124,14 @@ source "amazon-ebs" "github_runner" {
 
   tags = merge(
     {
-      Name           = "ami-${local.ami_name}"
-      OSFamily       = title(var.os_family)
-      OSVersion      = var.os_version
-      OSArchitecture = var.os_architecture
-      RunnerVersion  = var.runner_version
-      Purpose        = "GitHub self-hosted EC2 runner"
-      BuildDate      = local.timestamp
-    },
-    {
-      "${var.stable_tag_key}" = "false"
+      Name                        = "ami-${local.ami_name}"
+      OSFamily                    = title(var.os_family)
+      OSVersion                   = var.os_version
+      OSArchitecture              = var.os_architecture
+      RunnerVersion               = var.runner_version
+      "${var.ami_purpose_tag}"    = var.ami_purpose_value
+      BuildDate                   = local.timestamp
+      "${var.ami_stable_tag}"     = "false"
     },
     var.github_repository != "" ? {
       ManagedBy  = "GitHubActions"
@@ -135,15 +142,11 @@ source "amazon-ebs" "github_runner" {
   )
 
   # Snapshot tags
-  snapshot_tags = merge(
-    {
-      Name    = "snapshot-${local.ami_name}"
-      Purpose = "GitHub self-hosted EC2 runner"
-    },
-    {
-      "${var.stable_tag_key}" = "false"
-    }
-  )
+  snapshot_tags = {
+    Name                      = "snapshot-${local.ami_name}"
+    "${var.ami_purpose_tag}"  = var.ami_purpose_value
+    "${var.ami_stable_tag}"   = "false"
+  }
 }
 
 build {

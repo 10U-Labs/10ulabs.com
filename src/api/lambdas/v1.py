@@ -437,12 +437,15 @@ aws ec2 terminate-instances \
 
 
 def get_latest_ami() -> str:
+    ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
+    ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
+    ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
     try:
         response = get_ec2_client().describe_images(
             Owners=['self'],
             Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
-                {'Name': 'tag:Stable', 'Values': ['true']},
+                {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]},
+                {'Name': f'tag:{ami_stable_tag}', 'Values': ['true']},
                 {'Name': 'state', 'Values': ['available']}
             ]
         )
@@ -596,11 +599,13 @@ def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_amis() -> Dict[str, Any]:
+    ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
+    ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     try:
         response = get_ec2_client().describe_images(
             Owners=['self'],
             Filters=[
-                {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']}
+                {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]}
             ]
         )
 
@@ -624,6 +629,9 @@ def list_amis() -> Dict[str, Any]:
 
 
 def get_latest_ami_details() -> Dict[str, Any]:
+    ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
+    ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
+    ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
     try:
         try:
             param_response = get_ssm_client().get_parameter(Name='/github-runner/ami/latest')
@@ -635,8 +643,8 @@ def get_latest_ami_details() -> Dict[str, Any]:
                 response = get_ec2_client().describe_images(
                     Owners=['self'],
                     Filters=[
-                        {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']},
-                        {'Name': 'tag:stable', 'Values': ['true']}
+                        {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]},
+                        {'Name': f'tag:{ami_stable_tag}', 'Values': ['true']}
                     ]
                 )
                 if not response['Images']:

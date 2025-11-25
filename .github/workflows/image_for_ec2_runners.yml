@@ -9,6 +9,7 @@ jobs:
       - unit-testing
     outputs:
       ami_id: ${{ steps.build.outputs.ami_id }}
+      ami_stable_tag: ${{ steps.terraform.outputs.ami_stable_tag }}
       security_group_id: ${{ steps.terraform.outputs.security_group_id }}
       subnet_id: ${{ steps.network.outputs.subnet_id }}
     permissions:
@@ -37,12 +38,21 @@ jobs:
         run: |
           cd src/api
           terraform init -backend=true -input=false
-          SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
+          AMI_PURPOSE_TAG=$(terraform output -raw ec2_runner_ami_purpose_tag)
+          AMI_PURPOSE_VALUE=$(terraform output -raw ec2_runner_ami_purpose_value)
+          AMI_STABLE_TAG=$(terraform output -raw ec2_runner_ami_stable_tag)
           SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
-          echo "Subnet IDs from Terraform: $SUBNET_IDS"
-          echo "Security Group ID from Terraform: $SECURITY_GROUP_ID"
-          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
+          echo "AMI Purpose Tag: $AMI_PURPOSE_TAG"
+          echo "AMI Purpose Value: $AMI_PURPOSE_VALUE"
+          echo "AMI Stable Tag: $AMI_STABLE_TAG"
+          echo "Security Group ID: $SECURITY_GROUP_ID"
+          echo "Subnet IDs: $SUBNET_IDS"
+          echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT
+          echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
+          echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
       - id: network
         name: Find suitable subnet for instance types
         run: |
@@ -83,6 +93,9 @@ jobs:
           while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
             echo "Build attempt $ATTEMPT of $MAX_ATTEMPTS"
             packer build \
+              -var="ami_purpose_tag=${{ steps.terraform.outputs.ami_purpose_tag }}" \
+              -var="ami_purpose_value=${{ steps.terraform.outputs.ami_purpose_value }}" \
+              -var="ami_stable_tag=${{ steps.terraform.outputs.ami_stable_tag }}" \
               -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
               -var="github_repository=${{ github.repository }}" \
               -var="github_run_id=${{ github.run_id }}" \
@@ -92,7 +105,6 @@ jobs:
               -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
               -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
               -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-              -var="stable_tag_key=${{ needs.declaring-common-variables.outputs.stable_tag_key }}" \
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
@@ -187,7 +199,6 @@ jobs:
       os_version: ${{ steps.config.outputs.os_version }}
       runner_version: ${{ steps.config.outputs.runner_version }}
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
-      stable_tag_key: ${{ steps.config.outputs.stable_tag_key }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
@@ -217,7 +228,6 @@ jobs:
           OS_VERSION=$(yq '.os_version' src/build/image_for_ec2_runners/config.yml)
           RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_ec2_runners/config.yml)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
-          STABLE_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/build/image_for_ec2_runners/config.yml)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
@@ -227,7 +237,6 @@ jobs:
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
-          echo "stable_tag_key=$STABLE_TAG_KEY" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
@@ -379,13 +388,15 @@ jobs:
         run: |
           cd src/build/image_for_ec2_runners
           packer validate \
+            -var="ami_purpose_tag=Purpose" \
+            -var="ami_purpose_value=GitHub self-hosted EC2 runner" \
+            -var="ami_stable_tag=Stable" \
             -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
             -var="os_family=${{ needs.declaring-common-variables.outputs.os_family }}" \
             -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
             -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
             -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-            -var="stable_tag_key=${{ needs.declaring-common-variables.outputs.stable_tag_key }}" \
             -var="subnet_id=subnet-dummy" \
             template.pkr.hcl
   promoting-ami:
@@ -407,20 +418,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install yq
-        run: |
-          VERSION=v4.44.1
-          BINARY=yq_linux_amd64
-          wget "https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY}" -O /usr/local/bin/yq
-          chmod +x /usr/local/bin/yq
-        shell: bash
       - id: config
         name: Load configuration
         run: |
           AMI_SSM_PARAMETER=$(grep 'ssm_parameter_name_for_ami' src/api/terraform.tfvars | cut -d'"' -f2)
-          AMI_TAG_KEY=$(yq '.ami.promotion_stable_tag' src/build/image_for_ec2_runners/config.yml)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
-          echo "ami_tag_key=$AMI_TAG_KEY" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -441,7 +443,7 @@ jobs:
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \
             --ssm-parameter-name "${{ steps.config.outputs.ami_ssm_parameter }}" \
-            --tag-key "${{ steps.config.outputs.ami_tag_key }}"
+            --tag-key "${{ needs.building-ami.outputs.ami_stable_tag }}"
   unit-testing:
     name: Unit testing
     needs:

@@ -23,7 +23,7 @@ class TestGetLatestAmi:
         call_args = mock_ec2.describe_images.call_args
         filters = call_args[1]['Filters']
 
-        assert {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']} in filters
+        assert {'Name': 'tag:Purpose', 'Values': ['GitHub self-hosted EC2 runner']} in filters
 
     def test_filters_by_stable_tag(self, v1_handler, mock_ec2):
         mock_ec2.describe_images.return_value = {'Images': []}
@@ -33,7 +33,7 @@ class TestGetLatestAmi:
         call_args = mock_ec2.describe_images.call_args
         filters = call_args[1]['Filters']
 
-        assert {'Name': 'tag:stable', 'Values': ['true']} in filters
+        assert {'Name': 'tag:Stable', 'Values': ['true']} in filters
 
     def test_returns_empty_string_when_no_amis(self, v1_handler, mock_ec2):
         mock_ec2.describe_images.return_value = {'Images': []}

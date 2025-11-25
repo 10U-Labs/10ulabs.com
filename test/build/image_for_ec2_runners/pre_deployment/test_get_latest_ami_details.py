@@ -23,7 +23,7 @@ class TestGetLatestAmiDetails:
                     'CreationDate': '2024-01-01T00:00:00.000Z',
                     'State': 'available',
                     'Architecture': 'arm64',
-                    'Tags': [{'Key': 'stable', 'Value': 'true'}]
+                    'Tags': [{'Key': 'Stable', 'Value': 'true'}]
                 }]
             }
 
@@ -50,7 +50,7 @@ class TestGetLatestAmiDetails:
                     'CreationDate': '2024-01-01T00:00:00.000Z',
                     'State': 'available',
                     'Architecture': 'arm64',
-                    'Tags': [{'Key': 'stable', 'Value': 'true'}]
+                    'Tags': [{'Key': 'Stable', 'Value': 'true'}]
                 }]
             }
 

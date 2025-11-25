@@ -91,6 +91,9 @@ def health_handler() -> ModuleType:
 def v1_handler(config: Dict[str, str]) -> Any:
     env_vars = {
         'AWS_REGION': config['aws_region'],
+        'EC2_AMI_PURPOSE_TAG': 'Purpose',
+        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
+        'EC2_AMI_STABLE_TAG': 'Stable',
         'ECR_REPOSITORY': config['ecr_repository_name'],
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': '/github/pat',
@@ -431,6 +434,9 @@ ENV_VAR_PRESETS = {
     },
     'v1_handler': {
         'AWS_REGION': 'us-east-1',
+        'EC2_AMI_PURPOSE_TAG': 'Purpose',
+        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
+        'EC2_AMI_STABLE_TAG': 'Stable',
         'ECR_REPOSITORY': 'test-ecr-repo',
         'GITHUB_REPO': 'test/repo',
         'GITHUB_TOKEN_SECRET_NAME': 'test-github-token',

@@ -9,6 +9,9 @@ import yaml
 
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['AWS_REGION'] = 'us-east-1'
+os.environ['EC2_AMI_PURPOSE_TAG'] = 'Purpose'
+os.environ['EC2_AMI_PURPOSE_VALUE'] = 'GitHub self-hosted EC2 runner'
+os.environ['EC2_AMI_STABLE_TAG'] = 'Stable'
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 

@@ -1,5 +1,3 @@
-ami:
-  promotion_stable_tag: Stable
 os_family: debian
 os_version: "13"
 packer:

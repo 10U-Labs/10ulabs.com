@@ -383,7 +383,7 @@ def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(mock
             'Name': 'test-image',
             'State': 'available',
             'Architecture': 'x86_64',
-            'Tags': [{'Key': 'stable', 'Value': 'true'}]
+            'Tags': [{'Key': 'Stable', 'Value': 'true'}]
         }]
     }
 
@@ -1121,7 +1121,7 @@ def test_get_latest_ami_details_fallback_to_ec2(mock_boto_client, v1_handler):
     mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
-        'Images': [{'ImageId': 'ami-ec2', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
+        'Images': [{'ImageId': 'ami-ec2', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': [{'Key': 'Stable', 'Value': 'true'}]}]
     }
 
     def mock_client(service):
@@ -1388,7 +1388,7 @@ def test_get_latest_ami_filters_by_purpose(mock_boto_client, v1_handler):
     call_args = mock_ec2.describe_images.call_args
     filters = call_args[1]['Filters']
     purpose_filter = next(f for f in filters if f['Name'] == 'tag:Purpose')
-    assert purpose_filter['Values'][0] == 'Github self-hosted EC2 runner'
+    assert purpose_filter['Values'][0] == 'GitHub self-hosted EC2 runner'
 
 
 
@@ -1400,7 +1400,7 @@ def test_get_latest_ami_filters_by_stable_tag(mock_boto_client, v1_handler):
     v1_handler.get_latest_ami()
     call_args = mock_ec2.describe_images.call_args
     filters = call_args[1]['Filters']
-    stable_filter = next(f for f in filters if f['Name'] == 'tag:stable')
+    stable_filter = next(f for f in filters if f['Name'] == 'tag:Stable')
     assert stable_filter['Values'][0] == 'true'
 
 
