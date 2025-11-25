@@ -96,9 +96,7 @@ def test_v1_docker_runner_post_returns_success_true(api_url, api_key, github_rep
     headers = {"x-api-key": api_key}
     payload = {"job_id": 888889, "job_labels": ["ephemeral-ecs-fargate-spot"], "github_repo": github_repo}
     response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
-    if response.status_code == 200:
-        data = response.json()
-        assert data.get('success') is True
+    assert response.json().get('success') is True
 
 
 def test_v1_docker_runner_post_missing_job_id_returns_400(api_url, api_key):
@@ -118,9 +116,7 @@ def test_v1_docker_runner_post_missing_github_repo_returns_400(api_url, api_key)
 def test_v1_docker_runner_get_task_details_include_metadata(api_url, api_key):
     headers = {"x-api-key": api_key}
     response = requests.get(f"{api_url}/v1/docker-runner", headers=headers, timeout=10)
-    if response.status_code == 200:
-        data = response.json()
-        assert "running_tasks" in data
+    assert "running_tasks" in response.json()
 
 
 def test_runner_self_terminates_after_job(api_url, api_key):

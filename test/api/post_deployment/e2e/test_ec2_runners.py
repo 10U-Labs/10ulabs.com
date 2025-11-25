@@ -107,9 +107,7 @@ def test_v1_ec2_runner_post_missing_github_repo_returns_400(api_url, api_key):
 def test_v1_ec2_runner_get_instance_details_include_metadata(api_url, api_key):
     headers = {"x-api-key": api_key}
     response = requests.get(f"{api_url}/v1/ec2-runner", headers=headers, timeout=10)
-    if response.status_code == 200:
-        data = response.json()
-        assert "running_instances" in data
+    assert "running_instances" in response.json()
 
 
 def test_runner_registers_with_github(api_url, api_key):
