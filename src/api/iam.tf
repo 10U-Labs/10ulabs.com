@@ -427,7 +427,8 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ssm" {
       Action = ["ssm:GetParameter"]
       Resource = [
         "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter/github-runner/*",
-        data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter
+        data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
+        aws_ssm_parameter.api_key.arn
       ]
     }]
   })

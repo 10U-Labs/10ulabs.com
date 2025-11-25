@@ -12,6 +12,7 @@ logger.setLevel(logging.INFO)
 
 _clients = {}
 _github_token_cache = {'value': None}
+_api_key_cache = {'value': None}
 
 
 def get_ec2_client():
@@ -36,6 +37,18 @@ def get_ssm_client():
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
+
+
+def get_api_key() -> str:
+    api_key = _api_key_cache['value']
+    if api_key:
+        return api_key
+    parameter_name = os.environ['API_KEY_PARAMETER_NAME']
+    ssm = get_ssm_client()
+    response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+    api_key = response['Parameter']['Value']
+    _api_key_cache['value'] = api_key
+    return api_key
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -434,10 +447,11 @@ def trigger_ami_creation() -> Dict[str, Any]:
     ami_creation_url = f"https://{api_domain}/v1/image-for-ec2-runners"
 
     try:
+        api_key = get_api_key()
         req = urllib.request.Request(
             ami_creation_url,
             data=json.dumps({}).encode('utf-8'),
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json', 'x-api-key': api_key},
             method='POST'
         )
 
@@ -445,7 +459,7 @@ def trigger_ami_creation() -> Dict[str, Any]:
             result = json.loads(response.read().decode('utf-8'))
             logger.info("AMI creation triggered successfully: %s", result)
             return {'success': True, 'result': result}
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as e:
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError, ClientError) as e:
         logger.error("Failed to trigger AMI creation: %s", e)
         return {'success': False, 'error': str(e)}
 

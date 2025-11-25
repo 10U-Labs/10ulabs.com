@@ -163,6 +163,7 @@ resource "aws_lambda_function" "v1_handler" {
       ECR_REPOSITORY           = aws_ecr_repository.runner.name
       IMAGE_API_ENDPOINT       = "https://${local.domain_subdomain}"
       API_DOMAIN               = local.domain_subdomain
+      API_KEY_PARAMETER_NAME   = aws_ssm_parameter.api_key.name
     }
   }
 

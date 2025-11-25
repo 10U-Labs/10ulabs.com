@@ -4,6 +4,23 @@ import boto3
 import pytest
 
 
+TFVARS_PATH = os.path.join(os.path.dirname(__file__), "../../../../src/api/terraform.tfvars")
+
+
+def _get_tfvar_value(var_name):
+    with open(TFVARS_PATH, 'r', encoding='utf-8') as f:
+        content = f.read()
+    idx = content.find(f'{var_name}')
+    if idx == -1:
+        return None
+    line = content[idx:content.find('\n', idx)]
+    start = line.find('"') + 1
+    end = line.find('"', start)
+    if start > 0 and end > start:
+        return line[start:end]
+    return None
+
+
 def get_dockerfile_path():
     return os.path.join(os.path.dirname(__file__), "../../../../src/build/image_for_docker_runners/Dockerfile")
 
@@ -12,7 +29,8 @@ def get_docker_image_tag():
     try:
         tag = os.environ["TEST_DOCKER_IMAGE_TAG"]
     except KeyError:
-        tag = "github-docker-runner:test"
+        container_name = _get_tfvar_value("container_name")
+        tag = f"{container_name}:test"
     return tag
 
 
