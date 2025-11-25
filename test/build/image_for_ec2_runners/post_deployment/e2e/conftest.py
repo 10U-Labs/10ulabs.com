@@ -112,24 +112,24 @@ def validate_e2e_inputs(test_ami_id, github_token):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
 
-def build_e2e_config(test_ami_id, tfvars_data, github_repo, registration_token):
-    region = tfvars_data.get("aws_region", "us-east-1")
-    spot_types = tfvars_data.get("ec2_spot_instance_types", ["t4g.small"])
+def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
+    region = test_config.get("aws_region", "us-east-1")
+    spot_types = test_config.get("ec2_spot_instance_types", ["t4g.small"])
     if not isinstance(spot_types, list):
         spot_types = [spot_types]
     return {
         "ami_id": test_ami_id,
         "subnet_id": os.environ.get("TEST_SUBNET_ID", ""),
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
-        "instance_profile": tfvars_data.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
+        "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
         "user_data": create_user_data(github_repo, registration_token, region),
-        "max_spot_price": tfvars_data.get("ec2_max_spot_price", "0.05"),
+        "max_spot_price": test_config.get("ec2_max_spot_price", "0.05"),
         "spot_instance_types": spot_types,
     }
 
 
 @pytest.fixture(scope="module")
-def e2e_test_instance(ec2_client, test_ami_id, tfvars_data, github_token, github_repo):
+def e2e_test_instance(ec2_client, test_ami_id, config, github_token, github_repo):
     validate_e2e_inputs(test_ami_id, github_token)
 
     try:
@@ -140,20 +140,20 @@ def e2e_test_instance(ec2_client, test_ami_id, tfvars_data, github_token, github
     if not registration_token:
         pytest.fail("Failed to retrieve registration token")
 
-    config = build_e2e_config(test_ami_id, tfvars_data, github_repo, registration_token)
+    instance_config = build_e2e_config(test_ami_id, config, github_repo, registration_token)
     instance_id = None
     last_error = None
 
-    for instance_type in config["spot_instance_types"]:
-        config["instance_type"] = instance_type
+    for instance_type in instance_config["spot_instance_types"]:
+        instance_config["instance_type"] = instance_type
         try:
-            instance_id = launch_spot_instance(ec2_client, config)
+            instance_id = launch_spot_instance(ec2_client, instance_config)
             break
         except ClientError as err:
             last_error = err
 
     if not instance_id:
-        pytest.fail(f"Could not launch spot instance with any of the configured types: {config['spot_instance_types']}. Last error: {last_error}")
+        pytest.fail(f"Could not launch spot instance with any of the configured types: {instance_config['spot_instance_types']}. Last error: {last_error}")
 
     wait_for_instance_ready(ec2_client, instance_id)
     yield instance_id

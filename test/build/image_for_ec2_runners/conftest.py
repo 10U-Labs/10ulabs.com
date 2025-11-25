@@ -36,13 +36,13 @@ def get_runner_config():
         return yaml.safe_load(f)
 
 
-def get_tfvars():
+def get_config():
     tfvars_path = PROJECT_ROOT / "src" / "api" / "terraform.tfvars"
-    config = get_shared_outputs()
+    result = get_shared_outputs()
     runner_config = get_runner_config()
-    config["os_family"] = runner_config.get("os_family", "")
-    config["os_version"] = str(runner_config.get("os_version", ""))
-    config["runner_version"] = runner_config.get("runner_version", "")
+    result["os_family"] = runner_config.get("os_family", "")
+    result["os_version"] = str(runner_config.get("os_version", ""))
+    result["runner_version"] = runner_config.get("runner_version", "")
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -55,20 +55,20 @@ def get_tfvars():
                         value = ast.literal_eval(value)
                     elif value.startswith('"') and value.endswith('"'):
                         value = value[1:-1]
-                    config[key] = value
-    if "fargate_cpu_architecture" in config:
-        config["os_architecture"] = config["fargate_cpu_architecture"].lower()
-    return config
+                    result[key] = value
+    if "fargate_cpu_architecture" in result:
+        result["os_architecture"] = result["fargate_cpu_architecture"].lower()
+    return result
 
 
 @pytest.fixture(scope="module")
-def tfvars_data():
-    return get_tfvars()
+def config():
+    return get_config()
 
 
 @pytest.fixture(scope="module")
 def aws_region(request):
-    data = request.getfixturevalue("tfvars_data")
+    data = request.getfixturevalue("config")
     return data["aws_region"]
 
 

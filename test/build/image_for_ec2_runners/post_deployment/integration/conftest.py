@@ -1,4 +1,5 @@
 import os
+import time
 from botocore.exceptions import ClientError
 import pytest
 
@@ -48,8 +49,40 @@ def terminate_instance_safely(ec2_client, instance_id):
         pass
 
 
+def wait_for_instance_ready(ec2_client, instance_id):
+    waiter = ec2_client.get_waiter("instance_running")
+    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
+    max_wait_time = 600
+    start_time = time.time()
+    while time.time() - start_time < max_wait_time:
+        response = ec2_client.describe_instance_status(InstanceIds=[instance_id])
+        if response["InstanceStatuses"]:
+            status = response["InstanceStatuses"][0]
+            instance_status = status.get("InstanceStatus", {}).get("Status", "")
+            system_status = status.get("SystemStatus", {}).get("Status", "")
+            if instance_status == "ok" and system_status == "ok":
+                return True
+        time.sleep(15)
+    return False
+
+
+def wait_for_ssm_ready(ssm_client, instance_id):
+    max_wait_time = 300
+    start_time = time.time()
+    while time.time() - start_time < max_wait_time:
+        response = ssm_client.describe_instance_information(
+            Filters=[{"Key": "InstanceIds", "Values": [instance_id]}]
+        )
+        if response["InstanceInformationList"]:
+            info = response["InstanceInformationList"][0]
+            if info.get("PingStatus") == "Online":
+                return True
+        time.sleep(10)
+    return False
+
+
 @pytest.fixture(scope="module")
-def test_instance(ec2_client, test_ami_id, tfvars_data):
+def test_instance(ec2_client, ssm_client, test_ami_id, config):
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
 
@@ -61,16 +94,16 @@ def test_instance(ec2_client, test_ami_id, tfvars_data):
     if not security_group_id:
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
-    instance_profile = tfvars_data.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
-    spot_instance_types = tfvars_data.get("ec2_spot_instance_types", ["t4g.small"])
-    max_spot_price = tfvars_data.get("ec2_max_spot_price", "0.05")
+    instance_profile = config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
+    spot_instance_types = config.get("ec2_spot_instance_types", ["t4g.small"])
+    max_spot_price = config.get("ec2_max_spot_price", "0.05")
 
     if not isinstance(spot_instance_types, list):
         spot_instance_types = [spot_instance_types]
 
     instance_id = None
     last_error = None
-    config = {
+    launch_config = {
         "ami_id": test_ami_id,
         "subnet_id": subnet_id,
         "security_group_id": security_group_id,
@@ -79,15 +112,18 @@ def test_instance(ec2_client, test_ami_id, tfvars_data):
     }
 
     for instance_type in spot_instance_types:
-        config["instance_type"] = instance_type
+        launch_config["instance_type"] = instance_type
         try:
-            instance_id = launch_spot_instance(ec2_client, config)
+            instance_id = launch_spot_instance(ec2_client, launch_config)
             break
         except ClientError as err:
             last_error = err
 
     if not instance_id:
         pytest.fail(f"Could not launch spot instance with any of the configured types: {spot_instance_types}. Last error: {last_error}")
+
+    wait_for_instance_ready(ec2_client, instance_id)
+    wait_for_ssm_ready(ssm_client, instance_id)
 
     yield instance_id
     terminate_instance_safely(ec2_client, instance_id)

@@ -42,12 +42,12 @@ def test_github_runner_directory_exists(ssm_client, test_instance, run_ssm_comma
     assert output["StandardOutputContent"].strip() == "exists"
 
 
-def test_github_runner_binary_exists(ssm_client, test_instance, tfvars_data, run_ssm_command):
+def test_github_runner_binary_exists(ssm_client, test_instance, config, run_ssm_command):
     if not test_instance:
         pytest.fail("Test instance not created")
 
-    runner_version = tfvars_data["github_runner_version"]
-    os_arch = tfvars_data["os_architecture"]
+    runner_version = config["runner_version"]
+    os_arch = config["os_architecture"]
     runner_arch = "arm64" if os_arch == "arm64" else "x64"
 
     output = run_ssm_command(ssm_client, test_instance, f"test -f /home/github-runner/actions-runner/actions-runner-linux-{runner_arch}-{runner_version}.tar.gz && echo exists")
