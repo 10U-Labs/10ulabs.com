@@ -1,7 +1,11 @@
 import os
+import sys
 import time
+from pathlib import Path
 import boto3
 import pytest
+
+sys.path.insert(0, str(Path(__file__).parent))
 
 
 def execute_ssm_command(client, instance_id, command, wait_seconds=5):

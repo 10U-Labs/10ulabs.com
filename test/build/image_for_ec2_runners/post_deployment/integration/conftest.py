@@ -1,12 +1,8 @@
 import os
-import sys
 import time
-from pathlib import Path
 from botocore.exceptions import ClientError
-import pytest
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
+import pytest
 
 
 @pytest.fixture(scope="session")
