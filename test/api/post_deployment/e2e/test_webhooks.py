@@ -1,5 +1,5 @@
+from test.api.post_deployment.conftest import assert_circuit_breaker_state_in_response, make_health_check_request
 import requests
-from test.api.post_deployment.conftest import make_health_check_request, assert_circuit_breaker_state_in_response
 
 
 def test_v1_runners_health_get_requires_auth(api_url):

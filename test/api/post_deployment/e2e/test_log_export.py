@@ -93,8 +93,6 @@ def test_cloudfront_requests_metric_available():
 
 def test_dynamodb_streams_consumed_records_metric():
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
-    end_time = datetime.now(UTC)
-    start_time = end_time - timedelta(hours=24)
     response = cloudwatch.list_metrics(
         Namespace='AWS/DynamoDB',
         MetricName='ConsumedReadCapacityUnits',
