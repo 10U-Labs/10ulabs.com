@@ -22,12 +22,12 @@ def load_module_from_path(module_name, module_path):
 
 def get_shared_outputs():
     outputs_path = PROJECT_ROOT / "src" / "modules" / "shared" / "outputs.tf"
-    config = {}
+    outputs = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
     for match in re.finditer(r'output\s+"(\w+)"\s*\{[^}]*value\s*=\s*"([^"]*)"', content):
-        config[match.group(1)] = match.group(2)
-    return config
+        outputs[match.group(1)] = match.group(2)
+    return outputs
 
 
 def get_runner_config():
