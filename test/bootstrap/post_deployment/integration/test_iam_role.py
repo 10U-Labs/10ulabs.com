@@ -27,7 +27,7 @@ def test_iam_role_trust_policy_has_correct_audience_condition(iam_client, config
 def test_iam_role_trust_policy_has_correct_subject_condition(iam_client, config):
     role_name = config['name_for_github_actions_role']
     github_org = config['github_org']
-    github_repo = config['github_repo']
+    github_repo = config['name_for_github_repo']
     expected_pattern = f"repo:{github_org}/{github_repo}:*"
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']

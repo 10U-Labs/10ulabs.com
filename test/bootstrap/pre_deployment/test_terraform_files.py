@@ -50,8 +50,12 @@ def test_central_logs_tf_file_exists(bootstrap_dir):
     assert (bootstrap_dir / "central_logs.tf").exists()
 
 
-def test_config_tf_file_exists(bootstrap_dir):
-    assert (bootstrap_dir / "config.tf").exists()
+def test_shared_tf_file_exists(bootstrap_dir):
+    assert (bootstrap_dir / "shared.tf").exists()
+
+
+def test_locals_tf_file_exists(bootstrap_dir):
+    assert (bootstrap_dir / "locals.tf").exists()
 
 
 def test_github_pat_tf_file_exists(bootstrap_dir):
