@@ -128,7 +128,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
     }
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def e2e_test_instance(ec2_client, test_ami_id, config, github_token, github_repo):
     validate_e2e_inputs(test_ami_id, github_token)
 

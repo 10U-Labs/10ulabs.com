@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 import pytest
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def fetched_ami(ec2_client, test_ami_id):
     result = None
     if test_ami_id:
@@ -23,7 +23,7 @@ def _get_tag_value(tags, key):
     return None
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ami_tags_dict(request):
     ami = request.getfixturevalue("fetched_ami")
     result = {}
@@ -34,7 +34,7 @@ def ami_tags_dict(request):
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ami_purpose_tag(request):
     ami = request.getfixturevalue("fetched_ami")
     result = None
@@ -43,7 +43,7 @@ def ami_purpose_tag(request):
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ami_runner_version_tag(request):
     ami = request.getfixturevalue("fetched_ami")
     result = None
@@ -52,7 +52,7 @@ def ami_runner_version_tag(request):
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ami_os_family_tag(request):
     ami = request.getfixturevalue("fetched_ami")
     result = None
@@ -61,7 +61,7 @@ def ami_os_family_tag(request):
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ami_os_version_tag(request):
     ami = request.getfixturevalue("fetched_ami")
     result = None

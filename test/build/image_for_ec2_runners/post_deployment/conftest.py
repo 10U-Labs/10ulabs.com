@@ -44,11 +44,11 @@ def test_ami_id():
     return os.environ.get("TEST_AMI_ID", "")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def github_token():
     return os.environ.get("GITHUB_PAT", "")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def github_repo():
     return os.environ.get("GITHUB_REPOSITORY", "10U-Labs-LLC/10ulabs.com")
