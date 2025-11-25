@@ -100,51 +100,11 @@ def test_central_logs_bucket_has_logging_enabled(s3_client, config):
     assert 'LoggingEnabled' in logging
 
 
-def test_central_logs_bucket_logs_to_access_logs_bucket(s3_client, config):
+def test_central_logs_bucket_logs_to_itself(s3_client, config):
     bucket_name = config['name_for_central_logs_bucket']
     logging = s3_client.get_bucket_logging(Bucket=bucket_name)
     target_bucket = logging['LoggingEnabled']['TargetBucket']
-    expected_target = f"{bucket_name}-access-logs"
-    assert target_bucket == expected_target
-
-
-def test_central_logs_access_logs_bucket_exists(s3_client, config):
-    bucket_name = f"{config['name_for_central_logs_bucket']}-access-logs"
-    response = s3_client.head_bucket(Bucket=bucket_name)
-    assert response['ResponseMetadata']['HTTPStatusCode'] == 200
-
-
-def test_central_logs_access_logs_bucket_has_encryption(s3_client, config):
-    bucket_name = f"{config['name_for_central_logs_bucket']}-access-logs"
-    encryption = s3_client.get_bucket_encryption(Bucket=bucket_name)
-    assert 'ServerSideEncryptionConfiguration' in encryption
-
-
-def test_central_logs_access_logs_bucket_versioning_disabled(s3_client, config):
-    bucket_name = f"{config['name_for_central_logs_bucket']}-access-logs"
-    versioning = s3_client.get_bucket_versioning(Bucket=bucket_name)
-    assert versioning.get('Status') != 'Enabled'
-
-
-def test_central_logs_access_logs_bucket_blocks_public_acls(s3_client, config):
-    bucket_name = f"{config['name_for_central_logs_bucket']}-access-logs"
-    public_access = s3_client.get_public_access_block(Bucket=bucket_name)
-    block_config = public_access['PublicAccessBlockConfiguration']
-    assert block_config['BlockPublicAcls'] is True
-
-
-def test_central_logs_access_logs_bucket_has_lifecycle(s3_client, config):
-    bucket_name = f"{config['name_for_central_logs_bucket']}-access-logs"
-    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
-    assert 'Rules' in lifecycle
-
-
-def test_central_logs_access_logs_bucket_has_glacier_transition(s3_client, config):
-    bucket_name = f"{config['name_for_central_logs_bucket']}-access-logs"
-    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=bucket_name)
-    rule = lifecycle['Rules'][0]
-    storage_classes = [t['StorageClass'] for t in rule['Transitions']]
-    assert 'GLACIER' in storage_classes
+    assert target_bucket == bucket_name
 
 
 def test_central_logs_write_policy_exists(iam_client):

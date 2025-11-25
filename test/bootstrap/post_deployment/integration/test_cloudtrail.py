@@ -185,18 +185,28 @@ def test_access_log_bucket_versioning_disabled(s3_client, cloudtrail_client):
             pass
 
 
-def test_access_log_bucket_has_glacier_lifecycle_rule(s3_client, cloudtrail_client):
+def test_access_log_bucket_has_standard_ia_transition_at_30_days(s3_client, cloudtrail_client):
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     cloudtrail_bucket_name = trail['S3BucketName']
     response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
-    if 'LoggingEnabled' in response:
-        access_log_bucket = response['LoggingEnabled']['TargetBucket']
-        lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
-        rule = lifecycle['Rules'][0]
-        transition = rule['Transitions'][0]
-        storage_class = transition['StorageClass']
-        assert storage_class == 'GLACIER'
+    access_log_bucket = response['LoggingEnabled']['TargetBucket']
+    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
+    rule = lifecycle['Rules'][0]
+    standard_ia_transition = next(t for t in rule['Transitions'] if t['StorageClass'] == 'STANDARD_IA')
+    assert standard_ia_transition['Days'] == 30
+
+
+def test_access_log_bucket_has_glacier_transition_at_90_days(s3_client, cloudtrail_client):
+    trails = cloudtrail_client.describe_trails()
+    trail = trails['trailList'][0]
+    cloudtrail_bucket_name = trail['S3BucketName']
+    response = s3_client.get_bucket_logging(Bucket=cloudtrail_bucket_name)
+    access_log_bucket = response['LoggingEnabled']['TargetBucket']
+    lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
+    rule = lifecycle['Rules'][0]
+    glacier_transition = next(t for t in rule['Transitions'] if t['StorageClass'] == 'GLACIER')
+    assert glacier_transition['Days'] == 90
 
 
 def test_cloudtrail_bucket_enforces_ssl(s3_client, cloudtrail_client):
