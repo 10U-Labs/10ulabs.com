@@ -50,22 +50,30 @@ def get_cloudwatch_client():
     return clients['cloudwatch']
 
 
+test_mode_enabled = {'value': False}
+
+
+def set_test_mode(enabled: bool):
+    test_mode_enabled['value'] = enabled
+
+
 def publish_metric(metric_name: str, value: float, unit: str = 'None'):
-    try:
-        cloudwatch = get_cloudwatch_client()
-        cloudwatch.put_metric_data(
-            Namespace='WebhookRouter',
-            MetricData=[
-                {
-                    'MetricName': metric_name,
-                    'Value': value,
-                    'Unit': unit,
-                    'Timestamp': datetime.datetime.now(datetime.UTC)
-                }
-            ]
-        )
-    except Exception as e:
-        logger.warning("Failed to publish metric %s: %s", metric_name, e)
+    if not test_mode_enabled['value']:
+        try:
+            cloudwatch = get_cloudwatch_client()
+            cloudwatch.put_metric_data(
+                Namespace='WebhookRouter',
+                MetricData=[
+                    {
+                        'MetricName': metric_name,
+                        'Value': value,
+                        'Unit': unit,
+                        'Timestamp': datetime.datetime.now(datetime.UTC)
+                    }
+                ]
+            )
+        except Exception as e:
+            logger.warning("Failed to publish metric %s: %s", metric_name, e)
 
 
 def check_and_record_idempotency(request_id: str) -> bool:
@@ -418,6 +426,10 @@ def get_header_case_insensitive(headers: dict, key: str) -> str:
 
 
 def handle_api_gateway_event(event: dict, start_time: float) -> dict:
+    headers = event.get('headers', {})
+    test_header = get_header_case_insensitive(headers, 'x-test-mode')
+    set_test_mode(test_header == 'true')
+
     http_method = event.get('httpMethod', event.get('requestContext', {}).get('http', {}).get('method', ''))
     if http_method == 'OPTIONS':
         return {

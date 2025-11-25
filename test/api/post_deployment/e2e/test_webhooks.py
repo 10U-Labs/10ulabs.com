@@ -2,8 +2,11 @@ from test.api.post_deployment.conftest import assert_circuit_breaker_state_in_re
 import requests
 
 
+TEST_HEADERS = {"x-test-mode": "true"}
+
+
 def test_v1_runners_health_get_requires_auth(api_url):
-    response = requests.get(f"{api_url}/v1/runners/health", timeout=10)
+    response = requests.get(f"{api_url}/v1/runners/health", headers=TEST_HEADERS, timeout=10)
     assert response.status_code == 403
 
 
@@ -24,26 +27,26 @@ def test_v1_runners_health_returns_circuit_breaker_state(api_url, api_key):
 
 def test_v1_runners_post_ignores_missing_github_event_header(api_url):
     payload = {"action": "queued"}
-    response = requests.post(f"{api_url}/v1/runners", json=payload, timeout=10)
+    response = requests.post(f"{api_url}/v1/runners", json=payload, headers=TEST_HEADERS, timeout=10)
     assert response.status_code == 200
 
 
 def test_v1_runners_post_ignores_missing_signature(api_url):
-    headers = {"x-github-event": "workflow_job"}
+    headers = {"x-github-event": "workflow_job", "x-test-mode": "true"}
     payload = {"action": "queued", "workflow_job": {"id": 123, "labels": []}, "repository": {"full_name": "x/y"}}
     response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
     assert response.status_code == 200
 
 
 def test_v1_runners_post_rejects_invalid_signature(api_url):
-    headers = {"x-github-event": "workflow_job", "x-hub-signature-256": "sha256=invalid"}
+    headers = {"x-github-event": "workflow_job", "x-hub-signature-256": "sha256=invalid", "x-test-mode": "true"}
     payload = {"action": "queued", "workflow_job": {"id": 123, "labels": []}, "repository": {"full_name": "x/y"}}
     response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
     assert response.status_code == 401
 
 
 def test_workflow_job_completed_action_returns_200(api_url):
-    headers = {"x-github-event": "workflow_job", "x-hub-signature-256": "sha256=invalid"}
+    headers = {"x-github-event": "workflow_job", "x-hub-signature-256": "sha256=invalid", "x-test-mode": "true"}
     payload = {
         "action": "completed",
         "workflow_job": {"id": 123, "labels": ["ubuntu-latest"], "status": "completed"},
@@ -54,7 +57,7 @@ def test_workflow_job_completed_action_returns_200(api_url):
 
 
 def test_workflow_job_without_self_hosted_labels_returns_200(api_url):
-    headers = {"x-github-event": "workflow_job", "x-hub-signature-256": "sha256=invalid"}
+    headers = {"x-github-event": "workflow_job", "x-hub-signature-256": "sha256=invalid", "x-test-mode": "true"}
     payload = {
         "action": "queued",
         "workflow_job": {"id": 456, "labels": ["ubuntu-latest"], "status": "queued"},

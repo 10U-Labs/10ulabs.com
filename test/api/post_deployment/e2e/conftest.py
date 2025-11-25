@@ -25,12 +25,12 @@ def ecr_image_count_fixture(ecr_client):
 
 
 def make_authenticated_get(url, api_key, timeout=DEFAULT_REQUEST_TIMEOUT):
-    headers = {"x-api-key": api_key}
+    headers = {"x-api-key": api_key, "x-test-mode": "true"}
     return requests.get(url, headers=headers, timeout=timeout)
 
 
 def make_authenticated_post(url, api_key, json=None, timeout=DEFAULT_REQUEST_TIMEOUT):
-    headers = {"x-api-key": api_key}
+    headers = {"x-api-key": api_key, "x-test-mode": "true"}
     return requests.post(url, json=json, headers=headers, timeout=timeout)
 
 

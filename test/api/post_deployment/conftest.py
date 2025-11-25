@@ -35,7 +35,7 @@ def api_key_fixture(ssm_client):
 
 
 def make_health_check_request(api_url, api_key):
-    headers = {"x-api-key": api_key}
+    headers = {"x-api-key": api_key, "x-test-mode": "true"}
     return requests.get(f"{api_url}/v1/runners/health", headers=headers, timeout=10)
 
 

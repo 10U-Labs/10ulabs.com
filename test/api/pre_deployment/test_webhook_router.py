@@ -440,6 +440,47 @@ def test_publish_metric_sends_to_cloudwatch(webhook_router, mock_cloudwatch):
     assert mock_cloudwatch.put_metric_data.call_count == 1
 
 
+def test_publish_metric_skips_when_test_mode_enabled(webhook_router, mock_cloudwatch):
+    webhook_router.set_test_mode(True)
+    webhook_router.publish_metric('TestMetric', 1.0, 'Count')
+    webhook_router.set_test_mode(False)
+    assert mock_cloudwatch.put_metric_data.call_count == 0
+
+
+def test_set_test_mode_enables_test_mode(webhook_router):
+    webhook_router.set_test_mode(True)
+    assert webhook_router.test_mode_enabled['value'] is True
+    webhook_router.set_test_mode(False)
+
+
+def test_set_test_mode_disables_test_mode(webhook_router):
+    webhook_router.set_test_mode(True)
+    webhook_router.set_test_mode(False)
+    assert webhook_router.test_mode_enabled['value'] is False
+
+
+def test_handle_api_gateway_event_enables_test_mode_with_header(webhook_router):
+    event = {'path': '/v1/runners/health', 'httpMethod': 'GET', 'headers': {'x-test-mode': 'true'}}
+    webhook_router.handle_api_gateway_event(event, time.time())
+    result = webhook_router.test_mode_enabled['value']
+    webhook_router.set_test_mode(False)
+    assert result is True
+
+
+def test_handle_api_gateway_event_disables_test_mode_without_header(webhook_router):
+    webhook_router.set_test_mode(True)
+    event = {'path': '/v1/runners/health', 'httpMethod': 'GET', 'headers': {}}
+    webhook_router.handle_api_gateway_event(event, time.time())
+    assert webhook_router.test_mode_enabled['value'] is False
+
+
+def test_handle_api_gateway_event_detects_uppercase_test_mode_header(webhook_router):
+    event = {'path': '/v1/runners/health', 'httpMethod': 'GET', 'headers': {'X-Test-Mode': 'true'}}
+    webhook_router.handle_api_gateway_event(event, time.time())
+    result = webhook_router.test_mode_enabled['value']
+    webhook_router.set_test_mode(False)
+    assert result is True
+
 
 def test_verify_webhook_signature_with_valid_signature_returns_empty_dict(webhook_router, mock_ssm):
     mock_ssm.get_parameter.return_value = {

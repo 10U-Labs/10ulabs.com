@@ -3,6 +3,22 @@ from botocore.exceptions import ClientError
 import pytest
 
 
+def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=30):
+    start_time = time.time()
+    while time.time() - start_time < max_wait:
+        time.sleep(2)
+        try:
+            output = ssm_client.get_command_invocation(
+                CommandId=command_id,
+                InstanceId=instance_id
+            )
+            if output["Status"] in ("Success", "Failed"):
+                return output
+        except ClientError:
+            pass
+    return {"Status": "Timeout", "StandardOutputContent": ""}
+
+
 def test_github_runner_can_register(ssm_client, e2e_test_instance):
     if not e2e_test_instance:
         pytest.fail("Test instance not created")
@@ -20,12 +36,7 @@ def test_github_runner_can_register(ssm_client, e2e_test_instance):
             )
 
             command_id = response["Command"]["CommandId"]
-            time.sleep(5)
-
-            output = ssm_client.get_command_invocation(
-                CommandId=command_id,
-                InstanceId=e2e_test_instance
-            )
+            output = poll_ssm_command(ssm_client, e2e_test_instance, command_id)
 
             if output["Status"] == "Success" and "configured" in output["StandardOutputContent"]:
                 runner_configured = True
@@ -33,7 +44,7 @@ def test_github_runner_can_register(ssm_client, e2e_test_instance):
         except ClientError:
             pass
 
-        time.sleep(15)
+        time.sleep(5)
 
     assert runner_configured
 
@@ -55,12 +66,7 @@ def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
             )
 
             command_id = response["Command"]["CommandId"]
-            time.sleep(5)
-
-            output = ssm_client.get_command_invocation(
-                CommandId=command_id,
-                InstanceId=e2e_test_instance
-            )
+            output = poll_ssm_command(ssm_client, e2e_test_instance, command_id)
 
             if output["Status"] == "Success" and "running" in output["StandardOutputContent"]:
                 runner_running = True
@@ -68,6 +74,6 @@ def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
         except ClientError:
             pass
 
-        time.sleep(15)
+        time.sleep(5)
 
     assert runner_running
