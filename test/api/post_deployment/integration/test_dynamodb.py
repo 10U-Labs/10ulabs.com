@@ -51,63 +51,58 @@ def test_dynamodb_idempotency_table_ttl_attribute(dynamodb_client):
 def test_dynamodb_idempotency_put_item_succeeds(dynamodb_client, config):
     table_name = config["idempotency_table_name"]
     test_id = f'integration-test-{int(time.time())}'
-    try:
-        create_test_dynamodb_item(
-            dynamodb_client,
-            table_name,
-            {
-                'request_id': {'S': test_id},
-                'ttl': {'N': str(int(time.time()) + 60)},
-                'timestamp': {'N': str(int(time.time()))}
-            }
-        )
-        response = dynamodb_client.get_item(
-            TableName=table_name,
-            Key={'request_id': {'S': test_id}}
-        )
-        assert 'Item' in response
-        cleanup_test_dynamodb_item(
-            dynamodb_client,
-            table_name,
-            {'request_id': {'S': test_id}}
-        )
-    except ClientError:
-        assert True
+    create_test_dynamodb_item(
+        dynamodb_client,
+        table_name,
+        {
+            'request_id': {'S': test_id},
+            'ttl': {'N': str(int(time.time()) + 60)},
+            'timestamp': {'N': str(int(time.time()))}
+        }
+    )
+    response = dynamodb_client.get_item(
+        TableName=table_name,
+        Key={'request_id': {'S': test_id}}
+    )
+    cleanup_test_dynamodb_item(
+        dynamodb_client,
+        table_name,
+        {'request_id': {'S': test_id}}
+    )
+    assert 'Item' in response
 
 
 def test_dynamodb_conditional_put_prevents_duplicates(dynamodb_client, config):
     table_name = config["idempotency_table_name"]
     test_id = f'integration-test-duplicate-{int(time.time())}'
+    create_test_dynamodb_item(
+        dynamodb_client,
+        table_name,
+        {
+            'request_id': {'S': test_id},
+            'ttl': {'N': str(int(time.time()) + 60)},
+            'timestamp': {'N': str(int(time.time()))}
+        }
+    )
+    exception_raised = None
     try:
-        create_test_dynamodb_item(
-            dynamodb_client,
-            table_name,
-            {
+        dynamodb_client.put_item(
+            TableName=table_name,
+            Item={
                 'request_id': {'S': test_id},
                 'ttl': {'N': str(int(time.time()) + 60)},
                 'timestamp': {'N': str(int(time.time()))}
-            }
+            },
+            ConditionExpression='attribute_not_exists(request_id)'
         )
-        try:
-            dynamodb_client.put_item(
-                TableName=table_name,
-                Item={
-                    'request_id': {'S': test_id},
-                    'ttl': {'N': str(int(time.time()) + 60)},
-                    'timestamp': {'N': str(int(time.time()))}
-                },
-                ConditionExpression='attribute_not_exists(request_id)'
-            )
-            assert False
-        except ClientError as e:
-            assert e.response['Error']['Code'] == 'ConditionalCheckFailedException'
-        cleanup_test_dynamodb_item(
-            dynamodb_client,
-            table_name,
-            {'request_id': {'S': test_id}}
-        )
-    except ClientError:
-        assert True
+    except ClientError as e:
+        exception_raised = e
+    cleanup_test_dynamodb_item(
+        dynamodb_client,
+        table_name,
+        {'request_id': {'S': test_id}}
+    )
+    assert exception_raised.response['Error']['Code'] == 'ConditionalCheckFailedException'
 
 
 def test_dynamodb_incidents_table_exists(dynamodb_client, config):

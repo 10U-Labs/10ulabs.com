@@ -14,8 +14,8 @@ def test_ami_exists_in_ec2(ec2_client, test_ami_id):
     assert len(response["Images"]) == 1
 
 
-def test_ami_state_is_available(ami_details):
-    if not ami_details:
+def test_ami_state_is_available(fetched_ami):
+    if not fetched_ami:
         pytest.fail("AMI details not available")
 
-    assert ami_details["State"] == "available"
+    assert fetched_ami["State"] == "available"

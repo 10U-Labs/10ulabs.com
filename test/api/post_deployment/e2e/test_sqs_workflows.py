@@ -24,12 +24,9 @@ def test_sqs_message_processing_updates_status():
 
 def test_dlq_reprocessor_moves_messages_back():
     sqs = boto3.client('sqs', region_name='us-east-1')
-    try:
-        dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
-        attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
-        assert "ApproximateNumberOfMessages" in attributes["Attributes"]
-    except sqs.exceptions.QueueDoesNotExist:
-        assert True
+    dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
+    attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+    assert "ApproximateNumberOfMessages" in attributes["Attributes"]
 
 
 def test_queue_depth_metrics_published():
@@ -49,13 +46,10 @@ def test_sqs_message_retry_moves_to_dlq_after_max_attempts():
 
 def test_dlq_reprocessor_workflow_moves_messages_back():
     sqs = boto3.client('sqs', region_name='us-east-1')
-    try:
-        job_dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
-        initial_dlq_attrs = sqs.get_queue_attributes(QueueUrl=job_dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
-        initial_dlq_count = int(initial_dlq_attrs['Attributes']['ApproximateNumberOfMessages'])
-        assert initial_dlq_count >= 0
-    except sqs.exceptions.QueueDoesNotExist:
-        assert True
+    job_dlq_url = sqs.get_queue_url(QueueName='TenULabsWebhookHandler-job-dlq')['QueueUrl']
+    initial_dlq_attrs = sqs.get_queue_attributes(QueueUrl=job_dlq_url, AttributeNames=['ApproximateNumberOfMessages'])
+    initial_dlq_count = int(initial_dlq_attrs['Attributes']['ApproximateNumberOfMessages'])
+    assert initial_dlq_count >= 0
 
 
 def test_sqs_visibility_timeout_prevents_duplicate_processing():

@@ -5,13 +5,13 @@ import pytest
 
 
 @pytest.fixture(scope="module")
-def ami_details(ec2_client, test_ami_id):
-    if not test_ami_id:
-        return None
-    response = ec2_client.describe_images(ImageIds=[test_ami_id])
-    if response["Images"]:
-        return response["Images"][0]
-    return None
+def fetched_ami(ec2_client, test_ami_id):
+    result = None
+    if test_ami_id:
+        response = ec2_client.describe_images(ImageIds=[test_ami_id])
+        if response["Images"]:
+            result = response["Images"][0]
+    return result
 
 
 def _get_tag_value(tags, key):
@@ -24,48 +24,55 @@ def _get_tag_value(tags, key):
 
 
 @pytest.fixture(scope="module")
-def ami_tags_dict(ami_details):
-    if not ami_details:
-        return {}
-    tags = ami_details.get("Tags", [])
+def ami_tags_dict(request):
+    ami = request.getfixturevalue("fetched_ami")
     result = {}
-    for tag in tags:
-        result[tag["Key"]] = tag["Value"]
+    if ami:
+        tags = ami.get("Tags", [])
+        for tag in tags:
+            result[tag["Key"]] = tag["Value"]
     return result
 
 
 @pytest.fixture(scope="module")
-def ami_purpose_tag(ami_details):
-    if not ami_details:
-        return None
-    return _get_tag_value(ami_details.get("Tags", []), "Purpose")
+def ami_purpose_tag(request):
+    ami = request.getfixturevalue("fetched_ami")
+    result = None
+    if ami:
+        result = _get_tag_value(ami.get("Tags", []), "Purpose")
+    return result
 
 
 @pytest.fixture(scope="module")
-def ami_runner_version_tag(ami_details):
-    if not ami_details:
-        return None
-    return _get_tag_value(ami_details.get("Tags", []), "RunnerVersion")
+def ami_runner_version_tag(request):
+    ami = request.getfixturevalue("fetched_ami")
+    result = None
+    if ami:
+        result = _get_tag_value(ami.get("Tags", []), "RunnerVersion")
+    return result
 
 
 @pytest.fixture(scope="module")
-def ami_os_family_tag(ami_details):
-    if not ami_details:
-        return None
-    return _get_tag_value(ami_details.get("Tags", []), "OSFamily")
+def ami_os_family_tag(request):
+    ami = request.getfixturevalue("fetched_ami")
+    result = None
+    if ami:
+        result = _get_tag_value(ami.get("Tags", []), "OSFamily")
+    return result
 
 
 @pytest.fixture(scope="module")
-def ami_os_version_tag(ami_details):
-    if not ami_details:
-        return None
-    return _get_tag_value(ami_details.get("Tags", []), "OSVersion")
+def ami_os_version_tag(request):
+    ami = request.getfixturevalue("fetched_ami")
+    result = None
+    if ami:
+        result = _get_tag_value(ami.get("Tags", []), "OSVersion")
+    return result
 
 
 @pytest.fixture
 def run_ssm_command():
     def _run_command(ssm_client, instance_id, command, retries=8):
-        import time
         response = ssm_client.send_command(
             InstanceIds=[instance_id],
             DocumentName="AWS-RunShellScript",

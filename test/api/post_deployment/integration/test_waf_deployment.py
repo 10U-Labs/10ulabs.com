@@ -8,18 +8,19 @@ def test_waf_web_acl_exists():
     assert 'ApiWafWebAcl' in acl_names
 
 
+def test_waf_web_acl_list_not_empty():
+    waf_client = boto3.client('wafv2', region_name='us-east-1')
+    response = waf_client.list_web_acls(Scope='CLOUDFRONT')
+    assert len(response['WebACLs']) > 0
+
+
 def test_waf_web_acl_has_cloudwatch_metrics_enabled():
     waf_client = boto3.client('wafv2', region_name='us-east-1')
     response = waf_client.list_web_acls(Scope='CLOUDFRONT')
-    acl_found = False
-    metrics_enabled = False
-    if response['WebACLs']:
-        acl_found = True
-        acl = response['WebACLs'][0]
-        acl_detail = waf_client.get_web_acl(Name=acl['Name'], Scope='CLOUDFRONT', Id=acl['Id'])
-        metrics_enabled = acl_detail['WebACL']['VisibilityConfig']['CloudWatchMetricsEnabled']
-    assert acl_found
-    assert metrics_enabled
+    acl = response['WebACLs'][0]
+    acl_detail = waf_client.get_web_acl(Name=acl['Name'], Scope='CLOUDFRONT', Id=acl['Id'])
+    metrics_enabled = acl_detail['WebACL']['VisibilityConfig']['CloudWatchMetricsEnabled']
+    assert metrics_enabled is True
 
 
 def test_waf_log_group_exists():

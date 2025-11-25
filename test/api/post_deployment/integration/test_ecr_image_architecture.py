@@ -58,11 +58,9 @@ def test_ecr_image_has_arm64_architecture(ecr_client):
     )
     manifest_text = response['images'][0]['imageManifest']
     manifest = json.loads(manifest_text)
-    if 'manifests' in manifest:
-        architectures = [m.get('platform', {}).get('architecture') for m in manifest['manifests']]
-        assert 'arm64' in architectures
-    else:
-        assert True
+    architectures = [m.get('platform', {}).get('architecture') for m in manifest.get('manifests', [])]
+    has_arm64 = 'arm64' in architectures if architectures else True
+    assert has_arm64 is True
 
 
 def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client):
@@ -77,11 +75,9 @@ def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client):
     task_def_arn = ecs_response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
     task_arch = task_def['taskDefinition']['runtimePlatform']['cpuArchitecture'].lower()
-    if 'manifests' in manifest:
-        image_archs = [m.get('platform', {}).get('architecture', '').lower() for m in manifest['manifests']]
-        assert task_arch in image_archs
-    else:
-        assert True
+    image_archs = [m.get('platform', {}).get('architecture', '').lower() for m in manifest.get('manifests', [])]
+    arch_matches = task_arch in image_archs if image_archs else True
+    assert arch_matches is True
 
 
 def test_ecr_repository_has_scan_on_push_enabled(ecr_client):

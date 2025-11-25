@@ -60,7 +60,7 @@ def publish_metric(metric_name: str, value: float, unit: str = 'None'):
                     'MetricName': metric_name,
                     'Value': value,
                     'Unit': unit,
-                    'Timestamp': datetime.datetime.utcnow()
+                    'Timestamp': datetime.datetime.now(datetime.UTC)
                 }
             ]
         )

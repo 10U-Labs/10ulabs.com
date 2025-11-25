@@ -186,18 +186,12 @@ def test_lambda_can_read_from_ssm_parameter_store(ssm_client, config):
     assert 'Parameter' in response
 
 
-def test_lambda_can_read_github_token_from_ssm(ssm_client):
-    try:
-        response = ssm_client.get_parameter(Name='/github-runner/credentials', WithDecryption=True)
-        assert 'Parameter' in response
-    except ssm_client.exceptions.ParameterNotFound:
-        assert True
+def test_lambda_can_read_ami_parameter_from_ssm(ssm_client):
+    response = ssm_client.get_parameter(Name='/github-runner/ami/latest/arm64')
+    assert 'Parameter' in response
 
 
 def test_lambda_has_permission_to_invoke_circuit_breaker_check(lambda_client, config):
-    try:
-        function_name = config["lambda_function_name"]
-        response = lambda_client.get_policy(FunctionName=function_name)
-        assert 'Policy' in response
-    except lambda_client.exceptions.ResourceNotFoundException:
-        assert True
+    function_name = config["lambda_function_name"]
+    response = lambda_client.get_policy(FunctionName=function_name)
+    assert 'Policy' in response

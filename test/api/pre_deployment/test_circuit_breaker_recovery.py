@@ -331,7 +331,8 @@ def test_attempt_recovery_performs_health_check(circuit_breaker_recovery):
             }
             mock_boto_client.return_value = mock_client
             result = circuit_breaker_recovery.attempt_recovery()
-    assert any('Health check passed' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Health check passed' in actions_str
 
 
 def test_attempt_recovery_fails_when_health_check_fails(circuit_breaker_recovery):
@@ -439,7 +440,8 @@ def test_attempt_recovery_enables_event_sources(circuit_breaker_recovery):
             }
             mock_boto_client.return_value = mock_client
             result = circuit_breaker_recovery.attempt_recovery()
-    assert any('Enabled' in action and 'event source' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Enabled 1 event source mappings' in actions_str
 
 
 def test_attempt_recovery_updates_state_to_half_open(circuit_breaker_recovery):

@@ -49,10 +49,7 @@ def test_ecr_lifecycle_policy_has_catchall_rule(ecr_client, config):
     assert len(any_rules) == 1
 
 
-def test_ecr_repository_permissions(ecr_client, config):
+def test_ecr_repository_image_scanning_enabled(ecr_client, config):
     repository_name = config["ecr_repository_name"]
-    try:
-        response = ecr_client.get_repository_policy(repositoryName=repository_name)
-        assert "policyText" in response
-    except ecr_client.exceptions.RepositoryPolicyNotFoundException:
-        assert True
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    assert response["repositories"][0]["imageScanningConfiguration"]["scanOnPush"] is True

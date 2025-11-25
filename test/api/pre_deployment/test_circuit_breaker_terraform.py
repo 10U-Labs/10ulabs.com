@@ -111,9 +111,15 @@ def test_lambda_permission_recovery_eventbridge_exists():
     assert 'resource "aws_lambda_permission" "circuit_breaker_recovery_eventbridge"' in content
 
 
-def test_alarms_send_to_sns_topic():
+def test_alarms_have_alarm_actions():
     cb_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "circuit_breaker.tf"
     with open(cb_file, encoding="utf-8") as f:
         content = f.read()
     assert 'alarm_actions' in content
+
+
+def test_alarms_send_to_sns_topic():
+    cb_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "circuit_breaker.tf"
+    with open(cb_file, encoding="utf-8") as f:
+        content = f.read()
     assert 'aws_sns_topic.circuit_breaker_alerts.arn' in content

@@ -10,10 +10,15 @@ def test_s3_bucket_versioning_disabled(s3_client, config):
     assert response.get("Status") != "Enabled"
 
 
-def test_s3_bucket_encryption_enabled(s3_client, config):
+def test_s3_bucket_encryption_config_exists(s3_client, config):
     bucket_name = config["domain_subdomain"]
     response = s3_client.get_bucket_encryption(Bucket=bucket_name)
     assert "ServerSideEncryptionConfiguration" in response
+
+
+def test_s3_bucket_encryption_has_rules(s3_client, config):
+    bucket_name = config["domain_subdomain"]
+    response = s3_client.get_bucket_encryption(Bucket=bucket_name)
     assert "Rules" in response["ServerSideEncryptionConfiguration"]
 
 

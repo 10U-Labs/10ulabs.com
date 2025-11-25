@@ -1,6 +1,3 @@
-from botocore.exceptions import ClientError
-
-
 def test_cloudwatch_log_group_webhook_handler_exists(logs_client, config):
     log_group_name = config["webhook_handler_log_group_name"]
     response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
@@ -59,11 +56,6 @@ def test_cloudwatch_alarm_job_queue_dlq_messages_exists(cloudwatch_client, confi
 
 
 def test_cloudwatch_log_retention_configured(logs_client, config):
-    try:
-        log_group_name = config["webhook_handler_log_group_name"]
-        response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
-        if response['logGroups']:
-            log_group = response['logGroups'][0]
-            assert 'retentionInDays' in log_group or 'retentionInDays' not in log_group
-    except ClientError:
-        assert True
+    log_group_name = config["webhook_handler_log_group_name"]
+    response = logs_client.describe_log_groups(logGroupNamePrefix=log_group_name)
+    assert len(response['logGroups']) > 0

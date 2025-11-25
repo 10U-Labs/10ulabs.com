@@ -224,7 +224,8 @@ def test_handle_cloudwatch_alarm_event_disables_event_sources(circuit_breaker_re
         with patch('boto3.client') as mock_boto_client:
             mock_boto_client.return_value = create_mock_lambda_with_mappings()
             result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
-    assert any('Disabled SQS event sources' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Disabled SQS event sources' in actions_str
 
 
 def test_handle_cloudwatch_alarm_event_sets_zero_concurrency(circuit_breaker_remediation):
@@ -243,7 +244,8 @@ def test_handle_cloudwatch_alarm_event_sets_zero_concurrency(circuit_breaker_rem
             mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
             mock_boto_client.return_value = mock_lambda
             result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
-    assert any('reserved concurrency to 0' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'reserved concurrency to 0' in actions_str
 
 
 def test_handle_cloudwatch_alarm_event_sends_notification(circuit_breaker_remediation):
@@ -264,7 +266,8 @@ def test_handle_cloudwatch_alarm_event_sends_notification(circuit_breaker_remedi
             mock_client.publish.return_value = {'MessageId': 'test-id'}
             mock_boto_client.return_value = mock_client
             result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
-    assert any('SNS notification' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'SNS notification' in actions_str
 
 
 def test_handle_cloudwatch_alarm_event_records_incident(circuit_breaker_remediation):
@@ -284,7 +287,8 @@ def test_handle_cloudwatch_alarm_event_records_incident(circuit_breaker_remediat
             mock_client.list_event_source_mappings.return_value = {'EventSourceMappings': []}
             mock_boto_client.return_value = mock_client
             result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
-    assert any('Recorded incident' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Recorded incident' in actions_str
 
 
 def test_handle_cloudwatch_alarm_event_updates_state_table(circuit_breaker_remediation):
@@ -303,7 +307,8 @@ def test_handle_cloudwatch_alarm_event_updates_state_table(circuit_breaker_remed
             mock_client.list_event_source_mappings.return_value = {'EventSourceMappings': []}
             mock_boto_client.return_value = mock_client
             result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
-    assert any('circuit breaker state to OPEN' in action for action in result.get('actions_taken', []))
+    actions_str = str(result.get('actions_taken', []))
+    assert 'circuit breaker state to OPEN' in actions_str
 
 
 def test_handle_cloudwatch_alarm_event_tracks_all_actions(circuit_breaker_remediation):

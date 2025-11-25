@@ -62,11 +62,17 @@ def test_dynamodb_tables_have_ttl():
     assert 'ttl' in content
 
 
-def test_dynamodb_tables_use_pay_per_request():
+def test_dynamodb_tables_have_billing_mode():
     sqs_ddb_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "sqs_dynamodb.tf"
     with open(sqs_ddb_file, encoding="utf-8") as f:
         content = f.read()
     assert 'billing_mode' in content
+
+
+def test_dynamodb_tables_use_pay_per_request():
+    sqs_ddb_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "sqs_dynamodb.tf"
+    with open(sqs_ddb_file, encoding="utf-8") as f:
+        content = f.read()
     assert 'PAY_PER_REQUEST' in content
 
 

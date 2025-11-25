@@ -36,19 +36,13 @@ def test_ecs_task_role_has_ecr_pull_permissions(iam_client):
 
 
 def test_lambda_execution_role_has_sqs_send_message_permission(iam_client):
-    try:
-        role = iam_client.get_role(RoleName='TenULabsWebhookHandler-role')
-        assert role['Role']['RoleName']
-    except iam_client.exceptions.NoSuchEntityException:
-        assert True
+    role = iam_client.get_role(RoleName='TenULabsWebhookHandler-ServiceRole')
+    assert role['Role']['RoleName'] == 'TenULabsWebhookHandler-ServiceRole'
 
 
 def test_lambda_execution_role_has_dynamodb_put_permission(iam_client):
-    try:
-        role = iam_client.get_role(RoleName='TenULabsWebhookHandler-role')
-        assert role['Role']['RoleName']
-    except iam_client.exceptions.NoSuchEntityException:
-        assert True
+    role = iam_client.get_role(RoleName='TenULabsWebhookHandler-ServiceRole')
+    assert role['Role']['RoleName'] == 'TenULabsWebhookHandler-ServiceRole'
 
 
 def test_circuit_breaker_remediation_role_exists(iam_client, config):

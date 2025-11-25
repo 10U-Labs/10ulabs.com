@@ -83,12 +83,17 @@ def test_lambda_uses_bootstrap_github_token_parameter():
     assert 'GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat' in content
 
 
-def test_cloudfront_health_endpoint_allows_options():
+def test_cloudfront_health_endpoint_path_pattern_exists():
     cloudfront_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "cloudfront_s3.tf"
     with open(cloudfront_file, encoding="utf-8") as f:
         content = f.read()
     assert 'path_pattern           = "/health"' in content
+
+
+def test_cloudfront_health_endpoint_allows_options():
+    cloudfront_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "cloudfront_s3.tf"
+    with open(cloudfront_file, encoding="utf-8") as f:
+        content = f.read()
     health_section_start = content.find('path_pattern           = "/health"')
-    assert health_section_start != -1
     health_section = content[health_section_start:health_section_start + 500]
     assert 'OPTIONS' in health_section

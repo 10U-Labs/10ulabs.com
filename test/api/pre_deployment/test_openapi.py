@@ -126,20 +126,46 @@ def test_openapi_spec_health_has_options_method(openapi_spec):
     assert 'options' in openapi_spec['paths']['/health']
 
 
-def test_openapi_spec_health_options_has_mock_integration(openapi_spec):
+def test_openapi_spec_health_options_has_integration_key(openapi_spec):
     options = openapi_spec['paths']['/health']['options']
     assert 'x-amazon-apigateway-integration' in options
+
+
+def test_openapi_spec_health_options_integration_type_is_mock(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
     assert options['x-amazon-apigateway-integration']['type'] == 'mock'
 
 
-def test_openapi_spec_health_options_returns_cors_headers(openapi_spec):
+def test_openapi_spec_health_options_integration_has_responses(openapi_spec):
     options = openapi_spec['paths']['/health']['options']
     integration = options['x-amazon-apigateway-integration']
     assert 'responses' in integration
+
+
+def test_openapi_spec_health_options_integration_has_default_response(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    integration = options['x-amazon-apigateway-integration']
     assert 'default' in integration['responses']
-    response_params = integration['responses']['default'].get('responseParameters', {})
+
+
+def test_openapi_spec_health_options_returns_allow_origin_header(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    integration = options['x-amazon-apigateway-integration']
+    response_params = integration['responses']['default']['responseParameters']
     assert 'method.response.header.Access-Control-Allow-Origin' in response_params
+
+
+def test_openapi_spec_health_options_returns_allow_methods_header(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    integration = options['x-amazon-apigateway-integration']
+    response_params = integration['responses']['default']['responseParameters']
     assert 'method.response.header.Access-Control-Allow-Methods' in response_params
+
+
+def test_openapi_spec_health_options_returns_allow_headers_header(openapi_spec):
+    options = openapi_spec['paths']['/health']['options']
+    integration = options['x-amazon-apigateway-integration']
+    response_params = integration['responses']['default']['responseParameters']
     assert 'method.response.header.Access-Control-Allow-Headers' in response_params
 
 

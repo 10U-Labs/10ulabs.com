@@ -20,11 +20,17 @@ def test_acm_certificate_resource_exists():
     assert 'resource "aws_acm_certificate" "api"' in content
 
 
-def test_acm_certificate_uses_dns_validation():
+def test_acm_certificate_has_validation_method():
     cert_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "certificate_dns.tf"
     with open(cert_file, encoding="utf-8") as f:
         content = f.read()
     assert 'validation_method' in content
+
+
+def test_acm_certificate_uses_dns_validation():
+    cert_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "certificate_dns.tf"
+    with open(cert_file, encoding="utf-8") as f:
+        content = f.read()
     assert 'DNS' in content
 
 

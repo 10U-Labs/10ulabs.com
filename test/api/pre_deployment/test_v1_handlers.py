@@ -1463,13 +1463,21 @@ def test_v1_get_github_token_failure(mock_boto_client, v1_handler):
 
 @patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
 @patch('boto3.client')
-def test_v1_get_github_token_success_caches_value(mock_boto_client, v1_handler):
+def test_v1_get_github_token_success_returns_token(mock_boto_client, v1_handler):
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     mock_boto_client.return_value = mock_ssm
     token1 = v1_handler.get_github_token()
-    v1_handler.get_github_token()
     assert token1 == 'test-token'
+
+
+@patch('boto3.client')
+def test_v1_get_github_token_success_caches_value(mock_boto_client, v1_handler):
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+    mock_boto_client.return_value = mock_ssm
+    v1_handler.get_github_token()
+    v1_handler.get_github_token()
     assert mock_ssm.get_parameter.call_count == 1
 
 
@@ -1616,11 +1624,26 @@ def test_v1_get_ec2_runner_status_ec2_error(mock_boto_client, v1_handler):
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
-def test_v1_create_ec2_user_data_script_format(v1_handler):
+def test_v1_create_ec2_user_data_includes_config_script(v1_handler):
     user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
     assert 'config.sh' in user_data
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_create_ec2_user_data_includes_registration_token(v1_handler):
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
     assert 'test-token' in user_data
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_create_ec2_user_data_includes_labels(v1_handler):
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
     assert 'label1,label2' in user_data
+
+
+@patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
+def test_v1_create_ec2_user_data_includes_repo(v1_handler):
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
     assert 'owner/repo' in user_data
 
 
@@ -1733,12 +1756,24 @@ def test_lambda_handler_options_request_returns_200(v1_handler, lambda_context):
 
 
 
-def test_lambda_handler_options_request_returns_cors_headers(v1_handler, lambda_context):
+def test_lambda_handler_options_request_returns_allow_origin_header(v1_handler, lambda_context):
     event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
     response = v1_handler.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     assert 'Access-Control-Allow-Origin' in headers
+
+
+def test_lambda_handler_options_request_returns_allow_methods_header(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
     assert 'Access-Control-Allow-Methods' in headers
+
+
+def test_lambda_handler_options_request_returns_allow_headers_header(v1_handler, lambda_context):
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
     assert 'Access-Control-Allow-Headers' in headers
 
 
@@ -1751,12 +1786,33 @@ def test_lambda_handler_options_request_allows_wildcard_origin(v1_handler, lambd
 
 
 
-def test_lambda_handler_options_request_allows_required_methods(v1_handler, lambda_context):
+def test_lambda_handler_options_request_allows_get_method(v1_handler, lambda_context):
     event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
     response = v1_handler.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'GET' in allowed_methods
+
+
+def test_lambda_handler_options_request_allows_post_method(v1_handler, lambda_context):
+    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'POST' in allowed_methods
+
+
+def test_lambda_handler_options_request_allows_delete_method(v1_handler, lambda_context):
+    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'DELETE' in allowed_methods
+
+
+def test_lambda_handler_options_request_allows_options_method(v1_handler, lambda_context):
+    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    response = v1_handler.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'OPTIONS' in allowed_methods

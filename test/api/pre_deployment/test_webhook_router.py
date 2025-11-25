@@ -393,27 +393,45 @@ def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router):
     assert success is True
 
 
-def test_make_http_request_with_retry_retries_on_server_error(webhook_router):
+def test_make_http_request_with_retry_retries_on_server_error_returns_false(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
-        success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
+        success, _data, _error, _status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert success is False
+
+
+def test_make_http_request_with_retry_retries_on_server_error_returns_status_code(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+        _success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert status == 500
 
 
-def test_make_http_request_with_retry_fails_immediately_on_client_error(webhook_router):
+def test_make_http_request_with_retry_fails_immediately_on_client_error_returns_false(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
-        success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {})
+        success, _data, _error, _status = webhook_router.make_http_request_with_retry('http://test.com', {})
     assert success is False
+
+
+def test_make_http_request_with_retry_fails_immediately_on_client_error_returns_status_code(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
+        _success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {})
     assert status == 400
+
+
+def test_make_http_request_with_retry_returns_503_returns_false(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+        success, _data, _error, _status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
+    assert success is False
 
 
 def test_make_http_request_with_retry_returns_503_status_code(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
-        success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
-    assert success is False
+        _success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert status == 503
 
 
@@ -563,14 +581,27 @@ def test_get_api_key_cached_value(webhook_router):
 
 
 @patch('boto3.client')
-def test_get_api_key_missing_env_var(_mock_boto_client, webhook_router):
+def test_get_api_key_missing_env_var_raises_runtime_error(_mock_boto_client, webhook_router):
     webhook_router.api_key_cache['value'] = None
+    raised_error = None
     with patch.dict('os.environ', {}, clear=True):
         try:
             webhook_router.get_api_key()
-            assert False
         except RuntimeError as e:
-            assert 'API_KEY_PARAMETER_NAME' in str(e)
+            raised_error = e
+    assert raised_error is not None
+
+
+@patch('boto3.client')
+def test_get_api_key_missing_env_var_error_mentions_parameter_name(_mock_boto_client, webhook_router):
+    webhook_router.api_key_cache['value'] = None
+    raised_error = None
+    with patch.dict('os.environ', {}, clear=True):
+        try:
+            webhook_router.get_api_key()
+        except RuntimeError as e:
+            raised_error = e
+    assert 'API_KEY_PARAMETER_NAME' in str(raised_error)
 
 
 
@@ -680,12 +711,24 @@ def test_lambda_handler_options_request_returns_200(webhook_router, lambda_conte
 
 
 
-def test_lambda_handler_options_request_returns_cors_headers(webhook_router, lambda_context):
+def test_lambda_handler_options_request_returns_allow_origin_header(webhook_router, lambda_context):
     event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
     response = webhook_router.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     assert 'Access-Control-Allow-Origin' in headers
+
+
+def test_lambda_handler_options_request_returns_allow_methods_header(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
     assert 'Access-Control-Allow-Methods' in headers
+
+
+def test_lambda_handler_options_request_returns_allow_headers_header(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
     assert 'Access-Control-Allow-Headers' in headers
 
 
@@ -698,13 +741,27 @@ def test_lambda_handler_options_request_allows_wildcard_origin(webhook_router, l
 
 
 
-def test_lambda_handler_options_request_allows_required_methods(webhook_router, lambda_context):
+def test_lambda_handler_options_request_allows_get_method(webhook_router, lambda_context):
     event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
     response = webhook_router.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'GET' in allowed_methods
+
+
+def test_lambda_handler_options_request_allows_post_method(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'POST' in allowed_methods
+
+
+def test_lambda_handler_options_request_allows_options_method(webhook_router, lambda_context):
+    event = {'path': '/v1/runners', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = webhook_router.lambda_handler(event, lambda_context)
+    headers = response.get('headers', {})
+    allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'OPTIONS' in allowed_methods
 
 

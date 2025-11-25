@@ -58,10 +58,7 @@ def test_sqs_dlq_receives_failed_messages(sqs_client, config):
 
 
 def test_sqs_job_dlq_exists_and_configured(sqs_client, config):
-    try:
-        queue_name = config["job_queue_dlq_name"]
-        dlq_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
-        attributes = sqs_client.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['MessageRetentionPeriod'])
-        assert int(attributes['Attributes']['MessageRetentionPeriod']) > 0
-    except sqs_client.exceptions.QueueDoesNotExist:
-        assert True
+    queue_name = config["job_queue_dlq_name"]
+    dlq_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    attributes = sqs_client.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=['MessageRetentionPeriod'])
+    assert int(attributes['Attributes']['MessageRetentionPeriod']) > 0

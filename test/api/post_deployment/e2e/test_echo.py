@@ -13,10 +13,15 @@ def test_echo_endpoint_returns_echoed_data(api_url):
     assert data["echo"] == test_data
 
 
-def test_echo_endpoint_with_unicode(api_url):
+def test_echo_endpoint_with_unicode_returns_200(api_url):
     test_data = {"message": "Hello 世界 🌍"}
     response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
     assert response.status_code == 200
+
+
+def test_echo_endpoint_with_unicode_preserves_characters(api_url):
+    test_data = {"message": "Hello 世界 🌍"}
+    response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
     data = response.json()
     assert data["echo"]["message"] == "Hello 世界 🌍"
 
@@ -27,19 +32,36 @@ def test_echo_endpoint_with_large_payload(api_url):
     assert response.status_code == 200
 
 
-def test_echo_endpoint_preserves_data_types(api_url):
-    test_data = {
-        "string": "test",
-        "number": 42,
-        "float": 3.14,
-        "boolean": True,
-        "null": None
-    }
+def test_echo_endpoint_preserves_string_type(api_url):
+    test_data = {"string": "test"}
     response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
     data = response.json()
-    echo = data["echo"]
-    assert echo["string"] == "test"
-    assert echo["number"] == 42
-    assert echo["float"] == 3.14
-    assert echo["boolean"] is True
-    assert echo["null"] is None
+    assert data["echo"]["string"] == "test"
+
+
+def test_echo_endpoint_preserves_integer_type(api_url):
+    test_data = {"number": 42}
+    response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
+    data = response.json()
+    assert data["echo"]["number"] == 42
+
+
+def test_echo_endpoint_preserves_float_type(api_url):
+    test_data = {"float": 3.14}
+    response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
+    data = response.json()
+    assert data["echo"]["float"] == 3.14
+
+
+def test_echo_endpoint_preserves_boolean_type(api_url):
+    test_data = {"boolean": True}
+    response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
+    data = response.json()
+    assert data["echo"]["boolean"] is True
+
+
+def test_echo_endpoint_preserves_null_type(api_url):
+    test_data = {"null": None}
+    response = requests.post(f"{api_url}/v1/echo", json=test_data, timeout=10)
+    data = response.json()
+    assert data["echo"]["null"] is None

@@ -23,9 +23,13 @@ def test_api_handles_concurrent_echo_requests(api_url):
     assert success_count >= 8
 
 
+def test_lambda_cold_start_responds_successfully(api_url):
+    response = requests.get(f"{api_url}/health", timeout=15)
+    assert response.status_code == 200
+
+
 def test_lambda_cold_start_performance(api_url):
     start = time.time()
-    response = requests.get(f"{api_url}/health", timeout=15)
+    requests.get(f"{api_url}/health", timeout=15)
     duration = time.time() - start
-    assert response.status_code == 200
     assert duration < 10.0
