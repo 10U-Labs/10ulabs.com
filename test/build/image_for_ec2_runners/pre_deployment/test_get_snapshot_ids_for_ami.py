@@ -1,32 +1,24 @@
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / 'scripts' / 'cleanup_packer_artifacts'))
-
-from cleanup_packer_artifacts import get_snapshot_ids_for_ami
-
-
 class TestGetSnapshotIdsForAmi:
 
-    def test_returns_empty_set_for_empty_block_device_mappings(self):
+    def test_returns_empty_set_for_empty_block_device_mappings(self, cleanup_packer_artifacts):
         image = {'BlockDeviceMappings': []}
 
-        result = get_snapshot_ids_for_ami(image)
+        result = cleanup_packer_artifacts.get_snapshot_ids_for_ami(image)
 
         assert result == set()
 
-    def test_returns_snapshot_id_from_ebs_block_device(self):
+    def test_returns_snapshot_id_from_ebs_block_device(self, cleanup_packer_artifacts):
         image = {
             'BlockDeviceMappings': [
                 {'Ebs': {'SnapshotId': 'snap-123'}}
             ]
         }
 
-        result = get_snapshot_ids_for_ami(image)
+        result = cleanup_packer_artifacts.get_snapshot_ids_for_ami(image)
 
         assert result == {'snap-123'}
 
-    def test_returns_multiple_snapshot_ids(self):
+    def test_returns_multiple_snapshot_ids(self, cleanup_packer_artifacts):
         image = {
             'BlockDeviceMappings': [
                 {'Ebs': {'SnapshotId': 'snap-123'}},
@@ -34,11 +26,11 @@ class TestGetSnapshotIdsForAmi:
             ]
         }
 
-        result = get_snapshot_ids_for_ami(image)
+        result = cleanup_packer_artifacts.get_snapshot_ids_for_ami(image)
 
         assert result == {'snap-123', 'snap-456'}
 
-    def test_ignores_block_devices_without_ebs(self):
+    def test_ignores_block_devices_without_ebs(self, cleanup_packer_artifacts):
         image = {
             'BlockDeviceMappings': [
                 {'DeviceName': '/dev/sda1'},
@@ -46,11 +38,11 @@ class TestGetSnapshotIdsForAmi:
             ]
         }
 
-        result = get_snapshot_ids_for_ami(image)
+        result = cleanup_packer_artifacts.get_snapshot_ids_for_ami(image)
 
         assert result == {'snap-123'}
 
-    def test_ignores_ebs_without_snapshot_id(self):
+    def test_ignores_ebs_without_snapshot_id(self, cleanup_packer_artifacts):
         image = {
             'BlockDeviceMappings': [
                 {'Ebs': {}},
@@ -58,13 +50,13 @@ class TestGetSnapshotIdsForAmi:
             ]
         }
 
-        result = get_snapshot_ids_for_ami(image)
+        result = cleanup_packer_artifacts.get_snapshot_ids_for_ami(image)
 
         assert result == {'snap-123'}
 
-    def test_returns_empty_set_when_no_block_device_mappings_key(self):
+    def test_returns_empty_set_when_no_block_device_mappings_key(self, cleanup_packer_artifacts):
         image = {}
 
-        result = get_snapshot_ids_for_ami(image)
+        result = cleanup_packer_artifacts.get_snapshot_ids_for_ami(image)
 
         assert result == set()

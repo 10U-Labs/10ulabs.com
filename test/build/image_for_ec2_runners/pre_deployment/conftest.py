@@ -1,5 +1,21 @@
+import importlib.util
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+
+
+def load_module_from_path(module_name, module_path):
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def cleanup_packer_artifacts():
+    return load_module_from_path("cleanup_packer_artifacts", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "cleanup_packer_artifacts.py")
 
 
 @pytest.fixture
