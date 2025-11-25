@@ -240,6 +240,25 @@ def test_route_runner_request_rejected_when_circuit_breaker_open(webhook_router)
     assert result['success'] is False
 
 
+def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+        with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
+            webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+            mock_record.assert_not_called()
+
+
+def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_router):
+    webhook_router.circuit_breaker_state['state'] = 'closed'
+    webhook_router.circuit_breaker_state['failures'] = 0
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
+        with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
+            webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+            mock_record.assert_called_once()
+
 
 def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs):
     event_data = {
@@ -370,25 +389,32 @@ def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router):
         mock_response.read.return_value = json.dumps({'result': 'success'}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        success, _data, _error = webhook_router.make_http_request_with_retry('http://test.com', {})
+        success, _data, _error, _status = webhook_router.make_http_request_with_retry('http://test.com', {})
     assert success is True
-
 
 
 def test_make_http_request_with_retry_retries_on_server_error(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
-        success, _data, _error = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
+        success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert success is False
-
+    assert status == 500
 
 
 def test_make_http_request_with_retry_fails_immediately_on_client_error(webhook_router):
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
-        success, _data, _error = webhook_router.make_http_request_with_retry('http://test.com', {})
+        success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {})
     assert success is False
+    assert status == 400
 
+
+def test_make_http_request_with_retry_returns_503_status_code(webhook_router):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+        success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
+    assert success is False
+    assert status == 503
 
 
 def test_publish_metric_sends_to_cloudwatch(webhook_router, mock_cloudwatch):
@@ -680,3 +706,31 @@ def test_lambda_handler_options_request_allows_required_methods(webhook_router, 
     assert 'GET' in allowed_methods
     assert 'POST' in allowed_methods
     assert 'OPTIONS' in allowed_methods
+
+
+def test_should_record_circuit_breaker_failure_returns_false_for_503(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(503) is False
+
+
+def test_should_record_circuit_breaker_failure_returns_true_for_500(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(500) is True
+
+
+def test_should_record_circuit_breaker_failure_returns_true_for_502(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(502) is True
+
+
+def test_should_record_circuit_breaker_failure_returns_true_for_504(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(504) is True
+
+
+def test_should_record_circuit_breaker_failure_returns_false_for_400(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(400) is False
+
+
+def test_should_record_circuit_breaker_failure_returns_false_for_200(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(200) is False
+
+
+def test_should_record_circuit_breaker_failure_returns_true_for_none(webhook_router):
+    assert webhook_router.should_record_circuit_breaker_failure(None) is True

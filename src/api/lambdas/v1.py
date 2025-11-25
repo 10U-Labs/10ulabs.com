@@ -64,6 +64,15 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+def _is_capacity_error(result: Dict[str, Any]) -> bool:
+    error = result.get('error', [])
+    if isinstance(error, str):
+        return 'capacity' in error.lower() or 'availability zone' in error.lower()
+    if isinstance(error, list):
+        return any('Capacity' in str(e.get('reason', '')) for e in error if isinstance(e, dict))
+    return False
+
+
 def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     github_repo = os.environ['GITHUB_REPO']
     github_token = os.environ.get('GITHUB_TOKEN')
@@ -684,7 +693,9 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 result = launch_fargate_runner(job_id, job_labels, github_repo)
                 response_body = result.copy()
-                response = success_response(response_body)
+                is_capacity_error = not result.get('success') and _is_capacity_error(result)
+                status_code = 503 if is_capacity_error else (200 if result.get('success') else 500)
+                response = json_response(status_code, response_body)
     except (ValueError, KeyError) as e:
         logger.error("Error handling POST request: %s", e, exc_info=True)
         response = error_response(500, 'Internal server error', str(e))
@@ -816,7 +827,9 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
         else:
             result = launch_ec2_spot_runner(job_id, job_labels, github_repo)
             response_body = result.copy()
-            response = success_response(response_body)
+            is_capacity_error = not result.get('success') and _is_capacity_error(result)
+            status_code = 503 if is_capacity_error else (200 if result.get('success') else 500)
+            response = json_response(status_code, response_body)
     except (ValueError, KeyError) as e:
         logger.error("Unexpected error: %s", e, exc_info=True)
         response = error_response(500, 'Internal server error', str(e))

@@ -137,6 +137,16 @@ def record_circuit_breaker_failure():
         circuit_breaker_state['state'] = 'open'
 
 
+def should_record_circuit_breaker_failure(status_code: int) -> bool:
+    if status_code is None:
+        return True
+    if status_code == 503:
+        return False
+    if 500 <= status_code < 600:
+        return True
+    return False
+
+
 def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
     queue_url = os.environ.get('JOB_QUEUE_URL')
     if not queue_url:
@@ -220,6 +230,7 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
 
 def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict = None, max_retries: int = 3) -> tuple:
     base_delay = 1.0
+    last_status_code = None
     if headers is None:
         headers = {}
     headers['Content-Type'] = 'application/json'
@@ -227,18 +238,19 @@ def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict = N
         try:
             req = urllib.request.Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
             with urllib.request.urlopen(req, timeout=30) as response:
-                return (True, json.loads(response.read()), None)
+                return (True, json.loads(response.read()), None, response.status)
         except urllib.error.HTTPError as e:
+            last_status_code = e.code
             if 400 <= e.code < 500:
-                return (False, None, f'HTTP {e.code}: {e.reason}')
+                return (False, None, f'HTTP {e.code}: {e.reason}', e.code)
             if attempt >= max_retries:
-                return (False, None, f'HTTP {e.code} after {max_retries + 1} attempts')
+                return (False, None, f'HTTP {e.code} after {max_retries + 1} attempts', e.code)
             time.sleep(base_delay * (2 ** attempt))
         except (urllib.error.URLError, ValueError) as e:
             if attempt >= max_retries:
-                return (False, None, f'{str(e)} after {max_retries + 1} attempts')
+                return (False, None, f'{str(e)} after {max_retries + 1} attempts', last_status_code)
             time.sleep(base_delay * (2 ** attempt))
-    return (False, None, 'Max retries exceeded')
+    return (False, None, 'Max retries exceeded', last_status_code)
 
 
 def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
@@ -265,13 +277,16 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
     headers = {'x-api-key': api_key}
     logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
 
-    success, response_data, error = make_http_request_with_retry(endpoint, payload, headers)
+    success, response_data, error, status_code = make_http_request_with_retry(endpoint, payload, headers)
     if success:
         logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
         record_circuit_breaker_success()
         return {'success': True, 'runner_type': runner_type, 'response': response_data}
     logger.error("Failed to route job %s: %s", job_id, error)
-    record_circuit_breaker_failure()
+    if should_record_circuit_breaker_failure(status_code):
+        record_circuit_breaker_failure()
+    else:
+        logger.warning("Status %s for job %s - not counting as circuit breaker failure", status_code, job_id)
     return {'success': False, 'error': error}
 
 

@@ -1169,6 +1169,69 @@ def test_launch_fargate_runner_retries_on_capacity_error(mock_boto_client, v1_ha
             assert mock_ecs.run_task.call_count == 3
 
 
+def test_is_capacity_error_with_capacity_string(v1_handler):
+    result = {'success': False, 'error': 'No capacity in any availability zone'}
+    assert v1_handler._is_capacity_error(result) is True
+
+
+def test_is_capacity_error_with_capacity_list(v1_handler):
+    result = {'success': False, 'error': [{'reason': 'Capacity is unavailable'}]}
+    assert v1_handler._is_capacity_error(result) is True
+
+
+def test_is_capacity_error_with_non_capacity_error(v1_handler):
+    result = {'success': False, 'error': 'Connection timeout'}
+    assert v1_handler._is_capacity_error(result) is False
+
+
+@patch('boto3.client')
+def test_handle_docker_runner_post_returns_503_on_capacity_error(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token', 'ECR_REPOSITORY': 'test-repo'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ecr = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecr.describe_images.return_value = {'imageDetails': [{'imageDigest': 'sha256:abc', 'imageTags': ['stable'], 'imagePushedAt': MagicMock(isoformat=lambda: '2024-01-01'), 'imageSizeInBytes': 100}]}
+        mock_ecs.run_task.return_value = {'tasks': [], 'failures': [{'reason': 'Capacity is unavailable at this time'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            if service == 'ecr':
+                return mock_ecr
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            event = {'httpMethod': 'POST', 'path': '/v1/docker-runner', 'body': '{"job_id": 123, "job_labels": ["test"], "github_repo": "test/repo"}'}
+            response = v1_handler.lambda_handler(event, None)
+            assert response['statusCode'] == 503
+
+
+@patch('boto3.client')
+def test_handle_docker_runner_post_returns_500_on_non_capacity_error(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token', 'ECR_REPOSITORY': 'test-repo'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ecr = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecr.describe_images.return_value = {'imageDetails': [{'imageDigest': 'sha256:abc', 'imageTags': ['stable'], 'imagePushedAt': MagicMock(isoformat=lambda: '2024-01-01'), 'imageSizeInBytes': 100}]}
+        mock_ecs.run_task.return_value = {'tasks': [], 'failures': [{'reason': 'Resource limit exceeded'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            if service == 'ecr':
+                return mock_ecr
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            event = {'httpMethod': 'POST', 'path': '/v1/docker-runner', 'body': '{"job_id": 123, "job_labels": ["test"], "github_repo": "test/repo"}'}
+            response = v1_handler.lambda_handler(event, None)
+            assert response['statusCode'] == 500
+
+
 def test_create_ec2_user_data_includes_region(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-west-2'}):
         user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
