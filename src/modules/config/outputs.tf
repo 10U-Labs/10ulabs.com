@@ -1,3 +1,7 @@
+output "admin_iam_user" {
+  value = "jdrowne"
+}
+
 output "aws_account_id" {
   value = "781581267945"
 }

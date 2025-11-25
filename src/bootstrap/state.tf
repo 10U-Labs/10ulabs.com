@@ -9,7 +9,7 @@ resource "aws_kms_alias" "terraform_state" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = module.config.terraform_state_bucket_name
+  bucket = local.terraform_state_bucket_name
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
@@ -43,7 +43,7 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
 resource "aws_s3_bucket_logging" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
-  target_bucket = module.central_logs.bucket_name
+  target_bucket = local.name_for_cloudtrail_bucket
   target_prefix = "s3-access/terraform-state/"
 }
 
@@ -58,8 +58,8 @@ resource "aws_s3_bucket_policy" "terraform_state" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            "arn:aws:iam::${module.config.aws_account_id}:user/jdrowne",
-            "arn:aws:iam::${module.config.aws_account_id}:role/${var.name_for_github_actions_role}"
+            "arn:aws:iam::${local.aws_account_id}:user/${local.admin_iam_user}",
+            "arn:aws:iam::${local.aws_account_id}:role/${local.name_for_github_actions_role}"
           ]
         }
         Action = [

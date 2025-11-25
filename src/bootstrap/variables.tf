@@ -2,22 +2,6 @@ variable "hosted_zone_id" {
   type = string
 }
 
-variable "name_for_cloudtrail" {
-  type = string
-}
-
-variable "name_for_cloudtrail_log_group" {
-  type = string
-}
-
-variable "name_for_cloudtrail_iam_role" {
-  type = string
-}
-
-variable "name_for_github_actions_role" {
-  type = string
-}
-
 variable "google_site_verification" {
   type = string
 }
