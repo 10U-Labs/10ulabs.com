@@ -30,9 +30,6 @@ RUN apt-get update && \
         zlib1g && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
-RUN useradd -m -s /bin/bash runner && \
-    echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
 RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o awscliv2.zip && \
     unzip -q awscliv2.zip && \
     ./aws/install && \
@@ -70,6 +67,9 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o aw
         types-PyYAML \
         types-requests \
         yamllint
+
+RUN useradd -m -s /bin/bash runner && \
+    echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 WORKDIR /home/runner
 RUN curl -fsSL -o runner.tar.gz \
