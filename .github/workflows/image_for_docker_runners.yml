@@ -156,7 +156,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: pip install pylint mypy yamllint pytest boto3 boto3-stubs[ecr] botocore dockerfile-parse types-dockerfile-parse
+        run: pip install pylint mypy yamllint pytest boto3 boto3-stubs[ecr] botocore dockerfile-parse types-dockerfile-parse types-PyYAML
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
