@@ -1,55 +1,6 @@
-resource "aws_s3_bucket" "access_logs" {
-  bucket = "${var.bucket_name}-access-logs"
-}
-
-resource "aws_s3_bucket_versioning" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-  versioning_configuration {
-    status = "Disabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
-  bucket = aws_s3_bucket.access_logs.id
-
-  rule {
-    id     = "archive-and-expire"
-    status = "Enabled"
-
-    filter {}
-
-    transition {
-      days          = 90
-      storage_class = "GLACIER"
-    }
-
-    expiration {
-      days = 1825
-    }
-  }
-}
-
 resource "aws_s3_bucket" "central_logs" {
-  bucket = var.bucket_name
+  bucket        = var.bucket_name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "central_logs" {
@@ -96,8 +47,8 @@ resource "aws_s3_bucket_acl" "central_logs" {
 resource "aws_s3_bucket_logging" "central_logs" {
   bucket = aws_s3_bucket.central_logs.id
 
-  target_bucket = aws_s3_bucket.access_logs.id
-  target_prefix = "central-logs-bucket-access/"
+  target_bucket = aws_s3_bucket.central_logs.id
+  target_prefix = "s3-access-logs/central-logs/"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "central_logs" {

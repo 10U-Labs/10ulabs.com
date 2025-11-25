@@ -9,7 +9,8 @@ resource "aws_kms_alias" "terraform_state" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = local.name_for_terraform_state_bucket
+  bucket        = local.name_for_terraform_state_bucket
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
