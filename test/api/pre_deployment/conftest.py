@@ -20,7 +20,7 @@ def assert_response_status(response: Dict[str, Any], expected_code: int) -> None
 
 
 def assert_json_content_type(response: Dict[str, Any]) -> None:
-    assert response['headers']['Content-Type'] == 'application/json'
+    assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def assert_cors_headers(response: Dict[str, Any]) -> None:

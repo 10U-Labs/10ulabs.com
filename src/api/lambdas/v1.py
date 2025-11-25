@@ -693,8 +693,8 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 result = launch_fargate_runner(job_id, job_labels, github_repo)
                 response_body = result.copy()
-                is_capacity_error = not result.get('success') and is_capacity_error(result)
-                status_code = 503 if is_capacity_error else (200 if result.get('success') else 500)
+                capacity_error = not result.get('success') and is_capacity_error(result)
+                status_code = 503 if capacity_error else (200 if result.get('success') else 500)
                 response = json_response(status_code, response_body)
     except (ValueError, KeyError) as e:
         logger.error("Error handling POST request: %s", e, exc_info=True)
@@ -827,8 +827,8 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
         else:
             result = launch_ec2_spot_runner(job_id, job_labels, github_repo)
             response_body = result.copy()
-            is_capacity_error = not result.get('success') and is_capacity_error(result)
-            status_code = 503 if is_capacity_error else (200 if result.get('success') else 500)
+            capacity_error = not result.get('success') and is_capacity_error(result)
+            status_code = 503 if capacity_error else (200 if result.get('success') else 500)
             response = json_response(status_code, response_body)
     except (ValueError, KeyError) as e:
         logger.error("Unexpected error: %s", e, exc_info=True)
