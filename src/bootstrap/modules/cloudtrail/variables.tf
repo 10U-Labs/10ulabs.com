@@ -10,7 +10,7 @@ variable "aws_region" {
   type = string
 }
 
-variable "cloudtrail_bucket_name" {
+variable "name_for_cloudtrail_bucket" {
   type = string
 }
 
@@ -18,10 +18,10 @@ variable "central_logs_bucket_name" {
   type = string
 }
 
-variable "cloudtrail_log_group_name" {
+variable "name_for_cloudtrail_log_group" {
   type = string
 }
 
-variable "cloudtrail_iam_role_name" {
+variable "name_for_cloudtrail_iam_role" {
   type = string
 }

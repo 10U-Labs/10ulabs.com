@@ -59,7 +59,7 @@ resource "aws_s3_bucket_policy" "terraform_state" {
         Principal = {
           AWS = [
             "arn:aws:iam::${module.config.aws_account_id}:user/jdrowne",
-            "arn:aws:iam::${module.config.aws_account_id}:role/${var.github_actions_role_name}"
+            "arn:aws:iam::${module.config.aws_account_id}:role/${var.name_for_github_actions_role}"
           ]
         }
         Action = [

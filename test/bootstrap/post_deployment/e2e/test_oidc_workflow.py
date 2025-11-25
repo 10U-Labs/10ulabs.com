@@ -56,7 +56,7 @@ class TestCompleteOIDCWorkflow:
         return assume_role_with_oidc(
             config['aws_account_id'],
             config['aws_region'],
-            config['github_actions_role_name'],
+            config['name_for_github_actions_role'],
             oidc_token
         )
 
@@ -83,7 +83,7 @@ class TestCompleteOIDCWorkflow:
         )
         identity = json.loads(result.stdout)
         arn = identity['Arn']
-        role_name_present = config['github_actions_role_name'] in arn
+        role_name_present = config['name_for_github_actions_role'] in arn
         assumed_role_present = 'assumed-role' in arn
         both_present = role_name_present and assumed_role_present
         assert both_present is True

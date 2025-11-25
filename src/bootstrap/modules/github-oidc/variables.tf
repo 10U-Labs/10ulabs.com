@@ -10,6 +10,6 @@ variable "aws_account_id" {
   type = string
 }
 
-variable "github_actions_role_name" {
+variable "name_for_github_actions_role" {
   type = string
 }

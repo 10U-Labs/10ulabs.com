@@ -2,23 +2,23 @@ variable "hosted_zone_id" {
   type = string
 }
 
-variable "cloudtrail_name" {
+variable "name_for_cloudtrail" {
   type = string
 }
 
-variable "cloudtrail_bucket_name" {
+variable "name_for_cloudtrail_bucket" {
   type = string
 }
 
-variable "cloudtrail_log_group_name" {
+variable "name_for_cloudtrail_log_group" {
   type = string
 }
 
-variable "cloudtrail_iam_role_name" {
+variable "name_for_cloudtrail_iam_role" {
   type = string
 }
 
-variable "github_actions_role_name" {
+variable "name_for_github_actions_role" {
   type = string
 }
 

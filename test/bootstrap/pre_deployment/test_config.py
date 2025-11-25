@@ -2,28 +2,28 @@ def test_terraform_tfvars_file_exists(bootstrap_dir):
     assert (bootstrap_dir / "terraform.tfvars").exists()
 
 
-def test_config_has_cloudtrail_name(config):
-    assert 'cloudtrail_name' in config
+def test_config_has_name_for_cloudtrail(config):
+    assert 'name_for_cloudtrail' in config
 
 
-def test_config_has_cloudtrail_bucket_name(config):
-    assert 'cloudtrail_bucket_name' in config
+def test_config_has_name_for_cloudtrail_bucket(config):
+    assert 'name_for_cloudtrail_bucket' in config
 
 
-def test_config_has_cloudtrail_iam_role_name(config):
-    assert 'cloudtrail_iam_role_name' in config
+def test_config_has_name_for_cloudtrail_iam_role(config):
+    assert 'name_for_cloudtrail_iam_role' in config
 
 
-def test_config_has_cloudtrail_log_group_name(config):
-    assert 'cloudtrail_log_group_name' in config
+def test_config_has_name_for_cloudtrail_log_group(config):
+    assert 'name_for_cloudtrail_log_group' in config
 
 
 def test_config_has_hosted_zone_id(config):
     assert 'hosted_zone_id' in config
 
 
-def test_config_has_github_actions_role_name(config):
-    assert 'github_actions_role_name' in config
+def test_config_has_name_for_github_actions_role(config):
+    assert 'name_for_github_actions_role' in config
 
 
 def test_config_has_google_site_verification(config):

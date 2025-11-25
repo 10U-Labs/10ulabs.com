@@ -1,5 +1,5 @@
 resource "aws_s3_bucket" "cloudtrail" {
-  bucket = var.cloudtrail_bucket_name
+  bucket = var.name_for_cloudtrail_bucket
 }
 
 resource "aws_s3_bucket_versioning" "cloudtrail" {
@@ -84,12 +84,12 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
 }
 
 resource "aws_cloudwatch_log_group" "cloudtrail" {
-  name              = var.cloudtrail_log_group_name
+  name              = var.name_for_cloudtrail_log_group
   retention_in_days = 365
 }
 
 resource "aws_iam_role" "cloudtrail_cloudwatch" {
-  name = var.cloudtrail_iam_role_name
+  name = var.name_for_cloudtrail_iam_role
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
