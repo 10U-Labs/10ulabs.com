@@ -52,7 +52,7 @@ jobs:
         name: Install Python dependencies
         run: pip install pytest boto3 dnspython
       - name: Run E2E tests
-        run: pytest test/bootstrap/test_e2e.py -v
+        run: pytest test/bootstrap/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -104,7 +104,7 @@ jobs:
         name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run integration tests
-        run: pytest test/bootstrap/test_integration.py -v
+        run: pytest test/bootstrap/post_deployment/integration/ -v
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -184,7 +184,7 @@ jobs:
         name: Install Python dependencies
         run: pip install pytest boto3
       - name: Run unit tests
-        run: pytest test/bootstrap/test_unit.py -v
+        run: pytest test/bootstrap/pre_deployment/ -v
 name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
   push:
