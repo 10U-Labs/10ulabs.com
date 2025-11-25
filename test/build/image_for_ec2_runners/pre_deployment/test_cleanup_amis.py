@@ -3,7 +3,7 @@ class TestCleanupAmisReturnsDeletedCount:
     def test_returns_zero_when_no_amis(self, cleanup_packer_artifacts, mock_ec2_client):
         mock_ec2_client.describe_images.return_value = {'Images': []}
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        count, _ = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
 
         assert count == 0
 
@@ -15,7 +15,7 @@ class TestCleanupAmisReturnsDeletedCount:
             ]
         }
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        count, _ = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
 
         assert count == 2
 
@@ -30,7 +30,7 @@ class TestCleanupAmisSkipsLatestAmi:
             ]
         }
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        count, _ = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
 
         assert count == 1
 
@@ -59,7 +59,7 @@ class TestCleanupAmisCollectsSnapshots:
             ]
         }
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        _, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
 
         assert snapshots == {'snap-123'}
 
@@ -77,7 +77,7 @@ class TestCleanupAmisCollectsSnapshots:
             ]
         }
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', {'snap-protected'}, False, True)
+        _, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', {'snap-protected'}, False, True)
 
         assert snapshots == {'snap-123'}
 
@@ -92,7 +92,7 @@ class TestCleanupAmisCollectsSnapshots:
             ]
         }
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, False)
+        _, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, False)
 
         assert snapshots == set()
 
@@ -117,6 +117,6 @@ class TestCleanupAmisDryRun:
             ]
         }
 
-        count, snapshots = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), True, True)
+        count, _ = cleanup_packer_artifacts.cleanup_amis(mock_ec2_client, 'ami-latest', set(), True, True)
 
         assert count == 1

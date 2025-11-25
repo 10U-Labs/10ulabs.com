@@ -23,9 +23,6 @@ class TestFindOrphanedSnapshotsReturnsOrphanedSet:
 
         assert result == {'snap-orphaned'}
 
-
-class TestFindOrphanedSnapshotsSkipsExistingAmis:
-
     def test_does_not_return_snapshot_when_ami_exists(self, cleanup_packer_artifacts, mock_ec2_client):
         mock_ec2_client.describe_images.return_value = {
             'Images': [{'ImageId': 'ami-0abc123def456789a'}]
@@ -43,9 +40,6 @@ class TestFindOrphanedSnapshotsSkipsExistingAmis:
 
         assert result == set()
 
-
-class TestFindOrphanedSnapshotsSkipsProtectedSnapshots:
-
     def test_skips_protected_snapshots(self, cleanup_packer_artifacts, mock_ec2_client):
         mock_ec2_client.describe_images.return_value = {'Images': []}
         mock_ec2_client.describe_snapshots.return_value = {
@@ -60,9 +54,6 @@ class TestFindOrphanedSnapshotsSkipsProtectedSnapshots:
         result = cleanup_packer_artifacts.find_orphaned_snapshots(mock_ec2_client, {'snap-protected'})
 
         assert result == set()
-
-
-class TestFindOrphanedSnapshotsHandlesMultipleSnapshots:
 
     def test_returns_only_orphaned_from_mixed_set(self, cleanup_packer_artifacts, mock_ec2_client):
         mock_ec2_client.describe_images.return_value = {
