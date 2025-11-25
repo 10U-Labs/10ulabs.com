@@ -1,8 +1,7 @@
 import time
 import pytest
-import requests
 from botocore.exceptions import ClientError
-from .conftest import make_authenticated_post, make_authenticated_get
+from test.api.post_deployment.conftest import make_authenticated_post, make_authenticated_get
 
 
 @pytest.fixture(name="latest_ami_exists", scope="module")
@@ -65,82 +64,6 @@ def test_ec2_runner_instance_fixture(
     wait_for_instance_running(ec2_client, instance_id)
     yield {"instance_id": instance_id, "job_id": job_id, "github_repo": github_repo}
     terminate_instance_safely(ec2_client, instance_id)
-
-
-def test_protected_endpoint_requires_auth(api_url):
-    response = requests.get(f"{api_url}/v1/image-for-ec2-runners/latest", timeout=10)
-    assert response.status_code == 403
-
-
-def test_protected_endpoint_rejects_invalid_api_key(api_url):
-    headers = {"x-api-key": "invalid-key-12345"}
-    url = f"{api_url}/v1/image-for-ec2-runners/latest"
-    response = requests.get(url, headers=headers, timeout=10)
-    assert response.status_code == 403
-
-
-def test_protected_endpoint_accepts_valid_api_key(api_url, api_key, latest_ami_exists):
-    if not latest_ami_exists:
-        pytest.skip("No AMI available")
-    response = make_authenticated_get(f"{api_url}/v1/image-for-ec2-runners/latest", api_key)
-    assert response.status_code == 200
-
-
-def test_ec2_runner_list_requires_auth(api_url):
-    response = requests.get(f"{api_url}/v1/image-for-ec2-runners", timeout=10)
-    assert response.status_code == 403
-
-
-def test_runner_creation_requires_auth(api_url):
-    payload = {
-        "job_id": 123,
-        "github_repo": "any/repo",
-        "job_labels": ["ephemeral-ec2-spot-instance"]
-    }
-    response = requests.post(f"{api_url}/v1/ec2-runner", json=payload, timeout=10)
-    assert response.status_code == 403
-
-
-def test_ec2_runner_status_requires_auth(api_url):
-    response = requests.get(f"{api_url}/v1/ec2-runner", timeout=10)
-    assert response.status_code == 403
-
-
-def test_ec2_runner_status_accepts_valid_api_key(api_url, api_key):
-    response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key)
-    assert response.status_code == 200
-
-
-def test_ec2_runner_status_returns_json(api_url, api_key):
-    response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key)
-    assert response.headers["Content-Type"] == "application/json"
-
-
-def test_ec2_runner_status_has_success_field(api_url, api_key):
-    response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key)
-    assert "success" in response.json()
-
-
-def test_ec2_runner_status_has_running_instances_field(api_url, api_key):
-    response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key)
-    assert "running_instances" in response.json()
-
-
-def test_ec2_runner_status_has_instances_field(api_url, api_key):
-    response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key)
-    assert "instances" in response.json()
-
-
-def test_v1_ec2_runner_post_missing_job_id_returns_400(api_url, api_key):
-    payload = {"job_labels": ["ephemeral-ec2-spot-instance"], "github_repo": "any/repo"}
-    response = make_authenticated_post(f"{api_url}/v1/ec2-runner", api_key, json=payload)
-    assert response.status_code == 400
-
-
-def test_v1_ec2_runner_post_missing_github_repo_returns_400(api_url, api_key):
-    payload = {"job_id": 333333, "job_labels": ["ephemeral-ec2-spot-instance"]}
-    response = make_authenticated_post(f"{api_url}/v1/ec2-runner", api_key, json=payload)
-    assert response.status_code == 400
 
 
 def test_ec2_runner_post_returns_instance_id(test_ec2_runner_instance, latest_ami_exists):

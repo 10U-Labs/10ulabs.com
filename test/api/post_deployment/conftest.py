@@ -3,6 +3,9 @@ import pytest
 import requests
 
 
+DEFAULT_REQUEST_TIMEOUT = 10
+
+
 @pytest.fixture(name="aws_region", scope="module")
 def aws_region_fixture(config):
     return config["aws_region"]
@@ -47,3 +50,18 @@ def make_health_check_request(api_url, api_key):
 def assert_circuit_breaker_state_in_response(response):
     data = response.json()
     assert data["circuit_breaker"] is not None
+
+
+def make_authenticated_get(url, api_key, timeout=DEFAULT_REQUEST_TIMEOUT):
+    headers = {"x-api-key": api_key, "x-test-mode": "true"}
+    return requests.get(url, headers=headers, timeout=timeout)
+
+
+def make_authenticated_post(url, api_key, json=None, timeout=DEFAULT_REQUEST_TIMEOUT):
+    headers = {"x-api-key": api_key, "x-test-mode": "true"}
+    return requests.post(url, json=json, headers=headers, timeout=timeout)
+
+
+@pytest.fixture(name="github_repo", scope="module")
+def github_repo_fixture(config):
+    return config["github_repo"]
