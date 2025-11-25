@@ -161,7 +161,7 @@ def wait_for_ssm_ready(ssm_client, instance_id):
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def test_instance(ec2_client, ssm_client, test_ami_id, config):
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")

@@ -24,22 +24,22 @@ def run_ssm_command():
     return execute_ssm_command
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ec2_client(aws_region):
     return boto3.client("ec2", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ssm_client(aws_region):
     return boto3.client("ssm", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def logs_client(aws_region):
     return boto3.client("logs", region_name=aws_region)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def test_ami_id():
     return os.environ.get("TEST_AMI_ID", "")
 

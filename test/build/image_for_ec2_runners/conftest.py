@@ -61,12 +61,12 @@ def get_config():
     return result
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def config():
     return get_config()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def aws_region(request):
     data = request.getfixturevalue("config")
     return data["aws_region"]
