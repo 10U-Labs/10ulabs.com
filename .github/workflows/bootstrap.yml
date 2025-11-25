@@ -191,7 +191,7 @@ jobs:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs dnspython
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs dnspython python-hcl2
       - name: Terraform Format Check
         run: cd src/bootstrap && terraform fmt -check -recursive
       - name: Terraform Init
@@ -241,7 +241,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
+        run: python3 -m pip install pytest boto3 python-hcl2
       - name: Run unit tests
         run: python3 -m pytest test/bootstrap/pre_deployment/ -v
 name: Ensuring bootstrap infrastructure exists and is properly configured

@@ -55,6 +55,7 @@ RUN pip3 install --no-cache-dir --break-system-packages \
         mypy \
         pylint \
         pytest \
+        python-hcl2 \
         PyYAML \
         requests \
         types-PyYAML \
