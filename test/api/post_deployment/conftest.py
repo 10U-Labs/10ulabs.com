@@ -13,6 +13,11 @@ def ssm_client_fixture(aws_region):
     return boto3.client("ssm", region_name=aws_region)
 
 
+@pytest.fixture(name="ec2_client", scope="module")
+def ec2_client_fixture(aws_region):
+    return boto3.client("ec2", region_name=aws_region)
+
+
 @pytest.fixture(name="ecr_client", scope="module")
 def ecr_client_fixture(aws_region):
     return boto3.client("ecr", region_name=aws_region)
