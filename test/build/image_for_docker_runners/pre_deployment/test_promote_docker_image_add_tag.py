@@ -1,18 +1,9 @@
-from unittest.mock import Mock
-from botocore.exceptions import ClientError
-import importlib.util
-import os
 import sys
+from unittest.mock import Mock
 
+from botocore.exceptions import ClientError
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../../src/build/image_for_docker_runners')
-sys.path.insert(0, BASE_DIR)
-promote_path = os.path.join(BASE_DIR, 'promote_docker_image.py')
-promote_spec = importlib.util.spec_from_file_location("promote_docker_image", promote_path)
-if promote_spec is None or promote_spec.loader is None:
-    raise ImportError("Could not load promote_docker_image module")
-promote_docker_image = importlib.util.module_from_spec(promote_spec)
-promote_spec.loader.exec_module(promote_docker_image)
+promote_docker_image = sys.modules['promote_docker_image']
 
 
 def test_add_tag_calls_put_image():

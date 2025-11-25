@@ -16,7 +16,7 @@ def _get_tfvar_value(var_name):
     line = content[idx:content.find('\n', idx)]
     start = line.find('"') + 1
     end = line.find('"', start)
-    if start > 0 and end > start:
+    if 0 < start < end:
         return line[start:end]
     return None
 
