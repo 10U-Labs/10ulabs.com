@@ -1,16 +1,23 @@
 FROM debian:stable-slim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG NODE_VERSION
+ARG PACKER_VERSION
+ARG RUNNER_ARCH
+ARG RUNNER_VERSION
+ARG TERRAFORM_VERSION
+ARG YQ_VERSION
+
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         git \
         gnupg \
         jq \
         libicu76 \
-        libssl3t64 \
         liblttng-ust1 \
+        libssl3t64 \
         procps \
         python3 \
         python3-pip \
@@ -23,26 +30,28 @@ RUN apt-get update && \
         zlib1g && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    ./aws/install && \
-    rm -rf awscliv2.zip aws
-
 RUN useradd -m -s /bin/bash runner && \
     echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-ARG RUNNER_VERSION=2.311.0
-ARG RUNNER_ARCH=arm64
-WORKDIR /home/runner
+RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o awscliv2.zip && \
+    unzip -q awscliv2.zip && \
+    ./aws/install && \
+    curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_arm64" && \
+    chmod +x /usr/local/bin/yq && \
+    HADOLINT_VERSION=$(curl -fsSL https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name') && \
+    curl -fsSL -o /usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-arm64" && \
+    chmod +x /usr/local/bin/hadolint && \
+    TFLINT_VERSION=$(curl -fsSL https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
+    curl -fsSL -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip" && \
+    curl -fsSL -o tflint.zip "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_arm64.zip" && \
+    curl -fsSL -o packer.zip "https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_arm64.zip" && \
+    unzip -q terraform.zip && \
+    unzip -q tflint.zip && \
+    unzip -q packer.zip && \
+    mv terraform tflint packer /usr/local/bin/ && \
+    rm -rf awscliv2.zip aws terraform.zip tflint.zip packer.zip
 
-RUN curl -o actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz -L \
-        https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz && \
-    tar xzf actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz && \
-    rm actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz && \
-    chown -R runner:runner /home/runner
-
-ARG NODE_VERSION=20.18.1
-RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz | \
+RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" | \
         tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g jsonlint && \
     npm cache clean --force
@@ -51,6 +60,7 @@ RUN pip3 install --no-cache-dir --break-system-packages \
         boto3 \
         boto3-stubs \
         botocore \
+        dockerfile-parse \
         dnspython \
         mypy \
         pylint \
@@ -58,26 +68,21 @@ RUN pip3 install --no-cache-dir --break-system-packages \
         python-hcl2 \
         PyYAML \
         requests \
+        types-dockerfile-parse \
         types-PyYAML \
         types-requests \
-        yamllint && \
-    rm -rf /root/.cache/pip
+        yamllint
 
-ARG TERRAFORM_VERSION=1.14.0
-RUN TFLINT_LATEST=$(curl -s https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
-    curl -L -o "terraform_${TERRAFORM_VERSION}_linux_arm64.zip" "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip" && \
-    curl -L -o "tflint_linux_arm64.zip" "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_LATEST}/tflint_linux_arm64.zip" && \
-    unzip "terraform_${TERRAFORM_VERSION}_linux_arm64.zip" && \
-    unzip "tflint_linux_arm64.zip" && \
-    mv terraform tflint /usr/local/bin/ && \
-    rm -f ./*.zip
+WORKDIR /home/runner
+RUN curl -fsSL -o runner.tar.gz \
+        "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz" && \
+    tar xzf runner.tar.gz && \
+    rm runner.tar.gz && \
+    chown -R runner:runner /home/runner
 
-COPY entrypoint.py /home/runner/entrypoint.py
-RUN chmod +x /home/runner/entrypoint.py && \
-    chown runner:runner /home/runner/entrypoint.py
+COPY --chown=runner:runner --chmod=755 entrypoint.py /home/runner/entrypoint.py
 
 USER runner
-WORKDIR /home/runner
 
 ENTRYPOINT ["/home/runner/entrypoint.py"]
 CMD ["--repo", "", "--name", "", "--labels", "", "--token", ""]
