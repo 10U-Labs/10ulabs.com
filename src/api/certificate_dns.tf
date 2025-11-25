@@ -1,5 +1,5 @@
 data "aws_route53_zone" "parent" {
-  name = module.config.domain_name
+  name = module.shared.domain_name
 }
 
 resource "aws_acm_certificate" "api" {

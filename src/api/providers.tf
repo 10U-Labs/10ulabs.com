@@ -1,5 +1,5 @@
 provider "aws" {
-  region = module.config.aws_region
+  region = module.shared.aws_region
 
   default_tags {
     tags = {
@@ -27,5 +27,5 @@ provider "aws" {
 
 provider "github" {
   token = data.aws_ssm_parameter.github_pat.value
-  owner = module.config.github_org
+  owner = module.shared.github_org
 }

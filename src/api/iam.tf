@@ -426,7 +426,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ssm" {
       Effect = "Allow"
       Action = ["ssm:GetParameter"]
       Resource = [
-        "arn:aws:ssm:${module.config.aws_region}:${module.config.aws_account_id}:parameter/github-runner/*",
+        "arn:aws:ssm:${module.shared.aws_region}:${module.shared.aws_account_id}:parameter/github-runner/*",
         data.terraform_remote_state.bootstrap.outputs.github_pat_parameter_arn
       ]
     }]
@@ -451,7 +451,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_kms" {
 }
 
 resource "aws_iam_role" "circuit_breaker_remediation" {
-  name = "${module.config.resource_prefix}-CircuitBreakerRemediation-Role"
+  name = "${module.shared.resource_prefix}-CircuitBreakerRemediation-Role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -465,7 +465,7 @@ resource "aws_iam_role" "circuit_breaker_remediation" {
   })
 
   tags = {
-    Name = "${module.config.resource_prefix}-CircuitBreakerRemediation-Role"
+    Name = "${module.shared.resource_prefix}-CircuitBreakerRemediation-Role"
   }
 }
 
@@ -492,7 +492,7 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
         ]
         Resource = [
           aws_lambda_function.runners_handler.arn,
-          "arn:aws:lambda:${module.config.aws_region}:${module.config.aws_account_id}:event-source-mapping:*"
+          "arn:aws:lambda:${module.shared.aws_region}:${module.shared.aws_account_id}:event-source-mapping:*"
         ]
       },
       {
@@ -518,7 +518,7 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
 }
 
 resource "aws_iam_role" "dlq_reprocessor" {
-  name = "${module.config.resource_prefix}-DLQReprocessor-Role"
+  name = "${module.shared.resource_prefix}-DLQReprocessor-Role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -532,7 +532,7 @@ resource "aws_iam_role" "dlq_reprocessor" {
   })
 
   tags = {
-    Name = "${module.config.resource_prefix}-DLQReprocessor-Role"
+    Name = "${module.shared.resource_prefix}-DLQReprocessor-Role"
   }
 }
 
@@ -573,7 +573,7 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
 }
 
 resource "aws_iam_role" "circuit_breaker_recovery" {
-  name = "${module.config.resource_prefix}-CircuitBreakerRecovery-Role"
+  name = "${module.shared.resource_prefix}-CircuitBreakerRecovery-Role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -587,7 +587,7 @@ resource "aws_iam_role" "circuit_breaker_recovery" {
   })
 
   tags = {
-    Name = "${module.config.resource_prefix}-CircuitBreakerRecovery-Role"
+    Name = "${module.shared.resource_prefix}-CircuitBreakerRecovery-Role"
   }
 }
 
@@ -615,7 +615,7 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
         ]
         Resource = [
           aws_lambda_function.runners_handler.arn,
-          "arn:aws:lambda:${module.config.aws_region}:${module.config.aws_account_id}:event-source-mapping:*"
+          "arn:aws:lambda:${module.shared.aws_region}:${module.shared.aws_account_id}:event-source-mapping:*"
         ]
       },
       {

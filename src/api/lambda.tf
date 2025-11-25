@@ -193,7 +193,7 @@ data "archive_file" "circuit_breaker_remediation" {
 
 resource "aws_lambda_function" "circuit_breaker_remediation" {
   filename         = data.archive_file.circuit_breaker_remediation.output_path
-  function_name    = "${module.config.resource_prefix}-CircuitBreakerRemediation"
+  function_name    = "${module.shared.resource_prefix}-CircuitBreakerRemediation"
   role             = aws_iam_role.circuit_breaker_remediation.arn
   handler          = "circuit_breaker_remediation.lambda_handler"
   source_code_hash = data.archive_file.circuit_breaker_remediation.output_base64sha256
@@ -217,16 +217,16 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
   }
 
   tags = {
-    Name = "${module.config.resource_prefix}-CircuitBreakerRemediation"
+    Name = "${module.shared.resource_prefix}-CircuitBreakerRemediation"
   }
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
-  name              = "/aws/lambda/${module.config.resource_prefix}-CircuitBreakerRemediation"
+  name              = "/aws/lambda/${module.shared.resource_prefix}-CircuitBreakerRemediation"
   retention_in_days = 30
 
   tags = {
-    Name = "${module.config.resource_prefix}-CircuitBreakerRemediation-logs"
+    Name = "${module.shared.resource_prefix}-CircuitBreakerRemediation-logs"
   }
 }
 
@@ -238,7 +238,7 @@ data "archive_file" "dlq_reprocessor" {
 
 resource "aws_lambda_function" "dlq_reprocessor" {
   filename         = data.archive_file.dlq_reprocessor.output_path
-  function_name    = "${module.config.resource_prefix}-DLQReprocessor"
+  function_name    = "${module.shared.resource_prefix}-DLQReprocessor"
   role             = aws_iam_role.dlq_reprocessor.arn
   handler          = "dlq_reprocessor.handler"
   source_code_hash = data.archive_file.dlq_reprocessor.output_base64sha256
@@ -261,16 +261,16 @@ resource "aws_lambda_function" "dlq_reprocessor" {
   }
 
   tags = {
-    Name = "${module.config.resource_prefix}-DLQReprocessor"
+    Name = "${module.shared.resource_prefix}-DLQReprocessor"
   }
 }
 
 resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
-  name              = "/aws/lambda/${module.config.resource_prefix}-DLQReprocessor"
+  name              = "/aws/lambda/${module.shared.resource_prefix}-DLQReprocessor"
   retention_in_days = 30
 
   tags = {
-    Name = "${module.config.resource_prefix}-DLQReprocessor-logs"
+    Name = "${module.shared.resource_prefix}-DLQReprocessor-logs"
   }
 }
 
@@ -282,7 +282,7 @@ data "archive_file" "circuit_breaker_recovery" {
 
 resource "aws_lambda_function" "circuit_breaker_recovery" {
   filename         = data.archive_file.circuit_breaker_recovery.output_path
-  function_name    = "${module.config.resource_prefix}-CircuitBreakerRecovery"
+  function_name    = "${module.shared.resource_prefix}-CircuitBreakerRecovery"
   role             = aws_iam_role.circuit_breaker_recovery.arn
   handler          = "circuit_breaker_recovery.lambda_handler"
   source_code_hash = data.archive_file.circuit_breaker_recovery.output_base64sha256
@@ -306,15 +306,15 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
   }
 
   tags = {
-    Name = "${module.config.resource_prefix}-CircuitBreakerRecovery"
+    Name = "${module.shared.resource_prefix}-CircuitBreakerRecovery"
   }
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
-  name              = "/aws/lambda/${module.config.resource_prefix}-CircuitBreakerRecovery"
+  name              = "/aws/lambda/${module.shared.resource_prefix}-CircuitBreakerRecovery"
   retention_in_days = 30
 
   tags = {
-    Name = "${module.config.resource_prefix}-CircuitBreakerRecovery-logs"
+    Name = "${module.shared.resource_prefix}-CircuitBreakerRecovery-logs"
   }
 }

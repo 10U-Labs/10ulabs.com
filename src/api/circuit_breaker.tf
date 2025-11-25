@@ -1,8 +1,8 @@
 resource "aws_sns_topic" "circuit_breaker_alerts" {
-  name = "${module.config.resource_prefix}-circuit-breaker-alerts"
+  name = "${module.shared.resource_prefix}-circuit-breaker-alerts"
 
   tags = {
-    Name = "${module.config.resource_prefix}-circuit-breaker-alerts"
+    Name = "${module.shared.resource_prefix}-circuit-breaker-alerts"
   }
 }
 
@@ -13,7 +13,7 @@ resource "aws_sns_topic_subscription" "circuit_breaker_email" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "circuit_breaker_open" {
-  alarm_name          = "${module.config.resource_prefix}-circuit-breaker-open"
+  alarm_name          = "${module.shared.resource_prefix}-circuit-breaker-open"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 2
   metric_name         = "CircuitBreakerState"
@@ -28,12 +28,12 @@ resource "aws_cloudwatch_metric_alarm" "circuit_breaker_open" {
   alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
 
   tags = {
-    Name = "${module.config.resource_prefix}-circuit-breaker-open"
+    Name = "${module.shared.resource_prefix}-circuit-breaker-open"
   }
 }
 
 resource "aws_cloudwatch_metric_alarm" "circuit_breaker_high_failures" {
-  alarm_name          = "${module.config.resource_prefix}-circuit-breaker-high-failures"
+  alarm_name          = "${module.shared.resource_prefix}-circuit-breaker-high-failures"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 3
   metric_name         = "CircuitBreakerState"
@@ -48,12 +48,12 @@ resource "aws_cloudwatch_metric_alarm" "circuit_breaker_high_failures" {
   alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
 
   tags = {
-    Name = "${module.config.resource_prefix}-circuit-breaker-high-failures"
+    Name = "${module.shared.resource_prefix}-circuit-breaker-high-failures"
   }
 }
 
 resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
-  alarm_name          = "${module.config.resource_prefix}-webhook-handler-errors"
+  alarm_name          = "${module.shared.resource_prefix}-webhook-handler-errors"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
   threshold           = 5
@@ -97,12 +97,12 @@ resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
   alarm_actions       = [aws_sns_topic.circuit_breaker_alerts.arn]
 
   tags = {
-    Name = "${module.config.resource_prefix}-webhook-handler-errors"
+    Name = "${module.shared.resource_prefix}-webhook-handler-errors"
   }
 }
 
 resource "aws_cloudwatch_metric_alarm" "job_queue_dlq_messages" {
-  alarm_name          = "${module.config.resource_prefix}-job-queue-dlq-messages"
+  alarm_name          = "${module.shared.resource_prefix}-job-queue-dlq-messages"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -121,12 +121,12 @@ resource "aws_cloudwatch_metric_alarm" "job_queue_dlq_messages" {
   alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
 
   tags = {
-    Name = "${module.config.resource_prefix}-job-queue-dlq-messages"
+    Name = "${module.shared.resource_prefix}-job-queue-dlq-messages"
   }
 }
 
 resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
-  name        = "${module.config.resource_prefix}-circuit-breaker-remediation"
+  name        = "${module.shared.resource_prefix}-circuit-breaker-remediation"
   description = "Triggers circuit breaker remediation when alarm state changes"
 
   event_pattern = jsonencode({
@@ -144,7 +144,7 @@ resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
   })
 
   tags = {
-    Name = "${module.config.resource_prefix}-circuit-breaker-remediation"
+    Name = "${module.shared.resource_prefix}-circuit-breaker-remediation"
   }
 }
 
@@ -163,12 +163,12 @@ resource "aws_lambda_permission" "circuit_breaker_remediation_eventbridge" {
 }
 
 resource "aws_cloudwatch_event_rule" "dlq_reprocessor" {
-  name                = "${module.config.resource_prefix}-dlq-reprocessor"
+  name                = "${module.shared.resource_prefix}-dlq-reprocessor"
   description         = "Triggers DLQ reprocessor every 15 minutes"
   schedule_expression = "rate(15 minutes)"
 
   tags = {
-    Name = "${module.config.resource_prefix}-dlq-reprocessor"
+    Name = "${module.shared.resource_prefix}-dlq-reprocessor"
   }
 }
 
@@ -187,12 +187,12 @@ resource "aws_lambda_permission" "dlq_reprocessor_eventbridge" {
 }
 
 resource "aws_cloudwatch_event_rule" "circuit_breaker_recovery" {
-  name                = "${module.config.resource_prefix}-circuit-breaker-recovery"
+  name                = "${module.shared.resource_prefix}-circuit-breaker-recovery"
   description         = "Attempts automatic recovery of circuit breaker every 5 minutes"
   schedule_expression = "rate(5 minutes)"
 
   tags = {
-    Name = "${module.config.resource_prefix}-circuit-breaker-recovery"
+    Name = "${module.shared.resource_prefix}-circuit-breaker-recovery"
   }
 }
 

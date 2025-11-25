@@ -114,7 +114,7 @@ resource "aws_ecs_task_definition" "runner" {
       logDriver = "awslogs"
       options = {
         "awslogs-group"         = aws_cloudwatch_log_group.runner.name
-        "awslogs-region"        = module.config.aws_region
+        "awslogs-region"        = module.shared.aws_region
         "awslogs-stream-prefix" = var.log_stream_prefix
       }
     }
