@@ -6,6 +6,40 @@ import boto3
 import pytest
 
 
+def parse_shared_module_outputs() -> Dict[str, str]:
+    outputs_path = Path(__file__).parent.parent.parent / "src" / "modules" / "shared" / "outputs.tf"
+    config = {}
+    with open(outputs_path, encoding="utf-8") as f:
+        content = f.read()
+    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
+    matches = re.findall(pattern, content)
+    for key, value in matches:
+        config[key] = value
+    return config
+
+
+def parse_api_locals() -> Dict[str, str]:
+    locals_path = Path(__file__).parent.parent.parent / "src" / "api" / "locals.tf"
+    shared = parse_shared_module_outputs()
+    config = {}
+    with open(locals_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
+                match = re.match(r'(\w+)\s*=\s*(.+)', line)
+                if match:
+                    key, value = match.groups()
+                    value = value.strip()
+                    if value.startswith('"') and value.endswith('"'):
+                        config[key] = value[1:-1]
+                    elif 'module.shared.' in value:
+                        ref = value.replace('module.shared.', '').strip()
+                        config[key] = shared.get(ref, '')
+    config['domain_subdomain'] = f"api.{shared.get('domain_name', '')}"
+    config['github_repo_full'] = f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}"
+    return config
+
+
 @pytest.fixture(name="tfvars", scope="module")
 def tfvars_fixture() -> Dict[str, str]:
     tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
@@ -18,6 +52,11 @@ def tfvars_fixture() -> Dict[str, str]:
                 if match:
                     key, value = match.groups()
                     config[key] = value.strip('"')
+    api_locals = parse_api_locals()
+    config['aws_region'] = api_locals.get('aws_region', '')
+    config['aws_account_id'] = api_locals.get('aws_account_id', '')
+    config['domain_subdomain'] = api_locals.get('domain_subdomain', '')
+    config['github_repo'] = api_locals.get('github_repo_full', '')
     return config
 
 
@@ -37,11 +76,11 @@ def cfg_fixture() -> Dict[str, Any]:
                 elif value.startswith('"') and value.endswith('"'):
                     value = value[1:-1]
                 tfvars[key] = value
-
+    shared = parse_shared_module_outputs()
     return {
         "aws": {
-            "account_id": tfvars.get("aws_account_id"),
-            "region": tfvars.get("aws_region")
+            "account_id": shared.get("aws_account_id"),
+            "region": shared.get("aws_region")
         },
         "naming": {
             "vpc_name": tfvars.get("vpc_name")

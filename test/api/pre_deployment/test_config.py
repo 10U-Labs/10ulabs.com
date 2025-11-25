@@ -22,25 +22,23 @@ def test_config_has_github_runner_version(cfg):
     assert "runner_version" in cfg["github"]
 
 
-def test_terraform_tfvars_has_github_repo():
-    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_path, encoding="utf-8") as f:
+def test_shared_module_has_github_org():
+    outputs_path = Path(__file__).parent.parent.parent.parent / "src" / "modules" / "shared" / "outputs.tf"
+    with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
-    assert 'github_repo' in content
+    assert 'github_org' in content
 
 
-def test_terraform_tfvars_github_repo_format():
-    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            if line.strip().startswith('github_repo'):
-                value = line.split('=')[1].strip().strip('"')
-                assert '/' in value
+def test_shared_module_has_github_repo():
+    outputs_path = Path(__file__).parent.parent.parent.parent / "src" / "modules" / "shared" / "outputs.tf"
+    with open(outputs_path, encoding="utf-8") as f:
+        content = f.read()
+    assert 'name_for_github_repo' in content
 
 
-def test_terraform_tfvars_has_domain_subdomain():
-    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    with open(tfvars_path, encoding="utf-8") as f:
+def test_locals_tf_has_domain_subdomain():
+    locals_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "locals.tf"
+    with open(locals_path, encoding="utf-8") as f:
         content = f.read()
     assert 'domain_subdomain' in content
 
