@@ -2,6 +2,26 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  checking-oidc-availability:
+    if: |
+      github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
+      )
+    name: Checking OIDC availability
+    needs: declaring-common-variables
+    outputs:
+      oidc_available: ${{ steps.oidc.outcome == 'success' }}
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    steps:
+      - continue-on-error: true
+        id: oidc
+        name: Test OIDC authentication
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          retry-max-attempts: 1
+          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
   declaring-common-variables:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -34,20 +54,20 @@ jobs:
   e2e-testing:
     name: E2E testing
     needs:
+      - checking-oidc-availability
       - declaring-common-variables
       - integration-testing
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - continue-on-error: true
-        id: oidc
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
         name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - if: steps.oidc.outcome == 'failure'
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -70,20 +90,20 @@ jobs:
         working-directory: src/bootstrap
     name: Ensuring infrastructure is in desired state
     needs:
+      - checking-oidc-availability
       - declaring-common-variables
       - unit-testing
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - continue-on-error: true
-        id: oidc
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
         name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - if: steps.oidc.outcome == 'failure'
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -104,20 +124,20 @@ jobs:
   integration-testing:
     name: Integration testing
     needs:
-      - ensuring-infrastructure-in-desired-state
+      - checking-oidc-availability
       - declaring-common-variables
+      - ensuring-infrastructure-in-desired-state
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - continue-on-error: true
-        id: oidc
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
         name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - if: steps.oidc.outcome == 'failure'
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -136,7 +156,9 @@ jobs:
         run: python3 -m pytest test/bootstrap/post_deployment/integration/ -v
   performing-static-analysis:
     name: Performing static analysis
-    needs: declaring-common-variables
+    needs:
+      - checking-oidc-availability
+      - declaring-common-variables
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -150,14 +172,13 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - continue-on-error: true
-        id: oidc
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
         name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
-      - if: steps.oidc.outcome == 'failure'
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
         with:
