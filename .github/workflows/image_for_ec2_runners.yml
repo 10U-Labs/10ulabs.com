@@ -96,7 +96,7 @@ jobs:
               -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
               -machine-readable \
               template.pkr.hcl | tee packer-output.log
-            BUILD_EXIT_CODE=$?
+            BUILD_EXIT_CODE=${PIPESTATUS[0]}
             if [ $BUILD_EXIT_CODE -eq 0 ]; then
               echo "Build succeeded on attempt $ATTEMPT"
               break

@@ -2,6 +2,8 @@
 import argparse
 import json
 import sys
+from collections import defaultdict
+from datetime import datetime, timezone
 import boto3
 
 def find_suitable_subnet(instance_types, subnet_ids):
@@ -19,13 +21,36 @@ def find_suitable_subnet(instance_types, subnet_ids):
     if not supported_azs_set:
         return None
 
+    subnet_az_map = {}
     for subnet_id in subnet_ids:
         response = ec2.describe_subnets(SubnetIds=[subnet_id.strip()])
         subnet_az = response['Subnets'][0]['AvailabilityZone']
         if subnet_az in supported_azs_set:
-            return subnet_id.strip()
+            subnet_az_map[subnet_id.strip()] = subnet_az
 
-    return None
+    if not subnet_az_map:
+        return None
+
+    candidate_azs = list(set(subnet_az_map.values()))
+    response = ec2.describe_spot_price_history(
+        InstanceTypes=instance_types,
+        ProductDescriptions=['Linux/UNIX'],
+        StartTime=datetime.now(timezone.utc),
+        MaxResults=1000
+    )
+
+    az_type_count = defaultdict(int)
+    for price in response['SpotPriceHistory']:
+        az_type_count[price['AvailabilityZone']] += 1
+
+    ranked_azs = sorted(candidate_azs, key=lambda az: az_type_count.get(az, 0), reverse=True)
+
+    for az in ranked_azs:
+        for subnet_id, subnet_az in subnet_az_map.items():
+            if subnet_az == az:
+                return subnet_id
+
+    return list(subnet_az_map.keys())[0]
 
 def main():
     parser = argparse.ArgumentParser(description='Find suitable subnet for instance types')
@@ -49,15 +74,13 @@ def main():
     if args.command == 'check':
         if result:
             sys.exit(0)
-        else:
-            sys.exit(1)
-    elif args.command == 'get':
+        sys.exit(1)
+    if args.command == 'get':
         if result:
             print(result)
             sys.exit(0)
-        else:
-            print("ERROR: No suitable subnet found", file=sys.stderr)
-            sys.exit(1)
+        print("ERROR: No suitable subnet found", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
