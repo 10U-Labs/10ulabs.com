@@ -1,4 +1,5 @@
 import base64
+import datetime
 import hashlib
 import hmac
 import json
@@ -59,11 +60,11 @@ def publish_metric(metric_name: str, value: float, unit: str = 'None'):
                     'MetricName': metric_name,
                     'Value': value,
                     'Unit': unit,
-                    'Timestamp': time.time()
+                    'Timestamp': datetime.datetime.utcnow()
                 }
             ]
         )
-    except ClientError as e:
+    except Exception as e:
         logger.warning("Failed to publish metric %s: %s", metric_name, e)
 
 
@@ -364,6 +365,7 @@ def handle_health_check() -> Dict[str, Any]:
     }
     return {
         'statusCode': 200,
+        'headers': {'Content-Type': 'application/json'},
         'body': json.dumps(health_status)
     }
 

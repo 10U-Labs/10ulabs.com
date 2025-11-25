@@ -40,6 +40,5 @@ def make_health_check_request(api_url, api_key):
 
 
 def assert_circuit_breaker_state_in_response(response):
-    if response.status_code == 200:
-        data = response.json()
-        assert "circuit_breaker" in data or "status" in data
+    data = response.json()
+    assert data["circuit_breaker"] is not None
