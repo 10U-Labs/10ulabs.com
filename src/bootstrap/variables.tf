@@ -6,10 +6,6 @@ variable "name_for_cloudtrail" {
   type = string
 }
 
-variable "name_for_cloudtrail_bucket" {
-  type = string
-}
-
 variable "name_for_cloudtrail_log_group" {
   type = string
 }

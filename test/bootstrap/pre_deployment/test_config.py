@@ -6,10 +6,6 @@ def test_config_has_name_for_cloudtrail(config):
     assert 'name_for_cloudtrail' in config
 
 
-def test_config_has_name_for_cloudtrail_bucket(config):
-    assert 'name_for_cloudtrail_bucket' in config
-
-
 def test_config_has_name_for_cloudtrail_iam_role(config):
     assert 'name_for_cloudtrail_iam_role' in config
 

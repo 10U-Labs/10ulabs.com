@@ -1,5 +1,5 @@
 output "cloudtrail_bucket" {
-  value = module.cloudtrail.bucket_name
+  value = module.central_logs.bucket_name
 }
 
 output "cloudtrail_name" {

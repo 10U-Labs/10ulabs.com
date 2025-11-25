@@ -14,10 +14,6 @@ variable "name_for_cloudtrail_bucket" {
   type = string
 }
 
-variable "central_logs_bucket_name" {
-  type = string
-}
-
 variable "name_for_cloudtrail_log_group" {
   type = string
 }
