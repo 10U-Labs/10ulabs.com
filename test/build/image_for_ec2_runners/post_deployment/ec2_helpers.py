@@ -35,7 +35,7 @@ def launch_spot_instance(ec2_client, config):
 
 def wait_for_instance_ready(ec2_client, instance_id):
     waiter = ec2_client.get_waiter("instance_running")
-    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 5, "MaxAttempts": 120})
+    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
     max_wait_time = 600
     start_time = time.time()
     while time.time() - start_time < max_wait_time:
@@ -46,7 +46,7 @@ def wait_for_instance_ready(ec2_client, instance_id):
             system_status = status.get("SystemStatus", {}).get("Status", "")
             if instance_status == "ok" and system_status == "ok":
                 return True
-        time.sleep(5)
+        time.sleep(15)
     return False
 
 
