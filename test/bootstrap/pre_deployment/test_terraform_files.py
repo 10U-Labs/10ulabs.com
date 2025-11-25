@@ -44,3 +44,19 @@ def test_github_oidc_module_exists(bootstrap_dir):
 
 def test_domain_module_exists(bootstrap_dir):
     assert (bootstrap_dir / "modules" / "domain" / "main.tf").exists()
+
+
+def test_central_logs_tf_file_exists(bootstrap_dir):
+    assert (bootstrap_dir / "central_logs.tf").exists()
+
+
+def test_config_tf_file_exists(bootstrap_dir):
+    assert (bootstrap_dir / "config.tf").exists()
+
+
+def test_github_pat_tf_file_exists(bootstrap_dir):
+    assert (bootstrap_dir / "github_pat.tf").exists()
+
+
+def test_central_logs_module_exists(bootstrap_dir):
+    assert (bootstrap_dir / "modules" / "central_logs" / "main.tf").exists()
