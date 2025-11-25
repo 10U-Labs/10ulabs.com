@@ -132,7 +132,7 @@ jobs:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3 dnspython
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs dnspython
       - name: Terraform Format Check
         run: cd src/bootstrap && terraform fmt -check -recursive
       - name: Terraform Init
@@ -167,7 +167,6 @@ jobs:
       - name: Run mypy
         run: |
           python3 -m mypy \
-            --ignore-missing-imports \
             test/bootstrap/
   unit-testing:
     name: Unit testing
