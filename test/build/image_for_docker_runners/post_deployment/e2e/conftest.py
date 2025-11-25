@@ -19,9 +19,11 @@ def runner_registration_token(github_pat, github_repo):
         text=True
     )
     response = json.loads(result.stdout)
-    if "token" not in response:
-        return ""
-    return response["token"]
+    try:
+        token = response["token"]
+    except KeyError:
+        token = ""
+    return token
 
 
 def start_runner_container(uri, repo, name, labels, token):
@@ -71,10 +73,12 @@ def get_github_runners(pat, repo):
         capture_output=True,
         text=True
     )
-    runners = json.loads(result.stdout)
-    if "runners" not in runners:
-        return []
-    return runners["runners"]
+    response = json.loads(result.stdout)
+    try:
+        runners = response["runners"]
+    except KeyError:
+        runners = []
+    return runners
 
 
 def run_runner_and_wait(uri, repo, name, labels, token):

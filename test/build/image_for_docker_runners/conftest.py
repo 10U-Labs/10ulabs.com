@@ -4,7 +4,11 @@ import pytest
 
 
 def get_aws_region():
-    return os.environ.get("AWS_REGION", "us-east-1")
+    try:
+        region = os.environ["AWS_REGION"]
+    except KeyError:
+        region = "us-east-1"
+    return region
 
 
 def get_aws_account_id():
@@ -35,7 +39,7 @@ def get_github_repo():
         text=True
     )
     url = result.stdout.strip()
-    if "github.com" in url:
+    if url.find("github.com") != -1:
         if url.startswith("git@github.com:"):
             repo = url.replace("git@github.com:", "").replace(".git", "")
         elif url.startswith("https://github.com/"):
@@ -47,7 +51,11 @@ def get_github_repo():
 
 
 def get_github_pat():
-    return os.environ.get("GITHUB_PAT")
+    try:
+        pat = os.environ["GITHUB_PAT"]
+    except KeyError:
+        pat = None
+    return pat
 
 
 @pytest.fixture(scope="module")

@@ -54,7 +54,20 @@ def test_signal_handler_invokes_cleanup_runner(mock_run, mock_signal):
     with pytest.raises(SystemExit):
         signal_handler(None, None)
     assert mock_run.call_count > initial_call_count
-    assert any('remove' in str(call) for call in mock_run.call_args_list[initial_call_count:])
+
+
+@patch('entrypoint.signal.signal')
+@patch('entrypoint.subprocess.run')
+@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+def test_signal_handler_calls_config_sh_remove(mock_run, mock_signal):
+    mock_run.return_value = Mock(returncode=0)
+    with pytest.raises(SystemExit):
+        entrypoint.main()
+    signal_handler = mock_signal.call_args_list[0][0][1]
+    initial_call_count = mock_run.call_count
+    with pytest.raises(SystemExit):
+        signal_handler(None, None)
+    assert mock_run.call_args_list[initial_call_count][0][0][1] == 'remove'
 
 
 @patch('entrypoint.cleanup_runner')

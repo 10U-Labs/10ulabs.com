@@ -7,8 +7,8 @@ def test_nodejs_installed(docker_image):
     assert result.returncode == 0
 
 
-def test_nodejs_version_matches(docker_image):
-    result = run_command_in_container(docker_image, "node --version | grep -q 'v20.18.1'")
+def test_nodejs_version_matches(docker_image, config_node_version):
+    result = run_command_in_container(docker_image, f"node --version | grep -q 'v{config_node_version}'")
 
     assert result.returncode == 0
 

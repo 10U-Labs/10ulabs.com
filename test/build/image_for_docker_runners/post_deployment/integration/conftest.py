@@ -1,4 +1,15 @@
+import os
 import subprocess
+import yaml
+import pytest
+
+
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), '../../../../../src/build/image_for_docker_runners/config.yml')
+
+
+def _read_config():
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
 
 
 def run_command_in_container(tag, command):
@@ -9,3 +20,15 @@ def run_command_in_container(tag, command):
         text=True
     )
     return result
+
+
+@pytest.fixture(scope="module")
+def config_node_version():
+    config = _read_config()
+    return config["node_version"]
+
+
+@pytest.fixture(scope="module")
+def config_terraform_version():
+    config = _read_config()
+    return config["terraform_version"]

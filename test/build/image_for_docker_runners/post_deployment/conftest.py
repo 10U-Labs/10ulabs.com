@@ -9,7 +9,11 @@ def get_dockerfile_path():
 
 
 def get_docker_image_tag():
-    return os.environ.get("TEST_DOCKER_IMAGE_TAG", "github-docker-runner:test")
+    try:
+        tag = os.environ["TEST_DOCKER_IMAGE_TAG"]
+    except KeyError:
+        tag = "github-docker-runner:test"
+    return tag
 
 
 @pytest.fixture(scope="module")
@@ -50,8 +54,17 @@ def get_available_ecr_tag(region, repository):
         repositoryName=repository,
         imageIds=[{"imageTag": "available"}]
     )
-    tags = response["imageDetails"][0].get("imageTags", [])
-    tag = next((t for t in tags if t == "available"), None)
+    try:
+        tags = response["imageDetails"][0]["imageTags"]
+    except KeyError:
+        tags = []
+    tag = None
+    index = 0
+    while index < len(tags):
+        if tags[index] == "available":
+            tag = tags[index]
+            break
+        index = index + 1
     if not tag:
         pytest.fail("Image with tag 'available' not found in ECR")
     return tag
