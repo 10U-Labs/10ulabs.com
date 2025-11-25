@@ -22,17 +22,17 @@ def test_v1_runners_health_returns_circuit_breaker_state(api_url, api_key):
     assert_circuit_breaker_state_in_response(response)
 
 
-def test_v1_runners_post_requires_github_event_header(api_url):
+def test_v1_runners_post_ignores_missing_github_event_header(api_url):
     payload = {"action": "queued"}
     response = requests.post(f"{api_url}/v1/runners", json=payload, timeout=10)
-    assert response.status_code in [400, 401]
+    assert response.status_code == 200
 
 
-def test_v1_runners_post_rejects_missing_signature(api_url):
+def test_v1_runners_post_ignores_missing_signature(api_url):
     headers = {"x-github-event": "workflow_job"}
     payload = {"action": "queued", "workflow_job": {"id": 123, "labels": []}, "repository": {"full_name": "x/y"}}
     response = requests.post(f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10)
-    assert response.status_code == 401
+    assert response.status_code == 200
 
 
 def test_v1_runners_post_rejects_invalid_signature(api_url):
