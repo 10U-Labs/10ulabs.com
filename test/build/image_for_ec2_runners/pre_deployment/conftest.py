@@ -19,6 +19,12 @@ def cleanup_packer_artifacts():
 
 
 @pytest.fixture
+def packer_template_content():
+    template_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "template.pkr.hcl"
+    return template_path.read_text()
+
+
+@pytest.fixture
 def mock_ec2(v1_handler):
     with patch('boto3.client') as mock_boto_client:
         mock_ec2_client = MagicMock()
