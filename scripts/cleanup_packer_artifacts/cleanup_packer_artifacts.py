@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import re
 import sys
 import boto3
 from botocore.exceptions import ClientError
@@ -92,6 +93,48 @@ def cleanup_snapshots(ec2_client, snapshot_ids_to_delete, dry_run):
         except ClientError as e:
             print(f"Error deleting snapshot {snapshot_id}: {e}")
     return deleted_count
+
+
+def extract_ami_id_from_description(description):
+    match = re.search(r'for (ami-[a-f0-9]+)', description)
+    if match:
+        return match.group(1)
+    return None
+
+
+def get_existing_ami_ids(ec2_client):
+    existing_ami_ids = set()
+    try:
+        response = ec2_client.describe_images(Owners=['self'])
+        for image in response.get('Images', []):
+            existing_ami_ids.add(image['ImageId'])
+    except ClientError as e:
+        print(f"Error listing AMIs: {e}")
+    return existing_ami_ids
+
+
+def find_orphaned_snapshots(ec2_client, latest_snapshot_ids):
+    orphaned_snapshots = set()
+    existing_ami_ids = get_existing_ami_ids(ec2_client)
+    try:
+        response = ec2_client.describe_snapshots(
+            OwnerIds=['self'],
+            Filters=[
+                {'Name': 'description', 'Values': ['Created by CreateImage*']},
+            ]
+        )
+        snapshots = response.get('Snapshots', [])
+        for snapshot in snapshots:
+            snapshot_id = snapshot['SnapshotId']
+            if snapshot_id in latest_snapshot_ids:
+                continue
+            description = snapshot.get('Description', '')
+            ami_id = extract_ami_id_from_description(description)
+            if ami_id and ami_id not in existing_ami_ids:
+                orphaned_snapshots.add(snapshot_id)
+    except ClientError as e:
+        print(f"Error listing snapshots: {e}")
+    return orphaned_snapshots
 
 
 def cleanup_security_groups(ec2_client, dry_run):
@@ -284,7 +327,11 @@ def handle_ami_cleanup(args):
         total_deleted += ami_count
 
     if 'snapshots' in resource_types_set:
-        total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, snapshots_to_delete, args.dry_run))
+        orphaned_snapshots = find_orphaned_snapshots(ec2_client, latest_snapshot_ids)
+        all_snapshots_to_delete = snapshots_to_delete | orphaned_snapshots
+        if orphaned_snapshots:
+            print(f"Found {len(orphaned_snapshots)} orphaned snapshot(s)")
+        total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, all_snapshots_to_delete, args.dry_run))
 
     if 'security-groups' in resource_types_set:
         total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run))
