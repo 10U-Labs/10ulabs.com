@@ -1,5 +1,5 @@
 resource "aws_kinesis_firehose_delivery_stream" "cloudwatch_logs" {
-  name        = "${module.shared.resource_prefix}-CloudWatchLogs"
+  name        = "${local.resource_prefix}-CloudWatchLogs"
   destination = "extended_s3"
 
   extended_s3_configuration {
@@ -20,12 +20,12 @@ resource "aws_kinesis_firehose_delivery_stream" "cloudwatch_logs" {
   }
 
   tags = {
-    Name = "${module.shared.resource_prefix}-CloudWatchLogs"
+    Name = "${local.resource_prefix}-CloudWatchLogs"
   }
 }
 
 resource "aws_iam_role" "firehose_cloudwatch_logs" {
-  name = "${module.shared.resource_prefix}-FirehoseCloudWatchLogs"
+  name = "${local.resource_prefix}-FirehoseCloudWatchLogs"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,7 +39,7 @@ resource "aws_iam_role" "firehose_cloudwatch_logs" {
   })
 
   tags = {
-    Name = "${module.shared.resource_prefix}-FirehoseCloudWatchLogs"
+    Name = "${local.resource_prefix}-FirehoseCloudWatchLogs"
   }
 }
 
@@ -70,26 +70,26 @@ resource "aws_iam_role_policy" "firehose_s3_access" {
 }
 
 resource "aws_iam_role" "cloudwatch_logs_firehose" {
-  name = "${module.shared.resource_prefix}-CloudWatchLogsFirehose"
+  name = "${local.resource_prefix}-CloudWatchLogsFirehose"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Service = "logs.${module.shared.aws_region}.amazonaws.com"
+        Service = "logs.${local.aws_region}.amazonaws.com"
       }
       Action = "sts:AssumeRole"
       Condition = {
         StringLike = {
-          "aws:SourceArn" = "arn:aws:logs:${module.shared.aws_region}:${module.shared.aws_account_id}:*"
+          "aws:SourceArn" = "arn:aws:logs:${local.aws_region}:${local.aws_account_id}:*"
         }
       }
     }]
   })
 
   tags = {
-    Name = "${module.shared.resource_prefix}-CloudWatchLogsFirehose"
+    Name = "${local.resource_prefix}-CloudWatchLogsFirehose"
   }
 }
 

@@ -1,9 +1,9 @@
 locals {
   openapi_spec = templatefile("${path.module}/files/openapi.yml", {
-    HealthHandlerArn   = "arn:aws:apigateway:${module.shared.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.health_handler.arn}/invocations"
-    V1HandlerArn       = "arn:aws:apigateway:${module.shared.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.v1_handler.arn}/invocations"
-    CatchAllHandlerArn = "arn:aws:apigateway:${module.shared.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
-    RunnersHandlerArn  = "arn:aws:apigateway:${module.shared.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
+    HealthHandlerArn   = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.health_handler.arn}/invocations"
+    V1HandlerArn       = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.v1_handler.arn}/invocations"
+    CatchAllHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
+    RunnersHandlerArn  = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }

@@ -56,7 +56,7 @@ resource "aws_dynamodb_table" "idempotency" {
 }
 
 resource "aws_dynamodb_table" "incidents" {
-  name         = "${module.shared.resource_prefix}-incidents"
+  name         = "${local.resource_prefix}-incidents"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "incident_id"
 
@@ -75,12 +75,12 @@ resource "aws_dynamodb_table" "incidents" {
   }
 
   tags = {
-    Name = "${module.shared.resource_prefix}-incidents"
+    Name = "${local.resource_prefix}-incidents"
   }
 }
 
 resource "aws_dynamodb_table" "circuit_breaker_state" {
-  name             = "${module.shared.resource_prefix}-circuit-breaker-state"
+  name             = "${local.resource_prefix}-circuit-breaker-state"
   billing_mode     = "PAY_PER_REQUEST"
   hash_key         = "state_id"
   stream_enabled   = true
@@ -101,6 +101,6 @@ resource "aws_dynamodb_table" "circuit_breaker_state" {
   }
 
   tags = {
-    Name = "${module.shared.resource_prefix}-circuit-breaker-state"
+    Name = "${local.resource_prefix}-circuit-breaker-state"
   }
 }

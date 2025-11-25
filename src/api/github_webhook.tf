@@ -4,7 +4,7 @@ resource "random_password" "webhook_secret" {
 }
 
 resource "github_repository_webhook" "workflow_job" {
-  repository = module.shared.name_for_github_repo
+  repository = local.github_repo
 
   configuration {
     url          = "https://${local.domain_subdomain}/v1/runners"

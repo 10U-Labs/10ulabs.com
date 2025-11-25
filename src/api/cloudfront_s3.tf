@@ -37,7 +37,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "docs" {
 resource "aws_s3_bucket_logging" "docs" {
   bucket = aws_s3_bucket.docs.id
 
-  target_bucket = module.shared.name_for_central_logs_bucket
+  target_bucket = local.name_for_central_logs
   target_prefix = "s3-access/api-docs/"
 }
 
@@ -172,12 +172,12 @@ resource "aws_cloudfront_distribution" "main" {
 
   logging_config {
     include_cookies = false
-    bucket          = "${module.shared.name_for_central_logs_bucket}.s3.amazonaws.com"
+    bucket          = "${local.name_for_central_logs}.s3.amazonaws.com"
     prefix          = "cloudfront-logs/api/"
   }
 
   origin {
-    domain_name         = "${aws_api_gateway_rest_api.main.id}.execute-api.${module.shared.aws_region}.amazonaws.com"
+    domain_name         = "${aws_api_gateway_rest_api.main.id}.execute-api.${local.aws_region}.amazonaws.com"
     origin_id           = "api-gateway"
     origin_path         = "/prod"
     connection_attempts = 3
