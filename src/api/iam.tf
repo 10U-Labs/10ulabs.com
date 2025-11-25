@@ -568,6 +568,20 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
           "sqs:GetQueueUrl"
         ]
         Resource = [aws_sqs_queue.job_queue.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
       }
     ]
   })

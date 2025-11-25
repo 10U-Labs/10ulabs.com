@@ -13,6 +13,24 @@ logger.setLevel(logging.INFO)
 _clients = {}
 _github_token_cache = {'value': None}
 _api_key_cache = {'value': None}
+_test_mode = {'enabled': False}
+
+
+def is_test_mode() -> bool:
+    return _test_mode['enabled']
+
+
+def set_test_mode(enabled: bool):
+    _test_mode['enabled'] = enabled
+
+
+def get_header_case_insensitive(headers: dict, header_name: str) -> str:
+    if not headers:
+        return ''
+    for key, value in headers.items():
+        if key.lower() == header_name.lower():
+            return value or ''
+    return ''
 
 
 def get_ec2_client():
@@ -904,8 +922,23 @@ ROUTE_MAP = {
 }
 
 
+TEST_MODE_MOCK_PATHS = {
+    '/v1/ec2-runner': {'success': True, 'instance_id': 'i-test-mode-mock', 'test_mode': True},
+    '/v1/docker-runner': {'success': True, 'task_arn': 'arn:aws:ecs:test-mode-mock', 'test_mode': True},
+    '/v1/image-for-ec2-runners': {'success': True, 'message': 'Test mode - no AMI created', 'test_mode': True},
+    '/v1/image-for-docker-runners': {'success': True, 'message': 'Test mode - no image built', 'test_mode': True}
+}
+
+
 def lambda_handler(event, _context):
     logger.info("Received API request: %s", json.dumps(event))
+
+    headers = event.get('headers', {})
+    test_mode_header = get_header_case_insensitive(headers, 'x-test-mode')
+    set_test_mode(test_mode_header == 'true')
+
+    if is_test_mode():
+        logger.info("Test mode enabled - will return mock responses for POST requests")
 
     method = event.get('httpMethod', '')
     if method == 'OPTIONS':
@@ -914,12 +947,17 @@ def lambda_handler(event, _context):
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,x-api-key'
+                'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-test-mode'
             },
             'body': ''
         }
 
     path = event.get('path', '')
+
+    if is_test_mode() and method == 'POST' and path in TEST_MODE_MOCK_PATHS:
+        logger.info("Test mode: returning mock response for %s", path)
+        return success_response(TEST_MODE_MOCK_PATHS[path])
+
     handler = ROUTE_MAP.get((path, method))
 
     if not handler:
