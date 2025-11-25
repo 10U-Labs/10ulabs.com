@@ -67,7 +67,7 @@ def wait_for_instance_ready(ec2_client, instance_id):
 
 
 def wait_for_ssm_ready(ssm_client, instance_id):
-    max_attempts = 10
+    max_attempts = 7
     for attempt in range(max_attempts):
         response = ssm_client.describe_instance_information(
             Filters=[{"Key": "InstanceIds", "Values": [instance_id]}]
