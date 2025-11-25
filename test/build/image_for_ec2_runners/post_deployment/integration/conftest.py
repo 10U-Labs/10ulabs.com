@@ -1,7 +1,12 @@
 import os
+import sys
 import time
+from pathlib import Path
 from botocore.exceptions import ClientError
 import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
 
 
 @pytest.fixture(scope="session")
@@ -93,58 +98,6 @@ def run_ssm_command():
     return _run_command
 
 
-def launch_spot_instance(ec2_client, config):
-    response = ec2_client.run_instances(
-        ImageId=config["ami_id"],
-        InstanceType=config["instance_type"],
-        MinCount=1,
-        MaxCount=1,
-        SubnetId=config["subnet_id"],
-        SecurityGroupIds=[config["security_group_id"]],
-        IamInstanceProfile={"Name": config["instance_profile"]},
-        InstanceMarketOptions={
-            "MarketType": "spot",
-            "SpotOptions": {
-                "MaxPrice": config["max_spot_price"],
-                "SpotInstanceType": "one-time"
-            }
-        },
-        TagSpecifications=[{
-            "ResourceType": "instance",
-            "Tags": [
-                {"Key": "Name", "Value": "integration-test-instance"},
-                {"Key": "Purpose", "Value": "AMI Integration Testing"},
-                {"Key": "ManagedBy", "Value": "pytest"}
-            ]
-        }]
-    )
-    return response["Instances"][0]["InstanceId"]
-
-
-def terminate_instance_safely(ec2_client, instance_id):
-    try:
-        ec2_client.terminate_instances(InstanceIds=[instance_id])
-    except ClientError:
-        pass
-
-
-def wait_for_instance_ready(ec2_client, instance_id):
-    waiter = ec2_client.get_waiter("instance_running")
-    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
-    max_wait_time = 600
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
-        response = ec2_client.describe_instance_status(InstanceIds=[instance_id])
-        if response["InstanceStatuses"]:
-            status = response["InstanceStatuses"][0]
-            instance_status = status.get("InstanceStatus", {}).get("Status", "")
-            system_status = status.get("SystemStatus", {}).get("Status", "")
-            if instance_status == "ok" and system_status == "ok":
-                return True
-        time.sleep(15)
-    return False
-
-
 def wait_for_ssm_ready(ssm_client, instance_id):
     max_attempts = 8
     result = False
@@ -189,6 +142,11 @@ def test_instance(ec2_client, ssm_client, test_ami_id, config):
         "security_group_id": security_group_id,
         "instance_profile": instance_profile,
         "max_spot_price": max_spot_price,
+        "tags": [
+            {"Key": "Name", "Value": "integration-test-instance"},
+            {"Key": "Purpose", "Value": "AMI Integration Testing"},
+            {"Key": "ManagedBy", "Value": "pytest"}
+        ],
     }
 
     for instance_type in spot_instance_types:

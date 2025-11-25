@@ -1,11 +1,15 @@
 import base64
 import json
 import os
-import time
+import sys
 import urllib.request
 import urllib.error
+from pathlib import Path
 from botocore.exceptions import ClientError
 import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
 
 
 def get_registration_token(github_repo, github_token):
@@ -48,59 +52,6 @@ aws ec2 terminate-instances \
     return base64.b64encode(user_data_script.encode()).decode()
 
 
-def launch_spot_instance(ec2_client, config):
-    response = ec2_client.run_instances(
-        ImageId=config["ami_id"],
-        InstanceType=config["instance_type"],
-        MinCount=1,
-        MaxCount=1,
-        SubnetId=config["subnet_id"],
-        SecurityGroupIds=[config["security_group_id"]],
-        IamInstanceProfile={"Name": config["instance_profile"]},
-        UserData=config["user_data"],
-        InstanceMarketOptions={
-            "MarketType": "spot",
-            "SpotOptions": {
-                "MaxPrice": config["max_spot_price"],
-                "SpotInstanceType": "one-time"
-            }
-        },
-        TagSpecifications=[{
-            "ResourceType": "instance",
-            "Tags": [
-                {"Key": "Name", "Value": "e2e-test-instance"},
-                {"Key": "Purpose", "Value": "AMI E2E Testing"},
-                {"Key": "ManagedBy", "Value": "pytest"}
-            ]
-        }]
-    )
-    return response["Instances"][0]["InstanceId"]
-
-
-def wait_for_instance_ready(ec2_client, instance_id):
-    waiter = ec2_client.get_waiter("instance_running")
-    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
-    max_wait_time = 600
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
-        response = ec2_client.describe_instance_status(InstanceIds=[instance_id])
-        if response["InstanceStatuses"]:
-            status = response["InstanceStatuses"][0]
-            instance_status = status.get("InstanceStatus", {}).get("Status", "")
-            system_status = status.get("SystemStatus", {}).get("Status", "")
-            if instance_status == "ok" and system_status == "ok":
-                return True
-        time.sleep(15)
-    return False
-
-
-def terminate_instance_safely(ec2_client, instance_id):
-    try:
-        ec2_client.terminate_instances(InstanceIds=[instance_id])
-    except ClientError:
-        pass
-
-
 def validate_e2e_inputs(test_ami_id, github_token):
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
@@ -125,6 +76,11 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         "user_data": create_user_data(github_repo, registration_token, region),
         "max_spot_price": test_config.get("ec2_max_spot_price", "0.05"),
         "spot_instance_types": spot_types,
+        "tags": [
+            {"Key": "Name", "Value": "e2e-test-instance"},
+            {"Key": "Purpose", "Value": "AMI E2E Testing"},
+            {"Key": "ManagedBy", "Value": "pytest"}
+        ],
     }
 
 
