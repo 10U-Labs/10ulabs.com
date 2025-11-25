@@ -35,8 +35,19 @@ def get_latest_snapshot_ids(ec2_client, latest_ami_id):
     return latest_snapshot_ids
 
 
-def cleanup_amis(ec2_client, latest_ami_id, dry_run):
+def get_snapshot_ids_for_ami(image):
+    snapshot_ids = set()
+    for block_device in image.get('BlockDeviceMappings', []):
+        ebs = block_device.get('Ebs', {})
+        snapshot_id = ebs.get('SnapshotId')
+        if snapshot_id:
+            snapshot_ids.add(snapshot_id)
+    return snapshot_ids
+
+
+def cleanup_amis(ec2_client, latest_ami_id, latest_snapshot_ids, dry_run, cleanup_snapshots_enabled):
     deleted_count = 0
+    snapshots_to_delete = set()
     try:
         response = ec2_client.describe_images(
             Owners=['self'],
@@ -51,6 +62,9 @@ def cleanup_amis(ec2_client, latest_ami_id, dry_run):
             if image_id == latest_ami_id:
                 print(f"Skipping latest AMI: {image_id}")
                 continue
+            ami_snapshot_ids = get_snapshot_ids_for_ami(image)
+            if cleanup_snapshots_enabled:
+                snapshots_to_delete.update(ami_snapshot_ids - latest_snapshot_ids)
             try:
                 if dry_run:
                     print(f"[DRY RUN] Would deregister AMI: {image_id} ({image.get('Name', 'N/A')})")
@@ -62,35 +76,21 @@ def cleanup_amis(ec2_client, latest_ami_id, dry_run):
                 print(f"Error deregistering AMI {image_id}: {e}")
     except ClientError as e:
         print(f"Error listing AMIs: {e}")
-    return deleted_count
+    return deleted_count, snapshots_to_delete
 
 
-def cleanup_snapshots(ec2_client, latest_snapshot_ids, dry_run):
+def cleanup_snapshots(ec2_client, snapshot_ids_to_delete, dry_run):
     deleted_count = 0
-    try:
-        response = ec2_client.describe_snapshots(
-            OwnerIds=['self'],
-            Filters=[
-                {'Name': 'description', 'Values': ['*github-ec2-runner-*']},
-            ]
-        )
-        snapshots = response.get('Snapshots', [])
-        for snapshot in snapshots:
-            snapshot_id = snapshot['SnapshotId']
-            if snapshot_id in latest_snapshot_ids:
-                print(f"Skipping latest snapshot: {snapshot_id}")
-                continue
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would delete snapshot: {snapshot_id} ({snapshot.get('Description', 'N/A')})")
-                else:
-                    ec2_client.delete_snapshot(SnapshotId=snapshot_id)
-                    print(f"Deleted snapshot: {snapshot_id} ({snapshot.get('Description', 'N/A')})")
-                deleted_count += 1
-            except ClientError as e:
-                print(f"Error deleting snapshot {snapshot_id}: {e}")
-    except ClientError as e:
-        print(f"Error listing snapshots: {e}")
+    for snapshot_id in sorted(snapshot_ids_to_delete):
+        try:
+            if dry_run:
+                print(f"[DRY RUN] Would delete snapshot: {snapshot_id}")
+            else:
+                ec2_client.delete_snapshot(SnapshotId=snapshot_id)
+                print(f"Deleted snapshot: {snapshot_id}")
+            deleted_count += 1
+        except ClientError as e:
+            print(f"Error deleting snapshot {snapshot_id}: {e}")
     return deleted_count
 
 
@@ -262,19 +262,35 @@ def handle_ami_cleanup(args):
     latest_snapshot_ids = get_latest_snapshot_ids(ec2_client, latest_ami_id)
     print_protected_resources(latest_ami_id, latest_snapshot_ids)
 
-    cleanup_tasks = [
-        ('instances', 'INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run)),
-        ('volumes', 'VOLUMES', lambda: cleanup_volumes(ec2_client, args.dry_run)),
-        ('amis', 'AMIS', lambda: cleanup_amis(ec2_client, latest_ami_id, args.dry_run)),
-        ('snapshots', 'SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, latest_snapshot_ids, args.dry_run)),
-        ('security-groups', 'SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run)),
-        ('key-pairs', 'KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run)),
-    ]
-
     total_deleted = 0
-    for resource_type, label, cleanup_fn in cleanup_tasks:
-        if resource_type in resource_types_set:
-            total_deleted += run_cleanup(label, cleanup_fn)
+    snapshots_to_delete = set()
+
+    if 'instances' in resource_types_set:
+        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run))
+
+    if 'volumes' in resource_types_set:
+        total_deleted += run_cleanup('VOLUMES', lambda: cleanup_volumes(ec2_client, args.dry_run))
+
+    if 'amis' in resource_types_set:
+        cleanup_snapshots_enabled = 'snapshots' in resource_types_set
+        print("-" * 80)
+        print("CLEANING UP AMIS")
+        print("-" * 80)
+        ami_count, snapshots_to_delete = cleanup_amis(
+            ec2_client, latest_ami_id, latest_snapshot_ids, args.dry_run, cleanup_snapshots_enabled
+        )
+        print(f"Amis cleaned: {ami_count}")
+        print()
+        total_deleted += ami_count
+
+    if 'snapshots' in resource_types_set:
+        total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, snapshots_to_delete, args.dry_run))
+
+    if 'security-groups' in resource_types_set:
+        total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run))
+
+    if 'key-pairs' in resource_types_set:
+        total_deleted += run_cleanup('KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run))
 
     print_summary(total_deleted, args.dry_run)
     return 0
