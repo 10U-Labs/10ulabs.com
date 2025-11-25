@@ -255,7 +255,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install dependencies
-        run: pip install pytest boto3
+        run: pip install pytest boto3 pyyaml
       - name: Get GitHub PAT from Parameter Store
         run: |
           GITHUB_PAT=$(aws ssm get-parameter --name /github/pat --with-decryption --query 'Parameter.Value' --output text)
@@ -294,7 +294,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3
+        run: pip install pytest boto3 pyyaml
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
