@@ -50,9 +50,9 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3 dnspython
+        run: python3 -m pip install pytest boto3 dnspython
       - name: Run E2E tests
-        run: pytest test/bootstrap/post_deployment/e2e/ -v
+        run: python3 -m pytest test/bootstrap/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -102,9 +102,9 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3
+        run: python3 -m pip install pytest boto3
       - name: Run integration tests
-        run: pytest test/bootstrap/post_deployment/integration/ -v
+        run: python3 -m pytest test/bootstrap/post_deployment/integration/ -v
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -132,7 +132,7 @@ jobs:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: pip install pylint mypy yamllint pytest boto3 dnspython
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 dnspython
       - name: Terraform Format Check
         run: cd src/bootstrap && terraform fmt -check -recursive
       - name: Terraform Init
@@ -160,13 +160,13 @@ jobs:
             .github/workflows/bootstrap.yml
       - name: Run pylint
         run: |
-          pylint \
+          python3 -m pylint \
             test/bootstrap/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          python -m mypy \
+          python3 -m mypy \
             test/bootstrap/
   unit-testing:
     name: Unit testing
@@ -182,9 +182,9 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3
+        run: python3 -m pip install pytest boto3
       - name: Run unit tests
-        run: pytest test/bootstrap/pre_deployment/ -v
+        run: python3 -m pytest test/bootstrap/pre_deployment/ -v
 name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
   push:
