@@ -88,7 +88,7 @@ def test_lambda_handler_docker_runner_post_returns_json_content_type(mock_boto_c
         return MagicMock()
 
     mock_boto_client.side_effect = mock_client
-    event = docker_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
+    event = docker_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
 
@@ -115,7 +115,7 @@ def test_lambda_handler_docker_runner_does_not_specify_launch_type_and_capacity_
 
     mock_boto_client.side_effect = mock_client
     with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-registration-token'):
-        event = docker_runner_post_event_factory(job_id=12346, github_repo='10U-Labs-LLC/10ulabs.com')
+        event = docker_runner_post_event_factory(job_id=12346, github_repo='test-org/test-repo')
         v1_handler.lambda_handler(event, lambda_context)
     call_kwargs = mock_ecs.run_task.call_args[1]
     has_launch_type = 'launchType' in call_kwargs
@@ -177,7 +177,7 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(mock_boto_clie
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     mock_boto_client.side_effect = create_multi_client_mock(mock_ec2, mock_ssm)
-    event = ec2_runner_post_event_factory(job_id=12345, github_repo='10U-Labs-LLC/10ulabs.com')
+    event = ec2_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = v1_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)
 

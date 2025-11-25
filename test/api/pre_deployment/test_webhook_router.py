@@ -107,7 +107,7 @@ def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_
     event = sqs_event_factory(records=[{
         'messageId': 'test-message-id',
         'eventSource': 'aws:sqs',
-        'body': json.dumps({'job_id': 123, 'job_labels': ['ephemeral-ec2-spot-instance'], 'github_repo': '10U-Labs-LLC/10ulabs.com'}),
+        'body': json.dumps({'job_id': 123, 'job_labels': ['ephemeral-ec2-spot-instance'], 'github_repo': 'test-org/test-repo'}),
         'attributes': {},
         'messageAttributes': {}
     }])

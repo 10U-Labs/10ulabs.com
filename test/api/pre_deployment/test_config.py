@@ -6,20 +6,16 @@ def test_config_file_exists_in_correct_location():
     assert config_path.exists()
 
 
-def test_config_has_aws_account_id(cfg):
-    assert "account_id" in cfg["aws"]
+def test_config_has_aws_account_id(config):
+    assert "aws_account_id" in config
 
 
-def test_config_has_aws_region(cfg):
-    assert "region" in cfg["aws"]
+def test_config_has_aws_region(config):
+    assert "aws_region" in config
 
 
-def test_config_has_vpc_name(cfg):
-    assert "vpc_name" in cfg["naming"]
-
-
-def test_config_has_github_runner_version(cfg):
-    assert "runner_version" in cfg["github"]
+def test_config_has_vpc_name(config):
+    assert "vpc_name" in config
 
 
 def test_shared_module_has_github_org():

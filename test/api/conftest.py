@@ -1,4 +1,3 @@
-import ast
 import re
 from pathlib import Path
 from typing import Any, Dict, List
@@ -52,44 +51,16 @@ def config_fixture() -> Dict[str, str]:
                 if match:
                     key, value = match.groups()
                     result[key] = value.strip('"')
+    shared = parse_shared_module_outputs()
     api_locals = parse_api_locals()
     result['aws_region'] = api_locals.get('aws_region', '')
     result['aws_account_id'] = api_locals.get('aws_account_id', '')
+    result['central_logs_bucket'] = shared.get('name_for_central_logs_bucket', '')
     result['domain_subdomain'] = api_locals.get('domain_subdomain', '')
+    result['github_org'] = shared.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
     return result
-
-
-@pytest.fixture(name="cfg")
-def cfg_fixture() -> Dict[str, Any]:
-    tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
-    tfvars = {}
-    with open(tfvars_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, value = line.split('=', 1)
-                key = key.strip()
-                value = value.strip()
-                if value.startswith('['):
-                    value = ast.literal_eval(value)
-                elif value.startswith('"') and value.endswith('"'):
-                    value = value[1:-1]
-                tfvars[key] = value
-    shared = parse_shared_module_outputs()
-    return {
-        "aws": {
-            "account_id": shared.get("aws_account_id"),
-            "region": shared.get("aws_region")
-        },
-        "naming": {
-            "vpc_name": tfvars.get("vpc_name")
-        },
-        "github": {
-            "runner_version": tfvars.get("github_runner_version")
-        }
-    }
 
 
 @pytest.fixture

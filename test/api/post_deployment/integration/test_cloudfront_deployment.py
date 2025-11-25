@@ -82,15 +82,15 @@ def test_cloudfront_distribution_has_logging_enabled(cloudfront_client):
     assert dist_found_with_logging
 
 
-def test_cloudfront_logging_bucket_is_central_logs(cloudfront_client):
+def test_cloudfront_logging_bucket_is_central_logs(cloudfront_client, config):
     distributions = cloudfront_client.list_distributions()
     bucket_correct = False
     if distributions['DistributionList']['Quantity'] > 0:
         dist_id = distributions['DistributionList']['Items'][0]['Id']
-        config = cloudfront_client.get_distribution_config(Id=dist_id)
-        logging_config = config['DistributionConfig'].get('Logging', {})
+        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
+        logging_config = dist_config['DistributionConfig'].get('Logging', {})
         bucket = logging_config.get('Bucket', '')
-        bucket_correct = '10ulabs-central-logs' in bucket
+        bucket_correct = config['central_logs_bucket'] in bucket
     assert bucket_correct
 
 

@@ -79,18 +79,17 @@ def run_ssm_command():
             Parameters={"commands": [command]}
         )
         command_id = response["Command"]["CommandId"]
-        for attempt in range(retries):
-            wait_time = 2 ** attempt
-            time.sleep(wait_time)
+        result = {"Status": "Timeout", "StandardOutputContent": "", "StandardErrorContent": "Command timed out"}
+        for _ in range(retries):
+            time.sleep(15)
             output = ssm_client.get_command_invocation(
                 CommandId=command_id,
                 InstanceId=instance_id
             )
-            if output["Status"] == "Success":
-                return output
-            if output["Status"] == "Failed":
-                return output
-        return {"Status": "Timeout", "StandardOutputContent": "", "StandardErrorContent": "Command timed out"}
+            if output["Status"] in ("Success", "Failed"):
+                result = output
+                break
+        return result
     return _run_command
 
 
@@ -147,18 +146,19 @@ def wait_for_instance_ready(ec2_client, instance_id):
 
 
 def wait_for_ssm_ready(ssm_client, instance_id):
-    max_attempts = 7
-    for attempt in range(max_attempts):
+    max_attempts = 8
+    result = False
+    for _ in range(max_attempts):
         response = ssm_client.describe_instance_information(
             Filters=[{"Key": "InstanceIds", "Values": [instance_id]}]
         )
         if response["InstanceInformationList"]:
             info = response["InstanceInformationList"][0]
             if info.get("PingStatus") == "Online":
-                return True
-        wait_time = 2 ** attempt
-        time.sleep(wait_time)
-    return False
+                result = True
+                break
+        time.sleep(15)
+    return result
 
 
 @pytest.fixture(scope="module")

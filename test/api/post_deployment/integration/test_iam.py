@@ -35,14 +35,14 @@ def test_ecs_task_role_has_ecr_pull_permissions(iam_client):
     assert role['Role']['RoleName'] == 'github-runner-TaskRole'
 
 
-def test_lambda_execution_role_has_sqs_send_message_permission(iam_client):
-    role = iam_client.get_role(RoleName='TenULabsWebhookHandler-ServiceRole')
-    assert role['Role']['RoleName'] == 'TenULabsWebhookHandler-ServiceRole'
+def test_lambda_execution_role_has_sqs_send_message_permission(iam_client, config):
+    role = iam_client.get_role(RoleName=config['webhook_handler_service_role_name'])
+    assert role['Role']['RoleName'] == config['webhook_handler_service_role_name']
 
 
-def test_lambda_execution_role_has_dynamodb_put_permission(iam_client):
-    role = iam_client.get_role(RoleName='TenULabsWebhookHandler-ServiceRole')
-    assert role['Role']['RoleName'] == 'TenULabsWebhookHandler-ServiceRole'
+def test_lambda_execution_role_has_dynamodb_put_permission(iam_client, config):
+    role = iam_client.get_role(RoleName=config['webhook_handler_service_role_name'])
+    assert role['Role']['RoleName'] == config['webhook_handler_service_role_name']
 
 
 def test_circuit_breaker_remediation_role_exists(iam_client, config):
