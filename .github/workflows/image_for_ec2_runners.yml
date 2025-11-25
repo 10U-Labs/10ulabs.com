@@ -15,8 +15,8 @@ jobs:
       contents: read
       id-token: write
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -145,8 +145,8 @@ jobs:
       - declaring-common-variables
       - promoting-ami
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -188,8 +188,8 @@ jobs:
       stable_tag_key: ${{ steps.config.outputs.stable_tag_key }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -231,8 +231,8 @@ jobs:
       - declaring-common-variables
       - integration-testing
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -269,8 +269,8 @@ jobs:
       - building-ami
       - declaring-common-variables
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -301,8 +301,8 @@ jobs:
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -390,8 +390,8 @@ jobs:
       contents: read
       id-token: write
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -437,8 +437,8 @@ jobs:
       - declaring-common-variables
       - performing-static-analysis
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') )
           && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
