@@ -67,9 +67,8 @@ def wait_for_instance_ready(ec2_client, instance_id):
 
 
 def wait_for_ssm_ready(ssm_client, instance_id):
-    max_wait_time = 300
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
+    max_attempts = 10
+    for attempt in range(max_attempts):
         response = ssm_client.describe_instance_information(
             Filters=[{"Key": "InstanceIds", "Values": [instance_id]}]
         )
@@ -77,7 +76,8 @@ def wait_for_ssm_ready(ssm_client, instance_id):
             info = response["InstanceInformationList"][0]
             if info.get("PingStatus") == "Online":
                 return True
-        time.sleep(10)
+        wait_time = 2 ** attempt
+        time.sleep(wait_time)
     return False
 
 
