@@ -143,9 +143,13 @@ def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict
 
 def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
     try:
-        body = parse_body(event)
-        result = handler_func(body)
-        response = success_response(result)
+        path = event.get('path', '')
+        if is_test_mode() and path in TEST_MODE_MOCK_PATHS:
+            response = success_response(TEST_MODE_MOCK_PATHS[path])
+        else:
+            body = parse_body(event)
+            result = handler_func(body)
+            response = success_response(result)
     except (ValueError, KeyError) as e:
         logger.error("Error handling POST request: %s", e, exc_info=True)
         response = error_response(500, 'Internal server error', str(e))
@@ -719,6 +723,8 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
             response = error_response(400, 'Missing required field: job_id')
         elif not github_repo:
             response = error_response(400, 'Missing required field: github_repo')
+        elif is_test_mode():
+            response = success_response(TEST_MODE_MOCK_PATHS['/v1/docker-runner'])
         else:
             image_check = get_latest_ecr_image()
             if not image_check['success']:
@@ -864,6 +870,8 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
             response = error_response(400, 'Missing required field: job_id')
         elif not github_repo:
             response = error_response(400, 'Missing required field: github_repo')
+        elif is_test_mode():
+            response = success_response(TEST_MODE_MOCK_PATHS['/v1/ec2-runner'])
         else:
             result = launch_ec2_spot_runner(job_id, job_labels, github_repo)
             response_body = result.copy()
@@ -961,10 +969,6 @@ def lambda_handler(event, _context):
         }
 
     path = event.get('path', '')
-
-    if is_test_mode() and method == 'POST' and path in TEST_MODE_MOCK_PATHS:
-        logger.info("Test mode: returning mock response for %s", path)
-        return success_response(TEST_MODE_MOCK_PATHS[path])
 
     handler = ROUTE_MAP.get((path, method))
 
