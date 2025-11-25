@@ -230,7 +230,7 @@ jobs:
         run: pip install boto3
       - name: Promote image
         run: |
-          python scripts/promote_docker_image/promote_docker_image.py \
+          python src/build/image_for_docker_runners/promote_docker_image.py \
             --repository "${{ needs.building-image.outputs.ecr_repository }}" \
             --image-tag "${{ needs.building-image.outputs.image_tag }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}"
