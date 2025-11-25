@@ -243,7 +243,7 @@ def test_route_runner_request_rejected_when_circuit_breaker_open(webhook_router)
 def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webhook_router):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
-    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
         with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
             webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
@@ -253,7 +253,7 @@ def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webho
 def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_router):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
-    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
         with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
             webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
@@ -394,14 +394,14 @@ def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router):
 
 
 def test_make_http_request_with_retry_retries_on_server_error_returns_false(webhook_router):
-    with patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
         success, _data, _error, _status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert success is False
 
 
 def test_make_http_request_with_retry_retries_on_server_error_returns_status_code(webhook_router):
-    with patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
         _success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert status == 500
@@ -422,14 +422,14 @@ def test_make_http_request_with_retry_fails_immediately_on_client_error_returns_
 
 
 def test_make_http_request_with_retry_returns_503_returns_false(webhook_router):
-    with patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
         success, _data, _error, _status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert success is False
 
 
 def test_make_http_request_with_retry_returns_503_status_code(webhook_router):
-    with patch('urllib.request.urlopen') as mock_urlopen:
+    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
         _success, _data, _error, status = webhook_router.make_http_request_with_retry('http://test.com', {}, max_retries=1)
     assert status == 503
