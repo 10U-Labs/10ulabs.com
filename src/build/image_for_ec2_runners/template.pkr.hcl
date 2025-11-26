@@ -177,15 +177,24 @@ build {
       "set -e",
       "export DEBIAN_FRONTEND=noninteractive",
       "sudo apt-get install -y \\",
-      "  curl \\",
-      "  wget \\",
-      "  git \\",
-      "  jq \\",
-      "  unzip \\",
-      "  sudo \\",
       "  ca-certificates \\",
+      "  curl \\",
+      "  git \\",
       "  gnupg \\",
-      "  lsb-release"
+      "  jq \\",
+      "  lsb-release \\",
+      "  sudo \\",
+      "  unzip \\",
+      "  wget"
+    ]
+  }
+
+  # Install Python packages via pip
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "set -e",
+      "sudo pip3 install --break-system-packages pytest"
     ]
   }
 
@@ -198,19 +207,6 @@ build {
       "YQ_BINARY=yq_linux_${var.os_architecture}",
       "sudo wget -q \"https://github.com/mikefarah/yq/releases/download/$${YQ_VERSION}/$${YQ_BINARY}\" -O /usr/local/bin/yq",
       "sudo chmod +x /usr/local/bin/yq"
-    ]
-  }
-
-  # Install AWS CLI
-  provisioner "shell" {
-    inline_shebang = "/bin/bash -e"
-    inline = [
-      "set -e",
-      "cd /tmp",
-      "curl -fsSL \"https://awscli.amazonaws.com/awscli-exe-linux-${var.os_architecture == "arm64" ? "aarch64" : "x86_64"}.zip\" -o awscliv2.zip",
-      "unzip -q awscliv2.zip",
-      "sudo ./aws/install",
-      "rm -rf aws awscliv2.zip"
     ]
   }
 

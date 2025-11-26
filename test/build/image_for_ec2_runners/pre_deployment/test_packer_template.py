@@ -1,13 +1,10 @@
 class TestPackerTemplateBaseDependencies:
 
-    def test_installs_git(self, packer_template_content):
-        assert "git \\" in packer_template_content
-
     def test_installs_curl(self, packer_template_content):
         assert "curl \\" in packer_template_content
 
-    def test_installs_wget(self, packer_template_content):
-        assert "wget \\" in packer_template_content
+    def test_installs_git(self, packer_template_content):
+        assert "git \\" in packer_template_content
 
     def test_installs_jq(self, packer_template_content):
         assert "jq \\" in packer_template_content
@@ -15,32 +12,32 @@ class TestPackerTemplateBaseDependencies:
     def test_installs_unzip(self, packer_template_content):
         assert "unzip \\" in packer_template_content
 
+    def test_installs_wget(self, packer_template_content):
+        assert "wget" in packer_template_content
+
+
+class TestPackerTemplatePythonPackages:
+
+    def test_installs_pytest_via_pip3(self, packer_template_content):
+        assert "pip3 install" in packer_template_content
+
+    def test_pip3_uses_break_system_packages_flag(self, packer_template_content):
+        assert "--break-system-packages" in packer_template_content
+
+    def test_pytest_installed(self, packer_template_content):
+        assert "pytest" in packer_template_content
+
 
 class TestPackerTemplateYq:
-
-    def test_installs_yq(self, packer_template_content):
-        assert "yq" in packer_template_content
 
     def test_yq_downloads_from_github(self, packer_template_content):
         assert "github.com/mikefarah/yq" in packer_template_content
 
+    def test_yq_installs(self, packer_template_content):
+        assert "yq" in packer_template_content
+
     def test_yq_uses_architecture_variable(self, packer_template_content):
         assert "yq_linux_${var.os_architecture}" in packer_template_content
-
-
-class TestPackerTemplateAwsCli:
-
-    def test_installs_aws_cli(self, packer_template_content):
-        assert "awscli" in packer_template_content
-
-    def test_aws_cli_downloads_from_aws(self, packer_template_content):
-        assert "awscli.amazonaws.com" in packer_template_content
-
-    def test_aws_cli_handles_arm64_architecture(self, packer_template_content):
-        assert "aarch64" in packer_template_content
-
-    def test_aws_cli_handles_x86_64_architecture(self, packer_template_content):
-        assert "x86_64" in packer_template_content
 
 
 class TestPackerTemplateDocker:
