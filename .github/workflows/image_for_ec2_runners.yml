@@ -44,12 +44,6 @@ jobs:
           SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
           SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
           VPC_ID=$(terraform output -raw vpc_id)
-          echo "AMI Purpose Tag: $AMI_PURPOSE_TAG"
-          echo "AMI Purpose Value: $AMI_PURPOSE_VALUE"
-          echo "AMI Stable Tag: $AMI_STABLE_TAG"
-          echo "Security Group ID: $SECURITY_GROUP_ID"
-          echo "Subnet IDs: $SUBNET_IDS"
-          echo "VPC ID: $VPC_ID"
           echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT
           echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
