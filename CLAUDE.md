@@ -23,7 +23,7 @@
 ## Credentials and Environment
 
 - AWS credentials in `~/.aws/credentials` with unlimited privileges.
-- Do not use environment variable expansion like `$GITHUB_PAT` in `curl` commands, instead obtain the value first by running `echo $GITHUB_PAT` and passing the value literally.
+- GitHub CLI (`gh`) is already configured and authenticated locally with unlimited privileges.
 - `GITHUB_PAT` has unlimited privileges in GitHub.
 - GitHub Personal Access Token (PAT) in your environment variables as `GITHUB_PAT`.
 
