@@ -1,95 +1,263 @@
 import pytest
 
 
-def test_github_runner_user_exists(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
-
-    output = run_ssm_command(ssm_client, test_instance, "id github-runner")
-
-    assert output["Status"] == "Success"
+RUNNER_DIR = "/home/github-runner/actions-runner"
 
 
-def test_github_runner_directory_exists(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+class TestGitHubRunnerUser:
 
-    output = run_ssm_command(ssm_client, test_instance, "test -d /home/github-runner/actions-runner && echo exists")
+    def test_github_runner_user_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-    assert output["StandardOutputContent"].strip() == "exists"
+        output = run_ssm_command(ssm_client, test_instance, "id github-runner")
 
-
-def test_github_runner_binary_exists(ssm_client, test_instance, config, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
-
-    runner_version = config["runner_version"]
-    os_arch = config["os_architecture"]
-    runner_arch = "arm64" if os_arch == "arm64" else "x64"
-
-    output = run_ssm_command(ssm_client, test_instance, f"test -f /home/github-runner/actions-runner/actions-runner-linux-{runner_arch}-{runner_version}.tar.gz && echo exists")
-
-    assert output["StandardOutputContent"].strip() == "exists"
+        assert output["Status"] == "Success"
 
 
-def test_github_runner_config_script_exists(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+class TestRunnerDirectoryStructure:
 
-    output = run_ssm_command(ssm_client, test_instance, "test -f /home/github-runner/actions-runner/config.sh && echo exists")
+    def test_runner_directory_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-    assert output["StandardOutputContent"].strip() == "exists"
+        output = run_ssm_command(ssm_client, test_instance, f"test -d {RUNNER_DIR} && echo exists")
 
+        assert output["StandardOutputContent"].strip() == "exists"
 
-def test_github_runner_run_script_exists(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+    def test_bin_directory_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-    output = run_ssm_command(ssm_client, test_instance, "test -f /home/github-runner/actions-runner/run.sh && echo exists")
+        output = run_ssm_command(ssm_client, test_instance, f"test -d {RUNNER_DIR}/bin && echo exists")
 
-    assert output["StandardOutputContent"].strip() == "exists"
+        assert output["StandardOutputContent"].strip() == "exists"
 
+    def test_externals_directory_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-def test_github_runner_binary_can_execute(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+        output = run_ssm_command(ssm_client, test_instance, f"test -d {RUNNER_DIR}/externals && echo exists")
 
-    output = run_ssm_command(ssm_client, test_instance, "/home/github-runner/actions-runner/bin/Runner.Listener --version")
-
-    assert output["Status"] == "Success"
-
-
-def test_libicu_is_installed(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
-
-    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libicu && echo installed")
-
-    assert output["StandardOutputContent"].strip() == "installed"
+        assert output["StandardOutputContent"].strip() == "exists"
 
 
-def test_libssl_is_installed(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+class TestRunnerScriptsExist:
 
-    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libssl && echo installed")
+    def test_config_script_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-    assert output["StandardOutputContent"].strip() == "installed"
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/config.sh && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_run_script_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/run.sh && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_env_script_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/env.sh && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_run_helper_template_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -f {RUNNER_DIR}/run-helper.sh.template && echo exists")
+
+        assert output["StandardOutputContent"].strip() == "exists"
+
+    def test_safe_sleep_script_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/safe_sleep.sh && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_installdependencies_script_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/bin/installdependencies.sh && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
 
 
-def test_libkrb5_is_installed(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+class TestRunnerBinariesExist:
 
-    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libkrb5 && echo installed")
+    def test_runner_listener_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-    assert output["StandardOutputContent"].strip() == "installed"
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/bin/Runner.Listener && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_runner_worker_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/bin/Runner.Worker && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_runner_plugin_host_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/bin/Runner.PluginHost && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
 
 
-def test_zlib_is_installed(ssm_client, test_instance, run_ssm_command):
-    if not test_instance:
-        pytest.fail("Test instance not created")
+class TestRunnerBinariesExecute:
 
-    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libz && echo installed")
+    def test_runner_listener_executes(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
 
-    assert output["StandardOutputContent"].strip() == "installed"
+        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/bin/Runner.Listener --version")
+
+        assert output["Status"] == "Success"
+
+    def test_runner_worker_executes(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/bin/Runner.Worker --version")
+
+        assert output["Status"] == "Success"
+
+
+class TestDotNetSharedLibraryDependencies:
+
+    def test_libcoreclr_dependencies_resolved(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libcoreclr.so | grep -c 'not found' || echo 0")
+
+        assert output["StandardOutputContent"].strip() == "0"
+
+    def test_libcrypto_dependencies_resolved(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Security.Cryptography.Native.OpenSsl.so | grep -c 'not found' || echo 0")
+
+        assert output["StandardOutputContent"].strip() == "0"
+
+    def test_libcompression_dependencies_resolved(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.IO.Compression.Native.so | grep -c 'not found' || echo 0")
+
+        assert output["StandardOutputContent"].strip() == "0"
+
+    def test_libglobalization_dependencies_resolved(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Globalization.Native.so | grep -c 'not found' || echo 0")
+
+        assert output["StandardOutputContent"].strip() == "0"
+
+    def test_libnative_dependencies_resolved(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Native.so | grep -c 'not found' || echo 0")
+
+        assert output["StandardOutputContent"].strip() == "0"
+
+
+class TestSystemLibrariesInstalled:
+
+    def test_libicu_available_via_ldconfig(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libicu && echo found")
+
+        assert output["StandardOutputContent"].strip() == "found"
+
+    def test_libssl_available_via_ldconfig(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libssl && echo found")
+
+        assert output["StandardOutputContent"].strip() == "found"
+
+    def test_libkrb5_available_via_ldconfig(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libkrb5 && echo found")
+
+        assert output["StandardOutputContent"].strip() == "found"
+
+    def test_zlib_available_via_ldconfig(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libz && echo found")
+
+        assert output["StandardOutputContent"].strip() == "found"
+
+
+class TestNodeJsExternals:
+
+    def test_node20_directory_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -d {RUNNER_DIR}/externals/node20 && echo exists")
+
+        assert output["StandardOutputContent"].strip() == "exists"
+
+    def test_node20_binary_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/externals/node20/bin/node && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_node20_binary_executes(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/externals/node20/bin/node --version")
+
+        assert output["Status"] == "Success"
+
+
+class TestRequiredSystemCommands:
+
+    def test_ldd_command_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "command -v ldd && echo found")
+
+        assert "found" in output["StandardOutputContent"]
+
+    def test_ldconfig_command_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "(command -v ldconfig || test -x /sbin/ldconfig) && echo found")
+
+        assert "found" in output["StandardOutputContent"]
