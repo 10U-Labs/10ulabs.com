@@ -561,6 +561,20 @@ def test_get_ec2_runner_status_handles_client_error(v1_handler):
         assert result['success'] is False
 
 
+def test_get_ec2_runner_status_filters_by_managed_by_tag_from_env(v1_handler):
+    with patch.object(v1_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+
+        v1_handler.get_ec2_runner_status()
+
+        call_args = mock_ec2.describe_instances.call_args
+        filters = call_args[1]['Filters']
+        managed_by_filter = next(f for f in filters if f['Name'] == 'tag:ManagedBy')
+
+        assert managed_by_filter['Values'] == ['api-ec2-spot-runner']
+
 
 def test_handle_docker_runner_get_returns_200_status(v1_handler, lambda_context):
     event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}

@@ -43,6 +43,7 @@ def mock_env_vars():
         'EC2_INSTANCE_TYPES': 't4g.large,t4g.medium',
         'EC2_IAM_INSTANCE_PROFILE': 'TestInstanceProfile',
         'EC2_MAX_PRICE': '0.10',
+        'EC2_MANAGED_BY_TAG': 'api-ec2-spot-runner',
         'GITHUB_TOKEN': 'ghp_test_token',
         'API_DOMAIN': 'api.test.com'
     }

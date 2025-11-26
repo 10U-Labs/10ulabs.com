@@ -271,3 +271,30 @@ class TestLaunchEc2SpotRunner:
             metadata_options = call_args[1]['LaunchTemplateData']['MetadataOptions']
 
             assert metadata_options['HttpEndpoint'] == 'enabled'
+
+    def test_applies_managed_by_tag_from_env_var(self, v1_handler, mock_env_vars):
+        with patch.object(v1_handler, 'get_ec2_client') as mock_get_ec2:
+
+            mock_ec2 = MagicMock()
+            mock_get_ec2.return_value = mock_ec2
+            mock_ec2.create_launch_template.return_value = {
+                'LaunchTemplate': {'LaunchTemplateId': 'lt-123'}
+            }
+
+            template_config = {
+                'ami_id': 'ami-123',
+                'security_group_id': 'sg-123',
+                'iam_instance_profile': 'profile',
+                'user_data_base64': 'dXNlcmRhdGE=',
+                'job_id': 456,
+                'job_labels': ['self-hosted'],
+                'github_repo': 'owner/repo'
+            }
+
+            v1_handler.create_fleet_launch_template(template_config)
+
+            call_args = mock_ec2.create_launch_template.call_args
+            tag_specs = call_args[1]['LaunchTemplateData']['TagSpecifications'][0]['Tags']
+            managed_by_tag_value = _find_tag_value(tag_specs, 'ManagedBy')
+
+            assert managed_by_tag_value == mock_env_vars['EC2_MANAGED_BY_TAG']
