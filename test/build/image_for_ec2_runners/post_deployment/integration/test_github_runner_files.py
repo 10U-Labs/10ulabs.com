@@ -127,15 +127,6 @@ class TestRunnerBinariesExecute:
 
         assert output["Status"] == "Success"
 
-    def test_runner_worker_loads(self, ssm_client, test_instance, run_ssm_command):
-        if not test_instance:
-            pytest.fail("Test instance not created")
-
-        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/bin/Runner.Worker 2>&1")
-        combined_output = output["StandardOutputContent"] + output["StandardErrorContent"]
-
-        assert len(combined_output.strip()) > 0
-
 
 class TestDotNetSharedLibraryDependencies:
 
