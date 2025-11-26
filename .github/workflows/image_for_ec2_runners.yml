@@ -68,8 +68,6 @@ jobs:
             --var "env.RUNNER_VERSION=${RUNNER_VERSION}" \
             --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --var "os_architecture=${OS_ARCH}" \
-            --var "os_family=${OS_FAMILY}" \
-            --var "os_version=${OS_VERSION}" \
             --var "region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --var 'subnet_ids=${{ steps.terraform.outputs.subnet_ids }}' \
             --var "tags.${{ steps.terraform.outputs.ami_purpose_tag }}=${{ steps.terraform.outputs.ami_purpose_value }}" \
@@ -189,16 +187,26 @@ jobs:
           SPOT_INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types)
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
-      - id: config
-        name: Set configuration values
+      - name: Install yq
         run: |
+          VERSION=v4.44.1
+          BINARY=yq_linux_amd64
+          wget "https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY}" -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+        shell: bash
+      - id: config
+        name: Extract configuration values
+        run: |
+          OS_FAMILY=$(yq '.os_family' src/build/image_for_ec2_runners/config.yml)
+          OS_VERSION=$(yq '.os_version' src/build/image_for_ec2_runners/config.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_ec2_runners/config.yml)
           TEST_SPOT_INSTANCE_TYPES='${{ github.event.inputs.test_spot_instance_types || '["t4g.xlarge", "m8g.xlarge", "m7g.xlarge"]' }}'
           echo "aws_region=${{ steps.shared.outputs.aws_region }}" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=${{ steps.shared.outputs.github_actions_role_arn }}" >> $GITHUB_OUTPUT
           echo "os_architecture=${{ steps.api.outputs.os_architecture }}" >> $GITHUB_OUTPUT
-          echo "os_family=debian" >> $GITHUB_OUTPUT
-          echo "os_version=13" >> $GITHUB_OUTPUT
-          echo "runner_version=2.330.0" >> $GITHUB_OUTPUT
+          echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
+          echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo 'spot_instance_types=${{ steps.api.outputs.spot_instance_types }}' >> $GITHUB_OUTPUT
           echo "terraform_version=${{ steps.shared.outputs.terraform_version }}" >> $GITHUB_OUTPUT
           echo "test_spot_instance_types=$TEST_SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
