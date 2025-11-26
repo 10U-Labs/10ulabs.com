@@ -12,7 +12,11 @@ jobs:
     needs: declaring-common-variables
     outputs:
       oidc_available: ${{ steps.oidc.outcome == 'success' }}
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - continue-on-error: true
         id: oidc
@@ -33,7 +37,11 @@ jobs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,7 +63,11 @@ jobs:
       - checking-oidc-availability
       - declaring-common-variables
       - integration-testing
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -91,7 +103,11 @@ jobs:
       - checking-oidc-availability
       - declaring-common-variables
       - unit-testing
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -125,7 +141,11 @@ jobs:
       - checking-oidc-availability
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,7 +177,11 @@ jobs:
     needs:
       - checking-oidc-availability
       - declaring-common-variables
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -228,7 +252,11 @@ jobs:
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
