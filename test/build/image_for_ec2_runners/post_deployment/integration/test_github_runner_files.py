@@ -116,9 +116,6 @@ class TestRunnerBinariesExist:
 
         assert output["StandardOutputContent"].strip() == "executable"
 
-
-class TestRunnerBinariesExecute:
-
     def test_runner_listener_executes(self, ssm_client, test_instance, run_ssm_command):
         if not test_instance:
             pytest.fail("Test instance not created")
