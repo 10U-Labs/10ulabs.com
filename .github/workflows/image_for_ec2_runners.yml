@@ -60,22 +60,16 @@ jobs:
         name: Install paramiko
         run: pip install paramiko
       - id: build
+        env:
+          OS_ARCH: ${{ needs.declaring-common-variables.outputs.os_architecture }}
+          OS_FAMILY: ${{ needs.declaring-common-variables.outputs.os_family }}
+          OS_VERSION: ${{ needs.declaring-common-variables.outputs.os_version }}
+          RUNNER_VERSION: ${{ needs.declaring-common-variables.outputs.runner_version }}
         name: Build AMI with EC2 Fleet
         run: |
-          OS_FAMILY="${{ needs.declaring-common-variables.outputs.os_family }}"
-          OS_VERSION="${{ needs.declaring-common-variables.outputs.os_version }}"
-          OS_ARCH="${{ needs.declaring-common-variables.outputs.os_architecture }}"
-          RUNNER_VERSION="${{ needs.declaring-common-variables.outputs.runner_version }}"
-          AWS_REGION="${{ needs.declaring-common-variables.outputs.aws_region }}"
           AMI_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "amd64")
           RUNNER_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "x64")
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          echo "Building GitHub Runner AMI..."
-          echo "OS Family: $OS_FAMILY"
-          echo "OS Version: $OS_VERSION"
-          echo "Architecture: $OS_ARCH"
-          echo "Runner Version: $RUNNER_VERSION"
-          echo ""
           SOURCE_AMI=$(aws ec2 describe-images \
             --owners 136693071363 \
             --filters "Name=name,Values=${OS_FAMILY}-${OS_VERSION}-${AMI_ARCH}-*" \
@@ -83,51 +77,32 @@ jobs:
                       "Name=virtualization-type,Values=hvm" \
             --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
             --output text)
-          echo "Source AMI: $SOURCE_AMI"
           AMI_NAME="github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
-          INSTANCE_TYPES_JSON='${{ needs.declaring-common-variables.outputs.spot_instance_types }}'
-          BUILD_DIR="src/build/image_for_ec2_runners"
-          SUBNET_IDS='${{ steps.terraform.outputs.subnet_ids }}'
-          cat > "${BUILD_DIR}/build_config.yml" << EOF
-          ami_description: "GitHub Actions Runner - ${OS_FAMILY^} $OS_VERSION $OS_ARCH"
-          ami_name: "$AMI_NAME"
-          env:
-            OS_ARCHITECTURE: "$OS_ARCH"
-            OS_FAMILY: "$OS_FAMILY"
-            RUNNER_ARCH: "$RUNNER_ARCH"
-            RUNNER_VERSION: "$RUNNER_VERSION"
-          iam_instance_profile: "PackerEC2InstanceProfile"
-          instance_types: $(echo "$INSTANCE_TYPES_JSON" | jq -c '.')
-          provisioners:
-            - script: provision_runner.sh
-          region: "$AWS_REGION"
-          source_ami: "$SOURCE_AMI"
-          ssh_username: "admin"
-          tags:
-            ${{ steps.terraform.outputs.ami_purpose_tag }}: "${{ steps.terraform.outputs.ami_purpose_value }}"
-            ${{ steps.terraform.outputs.ami_stable_tag }}: "false"
-            BuildDate: "$TIMESTAMP"
-            ManagedBy: "GitHubActions"
-            Name: "ami-$AMI_NAME"
-            OSArchitecture: "$OS_ARCH"
-            OSFamily: "${OS_FAMILY^}"
-            OSVersion: "$OS_VERSION"
-            Repository: "${{ github.repository }}"
-            RunId: "${{ github.run_id }}"
-            RunnerVersion: "$RUNNER_VERSION"
-            Workflow: "${{ github.workflow }}"
-          vpc_id: "${{ steps.terraform.outputs.vpc_id }}"
-          EOF
-          sed -i 's/^          //' "${BUILD_DIR}/build_config.yml"
-          cat "${BUILD_DIR}/build_config.yml"
-          echo ""
-          python3 "${BUILD_DIR}/build_ami.py" build "${BUILD_DIR}/build_config.yml" \
-            --var "subnet_ids=${SUBNET_IDS}" \
+          python3 src/build/image_for_ec2_runners/build_ami.py build src/build/image_for_ec2_runners/config.yml \
+            --var "ami_description=GitHub Actions Runner - ${OS_FAMILY^} ${OS_VERSION} ${OS_ARCH}" \
+            --var "ami_name=${AMI_NAME}" \
+            --var "env.OS_ARCHITECTURE=${OS_ARCH}" \
+            --var "env.OS_FAMILY=${OS_FAMILY}" \
+            --var "env.RUNNER_ARCH=${RUNNER_ARCH}" \
+            --var "env.RUNNER_VERSION=${RUNNER_VERSION}" \
+            --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
+            --var "source_ami=${SOURCE_AMI}" \
+            --var 'subnet_ids=${{ steps.terraform.outputs.subnet_ids }}' \
+            --var "tags.${{ steps.terraform.outputs.ami_purpose_tag }}=${{ steps.terraform.outputs.ami_purpose_value }}" \
+            --var "tags.${{ steps.terraform.outputs.ami_stable_tag }}=false" \
+            --var "tags.BuildDate=${TIMESTAMP}" \
+            --var "tags.ManagedBy=GitHubActions" \
+            --var "tags.Name=ami-${AMI_NAME}" \
+            --var "tags.OSArchitecture=${OS_ARCH}" \
+            --var "tags.OSFamily=${OS_FAMILY^}" \
+            --var "tags.OSVersion=${OS_VERSION}" \
+            --var "tags.Repository=${{ github.repository }}" \
+            --var "tags.RunId=${{ github.run_id }}" \
+            --var "tags.RunnerVersion=${RUNNER_VERSION}" \
+            --var "tags.Workflow=${{ github.workflow }}" \
             | tee build-output.log
           AMI_ID=$(grep '^ami_id=' build-output.log | cut -d= -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
-          echo ""
-          echo "AMI built successfully: $AMI_ID"
       - if: steps.build.outputs.ami_id != ''
         name: Output AMI details
         run: |
