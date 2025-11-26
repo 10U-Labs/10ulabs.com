@@ -9,12 +9,15 @@ from botocore.exceptions import ClientError
 
 
 @pytest.fixture(name="latest_ami_exists", scope="module")
-def latest_ami_exists_fixture(ec2_client):
+def latest_ami_exists_fixture(ec2_client, config):
+    purpose_tag = config['ec2_runner_ami_purpose_tag']
+    purpose_value = config['ec2_runner_ami_purpose_value']
+    stable_tag = config['ec2_runner_ami_stable_tag']
     response = ec2_client.describe_images(
         Owners=['self'],
         Filters=[
-            {'Name': 'tag:Purpose', 'Values': ['Github self-hosted EC2 runner']},
-            {'Name': 'tag:stable', 'Values': ['true']},
+            {'Name': f'tag:{purpose_tag}', 'Values': [purpose_value]},
+            {'Name': f'tag:{stable_tag}', 'Values': ['true']},
             {'Name': 'state', 'Values': ['available']}
         ]
     )

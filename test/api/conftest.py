@@ -71,6 +71,9 @@ def config_fixture() -> Dict[str, str]:
     result['circuit_breaker_remediation_log_group_name'] = f"/aws/lambda/{prefix}-CircuitBreakerRemediation"
     result['dlq_reprocessor_log_group_name'] = f"/aws/lambda/{prefix}-DLQReprocessor"
     result['circuit_breaker_recovery_log_group_name'] = f"/aws/lambda/{prefix}-CircuitBreakerRecovery"
+    result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
+    result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
+    result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
     return result
 
 
