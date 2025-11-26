@@ -243,6 +243,30 @@ class TestNodeJsExternals:
 
         assert output["Status"] == "Success"
 
+    def test_node24_directory_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -d {RUNNER_DIR}/externals/node24 && echo exists")
+
+        assert output["StandardOutputContent"].strip() == "exists"
+
+    def test_node24_binary_exists(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"test -x {RUNNER_DIR}/externals/node24/bin/node && echo executable")
+
+        assert output["StandardOutputContent"].strip() == "executable"
+
+    def test_node24_binary_executes(self, ssm_client, test_instance, run_ssm_command):
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/externals/node24/bin/node --version")
+
+        assert output["Status"] == "Success"
+
 
 class TestRequiredSystemCommands:
 
