@@ -111,7 +111,7 @@ jobs:
       - building-image
       - declaring-common-variables
       - integration-testing
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: ephemeral-ec2-spot-instance
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -120,14 +120,6 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install dependencies
-        run: pip install pytest boto3
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -149,7 +141,7 @@ jobs:
     needs:
       - building-image
       - declaring-common-variables
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    runs-on: ephemeral-ec2-spot-instance
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -158,14 +150,6 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: pip install pytest boto3 pyyaml
       - name: Run pytest integration tests
         run: |
           pytest test/build/image_for_docker_runners/post_deployment/integration/ \
