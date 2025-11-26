@@ -75,6 +75,9 @@ class TestPackerTemplateGitHubRunner:
     def test_downloads_actions_runner(self, packer_template_content):
         assert "actions-runner" in packer_template_content
 
+    def test_runs_installdependencies_script(self, packer_template_content):
+        assert "installdependencies.sh" in packer_template_content
+
 
 class TestPackerTemplateAgents:
 

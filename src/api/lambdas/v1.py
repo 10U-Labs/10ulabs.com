@@ -546,6 +546,10 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
                 SubnetId=subnet_id,
                 IamInstanceProfile={'Name': config['iam_instance_profile']},
                 UserData=user_data,
+                MetadataOptions={
+                    'HttpTokens': 'required',
+                    'HttpEndpoint': 'enabled'
+                },
                 TagSpecifications=[{
                     'ResourceType': 'instance',
                     'Tags': [

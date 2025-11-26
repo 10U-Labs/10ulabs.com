@@ -48,3 +48,48 @@ def test_github_runner_run_script_exists(ssm_client, test_instance, run_ssm_comm
     output = run_ssm_command(ssm_client, test_instance, "test -f /home/github-runner/actions-runner/run.sh && echo exists")
 
     assert output["StandardOutputContent"].strip() == "exists"
+
+
+def test_github_runner_binary_can_execute(ssm_client, test_instance, run_ssm_command):
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "/home/github-runner/actions-runner/bin/Runner.Listener --version")
+
+    assert output["Status"] == "Success"
+
+
+def test_libicu_is_installed(ssm_client, test_instance, run_ssm_command):
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libicu && echo installed")
+
+    assert output["StandardOutputContent"].strip() == "installed"
+
+
+def test_libssl_is_installed(ssm_client, test_instance, run_ssm_command):
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libssl && echo installed")
+
+    assert output["StandardOutputContent"].strip() == "installed"
+
+
+def test_libkrb5_is_installed(ssm_client, test_instance, run_ssm_command):
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libkrb5 && echo installed")
+
+    assert output["StandardOutputContent"].strip() == "installed"
+
+
+def test_zlib_is_installed(ssm_client, test_instance, run_ssm_command):
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "ldconfig -p | grep -q libz && echo installed")
+
+    assert output["StandardOutputContent"].strip() == "installed"
