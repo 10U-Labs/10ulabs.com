@@ -354,16 +354,20 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ec2" {
     Statement = [{
       Effect = "Allow"
       Action = [
-        "ec2:RunInstances",
-        "ec2:TerminateInstances",
+        "ec2:CreateFleet",
+        "ec2:CreateLaunchTemplate",
         "ec2:CreateTags",
-        "ec2:DescribeInstances",
-        "ec2:DescribeImages",
-        "ec2:DeregisterImage",
+        "ec2:DeleteLaunchTemplate",
         "ec2:DeleteSnapshot",
+        "ec2:DeregisterImage",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstances",
+        "ec2:DescribeLaunchTemplates",
+        "ec2:DescribeSecurityGroups",
         "ec2:DescribeSnapshots",
         "ec2:DescribeSubnets",
-        "ec2:DescribeSecurityGroups"
+        "ec2:RunInstances",
+        "ec2:TerminateInstances"
       ]
       Resource = ["*"]
     }]

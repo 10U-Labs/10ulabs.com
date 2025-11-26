@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import os
@@ -499,6 +500,47 @@ def get_ec2_config() -> Dict[str, Any]:
     }
 
 
+def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
+    ec2 = get_ec2_client()
+    template_name = f"github-runner-fleet-{template_config['job_id']}"
+    try:
+        response = ec2.create_launch_template(
+            LaunchTemplateName=template_name,
+            LaunchTemplateData={
+                'ImageId': template_config['ami_id'],
+                'SecurityGroupIds': [template_config['security_group_id']],
+                'IamInstanceProfile': {'Name': template_config['iam_instance_profile']},
+                'UserData': template_config['user_data_base64'],
+                'MetadataOptions': {
+                    'HttpTokens': 'required',
+                    'HttpEndpoint': 'enabled'
+                },
+                'TagSpecifications': [{
+                    'ResourceType': 'instance',
+                    'Tags': [
+                        {'Key': 'Name', 'Value': f"github-runner-ec2-{template_config['job_id']}"},
+                        {'Key': 'Type', 'Value': 'ephemeral-runner'},
+                        {'Key': 'ManagedBy', 'Value': 'api-ec2-spot-runner'},
+                        {'Key': 'GitHubJobId', 'Value': str(template_config['job_id'])},
+                        {'Key': 'JobLabels', 'Value': ','.join(template_config['job_labels'])},
+                        {'Key': 'GitHubRepo', 'Value': template_config['github_repo']}
+                    ]
+                }]
+            }
+        )
+        return response['LaunchTemplate']['LaunchTemplateId']
+    except ClientError as e:
+        logger.error("Failed to create launch template: %s", e)
+        raise
+
+
+def delete_launch_template(template_id: str):
+    try:
+        get_ec2_client().delete_launch_template(LaunchTemplateId=template_id)
+    except ClientError as e:
+        logger.warning("Failed to delete launch template %s: %s", template_id, e)
+
+
 def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
     ami_id = get_latest_ami()
     github_token = get_github_token()
@@ -507,10 +549,13 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
     if not ami_id:
         logger.warning("No AMI available - triggering AMI creation")
         ami_trigger = trigger_ami_creation()
+        error_msg = 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.'
+        if not ami_trigger['success']:
+            error_msg = f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
         return {
             'success': False,
             'job_id': job_id,
-            'error': 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.' if ami_trigger['success'] else f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}",
+            'error': error_msg,
             'ami_creation_triggered': ami_trigger['success']
         }
 
@@ -524,68 +569,78 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
         return {'success': False, 'job_id': job_id, 'error': 'Failed to get runner registration token'}
 
     user_data = create_ec2_user_data(registration_token, job_labels, github_repo)
-    response = None
-    last_error = None
+    user_data_base64 = base64.b64encode(user_data.encode('utf-8')).decode('utf-8')
 
-    for subnet_id in config['subnet_ids']:
-        try:
-            response = get_ec2_client().run_instances(
-                ImageId=ami_id,
-                MinCount=1,
-                MaxCount=1,
-                InstanceMarketOptions={
-                    'MarketType': 'spot',
-                    'SpotOptions': {
-                        'SpotInstanceType': 'one-time',
-                        'InstanceInterruptionBehavior': 'terminate',
-                        'MaxPrice': config['max_price']
-                    }
+    template_config = {
+        'ami_id': ami_id,
+        'security_group_id': config['security_group_id'],
+        'iam_instance_profile': config['iam_instance_profile'],
+        'user_data_base64': user_data_base64,
+        'job_id': job_id,
+        'job_labels': job_labels,
+        'github_repo': github_repo
+    }
+
+    launch_template_id = None
+    try:
+        launch_template_id = create_fleet_launch_template(template_config)
+
+        fleet_response = get_ec2_client().create_fleet(
+            Type='instant',
+            TargetCapacitySpecification={
+                'TotalTargetCapacity': 1,
+                'DefaultTargetCapacityType': 'spot'
+            },
+            SpotOptions={
+                'AllocationStrategy': 'capacity-optimized',
+                'InstanceInterruptionBehavior': 'terminate'
+            },
+            LaunchTemplateConfigs=[{
+                'LaunchTemplateSpecification': {
+                    'LaunchTemplateId': launch_template_id,
+                    'Version': '$Latest'
                 },
-                InstanceType=config['instance_types'][0],
-                SecurityGroupIds=[config['security_group_id']],
-                SubnetId=subnet_id,
-                IamInstanceProfile={'Name': config['iam_instance_profile']},
-                UserData=user_data,
-                MetadataOptions={
-                    'HttpTokens': 'required',
-                    'HttpEndpoint': 'enabled'
-                },
-                TagSpecifications=[{
-                    'ResourceType': 'instance',
-                    'Tags': [
-                        {'Key': 'Name', 'Value': f'github-runner-ec2-{job_id}'},
-                        {'Key': 'Type', 'Value': 'ephemeral-runner'},
-                        {'Key': 'ManagedBy', 'Value': 'api-ec2-spot-runner'},
-                        {'Key': 'GitHubJobId', 'Value': str(job_id)},
-                        {'Key': 'JobLabels', 'Value': ','.join(job_labels)},
-                        {'Key': 'GitHubRepo', 'Value': github_repo}
-                    ]
-                }]
-            )
-            logger.info("Launched EC2 spot instance in subnet %s", subnet_id)
-            break
-        except ClientError as e:
-            if 'InsufficientInstanceCapacity' in str(e):
-                logger.warning("No capacity in subnet %s, trying next AZ...", subnet_id)
-                last_error = e
-                continue
-            logger.error("Error launching EC2 runner for job %s: %s", job_id, e)
-            return {'success': False, 'job_id': job_id, 'error': str(e)}
+                'Overrides': [
+                    {'InstanceType': instance_type, 'SubnetId': subnet_id, 'MaxPrice': config['max_price']}
+                    for subnet_id in config['subnet_ids']
+                    for instance_type in config['instance_types']
+                ]
+            }]
+        )
 
-    if response and response['Instances']:
-        instance = response['Instances'][0]
-        logger.info("✅ Launched EC2 spot runner for job %s: %s (%s in %s)", job_id, instance['InstanceId'], instance['InstanceType'], instance['Placement']['AvailabilityZone'])
-        return {
-            'success': True,
-            'instance_id': instance['InstanceId'],
-            'instance_type': instance['InstanceType'],
-            'availability_zone': instance['Placement']['AvailabilityZone'],
-            'job_id': job_id,
-            'runner_type': 'ec2-spot'
-        }
+        if fleet_response.get('Instances'):
+            instance_ids = fleet_response['Instances'][0].get('InstanceIds', [])
+            if instance_ids:
+                instance_id = instance_ids[0]
+                describe_response = get_ec2_client().describe_instances(InstanceIds=[instance_id])
+                instance = describe_response['Reservations'][0]['Instances'][0]
+                logger.info(
+                    "✅ Launched EC2 spot runner for job %s: %s (%s in %s)",
+                    job_id,
+                    instance_id,
+                    instance['InstanceType'],
+                    instance['Placement']['AvailabilityZone']
+                )
+                return {
+                    'success': True,
+                    'instance_id': instance_id,
+                    'instance_type': instance['InstanceType'],
+                    'availability_zone': instance['Placement']['AvailabilityZone'],
+                    'job_id': job_id,
+                    'runner_type': 'ec2-spot'
+                }
 
-    logger.error("❌ Failed to launch EC2 runner for job %s: %s", job_id, str(last_error) if last_error else 'No instances launched')
-    return {'success': False, 'job_id': job_id, 'error': str(last_error) if last_error else 'No instances launched'}
+        errors = fleet_response.get('Errors', [])
+        error_msg = '; '.join([e.get('ErrorMessage', str(e)) for e in errors]) if errors else 'No instances launched'
+        logger.error("❌ Failed to launch EC2 runner for job %s: %s", job_id, error_msg)
+        return {'success': False, 'job_id': job_id, 'error': error_msg}
+
+    except ClientError as e:
+        logger.error("Error launching EC2 runner for job %s: %s", job_id, e)
+        return {'success': False, 'job_id': job_id, 'error': str(e)}
+    finally:
+        if launch_template_id:
+            delete_launch_template(launch_template_id)
 
 
 def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:

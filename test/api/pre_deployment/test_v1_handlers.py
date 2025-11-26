@@ -992,9 +992,8 @@ def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, 
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
     }
-    mock_ec2.run_instances.side_effect = ClientError(
-        {'Error': {'Code': 'InsufficientInstanceCapacity'}}, 'RunInstances'
-    )
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': [{'ErrorCode': 'InsufficientInstanceCapacity', 'ErrorMessage': 'No capacity'}]}
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
 
@@ -1623,7 +1622,8 @@ def test_v1_launch_ec2_spot_runner_capacity_exhaustion_all_azs(mock_boto_client,
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z', 'State': 'available', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
     }
-    mock_ec2.run_instances.side_effect = ClientError({'Error': {'Code': 'InsufficientInstanceCapacity', 'Message': 'No capacity'}}, 'RunInstances')
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': [{'ErrorCode': 'InsufficientInstanceCapacity', 'ErrorMessage': 'No capacity'}]}
     mock_boto_client.return_value = mock_ec2
     with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
         with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
@@ -2098,3 +2098,319 @@ def test_lambda_handler_test_mode_does_not_affect_echo_endpoint(v1_handler, lamb
     response = v1_handler.lambda_handler(event, lambda_context)
     body = parse_response_body(response)
     assert 'echo' in body
+
+
+@patch('boto3.client')
+def test_create_fleet_launch_template_returns_template_id(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_boto_client.return_value = mock_ec2
+    template_config = {'security_group_id': 'sg-1', 'iam_instance_profile': 'profile', 'ami_id': 'ami-123', 'user_data_base64': 'dXNlcmRhdGE=', 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo'}
+    result = v1_handler.create_fleet_launch_template(template_config)
+    assert result == 'lt-12345'
+
+
+@patch('boto3.client')
+def test_create_fleet_launch_template_raises_on_client_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.create_launch_template.side_effect = ClientError({'Error': {'Code': 'InvalidParameterValue', 'Message': 'Error'}}, 'CreateLaunchTemplate')
+    mock_boto_client.return_value = mock_ec2
+    template_config = {'security_group_id': 'sg-1', 'iam_instance_profile': 'profile', 'ami_id': 'ami-123', 'user_data_base64': 'dXNlcmRhdGE=', 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo'}
+    try:
+        v1_handler.create_fleet_launch_template(template_config)
+        assert False
+    except ClientError:
+        assert True
+
+
+@patch('boto3.client')
+def test_delete_launch_template_calls_ec2_delete(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_boto_client.return_value = mock_ec2
+    v1_handler.delete_launch_template('lt-12345')
+    mock_ec2.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-12345')
+
+
+@patch('boto3.client')
+def test_delete_launch_template_handles_client_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.delete_launch_template.side_effect = ClientError({'Error': {'Code': 'InvalidLaunchTemplateId', 'Message': 'Not found'}}, 'DeleteLaunchTemplate')
+    mock_boto_client.return_value = mock_ec2
+    v1_handler.delete_launch_template('lt-12345')
+    assert True
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_success(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is True
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_returns_instance_id(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['instance_id'] == 'i-12345'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_returns_instance_type(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 'm7g.large', 'Placement': {'AvailabilityZone': 'us-east-1b'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['instance_type'] == 'm7g.large'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_returns_availability_zone(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1c'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['availability_zone'] == 'us-east-1c'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_no_capacity_returns_error(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': [{'ErrorCode': 'InsufficientInstanceCapacity', 'ErrorMessage': 'No capacity available'}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_error_includes_message(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': [{'ErrorCode': 'InsufficientInstanceCapacity', 'ErrorMessage': 'No capacity available'}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert 'No capacity available' in result['error']
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_cleans_up_template_on_success(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            mock_ec2.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-12345')
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_cleans_up_template_on_failure(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': [{'ErrorCode': 'InsufficientInstanceCapacity', 'ErrorMessage': 'No capacity'}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            mock_ec2.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-12345')
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_cleans_up_template_on_exception(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'CreateFleet')
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            mock_ec2.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-12345')
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_template_creation_failure(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.side_effect = ClientError({'Error': {'Code': 'InvalidParameterValue', 'Message': 'Invalid'}}, 'CreateLaunchTemplate')
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_uses_capacity_optimized_strategy(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            call_args = mock_ec2.create_fleet.call_args
+            assert call_args[1]['SpotOptions']['AllocationStrategy'] == 'capacity-optimized'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_uses_instant_type(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            call_args = mock_ec2.create_fleet.call_args
+            assert call_args[1]['Type'] == 'instant'
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_includes_all_instance_types_in_overrides(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            call_args = mock_ec2.create_fleet.call_args
+            overrides = call_args[1]['LaunchTemplateConfigs'][0]['Overrides']
+            instance_types = [o['InstanceType'] for o in overrides]
+            assert 't4g.large' in instance_types
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_includes_second_instance_type_in_overrides(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            call_args = mock_ec2.create_fleet.call_args
+            overrides = call_args[1]['LaunchTemplateConfigs'][0]['Overrides']
+            instance_types = [o['InstanceType'] for o in overrides]
+            assert 'm7g.large' in instance_types
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_includes_all_subnets_in_overrides(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            call_args = mock_ec2.create_fleet.call_args
+            overrides = call_args[1]['LaunchTemplateConfigs'][0]['Overrides']
+            subnet_ids = [o['SubnetId'] for o in overrides]
+            assert 'subnet-1' in subnet_ids
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_includes_second_subnet_in_overrides(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [{'InstanceIds': ['i-12345']}], 'Errors': []}
+    mock_ec2.describe_instances.return_value = {'Reservations': [{'Instances': [{'InstanceId': 'i-12345', 'InstanceType': 't4g.large', 'Placement': {'AvailabilityZone': 'us-east-1a'}}]}]}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            call_args = mock_ec2.create_fleet.call_args
+            overrides = call_args[1]['LaunchTemplateConfigs'][0]['Overrides']
+            subnet_ids = [o['SubnetId'] for o in overrides]
+            assert 'subnet-2' in subnet_ids
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_empty_instances_no_errors(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': []}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+@patch.dict('os.environ', {'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'EC2_INSTANCE_TYPES': 't4g.large,m7g.large', 'EC2_IAM_INSTANCE_PROFILE': 'profile', 'EC2_MAX_PRICE': '0.10', 'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/token'})
+def test_launch_ec2_spot_runner_fleet_empty_instances_default_error_message(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': [{'ImageId': 'ami-123', 'CreationDate': '2024-01-01T00:00:00.000Z'}]}
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {'Instances': [], 'Errors': []}
+    mock_boto_client.return_value = mock_ec2
+    with patch.object(v1_handler, 'get_github_token', return_value='test-token'):
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
+            result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['error'] == 'No instances launched'
