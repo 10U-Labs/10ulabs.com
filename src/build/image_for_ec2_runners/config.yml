@@ -20,6 +20,3 @@ commands: |
   sudo systemctl enable amazon-ssm-agent
   wget https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${OS_ARCHITECTURE}/latest/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
   sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
-os_family: debian
-os_version: "13"
-runner_version: "2.330.0"
