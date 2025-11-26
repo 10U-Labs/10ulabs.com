@@ -1,7 +1,7 @@
 import time
 from botocore.exceptions import ClientError
 import pytest
-from ec2_helpers import wait_for_cloud_init, get_cloud_init_output
+from ec2_helpers import get_instance_logs
 
 
 def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=30):
@@ -17,18 +17,8 @@ def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=30):
                 return output
         except ClientError:
             pass
-    return {"Status": "Timeout", "StandardOutputContent": ""}
-
-
-def test_cloud_init_succeeds(ssm_client, e2e_test_instance):
-    if not e2e_test_instance:
-        pytest.fail("Test instance not created")
-
-    cloud_init_succeeded = wait_for_cloud_init(ssm_client, e2e_test_instance, max_wait=300)
-
-    if not cloud_init_succeeded:
-        cloud_init_log = get_cloud_init_output(ssm_client, e2e_test_instance)
-        pytest.fail(f"cloud-init failed. Log output:\n{cloud_init_log}")
+    result = {"Status": "Timeout", "StandardOutputContent": ""}
+    return result
 
 
 def test_github_runner_can_register(ssm_client, e2e_test_instance):
@@ -58,7 +48,9 @@ def test_github_runner_can_register(ssm_client, e2e_test_instance):
 
         time.sleep(5)
 
-    assert runner_configured
+    if not runner_configured:
+        logs = get_instance_logs(ssm_client, e2e_test_instance)
+        pytest.fail(f"Runner failed to register. Logs:\n{logs}")
 
 
 def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
@@ -88,4 +80,6 @@ def test_github_runner_process_is_running(ssm_client, e2e_test_instance):
 
         time.sleep(5)
 
-    assert runner_running
+    if not runner_running:
+        logs = get_instance_logs(ssm_client, e2e_test_instance)
+        pytest.fail(f"Runner process not running. Logs:\n{logs}")

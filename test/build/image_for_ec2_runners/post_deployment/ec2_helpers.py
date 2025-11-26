@@ -54,51 +54,61 @@ def wait_for_instance_ready(ec2_client, instance_id):
     return False
 
 
-def wait_for_cloud_init(ssm_client, instance_id, max_wait=300):
+def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=60):
     start_time = time.time()
     while time.time() - start_time < max_wait:
+        time.sleep(3)
         try:
-            response = ssm_client.send_command(
-                InstanceIds=[instance_id],
-                DocumentName="AWS-RunShellScript",
-                Parameters={"commands": ["cloud-init status --wait && cloud-init status"]}
-            )
-            command_id = response["Command"]["CommandId"]
-            time.sleep(5)
             output = ssm_client.get_command_invocation(
                 CommandId=command_id,
                 InstanceId=instance_id
             )
-            if output["Status"] == "Success":
-                stdout = output.get("StandardOutputContent", "")
-                if "done" in stdout or "status: done" in stdout:
-                    return True
-                if "error" in stdout or "status: error" in stdout:
-                    return False
+            if output["Status"] in ("Success", "Failed", "Cancelled", "TimedOut"):
+                return output
         except ClientError:
             pass
-        time.sleep(10)
-    return False
+    result = {"Status": "Timeout", "StandardOutputContent": "", "StandardErrorContent": ""}
+    return result
 
 
-def get_cloud_init_output(ssm_client, instance_id):
+def get_instance_logs(ssm_client, instance_id):
+    log_commands = """
+echo '=== cloud-init status ==='
+cloud-init status 2>&1 || echo 'cloud-init status failed'
+
+echo ''
+echo '=== /var/log/user-data.log ==='
+cat /var/log/user-data.log 2>&1 || echo 'user-data.log not found'
+
+echo ''
+echo '=== /var/log/cloud-init-output.log (last 50 lines) ==='
+tail -50 /var/log/cloud-init-output.log 2>&1 || echo 'cloud-init-output.log not found'
+
+echo ''
+echo '=== Runner diag logs ==='
+ls -la /home/github-runner/actions-runner/_diag/ 2>&1 || echo 'No diag directory'
+tail -30 /home/github-runner/actions-runner/_diag/*.log 2>&1 || echo 'No diag logs'
+
+echo ''
+echo '=== Processes ==='
+ps aux | grep -E 'runner|Runner' || echo 'No runner processes'
+"""
     try:
         response = ssm_client.send_command(
             InstanceIds=[instance_id],
             DocumentName="AWS-RunShellScript",
-            Parameters={"commands": ["cat /var/log/cloud-init-output.log | tail -100"]}
+            Parameters={"commands": [log_commands]}
         )
         command_id = response["Command"]["CommandId"]
-        time.sleep(5)
-        output = ssm_client.get_command_invocation(
-            CommandId=command_id,
-            InstanceId=instance_id
-        )
-        if output["Status"] == "Success":
-            return output.get("StandardOutputContent", "")
-    except ClientError:
-        pass
-    return ""
+        output = poll_ssm_command(ssm_client, instance_id, command_id, max_wait=30)
+        stdout = output.get("StandardOutputContent", "")
+        stderr = output.get("StandardErrorContent", "")
+        result = stdout
+        if stderr:
+            result += f"\n=== STDERR ===\n{stderr}"
+        return result
+    except ClientError as err:
+        return f"Failed to retrieve logs: {err}"
 
 
 def terminate_instance_safely(ec2_client, instance_id):

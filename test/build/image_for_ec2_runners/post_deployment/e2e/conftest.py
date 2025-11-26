@@ -25,10 +25,15 @@ def get_registration_token(github_repo, github_token):
 
 def create_user_data(github_repo, registration_token, region):
     user_data_script = f"""#!/bin/bash
-set -e
+exec > /var/log/user-data.log 2>&1
+set -ex
+
+echo "=== User data script started at $(date) ==="
+echo "Instance ID: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
 
 cd /home/github-runner/actions-runner
 
+echo "=== Starting config.sh at $(date) ==="
 sudo -u github-runner ./config.sh \
     --url "https://github.com/{github_repo}" \
     --token "{registration_token}" \
@@ -36,14 +41,12 @@ sudo -u github-runner ./config.sh \
     --labels "e2e-test" \
     --ephemeral \
     --unattended
+echo "=== config.sh completed at $(date) ==="
 
-sudo -u github-runner ./run.sh
-
-INSTANCE_ID=$(ec2-metadata --instance-id | cut -d' ' -f2)
-aws ec2 terminate-instances \
-    --instance-ids "$INSTANCE_ID" \
-    --region {region} \
-    || shutdown -h now
+echo "=== Starting run.sh at $(date) ==="
+sudo -u github-runner ./run.sh &
+RUNNER_PID=$!
+echo "=== run.sh started with PID $RUNNER_PID ==="
 """
     return base64.b64encode(user_data_script.encode()).decode()
 
