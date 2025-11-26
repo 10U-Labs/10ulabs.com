@@ -182,16 +182,6 @@ class TestValidateConfigValidInput:
 
 class TestValidateConfigMissingRequiredFields:
 
-    def test_returns_error_for_missing_source_ami(self, build_ami_module):
-        config = {
-            "ami_name": "my-ami",
-            "region": "us-east-1",
-            "subnet_ids": ["subnet-123"],
-            "instance_types": ["t3.micro"],
-        }
-        result = build_ami_module.validate_config(config)
-        assert result == ["Missing required field: source_ami"]
-
     def test_returns_error_for_missing_ami_name(self, build_ami_module):
         config = {
             "source_ami": "ami-123",
@@ -231,6 +221,69 @@ class TestValidateConfigMissingRequiredFields:
         }
         result = build_ami_module.validate_config(config)
         assert result == ["Missing required field: instance_types"]
+
+
+class TestValidateConfigSourceAmiLookup:
+
+    def test_valid_with_source_ami(self, build_ami_module):
+        config = {
+            "source_ami": "ami-123",
+            "ami_name": "my-ami",
+            "region": "us-east-1",
+            "subnet_ids": ["subnet-123"],
+            "instance_types": ["t3.micro"],
+        }
+        result = build_ami_module.validate_config(config)
+        assert result == []
+
+    def test_valid_with_os_fields_for_lookup(self, build_ami_module):
+        config = {
+            "os_family": "debian",
+            "os_version": "13",
+            "os_architecture": "arm64",
+            "ami_name": "my-ami",
+            "region": "us-east-1",
+            "subnet_ids": ["subnet-123"],
+            "instance_types": ["t3.micro"],
+        }
+        result = build_ami_module.validate_config(config)
+        assert result == []
+
+    def test_returns_error_for_missing_os_family(self, build_ami_module):
+        config = {
+            "os_version": "13",
+            "os_architecture": "arm64",
+            "ami_name": "my-ami",
+            "region": "us-east-1",
+            "subnet_ids": ["subnet-123"],
+            "instance_types": ["t3.micro"],
+        }
+        result = build_ami_module.validate_config(config)
+        assert result == ["Missing required field: os_family (needed to look up source_ami)"]
+
+    def test_returns_error_for_missing_os_version(self, build_ami_module):
+        config = {
+            "os_family": "debian",
+            "os_architecture": "arm64",
+            "ami_name": "my-ami",
+            "region": "us-east-1",
+            "subnet_ids": ["subnet-123"],
+            "instance_types": ["t3.micro"],
+        }
+        result = build_ami_module.validate_config(config)
+        assert result == ["Missing required field: os_version (needed to look up source_ami)"]
+
+    def test_returns_error_for_missing_os_architecture(self, build_ami_module):
+        config = {
+            "os_family": "debian",
+            "os_version": "13",
+            "ami_name": "my-ami",
+            "region": "us-east-1",
+            "subnet_ids": ["subnet-123"],
+            "instance_types": ["t3.micro"],
+        }
+        result = build_ami_module.validate_config(config)
+        assert result == ["Missing required field: os_architecture (needed to look up source_ami)"]
 
 
 class TestValidateConfigInstanceTypes:

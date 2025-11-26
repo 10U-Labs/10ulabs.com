@@ -59,26 +59,14 @@ jobs:
           RUNNER_VERSION: ${{ needs.declaring-common-variables.outputs.runner_version }}
         name: Build AMI with EC2 Fleet
         run: |
-          AMI_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "amd64")
           RUNNER_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "x64")
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          SOURCE_AMI=$(aws ec2 describe-images \
-            --owners 136693071363 \
-            --filters "Name=name,Values=${OS_FAMILY}-${OS_VERSION}-${AMI_ARCH}-*" \
-                      "Name=root-device-type,Values=ebs" \
-                      "Name=virtualization-type,Values=hvm" \
-            --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
-            --output text)
           AMI_NAME="github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
           python3 src/build/image_for_ec2_runners/build_ami.py build src/build/image_for_ec2_runners/config.yml \
-            --var "ami_description=GitHub Actions Runner - ${OS_FAMILY^} ${OS_VERSION} ${OS_ARCH}" \
             --var "ami_name=${AMI_NAME}" \
-            --var "env.OS_ARCHITECTURE=${OS_ARCH}" \
-            --var "env.OS_FAMILY=${OS_FAMILY}" \
             --var "env.RUNNER_ARCH=${RUNNER_ARCH}" \
-            --var "env.RUNNER_VERSION=${RUNNER_VERSION}" \
             --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-            --var "source_ami=${SOURCE_AMI}" \
+            --var "os_architecture=${OS_ARCH}" \
             --var 'subnet_ids=${{ steps.terraform.outputs.subnet_ids }}' \
             --var "tags.${{ steps.terraform.outputs.ami_purpose_tag }}=${{ steps.terraform.outputs.ami_purpose_value }}" \
             --var "tags.${{ steps.terraform.outputs.ami_stable_tag }}=false" \

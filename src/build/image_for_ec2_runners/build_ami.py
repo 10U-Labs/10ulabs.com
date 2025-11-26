@@ -28,7 +28,8 @@ class CommandParams:
     commands: str
     env_vars: dict
 
-REQUIRED_FIELDS = ["source_ami", "ami_name", "region", "subnet_ids", "instance_types"]
+REQUIRED_FIELDS = ["ami_name", "region", "subnet_ids", "instance_types"]
+SOURCE_AMI_FIELDS = ["os_family", "os_version", "os_architecture"]
 
 
 def validate_commands(config):
@@ -46,6 +47,10 @@ def validate_config(config):
     for field in REQUIRED_FIELDS:
         if field not in config:
             errors.append(f"Missing required field: {field}")
+    if "source_ami" not in config:
+        for field in SOURCE_AMI_FIELDS:
+            if field not in config:
+                errors.append(f"Missing required field: {field} (needed to look up source_ami)")
     if "instance_types" in config:
         if not isinstance(config["instance_types"], list):
             errors.append("instance_types must be a list")
@@ -65,6 +70,20 @@ def validate_config(config):
 def get_vpc_from_subnet(ec2, subnet_id):
     response = ec2.describe_subnets(SubnetIds=[subnet_id])
     return response["Subnets"][0]["VpcId"]
+
+
+def lookup_source_ami(ec2, os_family, os_version, os_architecture):
+    ami_arch = "arm64" if os_architecture == "arm64" else "amd64"
+    response = ec2.describe_images(
+        Owners=["136693071363"],
+        Filters=[
+            {"Name": "name", "Values": [f"{os_family}-{os_version}-{ami_arch}-*"]},
+            {"Name": "root-device-type", "Values": ["ebs"]},
+            {"Name": "virtualization-type", "Values": ["hvm"]},
+        ],
+    )
+    images = sorted(response["Images"], key=lambda x: x["CreationDate"], reverse=True)
+    return images[0]["ImageId"]
 
 
 def create_key_pair(ec2, key_name):
@@ -307,7 +326,12 @@ def cmd_build(args):
             print(f"Error: {err}", file=sys.stderr)
         return 1
     unique_id = uuid.uuid4().hex[:8]
-    ctx = BuildContext(boto3.client("ec2", region_name=config["region"]), config, config.get("env", {}), unique_id)
+    ec2 = boto3.client("ec2", region_name=config["region"])
+    if "source_ami" not in config:
+        print("Looking up source AMI...")
+        config["source_ami"] = lookup_source_ami(ec2, config["os_family"], config["os_version"], config["os_architecture"])
+        print(f"Found source AMI: {config['source_ami']}")
+    ctx = BuildContext(ec2, config, config.get("env", {}), unique_id)
     state = BuildState()
     try:
         run_build(ctx, state)
