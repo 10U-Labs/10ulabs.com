@@ -53,7 +53,7 @@ def test_ec2_runner_instance_fixture(
         return
     job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ec2-spot-instance"])
     response = make_e2e_post(
-        f"{api_url}/v1/ec2-runner", api_key, json=payload
+        f"{api_url}/v1/ec2-runner", api_key, json=payload, timeout=30
     )
     if response.status_code != 200:
         yield None
