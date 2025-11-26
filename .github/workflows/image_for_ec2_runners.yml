@@ -259,7 +259,7 @@ jobs:
           echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
-          echo "spot_instance_types=${{ steps.api.outputs.spot_instance_types }}" >> $GITHUB_OUTPUT
+          echo 'spot_instance_types=${{ steps.api.outputs.spot_instance_types }}' >> $GITHUB_OUTPUT
           echo "terraform_version=${{ steps.shared.outputs.terraform_version }}" >> $GITHUB_OUTPUT
           echo "test_spot_instance_types=$TEST_SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
   e2e-testing:
