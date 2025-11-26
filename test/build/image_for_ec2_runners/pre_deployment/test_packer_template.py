@@ -78,6 +78,9 @@ class TestPackerTemplateGitHubRunner:
     def test_runs_installdependencies_script(self, packer_template_content):
         assert "installdependencies.sh" in packer_template_content
 
+    def test_installdependencies_uses_absolute_path(self, packer_template_content):
+        assert "sudo /home/github-runner/actions-runner/bin/installdependencies.sh" in packer_template_content
+
 
 class TestPackerTemplateAgents:
 
