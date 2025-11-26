@@ -23,7 +23,7 @@ def get_registration_token(github_repo, github_token):
         return data.get("token", "")
 
 
-def create_user_data(github_repo, registration_token, region):
+def create_user_data(github_repo, registration_token):
     user_data_script = f"""#!/bin/bash
 exec > /var/log/user-data.log 2>&1
 set -ex
@@ -63,7 +63,6 @@ def validate_e2e_inputs(test_ami_id, github_token):
 
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
-    region = test_config.get("aws_region", "us-east-1")
     test_spot_types_env = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
     if test_spot_types_env:
         spot_types = json.loads(test_spot_types_env)
@@ -71,12 +70,12 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         spot_types = test_config.get("ec2_spot_instance_types", ["t4g.small"])
     if not isinstance(spot_types, list):
         spot_types = [spot_types]
-    return {
+    result = {
         "ami_id": test_ami_id,
         "subnet_id": os.environ.get("TEST_SUBNET_ID", ""),
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
-        "user_data": create_user_data(github_repo, registration_token, region),
+        "user_data": create_user_data(github_repo, registration_token),
         "max_spot_price": test_config.get("ec2_max_spot_price", "0.05"),
         "spot_instance_types": spot_types,
         "tags": [
@@ -85,6 +84,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
             {"Key": "ManagedBy", "Value": "pytest"}
         ],
     }
+    return result
 
 
 @pytest.fixture(scope="session")
