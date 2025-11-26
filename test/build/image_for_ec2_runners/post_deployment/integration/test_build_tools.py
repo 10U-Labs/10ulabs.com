@@ -55,11 +55,11 @@ def test_jq_is_installed(ssm_client, test_instance, run_ssm_command):
     assert output["Status"] == "Success"
 
 
-def test_pip3_is_installed(ssm_client, test_instance, run_ssm_command):
+def test_pip_is_available(ssm_client, test_instance, run_ssm_command):
     if not test_instance:
         pytest.fail("Test instance not created")
 
-    output = run_ssm_command(ssm_client, test_instance, "which pip3")
+    output = run_ssm_command(ssm_client, test_instance, "python3 -m pip --version")
 
     assert output["Status"] == "Success"
 

@@ -189,12 +189,11 @@ build {
     ]
   }
 
-  # Install Python packages via pip
   provisioner "shell" {
     inline_shebang = "/bin/bash -e"
     inline = [
       "set -e",
-      "sudo pip3 install --break-system-packages pytest"
+      "sudo python3 -m pip install --break-system-packages pytest"
     ]
   }
 

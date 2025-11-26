@@ -18,10 +18,10 @@ class TestPackerTemplateBaseDependencies:
 
 class TestPackerTemplatePythonPackages:
 
-    def test_installs_pytest_via_pip3(self, packer_template_content):
-        assert "pip3 install" in packer_template_content
+    def test_installs_pytest_via_pip(self, packer_template_content):
+        assert "python3 -m pip install" in packer_template_content
 
-    def test_pip3_uses_break_system_packages_flag(self, packer_template_content):
+    def test_pip_uses_break_system_packages_flag(self, packer_template_content):
         assert "--break-system-packages" in packer_template_content
 
     def test_pytest_installed(self, packer_template_content):
