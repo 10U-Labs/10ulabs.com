@@ -406,6 +406,7 @@ jobs:
             src/build/image_for_ec2_runners/*.py \
             test/build/image_for_ec2_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: python -m mypy src/build/image_for_ec2_runners/*.py
