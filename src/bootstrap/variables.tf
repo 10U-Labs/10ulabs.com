@@ -19,3 +19,7 @@ variable "github_pat" {
     error_message = "GitHub PAT must not be empty."
   }
 }
+
+variable "ssm_parameter_name_for_github_pat" {
+  type = string
+}

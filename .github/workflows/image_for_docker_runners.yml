@@ -106,9 +106,16 @@ jobs:
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install dependencies
         run: pip install pytest boto3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Get GitHub PAT from Parameter Store
         run: |
-          GITHUB_PAT=$(aws ssm get-parameter --name /github/pat --with-decryption --query 'Parameter.Value' --output text)
+          terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
+          GITHUB_TOKEN_SECRET_NAME=$(terraform -chdir=src/bootstrap output -raw ssm_parameter_name_for_github_pat)
+          GITHUB_PAT=$(aws ssm get-parameter --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run E2E tests
         run: |

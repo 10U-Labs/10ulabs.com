@@ -96,7 +96,7 @@ def v1_handler(config: Dict[str, str]) -> Any:
         'EC2_AMI_STABLE_TAG': 'Stable',
         'ECR_REPOSITORY': config['ecr_repository_name'],
         'GITHUB_REPO': config['github_repo'],
-        'GITHUB_TOKEN_SECRET_NAME': '/github/pat',
+        'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
         'ECS_CLUSTER': config['cluster_name'],
         'CONTAINER_NAME': config['container_name'],
         'TASK_DEFINITION': config['task_family'],

@@ -8,8 +8,11 @@ jobs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role: ${{ steps.config.outputs.github_actions_role }}
-      github_pat_parameter_name: ${{ steps.config.outputs.github_pat_parameter_name }}
+      github_pat_parameter_name: ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -20,15 +23,30 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local.resource_prefix}\(.*\)"/\1/')
-          GITHUB_PAT_PARAMETER_NAME=$(grep 'name.*=' src/bootstrap/github_pat.tf | grep -v '#' | cut -d'"' -f2)
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           GITHUB_ACTIONS_ROLE="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
-          echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.github_actions_role }}
+      - id: bootstrap
+        name: Get bootstrap outputs
+        run: |
+          terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
+          GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap output -raw ssm_parameter_name_for_github_pat)
+          echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -51,7 +69,9 @@ jobs:
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
-      - name: Run E2E tests
+      - env:
+          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
+        name: Run E2E tests
         run: python3 -m pytest test/api/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
@@ -147,7 +167,9 @@ jobs:
             --output text \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }})
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
-      - name: Run integration tests
+      - env:
+          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
+        name: Run integration tests
         run: python3 -m pytest test/api/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
@@ -215,7 +237,9 @@ jobs:
         run: cd src/api && terraform plan
   unit-testing:
     name: Unit testing
-    needs: performing-static-analysis
+    needs:
+      - declaring-common-variables
+      - performing-static-analysis
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -228,7 +252,9 @@ jobs:
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
-      - name: Run unit tests
+      - env:
+          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
+        name: Run unit tests
         run: python3 -m pytest test/api/pre_deployment/ -v
 name: Ensuring API exists and is properly configured
 on:

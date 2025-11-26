@@ -17,6 +17,15 @@ def parse_shared_module_outputs() -> Dict[str, str]:
     return config
 
 
+def get_bootstrap_output(output_name: str) -> str:
+    import os
+    env_var_name = output_name.upper()
+    env_value = os.environ.get(env_var_name)
+    if not env_value:
+        raise ValueError(f"Environment variable {env_var_name} is not set")
+    return env_value
+
+
 def parse_api_locals() -> Dict[str, str]:
     locals_path = Path(__file__).parent.parent.parent / "src" / "api" / "locals.tf"
     shared = parse_shared_module_outputs()
@@ -60,6 +69,7 @@ def config_fixture() -> Dict[str, str]:
     result['github_org'] = shared.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
+    result['ssm_parameter_name_for_github_pat'] = get_bootstrap_output('ssm_parameter_name_for_github_pat')
     prefix = result['resource_prefix']
     lambda_fn = result.get('lambda_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
