@@ -127,7 +127,7 @@ resource "aws_iam_role_policy" "ec2_runner_self_terminate" {
       Resource = ["*"]
       Condition = {
         StringEquals = {
-          "ec2:ResourceTag/ManagedBy" = "webhook-handler"
+          "ec2:ResourceTag/ManagedBy" = "api-ec2-spot-runner"
         }
       }
     }]
