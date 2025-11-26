@@ -194,7 +194,22 @@ build {
     inline_shebang = "/bin/bash -e"
     inline = [
       "set -e",
-      "sudo python3 -m pip install --break-system-packages pytest"
+      "sudo python3 -m pip install --break-system-packages \\",
+      "  boto3 \\",
+      "  boto3-stubs[ecr] \\",
+      "  botocore \\",
+      "  dnspython \\",
+      "  dockerfile-parse \\",
+      "  mypy \\",
+      "  pylint \\",
+      "  pytest \\",
+      "  python-hcl2 \\",
+      "  pyyaml \\",
+      "  requests \\",
+      "  types-PyYAML \\",
+      "  types-dockerfile-parse \\",
+      "  types-requests \\",
+      "  yamllint"
     ]
   }
 

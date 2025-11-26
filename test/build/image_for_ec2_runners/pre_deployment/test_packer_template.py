@@ -41,14 +41,56 @@ class TestPackerTemplatePython3Pip:
 
 class TestPackerTemplatePythonPackages:
 
-    def test_installs_pytest_via_pip(self, packer_template_content):
+    def test_installs_packages_via_pip(self, packer_template_content):
         assert "python3 -m pip install" in packer_template_content
 
     def test_pip_uses_break_system_packages_flag(self, packer_template_content):
         assert "--break-system-packages" in packer_template_content
 
-    def test_pytest_installed(self, packer_template_content):
-        assert "pytest" in packer_template_content
+    def test_installs_boto3(self, packer_template_content):
+        assert "boto3 \\" in packer_template_content
+
+    def test_installs_boto3_stubs_with_ecr(self, packer_template_content):
+        assert "boto3-stubs[ecr] \\" in packer_template_content
+
+    def test_installs_botocore(self, packer_template_content):
+        assert "botocore \\" in packer_template_content
+
+    def test_installs_dnspython(self, packer_template_content):
+        assert "dnspython \\" in packer_template_content
+
+    def test_installs_dockerfile_parse(self, packer_template_content):
+        assert "dockerfile-parse \\" in packer_template_content
+
+    def test_installs_mypy(self, packer_template_content):
+        assert "mypy \\" in packer_template_content
+
+    def test_installs_pylint(self, packer_template_content):
+        assert "pylint \\" in packer_template_content
+
+    def test_installs_pytest(self, packer_template_content):
+        assert "pytest \\" in packer_template_content
+
+    def test_installs_python_hcl2(self, packer_template_content):
+        assert "python-hcl2 \\" in packer_template_content
+
+    def test_installs_pyyaml(self, packer_template_content):
+        assert "pyyaml \\" in packer_template_content
+
+    def test_installs_requests(self, packer_template_content):
+        assert "requests \\" in packer_template_content
+
+    def test_installs_types_pyyaml(self, packer_template_content):
+        assert "types-PyYAML \\" in packer_template_content
+
+    def test_installs_types_dockerfile_parse(self, packer_template_content):
+        assert "types-dockerfile-parse \\" in packer_template_content
+
+    def test_installs_types_requests(self, packer_template_content):
+        assert "types-requests \\" in packer_template_content
+
+    def test_installs_yamllint(self, packer_template_content):
+        assert "yamllint" in packer_template_content
 
 
 class TestPackerTemplateYq:
