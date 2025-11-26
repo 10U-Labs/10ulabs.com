@@ -3,11 +3,11 @@ output "api_url" {
 }
 
 output "api_domain_name" {
-  value = local.domain_subdomain
+  value = local.api_fqdn
 }
 
 output "api_endpoint" {
-  value = "https://${local.domain_subdomain}"
+  value = "https://${local.api_fqdn}"
 }
 
 output "api_gateway_rest_api_id" {
@@ -100,4 +100,16 @@ output "ec2_runner_ami_purpose_value" {
 
 output "ec2_runner_ami_stable_tag" {
   value = local.ec2_runner_ami_stable_tag
+}
+
+output "fargate_cpu_architecture" {
+  value = var.fargate_cpu_architecture
+}
+
+output "ec2_spot_instance_types" {
+  value = var.ec2_spot_instance_types
+}
+
+output "ssm_parameter_name_for_latest_ami" {
+  value = aws_ssm_parameter.latest_ami.name
 }

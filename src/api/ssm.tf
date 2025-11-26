@@ -1,5 +1,5 @@
 resource "aws_ssm_parameter" "latest_ami" {
-  name  = var.ssm_parameter_name_for_ami
+  name  = var.ssm_parameter_name_for_latest_ami
   type  = "String"
   value = "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
   tier  = "Standard"
@@ -9,7 +9,7 @@ resource "aws_ssm_parameter" "latest_ami" {
   }
 
   tags = {
-    Name = var.ssm_parameter_name_for_ami
+    Name = var.ssm_parameter_name_for_latest_ami
   }
 }
 

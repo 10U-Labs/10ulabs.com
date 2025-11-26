@@ -90,7 +90,7 @@ resource "aws_lambda_function" "runners_handler" {
     variables = {
       WEBHOOK_SECRET_NAME    = aws_ssm_parameter.webhook_secret.name
       API_KEY_PARAMETER_NAME = aws_ssm_parameter.api_key.name
-      API_BASE_URL           = "https://${local.domain_subdomain}"
+      API_BASE_URL           = "https://${local.api_fqdn}"
       IDEMPOTENCY_TABLE_NAME = aws_dynamodb_table.idempotency.name
       JOB_QUEUE_URL          = aws_sqs_queue.job_queue.url
     }
@@ -149,7 +149,7 @@ resource "aws_lambda_function" "v1_handler" {
 
   environment {
     variables = {
-      API_DOMAIN               = local.domain_subdomain
+      API_DOMAIN               = local.api_fqdn
       API_KEY_PARAMETER_NAME   = aws_ssm_parameter.api_key.name
       CONTAINER_NAME           = var.container_name
       EC2_AMI_PURPOSE_TAG      = local.ec2_runner_ami_purpose_tag
@@ -162,7 +162,7 @@ resource "aws_lambda_function" "v1_handler" {
       ECS_CLUSTER              = aws_ecs_cluster.runner.arn
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
-      IMAGE_API_ENDPOINT       = "https://${local.domain_subdomain}"
+      IMAGE_API_ENDPOINT       = "https://${local.api_fqdn}"
       SECURITY_GROUPS          = aws_security_group.runner_sg.id
       SUBNETS                  = join(",", aws_subnet.public[*].id)
       TASK_DEFINITION          = aws_ecs_task_definition.runner.arn

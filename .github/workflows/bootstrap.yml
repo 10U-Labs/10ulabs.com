@@ -21,7 +21,7 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           retry-max-attempts: 1
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
   declaring-common-variables:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -30,9 +30,8 @@ jobs:
       )
     name: Declaring common variables
     outputs:
-      aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+      github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
@@ -44,12 +43,10 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local.resource_prefix}\(.*\)"/\1/')
-          GITHUB_ACTIONS_ROLE="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           TERRAFORM_VERSION=$(grep 'required_version' src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}-github-actions-role"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
@@ -66,7 +63,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
@@ -102,7 +99,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
@@ -136,7 +133,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
@@ -177,7 +174,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4

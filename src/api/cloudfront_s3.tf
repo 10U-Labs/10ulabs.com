@@ -1,9 +1,9 @@
 resource "aws_s3_bucket" "docs" {
-  bucket        = local.domain_subdomain
+  bucket        = local.api_fqdn
   force_destroy = true
 
   tags = {
-    Name = "${local.domain_subdomain}-docs"
+    Name = "${local.api_fqdn}-docs"
   }
 }
 
@@ -66,7 +66,7 @@ resource "aws_s3_object" "openapi_yml" {
 }
 
 resource "aws_cloudfront_origin_access_control" "s3" {
-  name                              = "${local.domain_subdomain}-oac"
+  name                              = "${local.api_fqdn}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -167,7 +167,7 @@ resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = ""
-  aliases             = [local.domain_subdomain]
+  aliases             = [local.api_fqdn]
   web_acl_id          = aws_wafv2_web_acl.api.arn
 
   logging_config {
@@ -286,7 +286,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   tags = {
-    Name = "${local.domain_subdomain}-distribution"
+    Name = "${local.api_fqdn}-distribution"
   }
 
   depends_on = [aws_acm_certificate_validation.api]

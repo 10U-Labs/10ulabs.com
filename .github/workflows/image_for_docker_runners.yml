@@ -8,7 +8,7 @@ jobs:
       - declaring-common-variables
       - unit-testing
     outputs:
-      ecr_repository: ${{ steps.config.outputs.ecr_repo }}
+      ecr_repository: ${{ needs.declaring-common-variables.outputs.ecr_repository_name }}
       image_tag: ${{ steps.build.outputs.image_tag }}
     permissions:
       contents: read
@@ -20,15 +20,11 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          ARCHITECTURE=$(grep 'fargate_cpu_architecture' src/api/terraform.tfvars | cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
-          ECR_REPO=$(grep 'ecr_repository_name' src/api/terraform.tfvars | cut -d'"' -f2)
           NODE_VERSION=$(yq '.node_version' src/build/image_for_docker_runners/config.yml)
           PACKER_VERSION=$(yq '.packer_version' src/build/image_for_docker_runners/config.yml)
           RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_docker_runners/config.yml)
           TERRAFORM_VERSION=$(yq '.terraform_version' src/build/image_for_docker_runners/config.yml)
           YQ_VERSION=$(yq '.yq_version' src/build/image_for_docker_runners/config.yml)
-          echo "architecture=$ARCHITECTURE" >> $GITHUB_OUTPUT
-          echo "ecr_repo=$ECR_REPO" >> $GITHUB_OUTPUT
           echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
           echo "packer_version=$PACKER_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
@@ -38,7 +34,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - id: build
@@ -46,11 +42,11 @@ jobs:
         run: |
           cd src/build/image_for_docker_runners
           BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
-          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ steps.config.outputs.ecr_repo }}"
+          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.declaring-common-variables.outputs.ecr_repository_name }}"
           docker buildx build \
             --build-arg NODE_VERSION=${{ steps.config.outputs.node_version }} \
             --build-arg PACKER_VERSION=${{ steps.config.outputs.packer_version }} \
-            --build-arg RUNNER_ARCH=${{ steps.config.outputs.architecture }} \
+            --build-arg RUNNER_ARCH=${{ needs.declaring-common-variables.outputs.fargate_cpu_architecture }} \
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
             --build-arg TERRAFORM_VERSION=${{ steps.config.outputs.terraform_version }} \
             --build-arg YQ_VERSION=${{ steps.config.outputs.yq_version }} \
@@ -69,7 +65,10 @@ jobs:
     outputs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+      ecr_repository_name: ${{ steps.api.outputs.ecr_repository_name }}
+      fargate_cpu_architecture: ${{ steps.api.outputs.fargate_cpu_architecture }}
+      github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
+      terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
     steps:
       - name: Checkout code
@@ -77,12 +76,34 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' src/api/terraform.tfvars | cut -d'"' -f2)
-          AWS_REGION=$(grep 'aws_region' src/api/terraform.tfvars | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE=$(grep 'name_for_github_actions_role' src/bootstrap/terraform.tfvars | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}-github-actions-role"
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - id: api
+        name: Get API terraform outputs
+        run: |
+          cd src/api
+          terraform init -backend=true -input=false
+          ECR_REPOSITORY_NAME=$(terraform output -raw ecr_repository_name)
+          FARGATE_CPU_ARCHITECTURE=$(terraform output -raw fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
+          echo "ecr_repository_name=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
+          echo "fargate_cpu_architecture=$FARGATE_CPU_ARCHITECTURE" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -97,7 +118,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
@@ -135,7 +156,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
@@ -211,7 +232,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5

@@ -32,11 +32,11 @@ def test_shared_module_has_github_repo():
     assert 'name_for_github_repo' in content
 
 
-def test_locals_tf_has_domain_subdomain():
+def test_locals_tf_has_api_fqdn():
     locals_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
         content = f.read()
-    assert 'domain_subdomain' in content
+    assert 'api_fqdn' in content
 
 
 def test_github_webhook_resource_exists():

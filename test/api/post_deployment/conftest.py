@@ -34,7 +34,7 @@ def ecs_client_fixture(aws_region):
 
 @pytest.fixture(name="api_url", scope="module")
 def api_url_fixture(config):
-    return f"https://{config['domain_subdomain']}"
+    return f"https://{config['api_fqdn']}"
 
 
 @pytest.fixture(name="api_key", scope="module")

@@ -102,8 +102,8 @@ def v1_handler(config: Dict[str, str]) -> Any:
         'TASK_DEFINITION': config['task_family'],
         'EC2_INSTANCE_TYPES': ','.join(config['ec2_spot_instance_types']),
         'EC2_MAX_PRICE': config['ec2_max_spot_price'],
-        'API_DOMAIN': config['domain_subdomain'],
-        'IMAGE_API_ENDPOINT': f"https://{config['domain_subdomain']}/{config['api_version']}",
+        'API_DOMAIN': config['api_fqdn'],
+        'IMAGE_API_ENDPOINT': f"https://{config['api_fqdn']}/{config['api_version']}",
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
@@ -128,7 +128,7 @@ def webhook_router(config):
     env_vars = {
         'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
         'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
-        'API_BASE_URL': f"https://{config['domain_subdomain']}/{config['api_version']}"
+        'API_BASE_URL': f"https://{config['api_fqdn']}/{config['api_version']}"
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("webhook_router.py", "webhook_router")

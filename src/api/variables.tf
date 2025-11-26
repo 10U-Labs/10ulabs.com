@@ -142,6 +142,6 @@ variable "fargate_operating_system_family" {
   type = string
 }
 
-variable "ssm_parameter_name_for_ami" {
+variable "ssm_parameter_name_for_latest_ami" {
   type = string
 }

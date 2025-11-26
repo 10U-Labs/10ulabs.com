@@ -10,6 +10,10 @@ output "arn_for_github_actions_role" {
   value = module.github_oidc.github_actions_role_arn
 }
 
+output "name_for_github_actions_role" {
+  value = module.github_oidc.github_actions_role_name
+}
+
 output "arn_for_github_pat_parameter" {
   value = aws_ssm_parameter.github_pat.arn
 }

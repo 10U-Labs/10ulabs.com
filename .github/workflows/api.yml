@@ -5,9 +5,8 @@ jobs:
   declaring-common-variables:
     name: Declaring common variables
     outputs:
-      aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role: ${{ steps.config.outputs.github_actions_role }}
+      github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
       github_pat_parameter_name: ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     permissions:
@@ -22,13 +21,11 @@ jobs:
         run: |
           AWS_REGION=$(grep -A1 'output "aws_region"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local.resource_prefix}\(.*\)"/\1/')
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' src/api/backend.tf | cut -d'"' -f2 | sed 's/>= //')
-          GITHUB_ACTIONS_ROLE="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}-github-actions-role"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
-          echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
@@ -40,12 +37,14 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ steps.config.outputs.aws_account_id }}:role/${{ steps.config.outputs.github_actions_role }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
       - id: bootstrap
         name: Get bootstrap outputs
         run: |
           terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
+          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
           GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap output -raw ssm_parameter_name_for_github_pat)
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
@@ -60,7 +59,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
@@ -91,7 +90,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -126,15 +125,15 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install boto3
       - if: steps.check_files.outputs.changed == 'true'
-        name: Extract domain from terraform.tfvars
+        name: Get API domain from Terraform output
         run: |
-          DOMAIN_SUBDOMAIN=$(grep 'domain_subdomain' terraform.tfvars | cut -d'"' -f2)
-          echo "DOMAIN_SUBDOMAIN=$DOMAIN_SUBDOMAIN" >> $GITHUB_ENV
+          API_FQDN=$(terraform output -raw api_domain_name)
+          echo "API_FQDN=$API_FQDN" >> $GITHUB_ENV
       - if: steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
           python ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py \
-            --fqdn "${{ env.DOMAIN_SUBDOMAIN }}" \
+            --fqdn "${{ env.API_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }}
   integration-testing:
     name: Integration testing
@@ -149,7 +148,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
@@ -193,7 +192,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: arn:aws:iam::${{ needs.declaring-common-variables.outputs.aws_account_id }}:role/${{ needs.declaring-common-variables.outputs.github_actions_role }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
