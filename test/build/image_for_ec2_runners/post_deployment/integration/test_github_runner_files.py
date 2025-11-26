@@ -4,7 +4,7 @@ import pytest
 RUNNER_DIR = "/home/github-runner/actions-runner"
 
 
-class TestGitHubRunnerUser:
+class TestRunnerDirectoryStructure:
 
     def test_github_runner_user_exists(self, ssm_client, test_instance, run_ssm_command):
         if not test_instance:
@@ -13,9 +13,6 @@ class TestGitHubRunnerUser:
         output = run_ssm_command(ssm_client, test_instance, "id github-runner")
 
         assert output["Status"] == "Success"
-
-
-class TestRunnerDirectoryStructure:
 
     def test_runner_directory_exists(self, ssm_client, test_instance, run_ssm_command):
         if not test_instance:
