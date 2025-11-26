@@ -129,12 +129,18 @@ jobs:
             else
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
-      - if: steps.check_files.outputs.changed == 'true' && (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      - if: >-
+          ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          steps.check_files.outputs.changed == 'true'
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: steps.check_files.outputs.changed == 'true' && (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      - if: >-
+          ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          steps.check_files.outputs.changed == 'true'
         name: Install Python dependencies
         run: python3 -m pip install boto3
       - if: steps.check_files.outputs.changed == 'true'
