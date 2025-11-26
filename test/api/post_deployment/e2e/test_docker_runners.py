@@ -1,7 +1,7 @@
 from test.api.post_deployment.conftest import (
     create_runner_job_payload,
-    make_authenticated_get,
-    make_authenticated_post,
+    make_e2e_get,
+    make_e2e_post,
 )
 import time
 import pytest
@@ -43,7 +43,7 @@ def test_fargate_task_fixture(
         yield None
         return
     job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ecs-fargate-spot"])
-    response = make_authenticated_post(
+    response = make_e2e_post(
         f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload
     )
     if response.status_code not in [200, 202]:
@@ -155,7 +155,7 @@ def test_docker_runner_appears_in_status_endpoint(
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     task_arn = test_fargate_task.get("task_arn")
-    status_response = make_authenticated_get(f"{api_url}/v1/docker-runner", api_key)
+    status_response = make_e2e_get(f"{api_url}/v1/docker-runner", api_key)
     tasks = status_response.json().get("tasks", [])
     task_arns = [task.get("task_arn") for task in tasks]
     assert task_arn in task_arns

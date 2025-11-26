@@ -63,6 +63,16 @@ def make_authenticated_post(url, api_key, json=None, timeout=DEFAULT_REQUEST_TIM
     return requests.post(url, json=json, headers=headers, timeout=timeout)
 
 
+def make_e2e_get(url, api_key, timeout=DEFAULT_REQUEST_TIMEOUT):
+    headers = {"x-api-key": api_key}
+    return requests.get(url, headers=headers, timeout=timeout)
+
+
+def make_e2e_post(url, api_key, json=None, timeout=DEFAULT_REQUEST_TIMEOUT):
+    headers = {"x-api-key": api_key}
+    return requests.post(url, json=json, headers=headers, timeout=timeout)
+
+
 @pytest.fixture(name="github_repo", scope="module")
 def github_repo_fixture(config):
     return config["github_repo"]

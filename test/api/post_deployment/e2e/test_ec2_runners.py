@@ -1,7 +1,7 @@
 from test.api.post_deployment.conftest import (
     create_runner_job_payload,
-    make_authenticated_get,
-    make_authenticated_post,
+    make_e2e_get,
+    make_e2e_post,
 )
 import time
 import pytest
@@ -49,7 +49,7 @@ def test_ec2_runner_instance_fixture(
         yield None
         return
     job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ec2-spot-instance"])
-    response = make_authenticated_post(
+    response = make_e2e_post(
         f"{api_url}/v1/ec2-runner", api_key, json=payload
     )
     if response.status_code != 200:
@@ -151,7 +151,7 @@ def test_ec2_runner_appears_in_status_endpoint(
     if test_ec2_runner_instance is None:
         pytest.fail("Test instance not created")
     instance_id = test_ec2_runner_instance.get("instance_id")
-    status_response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key)
+    status_response = make_e2e_get(f"{api_url}/v1/ec2-runner", api_key)
     instances = status_response.json().get("instances", [])
     instance_ids = [inst.get("instance_id") for inst in instances]
     assert instance_id in instance_ids
