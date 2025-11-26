@@ -541,7 +541,7 @@ def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
                     'Tags': [
                         {'Key': 'Name', 'Value': f"github-runner-ec2-{template_config['job_id']}"},
                         {'Key': 'Type', 'Value': 'ephemeral-runner'},
-                        {'Key': 'ManagedBy', 'Value': 'api-ec2-spot-runner'},
+                        {'Key': 'ManagedBy', 'Value': os.environ['EC2_MANAGED_BY_TAG']},
                         {'Key': 'GitHubJobId', 'Value': str(template_config['job_id'])},
                         {'Key': 'JobLabels', 'Value': ','.join(template_config['job_labels'])},
                         {'Key': 'GitHubRepo', 'Value': template_config['github_repo']}
@@ -890,7 +890,7 @@ def get_ec2_runner_status() -> Dict[str, Any]:
         response = ec2.describe_instances(
             Filters=[
                 {'Name': 'tag:Type', 'Values': ['ephemeral-runner']},
-                {'Name': 'tag:ManagedBy', 'Values': ['api-ec2-spot-runner']},
+                {'Name': 'tag:ManagedBy', 'Values': [os.environ['EC2_MANAGED_BY_TAG']]},
                 {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
             ]
         )

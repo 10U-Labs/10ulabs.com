@@ -6,6 +6,7 @@ locals {
   ec2_runner_ami_purpose_tag   = "Purpose"
   ec2_runner_ami_purpose_value = "GitHub self-hosted EC2 runner"
   ec2_runner_ami_stable_tag    = "Stable"
+  ec2_runner_managed_by_tag    = "api-ec2-spot-runner"
   github_org                   = module.shared.github_org
   github_repo                  = module.shared.name_for_github_repo
   github_repo_full             = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
