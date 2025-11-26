@@ -1,5 +1,9 @@
 # Development Guidelines
 
+## Behavior
+
+- When the user asks a question, answer the question. Do not make changes unless explicitly asked.
+
 ## Architecture Standards
 
 - Prefer serverless architecture.

@@ -236,54 +236,15 @@ class TestValidateConfigSourceAmiLookup:
         result = build_ami_module.validate_config(config)
         assert result == []
 
-    def test_valid_with_os_fields_for_lookup(self, build_ami_module):
+    def test_returns_error_for_missing_source_ami(self, build_ami_module):
         config = {
-            "os_family": "debian",
-            "os_version": "13",
-            "os_architecture": "arm64",
             "ami_name": "my-ami",
             "region": "us-east-1",
             "subnet_ids": ["subnet-123"],
             "instance_types": ["t3.micro"],
         }
         result = build_ami_module.validate_config(config)
-        assert result == []
-
-    def test_returns_error_for_missing_os_family(self, build_ami_module):
-        config = {
-            "os_version": "13",
-            "os_architecture": "arm64",
-            "ami_name": "my-ami",
-            "region": "us-east-1",
-            "subnet_ids": ["subnet-123"],
-            "instance_types": ["t3.micro"],
-        }
-        result = build_ami_module.validate_config(config)
-        assert result == ["Missing required field: os_family (needed to look up source_ami)"]
-
-    def test_returns_error_for_missing_os_version(self, build_ami_module):
-        config = {
-            "os_family": "debian",
-            "os_architecture": "arm64",
-            "ami_name": "my-ami",
-            "region": "us-east-1",
-            "subnet_ids": ["subnet-123"],
-            "instance_types": ["t3.micro"],
-        }
-        result = build_ami_module.validate_config(config)
-        assert result == ["Missing required field: os_version (needed to look up source_ami)"]
-
-    def test_returns_error_for_missing_os_architecture(self, build_ami_module):
-        config = {
-            "os_family": "debian",
-            "os_version": "13",
-            "ami_name": "my-ami",
-            "region": "us-east-1",
-            "subnet_ids": ["subnet-123"],
-            "instance_types": ["t3.micro"],
-        }
-        result = build_ami_module.validate_config(config)
-        assert result == ["Missing required field: os_architecture (needed to look up source_ami)"]
+        assert result == ["Missing required field: source_ami"]
 
 
 class TestValidateConfigInstanceTypes:
@@ -478,3 +439,22 @@ class TestParseCommandsComments:
     def test_keeps_commands_with_hash_in_middle(self, build_ami_module):
         result = build_ami_module.parse_commands("echo hello # not a comment")
         assert result == ["echo hello # not a comment"]
+
+
+class TestLookupSourceAmiFound:
+
+    def test_returns_ami_id_when_found(self, build_ami_module):
+        mock_ec2 = type("MockEC2", (), {})()
+        mock_ec2.describe_images = lambda **kwargs: {"Images": [{"ImageId": "ami-12345678"}]}
+        result = build_ami_module.lookup_source_ami(mock_ec2, "debian-13-arm64-20251117-2299")
+        assert result == "ami-12345678"
+
+
+class TestLookupSourceAmiNotFound:
+
+    def test_raises_error_when_not_found(self, build_ami_module):
+        import pytest
+        mock_ec2 = type("MockEC2", (), {})()
+        mock_ec2.describe_images = lambda **kwargs: {"Images": []}
+        with pytest.raises(RuntimeError):
+            build_ami_module.lookup_source_ami(mock_ec2, "nonexistent-ami")
