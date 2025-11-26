@@ -11,7 +11,7 @@ jobs:
       ami_id: ${{ steps.build.outputs.ami_id }}
       ami_stable_tag: ${{ steps.terraform.outputs.ami_stable_tag }}
       security_group_id: ${{ steps.terraform.outputs.security_group_id }}
-      subnet_id: ${{ steps.network.outputs.subnet_id }}
+      subnet_ids: ${{ steps.terraform.outputs.subnet_ids }}
     permissions:
       contents: read
       id-token: write
@@ -304,7 +304,7 @@ jobs:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.test_spot_instance_types }}
-          TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
+          TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run E2E tests
         run: |
           pytest test/build/image_for_ec2_runners/post_deployment/e2e/ \
@@ -340,7 +340,7 @@ jobs:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.test_spot_instance_types }}
-          TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
+          TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run pytest integration tests
         run: |
           pytest test/build/image_for_ec2_runners/post_deployment/integration/ \

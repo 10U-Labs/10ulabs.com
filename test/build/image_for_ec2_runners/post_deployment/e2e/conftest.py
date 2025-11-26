@@ -56,10 +56,24 @@ def validate_e2e_inputs(test_ami_id, github_token):
         pytest.fail("TEST_AMI_ID not provided")
     if not github_token:
         pytest.fail("GITHUB_PAT not provided")
-    if not os.environ.get("TEST_SUBNET_ID", ""):
-        pytest.fail("TEST_SUBNET_ID environment variable not set")
+    subnet_ids_env = os.environ.get("TEST_SUBNET_IDS", "")
+    subnet_id_env = os.environ.get("TEST_SUBNET_ID", "")
+    if not subnet_ids_env and not subnet_id_env:
+        pytest.fail("TEST_SUBNET_IDS or TEST_SUBNET_ID environment variable not set")
     if not os.environ.get("TEST_SECURITY_GROUP_ID", ""):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
+
+
+def get_subnet_ids():
+    subnet_ids_env = os.environ.get("TEST_SUBNET_IDS", "")
+    subnet_id_env = os.environ.get("TEST_SUBNET_ID", "")
+    if subnet_ids_env:
+        result = [s.strip() for s in subnet_ids_env.split(",") if s.strip()]
+    elif subnet_id_env:
+        result = [subnet_id_env]
+    else:
+        result = []
+    return result
 
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
@@ -72,7 +86,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         spot_types = [spot_types]
     result = {
         "ami_id": test_ami_id,
-        "subnet_id": os.environ.get("TEST_SUBNET_ID", ""),
+        "subnet_ids": get_subnet_ids(),
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
         "user_data": create_user_data(github_repo, registration_token),
@@ -103,16 +117,20 @@ def e2e_test_instance(ec2_client, test_ami_id, config, github_token, github_repo
     instance_id = None
     last_error = None
 
-    for instance_type in instance_config["spot_instance_types"]:
-        instance_config["instance_type"] = instance_type
-        try:
-            instance_id = launch_spot_instance(ec2_client, instance_config)
+    for subnet_id in instance_config["subnet_ids"]:
+        instance_config["subnet_id"] = subnet_id
+        for instance_type in instance_config["spot_instance_types"]:
+            instance_config["instance_type"] = instance_type
+            try:
+                instance_id = launch_spot_instance(ec2_client, instance_config)
+                break
+            except ClientError as err:
+                last_error = err
+        if instance_id:
             break
-        except ClientError as err:
-            last_error = err
 
     if not instance_id:
-        pytest.fail(f"Could not launch spot instance with any of the configured types: {instance_config['spot_instance_types']}. Last error: {last_error}")
+        pytest.fail(f"Could not launch spot instance with types {instance_config['spot_instance_types']} in subnets {instance_config['subnet_ids']}. Last error: {last_error}")
 
     wait_for_instance_ready(ec2_client, instance_id)
     yield instance_id
