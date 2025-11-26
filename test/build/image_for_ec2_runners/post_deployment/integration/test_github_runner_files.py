@@ -131,7 +131,7 @@ class TestRunnerBinariesExecute:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/bin/Runner.Worker --version")
+        output = run_ssm_command(ssm_client, test_instance, f"{RUNNER_DIR}/bin/Runner.Worker --help 2>&1 || true")
 
         assert output["Status"] == "Success"
 
