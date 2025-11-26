@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+import time
 import urllib.request
 import urllib.error
 from typing import Dict, Any, List
@@ -500,6 +501,26 @@ def get_ec2_config() -> Dict[str, Any]:
     }
 
 
+def wait_for_instance_describable(instance_id: str, max_attempts: int = 5) -> Dict[str, Any]:
+    ec2 = get_ec2_client()
+    attempt = 0
+    while attempt < max_attempts:
+        try:
+            response = ec2.describe_instances(InstanceIds=[instance_id])
+            if response['Reservations'] and response['Reservations'][0]['Instances']:
+                return response['Reservations'][0]['Instances'][0]
+        except ClientError as e:
+            if e.response['Error']['Code'] != 'InvalidInstanceID.NotFound':
+                raise
+        wait_time = 0.5 * (2 ** attempt)
+        time.sleep(wait_time)
+        attempt = attempt + 1
+    raise ClientError(
+        {'Error': {'Code': 'InvalidInstanceID.NotFound', 'Message': f'Instance {instance_id} not found after {max_attempts} attempts'}},
+        'DescribeInstances'
+    )
+
+
 def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
     ec2 = get_ec2_client()
     template_name = f"github-runner-fleet-{template_config['job_id']}"
@@ -612,10 +633,9 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
             instance_ids = fleet_response['Instances'][0].get('InstanceIds', [])
             if instance_ids:
                 instance_id = instance_ids[0]
-                describe_response = get_ec2_client().describe_instances(InstanceIds=[instance_id])
-                instance = describe_response['Reservations'][0]['Instances'][0]
+                instance = wait_for_instance_describable(instance_id)
                 logger.info(
-                    "✅ Launched EC2 spot runner for job %s: %s (%s in %s)",
+                    "Launched EC2 spot runner for job %s: %s (%s in %s)",
                     job_id,
                     instance_id,
                     instance['InstanceType'],
