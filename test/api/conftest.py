@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List
@@ -18,7 +19,6 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 
 def get_bootstrap_output(output_name: str) -> str:
-    import os
     env_var_name = output_name.upper()
     env_value = os.environ.get(env_var_name)
     if not env_value:

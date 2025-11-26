@@ -2,7 +2,7 @@ locals {
   aws_account_id               = module.shared.aws_account_id
   aws_region                   = module.shared.aws_region
   domain_name                  = module.shared.domain_name
-  api_fqdn             = "api.${module.shared.domain_name}"
+  api_fqdn                     = "api.${module.shared.domain_name}"
   ec2_runner_ami_purpose_tag   = "Purpose"
   ec2_runner_ami_purpose_value = "GitHub self-hosted EC2 runner"
   ec2_runner_ami_stable_tag    = "Stable"
