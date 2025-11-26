@@ -65,8 +65,10 @@ jobs:
           python3 src/build/image_for_ec2_runners/build_ami.py build src/build/image_for_ec2_runners/config.yml \
             --var "ami_name=${AMI_NAME}" \
             --var "env.RUNNER_ARCH=${RUNNER_ARCH}" \
+            --var "env.RUNNER_VERSION=${RUNNER_VERSION}" \
             --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --var "os_architecture=${OS_ARCH}" \
+            --var "region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --var 'subnet_ids=${{ steps.terraform.outputs.subnet_ids }}' \
             --var "tags.${{ steps.terraform.outputs.ami_purpose_tag }}=${{ steps.terraform.outputs.ami_purpose_value }}" \
             --var "tags.${{ steps.terraform.outputs.ami_stable_tag }}=false" \

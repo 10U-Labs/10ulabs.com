@@ -22,5 +22,4 @@ commands: |
   sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
 os_family: debian
 os_version: "13"
-region: us-east-1
 runner_version: "2.330.0"
