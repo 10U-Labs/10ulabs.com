@@ -1,5 +1,6 @@
 # Build outputs
 *.zip
+src/build/image_for_ec2_runners/build_config.yml
 
 # OS
 .DS_Store

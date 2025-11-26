@@ -19,9 +19,9 @@ def cleanup_packer_artifacts():
 
 
 @pytest.fixture
-def packer_template_content():
-    template_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "template.pkr.hcl"
-    return template_path.read_text()
+def provision_script_content():
+    script_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "provision_runner.sh"
+    return script_path.read_text()
 
 
 @pytest.fixture

@@ -43,97 +43,85 @@ jobs:
           AMI_STABLE_TAG=$(terraform output -raw ec2_runner_ami_stable_tag)
           SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
           SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
+          VPC_ID=$(terraform output -raw vpc_id)
           echo "AMI Purpose Tag: $AMI_PURPOSE_TAG"
           echo "AMI Purpose Value: $AMI_PURPOSE_VALUE"
           echo "AMI Stable Tag: $AMI_STABLE_TAG"
           echo "Security Group ID: $SECURITY_GROUP_ID"
           echo "Subnet IDs: $SUBNET_IDS"
+          echo "VPC ID: $VPC_ID"
           echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT
           echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
-      - id: network
-        name: Find suitable subnet for instance types
-        run: |
-          if python3 src/build/image_for_ec2_runners/find_suitable_subnet.py \
-            check \
-            --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-            --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}'; then
-            SUBNET_ID=$(python3 src/build/image_for_ec2_runners/find_suitable_subnet.py \
-              get \
-              --instance-types '${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-              --subnet-ids '${{ steps.terraform.outputs.subnet_ids }}')
-            echo "subnet_id=$SUBNET_ID" >> $GITHUB_OUTPUT
-          else
-            echo "ERROR: No suitable subnet found for instance types ${{ needs.declaring-common-variables.outputs.spot_instance_types }}" && \
-            echo "in region ${{ needs.declaring-common-variables.outputs.aws_region }}" >&2
-            exit 1
-          fi
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@main
-        with:
-          version: "latest"
-      - name: Initialize Packer
-        run: |
-          cd src/build/image_for_ec2_runners
-          packer init template.pkr.hcl
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install paramiko
+        run: pip install paramiko
       - id: build
-        name: Build AMI with Packer
+        name: Build AMI with EC2 Fleet
         run: |
-          cd src/build/image_for_ec2_runners
+          OS_FAMILY="${{ needs.declaring-common-variables.outputs.os_family }}"
+          OS_VERSION="${{ needs.declaring-common-variables.outputs.os_version }}"
+          OS_ARCH="${{ needs.declaring-common-variables.outputs.os_architecture }}"
+          RUNNER_VERSION="${{ needs.declaring-common-variables.outputs.runner_version }}"
+          AWS_REGION="${{ needs.declaring-common-variables.outputs.aws_region }}"
+          AMI_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "amd64")
+          RUNNER_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "x64")
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
           echo "Building GitHub Runner AMI..."
-          echo "OS Family: ${{ needs.declaring-common-variables.outputs.os_family }}"
-          echo "OS Version: ${{ needs.declaring-common-variables.outputs.os_version }}"
-          echo "Architecture: ${{ needs.declaring-common-variables.outputs.os_architecture }}"
-          echo "Runner Version: ${{ needs.declaring-common-variables.outputs.runner_version }}"
+          echo "OS Family: $OS_FAMILY"
+          echo "OS Version: $OS_VERSION"
+          echo "Architecture: $OS_ARCH"
+          echo "Runner Version: $RUNNER_VERSION"
           echo ""
-          MAX_ATTEMPTS=3
-          ATTEMPT=1
-          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
-            echo "Build attempt $ATTEMPT of $MAX_ATTEMPTS"
-            packer build \
-              -var="ami_purpose_tag=${{ steps.terraform.outputs.ami_purpose_tag }}" \
-              -var="ami_purpose_value=${{ steps.terraform.outputs.ami_purpose_value }}" \
-              -var="ami_stable_tag=${{ steps.terraform.outputs.ami_stable_tag }}" \
-              -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-              -var="github_repository=${{ github.repository }}" \
-              -var="github_run_id=${{ github.run_id }}" \
-              -var="github_workflow=${{ github.workflow }}" \
-              -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
-              -var="os_family=${{ needs.declaring-common-variables.outputs.os_family }}" \
-              -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
-              -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
-              -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-              -var="subnet_id=${{ steps.network.outputs.subnet_id }}" \
-              -machine-readable \
-              template.pkr.hcl | tee packer-output.log
-            BUILD_EXIT_CODE=${PIPESTATUS[0]}
-            if [ $BUILD_EXIT_CODE -eq 0 ]; then
-              echo "Build succeeded on attempt $ATTEMPT"
-              break
-            fi
-            if grep -q "Spot Instance interruption" packer-output.log || \
-               grep -q "capacity" packer-output.log || \
-               grep -q "fleet request" packer-output.log; then
-              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
-                echo "Spot instance issue detected. Retrying in 30 seconds..."
-                sleep 30
-                ATTEMPT=$((ATTEMPT + 1))
-              else
-                echo "Build failed after $MAX_ATTEMPTS attempts"
-                exit 1
-              fi
-            else
-              echo "Build failed with non-retryable error"
-              exit 1
-            fi
-          done
-          AMI_ID=$(grep 'artifact,0,id' packer-output.log | cut -d: -f2 | cut -d, -f1 || echo "")
-          if [ -z "$AMI_ID" ]; then
-            echo "Failed to extract AMI ID from Packer output"
-            exit 1
-          fi
+          SOURCE_AMI=$(aws ec2 describe-images \
+            --owners 136693071363 \
+            --filters "Name=name,Values=${OS_FAMILY}-${OS_VERSION}-${AMI_ARCH}-*" \
+                      "Name=root-device-type,Values=ebs" \
+                      "Name=virtualization-type,Values=hvm" \
+            --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
+            --output text)
+          echo "Source AMI: $SOURCE_AMI"
+          AMI_NAME="github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
+          INSTANCE_TYPES_JSON='${{ needs.declaring-common-variables.outputs.spot_instance_types }}'
+          BUILD_DIR="src/build/image_for_ec2_runners"
+          cat > "${BUILD_DIR}/build_config.yml" << EOF
+          ami_description: "GitHub Actions Runner - ${OS_FAMILY^} $OS_VERSION $OS_ARCH"
+          ami_name: "$AMI_NAME"
+          iam_instance_profile: "PackerEC2InstanceProfile"
+          instance_types: $(echo "$INSTANCE_TYPES_JSON" | jq -c '.')
+          provisioners:
+            - script: provision_runner.sh
+          region: "$AWS_REGION"
+          source_ami: "$SOURCE_AMI"
+          ssh_username: "admin"
+          tags:
+            ${{ steps.terraform.outputs.ami_purpose_tag }}: "${{ steps.terraform.outputs.ami_purpose_value }}"
+            ${{ steps.terraform.outputs.ami_stable_tag }}: "false"
+            BuildDate: "$TIMESTAMP"
+            ManagedBy: "GitHubActions"
+            Name: "ami-$AMI_NAME"
+            OSArchitecture: "$OS_ARCH"
+            OSFamily: "${OS_FAMILY^}"
+            OSVersion: "$OS_VERSION"
+            Repository: "${{ github.repository }}"
+            RunId: "${{ github.run_id }}"
+            RunnerVersion: "$RUNNER_VERSION"
+            Workflow: "${{ github.workflow }}"
+          vpc_id: "${{ steps.terraform.outputs.vpc_id }}"
+          EOF
+          sed -i 's/^          //' "${BUILD_DIR}/build_config.yml"
+          cat "${BUILD_DIR}/build_config.yml"
+          echo ""
+          python3 "${BUILD_DIR}/build_ami.py" build "${BUILD_DIR}/build_config.yml" \
+            --env "OS_FAMILY=$OS_FAMILY" \
+            --env "OS_ARCHITECTURE=$OS_ARCH" \
+            --env "RUNNER_VERSION=$RUNNER_VERSION" \
+            --env "RUNNER_ARCH=$RUNNER_ARCH" \
+            | tee build-output.log
+          AMI_ID=$(grep '^ami_id=' build-output.log | cut -d= -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
           echo ""
           echo "AMI built successfully: $AMI_ID"
@@ -178,7 +166,7 @@ jobs:
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: pip install boto3
-      - name: Clean up Packer artifacts
+      - name: Clean up old AMIs
         run: |
           python src/build/image_for_ec2_runners/cleanup_packer_artifacts.py \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
@@ -397,7 +385,7 @@ jobs:
             tflint --disable-rule=terraform_unused_declarations
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
-        run: pip install boto3 boto3-stubs mypy pylint pytest
+        run: pip install boto3 boto3-stubs mypy pylint pytest types-paramiko
       - env:
           PYTHONPATH: test/build/image_for_ec2_runners/post_deployment
         name: Linting Python files
@@ -410,29 +398,6 @@ jobs:
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: python -m mypy src/build/image_for_ec2_runners/*.py
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@main
-        with:
-          version: "latest"
-      - name: Initialize Packer
-        run: |
-          cd src/build/image_for_ec2_runners
-          packer init template.pkr.hcl
-      - name: Validate Packer template
-        run: |
-          cd src/build/image_for_ec2_runners
-          packer validate \
-            -var="ami_purpose_tag=Purpose" \
-            -var="ami_purpose_value=GitHub self-hosted EC2 runner" \
-            -var="ami_stable_tag=Stable" \
-            -var="aws_region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            -var="os_architecture=${{ needs.declaring-common-variables.outputs.os_architecture }}" \
-            -var="os_family=${{ needs.declaring-common-variables.outputs.os_family }}" \
-            -var="os_version=${{ needs.declaring-common-variables.outputs.os_version }}" \
-            -var="runner_version=${{ needs.declaring-common-variables.outputs.runner_version }}" \
-            -var='spot_instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-            -var="subnet_id=subnet-dummy" \
-            template.pkr.hcl
   promoting-ami:
     name: Promoting AMI
     needs:
