@@ -1,6 +1,10 @@
 from pathlib import Path
+import re
 import pytest
 
+
+BOOTSTRAP_DIR = Path(__file__).parent.parent.parent / "src" / "bootstrap"
+LOCALS_TF_PATH = BOOTSTRAP_DIR / "locals.tf"
 
 SHARED_MODULE_VALUES = {
     'admin_iam_user': 'jdrowne',
@@ -14,18 +18,27 @@ SHARED_MODULE_VALUES = {
     'resource_prefix': 'TenULabs',
 }
 
+
+def _extract_role_suffix(local_name: str) -> str:
+    with open(LOCALS_TF_PATH, encoding='utf-8') as f:
+        content = f.read()
+    pattern = rf'{local_name}\s*=\s*"\${{local\.resource_prefix}}([^"]+)"'
+    match = re.search(pattern, content)
+    return match.group(1) if match else ''
+
+
 LOCALS_DERIVED_VALUES = {
     'name_for_cloudtrail': f"{SHARED_MODULE_VALUES['resource_prefix']}-cloudtrail",
     'name_for_cloudtrail_bucket': SHARED_MODULE_VALUES['name_for_central_logs_bucket'],
-    'name_for_cloudtrail_iam_role': f"{SHARED_MODULE_VALUES['resource_prefix']}-cloudtrail-logs-role",
+    'name_for_cloudtrail_iam_role': f"{SHARED_MODULE_VALUES['resource_prefix']}{_extract_role_suffix('name_for_cloudtrail_iam_role')}",
     'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{SHARED_MODULE_VALUES['resource_prefix']}",
-    'name_for_github_actions_role': f"{SHARED_MODULE_VALUES['resource_prefix']}-github-actions-role",
+    'name_for_github_actions_role': f"{SHARED_MODULE_VALUES['resource_prefix']}{_extract_role_suffix('name_for_github_actions_role')}",
 }
 
 
 @pytest.fixture(name='bootstrap_dir')
 def bootstrap_dir_fixture():
-    return Path(__file__).parent.parent.parent / "src" / "bootstrap"
+    return BOOTSTRAP_DIR
 
 
 @pytest.fixture
