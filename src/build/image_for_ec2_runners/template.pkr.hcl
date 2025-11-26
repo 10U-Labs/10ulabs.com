@@ -183,6 +183,7 @@ build {
       "  gnupg \\",
       "  jq \\",
       "  lsb-release \\",
+      "  python3-pip \\",
       "  sudo \\",
       "  unzip \\",
       "  wget"

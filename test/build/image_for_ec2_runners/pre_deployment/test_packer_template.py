@@ -9,11 +9,34 @@ class TestPackerTemplateBaseDependencies:
     def test_installs_jq(self, packer_template_content):
         assert "jq \\" in packer_template_content
 
+    def test_installs_python3_pip(self, packer_template_content):
+        assert "python3-pip \\" in packer_template_content
+
     def test_installs_unzip(self, packer_template_content):
         assert "unzip \\" in packer_template_content
 
     def test_installs_wget(self, packer_template_content):
         assert "wget" in packer_template_content
+
+
+class TestPackerTemplatePython3Pip:
+
+    def test_python3_pip_installed_via_apt(self, packer_template_content):
+        apt_install_block_start = packer_template_content.find("apt-get install")
+        apt_install_block_end = packer_template_content.find("]", apt_install_block_start)
+        apt_install_block = packer_template_content[apt_install_block_start:apt_install_block_end]
+        assert "python3-pip" in apt_install_block
+
+    def test_python3_pip_installed_before_pip_module_used(self, packer_template_content):
+        apt_install_pos = packer_template_content.find("python3-pip")
+        pip_module_pos = packer_template_content.find("python3 -m pip")
+        assert apt_install_pos < pip_module_pos
+
+    def test_python3_pip_in_base_dependencies_block(self, packer_template_content):
+        base_deps_start = packer_template_content.find("# Install base dependencies")
+        next_comment = packer_template_content.find("#", base_deps_start + 1)
+        base_deps_block = packer_template_content[base_deps_start:next_comment]
+        assert "python3-pip" in base_deps_block
 
 
 class TestPackerTemplatePythonPackages:
