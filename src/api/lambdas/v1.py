@@ -501,7 +501,7 @@ def get_ec2_config() -> Dict[str, Any]:
     }
 
 
-def wait_for_instance_describable(instance_id: str, max_attempts: int = 5) -> Dict[str, Any]:
+def wait_for_instance_describable(instance_id: str, max_attempts: int = 3) -> Dict[str, Any]:
     ec2 = get_ec2_client()
     attempt = 0
     while attempt < max_attempts:
@@ -512,7 +512,7 @@ def wait_for_instance_describable(instance_id: str, max_attempts: int = 5) -> Di
         except ClientError as e:
             if e.response['Error']['Code'] != 'InvalidInstanceID.NotFound':
                 raise
-        wait_time = 0.5 * (2 ** attempt)
+        wait_time = 2 ** (attempt + 3)
         time.sleep(wait_time)
         attempt = attempt + 1
     raise ClientError(
