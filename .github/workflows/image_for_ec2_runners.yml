@@ -51,12 +51,12 @@ jobs:
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install paramiko
         run: pip install paramiko
-      - id: build
-        env:
+      - env:
           OS_ARCH: ${{ needs.declaring-common-variables.outputs.os_architecture }}
           OS_FAMILY: ${{ needs.declaring-common-variables.outputs.os_family }}
           OS_VERSION: ${{ needs.declaring-common-variables.outputs.os_version }}
           RUNNER_VERSION: ${{ needs.declaring-common-variables.outputs.runner_version }}
+        id: build
         name: Build AMI with EC2 Fleet
         run: |
           RUNNER_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "x64")
