@@ -155,3 +155,16 @@ def test_ec2_runner_appears_in_status_endpoint(
     instances = status_response.json().get("instances", [])
     instance_ids = [inst.get("instance_id") for inst in instances]
     assert instance_id in instance_ids
+
+
+def test_ec2_runner_instance_enforces_imdsv2(
+    test_ec2_runner_instance, ec2_client, latest_ami_exists
+):
+    if not latest_ami_exists:
+        pytest.skip("No AMI available")
+    if test_ec2_runner_instance is None:
+        pytest.fail("Test instance not created")
+    instance_id = test_ec2_runner_instance.get("instance_id")
+    response = ec2_client.describe_instances(InstanceIds=[instance_id])
+    metadata_options = response['Reservations'][0]['Instances'][0].get('MetadataOptions', {})
+    assert metadata_options.get("HttpTokens") == "required"

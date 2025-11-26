@@ -222,3 +222,57 @@ class TestLaunchEc2SpotRunner:
             job_id_tag_value = _find_tag_value(tag_specs, 'GitHubJobId')
 
             assert job_id_tag_value == '456'
+
+    def test_enforces_imdsv2(self, v1_handler):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
+             patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch('boto3.client') as mock_boto_client:
+
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.run_instances.return_value = {
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'PrivateIpAddress': '10.0.0.1',
+                    'InstanceType': 't4g.large',
+                    'Placement': {'AvailabilityZone': 'us-east-1a'}
+                }]
+            }
+
+            v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
+            call_args = mock_ec2.run_instances.call_args
+            metadata_options = call_args[1]['MetadataOptions']
+
+            assert metadata_options['HttpTokens'] == 'required'
+
+    def test_enables_metadata_endpoint(self, v1_handler):
+        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+             patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
+             patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'), \
+             patch.object(v1_handler, 'create_ec2_user_data', return_value='#!/bin/bash'), \
+             patch('boto3.client') as mock_boto_client:
+
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            v1_handler.ec2 = mock_ec2
+
+            mock_ec2.run_instances.return_value = {
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'PrivateIpAddress': '10.0.0.1',
+                    'InstanceType': 't4g.large',
+                    'Placement': {'AvailabilityZone': 'us-east-1a'}
+                }]
+            }
+
+            v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
+
+            call_args = mock_ec2.run_instances.call_args
+            metadata_options = call_args[1]['MetadataOptions']
+
+            assert metadata_options['HttpEndpoint'] == 'enabled'
