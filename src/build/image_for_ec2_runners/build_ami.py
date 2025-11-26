@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import sys
 import time
 import uuid
@@ -218,27 +219,32 @@ def load_config(config_path):
         return yaml.safe_load(f)
 
 
-def parse_vars(var_list):
-    result = {}
+def parse_value(value_str):
+    try:
+        return json.loads(value_str)
+    except json.JSONDecodeError:
+        return value_str
+
+
+def apply_vars(config, var_list):
     for item in var_list or []:
-        if "=" in item:
-            key, value = item.split("=", 1)
-            result[key] = value
-    return result
-
-
-def merge_tags(config, tag_list):
-    if not tag_list:
-        return
-    if "tags" not in config:
-        config["tags"] = {}
-    config["tags"].update(parse_vars(tag_list))
+        if "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        parsed_value = parse_value(value)
+        if "." in key:
+            parts = key.split(".", 1)
+            parent_key, child_key = parts[0], parts[1]
+            if parent_key not in config:
+                config[parent_key] = {}
+            config[parent_key][child_key] = parsed_value
+        else:
+            config[key] = parsed_value
 
 
 def cmd_validate(args):
     config = load_config(args.config)
-    config.update(parse_vars(args.var))
-    merge_tags(config, args.tag)
+    apply_vars(config, args.var)
     errors = validate_config(config)
     if errors:
         for err in errors:
@@ -294,8 +300,7 @@ def run_build(ctx: BuildContext, state: BuildState):
 
 def cmd_build(args):
     config = load_config(args.config)
-    config.update(parse_vars(args.var))
-    merge_tags(config, args.tag)
+    apply_vars(config, args.var)
     errors = validate_config(config)
     if errors:
         for err in errors:
@@ -317,11 +322,9 @@ def main():
     build_parser = subparsers.add_parser("build", help="Build an AMI from config")
     build_parser.add_argument("config", help="Path to YAML config file")
     build_parser.add_argument("--var", action="append", metavar="KEY=VALUE", help="Override config value")
-    build_parser.add_argument("--tag", action="append", metavar="KEY=VALUE", help="Add AMI tag")
     validate_parser = subparsers.add_parser("validate", help="Validate config file")
     validate_parser.add_argument("config", help="Path to YAML config file")
     validate_parser.add_argument("--var", action="append", metavar="KEY=VALUE", help="Override config value")
-    validate_parser.add_argument("--tag", action="append", metavar="KEY=VALUE", help="Add AMI tag")
     args = parser.parse_args()
     if args.command == "build":
         return cmd_build(args)

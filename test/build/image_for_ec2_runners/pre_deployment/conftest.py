@@ -6,7 +6,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 
-def load_module_from_path(module_name, module_path):
+def _load_module_from_path(module_name, module_path):
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -14,8 +14,23 @@ def load_module_from_path(module_name, module_path):
 
 
 @pytest.fixture
+def project_root():
+    return PROJECT_ROOT
+
+
+@pytest.fixture
+def load_module_from_path():
+    return _load_module_from_path
+
+
+@pytest.fixture
+def build_ami_module():
+    return _load_module_from_path("build_ami", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "build_ami.py")
+
+
+@pytest.fixture
 def cleanup_packer_artifacts():
-    return load_module_from_path("cleanup_packer_artifacts", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "cleanup_packer_artifacts.py")
+    return _load_module_from_path("cleanup_packer_artifacts", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "cleanup_packer_artifacts.py")
 
 
 @pytest.fixture

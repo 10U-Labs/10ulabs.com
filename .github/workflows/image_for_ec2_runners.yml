@@ -87,9 +87,15 @@ jobs:
           AMI_NAME="github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
           INSTANCE_TYPES_JSON='${{ needs.declaring-common-variables.outputs.spot_instance_types }}'
           BUILD_DIR="src/build/image_for_ec2_runners"
+          SUBNET_IDS='${{ steps.terraform.outputs.subnet_ids }}'
           cat > "${BUILD_DIR}/build_config.yml" << EOF
           ami_description: "GitHub Actions Runner - ${OS_FAMILY^} $OS_VERSION $OS_ARCH"
           ami_name: "$AMI_NAME"
+          env:
+            OS_ARCHITECTURE: "$OS_ARCH"
+            OS_FAMILY: "$OS_FAMILY"
+            RUNNER_ARCH: "$RUNNER_ARCH"
+            RUNNER_VERSION: "$RUNNER_VERSION"
           iam_instance_profile: "PackerEC2InstanceProfile"
           instance_types: $(echo "$INSTANCE_TYPES_JSON" | jq -c '.')
           provisioners:
@@ -116,10 +122,7 @@ jobs:
           cat "${BUILD_DIR}/build_config.yml"
           echo ""
           python3 "${BUILD_DIR}/build_ami.py" build "${BUILD_DIR}/build_config.yml" \
-            --env "OS_FAMILY=$OS_FAMILY" \
-            --env "OS_ARCHITECTURE=$OS_ARCH" \
-            --env "RUNNER_VERSION=$RUNNER_VERSION" \
-            --env "RUNNER_ARCH=$RUNNER_ARCH" \
+            --var "subnet_ids=${SUBNET_IDS}" \
             | tee build-output.log
           AMI_ID=$(grep '^ami_id=' build-output.log | cut -d= -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
