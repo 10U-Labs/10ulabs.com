@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
+import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
@@ -35,8 +36,10 @@ def cleanup_packer_artifacts():
 
 @pytest.fixture
 def provision_script_content():
-    script_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "provision_runner.sh"
-    return script_path.read_text()
+    config_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "config.yml"
+    with open(config_path, encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    return config.get("commands", "")
 
 
 @pytest.fixture
