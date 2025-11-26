@@ -200,6 +200,7 @@ jobs:
       runner_version: ${{ steps.config.outputs.runner_version }}
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
+      test_spot_instance_types: ${{ steps.config.outputs.test_spot_instance_types }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
@@ -229,6 +230,7 @@ jobs:
           RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_ec2_runners/config.yml)
           SPOT_INSTANCE_TYPES=$(grep 'ec2_spot_instance_types' src/api/terraform.tfvars | grep -o '\[.*\]')
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          TEST_SPOT_INSTANCE_TYPES='${{ github.event.inputs.test_spot_instance_types || '["t4g.xlarge", "m8g.xlarge", "m7g.xlarge"]' }}'
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "github_actions_role=$GITHUB_ACTIONS_ROLE" >> $GITHUB_OUTPUT
@@ -238,6 +240,7 @@ jobs:
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "test_spot_instance_types=$TEST_SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -272,6 +275,7 @@ jobs:
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
+          TEST_SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.test_spot_instance_types }}
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run E2E tests
         run: |
@@ -307,6 +311,7 @@ jobs:
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
+          TEST_SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.test_spot_instance_types }}
           TEST_SUBNET_ID: ${{ needs.building-ami.outputs.subnet_id }}
         name: Run pytest integration tests
         run: |
@@ -490,6 +495,11 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
+      test_spot_instance_types:
+        default: '["t4g.xlarge", "m8g.xlarge", "m7g.xlarge"]'
+        description: 'Spot instance types for integration/e2e tests (JSON array)'
+        required: false
+        type: string
 permissions:
   contents: read
   id-token: write

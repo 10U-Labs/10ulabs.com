@@ -142,7 +142,7 @@ class TestDotNetSharedLibraryDependencies:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libcoreclr.so | grep -c 'not found' || echo 0")
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libcoreclr.so | grep 'not found' | wc -l")
 
         assert output["StandardOutputContent"].strip() == "0"
 
@@ -150,7 +150,7 @@ class TestDotNetSharedLibraryDependencies:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Security.Cryptography.Native.OpenSsl.so | grep -c 'not found' || echo 0")
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Security.Cryptography.Native.OpenSsl.so | grep 'not found' | wc -l")
 
         assert output["StandardOutputContent"].strip() == "0"
 
@@ -158,7 +158,7 @@ class TestDotNetSharedLibraryDependencies:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.IO.Compression.Native.so | grep -c 'not found' || echo 0")
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.IO.Compression.Native.so | grep 'not found' | wc -l")
 
         assert output["StandardOutputContent"].strip() == "0"
 
@@ -166,7 +166,7 @@ class TestDotNetSharedLibraryDependencies:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Globalization.Native.so | grep -c 'not found' || echo 0")
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Globalization.Native.so | grep 'not found' | wc -l")
 
         assert output["StandardOutputContent"].strip() == "0"
 
@@ -174,7 +174,7 @@ class TestDotNetSharedLibraryDependencies:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Native.so | grep -c 'not found' || echo 0")
+        output = run_ssm_command(ssm_client, test_instance, f"ldd {RUNNER_DIR}/bin/libSystem.Native.so | grep 'not found' | wc -l")
 
         assert output["StandardOutputContent"].strip() == "0"
 

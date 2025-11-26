@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from botocore.exceptions import ClientError
@@ -124,7 +125,11 @@ def test_instance(ec2_client, ssm_client, test_ami_id, config):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
     instance_profile = config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile")
-    spot_instance_types = config.get("ec2_spot_instance_types", ["t4g.small"])
+    test_spot_types_env = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
+    if test_spot_types_env:
+        spot_instance_types = json.loads(test_spot_types_env)
+    else:
+        spot_instance_types = config.get("ec2_spot_instance_types", ["t4g.small"])
     max_spot_price = config.get("ec2_max_spot_price", "0.05")
 
     if not isinstance(spot_instance_types, list):

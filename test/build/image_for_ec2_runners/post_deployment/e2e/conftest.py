@@ -61,7 +61,11 @@ def validate_e2e_inputs(test_ami_id, github_token):
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
     region = test_config.get("aws_region", "us-east-1")
-    spot_types = test_config.get("ec2_spot_instance_types", ["t4g.small"])
+    test_spot_types_env = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
+    if test_spot_types_env:
+        spot_types = json.loads(test_spot_types_env)
+    else:
+        spot_types = test_config.get("ec2_spot_instance_types", ["t4g.small"])
     if not isinstance(spot_types, list):
         spot_types = [spot_types]
     return {
