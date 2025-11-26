@@ -24,8 +24,7 @@
 
 - AWS credentials in `~/.aws/credentials` with unlimited privileges.
 - GitHub CLI (`gh`) is already configured and authenticated locally with unlimited privileges.
-- `GITHUB_PAT` has unlimited privileges in GitHub.
-- GitHub Personal Access Token (PAT) in your environment variables as `GITHUB_PAT`.
+- `GITHUB_PAT` environment variable contains a GitHub Personal Access Token with unlimited privileges.
 
 ## Git and GitHub
 

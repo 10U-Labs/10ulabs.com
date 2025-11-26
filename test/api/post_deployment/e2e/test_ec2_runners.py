@@ -4,8 +4,27 @@ from test.api.post_deployment.conftest import (
     make_e2e_post,
 )
 import time
+import boto3
 import pytest
 from botocore.exceptions import ClientError
+
+
+SECONDS_PER_AZ_CAPACITY_CHECK = 19
+SECONDS_FOR_SETUP_AND_LAUNCH = 7
+
+
+def get_ec2_runner_subnet_count():
+    lambda_client = boto3.client('lambda')
+    response = lambda_client.get_function_configuration(FunctionName='TenULabsV1ApiHandler')
+    subnets_env = response.get('Environment', {}).get('Variables', {}).get('SUBNETS', '')
+    subnet_count = len(subnets_env.split(',')) if subnets_env else 1
+    return subnet_count
+
+
+def calculate_ec2_runner_timeout():
+    subnet_count = get_ec2_runner_subnet_count()
+    timeout = SECONDS_FOR_SETUP_AND_LAUNCH + (subnet_count * SECONDS_PER_AZ_CAPACITY_CHECK)
+    return timeout
 
 
 @pytest.fixture(name="latest_ami_exists", scope="module")
@@ -52,8 +71,9 @@ def test_ec2_runner_instance_fixture(
         yield None
         return
     job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ec2-spot-instance"])
+    timeout = calculate_ec2_runner_timeout()
     response = make_e2e_post(
-        f"{api_url}/v1/ec2-runner", api_key, json=payload, timeout=30
+        f"{api_url}/v1/ec2-runner", api_key, json=payload, timeout=timeout
     )
     if response.status_code != 200:
         yield None
