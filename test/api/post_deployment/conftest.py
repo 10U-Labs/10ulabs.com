@@ -102,3 +102,13 @@ def create_runner_job_payload(github_repo, job_labels):
         "github_repo": github_repo
     }
     return job_id, payload
+
+
+def get_ecs_task_tags(ecs_client, cluster_name, task_arn):
+    response = ecs_client.describe_tasks(
+        cluster=cluster_name,
+        tasks=[task_arn],
+        include=['TAGS']
+    )
+    tags = response['tasks'][0].get('tags', [])
+    return {tag['key']: tag['value'] for tag in tags}

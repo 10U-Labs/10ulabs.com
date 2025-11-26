@@ -1,5 +1,6 @@
 from test.api.post_deployment.conftest import (
     create_runner_job_payload,
+    get_ecs_task_tags,
     make_e2e_get,
     make_e2e_post,
 )
@@ -94,9 +95,7 @@ def test_docker_runner_task_has_type_tag(
         pytest.fail("Test task not created")
     task_arn = test_fargate_task.get("task_arn")
     cluster_name = test_fargate_task.get("cluster_name")
-    response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
-    tags = response['tasks'][0].get('tags', [])
-    tag_dict = {tag['key']: tag['value'] for tag in tags}
+    tag_dict = get_ecs_task_tags(ecs_client, cluster_name, task_arn)
     assert tag_dict.get("Type") == "ephemeral-runner"
 
 
@@ -109,9 +108,7 @@ def test_docker_runner_task_has_managed_by_tag(
         pytest.fail("Test task not created")
     task_arn = test_fargate_task.get("task_arn")
     cluster_name = test_fargate_task.get("cluster_name")
-    response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
-    tags = response['tasks'][0].get('tags', [])
-    tag_dict = {tag['key']: tag['value'] for tag in tags}
+    tag_dict = get_ecs_task_tags(ecs_client, cluster_name, task_arn)
     assert tag_dict.get("ManagedBy") == "docker-runner-api"
 
 
@@ -125,9 +122,7 @@ def test_docker_runner_task_has_job_id_tag(
     task_arn = test_fargate_task.get("task_arn")
     cluster_name = test_fargate_task.get("cluster_name")
     job_id = test_fargate_task.get("job_id")
-    response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
-    tags = response['tasks'][0].get('tags', [])
-    tag_dict = {tag['key']: tag['value'] for tag in tags}
+    tag_dict = get_ecs_task_tags(ecs_client, cluster_name, task_arn)
     assert tag_dict.get("GitHubJobId") == str(job_id)
 
 
@@ -141,9 +136,7 @@ def test_docker_runner_task_has_repo_tag(
     task_arn = test_fargate_task.get("task_arn")
     cluster_name = test_fargate_task.get("cluster_name")
     github_repo = test_fargate_task.get("github_repo")
-    response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
-    tags = response['tasks'][0].get('tags', [])
-    tag_dict = {tag['key']: tag['value'] for tag in tags}
+    tag_dict = get_ecs_task_tags(ecs_client, cluster_name, task_arn)
     assert tag_dict.get("GitHubRepo") == github_repo
 
 
