@@ -52,7 +52,7 @@ resource "aws_iam_role_policy" "config_recorder_s3" {
 }
 
 resource "aws_s3_bucket" "config_bucket" {
-  bucket = "${local.resource_prefix}-config-${local.aws_account_id}"
+  bucket = lower("${local.resource_prefix}-config-${local.aws_account_id}")
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-config-bucket"
