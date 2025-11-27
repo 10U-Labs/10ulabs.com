@@ -233,7 +233,7 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    full_cmd = f"sudo bash -ex << 'EOFSCRIPT'\nPS4=''\nexport DEBIAN_FRONTEND=noninteractive\n{params.commands}\nEOFSCRIPT"
+    full_cmd = f"sudo bash -e << 'EOFSCRIPT'\nPS4=''\nexport DEBIAN_FRONTEND=noninteractive\nset -x\n{params.commands}\nEOFSCRIPT"
     run_ssh_command(client, full_cmd)
     client.close()
 
