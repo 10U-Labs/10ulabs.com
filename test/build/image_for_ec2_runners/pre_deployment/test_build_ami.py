@@ -434,7 +434,7 @@ class TestRunSshCommandFailure:
 
 class TestRunSshCommandOutput:
 
-    def test_writes_stdout_to_sys_stdout(self, build_ami_module, mock_ssh_client_with_output, capsys):
+    def test_writes_output_to_sys_stdout(self, build_ami_module, mock_ssh_client_with_output, capsys):
         build_ami_module.run_ssh_command(mock_ssh_client_with_output, "echo hello")
         captured = capsys.readouterr()
         assert captured.out == "hello world"

@@ -75,7 +75,14 @@ jobs:
             --var "tags.OSVersion=${OS_VERSION}" \
             --var "tags.Repository=${{ github.repository }}" \
             --var "tags.RunId=${{ github.run_id }}" \
-            --var "tags.Workflow=${{ github.workflow }}"
+            --var "tags.Workflow=${{ github.workflow }}" \
+            | tee build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            exit $BUILD_EXIT_CODE
+          fi
+          AMI_ID=$(grep '^AMI_ID=' build.log | cut -d= -f2)
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
       - if: steps.build.outputs.ami_id != ''
         name: Output AMI details
         run: |

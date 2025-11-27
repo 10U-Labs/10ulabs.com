@@ -394,6 +394,8 @@ def cmd_build(args):
         finally:
             cleanup(ctx.ec2, state.instance_id, f"ami-builder-{unique_id}", f"ami-builder-{unique_id}", state.sg_id)
         if state.result:
+            logging.info("Created AMI: %s", state.result)
+            print(f"AMI_ID={state.result}")
             exit_code = 0
     return exit_code
 
