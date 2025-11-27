@@ -361,8 +361,7 @@ def handle_ami_cleanup(args):
     ec2_client = boto3.client('ec2', region_name=args.region)
     ssm_client = boto3.client('ssm', region_name=args.region)
 
-    config = load_config(args.config)
-    tags = config.get('tags', {})
+    tags = load_config(args.config).get('tags', {})
     tags.update(parse_tags(args.tag))
     if not tags:
         print("Error: No tags found in config file or --tag")
@@ -370,11 +369,10 @@ def handle_ami_cleanup(args):
 
     exclude_tags = parse_tags(args.exclude_tag)
 
-    resource_types = args.resource_types.lower()
-    if resource_types == 'all':
+    if args.resource_types.lower() == 'all':
         resource_types_set = {'amis', 'snapshots', 'instances', 'security-groups', 'key-pairs', 'launch-templates'}
     else:
-        resource_types_set = set(rt.strip() for rt in resource_types.split(','))
+        resource_types_set = set(rt.strip() for rt in args.resource_types.lower().split(','))
 
     print_header(args, resource_types_set, tags, exclude_tags)
 
