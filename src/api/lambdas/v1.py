@@ -173,6 +173,24 @@ def reset_dependency_validation():
     _dependencies_validated['errors'] = []
 
 
+def get_dependencies_status():
+    return {
+        'checked': _dependencies_validated['checked'],
+        'valid': _dependencies_validated['valid'],
+        'errors': list(_dependencies_validated['errors'])
+    }
+
+
+def set_dependencies_status(checked, valid, errors):
+    _dependencies_validated['checked'] = checked
+    _dependencies_validated['valid'] = valid
+    _dependencies_validated['errors'] = errors
+
+
+def set_client(name, client):
+    _clients[name] = client
+
+
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     return {
         'statusCode': status_code,

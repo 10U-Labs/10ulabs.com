@@ -1,4 +1,5 @@
-from unittest.mock import patch, MagicMock
+import json
+from unittest.mock import MagicMock
 from botocore.exceptions import ClientError
 
 
@@ -9,7 +10,7 @@ class TestValidateSecurityGroupsReturnsValid:
         mock_ec2.describe_security_groups.return_value = {
             'SecurityGroups': [{'GroupId': 'sg-123'}]
         }
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_security_groups(['sg-123'])
 
@@ -20,7 +21,7 @@ class TestValidateSecurityGroupsReturnsValid:
         mock_ec2.describe_security_groups.return_value = {
             'SecurityGroups': [{'GroupId': 'sg-123'}]
         }
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_security_groups(['sg-123'])
 
@@ -40,7 +41,7 @@ class TestValidateSecurityGroupsReturnsInvalid:
             {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
             'DescribeSecurityGroups'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_security_groups(['sg-missing'])
 
@@ -52,7 +53,7 @@ class TestValidateSecurityGroupsReturnsInvalid:
             {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
             'DescribeSecurityGroups'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_security_groups(['sg-missing'])
 
@@ -64,7 +65,7 @@ class TestValidateSecurityGroupsReturnsInvalid:
             {'Error': {'Code': 'UnauthorizedOperation', 'Message': 'Access denied'}},
             'DescribeSecurityGroups'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_security_groups(['sg-123'])
 
@@ -78,7 +79,7 @@ class TestValidateSubnetsReturnsValid:
         mock_ec2.describe_subnets.return_value = {
             'Subnets': [{'SubnetId': 'subnet-123'}]
         }
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_subnets(['subnet-123'])
 
@@ -89,7 +90,7 @@ class TestValidateSubnetsReturnsValid:
         mock_ec2.describe_subnets.return_value = {
             'Subnets': [{'SubnetId': 'subnet-123'}]
         }
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_subnets(['subnet-123'])
 
@@ -109,7 +110,7 @@ class TestValidateSubnetsReturnsInvalid:
             {'Error': {'Code': 'InvalidSubnetID.NotFound', 'Message': 'Not found'}},
             'DescribeSubnets'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_subnets(['subnet-missing'])
 
@@ -121,7 +122,7 @@ class TestValidateSubnetsReturnsInvalid:
             {'Error': {'Code': 'InvalidSubnetID.NotFound', 'Message': 'Not found'}},
             'DescribeSubnets'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_subnets(['subnet-missing'])
 
@@ -135,7 +136,7 @@ class TestValidateVpcReturnsValid:
         mock_ec2.describe_vpcs.return_value = {
             'Vpcs': [{'VpcId': 'vpc-123'}]
         }
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_vpc('vpc-123')
 
@@ -146,7 +147,7 @@ class TestValidateVpcReturnsValid:
         mock_ec2.describe_vpcs.return_value = {
             'Vpcs': [{'VpcId': 'vpc-123'}]
         }
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_vpc('vpc-123')
 
@@ -161,7 +162,7 @@ class TestValidateVpcReturnsInvalid:
             {'Error': {'Code': 'InvalidVpcID.NotFound', 'Message': 'Not found'}},
             'DescribeVpcs'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_vpc('vpc-missing')
 
@@ -173,7 +174,7 @@ class TestValidateVpcReturnsInvalid:
             {'Error': {'Code': 'InvalidVpcID.NotFound', 'Message': 'Not found'}},
             'DescribeVpcs'
         )
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_vpc('vpc-missing')
 
@@ -192,7 +193,7 @@ class TestValidateAllDependencies:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_all_dependencies()
 
@@ -203,7 +204,7 @@ class TestValidateAllDependencies:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_all_dependencies()
 
@@ -217,7 +218,7 @@ class TestValidateAllDependencies:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_all_dependencies()
 
@@ -231,7 +232,7 @@ class TestValidateAllDependencies:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_all_dependencies()
 
@@ -242,7 +243,7 @@ class TestValidateAllDependencies:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         result = v1_handler.validate_all_dependencies()
 
@@ -260,7 +261,7 @@ class TestEnsureDependenciesValid:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         try:
             v1_handler.ensure_dependencies_valid()
@@ -275,7 +276,7 @@ class TestEnsureDependenciesValid:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
 
         try:
             v1_handler.ensure_dependencies_valid()
@@ -290,7 +291,7 @@ class TestEnsureDependenciesValid:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         v1_handler.ensure_dependencies_valid()
         mock_ec2.describe_security_groups.reset_mock()
 
@@ -307,7 +308,7 @@ class TestEnsureDependenciesValid:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         try:
             v1_handler.ensure_dependencies_valid()
         except RuntimeError:
@@ -326,25 +327,25 @@ class TestEnsureDependenciesValid:
 class TestResetDependencyValidation:
 
     def test_clears_checked_flag(self, v1_handler):
-        v1_handler._dependencies_validated['checked'] = True
+        v1_handler.set_dependencies_status(True, True, [])
 
         v1_handler.reset_dependency_validation()
 
-        assert v1_handler._dependencies_validated['checked'] is False
+        assert v1_handler.get_dependencies_status()['checked'] is False
 
     def test_clears_valid_flag(self, v1_handler):
-        v1_handler._dependencies_validated['valid'] = True
+        v1_handler.set_dependencies_status(True, True, [])
 
         v1_handler.reset_dependency_validation()
 
-        assert v1_handler._dependencies_validated['valid'] is False
+        assert v1_handler.get_dependencies_status()['valid'] is False
 
     def test_clears_errors_list(self, v1_handler):
-        v1_handler._dependencies_validated['errors'] = [{'type': 'test'}]
+        v1_handler.set_dependencies_status(True, True, [{'type': 'test'}])
 
         v1_handler.reset_dependency_validation()
 
-        assert v1_handler._dependencies_validated['errors'] == []
+        assert v1_handler.get_dependencies_status()['errors'] == []
 
 
 class TestHandleDependenciesHealthReturnsHealthy:
@@ -354,7 +355,7 @@ class TestHandleDependenciesHealthReturnsHealthy:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
         response = v1_handler.lambda_handler(event, lambda_context)
@@ -366,11 +367,10 @@ class TestHandleDependenciesHealthReturnsHealthy:
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
         response = v1_handler.lambda_handler(event, lambda_context)
-        import json
         body = json.loads(response['body'])
 
         assert body['status'] == 'healthy'
@@ -386,7 +386,7 @@ class TestHandleDependenciesHealthReturnsUnhealthy:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
         response = v1_handler.lambda_handler(event, lambda_context)
@@ -401,11 +401,10 @@ class TestHandleDependenciesHealthReturnsUnhealthy:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
         response = v1_handler.lambda_handler(event, lambda_context)
-        import json
         body = json.loads(response['body'])
 
         assert body['status'] == 'unhealthy'
@@ -418,11 +417,10 @@ class TestHandleDependenciesHealthReturnsUnhealthy:
         )
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
-        v1_handler._clients['ec2'] = mock_ec2
+        v1_handler.set_client('ec2', mock_ec2)
         event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
         response = v1_handler.lambda_handler(event, lambda_context)
-        import json
         body = json.loads(response['body'])
 
         assert len(body['errors']) > 0

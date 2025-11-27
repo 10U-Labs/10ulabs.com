@@ -12,6 +12,10 @@ logger.setLevel(logging.INFO)
 _clients = {}
 
 
+def clear_clients():
+    _clients.clear()
+
+
 def get_ssm_client():
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')

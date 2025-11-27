@@ -1,12 +1,13 @@
-import json
 import os
+import urllib.error
 from unittest.mock import patch, MagicMock, Mock
+
 from test.api.pre_deployment.conftest import (
     assert_response_status,
     create_mock_sns_publish_error
 )
+
 from botocore.exceptions import ClientError
-import urllib.error
 
 
 class TestGetGitHubToken:
@@ -302,7 +303,7 @@ class TestClientCaching:
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
             mock_boto_client.return_value = mock_ssm
-            drift_recovery._clients.clear()
+            drift_recovery.clear_clients()
             drift_recovery.get_ssm_client()
             drift_recovery.get_ssm_client()
         assert mock_boto_client.call_count == 1
@@ -311,7 +312,7 @@ class TestClientCaching:
         with patch('boto3.client') as mock_boto_client:
             mock_sns = MagicMock()
             mock_boto_client.return_value = mock_sns
-            drift_recovery._clients.clear()
+            drift_recovery.clear_clients()
             drift_recovery.get_sns_client()
             drift_recovery.get_sns_client()
         assert mock_boto_client.call_count == 1
