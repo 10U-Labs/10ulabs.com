@@ -1,12 +1,14 @@
 from botocore.exceptions import ClientError
 
+TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
+
 
 class TestCleanupKeyPairsReturnsDeletedCount:
 
     def test_returns_zero_when_no_key_pairs(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_key_pairs.return_value = {'KeyPairs': []}
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
 
         assert result == 0
 
@@ -18,7 +20,7 @@ class TestCleanupKeyPairsReturnsDeletedCount:
             ]
         }
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
 
         assert result == 2
 
@@ -30,7 +32,7 @@ class TestCleanupKeyPairsCallsDeleteKeyPair:
             'KeyPairs': [{'KeyName': 'ami-builder-abc123'}]
         }
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
 
         mock_ec2_client.delete_key_pair.assert_called_once_with(KeyName='ami-builder-abc123')
 
@@ -42,7 +44,7 @@ class TestCleanupKeyPairsCallsDeleteKeyPair:
             ]
         }
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
 
         assert mock_ec2_client.delete_key_pair.call_count == 2
 
@@ -54,7 +56,7 @@ class TestCleanupKeyPairsDryRun:
             'KeyPairs': [{'KeyName': 'ami-builder-abc123'}]
         }
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, True)
+        cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS)
 
         mock_ec2_client.delete_key_pair.assert_not_called()
 
@@ -66,7 +68,7 @@ class TestCleanupKeyPairsDryRun:
             ]
         }
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, True)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS)
 
         assert result == 2
 
@@ -82,6 +84,21 @@ class TestCleanupKeyPairsDryRun:
             None
         ]
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
 
         assert result == 1
+
+
+class TestCleanupKeyPairsFiltersByTag:
+
+    def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_key_pairs.return_value = {'KeyPairs': []}
+
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+
+        mock_ec2_client.describe_key_pairs.assert_called_once()
+        call_args = mock_ec2_client.describe_key_pairs.call_args
+        filters = call_args[1]['Filters']
+        tag_filter = filters[0]
+        assert tag_filter['Name'] == 'tag:Purpose'
+        assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']

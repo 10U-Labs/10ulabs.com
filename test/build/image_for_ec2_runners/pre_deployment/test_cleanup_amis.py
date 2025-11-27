@@ -1,9 +1,19 @@
+def make_params(cleanup, latest_ami_id='ami-latest', latest_snapshot_ids=None, dry_run=False, cleanup_snapshots_enabled=True, tags=None):
+    return cleanup.AmiCleanupParams(
+        latest_ami_id=latest_ami_id,
+        latest_snapshot_ids=latest_snapshot_ids or set(),
+        dry_run=dry_run,
+        cleanup_snapshots_enabled=cleanup_snapshots_enabled,
+        tags=tags or {'Purpose': 'GitHub self-hosted EC2 runner'}
+    )
+
+
 class TestCleanupAmisReturnsDeletedCount:
 
     def test_returns_zero_when_no_amis(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_images.return_value = {'Images': []}
 
-        count, _ = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup))
 
         assert count == 0
 
@@ -15,7 +25,7 @@ class TestCleanupAmisReturnsDeletedCount:
             ]
         }
 
-        count, _ = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup))
 
         assert count == 2
 
@@ -30,7 +40,7 @@ class TestCleanupAmisSkipsLatestAmi:
             ]
         }
 
-        count, _ = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup))
 
         assert count == 1
 
@@ -41,7 +51,7 @@ class TestCleanupAmisSkipsLatestAmi:
             ]
         }
 
-        cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup))
 
         mock_ec2_client.deregister_image.assert_not_called()
 
@@ -59,7 +69,7 @@ class TestCleanupAmisCollectsSnapshots:
             ]
         }
 
-        _, snapshots = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, True)
+        _, snapshots = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup))
 
         assert snapshots == {'snap-123'}
 
@@ -77,7 +87,7 @@ class TestCleanupAmisCollectsSnapshots:
             ]
         }
 
-        _, snapshots = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', {'snap-protected'}, False, True)
+        _, snapshots = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup, latest_snapshot_ids={'snap-protected'}))
 
         assert snapshots == {'snap-123'}
 
@@ -92,7 +102,7 @@ class TestCleanupAmisCollectsSnapshots:
             ]
         }
 
-        _, snapshots = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), False, False)
+        _, snapshots = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup, cleanup_snapshots_enabled=False))
 
         assert snapshots == set()
 
@@ -106,7 +116,7 @@ class TestCleanupAmisDryRun:
             ]
         }
 
-        cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), True, True)
+        cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup, dry_run=True))
 
         mock_ec2_client.deregister_image.assert_not_called()
 
@@ -117,6 +127,20 @@ class TestCleanupAmisDryRun:
             ]
         }
 
-        count, _ = cleanup.cleanup_amis(mock_ec2_client, 'ami-latest', set(), True, True)
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup, dry_run=True))
 
         assert count == 1
+
+
+class TestCleanupAmisFiltersByTag:
+
+    def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_images.return_value = {'Images': []}
+
+        cleanup.cleanup_amis(mock_ec2_client, make_params(cleanup, tags={'Purpose': 'GitHub self-hosted EC2 runner'}))
+
+        mock_ec2_client.describe_images.assert_called_once()
+        call_args = mock_ec2_client.describe_images.call_args
+        filters = call_args[1]['Filters']
+        tag_filter = next(f for f in filters if f['Name'] == 'tag:Purpose')
+        assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']

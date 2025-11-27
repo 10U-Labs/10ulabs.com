@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 import argparse
+from dataclasses import dataclass
 import re
 import sys
 import boto3
 from botocore.exceptions import ClientError
+import yaml
+
+
+@dataclass
+class AmiCleanupParams:
+    latest_ami_id: str
+    latest_snapshot_ids: set
+    dry_run: bool
+    cleanup_snapshots_enabled: bool
+    tags: dict
 
 
 def get_latest_ami_id(ssm_client, ssm_parameter_name):
@@ -46,37 +57,40 @@ def get_snapshot_ids_for_ami(image):
     return snapshot_ids
 
 
-def cleanup_amis(ec2_client, latest_ami_id, latest_snapshot_ids, dry_run, cleanup_snapshots_enabled):
+def cleanup_amis(ec2_client, params: AmiCleanupParams):
     deleted_count = 0
     snapshots_to_delete = set()
-    try:
-        response = ec2_client.describe_images(
-            Owners=['self'],
-            Filters=[
-                {'Name': 'name', 'Values': ['github-ec2-runner-*']},
-                {'Name': 'state', 'Values': ['available', 'pending', 'failed']}
-            ]
-        )
-        images = response.get('Images', [])
-        for image in images:
-            image_id = image['ImageId']
-            if image_id == latest_ami_id:
-                print(f"Skipping latest AMI: {image_id}")
-                continue
-            ami_snapshot_ids = get_snapshot_ids_for_ami(image)
-            if cleanup_snapshots_enabled:
-                snapshots_to_delete.update(ami_snapshot_ids - latest_snapshot_ids)
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would deregister AMI: {image_id} ({image.get('Name', 'N/A')})")
-                else:
-                    ec2_client.deregister_image(ImageId=image_id)
-                    print(f"Deregistered AMI: {image_id} ({image.get('Name', 'N/A')})")
-                deleted_count += 1
-            except ClientError as e:
-                print(f"Error deregistering AMI {image_id}: {e}")
-    except ClientError as e:
-        print(f"Error listing AMIs: {e}")
+    images_by_id = {}
+    for tag_key, tag_value in params.tags.items():
+        try:
+            response = ec2_client.describe_images(
+                Owners=['self'],
+                Filters=[
+                    {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
+                    {'Name': 'state', 'Values': ['available', 'pending', 'failed']}
+                ]
+            )
+            for image in response.get('Images', []):
+                images_by_id[image['ImageId']] = image
+        except ClientError as e:
+            print(f"Error listing AMIs: {e}")
+    for image in images_by_id.values():
+        image_id = image['ImageId']
+        if image_id == params.latest_ami_id:
+            print(f"Skipping latest AMI: {image_id}")
+            continue
+        ami_snapshot_ids = get_snapshot_ids_for_ami(image)
+        if params.cleanup_snapshots_enabled:
+            snapshots_to_delete.update(ami_snapshot_ids - params.latest_snapshot_ids)
+        try:
+            if params.dry_run:
+                print(f"[DRY RUN] Would deregister AMI: {image_id} ({image.get('Name', 'N/A')})")
+            else:
+                ec2_client.deregister_image(ImageId=image_id)
+                print(f"Deregistered AMI: {image_id} ({image.get('Name', 'N/A')})")
+            deleted_count += 1
+        except ClientError as e:
+            print(f"Error deregistering AMI {image_id}: {e}")
     return deleted_count, snapshots_to_delete
 
 
@@ -96,10 +110,11 @@ def cleanup_snapshots(ec2_client, snapshot_ids_to_delete, dry_run):
 
 
 def extract_ami_id_from_description(description):
+    result = None
     match = re.search(r'for (ami-[a-f0-9]+)', description)
     if match:
-        return match.group(1)
-    return None
+        result = match.group(1)
+    return result
 
 
 def get_existing_ami_ids(ec2_client):
@@ -137,111 +152,121 @@ def find_orphaned_snapshots(ec2_client, latest_snapshot_ids):
     return orphaned_snapshots
 
 
-def cleanup_security_groups(ec2_client, dry_run):
+def cleanup_security_groups(ec2_client, dry_run, tags):
     deleted_count = 0
-    try:
-        response = ec2_client.describe_security_groups(
-            Filters=[
-                {'Name': 'group-name', 'Values': ['ami-builder-*']},
-            ]
-        )
-        security_groups = response.get('SecurityGroups', [])
-        for sg in security_groups:
-            sg_id = sg['GroupId']
-            sg_name = sg['GroupName']
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would delete security group: {sg_id} ({sg_name})")
-                else:
-                    ec2_client.delete_security_group(GroupId=sg_id)
-                    print(f"Deleted security group: {sg_id} ({sg_name})")
-                deleted_count += 1
-            except ClientError as e:
-                if e.response['Error']['Code'] == 'DependencyViolation':
-                    print(f"Cannot delete security group {sg_id} ({sg_name}): Still in use")
-                else:
-                    print(f"Error deleting security group {sg_id}: {e}")
-    except ClientError as e:
-        print(f"Error listing security groups: {e}")
+    sgs_by_id = {}
+    for tag_key, tag_value in tags.items():
+        try:
+            response = ec2_client.describe_security_groups(
+                Filters=[
+                    {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
+                ]
+            )
+            for sg in response.get('SecurityGroups', []):
+                sgs_by_id[sg['GroupId']] = sg
+        except ClientError as e:
+            print(f"Error listing security groups: {e}")
+    for sg in sgs_by_id.values():
+        sg_id = sg['GroupId']
+        sg_name = sg['GroupName']
+        try:
+            if dry_run:
+                print(f"[DRY RUN] Would delete security group: {sg_id} ({sg_name})")
+            else:
+                ec2_client.delete_security_group(GroupId=sg_id)
+                print(f"Deleted security group: {sg_id} ({sg_name})")
+            deleted_count += 1
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'DependencyViolation':
+                print(f"Cannot delete security group {sg_id} ({sg_name}): Still in use")
+            else:
+                print(f"Error deleting security group {sg_id}: {e}")
     return deleted_count
 
 
-def cleanup_key_pairs(ec2_client, dry_run):
+def cleanup_key_pairs(ec2_client, dry_run, tags):
     deleted_count = 0
-    try:
-        response = ec2_client.describe_key_pairs(
-            Filters=[
-                {'Name': 'key-name', 'Values': ['ami-builder-*']}
-            ]
-        )
-        key_pairs = response.get('KeyPairs', [])
-        for key_pair in key_pairs:
-            key_name = key_pair['KeyName']
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would delete key pair: {key_name}")
-                else:
-                    ec2_client.delete_key_pair(KeyName=key_name)
-                    print(f"Deleted key pair: {key_name}")
-                deleted_count += 1
-            except ClientError as e:
-                print(f"Error deleting key pair {key_name}: {e}")
-    except ClientError as e:
-        print(f"Error listing key pairs: {e}")
+    kps_by_name = {}
+    for tag_key, tag_value in tags.items():
+        try:
+            response = ec2_client.describe_key_pairs(
+                Filters=[
+                    {'Name': f'tag:{tag_key}', 'Values': [tag_value]}
+                ]
+            )
+            for key_pair in response.get('KeyPairs', []):
+                kps_by_name[key_pair['KeyName']] = key_pair
+        except ClientError as e:
+            print(f"Error listing key pairs: {e}")
+    for key_pair in kps_by_name.values():
+        key_name = key_pair['KeyName']
+        try:
+            if dry_run:
+                print(f"[DRY RUN] Would delete key pair: {key_name}")
+            else:
+                ec2_client.delete_key_pair(KeyName=key_name)
+                print(f"Deleted key pair: {key_name}")
+            deleted_count += 1
+        except ClientError as e:
+            print(f"Error deleting key pair {key_name}: {e}")
     return deleted_count
 
 
-def cleanup_instances(ec2_client, dry_run):
+def cleanup_instances(ec2_client, dry_run, tags):
     deleted_count = 0
-    try:
-        response = ec2_client.describe_instances(
-            Filters=[
-                {'Name': 'key-name', 'Values': ['ami-builder-*']},
-                {'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'stopping', 'pending']}
-            ]
-        )
-        instance_ids = []
-        for reservation in response.get('Reservations', []):
-            for instance in reservation.get('Instances', []):
-                instance_ids.append(instance['InstanceId'])
-        for instance_id in instance_ids:
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would terminate instance: {instance_id}")
-                else:
-                    ec2_client.terminate_instances(InstanceIds=[instance_id])
-                    print(f"Terminated instance: {instance_id}")
-                deleted_count += 1
-            except ClientError as e:
-                print(f"Error terminating instance {instance_id}: {e}")
-    except ClientError as e:
-        print(f"Error listing instances: {e}")
+    instances_by_id = {}
+    for tag_key, tag_value in tags.items():
+        try:
+            response = ec2_client.describe_instances(
+                Filters=[
+                    {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
+                    {'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'stopping', 'pending']}
+                ]
+            )
+            for reservation in response.get('Reservations', []):
+                for instance in reservation.get('Instances', []):
+                    instances_by_id[instance['InstanceId']] = instance
+        except ClientError as e:
+            print(f"Error listing instances: {e}")
+    for instance_id in instances_by_id.keys():
+        try:
+            if dry_run:
+                print(f"[DRY RUN] Would terminate instance: {instance_id}")
+            else:
+                ec2_client.terminate_instances(InstanceIds=[instance_id])
+                print(f"Terminated instance: {instance_id}")
+            deleted_count += 1
+        except ClientError as e:
+            print(f"Error terminating instance {instance_id}: {e}")
     return deleted_count
 
 
-def cleanup_launch_templates(ec2_client, dry_run):
+def cleanup_launch_templates(ec2_client, dry_run, tags):
     deleted_count = 0
-    try:
-        response = ec2_client.describe_launch_templates(
-            Filters=[
-                {'Name': 'launch-template-name', 'Values': ['ami-builder-*']}
-            ]
-        )
-        launch_templates = response.get('LaunchTemplates', [])
-        for lt in launch_templates:
-            lt_id = lt['LaunchTemplateId']
-            lt_name = lt['LaunchTemplateName']
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would delete launch template: {lt_id} ({lt_name})")
-                else:
-                    ec2_client.delete_launch_template(LaunchTemplateId=lt_id)
-                    print(f"Deleted launch template: {lt_id} ({lt_name})")
-                deleted_count += 1
-            except ClientError as e:
-                print(f"Error deleting launch template {lt_id}: {e}")
-    except ClientError as e:
-        print(f"Error listing launch templates: {e}")
+    lts_by_id = {}
+    for tag_key, tag_value in tags.items():
+        try:
+            response = ec2_client.describe_launch_templates(
+                Filters=[
+                    {'Name': f'tag:{tag_key}', 'Values': [tag_value]}
+                ]
+            )
+            for lt in response.get('LaunchTemplates', []):
+                lts_by_id[lt['LaunchTemplateId']] = lt
+        except ClientError as e:
+            print(f"Error listing launch templates: {e}")
+    for lt in lts_by_id.values():
+        lt_id = lt['LaunchTemplateId']
+        lt_name = lt['LaunchTemplateName']
+        try:
+            if dry_run:
+                print(f"[DRY RUN] Would delete launch template: {lt_id} ({lt_name})")
+            else:
+                ec2_client.delete_launch_template(LaunchTemplateId=lt_id)
+                print(f"Deleted launch template: {lt_id} ({lt_name})")
+            deleted_count += 1
+        except ClientError as e:
+            print(f"Error deleting launch template {lt_id}: {e}")
     return deleted_count
 
 
@@ -255,12 +280,18 @@ def run_cleanup(label, cleanup_fn):
     return count
 
 
-def print_header(args, resource_types_set):
+def load_config(config_path):
+    with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def print_header(args, resource_types_set, tags):
     print("=" * 80)
     print("EC2 RUNNER IMAGE CLEANUP")
     print("=" * 80)
     print(f"Region: {args.region}")
     print(f"SSM Parameter: {args.ssm_parameter_name}")
+    print(f"Tag Filters: {', '.join(f'{k}={v}' for k, v in tags.items())}")
     print(f"Dry Run: {args.dry_run}")
     print(f"Resource Types: {', '.join(sorted(resource_types_set))}")
     print()
@@ -289,9 +320,26 @@ def print_summary(total_deleted, dry_run):
     print()
 
 
+def parse_tags(tag_list):
+    tags = {}
+    for item in tag_list or []:
+        if '=' in item:
+            key, value = item.split('=', 1)
+            tags[key] = value
+    return tags
+
+
 def handle_ami_cleanup(args):
     ec2_client = boto3.client('ec2', region_name=args.region)
     ssm_client = boto3.client('ssm', region_name=args.region)
+
+    config = load_config(args.config)
+    tags = config.get('tags', {})
+    dynamic_tags = parse_tags(args.tag)
+    tags.update(dynamic_tags)
+    if not tags:
+        print("Error: No tags found in config file or --tag")
+        return 1
 
     resource_types = args.resource_types.lower()
     if resource_types == 'all':
@@ -299,7 +347,7 @@ def handle_ami_cleanup(args):
     else:
         resource_types_set = set(rt.strip() for rt in resource_types.split(','))
 
-    print_header(args, resource_types_set)
+    print_header(args, resource_types_set, tags)
 
     latest_ami_id = get_latest_ami_id(ssm_client, args.ssm_parameter_name)
     latest_snapshot_ids = get_latest_snapshot_ids(ec2_client, latest_ami_id)
@@ -309,13 +357,17 @@ def handle_ami_cleanup(args):
     snapshots_to_delete = set()
 
     if 'amis' in resource_types_set:
-        cleanup_snapshots_enabled = 'snapshots' in resource_types_set
         print("-" * 80)
         print("CLEANING UP AMIS")
         print("-" * 80)
-        ami_count, snapshots_to_delete = cleanup_amis(
-            ec2_client, latest_ami_id, latest_snapshot_ids, args.dry_run, cleanup_snapshots_enabled
+        ami_params = AmiCleanupParams(
+            latest_ami_id=latest_ami_id,
+            latest_snapshot_ids=latest_snapshot_ids,
+            dry_run=args.dry_run,
+            cleanup_snapshots_enabled='snapshots' in resource_types_set,
+            tags=tags
         )
+        ami_count, snapshots_to_delete = cleanup_amis(ec2_client, ami_params)
         print(f"Amis cleaned: {ami_count}")
         print()
         total_deleted += ami_count
@@ -328,16 +380,16 @@ def handle_ami_cleanup(args):
         total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, all_snapshots_to_delete, args.dry_run))
 
     if 'instances' in resource_types_set:
-        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run))
+        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run, tags))
 
     if 'launch-templates' in resource_types_set:
-        total_deleted += run_cleanup('LAUNCH TEMPLATES', lambda: cleanup_launch_templates(ec2_client, args.dry_run))
+        total_deleted += run_cleanup('LAUNCH TEMPLATES', lambda: cleanup_launch_templates(ec2_client, args.dry_run, tags))
 
     if 'security-groups' in resource_types_set:
-        total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run))
+        total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run, tags))
 
     if 'key-pairs' in resource_types_set:
-        total_deleted += run_cleanup('KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run))
+        total_deleted += run_cleanup('KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run, tags))
 
     print_summary(total_deleted, args.dry_run)
     return 0
@@ -346,6 +398,11 @@ def handle_ami_cleanup(args):
 def main():
     parser = argparse.ArgumentParser(
         description='Cleanup old AMIs and snapshots for GitHub EC2 runners'
+    )
+    parser.add_argument(
+        '--config',
+        required=True,
+        help='Path to config file containing tags to filter resources'
     )
     parser.add_argument(
         '--region',
@@ -366,6 +423,12 @@ def main():
         '--resource-types',
         default='all',
         help='Comma-separated list of resource types to clean (amis,snapshots,instances,security-groups,key-pairs,launch-templates) or "all" (default: all)'
+    )
+    parser.add_argument(
+        '--tag',
+        action='append',
+        metavar='KEY=VALUE',
+        help='Additional tag filter (can be specified multiple times). Resources matching ANY tag will be deleted.'
     )
 
     args = parser.parse_args()

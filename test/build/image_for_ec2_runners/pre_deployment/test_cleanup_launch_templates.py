@@ -1,12 +1,14 @@
 from botocore.exceptions import ClientError
 
+TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
+
 
 class TestCleanupLaunchTemplatesReturnsDeletedCount:
 
     def test_returns_zero_when_no_launch_templates(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
 
         assert result == 0
 
@@ -18,7 +20,7 @@ class TestCleanupLaunchTemplatesReturnsDeletedCount:
             ]
         }
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
 
         assert result == 2
 
@@ -32,7 +34,7 @@ class TestCleanupLaunchTemplatesCallsDeleteLaunchTemplate:
             ]
         }
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
 
         mock_ec2_client.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-123')
 
@@ -44,7 +46,7 @@ class TestCleanupLaunchTemplatesCallsDeleteLaunchTemplate:
             ]
         }
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
 
         assert mock_ec2_client.delete_launch_template.call_count == 2
 
@@ -58,7 +60,7 @@ class TestCleanupLaunchTemplatesDryRun:
             ]
         }
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, True)
+        cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS)
 
         mock_ec2_client.delete_launch_template.assert_not_called()
 
@@ -70,7 +72,7 @@ class TestCleanupLaunchTemplatesDryRun:
             ]
         }
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, True)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS)
 
         assert result == 2
 
@@ -86,6 +88,21 @@ class TestCleanupLaunchTemplatesDryRun:
             None
         ]
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
 
         assert result == 1
+
+
+class TestCleanupLaunchTemplatesFiltersByTag:
+
+    def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
+
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+
+        mock_ec2_client.describe_launch_templates.assert_called_once()
+        call_args = mock_ec2_client.describe_launch_templates.call_args
+        filters = call_args[1]['Filters']
+        tag_filter = filters[0]
+        assert tag_filter['Name'] == 'tag:Purpose'
+        assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']

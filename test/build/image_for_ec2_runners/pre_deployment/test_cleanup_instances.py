@@ -1,12 +1,14 @@
 from botocore.exceptions import ClientError
 
+TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
+
 
 class TestCleanupInstancesReturnsDeletedCount:
 
     def test_returns_zero_when_no_instances(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_instances.return_value = {'Reservations': []}
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
 
         assert result == 0
 
@@ -20,7 +22,7 @@ class TestCleanupInstancesReturnsDeletedCount:
             }]
         }
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
 
         assert result == 2
 
@@ -32,7 +34,7 @@ class TestCleanupInstancesReturnsDeletedCount:
             ]
         }
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
 
         assert result == 2
 
@@ -44,7 +46,7 @@ class TestCleanupInstancesCallsTerminateInstances:
             'Reservations': [{'Instances': [{'InstanceId': 'i-123'}]}]
         }
 
-        cleanup.cleanup_instances(mock_ec2_client, False)
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
 
         mock_ec2_client.terminate_instances.assert_called_once_with(InstanceIds=['i-123'])
 
@@ -58,7 +60,7 @@ class TestCleanupInstancesCallsTerminateInstances:
             }]
         }
 
-        cleanup.cleanup_instances(mock_ec2_client, False)
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
 
         assert mock_ec2_client.terminate_instances.call_count == 2
 
@@ -76,7 +78,7 @@ class TestCleanupInstancesCallsTerminateInstances:
             None
         ]
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
 
         assert result == 1
 
@@ -88,7 +90,7 @@ class TestCleanupInstancesDryRun:
             'Reservations': [{'Instances': [{'InstanceId': 'i-123'}]}]
         }
 
-        cleanup.cleanup_instances(mock_ec2_client, True)
+        cleanup.cleanup_instances(mock_ec2_client, True, TAGS)
 
         mock_ec2_client.terminate_instances.assert_not_called()
 
@@ -102,6 +104,20 @@ class TestCleanupInstancesDryRun:
             }]
         }
 
-        result = cleanup.cleanup_instances(mock_ec2_client, True)
+        result = cleanup.cleanup_instances(mock_ec2_client, True, TAGS)
 
         assert result == 2
+
+
+class TestCleanupInstancesFiltersByTag:
+
+    def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {'Reservations': []}
+
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+
+        mock_ec2_client.describe_instances.assert_called_once()
+        call_args = mock_ec2_client.describe_instances.call_args
+        filters = call_args[1]['Filters']
+        tag_filter = next(f for f in filters if f['Name'] == 'tag:Purpose')
+        assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']

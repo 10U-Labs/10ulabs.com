@@ -38,13 +38,9 @@ jobs:
         run: |
           cd src/api
           terraform init -backend=true -input=false
-          AMI_PURPOSE_TAG=$(terraform output -raw ec2_runner_ami_purpose_tag)
-          AMI_PURPOSE_VALUE=$(terraform output -raw ec2_runner_ami_purpose_value)
           AMI_STABLE_TAG=$(terraform output -raw ec2_runner_ami_stable_tag)
           SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
           SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
-          echo "ami_purpose_tag=$AMI_PURPOSE_TAG" >> $GITHUB_OUTPUT
-          echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
@@ -65,7 +61,6 @@ jobs:
             --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --var "region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --var 'subnet_ids=${{ steps.terraform.outputs.subnet_ids }}' \
-            --var "tags.${{ steps.terraform.outputs.ami_purpose_tag }}=${{ steps.terraform.outputs.ami_purpose_value }}" \
             --var "tags.${{ steps.terraform.outputs.ami_stable_tag }}=false" \
             --var "tags.BuildDate=${TIMESTAMP}" \
             --var "tags.ManagedBy=GitHubActions" \
@@ -122,10 +117,11 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install boto3
+        run: python3 -m pip install boto3 pyyaml
       - name: Clean up old AMIs
         run: |
           python src/build/image_for_ec2_runners/cleanup.py \
+            --config src/build/image_for_ec2_runners/config.yml \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --ssm-parameter-name "${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
   declaring-common-variables:

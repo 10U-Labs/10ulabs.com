@@ -80,8 +80,11 @@ def lookup_source_ami(ec2, ami_name):
     return response["Images"][0]["ImageId"]
 
 
-def create_key_pair(ec2, key_name):
-    response = ec2.create_key_pair(KeyName=key_name, KeyType="ed25519")
+def create_key_pair(ec2, key_name, tags):
+    tag_specs = []
+    if tags:
+        tag_specs = [{"ResourceType": "key-pair", "Tags": [{"Key": k, "Value": str(v)} for k, v in tags.items()]}]
+    response = ec2.create_key_pair(KeyName=key_name, KeyType="ed25519", TagSpecifications=tag_specs)
     return response["KeyMaterial"]
 
 
@@ -89,11 +92,15 @@ def delete_key_pair(ec2, key_name):
     ec2.delete_key_pair(KeyName=key_name)
 
 
-def create_security_group(ec2, vpc_id, group_name):
+def create_security_group(ec2, vpc_id, group_name, tags):
+    tag_specs = []
+    if tags:
+        tag_specs = [{"ResourceType": "security-group", "Tags": [{"Key": k, "Value": str(v)} for k, v in tags.items()]}]
     response = ec2.create_security_group(
         GroupName=group_name,
         Description="Temporary SG for AMI builder",
         VpcId=vpc_id,
+        TagSpecifications=tag_specs,
     )
     sg_id = response["GroupId"]
     ec2.authorize_security_group_ingress(
@@ -115,11 +122,14 @@ def delete_security_group(ec2, sg_id):
         attempts += 1
 
 
-def create_launch_template(ec2, params: LaunchTemplateParams):
+def create_launch_template(ec2, params: LaunchTemplateParams, tags):
     data: dict[str, Any] = {"ImageId": params.base_ami, "KeyName": params.key_name, "SecurityGroupIds": [params.sg_id]}
     if params.iam_profile:
         data["IamInstanceProfile"] = {"Name": params.iam_profile}
-    ec2.create_launch_template(LaunchTemplateName=params.template_name, LaunchTemplateData=data)
+    tag_specs = []
+    if tags:
+        tag_specs = [{"ResourceType": "launch-template", "Tags": [{"Key": k, "Value": str(v)} for k, v in tags.items()]}]
+    ec2.create_launch_template(LaunchTemplateName=params.template_name, LaunchTemplateData=data, TagSpecifications=tag_specs)
 
 
 def delete_launch_template(ec2, template_name):
@@ -348,16 +358,17 @@ def run_build(ctx: BuildContext, state: BuildState):
     key_name = f"ami-builder-{ctx.unique_id}"
     template_name = f"ami-builder-{ctx.unique_id}"
     subnet_ids = ctx.config["subnet_ids"]
+    tags = ctx.config.get("tags", {})
     logging.info("Subnets: %s", subnet_ids)
     vpc_id = get_vpc_from_subnet(ctx.ec2, subnet_ids[0])
     logging.info("VPC: %s", vpc_id)
     logging.info("Creating temporary key pair...")
-    state.key_material = create_key_pair(ctx.ec2, key_name)
+    state.key_material = create_key_pair(ctx.ec2, key_name, tags)
     logging.info("Creating temporary security group...")
-    state.sg_id = create_security_group(ctx.ec2, vpc_id, f"ami-builder-{ctx.unique_id}")
+    state.sg_id = create_security_group(ctx.ec2, vpc_id, f"ami-builder-{ctx.unique_id}", tags)
     logging.info("Creating launch template...")
     lt_params = LaunchTemplateParams(template_name, ctx.config["source_ami"], state.sg_id, key_name, ctx.config.get("iam_instance_profile"))
-    create_launch_template(ctx.ec2, lt_params)
+    create_launch_template(ctx.ec2, lt_params, tags)
     logging.info("Creating EC2 Fleet with %d instance types x %d subnets...", len(ctx.config['instance_types']), len(subnet_ids))
     state.instance_id = create_fleet_instance(ctx.ec2, template_name, ctx.config["instance_types"], subnet_ids)
     logging.info("Instance launched: %s", state.instance_id)
