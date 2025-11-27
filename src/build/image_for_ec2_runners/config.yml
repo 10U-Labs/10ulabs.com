@@ -5,6 +5,8 @@ commands: |
   VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
   VERSION_RUNNER=2.330.0
   VERSION_YQ=4.44.1
+  sudo apt-get update
+  sudo apt-get install -y gnupg
   sudo install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/debian/gpg |
     sudo gpg --dearmor -o $DOCKER_GPG
