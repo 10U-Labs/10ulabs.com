@@ -1,10 +1,12 @@
 commands: |
   # Add Docker repository
+  DOCKER_GPG=/etc/apt/keyrings/docker.gpg
   sudo install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/debian/gpg \
-    | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+    | sudo gpg --dearmor -o $DOCKER_GPG
+  VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=$DOCKER_GPG] \
+    https://download.docker.com/linux/debian $VERSION_CODENAME stable" \
     | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
   # Install system packages
@@ -47,13 +49,14 @@ commands: |
   sudo chmod +x /usr/local/bin/yq
 
   # Install GitHub Actions runner
-  sudo useradd -m -s /bin/bash github-runner
-  sudo usermod -aG docker github-runner
+  RUNNER_USER=github-runner
+  sudo useradd -m -s /bin/bash $RUNNER_USER
+  sudo usermod -aG docker $RUNNER_USER
   curl -o /tmp/actions-runner.tar.gz -L \
     https://github.com/actions/runner/releases/download/v2.330.0/actions-runner-linux-arm64-2.330.0.tar.gz
-  sudo -u github-runner mkdir -p /home/github-runner/actions-runner
-  sudo -u github-runner tar xzf /tmp/actions-runner.tar.gz -C /home/github-runner/actions-runner
-  sudo /home/github-runner/actions-runner/bin/installdependencies.sh
+  sudo -u $RUNNER_USER mkdir -p /home/$RUNNER_USER/actions-runner
+  sudo -u $RUNNER_USER tar xzf /tmp/actions-runner.tar.gz -C /home/$RUNNER_USER/actions-runner
+  sudo /home/$RUNNER_USER/actions-runner/bin/installdependencies.sh
 
   # Install AWS SSM Agent
   curl -o /tmp/amazon-ssm-agent.deb -L \
