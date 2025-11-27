@@ -186,10 +186,12 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          SOURCE_AMI=$(grep '^source_ami:' src/build/image_for_ec2_runners/config.yml | cut -d' ' -f2)
+          SOURCE_AMI=$(yq '.source_ami' src/build/image_for_ec2_runners/config.yml)
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
-          TEST_SPOT_INSTANCE_TYPES='${{ github.event.inputs.test_spot_instance_types || '["t4g.xlarge", "m8g.xlarge", "m7g.xlarge"]' }}'
+          TEST_SPOT_INSTANCE_TYPES_DEFAULT=$(yq '.test_spot_instance_types | @json | @sh' src/build/image_for_ec2_runners/config.yml | tr -d "'" )
+          TEST_SPOT_INSTANCE_TYPES='${{ github.event.inputs.test_spot_instance_types }}'
+          TEST_SPOT_INSTANCE_TYPES="${TEST_SPOT_INSTANCE_TYPES:-$TEST_SPOT_INSTANCE_TYPES_DEFAULT}"
           echo "aws_region=${{ steps.shared.outputs.aws_region }}" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=${{ steps.shared.outputs.github_actions_role_arn }}" >> $GITHUB_OUTPUT
           echo "os_architecture=${{ steps.api.outputs.os_architecture }}" >> $GITHUB_OUTPUT
@@ -428,8 +430,7 @@ on:
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
       test_spot_instance_types:
-        default: '["t4g.xlarge", "m8g.xlarge", "m7g.xlarge"]'
-        description: 'Spot instance types for integration/e2e tests (JSON array)'
+        description: 'Spot instance types for integration/e2e tests (JSON array, defaults to config.yml)'
         required: false
         type: string
 permissions:

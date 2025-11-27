@@ -59,3 +59,7 @@ commands: |
   dpkg -i /tmp/amazon-cloudwatch-agent.deb
   rm -rf /tmp/*
 source_ami: debian-13-arm64-20251117-2299
+test_spot_instance_types:
+  - t4g.xlarge
+  - m8g.xlarge
+  - m7g.xlarge
