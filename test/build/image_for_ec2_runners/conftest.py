@@ -43,8 +43,10 @@ def get_config():
     tfvars_path = PROJECT_ROOT / "src" / "api" / "terraform.tfvars"
     result = get_shared_outputs()
     runner_config = get_runner_config()
-    result["os_family"] = runner_config.get("os_family", "")
-    result["os_version"] = str(runner_config.get("os_version", ""))
+    source_ami = runner_config.get("source_ami", "")
+    source_ami_parts = source_ami.split("-")
+    result["os_family"] = source_ami_parts[0] if source_ami_parts else ""
+    result["os_version"] = source_ami_parts[1] if len(source_ami_parts) > 1 else ""
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
