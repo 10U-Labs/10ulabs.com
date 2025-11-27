@@ -33,9 +33,7 @@ REQUIRED_FIELDS = ["ami_name", "region", "source_ami", "subnet_ids", "instance_t
 def validate_commands(config):
     errors = []
     commands = config.get("commands")
-    if commands is None:
-        return errors
-    if not isinstance(commands, str):
+    if commands is not None and not isinstance(commands, str):
         errors.append("commands must be a string (use YAML block scalar |)")
     return errors
 
@@ -102,12 +100,15 @@ def create_security_group(ec2, vpc_id, group_name):
 
 
 def delete_security_group(ec2, sg_id):
-    for _ in range(12):
+    deleted = False
+    attempts = 0
+    while not deleted and attempts < 12:
         try:
             ec2.delete_security_group(GroupId=sg_id)
-            return
+            deleted = True
         except ec2.exceptions.ClientError:
             time.sleep(5)
+        attempts += 1
 
 
 def create_launch_template(ec2, params: LaunchTemplateParams):
@@ -230,10 +231,12 @@ def load_config(config_path):
 
 
 def parse_value(value_str):
+    result = value_str
     try:
-        return json.loads(value_str)
+        result = json.loads(value_str)
     except json.JSONDecodeError:
-        return value_str
+        pass
+    return result
 
 
 def apply_vars(config, var_list):
@@ -255,12 +258,14 @@ def cmd_validate(args):
     config = load_config(args.config)
     apply_vars(config, args.var)
     errors = validate_config(config)
+    exit_code = 0
     if errors:
         for err in errors:
             print(f"Error: {err}", file=sys.stderr)
-        return 1
-    print("Configuration is valid.")
-    return 0
+        exit_code = 1
+    else:
+        print("Configuration is valid.")
+    return exit_code
 
 
 @dataclass
@@ -310,23 +315,26 @@ def cmd_build(args):
     config = load_config(args.config)
     apply_vars(config, args.var)
     errors = validate_config(config)
+    exit_code = 1
     if errors:
         for err in errors:
             print(f"Error: {err}", file=sys.stderr)
-        return 1
-    unique_id = uuid.uuid4().hex[:8]
-    ec2 = boto3.client("ec2", region_name=config["region"])
-    print(f"Looking up AMI ID for: {config['source_ami']}")
-    ami_id = lookup_source_ami(ec2, config["source_ami"])
-    print(f"Found AMI ID: {ami_id}")
-    config["source_ami"] = ami_id
-    ctx = BuildContext(ec2, config, unique_id)
-    state = BuildState()
-    try:
-        run_build(ctx, state)
-    finally:
-        cleanup(ctx.ec2, state.instance_id, f"ami-builder-{unique_id}", f"ami-builder-{unique_id}", state.sg_id)
-    return 0 if state.result else 1
+    else:
+        unique_id = uuid.uuid4().hex[:8]
+        ec2 = boto3.client("ec2", region_name=config["region"])
+        print(f"Looking up AMI ID for: {config['source_ami']}")
+        ami_id = lookup_source_ami(ec2, config["source_ami"])
+        print(f"Found AMI ID: {ami_id}")
+        config["source_ami"] = ami_id
+        ctx = BuildContext(ec2, config, unique_id)
+        state = BuildState()
+        try:
+            run_build(ctx, state)
+        finally:
+            cleanup(ctx.ec2, state.instance_id, f"ami-builder-{unique_id}", f"ami-builder-{unique_id}", state.sg_id)
+        if state.result:
+            exit_code = 0
+    return exit_code
 
 
 def main():
@@ -339,11 +347,12 @@ def main():
     validate_parser.add_argument("config", help="Path to YAML config file")
     validate_parser.add_argument("--var", action="append", metavar="KEY=VALUE", help="Override config value")
     args = parser.parse_args()
+    exit_code = 1
     if args.command == "build":
-        return cmd_build(args)
-    if args.command == "validate":
-        return cmd_validate(args)
-    return 1
+        exit_code = cmd_build(args)
+    elif args.command == "validate":
+        exit_code = cmd_validate(args)
+    return exit_code
 
 
 if __name__ == "__main__":
