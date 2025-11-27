@@ -158,6 +158,7 @@ def wait_for_instance_running(ec2, instance_id):
             running = True
             break
         if attempt < max_attempts:
+            logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)
     if not running:
         raise RuntimeError(f"Instance did not reach running state after {max_attempts} attempts")
@@ -182,6 +183,7 @@ def wait_for_status_checks(ec2, instance_id):
                 passed = True
                 break
         if attempt < max_attempts:
+            logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)
     if not passed:
         raise RuntimeError(f"Status checks did not pass after {max_attempts} attempts")
