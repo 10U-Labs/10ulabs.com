@@ -642,7 +642,7 @@ class TestRunCommandsHeredoc:
                     params = build_ami_module.CommandParams("1.2.3.4", "key", "echo hello")
                     build_ami_module.run_commands(params)
                     call_args = mock_run.call_args[0][1]
-                    assert call_args.startswith("sudo bash -ex << 'EOFSCRIPT'\nPS4=''")
+                    assert call_args.startswith("sudo bash -ex << 'EOFSCRIPT'\nPS4=''\nexport DEBIAN_FRONTEND=noninteractive")
 
     def test_heredoc_ends_with_eofscript(self, build_ami_module):
         with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
