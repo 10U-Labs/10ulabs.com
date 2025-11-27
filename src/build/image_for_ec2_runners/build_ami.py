@@ -213,12 +213,9 @@ def run_commands(params: CommandParams):
                 raise
             time.sleep(10)
     var_defs, commands = parse_commands(params.commands)
-    var_preamble = "; ".join(var_defs) + "; " if var_defs else ""
-    for cmd in commands:
-        escaped_cmd = var_preamble + cmd
-        escaped_cmd = escaped_cmd.replace("'", "'\"'\"'")
-        full_cmd = f"sudo bash -c '{escaped_cmd}'"
-        run_ssh_command(client, full_cmd)
+    script = "\n".join(var_defs + commands)
+    full_cmd = f"sudo bash -ex << 'EOFSCRIPT'\n{script}\nEOFSCRIPT"
+    run_ssh_command(client, full_cmd)
     client.close()
 
 
