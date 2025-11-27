@@ -1,11 +1,11 @@
 commands: |
   # Add Docker repository
+  ARCH=$(dpkg --print-architecture)
   DOCKER_GPG=/etc/apt/keyrings/docker.gpg
+  VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
   sudo install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/debian/gpg |
     sudo gpg --dearmor -o $DOCKER_GPG
-  VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
-  ARCH=$(dpkg --print-architecture)
   echo "deb [arch=$ARCH signed-by=$DOCKER_GPG] \
     https://download.docker.com/linux/debian $VERSION_CODENAME stable" |
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
@@ -45,7 +45,7 @@ commands: |
 
   # Install yq
   curl -o /tmp/yq -L \
-    https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_${OS_ARCHITECTURE}
+    https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_${ARCH}
   sudo mv /tmp/yq /usr/local/bin/yq
   sudo chmod +x /usr/local/bin/yq
 
@@ -61,12 +61,12 @@ commands: |
 
   # Install AWS SSM Agent
   curl -o /tmp/amazon-ssm-agent.deb -L \
-    https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${OS_ARCHITECTURE}/amazon-ssm-agent.deb
+    https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${ARCH}/amazon-ssm-agent.deb
   sudo dpkg -i /tmp/amazon-ssm-agent.deb
   sudo systemctl enable amazon-ssm-agent
 
   # Install AWS CloudWatch Agent
   curl -o /tmp/amazon-cloudwatch-agent.deb -L \
-    https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${OS_ARCHITECTURE}/latest/amazon-cloudwatch-agent.deb
+    https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb
   sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
 source_ami: debian-13-arm64-20251117-2299
