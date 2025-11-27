@@ -441,6 +441,39 @@ class TestParseCommandsComments:
         assert result == ["echo hello # not a comment"]
 
 
+class TestParseCommandsPipeContinuation:
+
+    def test_joins_command_with_pipe_at_end(self, build_ami_module):
+        result = build_ami_module.parse_commands("echo hello |\n  grep hello")
+        assert result == ["echo hello | grep hello"]
+
+    def test_joins_multiple_pipe_continuations(self, build_ami_module):
+        result = build_ami_module.parse_commands("echo hello |\n  grep hello |\n  wc -l")
+        assert result == ["echo hello | grep hello | wc -l"]
+
+
+class TestParseCommandsBackslashContinuation:
+
+    def test_joins_command_with_backslash_at_end(self, build_ami_module):
+        result = build_ami_module.parse_commands("apt-get install -y \\\n  curl")
+        assert result == ["apt-get install -y \\ curl"]
+
+    def test_joins_multiple_backslash_continuations(self, build_ami_module):
+        result = build_ami_module.parse_commands("apt-get install -y \\\n  curl \\\n  wget")
+        assert result == ["apt-get install -y \\ curl \\ wget"]
+
+
+class TestParseCommandsAmpersandContinuation:
+
+    def test_joins_command_with_ampersand_at_end(self, build_ami_module):
+        result = build_ami_module.parse_commands("mkdir -p /tmp/foo &&\n  cd /tmp/foo")
+        assert result == ["mkdir -p /tmp/foo && cd /tmp/foo"]
+
+    def test_joins_multiple_ampersand_continuations(self, build_ami_module):
+        result = build_ami_module.parse_commands("cmd1 &&\n  cmd2 &&\n  cmd3")
+        assert result == ["cmd1 && cmd2 && cmd3"]
+
+
 class TestLookupSourceAmi:
 
     def test_returns_ami_id_when_found(self, build_ami_module):

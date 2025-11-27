@@ -164,12 +164,25 @@ def run_ssh_command(client, cmd):
 
 
 def parse_commands(commands_str):
-    lines = []
+    commands = []
+    current_cmd = ""
     for line in commands_str.strip().split("\n"):
         line = line.strip()
-        if line and not line.startswith("#"):
-            lines.append(line)
-    return lines
+        if not line or line.startswith("#"):
+            continue
+        if current_cmd:
+            current_cmd += " " + line
+        else:
+            current_cmd = line
+        ends_with_continuation = (
+            current_cmd.endswith("\\") or current_cmd.endswith("|") or current_cmd.endswith("&&")
+        )
+        if not ends_with_continuation:
+            commands.append(current_cmd)
+            current_cmd = ""
+    if current_cmd:
+        commands.append(current_cmd)
+    return commands
 
 
 def run_commands(params: CommandParams):
