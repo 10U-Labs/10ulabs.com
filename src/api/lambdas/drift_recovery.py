@@ -59,7 +59,8 @@ def trigger_api_workflow(github_token):
     }
 
     try:
-        req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method='POST')
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
         with urllib.request.urlopen(req, timeout=10) as response:
             if response.status == 204:
                 return {'success': True, 'message': 'Workflow triggered'}
@@ -81,18 +82,21 @@ def send_notification(subject, message):
         logger.error("Failed to send notification: %s", e)
 
 
+def extract_event_from_sqs(event):
+    records = event.get('Records', [])
+    if not records:
+        return event
+    body = records[0].get('body', '{}')
+    return json.loads(body)
+
+
 def lambda_handler(event, _context):
-    logger.info("Received drift detection event: %s", json.dumps(event))
+    logger.info("Received SQS event: %s", json.dumps(event))
 
-    detail = event.get('detail', {})
-    rule_name = detail.get('configRuleName', 'Unknown')
-    compliance_type = detail.get('newEvaluationResult', {}).get('complianceType', 'Unknown')
-    resource_id = detail.get('resourceId', 'Unknown')
+    trigger_event = extract_event_from_sqs(event)
+    rule_name = trigger_event.get('configRuleName', 'Unknown')
 
-    logger.info("Config rule %s is %s for resource %s", rule_name, compliance_type, resource_id)
-
-    if compliance_type != 'NON_COMPLIANT':
-        return {'statusCode': 200, 'body': 'No action needed'}
+    logger.info("Drift detected for config rule: %s", rule_name)
 
     github_repo = os.environ.get('GITHUB_REPO', '')
 
@@ -102,7 +106,7 @@ def lambda_handler(event, _context):
         logger.error(error_msg)
         send_notification(
             f"Drift Recovery FAILED: {rule_name}",
-            f"Resource {resource_id} was detected as {compliance_type}.\n\n"
+            f"Infrastructure drift was detected.\n\n"
             f"FAILED to trigger recovery workflow: {error_msg}\n\n"
             f"MANUAL INTERVENTION REQUIRED"
         )
@@ -114,7 +118,7 @@ def lambda_handler(event, _context):
         logger.info("Successfully triggered api.yml workflow for drift recovery")
         send_notification(
             f"Drift Recovery Triggered: {rule_name}",
-            f"Resource {resource_id} was detected as {compliance_type}.\n\n"
+            f"Infrastructure drift was detected.\n\n"
             f"Automatically triggered api.yml workflow to recover infrastructure.\n\n"
             f"Monitor the workflow at: https://github.com/{github_repo}/actions"
         )
@@ -123,7 +127,7 @@ def lambda_handler(event, _context):
     logger.error("Failed to trigger workflow: %s", result.get('error'))
     send_notification(
         f"Drift Recovery FAILED: {rule_name}",
-        f"Resource {resource_id} was detected as {compliance_type}.\n\n"
+        f"Infrastructure drift was detected.\n\n"
         f"FAILED to trigger recovery workflow: {result.get('error')}\n\n"
         f"MANUAL INTERVENTION REQUIRED"
     )

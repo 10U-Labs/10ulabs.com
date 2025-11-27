@@ -370,10 +370,8 @@ resource "aws_cloudwatch_log_group" "drift_recovery" {
   })
 }
 
-resource "aws_lambda_permission" "drift_recovery_eventbridge" {
-  statement_id  = "AllowEventBridgeInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.drift_recovery.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.config_compliance_change.arn
+resource "aws_lambda_event_source_mapping" "drift_recovery_sqs" {
+  event_source_arn = aws_sqs_queue.drift_recovery.arn
+  function_name    = aws_lambda_function.drift_recovery.arn
+  batch_size       = 1
 }

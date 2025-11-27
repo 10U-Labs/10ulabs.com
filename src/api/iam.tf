@@ -701,6 +701,15 @@ resource "aws_iam_role_policy" "drift_recovery_permissions" {
           "sns:Publish"
         ]
         Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = [aws_sqs_queue.drift_recovery.arn]
       }
     ]
   })

@@ -1,13 +1,54 @@
+import json
 import os
 import urllib.error
 from unittest.mock import patch, MagicMock, Mock
+from test.api.pre_deployment.conftest import assert_response_status, create_mock_sns_publish_error
 
-from test.api.pre_deployment.conftest import (
-    assert_response_status,
-    create_mock_sns_publish_error
-)
-
+import pytest
 from botocore.exceptions import ClientError
+
+
+def wrap_in_sqs_event(config_event):
+    return {
+        'Records': [{
+            'messageId': 'test-message-id',
+            'body': json.dumps(config_event)
+        }]
+    }
+
+
+class TestExtractEventFromSqs:
+    def test_extracts_event_from_sqs_body(self, drift_recovery):
+        config_event = {'detail': {'configRuleName': 'test-rule'}}
+        sqs_event = wrap_in_sqs_event(config_event)
+        result = drift_recovery.extract_event_from_sqs(sqs_event)
+        assert result == config_event
+
+    def test_returns_original_event_when_no_records(self, drift_recovery):
+        direct_event = {'detail': {'configRuleName': 'test-rule'}}
+        result = drift_recovery.extract_event_from_sqs(direct_event)
+        assert result == direct_event
+
+    def test_returns_original_event_when_records_empty(self, drift_recovery):
+        event = {'Records': [], 'detail': {'configRuleName': 'test-rule'}}
+        result = drift_recovery.extract_event_from_sqs(event)
+        assert result == event
+
+    def test_parses_json_body_correctly(self, drift_recovery):
+        nested_event = {
+            'detail': {
+                'configRuleName': 'test-rule',
+                'newEvaluationResult': {'complianceType': 'NON_COMPLIANT'}
+            }
+        }
+        sqs_event = wrap_in_sqs_event(nested_event)
+        result = drift_recovery.extract_event_from_sqs(sqs_event)
+        assert result['detail']['newEvaluationResult']['complianceType'] == 'NON_COMPLIANT'
+
+    def test_raises_on_invalid_json_body(self, drift_recovery):
+        sqs_event = {'Records': [{'body': 'not valid json'}]}
+        with pytest.raises(json.JSONDecodeError):
+            drift_recovery.extract_event_from_sqs(sqs_event)
 
 
 class TestGetGitHubToken:
@@ -112,43 +153,12 @@ class TestSendNotification:
             drift_recovery.send_notification('Test Subject', 'Test Message')
 
 
-class TestLambdaHandlerComplianceFiltering:
-    def test_returns_no_action_when_compliant(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
-        response = drift_recovery.lambda_handler(event, lambda_context)
-        assert response['body'] == 'No action needed'
-
-    def test_returns_no_action_when_not_applicable(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NOT_APPLICABLE'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
-        response = drift_recovery.lambda_handler(event, lambda_context)
-        assert response['body'] == 'No action needed'
-
-    def test_processes_non_compliant_event(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NON_COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
+class TestLambdaHandlerDriftTrigger:
+    def test_triggers_workflow_on_drift_event(self, drift_recovery, lambda_context):
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
             mock_ssm.get_parameter.return_value = {
@@ -164,18 +174,33 @@ class TestLambdaHandlerComplianceFiltering:
                 response = drift_recovery.lambda_handler(event, lambda_context)
         assert_response_status(response, 200)
 
+    def test_sends_notification_on_successful_trigger(self, drift_recovery, lambda_context):
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule'
+        })
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_parameter.return_value = {
+                'Parameter': {'Value': 'test-token'}
+            }
+            mock_boto_client.return_value = mock_client
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_response = Mock()
+                mock_response.status = 204
+                mock_response.__enter__ = Mock(return_value=mock_response)
+                mock_response.__exit__ = Mock(return_value=False)
+                mock_urlopen.return_value = mock_response
+                drift_recovery.lambda_handler(event, lambda_context)
+        assert mock_client.publish.called
+
 
 class TestLambdaHandlerGitHubTokenFailure:
     def test_returns_500_when_token_retrieval_fails(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NON_COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
             mock_ssm.get_parameter.side_effect = ClientError(
@@ -187,15 +212,10 @@ class TestLambdaHandlerGitHubTokenFailure:
         assert_response_status(response, 500)
 
     def test_sends_failure_notification_when_token_fails(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NON_COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_client = MagicMock()
             mock_client.get_parameter.side_effect = ClientError(
@@ -209,15 +229,10 @@ class TestLambdaHandlerGitHubTokenFailure:
 
 class TestLambdaHandlerWorkflowTrigger:
     def test_returns_200_on_successful_workflow_trigger(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NON_COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
             mock_ssm.get_parameter.return_value = {
@@ -234,15 +249,10 @@ class TestLambdaHandlerWorkflowTrigger:
         assert response['body'] == 'Recovery workflow triggered'
 
     def test_returns_500_on_workflow_trigger_failure(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NON_COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
             mock_ssm.get_parameter.return_value = {
@@ -256,31 +266,28 @@ class TestLambdaHandlerWorkflowTrigger:
 
 
 class TestLambdaHandlerEventParsing:
-    def test_handles_missing_detail(self, drift_recovery, lambda_context):
-        event = {}
-        response = drift_recovery.lambda_handler(event, lambda_context)
-        assert response['body'] == 'No action needed'
-
-    def test_handles_missing_compliance_type(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'test-rule',
-                'resourceId': 'sg-test123'
+    def test_handles_missing_config_rule_name(self, drift_recovery, lambda_context):
+        event = wrap_in_sqs_event({'source': 'drift-recovery-trigger'})
+        with patch('boto3.client') as mock_boto_client:
+            mock_ssm = MagicMock()
+            mock_ssm.get_parameter.return_value = {
+                'Parameter': {'Value': 'test-token'}
             }
-        }
-        response = drift_recovery.lambda_handler(event, lambda_context)
-        assert response['body'] == 'No action needed'
+            mock_boto_client.return_value = mock_ssm
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_response = Mock()
+                mock_response.status = 204
+                mock_response.__enter__ = Mock(return_value=mock_response)
+                mock_response.__exit__ = Mock(return_value=False)
+                mock_urlopen.return_value = mock_response
+                response = drift_recovery.lambda_handler(event, lambda_context)
+        assert_response_status(response, 200)
 
     def test_extracts_rule_name_from_event(self, drift_recovery, lambda_context):
-        event = {
-            'detail': {
-                'configRuleName': 'required-tags-rule',
-                'newEvaluationResult': {
-                    'complianceType': 'NON_COMPLIANT'
-                },
-                'resourceId': 'sg-test123'
-            }
-        }
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'required-tags-rule'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_client = MagicMock()
             mock_client.get_parameter.return_value = {

@@ -167,8 +167,59 @@ resource "aws_cloudwatch_event_rule" "config_compliance_change" {
   })
 }
 
+resource "aws_sqs_queue" "drift_recovery" {
+  name                        = "${local.resource_prefix}-DriftRecovery.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  deduplication_scope         = "queue"
+  fifo_throughput_limit       = "perQueue"
+  message_retention_seconds   = 300
+  visibility_timeout_seconds  = 60
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-DriftRecovery-Queue"
+  })
+}
+
+resource "aws_sqs_queue_policy" "drift_recovery" {
+  queue_url = aws_sqs_queue.drift_recovery.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "events.amazonaws.com"
+      }
+      Action   = "sqs:SendMessage"
+      Resource = aws_sqs_queue.drift_recovery.arn
+      Condition = {
+        ArnEquals = {
+          "aws:SourceArn" = aws_cloudwatch_event_rule.config_compliance_change.arn
+        }
+      }
+    }]
+  })
+}
+
 resource "aws_cloudwatch_event_target" "drift_recovery" {
   rule      = aws_cloudwatch_event_rule.config_compliance_change.name
-  target_id = "drift-recovery-lambda"
-  arn       = aws_lambda_function.drift_recovery.arn
+  target_id = "drift-recovery-sqs"
+  arn       = aws_sqs_queue.drift_recovery.arn
+
+  sqs_target {
+    message_group_id = "drift-recovery"
+  }
+
+  input_transformer {
+    input_paths = {
+      configRuleName = "$.detail.configRuleName"
+    }
+    input_template = <<EOF
+{
+  "source": "drift-recovery-trigger",
+  "configRuleName": <configRuleName>
+}
+EOF
+  }
 }
