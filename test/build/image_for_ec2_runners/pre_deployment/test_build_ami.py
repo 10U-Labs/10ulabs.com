@@ -1,3 +1,6 @@
+from unittest.mock import MagicMock, patch
+
+
 class TestParseValueStrings:
 
     def test_returns_string_unchanged(self, build_ami_module):
@@ -558,3 +561,76 @@ class TestRunSshCommandOutput:
         build_ami_module.run_ssh_command(mock_ssh_client_with_multiline_output, script)
         captured = capsys.readouterr()
         assert captured.out == "line1\nline2\nline3\n"
+
+
+class TestRunCommandsHeredoc:
+
+    def test_creates_heredoc_with_sudo_bash(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command') as mock_run:
+                    params = build_ami_module.CommandParams("1.2.3.4", "key", "echo hello")
+                    build_ami_module.run_commands(params)
+                    call_args = mock_run.call_args[0][1]
+                    assert call_args.startswith("sudo bash -ex << 'EOFSCRIPT'")
+
+    def test_heredoc_ends_with_eofscript(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command') as mock_run:
+                    params = build_ami_module.CommandParams("1.2.3.4", "key", "echo hello")
+                    build_ami_module.run_commands(params)
+                    call_args = mock_run.call_args[0][1]
+                    assert call_args.endswith("EOFSCRIPT")
+
+    def test_heredoc_contains_command(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command') as mock_run:
+                    params = build_ami_module.CommandParams("1.2.3.4", "key", "apt-get update")
+                    build_ami_module.run_commands(params)
+                    call_args = mock_run.call_args[0][1]
+                    assert "apt-get update" in call_args
+
+    def test_heredoc_contains_variable_definitions(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command') as mock_run:
+                    params = build_ami_module.CommandParams("1.2.3.4", "key", "MY_VAR=hello\necho $MY_VAR")
+                    build_ami_module.run_commands(params)
+                    call_args = mock_run.call_args[0][1]
+                    assert "MY_VAR=hello" in call_args
+
+
+class TestRunCommandsConnection:
+
+    def test_connects_to_correct_ip(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command'):
+                    params = build_ami_module.CommandParams("192.168.1.100", "key", "echo hi")
+                    build_ami_module.run_commands(params)
+                    assert mock_client.connect.call_args[0][0] == "192.168.1.100"
+
+    def test_connects_with_admin_username(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command'):
+                    params = build_ami_module.CommandParams("1.2.3.4", "key", "echo hi")
+                    build_ami_module.run_commands(params)
+                    assert mock_client.connect.call_args[1]["username"] == "admin"
+
+    def test_closes_client_after_completion(self, build_ami_module):
+        with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
+            mock_client = MagicMock()
+            with patch.object(build_ami_module.paramiko, 'SSHClient', return_value=mock_client):
+                with patch.object(build_ami_module, 'run_ssh_command'):
+                    params = build_ami_module.CommandParams("1.2.3.4", "key", "echo hi")
+                    build_ami_module.run_commands(params)
+                    assert mock_client.close.called

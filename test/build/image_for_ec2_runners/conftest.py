@@ -80,11 +80,6 @@ def v1_handler():
 
 
 @pytest.fixture
-def wait_for_status_checks():
-    return load_module_from_path("wait_for_status_checks", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "wait_for_status_checks.py")
-
-
-@pytest.fixture
 def promote_ami():
     return load_module_from_path("promote_ami", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "promote_ami.py")
 
