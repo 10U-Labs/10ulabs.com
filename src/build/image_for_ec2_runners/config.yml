@@ -4,6 +4,8 @@ commands: |
   DOCKER_GPG=/etc/apt/keyrings/docker.gpg
   RUNNER_USER=github-runner
   VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+  VERSION_RUNNER=2.330.0
+  VERSION_YQ=4.44.1
 
   # Add Docker repository
   sudo install -m 0755 -d /etc/apt/keyrings
@@ -46,14 +48,14 @@ commands: |
     yamllint
 
   # Install yq
-  sudo curl -o /usr/local/bin/yq -L https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_${ARCH} &&
+  sudo curl -o /usr/local/bin/yq -L https://github.com/mikefarah/yq/releases/download/v${VERSION_YQ}/yq_linux_${ARCH} &&
     sudo chmod +x /usr/local/bin/yq
 
   # Install GitHub Actions runner
   sudo useradd -m -s /bin/bash $RUNNER_USER
   sudo usermod -aG docker $RUNNER_USER
   curl -o /tmp/actions-runner.tar.gz -L \
-    https://github.com/actions/runner/releases/download/v2.330.0/actions-runner-linux-arm64-2.330.0.tar.gz
+    https://github.com/actions/runner/releases/download/v${VERSION_RUNNER}/actions-runner-linux-${ARCH}-${VERSION_RUNNER}.tar.gz
   sudo -u $RUNNER_USER mkdir -p /home/$RUNNER_USER/actions-runner
   sudo -u $RUNNER_USER tar xzf /tmp/actions-runner.tar.gz -C /home/$RUNNER_USER/actions-runner
   sudo /home/$RUNNER_USER/actions-runner/bin/installdependencies.sh
