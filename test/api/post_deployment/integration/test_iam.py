@@ -138,3 +138,50 @@ def test_v1_handler_role_has_ecs_tag_resource_permission(iam_client):
         if has_tag_resource:
             break
     assert has_tag_resource
+
+
+def get_v1_handler_ec2_actions(iam_client):
+    role_name = 'V1ApiHandler-ServiceRole'
+    policies = iam_client.list_role_policies(RoleName=role_name)
+    ec2_actions = set()
+    for policy_name in policies['PolicyNames']:
+        policy_doc = iam_client.get_role_policy(RoleName=role_name, PolicyName=policy_name)
+        policy_document = policy_doc['PolicyDocument']
+        for statement in policy_document.get('Statement', []):
+            actions = statement.get('Action', [])
+            if isinstance(actions, str):
+                actions = [actions]
+            for action in actions:
+                if action.startswith('ec2:'):
+                    ec2_actions.add(action)
+    return ec2_actions
+
+
+def test_v1_handler_role_has_ec2_describe_vpcs_permission(iam_client):
+    ec2_actions = get_v1_handler_ec2_actions(iam_client)
+    assert 'ec2:DescribeVpcs' in ec2_actions
+
+
+def test_v1_handler_role_has_ec2_describe_subnets_permission(iam_client):
+    ec2_actions = get_v1_handler_ec2_actions(iam_client)
+    assert 'ec2:DescribeSubnets' in ec2_actions
+
+
+def test_v1_handler_role_has_ec2_describe_security_groups_permission(iam_client):
+    ec2_actions = get_v1_handler_ec2_actions(iam_client)
+    assert 'ec2:DescribeSecurityGroups' in ec2_actions
+
+
+def test_v1_handler_role_has_ec2_describe_instances_permission(iam_client):
+    ec2_actions = get_v1_handler_ec2_actions(iam_client)
+    assert 'ec2:DescribeInstances' in ec2_actions
+
+
+def test_v1_handler_role_has_ec2_run_instances_permission(iam_client):
+    ec2_actions = get_v1_handler_ec2_actions(iam_client)
+    assert 'ec2:RunInstances' in ec2_actions
+
+
+def test_v1_handler_role_has_ec2_terminate_instances_permission(iam_client):
+    ec2_actions = get_v1_handler_ec2_actions(iam_client)
+    assert 'ec2:TerminateInstances' in ec2_actions

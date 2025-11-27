@@ -366,6 +366,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ec2" {
         "ec2:DescribeSecurityGroups",
         "ec2:DescribeSnapshots",
         "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
         "ec2:RunInstances",
         "ec2:TerminateInstances"
       ]
