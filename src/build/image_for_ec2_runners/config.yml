@@ -1,14 +1,14 @@
 commands: |
   ARCH=$(dpkg --print-architecture)
-  DOCKER_GPG=/etc/apt/keyrings/docker.asc
+  DOCKER_KEY=/etc/apt/keyrings/docker.asc
   RUNNER_USER=github-runner
   VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
   VERSION_RUNNER=2.330.0
   VERSION_YQ=4.44.1
   sudo install -m 0755 -d /etc/apt/keyrings
-  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o $DOCKER_GPG
-  sudo chmod a+r $DOCKER_GPG
-  echo "deb [arch=$ARCH signed-by=$DOCKER_GPG] https://download.docker.com/linux/debian $VERSION_CODENAME stable" |
+  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o $DOCKER_KEY
+  sudo chmod a+r $DOCKER_KEY
+  echo "deb [arch=$ARCH signed-by=$DOCKER_KEY] https://download.docker.com/linux/debian $VERSION_CODENAME stable" |
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
   sudo apt-get update
   sudo apt-get install -y \
