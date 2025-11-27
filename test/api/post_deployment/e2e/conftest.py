@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 def ecr_image_count_fixture(ecr_client):
     try:
         response = ecr_client.describe_images(
-            repositoryName='github-runner',
+            repositoryName='10ulabs',
             filter={'tagStatus': 'TAGGED'}
         )
         stable_images = [

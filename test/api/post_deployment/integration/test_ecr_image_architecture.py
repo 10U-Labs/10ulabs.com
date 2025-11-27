@@ -2,24 +2,24 @@ import json
 
 
 def test_ecr_repository_exists(ecr_client):
-    response = ecr_client.describe_repositories(repositoryNames=['github-runner'])
+    response = ecr_client.describe_repositories(repositoryNames=['10ulabs'])
     assert len(response['repositories']) == 1
 
 
 def test_ecr_repository_has_images(ecr_client):
-    response = ecr_client.list_images(repositoryName='github-runner')
+    response = ecr_client.list_images(repositoryName='10ulabs')
     assert len(response['imageIds']) > 0
 
 
 def test_ecr_latest_image_exists(ecr_client):
-    response = ecr_client.list_images(repositoryName='github-runner')
+    response = ecr_client.list_images(repositoryName='10ulabs')
     image_tags = [img.get('imageTag') for img in response['imageIds'] if img.get('imageTag')]
     assert 'latest' in image_tags
 
 
 def test_ecr_image_has_manifest(ecr_client):
     response = ecr_client.batch_get_image(
-        repositoryName='github-runner',
+        repositoryName='10ulabs',
         imageIds=[{'imageTag': 'latest'}],
         acceptedMediaTypes=['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.v2+json']
     )
@@ -28,7 +28,7 @@ def test_ecr_image_has_manifest(ecr_client):
 
 def test_ecr_image_manifest_is_parseable(ecr_client):
     response = ecr_client.batch_get_image(
-        repositoryName='github-runner',
+        repositoryName='10ulabs',
         imageIds=[{'imageTag': 'latest'}],
         acceptedMediaTypes=['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.v2+json']
     )
@@ -39,7 +39,7 @@ def test_ecr_image_manifest_is_parseable(ecr_client):
 
 def test_ecr_image_is_multi_arch_or_single_arch(ecr_client):
     response = ecr_client.batch_get_image(
-        repositoryName='github-runner',
+        repositoryName='10ulabs',
         imageIds=[{'imageTag': 'latest'}],
         acceptedMediaTypes=['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.v2+json']
     )
@@ -52,7 +52,7 @@ def test_ecr_image_is_multi_arch_or_single_arch(ecr_client):
 
 def test_ecr_image_has_arm64_architecture(ecr_client):
     response = ecr_client.batch_get_image(
-        repositoryName='github-runner',
+        repositoryName='10ulabs',
         imageIds=[{'imageTag': 'latest'}],
         acceptedMediaTypes=['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.v2+json']
     )
@@ -65,7 +65,7 @@ def test_ecr_image_has_arm64_architecture(ecr_client):
 
 def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client):
     ecr_response = ecr_client.batch_get_image(
-        repositoryName='github-runner',
+        repositoryName='10ulabs',
         imageIds=[{'imageTag': 'latest'}],
         acceptedMediaTypes=['application/vnd.oci.image.index.v1+json', 'application/vnd.docker.distribution.manifest.v2+json']
     )
@@ -81,12 +81,12 @@ def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client):
 
 
 def test_ecr_repository_has_scan_on_push_enabled(ecr_client):
-    response = ecr_client.describe_repositories(repositoryNames=['github-runner'])
+    response = ecr_client.describe_repositories(repositoryNames=['10ulabs'])
     repo = response['repositories'][0]
     assert repo['imageScanningConfiguration']['scanOnPush'] is True
 
 
 def test_ecr_repository_has_encryption_enabled(ecr_client):
-    response = ecr_client.describe_repositories(repositoryNames=['github-runner'])
+    response = ecr_client.describe_repositories(repositoryNames=['10ulabs'])
     repo = response['repositories'][0]
     assert 'encryptionConfiguration' in repo
