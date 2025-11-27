@@ -67,3 +67,38 @@ def mock_env_vars():
     }
     with patch.dict('os.environ', env_vars, clear=False):
         yield env_vars
+
+
+def _create_mock_ssh_client(exit_code, encoded_output_chunks):
+    channel = MagicMock()
+    channel.recv_exit_status.return_value = exit_code
+    exit_ready_calls = [False] * len(encoded_output_chunks) + [True]
+    channel.exit_status_ready.side_effect = exit_ready_calls
+    recv_ready_calls = [True] * len(encoded_output_chunks) + [False]
+    channel.recv_ready.side_effect = recv_ready_calls
+    channel.recv.side_effect = encoded_output_chunks
+    client = MagicMock()
+    stdout = MagicMock()
+    stdout.channel = channel
+    client.exec_command.return_value = (None, stdout, None)
+    return client
+
+
+@pytest.fixture
+def mock_ssh_client_success():
+    return _create_mock_ssh_client(0, [])
+
+
+@pytest.fixture
+def mock_ssh_client_failure():
+    return _create_mock_ssh_client(1, [])
+
+
+@pytest.fixture
+def mock_ssh_client_with_output():
+    return _create_mock_ssh_client(0, [b"hello ", b"world"])
+
+
+@pytest.fixture
+def mock_ssh_client_with_multiline_output():
+    return _create_mock_ssh_client(0, [b"line1\n", b"line2\n", b"line3\n"])

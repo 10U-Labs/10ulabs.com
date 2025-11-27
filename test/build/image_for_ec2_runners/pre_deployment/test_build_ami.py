@@ -487,3 +487,42 @@ class TestLookupSourceAmi:
         mock_ec2.describe_images = lambda **kwargs: {"Images": []}
         with raise_runtime_error:
             build_ami_module.lookup_source_ami(mock_ec2, "nonexistent-ami")
+
+
+class TestRunSshCommandSuccess:
+
+    def test_does_not_raise_when_exit_code_zero(self, build_ami_module, mock_ssh_client_success):
+        build_ami_module.run_ssh_command(mock_ssh_client_success, "echo hello")
+
+    def test_calls_exec_command_with_command(self, build_ami_module, mock_ssh_client_success):
+        build_ami_module.run_ssh_command(mock_ssh_client_success, "echo hello")
+        assert mock_ssh_client_success.exec_command.call_args[0][0] == "echo hello"
+
+    def test_calls_exec_command_with_timeout(self, build_ami_module, mock_ssh_client_success):
+        build_ami_module.run_ssh_command(mock_ssh_client_success, "echo hello")
+        assert mock_ssh_client_success.exec_command.call_args[1]["timeout"] == 600
+
+    def test_calls_exec_command_with_pty(self, build_ami_module, mock_ssh_client_success):
+        build_ami_module.run_ssh_command(mock_ssh_client_success, "echo hello")
+        assert mock_ssh_client_success.exec_command.call_args[1]["get_pty"] is True
+
+
+class TestRunSshCommandFailure:
+
+    def test_raises_runtime_error_when_exit_code_nonzero(self, build_ami_module, mock_ssh_client_failure, raise_runtime_error):
+        with raise_runtime_error:
+            build_ami_module.run_ssh_command(mock_ssh_client_failure, "exit 1")
+
+
+class TestRunSshCommandOutput:
+
+    def test_writes_stdout_to_sys_stdout(self, build_ami_module, mock_ssh_client_with_output, capsys):
+        build_ami_module.run_ssh_command(mock_ssh_client_with_output, "echo hello")
+        captured = capsys.readouterr()
+        assert captured.out == "hello world"
+
+    def test_streams_output_from_multiline_script(self, build_ami_module, mock_ssh_client_with_multiline_output, capsys):
+        script = "echo line1\necho line2\necho line3"
+        build_ami_module.run_ssh_command(mock_ssh_client_with_multiline_output, script)
+        captured = capsys.readouterr()
+        assert captured.out == "line1\nline2\nline3\n"

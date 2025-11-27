@@ -155,11 +155,18 @@ def wait_for_instance(ec2, instance_id):
 
 def run_ssh_command(client, cmd):
     logging.info("Running: %s", cmd)
-    _, stdout, stderr = client.exec_command(cmd, timeout=600)
-    exit_code = stdout.channel.recv_exit_status()
+    _, stdout, _ = client.exec_command(cmd, timeout=600, get_pty=True)
+    channel = stdout.channel
+    while not channel.exit_status_ready():
+        if channel.recv_ready():
+            sys.stdout.write(channel.recv(4096).decode())
+            sys.stdout.flush()
+        time.sleep(0.1)
+    while channel.recv_ready():
+        sys.stdout.write(channel.recv(4096).decode())
+        sys.stdout.flush()
+    exit_code = channel.recv_exit_status()
     if exit_code != 0:
-        logging.info("STDOUT: %s", stdout.read().decode())
-        logging.info("STDERR: %s", stderr.read().decode())
         raise RuntimeError(f"Command failed with exit code {exit_code}")
 
 
