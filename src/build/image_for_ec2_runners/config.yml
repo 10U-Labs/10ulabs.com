@@ -46,10 +46,8 @@ commands: |
     yamllint
 
   # Install yq
-  curl -o /tmp/yq -L \
-    https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_${ARCH}
-  sudo mv /tmp/yq /usr/local/bin/yq
-  sudo chmod +x /usr/local/bin/yq
+  sudo curl -o /usr/local/bin/yq -L https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_${ARCH} &&
+    sudo chmod +x /usr/local/bin/yq
 
   # Install GitHub Actions runner
   sudo useradd -m -s /bin/bash $RUNNER_USER
