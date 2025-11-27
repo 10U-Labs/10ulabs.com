@@ -22,6 +22,7 @@ commands: |
     python3-pip \
     unzip \
     wget
+  sudo systemctl enable docker
   sudo python3 -m pip install --break-system-packages \
     boto3 \
     boto3-stubs[ecr] \
@@ -57,5 +58,4 @@ commands: |
     https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb
   sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
   rm -rf /tmp/*
-  sudo systemctl enable docker
 source_ami: debian-13-arm64-20251117-2299
