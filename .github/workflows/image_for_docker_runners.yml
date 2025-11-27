@@ -21,12 +21,10 @@ jobs:
         name: Load configuration
         run: |
           NODE_VERSION=$(yq '.node_version' src/build/image_for_docker_runners/config.yml)
-          PACKER_VERSION=$(yq '.packer_version' src/build/image_for_docker_runners/config.yml)
           RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_docker_runners/config.yml)
           TERRAFORM_VERSION=$(yq '.terraform_version' src/build/image_for_docker_runners/config.yml)
           YQ_VERSION=$(yq '.yq_version' src/build/image_for_docker_runners/config.yml)
           echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
-          echo "packer_version=$PACKER_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
           echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
@@ -45,7 +43,6 @@ jobs:
           ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.declaring-common-variables.outputs.ecr_repository_name }}"
           docker buildx build \
             --build-arg NODE_VERSION=${{ steps.config.outputs.node_version }} \
-            --build-arg PACKER_VERSION=${{ steps.config.outputs.packer_version }} \
             --build-arg RUNNER_ARCH=${{ needs.declaring-common-variables.outputs.fargate_cpu_architecture }} \
             --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
             --build-arg TERRAFORM_VERSION=${{ steps.config.outputs.terraform_version }} \

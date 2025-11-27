@@ -20,16 +20,6 @@ def test_config_node_version_is_string():
     assert isinstance(config["node_version"], str)
 
 
-def test_config_has_packer_version():
-    config = _read_config()
-    assert config["packer_version"] is not None
-
-
-def test_config_packer_version_is_string():
-    config = _read_config()
-    assert isinstance(config["packer_version"], str)
-
-
 def test_config_has_runner_version():
     config = _read_config()
     assert config["runner_version"] is not None

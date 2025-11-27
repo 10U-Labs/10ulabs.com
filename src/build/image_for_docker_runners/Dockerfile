@@ -2,7 +2,6 @@ FROM debian:stable-slim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG NODE_VERSION
-ARG PACKER_VERSION
 ARG RUNNER_ARCH
 ARG RUNNER_VERSION
 ARG TERRAFORM_VERSION
@@ -41,12 +40,10 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o aw
     TFLINT_VERSION=$(curl -fsSL https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
     curl -fsSL -o terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip" && \
     curl -fsSL -o tflint.zip "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_arm64.zip" && \
-    curl -fsSL -o packer.zip "https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_arm64.zip" && \
     unzip -oq terraform.zip && \
     unzip -oq tflint.zip && \
-    unzip -oq packer.zip && \
-    mv terraform tflint packer /usr/local/bin/ && \
-    rm -rf awscliv2.zip aws terraform.zip tflint.zip packer.zip && \
+    mv terraform tflint /usr/local/bin/ && \
+    rm -rf awscliv2.zip aws terraform.zip tflint.zip && \
     curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" | \
         tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g jsonlint && \
