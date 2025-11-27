@@ -19,18 +19,18 @@ resource "aws_lambda_function" "health_handler" {
     log_group  = aws_cloudwatch_log_group.health_handler.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.health_handler_function_name
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "health_handler" {
   name              = var.health_handler_log_group_name
   retention_in_days = 7
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.health_handler_function_name}-logs"
-  }
+  })
 }
 
 data "archive_file" "catchall_handler" {
@@ -54,18 +54,18 @@ resource "aws_lambda_function" "catchall_handler" {
     log_group  = aws_cloudwatch_log_group.catchall_handler.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.catchall_handler_function_name
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "catchall_handler" {
   name              = var.catchall_handler_log_group_name
   retention_in_days = 7
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.catchall_handler_function_name}-logs"
-  }
+  })
 }
 
 data "archive_file" "runners_handler" {
@@ -109,18 +109,18 @@ resource "aws_lambda_function" "runners_handler" {
     log_group  = aws_cloudwatch_log_group.runners_handler.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.lambda_function_name
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "runners_handler" {
   name              = var.webhook_handler_log_group_name
   retention_in_days = 7
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.lambda_function_name}-logs"
-  }
+  })
 }
 
 resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
@@ -176,18 +176,18 @@ resource "aws_lambda_function" "v1_handler" {
     log_group  = aws_cloudwatch_log_group.v1_handler.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.v1_handler_function_name
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "v1_handler" {
   name              = var.v1_handler_log_group_name
   retention_in_days = 7
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.v1_handler_function_name}-logs"
-  }
+  })
 }
 
 data "archive_file" "circuit_breaker_remediation" {
@@ -221,18 +221,18 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
     log_group  = aws_cloudwatch_log_group.circuit_breaker_remediation.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRemediation"
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
   name              = "/aws/lambda/${local.resource_prefix}-CircuitBreakerRemediation"
   retention_in_days = 30
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRemediation-logs"
-  }
+  })
 }
 
 data "archive_file" "dlq_reprocessor" {
@@ -267,18 +267,18 @@ resource "aws_lambda_function" "dlq_reprocessor" {
     log_group  = aws_cloudwatch_log_group.dlq_reprocessor.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-DLQReprocessor"
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
   name              = "/aws/lambda/${local.resource_prefix}-DLQReprocessor"
   retention_in_days = 30
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-DLQReprocessor-logs"
-  }
+  })
 }
 
 data "archive_file" "circuit_breaker_recovery" {
@@ -312,16 +312,68 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
     log_group  = aws_cloudwatch_log_group.circuit_breaker_recovery.name
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRecovery"
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
   name              = "/aws/lambda/${local.resource_prefix}-CircuitBreakerRecovery"
   retention_in_days = 30
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRecovery-logs"
+  })
+}
+
+data "archive_file" "drift_recovery" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/drift_recovery.py"
+  output_path = "${path.module}/.terraform/lambda_packages/drift_recovery.zip"
+}
+
+resource "aws_lambda_function" "drift_recovery" {
+  filename         = data.archive_file.drift_recovery.output_path
+  function_name    = "${local.resource_prefix}-DriftRecovery"
+  role             = aws_iam_role.drift_recovery.arn
+  handler          = "drift_recovery.lambda_handler"
+  source_code_hash = data.archive_file.drift_recovery.output_base64sha256
+  runtime          = "python3.13"
+  timeout          = 30
+  memory_size      = 256
+  description      = "Triggers API workflow when infrastructure drift is detected"
+
+  environment {
+    variables = {
+      GITHUB_REPO                 = local.github_repo_full
+      GITHUB_TOKEN_PARAMETER_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
+    }
   }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.drift_recovery.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-DriftRecovery"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "drift_recovery" {
+  name              = "/aws/lambda/${local.resource_prefix}-DriftRecovery"
+  retention_in_days = 30
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-DriftRecovery-logs"
+  })
+}
+
+resource "aws_lambda_permission" "drift_recovery_eventbridge" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.drift_recovery.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.config_compliance_change.arn
 }

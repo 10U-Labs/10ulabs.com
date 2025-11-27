@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
 
 TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
+EXCLUDE_TAGS = {}
 
 
 class TestCleanupInstancesReturnsDeletedCount:
@@ -8,7 +9,7 @@ class TestCleanupInstancesReturnsDeletedCount:
     def test_returns_zero_when_no_instances(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_instances.return_value = {'Reservations': []}
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 
@@ -22,7 +23,7 @@ class TestCleanupInstancesReturnsDeletedCount:
             }]
         }
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -34,7 +35,7 @@ class TestCleanupInstancesReturnsDeletedCount:
             ]
         }
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -46,7 +47,7 @@ class TestCleanupInstancesCallsTerminateInstances:
             'Reservations': [{'Instances': [{'InstanceId': 'i-123'}]}]
         }
 
-        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.terminate_instances.assert_called_once_with(InstanceIds=['i-123'])
 
@@ -60,7 +61,7 @@ class TestCleanupInstancesCallsTerminateInstances:
             }]
         }
 
-        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert mock_ec2_client.terminate_instances.call_count == 2
 
@@ -78,7 +79,7 @@ class TestCleanupInstancesCallsTerminateInstances:
             None
         ]
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 1
 
@@ -90,7 +91,7 @@ class TestCleanupInstancesDryRun:
             'Reservations': [{'Instances': [{'InstanceId': 'i-123'}]}]
         }
 
-        cleanup.cleanup_instances(mock_ec2_client, True, TAGS)
+        cleanup.cleanup_instances(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.terminate_instances.assert_not_called()
 
@@ -104,7 +105,7 @@ class TestCleanupInstancesDryRun:
             }]
         }
 
-        result = cleanup.cleanup_instances(mock_ec2_client, True, TAGS)
+        result = cleanup.cleanup_instances(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -114,7 +115,7 @@ class TestCleanupInstancesFiltersByTag:
     def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_instances.return_value = {'Reservations': []}
 
-        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.describe_instances.assert_called_once()
         call_args = mock_ec2_client.describe_instances.call_args
@@ -125,9 +126,78 @@ class TestCleanupInstancesFiltersByTag:
     def test_filters_by_instance_state(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_instances.return_value = {'Reservations': []}
 
-        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         call_args = mock_ec2_client.describe_instances.call_args
         filters = call_args[1]['Filters']
         state_filter = next(f for f in filters if f['Name'] == 'instance-state-name')
         assert state_filter['Values'] == ['running', 'stopped', 'stopping', 'pending']
+
+
+class TestCleanupInstancesExcludeTags:
+
+    def test_skips_instance_with_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {
+            'Reservations': [{
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+                }]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 0
+
+    def test_does_not_terminate_instance_with_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {
+            'Reservations': [{
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+                }]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS, exclude_tags)
+
+        mock_ec2_client.terminate_instances.assert_not_called()
+
+    def test_terminates_instance_without_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {
+            'Reservations': [{
+                'Instances': [{
+                    'InstanceId': 'i-123',
+                    'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+                }]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 1
+
+    def test_terminates_only_non_protected_instances(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {
+            'Reservations': [{
+                'Instances': [
+                    {
+                        'InstanceId': 'i-123',
+                        'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+                    },
+                    {
+                        'InstanceId': 'i-456',
+                        'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+                    }
+                ]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 1

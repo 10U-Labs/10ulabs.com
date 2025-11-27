@@ -12,9 +12,9 @@ resource "aws_iam_role" "ecs_task_role" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.task_family}-TaskRole"
-  }
+  })
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
@@ -31,9 +31,9 @@ resource "aws_iam_role" "ecs_execution_role" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.task_family}-ExecutionRole"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
@@ -91,9 +91,9 @@ resource "aws_iam_role" "ec2_runner_role" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "GitHubSelfHostedRunnerEC2Role"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "ec2_runner_ssm_policy" {
@@ -138,9 +138,9 @@ resource "aws_iam_instance_profile" "ec2_runner" {
   name = "GitHubSelfHostedRunnerInstanceProfile"
   role = aws_iam_role.ec2_runner_role.name
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "GitHubSelfHostedRunnerInstanceProfile"
-  }
+  })
 }
 
 resource "aws_iam_role" "lambda_health_handler" {
@@ -157,9 +157,9 @@ resource "aws_iam_role" "lambda_health_handler" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "HealthHandler-ServiceRole"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_health_handler_basic" {
@@ -181,9 +181,9 @@ resource "aws_iam_role" "lambda_catchall_handler" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "CatchAllHandler-ServiceRole"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_catchall_handler_basic" {
@@ -205,9 +205,9 @@ resource "aws_iam_role" "lambda_runners_handler" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.lambda_function_name}-ServiceRole"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_runners_handler_basic" {
@@ -315,9 +315,9 @@ resource "aws_iam_role" "lambda_v1_handler" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "V1ApiHandler-ServiceRole"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_v1_handler_basic" {
@@ -469,9 +469,9 @@ resource "aws_iam_role" "circuit_breaker_remediation" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRemediation-Role"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "circuit_breaker_remediation_basic" {
@@ -536,9 +536,9 @@ resource "aws_iam_role" "dlq_reprocessor" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-DLQReprocessor-Role"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "dlq_reprocessor_basic" {
@@ -605,9 +605,9 @@ resource "aws_iam_role" "circuit_breaker_recovery" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRecovery-Role"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "circuit_breaker_recovery_basic" {
@@ -652,6 +652,55 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
           "dynamodb:UpdateItem"
         ]
         Resource = [aws_dynamodb_table.circuit_breaker_state.arn]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "drift_recovery" {
+  name = "${local.resource_prefix}-DriftRecovery-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-DriftRecovery-Role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "drift_recovery_basic" {
+  role       = aws_iam_role.drift_recovery.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "drift_recovery_permissions" {
+  name = "DriftRecoveryPermissions"
+  role = aws_iam_role.drift_recovery.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sns:Publish"
+        ]
+        Resource = [aws_sns_topic.circuit_breaker_alerts.arn]
       }
     ]
   })

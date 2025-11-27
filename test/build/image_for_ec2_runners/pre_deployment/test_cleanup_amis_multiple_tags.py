@@ -31,13 +31,16 @@ class TestCleanupAmisMultipleTagsOrLogic:
         assert count == 2
 
 
+EXCLUDE_TAGS = {}
+
+
 class TestCleanupInstancesMultipleTagsOrLogic:
 
     def test_queries_for_each_tag(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_instances.return_value = {'Reservations': []}
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        cleanup.cleanup_instances(mock_ec2_client, False, tags)
+        cleanup.cleanup_instances(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert mock_ec2_client.describe_instances.call_count == 2
 
@@ -48,7 +51,7 @@ class TestCleanupInstancesMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_instances(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_instances(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 1
 
@@ -59,7 +62,7 @@ class TestCleanupInstancesMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_instances(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_instances(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 2
 
@@ -70,7 +73,7 @@ class TestCleanupSecurityGroupsMultipleTagsOrLogic:
         mock_ec2_client.describe_security_groups.return_value = {'SecurityGroups': []}
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        cleanup.cleanup_security_groups(mock_ec2_client, False, tags)
+        cleanup.cleanup_security_groups(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert mock_ec2_client.describe_security_groups.call_count == 2
 
@@ -81,7 +84,7 @@ class TestCleanupSecurityGroupsMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_security_groups(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_security_groups(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 1
 
@@ -92,7 +95,7 @@ class TestCleanupSecurityGroupsMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_security_groups(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_security_groups(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 2
 
@@ -103,7 +106,7 @@ class TestCleanupKeyPairsMultipleTagsOrLogic:
         mock_ec2_client.describe_key_pairs.return_value = {'KeyPairs': []}
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False, tags)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert mock_ec2_client.describe_key_pairs.call_count == 2
 
@@ -114,7 +117,7 @@ class TestCleanupKeyPairsMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_key_pairs(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_key_pairs(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 1
 
@@ -125,7 +128,7 @@ class TestCleanupKeyPairsMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_key_pairs(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_key_pairs(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 2
 
@@ -136,7 +139,7 @@ class TestCleanupLaunchTemplatesMultipleTagsOrLogic:
         mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False, tags)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert mock_ec2_client.describe_launch_templates.call_count == 2
 
@@ -147,7 +150,7 @@ class TestCleanupLaunchTemplatesMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_launch_templates(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_launch_templates(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 1
 
@@ -158,6 +161,6 @@ class TestCleanupLaunchTemplatesMultipleTagsOrLogic:
         ]
         tags = {'Purpose': 'test', 'Environment': 'dev'}
 
-        count = cleanup.cleanup_launch_templates(mock_ec2_client, False, tags)
+        count = cleanup.cleanup_launch_templates(mock_ec2_client, False, tags, EXCLUDE_TAGS)
 
         assert count == 2

@@ -2,9 +2,9 @@ resource "aws_s3_bucket" "docs" {
   bucket        = local.api_fqdn
   force_destroy = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.api_fqdn}-docs"
-  }
+  })
 }
 
 resource "aws_s3_bucket_versioning" "docs" {
@@ -119,9 +119,9 @@ resource "aws_wafv2_web_acl" "api" {
     sampled_requests_enabled   = true
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "ApiWafWebAcl"
-  }
+  })
 }
 
 resource "aws_cloudfront_cache_policy" "docs" {
@@ -285,9 +285,9 @@ resource "aws_cloudfront_distribution" "main" {
     }
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.api_fqdn}-distribution"
-  }
+  })
 
   depends_on = [aws_acm_certificate_validation.api]
 }
@@ -310,9 +310,9 @@ resource "aws_cloudwatch_log_group" "waf" {
   name              = "aws-waf-logs-api"
   retention_in_days = 30
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "aws-waf-logs-api"
-  }
+  })
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "api" {

@@ -133,7 +133,8 @@ def _make_ami_cleanup_params(cleanup_module, **overrides):
         'latest_snapshot_ids': set(),
         'dry_run': False,
         'cleanup_snapshots_enabled': True,
-        'tags': {'Purpose': 'GitHub self-hosted EC2 runner'}
+        'tags': {'Purpose': 'GitHub self-hosted EC2 runner'},
+        'exclude_tags': {}
     }
     params.update(overrides)
     return cleanup_module.AmiCleanupParams(**params)

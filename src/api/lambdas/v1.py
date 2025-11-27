@@ -16,6 +16,7 @@ _clients = {}
 _github_token_cache = {'value': None}
 _api_key_cache = {'value': None}
 _test_mode = {'enabled': False}
+_dependencies_validated = {'checked': False, 'valid': False, 'errors': []}
 
 
 def is_test_mode() -> bool:
@@ -69,6 +70,107 @@ def get_api_key() -> str:
     api_key = response['Parameter']['Value']
     _api_key_cache['value'] = api_key
     return api_key
+
+
+def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
+    if not security_group_ids:
+        return {'valid': True, 'missing': []}
+    try:
+        response = get_ec2_client().describe_security_groups(GroupIds=security_group_ids)
+        found_ids = {sg['GroupId'] for sg in response.get('SecurityGroups', [])}
+        missing = [sg_id for sg_id in security_group_ids if sg_id not in found_ids]
+        return {'valid': len(missing) == 0, 'missing': missing}
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'InvalidGroup.NotFound':
+            return {'valid': False, 'missing': security_group_ids, 'error': str(e)}
+        return {'valid': False, 'missing': [], 'error': str(e)}
+
+
+def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
+    if not subnet_ids:
+        return {'valid': True, 'missing': []}
+    try:
+        response = get_ec2_client().describe_subnets(SubnetIds=subnet_ids)
+        found_ids = {subnet['SubnetId'] for subnet in response.get('Subnets', [])}
+        missing = [subnet_id for subnet_id in subnet_ids if subnet_id not in found_ids]
+        return {'valid': len(missing) == 0, 'missing': missing}
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'InvalidSubnetID.NotFound':
+            return {'valid': False, 'missing': subnet_ids, 'error': str(e)}
+        return {'valid': False, 'missing': [], 'error': str(e)}
+
+
+def validate_vpc(vpc_id: str) -> Dict[str, Any]:
+    if not vpc_id:
+        return {'valid': False, 'error': 'VPC ID not configured'}
+    try:
+        response = get_ec2_client().describe_vpcs(VpcIds=[vpc_id])
+        found = len(response.get('Vpcs', [])) > 0
+        return {'valid': found, 'error': None if found else f'VPC {vpc_id} not found'}
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'InvalidVpcID.NotFound':
+            return {'valid': False, 'error': f'VPC {vpc_id} not found'}
+        return {'valid': False, 'error': str(e)}
+
+
+def validate_all_dependencies() -> Dict[str, Any]:
+    errors = []
+    security_groups_env = os.environ.get('SECURITY_GROUPS')
+    security_group_ids = security_groups_env.split(',') if security_groups_env else []
+    security_group_ids = [sg.strip() for sg in security_group_ids if sg.strip()]
+    sg_result = validate_security_groups(security_group_ids)
+    if not sg_result['valid']:
+        errors.append({'type': 'security_group', 'details': sg_result})
+
+    subnets_env = os.environ.get('SUBNETS')
+    subnet_ids = subnets_env.split(',') if subnets_env else []
+    subnet_ids = [s.strip() for s in subnet_ids if s.strip()]
+    subnet_result = validate_subnets(subnet_ids)
+    if not subnet_result['valid']:
+        errors.append({'type': 'subnet', 'details': subnet_result})
+
+    vpc_id = os.environ.get('VPC_ID')
+    vpc_result = validate_vpc(vpc_id)
+    if not vpc_result['valid']:
+        errors.append({'type': 'vpc', 'details': vpc_result})
+
+    all_valid = len(errors) == 0
+    return {
+        'valid': all_valid,
+        'errors': errors,
+        'checked_resources': {
+            'security_groups': security_group_ids,
+            'subnets': subnet_ids,
+            'vpc': vpc_id
+        }
+    }
+
+
+def ensure_dependencies_valid():
+    if _dependencies_validated['checked']:
+        if not _dependencies_validated['valid']:
+            raise RuntimeError(f"Infrastructure dependencies are invalid: {_dependencies_validated['errors']}")
+        return
+
+    result = validate_all_dependencies()
+    _dependencies_validated['checked'] = True
+    _dependencies_validated['valid'] = result['valid']
+    _dependencies_validated['errors'] = result['errors']
+
+    if not result['valid']:
+        logger.error("Infrastructure dependency validation failed: %s", result['errors'])
+        raise RuntimeError(f"Infrastructure dependencies are invalid: {result['errors']}")
+
+    logger.info("Infrastructure dependencies validated successfully")
+
+
+def reset_dependency_validation():
+    _dependencies_validated['checked'] = False
+    _dependencies_validated['valid'] = False
+    _dependencies_validated['errors'] = []
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -306,6 +408,12 @@ def trigger_image_creation() -> Dict[str, Any]:
 
 
 def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Dict[str, Any]:
+    try:
+        ensure_dependencies_valid()
+    except RuntimeError as e:
+        logger.error("Dependency validation failed: %s", e)
+        return {'success': False, 'job_id': job_id, 'error': str(e)}
+
     cluster = os.environ['ECS_CLUSTER']
     task_definition = os.environ['TASK_DEFINITION']
     subnets = os.environ['SUBNETS'].split(',')
@@ -563,6 +671,12 @@ def delete_launch_template(template_id: str):
 
 
 def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
+    try:
+        ensure_dependencies_valid()
+    except RuntimeError as e:
+        logger.error("Dependency validation failed: %s", e)
+        return {'success': False, 'job_id': job_id, 'error': str(e)}
+
     ami_id = get_latest_ami()
     github_token = get_github_token()
     config = get_ec2_config()
@@ -1002,8 +1116,27 @@ def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
+    result = validate_all_dependencies()
+    if result['valid']:
+        response = json_response(200, {
+            'status': 'healthy',
+            'message': 'All infrastructure dependencies are valid',
+            'checked_resources': result['checked_resources']
+        })
+    else:
+        response = json_response(503, {
+            'status': 'unhealthy',
+            'message': 'Infrastructure dependencies are invalid',
+            'errors': result['errors'],
+            'checked_resources': result['checked_resources']
+        })
+    return response
+
+
 ROUTE_MAP = {
     ('/v1/echo', 'POST'): handle_echo_post,
+    ('/v1/health/dependencies', 'GET'): handle_dependencies_health,
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,

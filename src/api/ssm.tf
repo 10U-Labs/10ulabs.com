@@ -8,9 +8,9 @@ resource "aws_ssm_parameter" "latest_ami" {
     ignore_changes = [value]
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.ssm_parameter_name_for_latest_ami
-  }
+  })
 }
 
 resource "aws_ssm_parameter" "webhook_secret" {
@@ -20,9 +20,9 @@ resource "aws_ssm_parameter" "webhook_secret" {
   description = "GitHub webhook secret for signature verification"
   tier        = "Standard"
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.ssm_parameter_name_for_webhook_secret
-  }
+  })
 }
 
 resource "aws_ssm_parameter" "api_key" {
@@ -31,7 +31,7 @@ resource "aws_ssm_parameter" "api_key" {
   value = random_password.api_key.result
   tier  = "Standard"
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.ssm_parameter_name_for_api_key
-  }
+  })
 }

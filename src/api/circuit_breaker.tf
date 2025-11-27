@@ -1,9 +1,9 @@
 resource "aws_sns_topic" "circuit_breaker_alerts" {
   name = "${local.resource_prefix}-circuit-breaker-alerts"
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-circuit-breaker-alerts"
-  }
+  })
 }
 
 resource "aws_sns_topic_subscription" "circuit_breaker_email" {
@@ -27,9 +27,9 @@ resource "aws_cloudwatch_metric_alarm" "circuit_breaker_open" {
   alarm_description = "Circuit breaker has entered OPEN state - webhook processing is failing"
   alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-circuit-breaker-open"
-  }
+  })
 }
 
 resource "aws_cloudwatch_metric_alarm" "circuit_breaker_high_failures" {
@@ -47,9 +47,9 @@ resource "aws_cloudwatch_metric_alarm" "circuit_breaker_high_failures" {
   alarm_description = "Circuit breaker failure rate is elevated"
   alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-circuit-breaker-high-failures"
-  }
+  })
 }
 
 resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
@@ -96,9 +96,9 @@ resource "aws_cloudwatch_metric_alarm" "webhook_handler_errors" {
   alarm_description   = "Webhook handler Lambda error rate exceeds 5%"
   alarm_actions       = [aws_sns_topic.circuit_breaker_alerts.arn]
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-webhook-handler-errors"
-  }
+  })
 }
 
 resource "aws_cloudwatch_metric_alarm" "job_queue_dlq_messages" {
@@ -120,9 +120,9 @@ resource "aws_cloudwatch_metric_alarm" "job_queue_dlq_messages" {
   alarm_description = "Job queue DLQ has accumulated messages"
   alarm_actions     = [aws_sns_topic.circuit_breaker_alerts.arn]
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-job-queue-dlq-messages"
-  }
+  })
 }
 
 resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
@@ -143,9 +143,9 @@ resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
     }
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-circuit-breaker-remediation"
-  }
+  })
 }
 
 resource "aws_cloudwatch_event_target" "circuit_breaker_remediation" {
@@ -167,9 +167,9 @@ resource "aws_cloudwatch_event_rule" "dlq_reprocessor" {
   description         = "Triggers DLQ reprocessor every 15 minutes"
   schedule_expression = "rate(15 minutes)"
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-dlq-reprocessor"
-  }
+  })
 }
 
 resource "aws_cloudwatch_event_target" "dlq_reprocessor" {
@@ -191,9 +191,9 @@ resource "aws_cloudwatch_event_rule" "circuit_breaker_recovery" {
   description         = "Attempts automatic recovery of circuit breaker every 5 minutes"
   schedule_expression = "rate(5 minutes)"
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-circuit-breaker-recovery"
-  }
+  })
 }
 
 resource "aws_cloudwatch_event_target" "circuit_breaker_recovery" {

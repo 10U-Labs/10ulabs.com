@@ -12,9 +12,9 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
   name              = var.api_gateway_log_group_name
   retention_in_days = 30
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.api_gateway_name}-logs"
-  }
+  })
 }
 
 resource "aws_api_gateway_rest_api" "main" {
@@ -26,9 +26,9 @@ resource "aws_api_gateway_rest_api" "main" {
     types = ["REGIONAL"]
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.api_gateway_name
-  }
+  })
 }
 
 resource "aws_api_gateway_deployment" "main" {
@@ -59,9 +59,9 @@ resource "aws_api_gateway_stage" "prod" {
 
   xray_tracing_enabled = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "prod"
-  }
+  })
 
   depends_on = [aws_api_gateway_account.main]
 }
@@ -98,9 +98,9 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
     ]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.stack_name}-api-gateway-cloudwatch"
-  }
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {

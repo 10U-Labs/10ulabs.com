@@ -11,10 +11,9 @@ resource "aws_vpc" "runner_vpc" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = {
-    Name    = var.vpc_name
-    Purpose = "10ulabs-api-and-runners"
-  }
+  tags = merge(local.common_tags, {
+    Name = var.vpc_name
+  })
 }
 
 resource "aws_subnet" "public" {
@@ -25,17 +24,17 @@ resource "aws_subnet" "public" {
   availability_zone       = local.azs[count.index]
   map_public_ip_on_launch = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.vpc_name}-public-${count.index + 1}"
-  }
+  })
 }
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.runner_vpc.id
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.vpc_name}-igw"
-  }
+  })
 }
 
 resource "aws_route_table" "public" {
@@ -46,9 +45,9 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.vpc_name}-public-rt"
-  }
+  })
 }
 
 resource "aws_route_table_association" "public" {
@@ -70,7 +69,7 @@ resource "aws_security_group" "runner_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "self-hosted-runner-sg"
-  }
+  })
 }

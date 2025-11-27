@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
 
 TAGS = {'Purpose': 'test'}
+EXCLUDE_TAGS = {}
 
 
 class TestCleanupAmisDescribeError:
@@ -34,7 +35,7 @@ class TestCleanupResourcesDescribeErrors:
             'DescribeInstances'
         )
 
-        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_instances(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 
@@ -44,7 +45,7 @@ class TestCleanupResourcesDescribeErrors:
             'DescribeSecurityGroups'
         )
 
-        result = cleanup.cleanup_security_groups(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_security_groups(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 
@@ -54,7 +55,7 @@ class TestCleanupResourcesDescribeErrors:
             'DescribeKeyPairs'
         )
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 
@@ -64,7 +65,7 @@ class TestCleanupResourcesDescribeErrors:
             'DescribeLaunchTemplates'
         )
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 

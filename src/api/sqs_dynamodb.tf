@@ -3,18 +3,18 @@ resource "aws_sqs_queue" "webhook_dlq" {
   message_retention_seconds  = 1209600
   visibility_timeout_seconds = 300
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.webhook_dlq_name
-  }
+  })
 }
 
 resource "aws_sqs_queue" "job_queue_dlq" {
   name                      = var.job_queue_dlq_name
   message_retention_seconds = 1209600
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.job_queue_dlq_name
-  }
+  })
 }
 
 resource "aws_sqs_queue" "job_queue" {
@@ -26,9 +26,9 @@ resource "aws_sqs_queue" "job_queue" {
     maxReceiveCount     = 3
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.job_queue_name
-  }
+  })
 }
 
 resource "aws_dynamodb_table" "idempotency" {
@@ -50,9 +50,9 @@ resource "aws_dynamodb_table" "idempotency" {
     enabled = true
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.idempotency_table_name
-  }
+  })
 }
 
 resource "aws_dynamodb_table" "incidents" {
@@ -74,9 +74,9 @@ resource "aws_dynamodb_table" "incidents" {
     enabled = true
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-incidents"
-  }
+  })
 }
 
 resource "aws_dynamodb_table" "circuit_breaker_state" {
@@ -100,7 +100,7 @@ resource "aws_dynamodb_table" "circuit_breaker_state" {
     enabled = true
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-circuit-breaker-state"
-  }
+  })
 }

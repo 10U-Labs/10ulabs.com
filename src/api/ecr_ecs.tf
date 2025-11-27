@@ -12,9 +12,9 @@ resource "aws_ecr_repository" "runner" {
 
   force_delete = true
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.ecr_repository_name
-  }
+  })
 }
 
 resource "aws_ecr_lifecycle_policy" "runner" {
@@ -74,9 +74,9 @@ resource "aws_ecs_cluster" "runner" {
     value = "enabled"
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.cluster_name
-  }
+  })
 }
 
 resource "aws_ecs_cluster_capacity_providers" "runner" {
@@ -122,16 +122,16 @@ resource "aws_ecs_task_definition" "runner" {
     environment = []
   }])
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = var.task_family
-  }
+  })
 }
 
 resource "aws_cloudwatch_log_group" "runner" {
   name              = "/ecs/${var.task_family}"
   retention_in_days = 7
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${var.task_family}-logs"
-  }
+  })
 }

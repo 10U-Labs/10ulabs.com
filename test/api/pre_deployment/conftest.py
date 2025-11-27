@@ -116,6 +116,8 @@ def v1_handler(config: Dict[str, str]) -> Any:
             setattr(module, '_clients', {})
         if hasattr(module, '_github_token_cache'):
             setattr(module, '_github_token_cache', {'value': None})
+        if hasattr(module, '_dependencies_validated'):
+            setattr(module, '_dependencies_validated', {'checked': True, 'valid': True, 'errors': []})
         yield module
 
 
@@ -171,6 +173,21 @@ def circuit_breaker_recovery(config):
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("circuit_breaker_recovery.py", "circuit_breaker_recovery")
+        yield module
+
+
+@pytest.fixture
+def drift_recovery(config):
+    env_vars = {
+        'AWS_REGION': config['aws_region'],
+        'GITHUB_REPO': config['github_repo'],
+        'GITHUB_TOKEN_PARAMETER_NAME': config['ssm_parameter_name_for_github_pat'],
+        'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123456789012:test-topic'
+    }
+    with patch.dict('os.environ', env_vars):
+        module = load_lambda_module("drift_recovery.py", "drift_recovery")
+        if hasattr(module, '_clients'):
+            setattr(module, '_clients', {})
         yield module
 
 

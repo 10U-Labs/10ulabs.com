@@ -19,9 +19,9 @@ resource "aws_kinesis_firehose_delivery_stream" "cloudwatch_logs" {
     }
   }
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CloudWatchLogs"
-  }
+  })
 }
 
 resource "aws_iam_role" "firehose_cloudwatch_logs" {
@@ -38,9 +38,9 @@ resource "aws_iam_role" "firehose_cloudwatch_logs" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-FirehoseCloudWatchLogs"
-  }
+  })
 }
 
 resource "aws_iam_role_policy" "firehose_s3_access" {
@@ -88,9 +88,9 @@ resource "aws_iam_role" "cloudwatch_logs_firehose" {
     }]
   })
 
-  tags = {
+  tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CloudWatchLogsFirehose"
-  }
+  })
 }
 
 resource "aws_iam_role_policy" "cloudwatch_logs_firehose_access" {

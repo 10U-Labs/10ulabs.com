@@ -133,6 +133,80 @@ paths:
         uri: ${V1HandlerArn}
         httpMethod: POST
         type: aws_proxy
+  /v1/health/dependencies:
+    get:
+      summary: Infrastructure Dependencies Health Check
+      description: Validates that all infrastructure dependencies (security groups, subnets, VPC) exist and are accessible
+      operationId: dependenciesHealth
+      tags:
+        - Health
+      security:
+        - api_key: []
+      responses:
+        '200':
+          description: All infrastructure dependencies are valid
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - message
+                  - checked_resources
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  message:
+                    type: string
+                    example: All infrastructure dependencies are valid
+                  checked_resources:
+                    type: object
+                    properties:
+                      security_groups:
+                        type: array
+                        items:
+                          type: string
+                      subnets:
+                        type: array
+                        items:
+                          type: string
+                      vpc:
+                        type: string
+        '503':
+          description: One or more infrastructure dependencies are invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - message
+                  - errors
+                  - checked_resources
+                properties:
+                  status:
+                    type: string
+                    example: unhealthy
+                  message:
+                    type: string
+                    example: Infrastructure dependencies are invalid
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          example: security_group
+                        details:
+                          type: object
+                  checked_resources:
+                    type: object
+      x-amazon-apigateway-integration:
+        uri: ${V1HandlerArn}
+        httpMethod: POST
+        type: aws_proxy
   /v1/runners:
     post:
       summary: GitHub Webhook for Runner Requests

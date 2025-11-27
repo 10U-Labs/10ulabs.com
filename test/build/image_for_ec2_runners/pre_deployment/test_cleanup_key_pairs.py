@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
 
 TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
+EXCLUDE_TAGS = {}
 
 
 class TestCleanupKeyPairsReturnsDeletedCount:
@@ -8,7 +9,7 @@ class TestCleanupKeyPairsReturnsDeletedCount:
     def test_returns_zero_when_no_key_pairs(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_key_pairs.return_value = {'KeyPairs': []}
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 
@@ -20,7 +21,7 @@ class TestCleanupKeyPairsReturnsDeletedCount:
             ]
         }
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -32,7 +33,7 @@ class TestCleanupKeyPairsCallsDeleteKeyPair:
             'KeyPairs': [{'KeyName': 'ami-builder-abc123'}]
         }
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_key_pair.assert_called_once_with(KeyName='ami-builder-abc123')
 
@@ -44,7 +45,7 @@ class TestCleanupKeyPairsCallsDeleteKeyPair:
             ]
         }
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert mock_ec2_client.delete_key_pair.call_count == 2
 
@@ -56,7 +57,7 @@ class TestCleanupKeyPairsDryRun:
             'KeyPairs': [{'KeyName': 'ami-builder-abc123'}]
         }
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS)
+        cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_key_pair.assert_not_called()
 
@@ -68,7 +69,7 @@ class TestCleanupKeyPairsDryRun:
             ]
         }
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -84,7 +85,7 @@ class TestCleanupKeyPairsDryRun:
             None
         ]
 
-        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 1
 
@@ -94,7 +95,7 @@ class TestCleanupKeyPairsFiltersByTag:
     def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_key_pairs.return_value = {'KeyPairs': []}
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.describe_key_pairs.assert_called_once()
         call_args = mock_ec2_client.describe_key_pairs.call_args
@@ -106,7 +107,68 @@ class TestCleanupKeyPairsFiltersByTag:
     def test_uses_filters_keyword_argument(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_key_pairs.return_value = {'KeyPairs': []}
 
-        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         call_args = mock_ec2_client.describe_key_pairs.call_args
         assert 'Filters' in call_args[1]
+
+
+class TestCleanupKeyPairsExcludeTags:
+
+    def test_skips_key_pair_with_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_key_pairs.return_value = {
+            'KeyPairs': [{
+                'KeyName': 'protected-key',
+                'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 0
+
+    def test_does_not_delete_key_pair_with_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_key_pairs.return_value = {
+            'KeyPairs': [{
+                'KeyName': 'protected-key',
+                'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, exclude_tags)
+
+        mock_ec2_client.delete_key_pair.assert_not_called()
+
+    def test_deletes_key_pair_without_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_key_pairs.return_value = {
+            'KeyPairs': [{
+                'KeyName': 'ephemeral-key',
+                'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 1
+
+    def test_deletes_only_non_protected_key_pairs(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_key_pairs.return_value = {
+            'KeyPairs': [
+                {
+                    'KeyName': 'protected-key',
+                    'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+                },
+                {
+                    'KeyName': 'ephemeral-key',
+                    'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+                }
+            ]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_key_pairs(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 1

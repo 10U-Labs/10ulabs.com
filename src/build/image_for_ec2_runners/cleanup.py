@@ -15,6 +15,17 @@ class AmiCleanupParams:
     dry_run: bool
     cleanup_snapshots_enabled: bool
     tags: dict
+    exclude_tags: dict
+
+
+def has_excluded_tags(resource_tags, exclude_tags):
+    if not exclude_tags:
+        return False
+    resource_tag_dict = {tag['Key']: tag['Value'] for tag in (resource_tags or [])}
+    for key, value in exclude_tags.items():
+        if resource_tag_dict.get(key) == value:
+            return True
+    return False
 
 
 def get_latest_ami_id(ssm_client, ssm_parameter_name):
@@ -78,6 +89,9 @@ def cleanup_amis(ec2_client, params: AmiCleanupParams):
         image_id = image['ImageId']
         if image_id == params.latest_ami_id:
             print(f"Skipping latest AMI: {image_id}")
+            continue
+        if has_excluded_tags(image.get('Tags', []), params.exclude_tags):
+            print(f"Skipping protected AMI: {image_id} ({image.get('Name', 'N/A')})")
             continue
         ami_snapshot_ids = get_snapshot_ids_for_ami(image)
         if params.cleanup_snapshots_enabled:
@@ -152,7 +166,7 @@ def find_orphaned_snapshots(ec2_client, latest_snapshot_ids):
     return orphaned_snapshots
 
 
-def cleanup_security_groups(ec2_client, dry_run, tags):
+def cleanup_security_groups(ec2_client, dry_run, tags, exclude_tags):
     deleted_count = 0
     sgs_by_id = {}
     for tag_key, tag_value in tags.items():
@@ -169,6 +183,9 @@ def cleanup_security_groups(ec2_client, dry_run, tags):
     for sg in sgs_by_id.values():
         sg_id = sg['GroupId']
         sg_name = sg['GroupName']
+        if has_excluded_tags(sg.get('Tags', []), exclude_tags):
+            print(f"Skipping protected security group: {sg_id} ({sg_name})")
+            continue
         try:
             if dry_run:
                 print(f"[DRY RUN] Would delete security group: {sg_id} ({sg_name})")
@@ -184,7 +201,7 @@ def cleanup_security_groups(ec2_client, dry_run, tags):
     return deleted_count
 
 
-def cleanup_key_pairs(ec2_client, dry_run, tags):
+def cleanup_key_pairs(ec2_client, dry_run, tags, exclude_tags):
     deleted_count = 0
     kps_by_name = {}
     for tag_key, tag_value in tags.items():
@@ -200,6 +217,9 @@ def cleanup_key_pairs(ec2_client, dry_run, tags):
             print(f"Error listing key pairs: {e}")
     for key_pair in kps_by_name.values():
         key_name = key_pair['KeyName']
+        if has_excluded_tags(key_pair.get('Tags', []), exclude_tags):
+            print(f"Skipping protected key pair: {key_name}")
+            continue
         try:
             if dry_run:
                 print(f"[DRY RUN] Would delete key pair: {key_name}")
@@ -212,7 +232,7 @@ def cleanup_key_pairs(ec2_client, dry_run, tags):
     return deleted_count
 
 
-def cleanup_instances(ec2_client, dry_run, tags):
+def cleanup_instances(ec2_client, dry_run, tags, exclude_tags):
     deleted_count = 0
     instances_by_id = {}
     for tag_key, tag_value in tags.items():
@@ -228,7 +248,10 @@ def cleanup_instances(ec2_client, dry_run, tags):
                     instances_by_id[instance['InstanceId']] = instance
         except ClientError as e:
             print(f"Error listing instances: {e}")
-    for instance_id in instances_by_id:
+    for instance_id, instance in instances_by_id.items():
+        if has_excluded_tags(instance.get('Tags', []), exclude_tags):
+            print(f"Skipping protected instance: {instance_id}")
+            continue
         try:
             if dry_run:
                 print(f"[DRY RUN] Would terminate instance: {instance_id}")
@@ -241,7 +264,7 @@ def cleanup_instances(ec2_client, dry_run, tags):
     return deleted_count
 
 
-def cleanup_launch_templates(ec2_client, dry_run, tags):
+def cleanup_launch_templates(ec2_client, dry_run, tags, exclude_tags):
     deleted_count = 0
     lts_by_id = {}
     for tag_key, tag_value in tags.items():
@@ -258,6 +281,9 @@ def cleanup_launch_templates(ec2_client, dry_run, tags):
     for lt in lts_by_id.values():
         lt_id = lt['LaunchTemplateId']
         lt_name = lt['LaunchTemplateName']
+        if has_excluded_tags(lt.get('Tags', []), exclude_tags):
+            print(f"Skipping protected launch template: {lt_id} ({lt_name})")
+            continue
         try:
             if dry_run:
                 print(f"[DRY RUN] Would delete launch template: {lt_id} ({lt_name})")
@@ -285,13 +311,15 @@ def load_config(config_path):
         return yaml.safe_load(f)
 
 
-def print_header(args, resource_types_set, tags):
+def print_header(args, resource_types_set, tags, exclude_tags):
     print("=" * 80)
     print("EC2 RUNNER IMAGE CLEANUP")
     print("=" * 80)
     print(f"Region: {args.region}")
     print(f"SSM Parameter: {args.ssm_parameter_name}")
     print(f"Tag Filters: {', '.join(f'{k}={v}' for k, v in tags.items())}")
+    if exclude_tags:
+        print(f"Excluded Tags: {', '.join(f'{k}={v}' for k, v in exclude_tags.items())}")
     print(f"Dry Run: {args.dry_run}")
     print(f"Resource Types: {', '.join(sorted(resource_types_set))}")
     print()
@@ -340,13 +368,15 @@ def handle_ami_cleanup(args):
         print("Error: No tags found in config file or --tag")
         return 1
 
+    exclude_tags = parse_tags(args.exclude_tag)
+
     resource_types = args.resource_types.lower()
     if resource_types == 'all':
         resource_types_set = {'amis', 'snapshots', 'instances', 'security-groups', 'key-pairs', 'launch-templates'}
     else:
         resource_types_set = set(rt.strip() for rt in resource_types.split(','))
 
-    print_header(args, resource_types_set, tags)
+    print_header(args, resource_types_set, tags, exclude_tags)
 
     latest_ami_id = get_latest_ami_id(ssm_client, args.ssm_parameter_name)
     latest_snapshot_ids = get_latest_snapshot_ids(ec2_client, latest_ami_id)
@@ -364,7 +394,8 @@ def handle_ami_cleanup(args):
             latest_snapshot_ids=latest_snapshot_ids,
             dry_run=args.dry_run,
             cleanup_snapshots_enabled='snapshots' in resource_types_set,
-            tags=tags
+            tags=tags,
+            exclude_tags=exclude_tags
         )
         ami_count, snapshots_to_delete = cleanup_amis(ec2_client, ami_params)
         print(f"Amis cleaned: {ami_count}")
@@ -379,16 +410,16 @@ def handle_ami_cleanup(args):
         total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, all_snapshots_to_delete, args.dry_run))
 
     if 'instances' in resource_types_set:
-        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run, tags))
+        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run, tags, exclude_tags))
 
     if 'launch-templates' in resource_types_set:
-        total_deleted += run_cleanup('LAUNCH TEMPLATES', lambda: cleanup_launch_templates(ec2_client, args.dry_run, tags))
+        total_deleted += run_cleanup('LAUNCH TEMPLATES', lambda: cleanup_launch_templates(ec2_client, args.dry_run, tags, exclude_tags))
 
     if 'security-groups' in resource_types_set:
-        total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run, tags))
+        total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run, tags, exclude_tags))
 
     if 'key-pairs' in resource_types_set:
-        total_deleted += run_cleanup('KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run, tags))
+        total_deleted += run_cleanup('KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run, tags, exclude_tags))
 
     print_summary(total_deleted, args.dry_run)
     return 0
@@ -428,6 +459,12 @@ def main():
         action='append',
         metavar='KEY=VALUE',
         help='Additional tag filter (can be specified multiple times). Resources matching ANY tag will be deleted.'
+    )
+    parser.add_argument(
+        '--exclude-tag',
+        action='append',
+        metavar='KEY=VALUE',
+        help='Exclude resources with this tag (can be specified multiple times). Resources with ANY excluded tag will be skipped.'
     )
 
     args = parser.parse_args()

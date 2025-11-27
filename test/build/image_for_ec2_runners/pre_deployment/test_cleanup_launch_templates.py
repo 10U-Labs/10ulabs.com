@@ -1,6 +1,7 @@
 from botocore.exceptions import ClientError
 
 TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
+EXCLUDE_TAGS = {}
 
 
 class TestCleanupLaunchTemplatesReturnsDeletedCount:
@@ -8,7 +9,7 @@ class TestCleanupLaunchTemplatesReturnsDeletedCount:
     def test_returns_zero_when_no_launch_templates(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 0
 
@@ -20,7 +21,7 @@ class TestCleanupLaunchTemplatesReturnsDeletedCount:
             ]
         }
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -34,7 +35,7 @@ class TestCleanupLaunchTemplatesCallsDeleteLaunchTemplate:
             ]
         }
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_launch_template.assert_called_once_with(LaunchTemplateId='lt-123')
 
@@ -46,7 +47,7 @@ class TestCleanupLaunchTemplatesCallsDeleteLaunchTemplate:
             ]
         }
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert mock_ec2_client.delete_launch_template.call_count == 2
 
@@ -60,7 +61,7 @@ class TestCleanupLaunchTemplatesDryRun:
             ]
         }
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS)
+        cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.delete_launch_template.assert_not_called()
 
@@ -72,7 +73,7 @@ class TestCleanupLaunchTemplatesDryRun:
             ]
         }
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, True, TAGS, EXCLUDE_TAGS)
 
         assert result == 2
 
@@ -88,7 +89,7 @@ class TestCleanupLaunchTemplatesDryRun:
             None
         ]
 
-        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         assert result == 1
 
@@ -98,7 +99,7 @@ class TestCleanupLaunchTemplatesFiltersByTag:
     def test_filters_by_tag_key_and_value(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         mock_ec2_client.describe_launch_templates.assert_called_once()
         call_args = mock_ec2_client.describe_launch_templates.call_args
@@ -110,7 +111,73 @@ class TestCleanupLaunchTemplatesFiltersByTag:
     def test_uses_filters_keyword_argument(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
 
-        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, EXCLUDE_TAGS)
 
         call_args = mock_ec2_client.describe_launch_templates.call_args
         assert 'Filters' in call_args[1]
+
+
+class TestCleanupLaunchTemplatesExcludeTags:
+
+    def test_skips_launch_template_with_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_launch_templates.return_value = {
+            'LaunchTemplates': [{
+                'LaunchTemplateId': 'lt-123',
+                'LaunchTemplateName': 'protected-lt',
+                'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 0
+
+    def test_does_not_delete_launch_template_with_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_launch_templates.return_value = {
+            'LaunchTemplates': [{
+                'LaunchTemplateId': 'lt-123',
+                'LaunchTemplateName': 'protected-lt',
+                'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, exclude_tags)
+
+        mock_ec2_client.delete_launch_template.assert_not_called()
+
+    def test_deletes_launch_template_without_excluded_tag(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_launch_templates.return_value = {
+            'LaunchTemplates': [{
+                'LaunchTemplateId': 'lt-123',
+                'LaunchTemplateName': 'ephemeral-lt',
+                'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 1
+
+    def test_deletes_only_non_protected_launch_templates(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_launch_templates.return_value = {
+            'LaunchTemplates': [
+                {
+                    'LaunchTemplateId': 'lt-123',
+                    'LaunchTemplateName': 'protected-lt',
+                    'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+                },
+                {
+                    'LaunchTemplateId': 'lt-456',
+                    'LaunchTemplateName': 'ephemeral-lt',
+                    'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+                }
+            ]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        result = cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS, exclude_tags)
+
+        assert result == 1

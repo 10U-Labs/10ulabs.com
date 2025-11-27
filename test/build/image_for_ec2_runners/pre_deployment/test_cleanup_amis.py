@@ -144,3 +144,74 @@ class TestCleanupAmisFiltersByTag:
         filters = call_args[1]['Filters']
         state_filter = next(f for f in filters if f['Name'] == 'state')
         assert state_filter['Values'] == ['available', 'pending', 'failed']
+
+
+class TestCleanupAmisExcludeTags:
+
+    def test_skips_ami_with_excluded_tag(self, cleanup, mock_ec2_client, make_ami_cleanup_params):
+        mock_ec2_client.describe_images.return_value = {
+            'Images': [{
+                'ImageId': 'ami-123',
+                'Name': 'protected-ami',
+                'BlockDeviceMappings': [],
+                'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_ami_cleanup_params(cleanup, exclude_tags=exclude_tags))
+
+        assert count == 0
+
+    def test_does_not_deregister_ami_with_excluded_tag(self, cleanup, mock_ec2_client, make_ami_cleanup_params):
+        mock_ec2_client.describe_images.return_value = {
+            'Images': [{
+                'ImageId': 'ami-123',
+                'Name': 'protected-ami',
+                'BlockDeviceMappings': [],
+                'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        cleanup.cleanup_amis(mock_ec2_client, make_ami_cleanup_params(cleanup, exclude_tags=exclude_tags))
+
+        mock_ec2_client.deregister_image.assert_not_called()
+
+    def test_deregisters_ami_without_excluded_tag(self, cleanup, mock_ec2_client, make_ami_cleanup_params):
+        mock_ec2_client.describe_images.return_value = {
+            'Images': [{
+                'ImageId': 'ami-123',
+                'Name': 'ephemeral-ami',
+                'BlockDeviceMappings': [],
+                'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+            }]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_ami_cleanup_params(cleanup, exclude_tags=exclude_tags))
+
+        assert count == 1
+
+    def test_deregisters_only_non_protected_amis(self, cleanup, mock_ec2_client, make_ami_cleanup_params):
+        mock_ec2_client.describe_images.return_value = {
+            'Images': [
+                {
+                    'ImageId': 'ami-123',
+                    'Name': 'protected-ami',
+                    'BlockDeviceMappings': [],
+                    'Tags': [{'Key': 'ManagedBy', 'Value': 'terraform'}]
+                },
+                {
+                    'ImageId': 'ami-456',
+                    'Name': 'ephemeral-ami',
+                    'BlockDeviceMappings': [],
+                    'Tags': [{'Key': 'Purpose', 'Value': 'runner'}]
+                }
+            ]
+        }
+        exclude_tags = {'ManagedBy': 'terraform'}
+
+        count, _ = cleanup.cleanup_amis(mock_ec2_client, make_ami_cleanup_params(cleanup, exclude_tags=exclude_tags))
+
+        assert count == 1
