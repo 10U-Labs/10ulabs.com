@@ -563,6 +563,153 @@ class TestRunSshCommandOutput:
         assert captured.out == "line1\nline2\nline3\n"
 
 
+class TestWaitForInstanceRunningSuccess:
+
+    def test_returns_when_state_is_running(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {
+            "Reservations": [{"Instances": [{"State": {"Name": "running"}}]}]
+        }
+        build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+        assert mock_ec2.describe_instances.call_count == 1
+
+    def test_polls_until_running(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = [
+            {"Reservations": [{"Instances": [{"State": {"Name": "pending"}}]}]},
+            {"Reservations": [{"Instances": [{"State": {"Name": "running"}}]}]},
+        ]
+        with patch.object(build_ami_module.time, 'sleep'):
+            build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+        assert mock_ec2.describe_instances.call_count == 2
+
+    def test_queries_correct_instance_id(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {
+            "Reservations": [{"Instances": [{"State": {"Name": "running"}}]}]
+        }
+        build_ami_module.wait_for_instance_running(mock_ec2, "i-test456")
+        assert mock_ec2.describe_instances.call_args[1]["InstanceIds"] == ["i-test456"]
+
+
+class TestWaitForInstanceRunningFailure:
+
+    def test_raises_after_max_attempts(self, build_ami_module, raise_runtime_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {
+            "Reservations": [{"Instances": [{"State": {"Name": "pending"}}]}]
+        }
+        with patch.object(build_ami_module.time, 'sleep'):
+            with raise_runtime_error:
+                build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+
+    def test_raises_when_stuck_in_stopped_state(self, build_ami_module, raise_runtime_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {
+            "Reservations": [{"Instances": [{"State": {"Name": "stopped"}}]}]
+        }
+        with patch.object(build_ami_module.time, 'sleep'):
+            with raise_runtime_error:
+                build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+
+
+class TestWaitForStatusChecksSuccess:
+
+    def test_returns_when_both_statuses_ok(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instance_status.return_value = {
+            "InstanceStatuses": [{
+                "InstanceStatus": {"Status": "ok"},
+                "SystemStatus": {"Status": "ok"}
+            }]
+        }
+        build_ami_module.wait_for_status_checks(mock_ec2, "i-12345")
+        assert mock_ec2.describe_instance_status.call_count == 1
+
+    def test_polls_until_status_ok(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instance_status.side_effect = [
+            {"InstanceStatuses": [{"InstanceStatus": {"Status": "initializing"}, "SystemStatus": {"Status": "initializing"}}]},
+            {"InstanceStatuses": [{"InstanceStatus": {"Status": "ok"}, "SystemStatus": {"Status": "ok"}}]},
+        ]
+        with patch.object(build_ami_module.time, 'sleep'):
+            build_ami_module.wait_for_status_checks(mock_ec2, "i-12345")
+        assert mock_ec2.describe_instance_status.call_count == 2
+
+
+class TestWaitForStatusChecksFailure:
+
+    def test_raises_after_max_attempts(self, build_ami_module, raise_runtime_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instance_status.return_value = {
+            "InstanceStatuses": [{
+                "InstanceStatus": {"Status": "initializing"},
+                "SystemStatus": {"Status": "initializing"}
+            }]
+        }
+        with patch.object(build_ami_module.time, 'sleep'):
+            with raise_runtime_error:
+                build_ami_module.wait_for_status_checks(mock_ec2, "i-12345")
+
+    def test_raises_when_instance_status_impaired(self, build_ami_module, raise_runtime_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instance_status.return_value = {
+            "InstanceStatuses": [{
+                "InstanceStatus": {"Status": "impaired"},
+                "SystemStatus": {"Status": "ok"}
+            }]
+        }
+        with patch.object(build_ami_module.time, 'sleep'):
+            with raise_runtime_error:
+                build_ami_module.wait_for_status_checks(mock_ec2, "i-12345")
+
+
+class TestGetInstancePublicIp:
+
+    def test_returns_public_ip(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {
+            "Reservations": [{"Instances": [{"PublicIpAddress": "1.2.3.4"}]}]
+        }
+        result = build_ami_module.get_instance_public_ip(mock_ec2, "i-12345")
+        assert result == "1.2.3.4"
+
+    def test_queries_correct_instance_id(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {
+            "Reservations": [{"Instances": [{"PublicIpAddress": "5.6.7.8"}]}]
+        }
+        build_ami_module.get_instance_public_ip(mock_ec2, "i-test123")
+        assert mock_ec2.describe_instances.call_args[1]["InstanceIds"] == ["i-test123"]
+
+
+class TestWaitForInstanceIntegration:
+
+    def test_calls_wait_for_instance_running(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        with patch.object(build_ami_module, 'wait_for_instance_running') as mock_running:
+            with patch.object(build_ami_module, 'wait_for_status_checks'):
+                with patch.object(build_ami_module, 'get_instance_public_ip', return_value="1.2.3.4"):
+                    build_ami_module.wait_for_instance(mock_ec2, "i-12345")
+        assert mock_running.call_args[0][1] == "i-12345"
+
+    def test_calls_wait_for_status_checks(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        with patch.object(build_ami_module, 'wait_for_instance_running'):
+            with patch.object(build_ami_module, 'wait_for_status_checks') as mock_status:
+                with patch.object(build_ami_module, 'get_instance_public_ip', return_value="1.2.3.4"):
+                    build_ami_module.wait_for_instance(mock_ec2, "i-12345")
+        assert mock_status.call_args[0][1] == "i-12345"
+
+    def test_returns_public_ip(self, build_ami_module):
+        mock_ec2 = MagicMock()
+        with patch.object(build_ami_module, 'wait_for_instance_running'):
+            with patch.object(build_ami_module, 'wait_for_status_checks'):
+                with patch.object(build_ami_module, 'get_instance_public_ip', return_value="9.8.7.6"):
+                    result = build_ami_module.wait_for_instance(mock_ec2, "i-12345")
+        assert result == "9.8.7.6"
+
+
 class TestRunCommandsHeredoc:
 
     def test_creates_heredoc_with_sudo_bash(self, build_ami_module):

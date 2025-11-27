@@ -143,15 +143,59 @@ def create_fleet_instance(ec2, template_name, instance_types, subnet_ids):
     return instances[0]["InstanceIds"][0]
 
 
-def wait_for_instance(ec2, instance_id):
+def wait_for_instance_running(ec2, instance_id):
     logging.info("Waiting for instance %s to be running...", instance_id)
-    waiter = ec2.get_waiter("instance_running")
-    waiter.wait(InstanceIds=[instance_id])
-    logging.info("Waiting for status checks...")
-    waiter = ec2.get_waiter("instance_status_ok")
-    waiter.wait(InstanceIds=[instance_id])
+    poll_interval = 5
+    max_attempts = 60
+    running = False
+    for attempt in range(1, max_attempts + 1):
+        logging.info("Checking instance state (attempt %d/%d)...", attempt, max_attempts)
+        response = ec2.describe_instances(InstanceIds=[instance_id])
+        state = response["Reservations"][0]["Instances"][0]["State"]["Name"]
+        logging.info("  Instance state: %s", state)
+        if state == "running":
+            logging.info("Instance is running")
+            running = True
+            break
+        if attempt < max_attempts:
+            time.sleep(poll_interval)
+    if not running:
+        raise RuntimeError(f"Instance did not reach running state after {max_attempts} attempts")
+
+
+def wait_for_status_checks(ec2, instance_id):
+    logging.info("Waiting for status checks to pass...")
+    poll_interval = 15
+    max_attempts = 40
+    passed = False
+    for attempt in range(1, max_attempts + 1):
+        logging.info("Checking status (attempt %d/%d)...", attempt, max_attempts)
+        response = ec2.describe_instance_status(InstanceIds=[instance_id])
+        statuses = response.get("InstanceStatuses", [])
+        if statuses:
+            instance_status = statuses[0]["InstanceStatus"]["Status"]
+            system_status = statuses[0]["SystemStatus"]["Status"]
+            logging.info("  Instance status: %s", instance_status)
+            logging.info("  System status: %s", system_status)
+            if instance_status == "ok" and system_status == "ok":
+                logging.info("All status checks passed")
+                passed = True
+                break
+        if attempt < max_attempts:
+            time.sleep(poll_interval)
+    if not passed:
+        raise RuntimeError(f"Status checks did not pass after {max_attempts} attempts")
+
+
+def get_instance_public_ip(ec2, instance_id):
     response = ec2.describe_instances(InstanceIds=[instance_id])
     return response["Reservations"][0]["Instances"][0]["PublicIpAddress"]
+
+
+def wait_for_instance(ec2, instance_id):
+    wait_for_instance_running(ec2, instance_id)
+    wait_for_status_checks(ec2, instance_id)
+    return get_instance_public_ip(ec2, instance_id)
 
 
 def run_ssh_command(client, cmd):
