@@ -90,7 +90,7 @@ def api_credentials_fixture(api_url, api_key):
 
 @pytest.fixture(name="ecr_image_count", scope="module")
 def ecr_image_count_fixture(ecr_client, config):
-    response = ecr_client.describe_images(repositoryName=config["ecr_repository"])
+    response = ecr_client.describe_images(repositoryName=config["ecr_repository_name"])
     return len(response.get("imageDetails", []))
 
 
