@@ -142,7 +142,7 @@ def cleanup_security_groups(ec2_client, dry_run):
     try:
         response = ec2_client.describe_security_groups(
             Filters=[
-                {'Name': 'group-name', 'Values': ['Packer*']},
+                {'Name': 'group-name', 'Values': ['ami-builder-*']},
             ]
         )
         security_groups = response.get('SecurityGroups', [])
@@ -166,12 +166,37 @@ def cleanup_security_groups(ec2_client, dry_run):
     return deleted_count
 
 
+def cleanup_key_pairs(ec2_client, dry_run):
+    deleted_count = 0
+    try:
+        response = ec2_client.describe_key_pairs(
+            Filters=[
+                {'Name': 'key-name', 'Values': ['ami-builder-*']}
+            ]
+        )
+        key_pairs = response.get('KeyPairs', [])
+        for key_pair in key_pairs:
+            key_name = key_pair['KeyName']
+            try:
+                if dry_run:
+                    print(f"[DRY RUN] Would delete key pair: {key_name}")
+                else:
+                    ec2_client.delete_key_pair(KeyName=key_name)
+                    print(f"Deleted key pair: {key_name}")
+                deleted_count += 1
+            except ClientError as e:
+                print(f"Error deleting key pair {key_name}: {e}")
+    except ClientError as e:
+        print(f"Error listing key pairs: {e}")
+    return deleted_count
+
+
 def cleanup_instances(ec2_client, dry_run):
     deleted_count = 0
     try:
         response = ec2_client.describe_instances(
             Filters=[
-                {'Name': 'tag:Name', 'Values': ['Packer*']},
+                {'Name': 'key-name', 'Values': ['ami-builder-*']},
                 {'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'stopping', 'pending']}
             ]
         )
@@ -194,54 +219,29 @@ def cleanup_instances(ec2_client, dry_run):
     return deleted_count
 
 
-def cleanup_key_pairs(ec2_client, dry_run):
+def cleanup_launch_templates(ec2_client, dry_run):
     deleted_count = 0
     try:
-        response = ec2_client.describe_key_pairs(
+        response = ec2_client.describe_launch_templates(
             Filters=[
-                {'Name': 'key-name', 'Values': ['packer_*']}
+                {'Name': 'launch-template-name', 'Values': ['ami-builder-*']}
             ]
         )
-        key_pairs = response.get('KeyPairs', [])
-        for key_pair in key_pairs:
-            key_name = key_pair['KeyName']
+        launch_templates = response.get('LaunchTemplates', [])
+        for lt in launch_templates:
+            lt_id = lt['LaunchTemplateId']
+            lt_name = lt['LaunchTemplateName']
             try:
                 if dry_run:
-                    print(f"[DRY RUN] Would delete key pair: {key_name}")
+                    print(f"[DRY RUN] Would delete launch template: {lt_id} ({lt_name})")
                 else:
-                    ec2_client.delete_key_pair(KeyName=key_name)
-                    print(f"Deleted key pair: {key_name}")
+                    ec2_client.delete_launch_template(LaunchTemplateId=lt_id)
+                    print(f"Deleted launch template: {lt_id} ({lt_name})")
                 deleted_count += 1
             except ClientError as e:
-                print(f"Error deleting key pair {key_name}: {e}")
+                print(f"Error deleting launch template {lt_id}: {e}")
     except ClientError as e:
-        print(f"Error listing key pairs: {e}")
-    return deleted_count
-
-
-def cleanup_volumes(ec2_client, dry_run):
-    deleted_count = 0
-    try:
-        response = ec2_client.describe_volumes(
-            Filters=[
-                {'Name': 'status', 'Values': ['available']},
-                {'Name': 'tag:Name', 'Values': ['Packer*']}
-            ]
-        )
-        volumes = response.get('Volumes', [])
-        for volume in volumes:
-            volume_id = volume['VolumeId']
-            try:
-                if dry_run:
-                    print(f"[DRY RUN] Would delete volume: {volume_id}")
-                else:
-                    ec2_client.delete_volume(VolumeId=volume_id)
-                    print(f"Deleted volume: {volume_id}")
-                deleted_count += 1
-            except ClientError as e:
-                print(f"Error deleting volume {volume_id}: {e}")
-    except ClientError as e:
-        print(f"Error listing volumes: {e}")
+        print(f"Error listing launch templates: {e}")
     return deleted_count
 
 
@@ -257,7 +257,7 @@ def run_cleanup(label, cleanup_fn):
 
 def print_header(args, resource_types_set):
     print("=" * 80)
-    print("PACKER ARTIFACTS CLEANUP")
+    print("EC2 RUNNER IMAGE CLEANUP")
     print("=" * 80)
     print(f"Region: {args.region}")
     print(f"SSM Parameter: {args.ssm_parameter_name}")
@@ -295,7 +295,7 @@ def handle_ami_cleanup(args):
 
     resource_types = args.resource_types.lower()
     if resource_types == 'all':
-        resource_types_set = {'amis', 'snapshots', 'security-groups', 'instances', 'key-pairs', 'volumes'}
+        resource_types_set = {'amis', 'snapshots', 'instances', 'security-groups', 'key-pairs', 'launch-templates'}
     else:
         resource_types_set = set(rt.strip() for rt in resource_types.split(','))
 
@@ -307,12 +307,6 @@ def handle_ami_cleanup(args):
 
     total_deleted = 0
     snapshots_to_delete = set()
-
-    if 'instances' in resource_types_set:
-        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run))
-
-    if 'volumes' in resource_types_set:
-        total_deleted += run_cleanup('VOLUMES', lambda: cleanup_volumes(ec2_client, args.dry_run))
 
     if 'amis' in resource_types_set:
         cleanup_snapshots_enabled = 'snapshots' in resource_types_set
@@ -333,6 +327,12 @@ def handle_ami_cleanup(args):
             print(f"Found {len(orphaned_snapshots)} orphaned snapshot(s)")
         total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, all_snapshots_to_delete, args.dry_run))
 
+    if 'instances' in resource_types_set:
+        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run))
+
+    if 'launch-templates' in resource_types_set:
+        total_deleted += run_cleanup('LAUNCH TEMPLATES', lambda: cleanup_launch_templates(ec2_client, args.dry_run))
+
     if 'security-groups' in resource_types_set:
         total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run))
 
@@ -345,7 +345,7 @@ def handle_ami_cleanup(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Cleanup Packer artifacts for GitHub EC2 runners'
+        description='Cleanup old AMIs and snapshots for GitHub EC2 runners'
     )
     parser.add_argument(
         '--region',
@@ -365,7 +365,7 @@ def main():
     parser.add_argument(
         '--resource-types',
         default='all',
-        help='Comma-separated list of resource types to clean (amis,snapshots,security-groups,instances,key-pairs,volumes) or "all" (default: all)'
+        help='Comma-separated list of resource types to clean (amis,snapshots,instances,security-groups,key-pairs,launch-templates) or "all" (default: all)'
     )
 
     args = parser.parse_args()
