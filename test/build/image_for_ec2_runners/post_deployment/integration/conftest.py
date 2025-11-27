@@ -46,15 +46,6 @@ def ami_purpose_tag(request):
 
 
 @pytest.fixture(scope="session")
-def ami_runner_version_tag(request):
-    ami = request.getfixturevalue("fetched_ami")
-    result = None
-    if ami:
-        result = _get_tag_value(ami.get("Tags", []), "RunnerVersion")
-    return result
-
-
-@pytest.fixture(scope="session")
 def ami_os_family_tag(request):
     ami = request.getfixturevalue("fetched_ami")
     result = None

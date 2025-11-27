@@ -55,17 +55,13 @@ jobs:
           OS_ARCH: ${{ needs.declaring-common-variables.outputs.os_architecture }}
           OS_FAMILY: ${{ needs.declaring-common-variables.outputs.os_family }}
           OS_VERSION: ${{ needs.declaring-common-variables.outputs.os_version }}
-          RUNNER_VERSION: ${{ needs.declaring-common-variables.outputs.runner_version }}
         id: build
         name: Build AMI with EC2 Fleet
         run: |
-          RUNNER_ARCH=$([ "$OS_ARCH" = "arm64" ] && echo "arm64" || echo "x64")
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           AMI_NAME="github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
           python3 src/build/image_for_ec2_runners/build_ami.py build src/build/image_for_ec2_runners/config.yml \
             --var "ami_name=${AMI_NAME}" \
-            --var "env.RUNNER_ARCH=${RUNNER_ARCH}" \
-            --var "env.RUNNER_VERSION=${RUNNER_VERSION}" \
             --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --var "os_architecture=${OS_ARCH}" \
             --var "region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
@@ -80,7 +76,6 @@ jobs:
             --var "tags.OSVersion=${OS_VERSION}" \
             --var "tags.Repository=${{ github.repository }}" \
             --var "tags.RunId=${{ github.run_id }}" \
-            --var "tags.RunnerVersion=${RUNNER_VERSION}" \
             --var "tags.Workflow=${{ github.workflow }}" \
             | tee build-output.log
           AMI_ID=$(grep '^ami_id=' build-output.log | cut -d= -f2)
@@ -97,7 +92,6 @@ jobs:
           echo "OS Family: ${{ needs.declaring-common-variables.outputs.os_family }}"
           echo "OS Version: ${{ needs.declaring-common-variables.outputs.os_version }}"
           echo "OS Architecture: ${{ needs.declaring-common-variables.outputs.os_architecture }}"
-          echo "Runner Version: ${{ needs.declaring-common-variables.outputs.runner_version }}"
           echo ""
           echo "==================================="
   cleaning-up:
@@ -144,7 +138,6 @@ jobs:
       os_architecture: ${{ steps.config.outputs.os_architecture }}
       os_family: ${{ steps.config.outputs.os_family }}
       os_version: ${{ steps.config.outputs.os_version }}
-      runner_version: ${{ steps.config.outputs.runner_version }}
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
       test_spot_instance_types: ${{ steps.config.outputs.test_spot_instance_types }}
@@ -197,7 +190,6 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_ec2_runners/config.yml)
           SOURCE_AMI=$(yq '.source_ami' src/build/image_for_ec2_runners/config.yml)
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
@@ -207,7 +199,6 @@ jobs:
           echo "os_architecture=${{ steps.api.outputs.os_architecture }}" >> $GITHUB_OUTPUT
           echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
-          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo 'spot_instance_types=${{ steps.api.outputs.spot_instance_types }}' >> $GITHUB_OUTPUT
           echo "terraform_version=${{ steps.shared.outputs.terraform_version }}" >> $GITHUB_OUTPUT
           echo "test_spot_instance_types=$TEST_SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT

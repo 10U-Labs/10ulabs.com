@@ -15,22 +15,6 @@ def test_ami_purpose_tag_value(ami_purpose_tag):
     assert "GitHub" in ami_purpose_tag or "Github" in ami_purpose_tag or "github" in ami_purpose_tag
 
 
-def test_ami_has_runner_version_tag(ami_tags_dict):
-    if not ami_tags_dict:
-        pytest.fail("AMI details not available")
-
-    assert "RunnerVersion" in ami_tags_dict
-
-
-def test_ami_runner_version_matches_expected(ami_runner_version_tag, config):
-    if ami_runner_version_tag is None:
-        pytest.fail("AMI details not available")
-
-    expected_version = config["runner_version"]
-
-    assert ami_runner_version_tag == expected_version
-
-
 def test_ami_has_os_family_tag(ami_tags_dict):
     if not ami_tags_dict:
         pytest.fail("AMI details not available")

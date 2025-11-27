@@ -45,7 +45,6 @@ def get_config():
     runner_config = get_runner_config()
     result["os_family"] = runner_config.get("os_family", "")
     result["os_version"] = str(runner_config.get("os_version", ""))
-    result["runner_version"] = runner_config.get("runner_version", "")
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
