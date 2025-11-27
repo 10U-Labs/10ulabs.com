@@ -69,7 +69,7 @@ jobs:
             --var "tags.${{ steps.terraform.outputs.ami_stable_tag }}=false" \
             --var "tags.BuildDate=${TIMESTAMP}" \
             --var "tags.ManagedBy=GitHubActions" \
-            --var "tags.Name=ami-${AMI_NAME}" \
+            --var "tags.Name=${AMI_NAME}" \
             --var "tags.OSArchitecture=${OS_ARCH}" \
             --var "tags.OSFamily=${OS_FAMILY^}" \
             --var "tags.OSVersion=${OS_VERSION}" \
@@ -121,7 +121,7 @@ jobs:
         run: pip install boto3
       - name: Clean up old AMIs
         run: |
-          python src/build/image_for_ec2_runners/cleanup_packer_artifacts.py \
+          python src/build/image_for_ec2_runners/cleanup.py \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --ssm-parameter-name "${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
   declaring-common-variables:

@@ -30,8 +30,8 @@ def build_ami_module():
 
 
 @pytest.fixture
-def cleanup_packer_artifacts():
-    return _load_module_from_path("cleanup_packer_artifacts", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "cleanup_packer_artifacts.py")
+def cleanup():
+    return _load_module_from_path("cleanup", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "cleanup.py")
 
 
 @pytest.fixture
