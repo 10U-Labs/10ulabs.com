@@ -51,19 +51,21 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o aw
         tar -xJ -C /usr/local --strip-components=1 && \
     npm install -g jsonlint && \
     npm cache clean --force && \
-    pip3 install --no-cache-dir --break-system-packages \
+    python3 -m pip install --no-cache-dir --break-system-packages \
         boto3 \
         boto3-stubs \
         botocore \
         dockerfile-parse \
         dnspython \
         mypy \
+        paramiko \
         pylint \
         pytest \
         python-hcl2 \
         PyYAML \
         requests \
         types-dockerfile-parse \
+        types-paramiko \
         types-PyYAML \
         types-requests \
         yamllint

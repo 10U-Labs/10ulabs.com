@@ -50,7 +50,7 @@ jobs:
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install paramiko
-        run: pip install paramiko
+        run: python3 -m pip install paramiko
       - env:
           OS_ARCH: ${{ needs.declaring-common-variables.outputs.os_architecture }}
           OS_FAMILY: ${{ needs.declaring-common-variables.outputs.os_family }}
@@ -118,7 +118,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install boto3
+        run: python3 -m pip install boto3
       - name: Clean up old AMIs
         run: |
           python src/build/image_for_ec2_runners/cleanup.py \
@@ -220,7 +220,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install dependencies
-        run: pip install pytest boto3 pyyaml
+        run: python3 -m pip install boto3 pytest pyyaml
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -267,7 +267,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3 pyyaml
+        run: python3 -m pip install boto3 pytest pyyaml
       - env:
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
@@ -296,7 +296,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yamllint
-        run: pip install yamllint
+        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
@@ -329,7 +329,7 @@ jobs:
             tflint --disable-rule=terraform_unused_declarations
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
-        run: pip install boto3 boto3-stubs mypy pylint pytest types-paramiko
+        run: python3 -m pip install boto3 boto3-stubs mypy paramiko pylint pytest types-paramiko
       - env:
           PYTHONPATH: test/build/image_for_ec2_runners/post_deployment
         name: Linting Python files
@@ -385,7 +385,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install boto3
+        run: python3 -m pip install boto3
       - name: Promote AMI
         run: |
           python src/build/image_for_ec2_runners/promote_ami.py \
@@ -414,7 +414,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: pip install pytest boto3 botocore pyyaml
+        run: python3 -m pip install boto3 botocore pytest pyyaml
       - name: Run unit tests
         run: |
           pytest test/build/image_for_ec2_runners/pre_deployment/ \

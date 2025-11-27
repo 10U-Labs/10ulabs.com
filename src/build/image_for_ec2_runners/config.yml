@@ -29,11 +29,13 @@ commands: |
     dnspython \
     dockerfile-parse \
     mypy \
+    paramiko \
     pylint \
     pytest \
     python-hcl2 \
     pyyaml \
     requests \
+    types-paramiko \
     types-PyYAML \
     types-dockerfile-parse \
     types-requests \
