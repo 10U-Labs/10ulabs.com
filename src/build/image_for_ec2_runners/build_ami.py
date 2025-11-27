@@ -244,6 +244,7 @@ def create_ami(ec2, instance_id, ami_name, ami_description, tags):
     logging.info("Creating AMI %s...", ami_id)
     waiter = ec2.get_waiter("image_available")
     waiter.wait(ImageIds=[ami_id])
+    logging.info("AMI %s created.", ami_id)
     if tags:
         tag_list = [{"Key": k, "Value": str(v)} for k, v in tags.items()]
         ec2.create_tags(Resources=[ami_id], Tags=tag_list)
@@ -264,6 +265,7 @@ def cleanup(ec2, instance_id, template_name, key_name, sg_id):
     if instance_id:
         logging.info("Terminating temporary instance...")
         terminate_instance(ec2, instance_id)
+        logging.info("Temporary instance terminated.")
     try:
         delete_launch_template(ec2, template_name)
     except boto3.exceptions.Boto3Error:
@@ -271,11 +273,13 @@ def cleanup(ec2, instance_id, template_name, key_name, sg_id):
     try:
         logging.info("Deleting temporary key pair...")
         delete_key_pair(ec2, key_name)
+        logging.info("Temporary key pair deleted.")
     except boto3.exceptions.Boto3Error:
         pass
     if sg_id:
         logging.info("Deleting temporary security group...")
         delete_security_group(ec2, sg_id)
+        logging.info("Temporary security group deleted.")
 
 
 def load_config(config_path):
@@ -365,7 +369,7 @@ def run_build(ctx: BuildContext, state: BuildState):
         run_commands(cmd_params)
     logging.info("Creating AMI...")
     state.result = create_ami(ctx.ec2, state.instance_id, ctx.config["ami_name"], ctx.config.get("ami_description"), ctx.config.get("tags", {}))
-    print(f"ami_id={state.result}")
+    logging.info("Done.")
 
 
 def cmd_build(args):
