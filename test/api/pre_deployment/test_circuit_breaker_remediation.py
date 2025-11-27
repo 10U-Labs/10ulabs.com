@@ -6,7 +6,9 @@ from test.api.pre_deployment.conftest import (
     create_mock_lambda_list_mappings_error,
     create_mock_lambda_put_concurrency_error,
     create_mock_sns_publish_error,
-    create_mock_lambda_with_mappings
+    create_mock_lambda_with_mappings,
+    create_mock_lambda_with_disabled_mappings,
+    create_mock_lambda_delete_concurrency_error
 )
 from botocore.exceptions import ClientError
 
@@ -192,11 +194,11 @@ def test_handle_cloudwatch_alarm_event_parses_alarm_details(circuit_breaker_reme
     assert result['alarm_name'] == 'test-alarm'
 
 
-def test_handle_cloudwatch_alarm_event_skips_non_alarm_state(circuit_breaker_remediation):
+def test_handle_cloudwatch_alarm_event_skips_insufficient_data_state(circuit_breaker_remediation):
     event = {
         'detail': {
             'alarmName': 'test-alarm',
-            'state': {'value': 'OK', 'reason': 'Back to normal'}
+            'state': {'value': 'INSUFFICIENT_DATA', 'reason': 'Not enough data'}
         }
     }
     with patch.dict(os.environ, {
@@ -390,3 +392,173 @@ def test_lambda_handler_returns_result_for_valid_events(circuit_breaker_remediat
             response = circuit_breaker_remediation.lambda_handler(event, lambda_context)
             body = parse_response_body(response)
     assert 'alarm_name' in body
+
+
+def test_enable_sqs_event_source_lists_mappings(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+        mock_boto_client.return_value = mock_lambda
+        circuit_breaker_remediation.enable_sqs_event_source('test-function')
+    assert mock_lambda.list_event_source_mappings.called
+
+
+def test_enable_sqs_event_source_enables_disabled_mappings(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_boto_client.return_value = create_mock_lambda_with_disabled_mappings()
+        circuit_breaker_remediation.enable_sqs_event_source('test-function')
+    assert mock_boto_client.return_value.update_event_source_mapping.called
+
+
+def test_enable_sqs_event_source_counts_enabled(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_lambda.list_event_source_mappings.return_value = {
+            'EventSourceMappings': [
+                {'UUID': 'mapping-1', 'State': 'Disabled'},
+                {'UUID': 'mapping-2', 'State': 'Disabled'}
+            ]
+        }
+        mock_boto_client.return_value = mock_lambda
+        result = circuit_breaker_remediation.enable_sqs_event_source('test-function')
+    assert result['enabled_count'] == 2
+
+
+def test_enable_sqs_event_source_skips_already_enabled(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_lambda.list_event_source_mappings.return_value = {
+            'EventSourceMappings': [{'UUID': 'mapping-1', 'State': 'Enabled'}]
+        }
+        mock_boto_client.return_value = mock_lambda
+        result = circuit_breaker_remediation.enable_sqs_event_source('test-function')
+    assert result['enabled_count'] == 0
+
+
+def test_enable_sqs_event_source_handles_api_error(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_boto_client.return_value = create_mock_lambda_list_mappings_error()
+        result = circuit_breaker_remediation.enable_sqs_event_source('test-function')
+    assert result['success'] is False
+
+
+def test_remove_lambda_reserved_concurrency_deletes_concurrency(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        circuit_breaker_remediation.remove_lambda_reserved_concurrency('test-function')
+    assert mock_lambda.delete_function_concurrency.called
+
+
+def test_remove_lambda_reserved_concurrency_returns_success(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_boto_client.return_value = mock_lambda
+        result = circuit_breaker_remediation.remove_lambda_reserved_concurrency('test-function')
+    assert result['success'] is True
+
+
+def test_remove_lambda_reserved_concurrency_handles_api_error(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_boto_client.return_value = create_mock_lambda_delete_concurrency_error()
+        result = circuit_breaker_remediation.remove_lambda_reserved_concurrency('test-function')
+    assert result['success'] is False
+
+
+def test_handle_alarm_ok_state_enables_event_sources(circuit_breaker_remediation):
+    result = {'actions_taken': []}
+    with patch('boto3.client') as mock_boto_client:
+        mock_boto_client.return_value = create_mock_lambda_with_disabled_mappings()
+        circuit_breaker_remediation.handle_alarm_ok_state(
+            result, 'test-function', 'test-state', None, 'test-alarm'
+        )
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Enabled SQS event sources' in actions_str
+
+
+def test_handle_alarm_ok_state_removes_concurrency_limit(circuit_breaker_remediation):
+    result = {'actions_taken': []}
+    with patch('boto3.client') as mock_boto_client:
+        mock_lambda = MagicMock()
+        mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+        mock_boto_client.return_value = mock_lambda
+        circuit_breaker_remediation.handle_alarm_ok_state(
+            result, 'test-function', 'test-state', None, 'test-alarm'
+        )
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Removed Lambda reserved concurrency limit' in actions_str
+
+
+def test_handle_alarm_ok_state_resets_circuit_breaker_to_closed(circuit_breaker_remediation):
+    result = {'actions_taken': []}
+    with patch('boto3.client') as mock_boto_client:
+        mock_client = MagicMock()
+        mock_client.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+        mock_boto_client.return_value = mock_client
+        circuit_breaker_remediation.handle_alarm_ok_state(
+            result, 'test-function', 'test-state', None, 'test-alarm'
+        )
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Reset circuit breaker state to CLOSED' in actions_str
+
+
+def test_handle_alarm_ok_state_sends_recovery_notification(circuit_breaker_remediation):
+    result = {'actions_taken': []}
+    with patch('boto3.client') as mock_boto_client:
+        mock_client = MagicMock()
+        mock_client.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+        mock_client.publish.return_value = {'MessageId': 'test-id'}
+        mock_boto_client.return_value = mock_client
+        circuit_breaker_remediation.handle_alarm_ok_state(
+            result, 'test-function', 'test-state', 'arn:aws:sns:test', 'test-alarm'
+        )
+    actions_str = str(result.get('actions_taken', []))
+    assert 'recovery notification' in actions_str
+
+
+def test_handle_cloudwatch_alarm_event_handles_ok_state(circuit_breaker_remediation):
+    event = {
+        'detail': {
+            'alarmName': 'test-alarm',
+            'state': {'value': 'OK', 'reason': 'Back to normal'}
+        }
+    }
+    with patch.dict(os.environ, {
+        'WEBHOOK_FUNCTION_NAME': 'test-function',
+        'STATE_TABLE_NAME': 'test-state'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+            mock_boto_client.return_value = mock_client
+            result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
+    assert result['message'] == 'Circuit breaker reset to closed state'
+
+
+def test_handle_cloudwatch_alarm_event_ok_state_updates_dynamodb(circuit_breaker_remediation):
+    event = {
+        'detail': {
+            'alarmName': 'test-alarm',
+            'state': {'value': 'OK', 'reason': 'Back to normal'}
+        }
+    }
+    with patch.dict(os.environ, {
+        'WEBHOOK_FUNCTION_NAME': 'test-function',
+        'STATE_TABLE_NAME': 'test-state'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.list_event_source_mappings.return_value = {'EventSourceMappings': []}
+            mock_boto_client.return_value = mock_client
+            result = circuit_breaker_remediation.handle_cloudwatch_alarm_event(event)
+    actions_str = str(result.get('actions_taken', []))
+    assert 'CLOSED' in actions_str
+
+
+def test_update_circuit_breaker_state_sets_closed_state(circuit_breaker_remediation):
+    with patch('boto3.client') as mock_boto_client:
+        mock_dynamodb = MagicMock()
+        mock_boto_client.return_value = mock_dynamodb
+        circuit_breaker_remediation.update_circuit_breaker_state('test-table', 'closed')
+        call_args = mock_dynamodb.put_item.call_args
+    assert call_args[1]['Item']['state']['S'] == 'closed'

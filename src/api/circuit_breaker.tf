@@ -138,7 +138,7 @@ resource "aws_cloudwatch_event_rule" "circuit_breaker_remediation" {
         aws_cloudwatch_metric_alarm.webhook_handler_errors.alarm_name
       ]
       state = {
-        value = ["ALARM"]
+        value = ["ALARM", "OK"]
       }
     }
   })

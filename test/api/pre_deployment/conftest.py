@@ -527,3 +527,20 @@ def create_mock_lambda_with_mappings():
         'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Enabled'}]
     }
     return mock_lambda
+
+
+def create_mock_lambda_with_disabled_mappings():
+    mock_lambda = MagicMock()
+    mock_lambda.list_event_source_mappings.return_value = {
+        'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Disabled'}]
+    }
+    return mock_lambda
+
+
+def create_mock_lambda_delete_concurrency_error():
+    mock_lambda = MagicMock()
+    mock_lambda.delete_function_concurrency.side_effect = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable'}},
+        'DeleteFunctionConcurrency'
+    )
+    return mock_lambda
