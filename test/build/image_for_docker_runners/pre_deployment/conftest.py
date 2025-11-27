@@ -54,7 +54,7 @@ def apt_get_install_packages():
 @pytest.fixture
 def pip3_install_packages():
     content = _read_dockerfile()
-    match = re.search(r'pip3 install.*?(?=&&\s*rm|$)', content, re.DOTALL)
+    match = re.search(r'python3 -m pip install.*', content, re.DOTALL)
     if match:
         return match.group(0)
     return ""
