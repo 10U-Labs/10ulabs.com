@@ -58,9 +58,9 @@ class TestApplyVarsSimpleKeys:
         build_ami_module.apply_vars(config, ["key=new"])
         assert config["key"] == "new"
 
-    def test_sets_json_array_value(self, build_ami_module):
+    def test_sets_csv_value_as_list(self, build_ami_module):
         config = {}
-        build_ami_module.apply_vars(config, ['subnet_ids=["subnet-a", "subnet-b"]'])
+        build_ami_module.apply_vars(config, ["subnet_ids=subnet-a,subnet-b"])
         assert config["subnet_ids"] == ["subnet-a", "subnet-b"]
 
 
