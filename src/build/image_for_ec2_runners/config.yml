@@ -5,13 +5,13 @@ commands: |
   VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
   VERSION_RUNNER=2.330.0
   VERSION_YQ=4.44.1
-  sudo install -m 0755 -d /etc/apt/keyrings
-  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o $DOCKER_KEY
-  sudo chmod a+r $DOCKER_KEY
+  install -m 0755 -d /etc/apt/keyrings
+  curl -fsSL https://download.docker.com/linux/debian/gpg -o $DOCKER_KEY
+  chmod a+r $DOCKER_KEY
   echo -e "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: $VERSION_CODENAME\nComponents: stable\nSigned-By: $DOCKER_KEY" | \
-    sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null
-  sudo apt-get update
-  sudo apt-get install -y \
+    tee /etc/apt/sources.list.d/docker.sources > /dev/null
+  apt-get update
+  apt-get install -y \
     containerd.io \
     docker-buildx-plugin \
     docker-ce \
@@ -22,8 +22,8 @@ commands: |
     python3-pip \
     unzip \
     wget
-  sudo systemctl enable docker
-  sudo python3 -m pip install --break-system-packages \
+  systemctl enable docker
+  python3 -m pip install --break-system-packages \
     boto3 \
     boto3-stubs[ecr] \
     botocore \
@@ -41,21 +41,21 @@ commands: |
     types-dockerfile-parse \
     types-requests \
     yamllint
-  sudo curl -o /usr/local/bin/yq -L https://github.com/mikefarah/yq/releases/download/v${VERSION_YQ}/yq_linux_${ARCH} &&
-    sudo chmod +x /usr/local/bin/yq
-  sudo useradd -m -s /bin/bash $RUNNER_USER
-  sudo usermod -aG docker $RUNNER_USER
-  curl -o /tmp/actions-runner.tar.gz -L \
+  curl -o /usr/local/bin/yq -L https://github.com/mikefarah/yq/releases/download/v${VERSION_YQ}/yq_linux_${ARCH} &&
+    chmod +x /usr/local/bin/yq
+  useradd -m -s /bin/bash $RUNNER_USER
+  usermod -aG docker $RUNNER_USER
+  sudo -u $RUNNER_USER curl -o /tmp/actions-runner.tar.gz -L \
     https://github.com/actions/runner/releases/download/v${VERSION_RUNNER}/actions-runner-linux-${ARCH}-${VERSION_RUNNER}.tar.gz
   sudo -u $RUNNER_USER mkdir -p /home/$RUNNER_USER/actions-runner
   sudo -u $RUNNER_USER tar xzf /tmp/actions-runner.tar.gz -C /home/$RUNNER_USER/actions-runner
-  sudo /home/$RUNNER_USER/actions-runner/bin/installdependencies.sh
+  /home/$RUNNER_USER/actions-runner/bin/installdependencies.sh
   curl -o /tmp/amazon-ssm-agent.deb -L \
     https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${ARCH}/amazon-ssm-agent.deb
-  sudo dpkg -i /tmp/amazon-ssm-agent.deb
-  sudo systemctl enable amazon-ssm-agent
+  dpkg -i /tmp/amazon-ssm-agent.deb
+  systemctl enable amazon-ssm-agent
   curl -o /tmp/amazon-cloudwatch-agent.deb -L \
     https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb
-  sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
+  dpkg -i /tmp/amazon-cloudwatch-agent.deb
   rm -rf /tmp/*
 source_ami: debian-13-arm64-20251117-2299

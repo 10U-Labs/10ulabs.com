@@ -2,6 +2,7 @@
 import argparse
 import json
 import logging
+import re
 import sys
 import time
 import uuid
@@ -171,6 +172,7 @@ def run_ssh_command(client, cmd):
 
 
 def parse_commands(commands_str):
+    var_defs = []
     commands = []
     current_cmd = ""
     for line in commands_str.strip().split("\n"):
@@ -185,11 +187,17 @@ def parse_commands(commands_str):
             current_cmd.endswith("\\") or current_cmd.endswith("|") or current_cmd.endswith("&&")
         )
         if not ends_with_continuation:
-            commands.append(current_cmd)
+            if re.match(r'^[A-Z_][A-Z0-9_]*=', current_cmd):
+                var_defs.append(current_cmd)
+            else:
+                commands.append(current_cmd)
             current_cmd = ""
     if current_cmd:
-        commands.append(current_cmd)
-    return commands
+        if re.match(r'^[A-Z_][A-Z0-9_]*=', current_cmd):
+            var_defs.append(current_cmd)
+        else:
+            commands.append(current_cmd)
+    return var_defs, commands
 
 
 def run_commands(params: CommandParams):
@@ -204,9 +212,13 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    commands = parse_commands(params.commands)
-    script = "\n".join(commands)
-    run_ssh_command(client, script)
+    var_defs, commands = parse_commands(params.commands)
+    var_preamble = "; ".join(var_defs) + "; " if var_defs else ""
+    for cmd in commands:
+        escaped_cmd = var_preamble + cmd
+        escaped_cmd = escaped_cmd.replace("'", "'\"'\"'")
+        full_cmd = f"sudo bash -c '{escaped_cmd}'"
+        run_ssh_command(client, full_cmd)
     client.close()
 
 
