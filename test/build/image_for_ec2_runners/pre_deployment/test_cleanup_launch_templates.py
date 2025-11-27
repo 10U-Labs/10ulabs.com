@@ -106,3 +106,11 @@ class TestCleanupLaunchTemplatesFiltersByTag:
         tag_filter = filters[0]
         assert tag_filter['Name'] == 'tag:Purpose'
         assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']
+
+    def test_uses_filters_keyword_argument(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_launch_templates.return_value = {'LaunchTemplates': []}
+
+        cleanup.cleanup_launch_templates(mock_ec2_client, False, TAGS)
+
+        call_args = mock_ec2_client.describe_launch_templates.call_args
+        assert 'Filters' in call_args[1]

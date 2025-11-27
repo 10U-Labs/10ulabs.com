@@ -228,7 +228,7 @@ def cleanup_instances(ec2_client, dry_run, tags):
                     instances_by_id[instance['InstanceId']] = instance
         except ClientError as e:
             print(f"Error listing instances: {e}")
-    for instance_id in instances_by_id.keys():
+    for instance_id in instances_by_id:
         try:
             if dry_run:
                 print(f"[DRY RUN] Would terminate instance: {instance_id}")
@@ -335,8 +335,7 @@ def handle_ami_cleanup(args):
 
     config = load_config(args.config)
     tags = config.get('tags', {})
-    dynamic_tags = parse_tags(args.tag)
-    tags.update(dynamic_tags)
+    tags.update(parse_tags(args.tag))
     if not tags:
         print("Error: No tags found in config file or --tag")
         return 1

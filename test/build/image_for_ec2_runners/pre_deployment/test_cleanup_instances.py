@@ -121,3 +121,13 @@ class TestCleanupInstancesFiltersByTag:
         filters = call_args[1]['Filters']
         tag_filter = next(f for f in filters if f['Name'] == 'tag:Purpose')
         assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']
+
+    def test_filters_by_instance_state(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {'Reservations': []}
+
+        cleanup.cleanup_instances(mock_ec2_client, False, TAGS)
+
+        call_args = mock_ec2_client.describe_instances.call_args
+        filters = call_args[1]['Filters']
+        state_filter = next(f for f in filters if f['Name'] == 'instance-state-name')
+        assert state_filter['Values'] == ['running', 'stopped', 'stopping', 'pending']

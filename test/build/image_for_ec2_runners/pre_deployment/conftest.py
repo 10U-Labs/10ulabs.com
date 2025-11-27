@@ -125,3 +125,20 @@ def instance_not_found_error():
 @pytest.fixture
 def access_denied_error():
     return _create_client_error("UnauthorizedOperation", "Access denied")
+
+
+def _make_ami_cleanup_params(cleanup_module, **overrides):
+    params = {
+        'latest_ami_id': 'ami-latest',
+        'latest_snapshot_ids': set(),
+        'dry_run': False,
+        'cleanup_snapshots_enabled': True,
+        'tags': {'Purpose': 'GitHub self-hosted EC2 runner'}
+    }
+    params.update(overrides)
+    return cleanup_module.AmiCleanupParams(**params)
+
+
+@pytest.fixture
+def make_ami_cleanup_params():
+    return _make_ami_cleanup_params

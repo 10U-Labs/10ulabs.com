@@ -102,3 +102,11 @@ class TestCleanupSecurityGroupsFiltersByTag:
         tag_filter = filters[0]
         assert tag_filter['Name'] == 'tag:Purpose'
         assert tag_filter['Values'] == ['GitHub self-hosted EC2 runner']
+
+    def test_uses_filters_keyword_argument(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_security_groups.return_value = {'SecurityGroups': []}
+
+        cleanup.cleanup_security_groups(mock_ec2_client, False, TAGS)
+
+        call_args = mock_ec2_client.describe_security_groups.call_args
+        assert 'Filters' in call_args[1]
