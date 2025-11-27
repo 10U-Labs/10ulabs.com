@@ -74,9 +74,6 @@ class TestCleanupLaunchTemplatesDryRun:
 
         assert result == 2
 
-
-class TestCleanupLaunchTemplatesClientError:
-
     def test_continues_on_client_error(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_launch_templates.return_value = {
             'LaunchTemplates': [

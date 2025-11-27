@@ -60,9 +60,6 @@ class TestGetLatestSnapshotIdsWithEmptyResponse:
 
         assert result == set()
 
-
-class TestGetLatestSnapshotIdsWithClientError:
-
     def test_returns_empty_set_on_client_error(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_images.side_effect = ClientError(
             {'Error': {'Code': 'InvalidAMIID.NotFound'}}, 'describe_images'

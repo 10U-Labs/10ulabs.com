@@ -19,9 +19,6 @@ class TestGetLatestAmiIdSuccess:
 
         mock_ssm.get_parameter.assert_called_once_with(Name='/my/parameter/name')
 
-
-class TestGetLatestAmiIdParameterNotFound:
-
     def test_returns_none_when_parameter_not_found(self, cleanup, mock_ec2_client):
         mock_ssm = mock_ec2_client
         mock_ssm.get_parameter.side_effect = ClientError(
@@ -31,9 +28,6 @@ class TestGetLatestAmiIdParameterNotFound:
         result = cleanup.get_latest_ami_id(mock_ssm, '/github-runner/ami/latest')
 
         assert result is None
-
-
-class TestGetLatestAmiIdClientError:
 
     def test_returns_none_on_other_client_error(self, cleanup, mock_ec2_client):
         mock_ssm = mock_ec2_client

@@ -70,9 +70,6 @@ class TestCleanupSecurityGroupsDryRun:
 
         assert result == 2
 
-
-class TestCleanupSecurityGroupsDependencyViolation:
-
     def test_continues_on_dependency_violation(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_security_groups.return_value = {
             'SecurityGroups': [

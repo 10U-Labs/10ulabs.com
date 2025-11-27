@@ -92,3 +92,8 @@ def promote_ami():
 @pytest.fixture
 def mock_ec2_client():
     return MagicMock()
+
+
+@pytest.fixture
+def raise_runtime_error():
+    return pytest.raises(RuntimeError)

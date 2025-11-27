@@ -441,7 +441,7 @@ class TestParseCommandsComments:
         assert result == ["echo hello # not a comment"]
 
 
-class TestLookupSourceAmiFound:
+class TestLookupSourceAmi:
 
     def test_returns_ami_id_when_found(self, build_ami_module):
         mock_ec2 = type("MockEC2", (), {})()
@@ -449,12 +449,8 @@ class TestLookupSourceAmiFound:
         result = build_ami_module.lookup_source_ami(mock_ec2, "debian-13-arm64-20251117-2299")
         assert result == "ami-12345678"
 
-
-class TestLookupSourceAmiNotFound:
-
-    def test_raises_error_when_not_found(self, build_ami_module):
-        import pytest
+    def test_raises_error_when_not_found(self, build_ami_module, raise_runtime_error):
         mock_ec2 = type("MockEC2", (), {})()
         mock_ec2.describe_images = lambda **kwargs: {"Images": []}
-        with pytest.raises(RuntimeError):
+        with raise_runtime_error:
             build_ami_module.lookup_source_ami(mock_ec2, "nonexistent-ami")

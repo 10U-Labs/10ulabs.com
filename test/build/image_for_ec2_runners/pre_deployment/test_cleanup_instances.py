@@ -24,6 +24,18 @@ class TestCleanupInstancesReturnsDeletedCount:
 
         assert result == 2
 
+    def test_handles_multiple_reservations(self, cleanup, mock_ec2_client):
+        mock_ec2_client.describe_instances.return_value = {
+            'Reservations': [
+                {'Instances': [{'InstanceId': 'i-123'}]},
+                {'Instances': [{'InstanceId': 'i-456'}]}
+            ]
+        }
+
+        result = cleanup.cleanup_instances(mock_ec2_client, False)
+
+        assert result == 2
+
 
 class TestCleanupInstancesCallsTerminateInstances:
 
@@ -50,20 +62,23 @@ class TestCleanupInstancesCallsTerminateInstances:
 
         assert mock_ec2_client.terminate_instances.call_count == 2
 
-
-class TestCleanupInstancesMultipleReservations:
-
-    def test_handles_multiple_reservations(self, cleanup, mock_ec2_client):
+    def test_continues_on_client_error(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_instances.return_value = {
-            'Reservations': [
-                {'Instances': [{'InstanceId': 'i-123'}]},
-                {'Instances': [{'InstanceId': 'i-456'}]}
-            ]
+            'Reservations': [{
+                'Instances': [
+                    {'InstanceId': 'i-123'},
+                    {'InstanceId': 'i-456'}
+                ]
+            }]
         }
+        mock_ec2_client.terminate_instances.side_effect = [
+            ClientError({'Error': {'Code': 'InvalidInstanceID.NotFound'}}, 'terminate_instances'),
+            None
+        ]
 
         result = cleanup.cleanup_instances(mock_ec2_client, False)
 
-        assert result == 2
+        assert result == 1
 
 
 class TestCleanupInstancesDryRun:
@@ -90,24 +105,3 @@ class TestCleanupInstancesDryRun:
         result = cleanup.cleanup_instances(mock_ec2_client, True)
 
         assert result == 2
-
-
-class TestCleanupInstancesClientError:
-
-    def test_continues_on_client_error(self, cleanup, mock_ec2_client):
-        mock_ec2_client.describe_instances.return_value = {
-            'Reservations': [{
-                'Instances': [
-                    {'InstanceId': 'i-123'},
-                    {'InstanceId': 'i-456'}
-                ]
-            }]
-        }
-        mock_ec2_client.terminate_instances.side_effect = [
-            ClientError({'Error': {'Code': 'InvalidInstanceID.NotFound'}}, 'terminate_instances'),
-            None
-        ]
-
-        result = cleanup.cleanup_instances(mock_ec2_client, False)
-
-        assert result == 1

@@ -70,9 +70,6 @@ class TestCleanupKeyPairsDryRun:
 
         assert result == 2
 
-
-class TestCleanupKeyPairsClientError:
-
     def test_continues_on_client_error(self, cleanup, mock_ec2_client):
         mock_ec2_client.describe_key_pairs.return_value = {
             'KeyPairs': [
