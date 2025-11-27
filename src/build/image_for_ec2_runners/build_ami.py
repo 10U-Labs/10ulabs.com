@@ -173,10 +173,10 @@ def wait_for_status_checks(ec2, instance_id):
         response = ec2.describe_instance_status(InstanceIds=[instance_id])
         statuses = response.get("InstanceStatuses", [])
         if statuses:
-            instance_status = statuses[0]["InstanceStatus"]["Status"]
             system_status = statuses[0]["SystemStatus"]["Status"]
-            logging.info("  Instance status: %s", instance_status)
+            instance_status = statuses[0]["InstanceStatus"]["Status"]
             logging.info("  System status: %s", system_status)
+            logging.info("  Instance status: %s", instance_status)
             if instance_status == "ok" and system_status == "ok":
                 logging.info("All status checks passed")
                 passed = True
