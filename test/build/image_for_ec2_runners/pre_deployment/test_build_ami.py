@@ -513,6 +513,10 @@ class TestRunSshCommandFailure:
         with raise_runtime_error:
             build_ami_module.run_ssh_command(mock_ssh_client_failure, "exit 1")
 
+    def test_raises_runtime_error_when_exit_code_127(self, build_ami_module, mock_ssh_client_exit_127, raise_runtime_error):
+        with raise_runtime_error:
+            build_ami_module.run_ssh_command(mock_ssh_client_exit_127, "command_not_found")
+
 
 class TestRunSshCommandOutput:
 

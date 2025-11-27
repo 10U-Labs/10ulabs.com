@@ -95,6 +95,11 @@ def mock_ssh_client_failure():
 
 
 @pytest.fixture
+def mock_ssh_client_exit_127():
+    return _create_mock_ssh_client(127, [])
+
+
+@pytest.fixture
 def mock_ssh_client_with_output():
     return _create_mock_ssh_client(0, [b"hello ", b"world"])
 
