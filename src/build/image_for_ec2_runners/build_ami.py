@@ -206,7 +206,6 @@ def wait_for_instance(ec2, instance_id):
 
 
 def run_ssh_command(client, cmd):
-    logging.info("Running: %s", cmd)
     _, stdout, _ = client.exec_command(cmd, timeout=600, get_pty=True)
     channel = stdout.channel
     while not channel.exit_status_ready():
@@ -234,7 +233,7 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    full_cmd = f"sudo PS4='' bash -ex << 'EOFSCRIPT'\n{params.commands}\nEOFSCRIPT"
+    full_cmd = f"sudo bash -ex << 'EOFSCRIPT'\nPS4=''\n{params.commands}\nEOFSCRIPT"
     run_ssh_command(client, full_cmd)
     client.close()
 
