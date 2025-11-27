@@ -1,8 +1,11 @@
 commands: |
-  # Add Docker repository
+  # Define variables
   ARCH=$(dpkg --print-architecture)
   DOCKER_GPG=/etc/apt/keyrings/docker.gpg
+  RUNNER_USER=github-runner
   VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+
+  # Add Docker repository
   sudo install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/debian/gpg |
     sudo gpg --dearmor -o $DOCKER_GPG
@@ -50,7 +53,6 @@ commands: |
   sudo chmod +x /usr/local/bin/yq
 
   # Install GitHub Actions runner
-  RUNNER_USER=github-runner
   sudo useradd -m -s /bin/bash $RUNNER_USER
   sudo usermod -aG docker $RUNNER_USER
   curl -o /tmp/actions-runner.tar.gz -L \
