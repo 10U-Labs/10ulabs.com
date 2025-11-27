@@ -18,6 +18,7 @@ commands: |
     docker-buildx-plugin \
     docker-ce \
     docker-ce-cli \
+    docker-compose-plugin \
     git \
     jq \
     python3-pip \
