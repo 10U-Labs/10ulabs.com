@@ -65,7 +65,8 @@ class TestLaunchEc2SpotRunner:
             assert result['instance_id'] == 'i-123'
 
     def test_no_ami_returns_failure(self, v1_handler):
-        with patch.object(v1_handler, 'get_latest_ami', return_value=''), \
+        with patch.object(v1_handler, 'ensure_dependencies_valid'), \
+             patch.object(v1_handler, 'get_latest_ami', return_value=''), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'trigger_ami_creation', return_value={'success': True}):
 
@@ -84,7 +85,8 @@ class TestLaunchEc2SpotRunner:
             assert 'ami_creation_triggered' in result
 
     def test_no_github_token_returns_failure(self, v1_handler):
-        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+        with patch.object(v1_handler, 'ensure_dependencies_valid'), \
+             patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value=''):
 
             result = v1_handler.launch_ec2_spot_runner(123, ['self-hosted'], 'owner/repo')
@@ -101,7 +103,8 @@ class TestLaunchEc2SpotRunner:
             assert 'GITHUB_TOKEN' in result['error']
 
     def test_registration_token_failure_returns_failure(self, v1_handler):
-        with patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
+        with patch.object(v1_handler, 'ensure_dependencies_valid'), \
+             patch.object(v1_handler, 'get_latest_ami', return_value='ami-123'), \
              patch.object(v1_handler, 'get_github_token', return_value='ghp_token'), \
              patch.object(v1_handler, 'get_runner_registration_token', return_value=''):
 
