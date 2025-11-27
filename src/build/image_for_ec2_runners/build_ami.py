@@ -154,7 +154,7 @@ def wait_for_instance(ec2, instance_id):
 
 
 def run_ssh_command(client, cmd):
-    logging.info("Running: %s%s", cmd[:80], '...' if len(cmd) > 80 else '')
+    logging.info("Running: %s", cmd)
     _, stdout, stderr = client.exec_command(cmd, timeout=600)
     exit_code = stdout.channel.recv_exit_status()
     if exit_code != 0:
@@ -197,8 +197,9 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    for cmd in parse_commands(params.commands):
-        run_ssh_command(client, cmd)
+    commands = parse_commands(params.commands)
+    script = "set -e\n" + "\n".join(commands)
+    run_ssh_command(client, script)
     client.close()
 
 
