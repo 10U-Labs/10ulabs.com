@@ -1,4 +1,3 @@
-import json
 import os
 import time
 from botocore.exceptions import ClientError
@@ -113,14 +112,9 @@ def get_subnet_ids():
     return result
 
 
-def get_spot_instance_types(config):
-    test_spot_types_env = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
-    if test_spot_types_env:
-        result = json.loads(test_spot_types_env)
-    else:
-        result = config.get("ec2_spot_instance_types", ["t4g.small"])
-    if not isinstance(result, list):
-        result = [result]
+def get_spot_instance_types():
+    env_value = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
+    result = env_value.split(",") if env_value else []
     return result
 
 
@@ -168,7 +162,7 @@ def test_instance(ec2_client, ssm_client, test_ami_id, config):
     if not os.environ.get("TEST_SECURITY_GROUP_ID", ""):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
-    spot_instance_types = get_spot_instance_types(config)
+    spot_instance_types = get_spot_instance_types()
     launch_config = build_launch_config(test_ami_id, config)
     instance_id, last_error = try_launch_spot_instance(ec2_client, launch_config, subnet_ids, spot_instance_types)
 
