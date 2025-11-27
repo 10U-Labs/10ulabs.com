@@ -70,6 +70,9 @@ commands: |
     https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb
   sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
 
+  # Clean up
+  rm -rf /tmp/*
+
   # Enable Docker service
   sudo systemctl enable docker
 source_ami: debian-13-arm64-20251117-2299
