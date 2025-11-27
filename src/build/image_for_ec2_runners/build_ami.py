@@ -2,7 +2,6 @@
 import argparse
 import json
 import logging
-import re
 import sys
 import time
 import uuid
@@ -223,35 +222,6 @@ def run_ssh_command(client, cmd):
         raise RuntimeError(f"Command failed with exit code {exit_code}")
 
 
-def parse_commands(commands_str):
-    var_defs = []
-    commands = []
-    current_cmd = ""
-    for line in commands_str.strip().split("\n"):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if current_cmd:
-            current_cmd += " " + line
-        else:
-            current_cmd = line
-        ends_with_continuation = (
-            current_cmd.endswith("\\") or current_cmd.endswith("|") or current_cmd.endswith("&&")
-        )
-        if not ends_with_continuation:
-            if re.match(r'^[A-Z_][A-Z0-9_]*=', current_cmd):
-                var_defs.append(current_cmd)
-            else:
-                commands.append(current_cmd)
-            current_cmd = ""
-    if current_cmd:
-        if re.match(r'^[A-Z_][A-Z0-9_]*=', current_cmd):
-            var_defs.append(current_cmd)
-        else:
-            commands.append(current_cmd)
-    return var_defs, commands
-
-
 def run_commands(params: CommandParams):
     key = paramiko.Ed25519Key.from_private_key(StringIO(params.key_material))
     client = paramiko.SSHClient()
@@ -264,9 +234,7 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    var_defs, commands = parse_commands(params.commands)
-    script = "\n".join(var_defs + commands)
-    full_cmd = f"sudo bash -ex << 'EOFSCRIPT'\n{script}\nEOFSCRIPT"
+    full_cmd = f"sudo bash -e << 'EOFSCRIPT'\n{params.commands}\nEOFSCRIPT"
     run_ssh_command(client, full_cmd)
     client.close()
 

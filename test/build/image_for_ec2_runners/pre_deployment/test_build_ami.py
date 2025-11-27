@@ -388,124 +388,6 @@ class TestLoadConfigBasic:
         assert result["commands"] == "echo hello\necho world"
 
 
-class TestParseCommandsBasic:
-
-    def test_parses_single_command(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello")
-        assert commands == ["echo hello"]
-
-    def test_parses_multiple_commands(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello\necho world")
-        assert commands == ["echo hello", "echo world"]
-
-    def test_returns_empty_list_for_empty_string(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("")
-        assert commands == []
-
-
-class TestParseCommandsWhitespace:
-
-    def test_strips_leading_whitespace(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("  echo hello")
-        assert commands == ["echo hello"]
-
-    def test_strips_trailing_whitespace(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello  ")
-        assert commands == ["echo hello"]
-
-    def test_strips_whitespace_from_all_lines(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("  echo hello  \n  echo world  ")
-        assert commands == ["echo hello", "echo world"]
-
-    def test_skips_empty_lines(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello\n\necho world")
-        assert commands == ["echo hello", "echo world"]
-
-    def test_skips_whitespace_only_lines(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello\n   \necho world")
-        assert commands == ["echo hello", "echo world"]
-
-
-class TestParseCommandsComments:
-
-    def test_skips_comment_lines(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("# this is a comment\necho hello")
-        assert commands == ["echo hello"]
-
-    def test_skips_multiple_comment_lines(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("# comment 1\n# comment 2\necho hello")
-        assert commands == ["echo hello"]
-
-    def test_skips_comment_with_leading_whitespace(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("  # indented comment\necho hello")
-        assert commands == ["echo hello"]
-
-    def test_keeps_commands_with_hash_in_middle(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello # not a comment")
-        assert commands == ["echo hello # not a comment"]
-
-
-class TestParseCommandsPipeContinuation:
-
-    def test_joins_command_with_pipe_at_end(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello |\n  grep hello")
-        assert commands == ["echo hello | grep hello"]
-
-    def test_joins_multiple_pipe_continuations(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("echo hello |\n  grep hello |\n  wc -l")
-        assert commands == ["echo hello | grep hello | wc -l"]
-
-
-class TestParseCommandsBackslashContinuation:
-
-    def test_joins_command_with_backslash_at_end(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("apt-get install -y \\\n  curl")
-        assert commands == ["apt-get install -y \\ curl"]
-
-    def test_joins_multiple_backslash_continuations(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("apt-get install -y \\\n  curl \\\n  wget")
-        assert commands == ["apt-get install -y \\ curl \\ wget"]
-
-
-class TestParseCommandsAmpersandContinuation:
-
-    def test_joins_command_with_ampersand_at_end(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("mkdir -p /tmp/foo &&\n  cd /tmp/foo")
-        assert commands == ["mkdir -p /tmp/foo && cd /tmp/foo"]
-
-    def test_joins_multiple_ampersand_continuations(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("cmd1 &&\n  cmd2 &&\n  cmd3")
-        assert commands == ["cmd1 && cmd2 && cmd3"]
-
-
-class TestParseCommandsVariableDefinitions:
-
-    def test_extracts_simple_variable_definition(self, build_ami_module):
-        var_defs, _ = build_ami_module.parse_commands("MY_VAR=value\necho $MY_VAR")
-        assert var_defs == ["MY_VAR=value"]
-
-    def test_extracts_variable_with_command_substitution(self, build_ami_module):
-        input_str = "ARCH=$(dpkg --print-architecture)\necho $ARCH"
-        var_defs, _ = build_ami_module.parse_commands(input_str)
-        assert var_defs == ["ARCH=$(dpkg --print-architecture)"]
-
-    def test_extracts_multiple_variable_definitions(self, build_ami_module):
-        var_defs, _ = build_ami_module.parse_commands("VAR1=one\nVAR2=two\necho done")
-        assert var_defs == ["VAR1=one", "VAR2=two"]
-
-    def test_separates_variables_from_commands(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("MY_VAR=value\necho hello")
-        assert commands == ["echo hello"]
-
-    def test_handles_underscore_in_variable_name(self, build_ami_module):
-        var_defs, _ = build_ami_module.parse_commands("MY_LONG_VAR=value\necho done")
-        assert var_defs == ["MY_LONG_VAR=value"]
-
-    def test_does_not_match_lowercase_as_variable(self, build_ami_module):
-        _, commands = build_ami_module.parse_commands("lowercase=value\necho done")
-        assert commands == ["lowercase=value", "echo done"]
-
-
 class TestLookupSourceAmi:
 
     def test_returns_ami_id_when_found(self, build_ami_module):
@@ -760,7 +642,7 @@ class TestRunCommandsHeredoc:
                     params = build_ami_module.CommandParams("1.2.3.4", "key", "echo hello")
                     build_ami_module.run_commands(params)
                     call_args = mock_run.call_args[0][1]
-                    assert call_args.startswith("sudo bash -ex << 'EOFSCRIPT'")
+                    assert call_args.startswith("sudo bash -e << 'EOFSCRIPT'")
 
     def test_heredoc_ends_with_eofscript(self, build_ami_module):
         with patch.object(build_ami_module.paramiko.Ed25519Key, 'from_private_key'):
