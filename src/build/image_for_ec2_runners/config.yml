@@ -1,22 +1,20 @@
 commands: |
   ARCH=$(dpkg --print-architecture)
-  DOCKER_KEY=/etc/apt/keyrings/docker.asc
   RUNNER_USER=github-runner
-  VERSION_CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
   VERSION_RUNNER=2.330.0
   VERSION_YQ=4.44.1
   sudo apt-get update
   sudo apt-get install -y ca-certificates curl
   sudo install -m 0755 -d /etc/apt/keyrings
-  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o $DOCKER_KEY
-  sudo chmod a+r $DOCKER_KEY
-  sudo tee /etc/apt/sources.list.d/docker.sources <<SOURCES
+  sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+  sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
 URIs: https://download.docker.com/linux/debian
-Suites: $VERSION_CODENAME
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
 Components: stable
-Signed-By: $DOCKER_KEY
-SOURCES
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
   sudo apt-get update
   sudo apt-get install -y \
     containerd.io \
