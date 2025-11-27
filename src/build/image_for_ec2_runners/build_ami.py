@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import logging
 import sys
 import time
 import uuid
@@ -10,6 +11,8 @@ from typing import Any, Optional
 import boto3
 import paramiko
 import yaml
+
+logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stderr)
 
 
 @dataclass
@@ -139,10 +142,10 @@ def create_fleet_instance(ec2, template_name, instance_types, subnet_ids):
 
 
 def wait_for_instance(ec2, instance_id):
-    print(f"Waiting for instance {instance_id} to be running...")
+    logging.info(f"Waiting for instance {instance_id} to be running...")
     waiter = ec2.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id])
-    print("Waiting for status checks...")
+    logging.info("Waiting for status checks...")
     waiter = ec2.get_waiter("instance_status_ok")
     waiter.wait(InstanceIds=[instance_id])
     response = ec2.describe_instances(InstanceIds=[instance_id])
@@ -150,12 +153,12 @@ def wait_for_instance(ec2, instance_id):
 
 
 def run_ssh_command(client, cmd):
-    print(f"Running: {cmd[:80]}{'...' if len(cmd) > 80 else ''}")
+    logging.info(f"Running: {cmd[:80]}{'...' if len(cmd) > 80 else ''}")
     _, stdout, stderr = client.exec_command(cmd, timeout=600)
     exit_code = stdout.channel.recv_exit_status()
     if exit_code != 0:
-        print(f"STDOUT: {stdout.read().decode()}")
-        print(f"STDERR: {stderr.read().decode()}")
+        logging.info(f"STDOUT: {stdout.read().decode()}")
+        logging.info(f"STDERR: {stderr.read().decode()}")
         raise RuntimeError(f"Command failed with exit code {exit_code}")
 
 
@@ -188,7 +191,7 @@ def run_commands(params: CommandParams):
 def create_ami(ec2, instance_id, ami_name, ami_description, tags):
     response = ec2.create_image(InstanceId=instance_id, Name=ami_name, Description=ami_description or "")
     ami_id = response["ImageId"]
-    print(f"Creating AMI {ami_id}...")
+    logging.info(f"Creating AMI {ami_id}...")
     waiter = ec2.get_waiter("image_available")
     waiter.wait(ImageIds=[ami_id])
     if tags:
@@ -209,19 +212,19 @@ def terminate_instance(ec2, instance_id):
 
 def cleanup(ec2, instance_id, template_name, key_name, sg_id):
     if instance_id:
-        print("Terminating temporary instance...")
+        logging.info("Terminating temporary instance...")
         terminate_instance(ec2, instance_id)
     try:
         delete_launch_template(ec2, template_name)
     except boto3.exceptions.Boto3Error:
         pass
     try:
-        print("Deleting temporary key pair...")
+        logging.info("Deleting temporary key pair...")
         delete_key_pair(ec2, key_name)
     except boto3.exceptions.Boto3Error:
         pass
     if sg_id:
-        print("Deleting temporary security group...")
+        logging.info("Deleting temporary security group...")
         delete_security_group(ec2, sg_id)
 
 
@@ -265,10 +268,10 @@ def cmd_validate(args):
     exit_code = 0
     if errors:
         for err in errors:
-            print(f"Error: {err}", file=sys.stderr)
+            logging.error(f"Error: {err}")
         exit_code = 1
     else:
-        print("Configuration is valid.")
+        logging.info("Configuration is valid.")
     return exit_code
 
 
@@ -291,26 +294,26 @@ def run_build(ctx: BuildContext, state: BuildState):
     key_name = f"ami-builder-{ctx.unique_id}"
     template_name = f"ami-builder-{ctx.unique_id}"
     subnet_ids = ctx.config["subnet_ids"]
-    print(f"Subnets: {subnet_ids}")
+    logging.info(f"Subnets: {subnet_ids}")
     vpc_id = get_vpc_from_subnet(ctx.ec2, subnet_ids[0])
-    print(f"VPC: {vpc_id}")
-    print("Creating temporary key pair...")
+    logging.info(f"VPC: {vpc_id}")
+    logging.info("Creating temporary key pair...")
     state.key_material = create_key_pair(ctx.ec2, key_name)
-    print("Creating temporary security group...")
+    logging.info("Creating temporary security group...")
     state.sg_id = create_security_group(ctx.ec2, vpc_id, f"ami-builder-{ctx.unique_id}")
-    print("Creating launch template...")
+    logging.info("Creating launch template...")
     lt_params = LaunchTemplateParams(template_name, ctx.config["source_ami"], state.sg_id, key_name, ctx.config.get("iam_instance_profile"))
     create_launch_template(ctx.ec2, lt_params)
-    print(f"Creating EC2 Fleet with {len(ctx.config['instance_types'])} instance types x {len(subnet_ids)} subnets...")
+    logging.info(f"Creating EC2 Fleet with {len(ctx.config['instance_types'])} instance types x {len(subnet_ids)} subnets...")
     state.instance_id = create_fleet_instance(ctx.ec2, template_name, ctx.config["instance_types"], subnet_ids)
-    print(f"Instance launched: {state.instance_id}")
+    logging.info(f"Instance launched: {state.instance_id}")
     public_ip = wait_for_instance(ctx.ec2, state.instance_id)
-    print(f"Instance ready at {public_ip}")
+    logging.info(f"Instance ready at {public_ip}")
     if ctx.config.get("commands"):
-        print("Running commands...")
+        logging.info("Running commands...")
         cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"])
         run_commands(cmd_params)
-    print("Creating AMI...")
+    logging.info("Creating AMI...")
     state.result = create_ami(ctx.ec2, state.instance_id, ctx.config["ami_name"], ctx.config.get("ami_description"), ctx.config.get("tags", {}))
     print(f"ami_id={state.result}")
 
@@ -322,13 +325,13 @@ def cmd_build(args):
     exit_code = 1
     if errors:
         for err in errors:
-            print(f"Error: {err}", file=sys.stderr)
+            logging.error(f"Error: {err}")
     else:
         unique_id = uuid.uuid4().hex[:8]
         ec2 = boto3.client("ec2", region_name=config["region"])
-        print(f"Looking up AMI ID for: {config['source_ami']}")
+        logging.info(f"Looking up AMI ID for: {config['source_ami']}")
         ami_id = lookup_source_ami(ec2, config["source_ami"])
-        print(f"Found AMI ID: {ami_id}")
+        logging.info(f"Found AMI ID: {ami_id}")
         config["source_ami"] = ami_id
         ctx = BuildContext(ec2, config, unique_id)
         state = BuildState()
