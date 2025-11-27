@@ -136,13 +136,14 @@ def create_fleet_instance(ec2, template_name, instance_types, subnet_ids):
             "Overrides": overrides,
         }],
     )
-    if response.get("Errors"):
-        raise RuntimeError(f"Fleet errors: {response['Errors']}")
-    return response["Instances"][0]["InstanceIds"][0]
+    instances = response.get("Instances", [])
+    if not instances or not instances[0].get("InstanceIds"):
+        raise RuntimeError(f"Fleet errors: {response.get('Errors', 'No instances launched')}")
+    return instances[0]["InstanceIds"][0]
 
 
 def wait_for_instance(ec2, instance_id):
-    logging.info(f"Waiting for instance {instance_id} to be running...")
+    logging.info("Waiting for instance %s to be running...", instance_id)
     waiter = ec2.get_waiter("instance_running")
     waiter.wait(InstanceIds=[instance_id])
     logging.info("Waiting for status checks...")
@@ -153,12 +154,12 @@ def wait_for_instance(ec2, instance_id):
 
 
 def run_ssh_command(client, cmd):
-    logging.info(f"Running: {cmd[:80]}{'...' if len(cmd) > 80 else ''}")
+    logging.info("Running: %s%s", cmd[:80], '...' if len(cmd) > 80 else '')
     _, stdout, stderr = client.exec_command(cmd, timeout=600)
     exit_code = stdout.channel.recv_exit_status()
     if exit_code != 0:
-        logging.info(f"STDOUT: {stdout.read().decode()}")
-        logging.info(f"STDERR: {stderr.read().decode()}")
+        logging.info("STDOUT: %s", stdout.read().decode())
+        logging.info("STDERR: %s", stderr.read().decode())
         raise RuntimeError(f"Command failed with exit code {exit_code}")
 
 
@@ -191,7 +192,7 @@ def run_commands(params: CommandParams):
 def create_ami(ec2, instance_id, ami_name, ami_description, tags):
     response = ec2.create_image(InstanceId=instance_id, Name=ami_name, Description=ami_description or "")
     ami_id = response["ImageId"]
-    logging.info(f"Creating AMI {ami_id}...")
+    logging.info("Creating AMI %s...", ami_id)
     waiter = ec2.get_waiter("image_available")
     waiter.wait(ImageIds=[ami_id])
     if tags:
@@ -268,7 +269,7 @@ def cmd_validate(args):
     exit_code = 0
     if errors:
         for err in errors:
-            logging.error(f"Error: {err}")
+            logging.error("Error: %s", err)
         exit_code = 1
     else:
         logging.info("Configuration is valid.")
@@ -294,9 +295,9 @@ def run_build(ctx: BuildContext, state: BuildState):
     key_name = f"ami-builder-{ctx.unique_id}"
     template_name = f"ami-builder-{ctx.unique_id}"
     subnet_ids = ctx.config["subnet_ids"]
-    logging.info(f"Subnets: {subnet_ids}")
+    logging.info("Subnets: %s", subnet_ids)
     vpc_id = get_vpc_from_subnet(ctx.ec2, subnet_ids[0])
-    logging.info(f"VPC: {vpc_id}")
+    logging.info("VPC: %s", vpc_id)
     logging.info("Creating temporary key pair...")
     state.key_material = create_key_pair(ctx.ec2, key_name)
     logging.info("Creating temporary security group...")
@@ -304,11 +305,11 @@ def run_build(ctx: BuildContext, state: BuildState):
     logging.info("Creating launch template...")
     lt_params = LaunchTemplateParams(template_name, ctx.config["source_ami"], state.sg_id, key_name, ctx.config.get("iam_instance_profile"))
     create_launch_template(ctx.ec2, lt_params)
-    logging.info(f"Creating EC2 Fleet with {len(ctx.config['instance_types'])} instance types x {len(subnet_ids)} subnets...")
+    logging.info("Creating EC2 Fleet with %d instance types x %d subnets...", len(ctx.config['instance_types']), len(subnet_ids))
     state.instance_id = create_fleet_instance(ctx.ec2, template_name, ctx.config["instance_types"], subnet_ids)
-    logging.info(f"Instance launched: {state.instance_id}")
+    logging.info("Instance launched: %s", state.instance_id)
     public_ip = wait_for_instance(ctx.ec2, state.instance_id)
-    logging.info(f"Instance ready at {public_ip}")
+    logging.info("Instance ready at %s", public_ip)
     if ctx.config.get("commands"):
         logging.info("Running commands...")
         cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"])
@@ -325,13 +326,13 @@ def cmd_build(args):
     exit_code = 1
     if errors:
         for err in errors:
-            logging.error(f"Error: {err}")
+            logging.error("Error: %s", err)
     else:
         unique_id = uuid.uuid4().hex[:8]
         ec2 = boto3.client("ec2", region_name=config["region"])
-        logging.info(f"Looking up AMI ID for: {config['source_ami']}")
+        logging.info("Looking up AMI ID for: %s", config['source_ami'])
         ami_id = lookup_source_ami(ec2, config["source_ami"])
-        logging.info(f"Found AMI ID: {ami_id}")
+        logging.info("Found AMI ID: %s", ami_id)
         config["source_ami"] = ami_id
         ctx = BuildContext(ec2, config, unique_id)
         state = BuildState()

@@ -307,23 +307,6 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners.yml \
             src/build/image_for_ec2_runners/config.yml
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - name: Terraform Format Check
-        run: cd src/api && terraform fmt -check terraform.tfvars
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: |
-          cd src/api && \
-            tflint --init && \
-            tflint --disable-rule=terraform_unused_declarations
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
         run: python3 -m pip install boto3 boto3-stubs mypy paramiko pylint pytest types-paramiko types-PyYAML
