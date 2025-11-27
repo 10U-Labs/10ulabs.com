@@ -75,10 +75,7 @@ jobs:
             --var "tags.OSVersion=${OS_VERSION}" \
             --var "tags.Repository=${{ github.repository }}" \
             --var "tags.RunId=${{ github.run_id }}" \
-            --var "tags.Workflow=${{ github.workflow }}" \
-            | tee build-output.log
-          AMI_ID=$(grep '^ami_id=' build-output.log | cut -d= -f2)
-          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+            --var "tags.Workflow=${{ github.workflow }}"
       - if: steps.build.outputs.ami_id != ''
         name: Output AMI details
         run: |
@@ -176,7 +173,7 @@ jobs:
           cd src/api
           terraform init -backend=true -input=false
           OS_ARCHITECTURE=$(terraform output -raw fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
-          SPOT_INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types)
+          SPOT_INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types | tr -d '[]" ')
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
       - id: config

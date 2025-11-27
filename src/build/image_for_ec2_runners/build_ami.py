@@ -240,18 +240,22 @@ def parse_value(value_str):
 
 
 def apply_vars(config, var_list):
+    csv_keys = {"instance_types", "subnet_ids"}
     for item in var_list or []:
         if "=" not in item:
             continue
         key, value = item.split("=", 1)
-        parsed_value = parse_value(value)
-        if key.startswith("tags."):
+        if key in csv_keys:
+            parsed_value = [v.strip() for v in value.split(",")]
+        elif key.startswith("tags."):
             child_key = key[5:]
             if "tags" not in config:
                 config["tags"] = {}
-            config["tags"][child_key] = parsed_value
+            config["tags"][child_key] = parse_value(value)
+            continue
         else:
-            config[key] = parsed_value
+            parsed_value = parse_value(value)
+        config[key] = parsed_value
 
 
 def cmd_validate(args):
