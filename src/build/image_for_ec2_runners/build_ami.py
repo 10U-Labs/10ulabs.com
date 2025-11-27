@@ -26,7 +26,6 @@ class CommandParams:
     ip_addr: str
     key_material: str
     commands: str
-    env_vars: dict
 
 REQUIRED_FIELDS = ["ami_name", "region", "source_ami", "subnet_ids", "instance_types"]
 
@@ -180,9 +179,8 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    env_prefix = " ".join(f"{k}={v}" for k, v in params.env_vars.items()) + " " if params.env_vars else ""
     for cmd in parse_commands(params.commands):
-        run_ssh_command(client, env_prefix + cmd)
+        run_ssh_command(client, cmd)
     client.close()
 
 
@@ -244,12 +242,11 @@ def apply_vars(config, var_list):
             continue
         key, value = item.split("=", 1)
         parsed_value = parse_value(value)
-        if "." in key:
-            parts = key.split(".", 1)
-            parent_key, child_key = parts[0], parts[1]
-            if parent_key not in config:
-                config[parent_key] = {}
-            config[parent_key][child_key] = parsed_value
+        if key.startswith("tags."):
+            child_key = key[5:]
+            if "tags" not in config:
+                config["tags"] = {}
+            config["tags"][child_key] = parsed_value
         else:
             config[key] = parsed_value
 
@@ -278,7 +275,6 @@ class BuildState:
 class BuildContext:
     ec2: object
     config: dict
-    env_vars: dict
     unique_id: str
 
 
@@ -303,7 +299,7 @@ def run_build(ctx: BuildContext, state: BuildState):
     print(f"Instance ready at {public_ip}")
     if ctx.config.get("commands"):
         print("Running commands...")
-        cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"], ctx.env_vars)
+        cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"])
         run_commands(cmd_params)
     print("Creating AMI...")
     state.result = create_ami(ctx.ec2, state.instance_id, ctx.config["ami_name"], ctx.config.get("ami_description"), ctx.config.get("tags", {}))
@@ -324,7 +320,7 @@ def cmd_build(args):
     ami_id = lookup_source_ami(ec2, config["source_ami"])
     print(f"Found AMI ID: {ami_id}")
     config["source_ami"] = ami_id
-    ctx = BuildContext(ec2, config, config.get("env", {}), unique_id)
+    ctx = BuildContext(ec2, config, unique_id)
     state = BuildState()
     try:
         run_build(ctx, state)
