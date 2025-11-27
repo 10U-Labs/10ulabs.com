@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from io import StringIO
 from typing import Any, Optional
 import boto3
+from botocore.exceptions import ClientError
 import paramiko
 import yaml
 
@@ -150,13 +151,18 @@ def wait_for_instance_running(ec2, instance_id):
     running = False
     for attempt in range(1, max_attempts + 1):
         logging.info("Checking instance state (attempt %d/%d)...", attempt, max_attempts)
-        response = ec2.describe_instances(InstanceIds=[instance_id])
-        state = response["Reservations"][0]["Instances"][0]["State"]["Name"]
-        logging.info("  Instance state: %s", state)
-        if state == "running":
-            logging.info("Instance is running")
-            running = True
-            break
+        try:
+            response = ec2.describe_instances(InstanceIds=[instance_id])
+            state = response["Reservations"][0]["Instances"][0]["State"]["Name"]
+            logging.info("  Instance state: %s", state)
+            if state == "running":
+                logging.info("Instance is running")
+                running = True
+                break
+        except ClientError as e:
+            if e.response["Error"]["Code"] != "InvalidInstanceID.NotFound":
+                raise
+            logging.info("  Instance not yet visible, retrying...")
         if attempt < max_attempts:
             logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)

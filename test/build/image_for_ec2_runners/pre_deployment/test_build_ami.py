@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+import pytest
 
 
 class TestParseValueStrings:
@@ -608,6 +609,45 @@ class TestWaitForInstanceRunningFailure:
         mock_ec2.describe_instances.return_value = {
             "Reservations": [{"Instances": [{"State": {"Name": "stopped"}}]}]
         }
+        with patch.object(build_ami_module.time, 'sleep'):
+            with raise_runtime_error:
+                build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+
+
+class TestWaitForInstanceRunningEventualConsistency:
+
+    def test_retries_when_instance_not_found(self, build_ami_module, instance_not_found_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = [
+            instance_not_found_error,
+            {"Reservations": [{"Instances": [{"State": {"Name": "running"}}]}]},
+        ]
+        with patch.object(build_ami_module.time, 'sleep'):
+            build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+        assert mock_ec2.describe_instances.call_count == 2
+
+    def test_succeeds_after_multiple_not_found_errors(self, build_ami_module, instance_not_found_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = [
+            instance_not_found_error,
+            instance_not_found_error,
+            instance_not_found_error,
+            {"Reservations": [{"Instances": [{"State": {"Name": "running"}}]}]},
+        ]
+        with patch.object(build_ami_module.time, 'sleep'):
+            build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+        assert mock_ec2.describe_instances.call_count == 4
+
+    def test_reraises_other_client_errors(self, build_ami_module, access_denied_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = access_denied_error
+        with patch.object(build_ami_module.time, 'sleep'):
+            with pytest.raises(build_ami_module.ClientError):
+                build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")
+
+    def test_raises_after_max_not_found_attempts(self, build_ami_module, instance_not_found_error, raise_runtime_error):
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = instance_not_found_error
         with patch.object(build_ami_module.time, 'sleep'):
             with raise_runtime_error:
                 build_ami_module.wait_for_instance_running(mock_ec2, "i-12345")

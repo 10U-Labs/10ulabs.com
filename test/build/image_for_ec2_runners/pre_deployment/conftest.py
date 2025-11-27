@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from botocore.exceptions import ClientError
 import pytest
 import yaml
 
@@ -107,3 +108,20 @@ def mock_ssh_client_with_output():
 @pytest.fixture
 def mock_ssh_client_with_multiline_output():
     return _create_mock_ssh_client(0, [b"line1\n", b"line2\n", b"line3\n"])
+
+
+def _create_client_error(error_code, error_message):
+    return ClientError(
+        {"Error": {"Code": error_code, "Message": error_message}},
+        "DescribeInstances"
+    )
+
+
+@pytest.fixture
+def instance_not_found_error():
+    return _create_client_error("InvalidInstanceID.NotFound", "The instance ID does not exist")
+
+
+@pytest.fixture
+def access_denied_error():
+    return _create_client_error("UnauthorizedOperation", "Access denied")
