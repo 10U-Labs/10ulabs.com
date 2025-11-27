@@ -13,7 +13,7 @@ from botocore.exceptions import ClientError
 import paramiko
 import yaml
 
-logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stderr)
+logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 
 
 @dataclass
@@ -368,7 +368,6 @@ def run_build(ctx: BuildContext, state: BuildState):
         cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"])
         run_commands(cmd_params)
     state.result = create_ami(ctx.ec2, state.instance_id, ctx.config["ami_name"], ctx.config.get("ami_description"), ctx.config.get("tags", {}))
-    logging.info("Done.")
 
 
 def cmd_build(args):
@@ -393,8 +392,8 @@ def cmd_build(args):
         finally:
             cleanup(ctx.ec2, state.instance_id, f"ami-builder-{unique_id}", f"ami-builder-{unique_id}", state.sg_id)
         if state.result:
-            logging.info("Created AMI: %s", state.result)
             print(f"AMI_ID={state.result}")
+            logging.info("Done.")
             exit_code = 0
     return exit_code
 
