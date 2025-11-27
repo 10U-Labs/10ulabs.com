@@ -95,7 +95,7 @@ class TestProvisionRunnerYq:
         assert "yq" in provision_script_content
 
     def test_yq_uses_architecture_variable(self, provision_script_content):
-        assert "yq_linux_${OS_ARCHITECTURE}" in provision_script_content
+        assert "yq_linux_${ARCH}" in provision_script_content
 
 
 class TestProvisionRunnerDocker:
@@ -125,7 +125,7 @@ class TestProvisionRunnerGitHubRunner:
         assert "github-runner" in provision_script_content
 
     def test_adds_runner_to_docker_group(self, provision_script_content):
-        assert "usermod -aG docker github-runner" in provision_script_content
+        assert "usermod -aG docker $RUNNER_USER" in provision_script_content
 
     def test_downloads_actions_runner(self, provision_script_content):
         assert "actions-runner" in provision_script_content
@@ -134,7 +134,7 @@ class TestProvisionRunnerGitHubRunner:
         assert "installdependencies.sh" in provision_script_content
 
     def test_installdependencies_uses_absolute_path(self, provision_script_content):
-        assert "/home/github-runner/actions-runner/bin/installdependencies.sh" in provision_script_content
+        assert "/home/$RUNNER_USER/actions-runner/bin/installdependencies.sh" in provision_script_content
 
 
 class TestProvisionRunnerAgents:
