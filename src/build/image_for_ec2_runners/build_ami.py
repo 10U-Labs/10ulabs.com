@@ -198,7 +198,7 @@ def run_commands(params: CommandParams):
                 raise
             time.sleep(10)
     commands = parse_commands(params.commands)
-    script = "set -e\n" + "\n".join(commands)
+    script = "\n".join(commands)
     run_ssh_command(client, script)
     client.close()
 
