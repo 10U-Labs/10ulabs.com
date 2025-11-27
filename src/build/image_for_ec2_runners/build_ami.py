@@ -367,7 +367,6 @@ def run_build(ctx: BuildContext, state: BuildState):
         logging.info("Running commands...")
         cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"])
         run_commands(cmd_params)
-    logging.info("Creating AMI...")
     state.result = create_ami(ctx.ec2, state.instance_id, ctx.config["ami_name"], ctx.config.get("ami_description"), ctx.config.get("tags", {}))
     logging.info("Done.")
 
