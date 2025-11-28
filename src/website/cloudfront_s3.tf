@@ -82,7 +82,7 @@ resource "aws_s3_bucket_policy" "website" {
 resource "aws_wafv2_web_acl" "website" {
   provider = aws.us-east-1
 
-  name  = "WebsiteWafWebAcl"
+  name  = "${local.resource_prefix}WafWebAcl"
   scope = "CLOUDFRONT"
 
   default_action {
@@ -91,17 +91,17 @@ resource "aws_wafv2_web_acl" "website" {
 
   visibility_config {
     cloudwatch_metrics_enabled = true
-    metric_name                = "WebsiteWafMetrics"
+    metric_name                = "${local.resource_prefix}WafMetrics"
     sampled_requests_enabled   = true
   }
 
   tags = merge(local.common_tags, {
-    Name = "WebsiteWafWebAcl"
+    Name = "${local.resource_prefix}WafWebAcl"
   })
 }
 
 resource "aws_cloudfront_cache_policy" "website" {
-  name        = "WebsiteCachePolicy"
+  name        = "${local.resource_prefix}CachePolicy"
   default_ttl = 86400
   max_ttl     = 31536000
   min_ttl     = 60
@@ -125,7 +125,7 @@ resource "aws_cloudfront_cache_policy" "website" {
 }
 
 resource "aws_cloudfront_function" "spa_routing" {
-  name    = "WebsiteSpaRoutingFunction"
+  name    = "${local.resource_prefix}SpaRoutingFunction"
   runtime = "cloudfront-js-2.0"
   publish = true
   code    = <<-EOT
@@ -225,11 +225,11 @@ data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
 resource "aws_cloudwatch_log_group" "waf" {
   provider = aws.us-east-1
 
-  name              = "aws-waf-logs-website"
+  name              = "aws-waf-logs-${local.resource_prefix}"
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
-    Name = "aws-waf-logs-website"
+    Name = "aws-waf-logs-${local.resource_prefix}"
   })
 }
 

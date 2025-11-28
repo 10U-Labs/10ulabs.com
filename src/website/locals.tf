@@ -5,6 +5,7 @@ locals {
   www_fqdn              = "www.${module.shared.domain_name}"
   github_repo_full      = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
   name_for_central_logs = module.shared.name_for_central_logs_bucket
+  resource_prefix       = "${module.shared.resource_prefix}Website"
 
   common_tags = {
     ManagedBy = "terraform"
