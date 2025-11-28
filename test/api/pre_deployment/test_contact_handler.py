@@ -1,10 +1,12 @@
 import json
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock
 from test.api.pre_deployment.conftest import (
     parse_response_body,
     assert_response_status,
     assert_json_content_type,
 )
+
+from botocore.exceptions import ClientError
 
 
 def create_contact_event(
@@ -202,32 +204,31 @@ def test_get_ses_client_returns_client(v1_handler):
     with patch("boto3.client") as mock_boto:
         mock_ses = MagicMock()
         mock_boto.return_value = mock_ses
-        v1_handler._clients.clear()
-        client = v1_handler.get_ses_client()
-        assert client is not None
+        with patch.dict(v1_handler.__dict__.get("_clients", {}), clear=True):
+            client = v1_handler.get_ses_client()
+            assert client is not None
 
 
 def test_send_contact_email_calls_ses_send_email(v1_handler):
     mock_ses = MagicMock()
-    v1_handler._clients["ses"] = mock_ses
-    v1_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
-    mock_ses.send_email.assert_called_once()
+    with patch.object(v1_handler, "get_ses_client", return_value=mock_ses):
+        v1_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
+        mock_ses.send_email.assert_called_once()
 
 
 def test_send_contact_email_returns_true_on_success(v1_handler):
     mock_ses = MagicMock()
-    v1_handler._clients["ses"] = mock_ses
-    result = v1_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
-    assert result is True
+    with patch.object(v1_handler, "get_ses_client", return_value=mock_ses):
+        result = v1_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
+        assert result is True
 
 
 def test_send_contact_email_returns_false_on_client_error(v1_handler):
-    from botocore.exceptions import ClientError
     mock_ses = MagicMock()
     mock_ses.send_email.side_effect = ClientError(
         {"Error": {"Code": "MessageRejected", "Message": "Test error"}},
         "SendEmail"
     )
-    v1_handler._clients["ses"] = mock_ses
-    result = v1_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
-    assert result is False
+    with patch.object(v1_handler, "get_ses_client", return_value=mock_ses):
+        result = v1_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
+        assert result is False
