@@ -81,9 +81,12 @@ jobs:
         run: |
           BUCKET_NAME=$(terraform output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
+      - name: Build website
+        run: |
+          cd html && npm ci && npm run build
       - name: Sync website to S3
         run: |
-          aws s3 sync html/ s3://${{ env.BUCKET_NAME }}/ \
+          aws s3 sync html/dist/ s3://${{ env.BUCKET_NAME }}/ \
             --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA
