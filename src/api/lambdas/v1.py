@@ -196,7 +196,12 @@ def set_client(name, client):
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     return {
         'statusCode': status_code,
-        'headers': {'Content-Type': 'application/json'},
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-test-mode'
+        },
         'body': json.dumps(body)
     }
 

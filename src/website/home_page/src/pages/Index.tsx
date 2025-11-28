@@ -101,7 +101,7 @@ const Index = () => {
             Contact Us
           </h2>
           <p className="text-center text-muted-foreground mb-12">
-            Have questions about our products or want to discuss a partnership? Get in touch with us.
+            Have questions about our products? Get in touch with us.
           </p>
           <Card className="border-border">
             <CardContent className="pt-6">
