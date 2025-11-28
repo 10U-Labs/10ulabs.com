@@ -182,25 +182,21 @@ jobs:
             src/build/image_for_docker_runners/config.yml
       - name: Run pylint
         run: |
-          pylint \
-            src/build/image_for_docker_runners/entrypoint.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-          pylint \
-            src/build/image_for_docker_runners/promote_docker_image.py \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-          pylint \
-            test/build/image_for_docker_runners/ \
+          for file in src/build/image_for_docker_runners/*.py; do
+            pylint "$file" \
+              --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+              --fail-on=C,R,W \
+              --fail-under=10.0
+          done
+          pylint test/build/image_for_docker_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          python -m mypy src/build/image_for_docker_runners/entrypoint.py
-          python -m mypy src/build/image_for_docker_runners/promote_docker_image.py
+          for file in src/build/image_for_docker_runners/*.py; do
+            python -m mypy "$file"
+          done
           python -m mypy test/build/image_for_docker_runners/
       - name: Validate Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
