@@ -108,29 +108,16 @@ jobs:
         run: terraform init
       - name: Terraform Apply
         run: terraform apply -auto-approve
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Build website
-        run: |
-          cd html
-          npm ci
-          npm run build
       - name: Get bucket name from Terraform output
         run: |
           BUCKET_NAME=$(terraform output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Sync website to S3
         run: |
-          aws s3 sync html/dist/ s3://${{ env.BUCKET_NAME }}/ \
+          aws s3 sync html/ s3://${{ env.BUCKET_NAME }}/ \
             --delete \
-            --cache-control "max-age=31536000,public" \
-            --exclude "index.html" \
-            --exclude "*.json"
-          aws s3 cp html/dist/index.html s3://${{ env.BUCKET_NAME }}/index.html \
-            --cache-control "no-cache,no-store,must-revalidate"
+            --cache-control no-cache \
+            --storage-class ONEZONE_IA
       - id: check_files
         name: Check if website files changed
         run: |
