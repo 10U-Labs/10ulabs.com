@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
+const API_URL = import.meta.env.VITE_API_URL || "https://api.10ulabs.com";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
@@ -12,6 +15,15 @@ const contactSchema = z.object({
 });
 
 type ContactFormData = z.infer<typeof contactSchema>;
+
+declare global {
+  interface Window {
+    grecaptcha: {
+      ready: (callback: () => void) => void;
+      execute: (siteKey: string, options: { action: string }) => Promise<string>;
+    };
+  }
+}
 
 export const ContactForm = () => {
   const { toast } = useToast();
@@ -22,6 +34,36 @@ export const ContactForm = () => {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!RECAPTCHA_SITE_KEY) {
+      return;
+    }
+    const scriptId = "recaptcha-script";
+    if (document.getElementById(scriptId)) {
+      setRecaptchaLoaded(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = scriptId;
+    script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+    script.async = true;
+    script.onload = () => setRecaptchaLoaded(true);
+    document.head.appendChild(script);
+  }, []);
+
+  const getRecaptchaToken = useCallback(async (): Promise<string> => {
+    if (!RECAPTCHA_SITE_KEY || !recaptchaLoaded) {
+      return "";
+    }
+    return new Promise((resolve) => {
+      window.grecaptcha.ready(async () => {
+        const token = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: "contact" });
+        resolve(token);
+      });
+    });
+  }, [recaptchaLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,14 +72,18 @@ export const ContactForm = () => {
 
     try {
       const validatedData = contactSchema.parse(formData);
-      const response = await fetch('/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(validatedData),
+      const recaptchaToken = await getRecaptchaToken();
+      if (!recaptchaToken) {
+        throw new Error("reCAPTCHA verification failed. Please try again.");
+      }
+      const response = await fetch(`${API_URL}/v1/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...validatedData, recaptcha_token: recaptchaToken }),
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to send message');
+        throw new Error(errorData.error || "Failed to send message");
       }
       toast({
         title: "Message sent!",
@@ -59,7 +105,7 @@ export const ContactForm = () => {
           variant: "destructive",
         });
       } else {
-        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
         toast({
           title: "Error",
           description: errorMessage,

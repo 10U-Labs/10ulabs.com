@@ -204,3 +204,19 @@ def test_contact_cache_behavior_uses_caching_disabled(cloudfront_s3_tf_content):
 
 def test_contact_cache_behavior_uses_all_viewer_except_host_header(cloudfront_s3_tf_content):
     assert 'origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id' in cloudfront_s3_tf_content
+
+
+def test_cloudfront_function_handles_rack_designer_path(cloudfront_s3_tf_content):
+    assert "uri === '/rack-designer'" in cloudfront_s3_tf_content
+
+
+def test_cloudfront_function_handles_rack_designer_trailing_slash(cloudfront_s3_tf_content):
+    assert "uri === '/rack-designer/'" in cloudfront_s3_tf_content
+
+
+def test_cloudfront_function_rewrites_rack_designer_to_index(cloudfront_s3_tf_content):
+    assert "request.uri = '/rack-designer/index.html'" in cloudfront_s3_tf_content
+
+
+def test_cloudfront_function_passes_through_rack_designer_subpaths(cloudfront_s3_tf_content):
+    assert "uri.startsWith('/rack-designer/')" in cloudfront_s3_tf_content

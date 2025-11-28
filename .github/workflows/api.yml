@@ -111,7 +111,9 @@ jobs:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
       - name: Terraform Init
         run: terraform init
-      - name: Terraform Apply
+      - env:
+          TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
+        name: Terraform Apply
         run: terraform apply -auto-approve
       - id: check_files
         name: Check if static files changed
@@ -270,7 +272,9 @@ jobs:
           cd src/api && \
             tflint --init && \
             tflint
-      - name: Terraform Plan
+      - env:
+          TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
+        name: Terraform Plan
         run: cd src/api && terraform plan
   unit-testing:
     name: Unit testing

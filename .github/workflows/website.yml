@@ -81,7 +81,10 @@ jobs:
         run: |
           BUCKET_NAME=$(terraform output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
-      - name: Build website
+      - env:
+          VITE_API_URL: https://api.10ulabs.com
+          VITE_RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
+        name: Build website
         run: |
           cd react && npm ci && npm run build
       - name: Sync website to S3

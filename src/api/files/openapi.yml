@@ -541,6 +541,117 @@ paths:
         httpMethod: POST
         type: aws_proxy
       x-amazon-apigateway-api-key-required: true
+  /v1/contact:
+    post:
+      summary: Submit Contact Form
+      description: Submits a contact form request with reCAPTCHA verification
+      operationId: submitContact
+      tags:
+        - Contact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - message
+                - recaptcha_token
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                message:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                recaptcha_token:
+                  type: string
+                  description: Google reCAPTCHA v3 token
+      responses:
+        '200':
+          description: Contact form submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - message
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Invalid input or reCAPTCHA verification failed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - error
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - error
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+      x-amazon-apigateway-integration:
+        uri: ${V1HandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+    options:
+      summary: CORS preflight for contact endpoint
+      description: Handles CORS preflight requests
+      operationId: contactOptions
+      tags:
+        - Contact
+      responses:
+        '200':
+          description: CORS headers
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
   /{proxy+}:
     x-amazon-apigateway-any-method:
       summary: Catch-all for undefined routes
@@ -595,3 +706,5 @@ tags:
     description: EC2 runner AMI management endpoints
   - name: Image for Docker runners
     description: Docker runner image management endpoints
+  - name: Contact
+    description: Contact form endpoints

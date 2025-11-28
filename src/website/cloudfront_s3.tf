@@ -191,30 +191,6 @@ resource "aws_cloudfront_distribution" "website" {
     origin_access_control_id = aws_cloudfront_origin_access_control.website.id
   }
 
-  origin {
-    domain_name = replace(replace(aws_lambda_function_url.contact_handler.function_url, "https://", ""), "/", "")
-    origin_id   = "contact-api"
-
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/contact"
-    target_origin_id       = "contact-api"
-    viewer_protocol_policy = "redirect-to-https"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
-    cached_methods         = ["GET", "HEAD"]
-    compress               = true
-
-    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id
-  }
-
   default_cache_behavior {
     target_origin_id       = "s3-website"
     viewer_protocol_policy = "redirect-to-https"
@@ -265,14 +241,6 @@ resource "aws_cloudfront_distribution" "website" {
 
 data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
   name = "Managed-CORS-S3Origin"
-}
-
-data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
-  name = "Managed-AllViewerExceptHostHeader"
-}
-
-data "aws_cloudfront_cache_policy" "caching_disabled" {
-  name = "Managed-CachingDisabled"
 }
 
 resource "aws_cloudwatch_log_group" "waf" {

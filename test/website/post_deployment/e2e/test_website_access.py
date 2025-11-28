@@ -63,3 +63,39 @@ def test_apex_redirect_preserves_path(config):
     response = requests.get(apex_url, timeout=30, allow_redirects=False)
     location = response.headers.get('Location', '')
     assert '/some/path' in location
+
+
+def test_rack_designer_returns_200(website_url):
+    response = requests.get(f"{website_url}/rack-designer", timeout=30)
+    assert response.status_code == 200
+
+
+def test_rack_designer_returns_html(website_url):
+    response = requests.get(f"{website_url}/rack-designer", timeout=30)
+    assert 'text/html' in response.headers.get('Content-Type', '')
+
+
+def test_rack_designer_trailing_slash_returns_200(website_url):
+    response = requests.get(f"{website_url}/rack-designer/", timeout=30)
+    assert response.status_code == 200
+
+
+def test_rack_designer_css_returns_200(website_url):
+    response = requests.get(f"{website_url}/rack-designer/css/styles.css", timeout=30)
+    assert response.status_code == 200
+
+
+def test_rack_designer_css_returns_css_content_type(website_url):
+    response = requests.get(f"{website_url}/rack-designer/css/styles.css", timeout=30)
+    assert 'text/css' in response.headers.get('Content-Type', '')
+
+
+def test_rack_designer_js_returns_200(website_url):
+    response = requests.get(f"{website_url}/rack-designer/js/app.js", timeout=30)
+    assert response.status_code == 200
+
+
+def test_rack_designer_js_returns_javascript_content_type(website_url):
+    response = requests.get(f"{website_url}/rack-designer/js/app.js", timeout=30)
+    content_type = response.headers.get('Content-Type', '')
+    assert 'javascript' in content_type

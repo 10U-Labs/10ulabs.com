@@ -2,9 +2,11 @@ import base64
 import json
 import logging
 import os
+import re
 import time
-import urllib.request
 import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Dict, Any, List
 import boto3
 from botocore.exceptions import ClientError
@@ -1192,6 +1194,136 @@ def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def get_ses_client():
+    if 'ses' not in _clients:
+        _clients['ses'] = boto3.client('ses')
+    return _clients['ses']
+
+
+def get_recaptcha_secret() -> str:
+    parameter_name = os.environ.get('RECAPTCHA_SECRET_PARAMETER_NAME', '')
+    if not parameter_name:
+        return ''
+    try:
+        response = get_ssm_client().get_parameter(Name=parameter_name, WithDecryption=True)
+        secret = response['Parameter']['Value']
+        return secret
+    except (ClientError, ValueError, KeyError) as e:
+        logger.error("Failed to retrieve reCAPTCHA secret: %s", e)
+        return ''
+
+
+def verify_recaptcha(token: str, secret: str) -> bool:
+    if not token or not secret:
+        return False
+    try:
+        data = urllib.parse.urlencode({
+            'secret': secret,
+            'response': token
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            'https://www.google.com/recaptcha/api/siteverify',
+            data=data,
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            success = result.get('success', False)
+            score = result.get('score', 0)
+            is_valid = success and score >= 0.5
+            if not is_valid:
+                logger.warning("reCAPTCHA verification failed: success=%s, score=%s", success, score)
+            return is_valid
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as e:
+        logger.error("reCAPTCHA verification error: %s", e)
+        return False
+
+
+def validate_contact_email(email: str) -> bool:
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    result = bool(re.match(pattern, email))
+    return result
+
+
+def send_contact_email(recipient: str, sender_name: str, sender_email: str, message: str) -> bool:
+    subject = f'Contact Form: Message from {sender_name}'
+    body_text = f'Name: {sender_name}\nEmail: {sender_email}\n\nMessage:\n{message}'
+    body_html = f'''<html>
+<body>
+<h2>New Contact Form Submission</h2>
+<p><strong>Name:</strong> {sender_name}</p>
+<p><strong>Email:</strong> <a href="mailto:{sender_email}">{sender_email}</a></p>
+<h3>Message:</h3>
+<p>{message.replace(chr(10), '<br>')}</p>
+</body>
+</html>'''
+    try:
+        get_ses_client().send_email(
+            Source=recipient,
+            Destination={'ToAddresses': [recipient]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Text': {'Data': body_text, 'Charset': 'UTF-8'},
+                    'Html': {'Data': body_html, 'Charset': 'UTF-8'}
+                }
+            },
+            ReplyToAddresses=[sender_email]
+        )
+        return True
+    except ClientError as e:
+        logger.error("Failed to send contact email: %s", e)
+        return False
+
+
+def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        body = parse_body(event)
+        recaptcha_token = body.get('recaptcha_token', '').strip()
+        name = body.get('name', '').strip()
+        email = body.get('email', '').strip()
+        message = body.get('message', '').strip()
+
+        if not recaptcha_token:
+            response = error_response(400, 'Missing required field: recaptcha_token')
+        elif not name:
+            response = error_response(400, 'Missing required field: name')
+        elif len(name) > 100:
+            response = error_response(400, 'Name must be less than 100 characters')
+        elif not email:
+            response = error_response(400, 'Missing required field: email')
+        elif len(email) > 255:
+            response = error_response(400, 'Email must be less than 255 characters')
+        elif not validate_contact_email(email):
+            response = error_response(400, 'Invalid email address')
+        elif not message:
+            response = error_response(400, 'Missing required field: message')
+        elif len(message) > 1000:
+            response = error_response(400, 'Message must be less than 1000 characters')
+        elif is_test_mode():
+            response = success_response(TEST_MODE_MOCK_PATHS['/v1/contact'])
+        else:
+            recaptcha_secret = get_recaptcha_secret()
+            if not recaptcha_secret:
+                logger.error("reCAPTCHA secret not configured")
+                response = error_response(500, 'Server configuration error')
+            elif not verify_recaptcha(recaptcha_token, recaptcha_secret):
+                response = error_response(400, 'reCAPTCHA verification failed')
+            else:
+                contact_email = os.environ.get('CONTACT_EMAIL', '')
+                if not contact_email:
+                    response = error_response(500, 'Server configuration error')
+                elif send_contact_email(contact_email, name, email, message):
+                    logger.info("Contact form submitted: name=%s, email=%s", name, email)
+                    response = json_response(200, {'success': True, 'message': 'Message sent successfully'})
+                else:
+                    response = error_response(500, 'Failed to send message')
+    except (ValueError, KeyError) as e:
+        logger.error("Error handling contact form: %s", e, exc_info=True)
+        response = error_response(500, 'Internal server error', str(e))
+    return response
+
+
 def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
     result = validate_all_dependencies()
     if result['valid']:
@@ -1211,6 +1343,7 @@ def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 ROUTE_MAP = {
+    ('/v1/contact', 'POST'): handle_contact_post,
     ('/v1/echo', 'POST'): handle_echo_post,
     ('/v1/health/dependencies', 'GET'): handle_dependencies_health,
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
@@ -1227,6 +1360,7 @@ ROUTE_MAP = {
 
 
 TEST_MODE_MOCK_PATHS = {
+    '/v1/contact': {'success': True, 'message': 'Test mode - contact form not submitted', 'test_mode': True},
     '/v1/ec2-runner': {'success': True, 'instance_id': 'i-test-mode-mock', 'test_mode': True},
     '/v1/docker-runner': {'success': True, 'task_arn': 'arn:aws:ecs:test-mode-mock', 'test_mode': True},
     '/v1/image-for-ec2-runners': {'success': True, 'message': 'Test mode - no AMI created', 'test_mode': True},

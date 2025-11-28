@@ -145,3 +145,8 @@ variable "fargate_operating_system_family" {
 variable "ssm_parameter_name_for_latest_ami" {
   type = string
 }
+
+variable "recaptcha_secret_key" {
+  type      = string
+  sensitive = true
+}
