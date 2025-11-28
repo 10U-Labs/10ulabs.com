@@ -668,7 +668,7 @@ def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
                 'BlockDeviceMappings': [{
                     'DeviceName': '/dev/xvda',
                     'Ebs': {
-                        'VolumeSize': 128,
+                        'VolumeSize': 64,
                         'VolumeType': 'gp3',
                         'DeleteOnTermination': True
                     }

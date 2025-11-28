@@ -2161,7 +2161,7 @@ def test_create_fleet_launch_template_includes_block_device_mappings(mock_boto_c
 
 
 @patch('boto3.client')
-def test_create_fleet_launch_template_block_device_has_128gb_volume(mock_boto_client, v1_handler):
+def test_create_fleet_launch_template_block_device_has_64gb_volume(mock_boto_client, v1_handler):
     mock_ec2 = MagicMock()
     mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
     mock_boto_client.return_value = mock_ec2
@@ -2169,7 +2169,7 @@ def test_create_fleet_launch_template_block_device_has_128gb_volume(mock_boto_cl
     v1_handler.create_fleet_launch_template(template_config)
     call_args = mock_ec2.create_launch_template.call_args
     block_device = call_args.kwargs['LaunchTemplateData']['BlockDeviceMappings'][0]
-    assert block_device['Ebs']['VolumeSize'] == 128
+    assert block_device['Ebs']['VolumeSize'] == 64
 
 
 @patch('boto3.client')
