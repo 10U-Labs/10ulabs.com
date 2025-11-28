@@ -93,7 +93,7 @@ resource "aws_lambda_function_url" "contact_handler" {
 
   cors {
     allow_origins = ["https://${local.www_fqdn}", "https://${local.apex_fqdn}"]
-    allow_methods = ["POST", "OPTIONS"]
+    allow_methods = ["POST"]
     allow_headers = ["Content-Type"]
     max_age       = 86400
   }

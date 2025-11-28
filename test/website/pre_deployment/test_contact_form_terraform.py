@@ -66,9 +66,5 @@ def test_lambda_function_url_allows_post_method(contact_form_tf_content):
     assert 'POST' in contact_form_tf_content
 
 
-def test_lambda_function_url_allows_options_method(contact_form_tf_content):
-    assert 'OPTIONS' in contact_form_tf_content
-
-
 def test_lambda_handler_file_exists(website_src_path):
     assert (website_src_path / "lambdas" / "contact.py").exists()
