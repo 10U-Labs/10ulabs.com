@@ -8,7 +8,6 @@ import { z } from "zod";
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
   email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters"),
-  company: z.string().trim().max(100, "Company name must be less than 100 characters").optional(),
   message: z.string().trim().min(1, "Message is required").max(1000, "Message must be less than 1000 characters"),
 });
 
@@ -19,7 +18,6 @@ export const ContactForm = () => {
   const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
-    company: "",
     message: "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({});
@@ -32,16 +30,24 @@ export const ContactForm = () => {
 
     try {
       const validatedData = contactSchema.parse(formData);
-      
-      // Simulate form submission
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      const apiUrl = import.meta.env.VITE_CONTACT_API_URL;
+      if (!apiUrl) {
+        throw new Error('Contact API URL not configured');
+      }
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validatedData),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to send message');
+      }
       toast({
         title: "Message sent!",
         description: "We'll get back to you as soon as possible.",
       });
-      
-      setFormData({ name: "", email: "", company: "", message: "" });
+      setFormData({ name: "", email: "", message: "" });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Partial<Record<keyof ContactFormData, string>> = {};
@@ -51,12 +57,19 @@ export const ContactForm = () => {
           }
         });
         setErrors(fieldErrors);
+        toast({
+          title: "Error",
+          description: "Please check the form for errors.",
+          variant: "destructive",
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
       }
-      toast({
-        title: "Error",
-        description: "Please check the form for errors.",
-        variant: "destructive",
-      });
     } finally {
       setIsSubmitting(false);
     }
@@ -83,16 +96,6 @@ export const ContactForm = () => {
           className="bg-background border-border"
         />
         {errors.email && <p className="text-destructive text-sm mt-1">{errors.email}</p>}
-      </div>
-      
-      <div>
-        <Input
-          placeholder="Company (optional)"
-          value={formData.company}
-          onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-          className="bg-background border-border"
-        />
-        {errors.company && <p className="text-destructive text-sm mt-1">{errors.company}</p>}
       </div>
       
       <div>
