@@ -2684,61 +2684,61 @@ def test_generate_config_hash_order_independent(v1_handler):
 
 def test_validate_rack_configuration_missing_rack_height(v1_handler):
     config = {'rackCount': 3, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'Missing required field: rackHeight'
 
 
 def test_validate_rack_configuration_missing_rack_count(v1_handler):
     config = {'rackHeight': 12, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'Missing required field: rackCount'
 
 
 def test_validate_rack_configuration_missing_placed_parts(v1_handler):
     config = {'rackHeight': 12, 'rackCount': 3}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'Missing required field: placedParts'
 
 
 def test_validate_rack_configuration_invalid_rack_height_type(v1_handler):
     config = {'rackHeight': '12', 'rackCount': 3, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'rackHeight must be an integer'
 
 
 def test_validate_rack_configuration_invalid_rack_count_type(v1_handler):
     config = {'rackHeight': 12, 'rackCount': '3', 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'rackCount must be an integer'
 
 
 def test_validate_rack_configuration_invalid_placed_parts_type(v1_handler):
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': 'not a list'}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'placedParts must be an array'
 
 
 def test_validate_rack_configuration_rack_height_too_low(v1_handler):
     config = {'rackHeight': 0, 'rackCount': 3, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'rackHeight must be between 1 and 42'
 
 
 def test_validate_rack_configuration_rack_height_too_high(v1_handler):
     config = {'rackHeight': 43, 'rackCount': 3, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'rackHeight must be between 1 and 42'
 
 
 def test_validate_rack_configuration_rack_count_too_low(v1_handler):
     config = {'rackHeight': 12, 'rackCount': 0, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result == 'rackCount must be at least 1'
 
 
 def test_validate_rack_configuration_valid_config_returns_none(v1_handler):
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
-    result = v1_handler._validate_rack_configuration(config)
+    result = v1_handler.validate_rack_configuration(config)
     assert result is None
 
 
@@ -2787,20 +2787,20 @@ def test_handle_rack_designer_post_config_hash_is_8_chars(mock_boto_client, v1_h
     assert len(body['config_hash']) == 8
 
 
-def test_handle_rack_designer_get_missing_config_hash(v1_handler, lambda_context):
+def test_handle_rack_designer_get_missing_config_hash(v1_handler):
     event = {'path': '/v1/rack-designer/configurations/', 'httpMethod': 'GET', 'pathParameters': {}, 'headers': {}}
     response = v1_handler.handle_rack_designer_get(event)
     assert response['statusCode'] == 400
 
 
-def test_handle_rack_designer_get_invalid_config_hash_format(v1_handler, lambda_context):
+def test_handle_rack_designer_get_invalid_config_hash_format(v1_handler):
     event = {'path': '/v1/rack-designer/configurations/invalid', 'httpMethod': 'GET', 'pathParameters': {'config_hash': 'invalid'}, 'headers': {}}
     response = v1_handler.handle_rack_designer_get(event)
     assert response['statusCode'] == 400
 
 
 @patch('boto3.client')
-def test_handle_rack_designer_get_not_found(mock_boto_client, v1_handler, rack_designer_get_event_factory, lambda_context):
+def test_handle_rack_designer_get_not_found(mock_boto_client, v1_handler, rack_designer_get_event_factory):
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
@@ -2810,7 +2810,7 @@ def test_handle_rack_designer_get_not_found(mock_boto_client, v1_handler, rack_d
 
 
 @patch('boto3.client')
-def test_handle_rack_designer_get_success(mock_boto_client, v1_handler, rack_designer_get_event_factory, lambda_context):
+def test_handle_rack_designer_get_success(mock_boto_client, v1_handler, rack_designer_get_event_factory):
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {
@@ -2825,7 +2825,7 @@ def test_handle_rack_designer_get_success(mock_boto_client, v1_handler, rack_des
 
 
 @patch('boto3.client')
-def test_handle_rack_designer_get_returns_configuration(mock_boto_client, v1_handler, rack_designer_get_event_factory, lambda_context):
+def test_handle_rack_designer_get_returns_configuration(mock_boto_client, v1_handler, rack_designer_get_event_factory):
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {

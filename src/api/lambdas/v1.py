@@ -1421,7 +1421,7 @@ def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
     return result
 
 
-def _validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
+def validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
     error_msg = None
     if 'rackHeight' not in config:
         error_msg = 'Missing required field: rackHeight'
@@ -1449,7 +1449,7 @@ def handle_rack_designer_post(event: Dict[str, Any]) -> Dict[str, Any]:
         if not config:
             response = error_response(400, 'Missing required field: configuration')
         else:
-            validation_error = _validate_rack_configuration(config)
+            validation_error = validate_rack_configuration(config)
             if validation_error:
                 response = error_response(400, validation_error)
             else:
