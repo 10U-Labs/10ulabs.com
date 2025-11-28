@@ -30,11 +30,7 @@ export const ContactForm = () => {
 
     try {
       const validatedData = contactSchema.parse(formData);
-      const apiUrl = import.meta.env.VITE_CONTACT_API_URL;
-      if (!apiUrl) {
-        throw new Error('Contact API URL not configured');
-      }
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(validatedData),
