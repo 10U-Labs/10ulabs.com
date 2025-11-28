@@ -1,7 +1,7 @@
 from botocore.exceptions import ClientError
 
 TAGS = {'Purpose': 'GitHub self-hosted EC2 runner'}
-EXCLUDE_TAGS = {}
+EXCLUDE_TAGS: dict[str, str] = {}
 
 
 class TestCleanupKeyPairsReturnsDeletedCount:

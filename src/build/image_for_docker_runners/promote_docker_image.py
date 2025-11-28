@@ -5,7 +5,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-def remove_tag_from_image(ecr_client, repository_name, tag_to_remove, region):
+def remove_tag_from_image(ecr_client, repository_name, tag_to_remove):
     try:
         response = ecr_client.describe_images(
             repositoryName=repository_name,
@@ -28,7 +28,7 @@ def remove_tag_from_image(ecr_client, repository_name, tag_to_remove, region):
         return 1
 
 
-def get_image_manifest(ecr_client, repository_name, source_tag, region):
+def get_image_manifest(ecr_client, repository_name, source_tag):
     try:
         response = ecr_client.describe_images(
             repositoryName=repository_name,
@@ -55,7 +55,7 @@ def get_image_manifest(ecr_client, repository_name, source_tag, region):
         return None
 
 
-def add_tag_to_image(ecr_client, repository_name, manifest, new_tag, region):
+def add_tag_to_image(ecr_client, repository_name, manifest, new_tag):
     try:
         ecr_client.put_image(
             repositoryName=repository_name,
@@ -83,14 +83,14 @@ def promote_image(repository_name: str, image_tag: str, region: str) -> int:
     print()
 
     print("Step 1: Remove 'latest' tag from previous image (if exists)")
-    result = remove_tag_from_image(ecr_client, repository_name, "latest", region)
+    result = remove_tag_from_image(ecr_client, repository_name, "latest")
     if result != 0:
         exit_code = result
         return exit_code
     print()
 
     print(f"Step 2: Get manifest of image '{image_tag}'")
-    manifest = get_image_manifest(ecr_client, repository_name, image_tag, region)
+    manifest = get_image_manifest(ecr_client, repository_name, image_tag)
     if not manifest:
         exit_code = 1
         return exit_code
@@ -98,21 +98,21 @@ def promote_image(repository_name: str, image_tag: str, region: str) -> int:
     print()
 
     print("Step 3: Add 'latest' tag to image")
-    result = add_tag_to_image(ecr_client, repository_name, manifest, "latest", region)
+    result = add_tag_to_image(ecr_client, repository_name, manifest, "latest")
     if result != 0:
         exit_code = result
         return exit_code
     print()
 
     print("Step 4: Add 'stable' tag to image")
-    result = add_tag_to_image(ecr_client, repository_name, manifest, "stable", region)
+    result = add_tag_to_image(ecr_client, repository_name, manifest, "stable")
     if result != 0:
         exit_code = result
         return exit_code
     print()
 
     print("Step 5: Remove 'available' tag from image")
-    result = remove_tag_from_image(ecr_client, repository_name, "available", region)
+    result = remove_tag_from_image(ecr_client, repository_name, "available")
     if result != 0:
         exit_code = result
         return exit_code

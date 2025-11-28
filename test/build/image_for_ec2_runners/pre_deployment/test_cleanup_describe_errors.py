@@ -1,7 +1,7 @@
 from botocore.exceptions import ClientError
 
 TAGS = {'Purpose': 'test'}
-EXCLUDE_TAGS = {}
+EXCLUDE_TAGS: dict[str, str] = {}
 
 
 class TestCleanupAmisDescribeError:

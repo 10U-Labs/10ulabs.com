@@ -188,7 +188,7 @@ jobs:
               --fail-on=C,R,W \
               --fail-under=10.0
           done
-          pylint test/build/image_for_docker_runners/ \
+          PYTHONPATH=src/build/image_for_docker_runners pylint test/build/image_for_docker_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
@@ -197,7 +197,7 @@ jobs:
           for file in src/build/image_for_docker_runners/*.py; do
             python -m mypy "$file"
           done
-          python -m mypy test/build/image_for_docker_runners/
+          MYPYPATH=src/build/image_for_docker_runners python -m mypy test/build/image_for_docker_runners/
       - name: Validate Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:

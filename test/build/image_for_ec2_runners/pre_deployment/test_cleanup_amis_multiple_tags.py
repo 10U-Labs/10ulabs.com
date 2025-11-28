@@ -31,7 +31,7 @@ class TestCleanupAmisMultipleTagsOrLogic:
         assert count == 2
 
 
-EXCLUDE_TAGS = {}
+EXCLUDE_TAGS: dict[str, str] = {}
 
 
 class TestCleanupInstancesMultipleTagsOrLogic:

@@ -326,7 +326,9 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
-        run: python -m mypy src/build/image_for_ec2_runners/*.py
+        run: |
+          python -m mypy src/build/image_for_ec2_runners/*.py
+          MYPYPATH=test/build/image_for_ec2_runners/post_deployment python -m mypy --explicit-package-bases test/build/image_for_ec2_runners/
   promoting-ami:
     name: Promoting AMI
     needs:
