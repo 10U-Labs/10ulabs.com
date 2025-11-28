@@ -1,4 +1,4 @@
-with open('openapi.yml', 'r') as f:
+with open('openapi.yml', 'r', encoding='utf-8') as f:
     lines = f.readlines()
 
 new_lines = []
@@ -35,7 +35,7 @@ for i, line in enumerate(lines):
                     skip_next = True
                     break
 
-with open('openapi.yml', 'w') as f:
+with open('openapi.yml', 'w', encoding='utf-8') as f:
     f.writelines(new_lines)
 
 print("Done adding API key requirements")

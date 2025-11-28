@@ -72,7 +72,7 @@ def publish_metric(metric_name: str, value: float, unit: str = 'None'):
                     }
                 ]
             )
-        except Exception as e:
+        except ClientError as e:
             logger.warning("Failed to publish metric %s: %s", metric_name, e)
 
 
@@ -236,7 +236,7 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
     return hmac.compare_digest(computed_signature, github_signature)
 
 
-def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict = None, max_retries: int = 3) -> tuple:
+def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | None = None, max_retries: int = 3) -> tuple:
     base_delay = 1.0
     last_status_code = None
     if headers is None:
@@ -417,7 +417,7 @@ def verify_webhook_signature(body_str: str, signature_header: str) -> dict:
         return {'statusCode': 500, 'body': json.dumps({'error': 'Authentication system unavailable'})}
 
 
-def get_header_case_insensitive(headers: dict, key: str) -> str:
+def get_header_case_insensitive(headers: dict, key: str) -> str | None:
     lower_key = key.lower()
     for header_name, header_value in headers.items():
         if header_name.lower() == lower_key:
@@ -427,12 +427,11 @@ def get_header_case_insensitive(headers: dict, key: str) -> str:
 
 def handle_api_gateway_event(event: dict, start_time: float) -> dict:
     headers = event.get('headers', {})
-    test_header = get_header_case_insensitive(headers, 'x-test-mode')
-    set_test_mode(test_header == 'true')
+    set_test_mode(get_header_case_insensitive(headers, 'x-test-mode') == 'true')
 
     http_method = event.get('httpMethod', event.get('requestContext', {}).get('http', {}).get('method', ''))
     if http_method == 'OPTIONS':
-        return {
+        result = {
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
@@ -441,11 +440,18 @@ def handle_api_gateway_event(event: dict, start_time: float) -> dict:
             },
             'body': ''
         }
+        return result
 
     path = event.get('path', event.get('rawPath', ''))
     if path == '/v1/runners/health':
-        return handle_health_check()
+        result = handle_health_check()
+        return result
 
+    result = _process_webhook_event(event, headers, start_time)
+    return result
+
+
+def _process_webhook_event(event: dict, headers: dict, start_time: float) -> dict:
     try:
         body_str, payload = parse_event_body(event)
     except (ValueError, KeyError) as e:
@@ -453,7 +459,6 @@ def handle_api_gateway_event(event: dict, start_time: float) -> dict:
         logger.error("Body content (first 500 chars): %s", str(event.get('body', ''))[:500])
         return {'statusCode': 400, 'body': json.dumps({'error': 'Invalid JSON payload'})}
 
-    headers = event.get('headers', {})
     signature_header = get_header_case_insensitive(headers, 'x-hub-signature-256')
     if signature_header:
         error_response = verify_webhook_signature(body_str, signature_header)
@@ -473,10 +478,13 @@ def handle_api_gateway_event(event: dict, start_time: float) -> dict:
     publish_metric('ProcessingTime', (time.time() - start_time) * 1000, 'Milliseconds')
 
     if event_type == 'workflow_job':
-        return handle_workflow_job(payload)
+        result = handle_workflow_job(payload)
+        return result
+
     logger.info("Received ping event" if event_type == 'ping' else f"Ignoring event type: {event_type}")
     message = 'pong' if event_type == 'ping' else f'Event type {event_type} ignored'
-    return {'statusCode': 200, 'body': json.dumps({'message': message})}
+    result = {'statusCode': 200, 'body': json.dumps({'message': message})}
+    return result
 
 
 def lambda_handler(event, _context):

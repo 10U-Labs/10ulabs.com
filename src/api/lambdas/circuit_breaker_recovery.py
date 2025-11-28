@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
@@ -40,6 +41,8 @@ def get_circuit_breaker_state(table_name: str) -> dict:
 
 def update_circuit_breaker_state(table_name: str, state: str, recovery_attempts: int) -> dict:
     dynamodb = boto3.client('dynamodb')
+    current_time = int(time.time())
+    result: dict[str, Any] = {'success': False}
 
     try:
         dynamodb.put_item(
@@ -48,16 +51,18 @@ def update_circuit_breaker_state(table_name: str, state: str, recovery_attempts:
                 'state_id': {'S': 'current'},
                 'state': {'S': state},
                 'recovery_attempts': {'N': str(recovery_attempts)},
-                'last_recovery_attempt': {'N': str(int(time.time()))},
-                'last_failure_time': {'N': str(int(time.time()))},
-                'ttl': {'N': str(int(time.time()) + 2592000)}
+                'last_recovery_attempt': {'N': str(current_time)},
+                'last_failure_time': {'N': str(current_time)},
+                'ttl': {'N': str(current_time + 2592000)}
             }
         )
         logger.info("Updated circuit breaker state to: %s", state)
-        return {'success': True}
+        result = {'success': True}
     except ClientError as e:
         logger.error("Failed to update circuit breaker state: %s", e)
-        return {'success': False, 'error': str(e)}
+        result = {'success': False, 'error': str(e)}
+
+    return result
 
 
 def calculate_backoff_seconds(recovery_attempts: int) -> int:
@@ -175,6 +180,10 @@ def attempt_recovery() -> dict:
     webhook_function = os.environ.get('WEBHOOK_FUNCTION_NAME')
     sns_topic = os.environ.get('SNS_TOPIC_ARN')
     max_recovery_attempts = int(os.environ.get('MAX_RECOVERY_ATTEMPTS', '5'))
+
+    if not state_table or not webhook_function:
+        logger.error("Missing required environment variables")
+        return {'error': 'Configuration error', 'message': 'Missing STATE_TABLE_NAME or WEBHOOK_FUNCTION_NAME'}
 
     current_state = get_circuit_breaker_state(state_table)
     recovery_attempts = current_state['recovery_attempts']

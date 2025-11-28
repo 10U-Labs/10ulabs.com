@@ -161,8 +161,8 @@ def update_circuit_breaker_state(table_name: str, state: str) -> dict:
 def handle_alarm_ok_state(
     result: dict,
     webhook_function_name: str,
-    state_table_name: str,
-    sns_topic_arn: str,
+    state_table_name: str | None,
+    sns_topic_arn: str | None,
     alarm_name: str
 ) -> dict:
     logger.info("Alarm returned to OK state, resetting circuit breaker")
@@ -207,21 +207,12 @@ The system has automatically recovered.
 def handle_cloudwatch_alarm_event(event: dict) -> dict:
     detail = event.get('detail', {})
     alarm_name = detail.get('alarmName', 'Unknown')
-    alarm_reason = detail.get('state', {}).get('reason', 'No reason provided')
     new_state_value = detail.get('state', {}).get('value', 'UNKNOWN')
+    webhook_function_name = os.environ.get('WEBHOOK_FUNCTION_NAME')
 
     logger.info("Processing CloudWatch alarm event: %s (state: %s)", alarm_name, new_state_value)
 
-    webhook_function_name = os.environ.get('WEBHOOK_FUNCTION_NAME')
-    sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
-    incident_table_name = os.environ.get('INCIDENT_TABLE_NAME')
-    state_table_name = os.environ.get('STATE_TABLE_NAME')
-
-    result = {
-        'alarm_name': alarm_name,
-        'alarm_state': new_state_value,
-        'actions_taken': []
-    }
+    result = {'alarm_name': alarm_name, 'alarm_state': new_state_value, 'actions_taken': []}
 
     if not webhook_function_name:
         logger.error("WEBHOOK_FUNCTION_NAME not set")
@@ -229,7 +220,8 @@ def handle_cloudwatch_alarm_event(event: dict) -> dict:
 
     if new_state_value == 'OK':
         return handle_alarm_ok_state(
-            result, webhook_function_name, state_table_name, sns_topic_arn, alarm_name
+            result, webhook_function_name, os.environ.get('STATE_TABLE_NAME'),
+            os.environ.get('SNS_TOPIC_ARN'), alarm_name
         )
 
     if new_state_value != 'ALARM':
@@ -237,14 +229,23 @@ def handle_cloudwatch_alarm_event(event: dict) -> dict:
         result['message'] = 'Alarm not in actionable state'
         return result
 
+    _execute_remediation_actions(result, webhook_function_name, alarm_name, detail)
+    logger.info("Remediation complete. Actions taken: %s", result['actions_taken'])
+    return result
+
+
+def _execute_remediation_actions(result: dict, webhook_function_name: str, alarm_name: str, detail: dict):
+    alarm_reason = detail.get('state', {}).get('reason', 'No reason provided')
+    new_state_value = detail.get('state', {}).get('value', 'UNKNOWN')
+
     disable_result = disable_sqs_event_source(webhook_function_name)
     if disable_result['success']:
         result['actions_taken'].append(f"Disabled SQS event sources: {disable_result['disabled_count']}")
 
-    concurrency_result = set_lambda_reserved_concurrency(webhook_function_name, 0)
-    if concurrency_result['success']:
+    if set_lambda_reserved_concurrency(webhook_function_name, 0)['success']:
         result['actions_taken'].append('Set Lambda reserved concurrency to 0')
 
+    sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
     if sns_topic_arn:
         notification_message = f"""Circuit Breaker Remediation Triggered
 
@@ -257,27 +258,20 @@ Actions Taken:
 
 Manual intervention may be required to restore service.
 """
-        sns_result = send_sns_notification(
-            sns_topic_arn,
-            f"Circuit Breaker Alert: {alarm_name}",
-            notification_message
-        )
-        if sns_result['success']:
+        if send_sns_notification(sns_topic_arn, f"Circuit Breaker Alert: {alarm_name}", notification_message)['success']:
             result['actions_taken'].append('Sent SNS notification')
 
+    incident_table_name = os.environ.get('INCIDENT_TABLE_NAME')
     if incident_table_name:
         incident_result = record_incident(incident_table_name, alarm_name, alarm_reason)
         if incident_result['success']:
             result['actions_taken'].append(f"Recorded incident: {incident_result['incident_id']}")
 
+    state_table_name = os.environ.get('STATE_TABLE_NAME')
     if state_table_name:
-        state_result = update_circuit_breaker_state(state_table_name, 'open')
-        if state_result['success']:
+        if update_circuit_breaker_state(state_table_name, 'open')['success']:
             result['actions_taken'].append('Set circuit breaker state to OPEN')
             result['actions_taken'].append('Auto-recovery will attempt after cooldown period')
-
-    logger.info("Remediation complete. Actions taken: %s", result['actions_taken'])
-    return result
 
 
 def lambda_handler(event, _context):

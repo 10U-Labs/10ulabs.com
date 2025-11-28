@@ -1374,7 +1374,13 @@ def test_create_ec2_user_data_includes_nvme_format(v1_handler):
 def test_create_ec2_user_data_includes_nvme_mount(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
         user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
-        assert '/dev/nvme1n1' in user_data
+        assert 'mount "$INSTANCE_STORE" /home/github-runner' in user_data
+
+
+def test_create_ec2_user_data_detects_instance_store_dynamically(v1_handler):
+    with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        assert 'INSTANCE_STORE=$(lsblk' in user_data
 
 
 @patch('boto3.client')

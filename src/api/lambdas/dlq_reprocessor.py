@@ -3,6 +3,7 @@ import logging
 import os
 import urllib.request
 import urllib.error
+from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
@@ -11,7 +12,7 @@ logger.setLevel(logging.INFO)
 
 MAX_REPROCESS_ATTEMPTS = 3
 
-_clients = {}
+_clients: dict[str, Any] = {}
 
 
 def reset_clients():
@@ -119,84 +120,73 @@ def get_reprocess_attempt_count(message: dict) -> int:
 
 
 def reprocess_dlq_messages(dlq_url: str, target_queue_url: str, max_messages: int = 10) -> dict:
-    sqs = get_sqs_client()
-    github_token = get_github_token()
-    reprocessed = 0
-    skipped_completed = 0
-    skipped_max_retries = 0
-    failed = 0
+    result: dict[str, Any] = {'reprocessed': 0, 'skipped_completed': 0, 'skipped_max_retries': 0, 'failed': 0}
 
     try:
-        response = sqs.receive_message(
-            QueueUrl=dlq_url,
-            MaxNumberOfMessages=max_messages,
-            WaitTimeSeconds=5,
-            MessageAttributeNames=['All'],
-            AttributeNames=['ApproximateReceiveCount']
+        response = get_sqs_client().receive_message(
+            QueueUrl=dlq_url, MaxNumberOfMessages=max_messages, WaitTimeSeconds=5,
+            MessageAttributeNames=['All'], AttributeNames=['ApproximateReceiveCount']
         )
         messages = response.get('Messages', [])
         logger.info("Found %d messages in DLQ: %s", len(messages), dlq_url)
 
         for message in messages:
-            try:
-                body = json.loads(message['Body'])
-            except (json.JSONDecodeError, KeyError):
-                logger.error("Invalid message body, skipping: %s", message.get('Body', '')[:200])
-                failed += 1
-                continue
-
-            job_id = body.get('job_id')
-            github_repo = body.get('github_repo')
-            attempt_count = get_reprocess_attempt_count(message) + 1
-
-            if attempt_count > MAX_REPROCESS_ATTEMPTS:
-                logger.warning("Job %s exceeded max reprocess attempts (%d), alerting humans", job_id, MAX_REPROCESS_ATTEMPTS)
-                send_poison_pill_alert(body, attempt_count, "Exceeded maximum reprocess attempts")
-                skipped_max_retries += 1
-                continue
-
-            if github_repo and job_id:
-                job_status = check_github_job_status(github_repo, job_id, github_token)
-                if job_status == 'completed':
-                    logger.info("Job %s already completed in GitHub, deleting from DLQ", job_id)
-                    sqs.delete_message(QueueUrl=dlq_url, ReceiptHandle=message['ReceiptHandle'])
-                    skipped_completed += 1
-                    continue
-                if job_status == 'not_found':
-                    logger.info("Job %s not found in GitHub (expired), deleting from DLQ", job_id)
-                    sqs.delete_message(QueueUrl=dlq_url, ReceiptHandle=message['ReceiptHandle'])
-                    skipped_completed += 1
-                    continue
-
-            try:
-                message_attrs = message.get('MessageAttributes', {})
-                message_attrs['ReprocessAttempts'] = {
-                    'DataType': 'Number',
-                    'StringValue': str(attempt_count)
-                }
-                sqs.send_message(
-                    QueueUrl=target_queue_url,
-                    MessageBody=message['Body'],
-                    MessageAttributes=message_attrs
-                )
-                sqs.delete_message(QueueUrl=dlq_url, ReceiptHandle=message['ReceiptHandle'])
-                reprocessed += 1
-                logger.info("Reprocessed job %s (attempt %d/%d)", job_id, attempt_count, MAX_REPROCESS_ATTEMPTS)
-            except ClientError as e:
-                logger.error("Failed to reprocess message for job %s: %s", job_id, e)
-                failed += 1
+            _process_dlq_message(message, dlq_url, target_queue_url, result)
 
     except ClientError as e:
         logger.error("Failed to receive messages from DLQ: %s", e)
-        return {'reprocessed': 0, 'failed': 0, 'error': str(e)}
+        result['error'] = str(e)
 
-    result = {
-        'reprocessed': reprocessed,
-        'skipped_completed': skipped_completed,
-        'skipped_max_retries': skipped_max_retries,
-        'failed': failed
-    }
     return result
+
+
+def _process_dlq_message(message: dict, dlq_url: str, target_queue_url: str, result: dict):
+    sqs = get_sqs_client()
+
+    try:
+        body = json.loads(message['Body'])
+    except (json.JSONDecodeError, KeyError):
+        logger.error("Invalid message body, skipping: %s", message.get('Body', '')[:200])
+        result['failed'] += 1
+        return
+
+    job_id = body.get('job_id')
+    attempt_count = get_reprocess_attempt_count(message) + 1
+
+    if attempt_count > MAX_REPROCESS_ATTEMPTS:
+        logger.warning("Job %s exceeded max reprocess attempts (%d), alerting humans", job_id, MAX_REPROCESS_ATTEMPTS)
+        send_poison_pill_alert(body, attempt_count, "Exceeded maximum reprocess attempts")
+        result['skipped_max_retries'] += 1
+        return
+
+    if _should_skip_completed_job(body, job_id, dlq_url, message['ReceiptHandle'], result):
+        return
+
+    try:
+        message_attrs = message.get('MessageAttributes', {})
+        message_attrs['ReprocessAttempts'] = {'DataType': 'Number', 'StringValue': str(attempt_count)}
+        sqs.send_message(QueueUrl=target_queue_url, MessageBody=message['Body'], MessageAttributes=message_attrs)
+        sqs.delete_message(QueueUrl=dlq_url, ReceiptHandle=message['ReceiptHandle'])
+        result['reprocessed'] += 1
+        logger.info("Reprocessed job %s (attempt %d/%d)", job_id, attempt_count, MAX_REPROCESS_ATTEMPTS)
+    except ClientError as e:
+        logger.error("Failed to reprocess message for job %s: %s", job_id, e)
+        result['failed'] += 1
+
+
+def _should_skip_completed_job(body: dict, job_id: int, dlq_url: str, receipt_handle: str, result: dict) -> bool:
+    github_repo = body.get('github_repo')
+    if not (github_repo and job_id):
+        return False
+
+    job_status = check_github_job_status(github_repo, job_id, get_github_token())
+    if job_status in ('completed', 'not_found'):
+        status_msg = 'already completed' if job_status == 'completed' else 'not found (expired)'
+        logger.info("Job %s %s in GitHub, deleting from DLQ", job_id, status_msg)
+        get_sqs_client().delete_message(QueueUrl=dlq_url, ReceiptHandle=receipt_handle)
+        result['skipped_completed'] += 1
+        return True
+    return False
 
 
 def handler(event, context):

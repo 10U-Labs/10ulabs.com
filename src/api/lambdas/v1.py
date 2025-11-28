@@ -102,7 +102,7 @@ def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
         return {'valid': False, 'missing': [], 'error': str(e)}
 
 
-def validate_vpc(vpc_id: str) -> Dict[str, Any]:
+def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
     if not vpc_id:
         return {'valid': False, 'error': 'VPC ID not configured'}
     try:
@@ -426,50 +426,52 @@ def trigger_image_creation() -> Dict[str, Any]:
 
 
 def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Dict[str, Any]:
+    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
+
     try:
         ensure_dependencies_valid()
     except RuntimeError as e:
         logger.error("Dependency validation failed: %s", e)
-        return {'success': False, 'job_id': job_id, 'error': str(e)}
-
-    cluster = os.environ['ECS_CLUSTER']
-    task_definition = os.environ['TASK_DEFINITION']
-    subnets = os.environ['SUBNETS'].split(',')
-    security_groups = os.environ['SECURITY_GROUPS'].split(',')
+        result['error'] = str(e)
+        return result
 
     github_token = get_github_token()
     if not github_token:
         logger.error("GITHUB_TOKEN not set - cannot register runner")
-        return {'success': False, 'job_id': job_id, 'error': 'GITHUB_TOKEN not configured'}
+        result['error'] = 'GITHUB_TOKEN not configured'
+        return result
 
     registration_token = get_runner_registration_token(github_token, github_repo)
     if not registration_token:
         logger.error("Failed to get runner registration token")
-        return {'success': False, 'job_id': job_id, 'error': 'Failed to get runner registration token'}
+        result['error'] = 'Failed to get runner registration token'
+        return result
 
-    runner_name = f'fargate-runner-{job_id}'
-    runner_labels = ','.join(job_labels)
-    last_error = None
+    result = _try_launch_fargate_task(job_id, job_labels, github_repo, registration_token)
+    return result
 
-    for subnet in subnets:
+
+def _try_launch_fargate_task(
+    job_id: int, job_labels: list, github_repo: str, registration_token: str
+) -> Dict[str, Any]:
+    last_error: Any = None
+    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
+
+    for subnet in os.environ['SUBNETS'].split(','):
         try:
             response = get_ecs_client().run_task(
-                cluster=cluster,
-                taskDefinition=task_definition,
+                cluster=os.environ['ECS_CLUSTER'],
+                taskDefinition=os.environ['TASK_DEFINITION'],
                 enableECSManagedTags=True,
                 networkConfiguration={
                     'awsvpcConfiguration': {
                         'subnets': [subnet],
-                        'securityGroups': security_groups,
+                        'securityGroups': os.environ['SECURITY_GROUPS'].split(','),
                         'assignPublicIp': 'ENABLED'
                     }
                 },
                 capacityProviderStrategy=[
-                    {
-                        'capacityProvider': 'FARGATE_SPOT',
-                        'weight': 100,
-                        'base': 0
-                    }
+                    {'capacityProvider': 'FARGATE_SPOT', 'weight': 100, 'base': 0}
                 ],
                 overrides={
                     'containerOverrides': [
@@ -477,8 +479,8 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
                             'name': os.environ['CONTAINER_NAME'],
                             'command': [
                                 '--repo', github_repo,
-                                '--name', runner_name,
-                                '--labels', runner_labels,
+                                '--name', f'fargate-runner-{job_id}',
+                                '--labels', ','.join(job_labels),
                                 '--token', registration_token
                             ]
                         }
@@ -494,32 +496,31 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
             )
 
             if response['tasks']:
-                task_arn = response['tasks'][0]['taskArn']
-                logger.info("✅ Launched Fargate runner for job %s: %s", job_id, task_arn)
-                return {
-                    'success': True,
-                    'task_arn': task_arn,
-                    'job_id': job_id,
-                    'runner_type': 'fargate-spot'
+                logger.info("✅ Launched Fargate runner for job %s: %s", job_id, response['tasks'][0]['taskArn'])
+                result = {
+                    'success': True, 'task_arn': response['tasks'][0]['taskArn'],
+                    'job_id': job_id, 'runner_type': 'fargate-spot'
                 }
+                return result
 
             failures = response.get('failures', [])
-            is_capacity_error = any('Capacity' in str(f.get('reason', '')) for f in failures)
-            if is_capacity_error:
+            if any('Capacity' in str(f.get('reason', '')) for f in failures):
                 logger.warning("No Fargate Spot capacity in subnet %s, trying next AZ...", subnet)
                 last_error = failures
                 continue
 
             logger.error("❌ Failed to launch Fargate runner for job %s: %s", job_id, failures)
-            return {'success': False, 'job_id': job_id, 'error': failures}
+            result['error'] = failures
+            return result
 
         except ClientError as e:
             logger.error("❌ Error launching Fargate runner for job %s: %s", job_id, e)
-            return {'success': False, 'job_id': job_id, 'error': str(e)}
+            result['error'] = str(e)
+            return result
 
     logger.error("❌ Failed to launch Fargate runner for job %s: no capacity in any AZ", job_id)
-    error_msg = last_error if last_error else 'No capacity in any availability zone'
-    return {'success': False, 'job_id': job_id, 'error': error_msg}
+    result['error'] = last_error if last_error else 'No capacity in any availability zone'
+    return result
 
 
 def get_runner_registration_token(github_token: str, github_repo: str) -> str:
@@ -548,11 +549,18 @@ def create_ec2_user_data(registration_token: str, job_labels: List[str], github_
     return f"""#!/bin/bash
 set -e
 
-mkfs.ext4 -F /dev/nvme1n1
-mount /dev/nvme1n1 /mnt
+INSTANCE_STORE=$(lsblk -dn -o NAME,TYPE | awk '$2=="disk" {{print "/dev/"$1}}' | while read dev; do
+    if [ -z "$(lsblk -n "$dev" -o CHILDREN 2>/dev/null | tr -d ' ')" ]; then
+        echo "$dev"
+        break
+    fi
+done)
+
+mkfs.ext4 -F "$INSTANCE_STORE"
+mount "$INSTANCE_STORE" /mnt
 cp -a /home/github-runner/. /mnt/
 umount /mnt
-mount /dev/nvme1n1 /home/github-runner
+mount "$INSTANCE_STORE" /home/github-runner
 chown -R github-runner:github-runner /home/github-runner
 
 cd /home/github-runner/actions-runner
@@ -704,74 +712,71 @@ def delete_launch_template(template_id: str):
 
 
 def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
+    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
+
     try:
         ensure_dependencies_valid()
     except RuntimeError as e:
         logger.error("Dependency validation failed: %s", e)
-        return {'success': False, 'job_id': job_id, 'error': str(e)}
+        result['error'] = str(e)
+        return result
 
     ami_id = get_latest_ami()
-    github_token = get_github_token()
-    config = get_ec2_config()
-
     if not ami_id:
         logger.warning("No AMI available - triggering AMI creation")
         ami_trigger = trigger_ami_creation()
-        error_msg = 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.'
-        if not ami_trigger['success']:
-            error_msg = f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
-        return {
-            'success': False,
-            'job_id': job_id,
-            'error': error_msg,
-            'ami_creation_triggered': ami_trigger['success']
-        }
+        result['ami_creation_triggered'] = ami_trigger['success']
+        if ami_trigger['success']:
+            result['error'] = 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.'
+        else:
+            result['error'] = f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
+        return result
 
+    github_token = get_github_token()
     if not github_token:
         logger.error("GITHUB_TOKEN not set - cannot register runner")
-        return {'success': False, 'job_id': job_id, 'error': 'GITHUB_TOKEN not configured'}
+        result['error'] = 'GITHUB_TOKEN not configured'
+        return result
 
     registration_token = get_runner_registration_token(github_token, github_repo)
     if not registration_token:
         logger.error("Failed to get runner registration token")
-        return {'success': False, 'job_id': job_id, 'error': 'Failed to get runner registration token'}
+        result['error'] = 'Failed to get runner registration token'
+        return result
 
+    result = _try_launch_ec2_fleet(job_id, job_labels, github_repo, ami_id, registration_token)
+    return result
+
+
+def _try_launch_ec2_fleet(
+    job_id: int, job_labels: List[str], github_repo: str, ami_id: str, registration_token: str
+) -> Dict[str, Any]:
+    config = get_ec2_config()
     user_data = create_ec2_user_data(registration_token, job_labels, github_repo)
-    user_data_base64 = base64.b64encode(user_data.encode('utf-8')).decode('utf-8')
-
     template_config = {
         'ami_id': ami_id,
         'security_group_id': config['security_group_id'],
         'iam_instance_profile': config['iam_instance_profile'],
-        'user_data_base64': user_data_base64,
+        'user_data_base64': base64.b64encode(user_data.encode('utf-8')).decode('utf-8'),
         'job_id': job_id,
         'job_labels': job_labels,
         'github_repo': github_repo
     }
-
+    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
     launch_template_id = None
+
     try:
         launch_template_id = create_fleet_launch_template(template_config)
-
         fleet_response = get_ec2_client().create_fleet(
             Type='instant',
-            TargetCapacitySpecification={
-                'TotalTargetCapacity': 1,
-                'DefaultTargetCapacityType': 'spot'
-            },
-            SpotOptions={
-                'AllocationStrategy': 'capacity-optimized',
-                'InstanceInterruptionBehavior': 'terminate'
-            },
+            TargetCapacitySpecification={'TotalTargetCapacity': 1, 'DefaultTargetCapacityType': 'spot'},
+            SpotOptions={'AllocationStrategy': 'capacity-optimized', 'InstanceInterruptionBehavior': 'terminate'},
             LaunchTemplateConfigs=[{
-                'LaunchTemplateSpecification': {
-                    'LaunchTemplateId': launch_template_id,
-                    'Version': '$Latest'
-                },
+                'LaunchTemplateSpecification': {'LaunchTemplateId': launch_template_id, 'Version': '$Latest'},
                 'Overrides': [
-                    {'InstanceType': instance_type, 'SubnetId': subnet_id, 'MaxPrice': config['max_price']}
-                    for subnet_id in config['subnet_ids']
-                    for instance_type in config['instance_types']
+                    {'InstanceType': itype, 'SubnetId': subnet, 'MaxPrice': config['max_price']}
+                    for subnet in config['subnet_ids']
+                    for itype in config['instance_types']
                 ]
             }]
         )
@@ -779,35 +784,30 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
         if fleet_response.get('Instances'):
             instance_ids = fleet_response['Instances'][0].get('InstanceIds', [])
             if instance_ids:
-                instance_id = instance_ids[0]
-                instance = wait_for_instance_describable(instance_id)
+                instance = wait_for_instance_describable(instance_ids[0])
                 logger.info(
                     "Launched EC2 spot runner for job %s: %s (%s in %s)",
-                    job_id,
-                    instance_id,
-                    instance['InstanceType'],
-                    instance['Placement']['AvailabilityZone']
+                    job_id, instance_ids[0], instance['InstanceType'], instance['Placement']['AvailabilityZone']
                 )
-                return {
-                    'success': True,
-                    'instance_id': instance_id,
-                    'instance_type': instance['InstanceType'],
-                    'availability_zone': instance['Placement']['AvailabilityZone'],
-                    'job_id': job_id,
+                result = {
+                    'success': True, 'instance_id': instance_ids[0], 'instance_type': instance['InstanceType'],
+                    'availability_zone': instance['Placement']['AvailabilityZone'], 'job_id': job_id,
                     'runner_type': 'ec2-spot'
                 }
+                return result
 
         errors = fleet_response.get('Errors', [])
-        error_msg = '; '.join([e.get('ErrorMessage', str(e)) for e in errors]) if errors else 'No instances launched'
-        logger.error("❌ Failed to launch EC2 runner for job %s: %s", job_id, error_msg)
-        return {'success': False, 'job_id': job_id, 'error': error_msg}
+        result['error'] = '; '.join([e.get('ErrorMessage', str(e)) for e in errors]) if errors else 'No instances launched'
+        logger.error("❌ Failed to launch EC2 runner for job %s: %s", job_id, result['error'])
 
     except ClientError as e:
         logger.error("Error launching EC2 runner for job %s: %s", job_id, e)
-        return {'success': False, 'job_id': job_id, 'error': str(e)}
+        result['error'] = str(e)
     finally:
         if launch_template_id:
             delete_launch_template(launch_template_id)
+
+    return result
 
 
 def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
@@ -1073,13 +1073,13 @@ def get_ec2_runner_status() -> Dict[str, Any]:
         }
 
 
-def handle_docker_runner_get(event: Dict[str, Any]) -> Dict[str, Any]:
+def handle_docker_runner_get(_event: Dict[str, Any]) -> Dict[str, Any]:
     result = get_docker_runner_status()
     response = success_response(result)
     return response
 
 
-def handle_ec2_runner_get(event: Dict[str, Any]) -> Dict[str, Any]:
+def handle_ec2_runner_get(_event: Dict[str, Any]) -> Dict[str, Any]:
     result = get_ec2_runner_status()
     response = success_response(result)
     return response

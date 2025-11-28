@@ -3,13 +3,14 @@ import logging
 import os
 import urllib.request
 import urllib.error
+from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {}
+_clients: dict[str, Any] = {}
 
 
 def clear_clients():
