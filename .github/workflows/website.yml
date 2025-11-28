@@ -83,10 +83,10 @@ jobs:
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Build website
         run: |
-          cd html && npm ci && npm run build
+          cd react && npm ci && npm run build
       - name: Sync website to S3
         run: |
-          aws s3 sync html/dist/ s3://${{ env.BUCKET_NAME }}/ \
+          aws s3 sync react/dist/ s3://${{ env.BUCKET_NAME }}/ \
             --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA
@@ -101,7 +101,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/website/html/'; then
+            if grep -qE 'src/website/react/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
