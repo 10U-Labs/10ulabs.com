@@ -1365,6 +1365,17 @@ def test_create_ec2_user_data_includes_region(v1_handler):
         assert 'us-west-2' in user_data
 
 
+def test_create_ec2_user_data_includes_nvme_format(v1_handler):
+    with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        assert 'mkfs.ext4' in user_data
+
+
+def test_create_ec2_user_data_includes_nvme_mount(v1_handler):
+    with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        assert '/dev/nvme1n1' in user_data
+
 
 @patch('boto3.client')
 def test_list_amis_sorts_by_creation_date(mock_boto_client, v1_handler):
@@ -2135,6 +2146,30 @@ def test_create_fleet_launch_template_raises_on_client_error(mock_boto_client, v
         assert False
     except ClientError:
         assert True
+
+
+@patch('boto3.client')
+def test_create_fleet_launch_template_includes_block_device_mappings(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_boto_client.return_value = mock_ec2
+    template_config = {'security_group_id': 'sg-1', 'iam_instance_profile': 'profile', 'ami_id': 'ami-123', 'user_data_base64': 'dXNlcmRhdGE=', 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo'}
+    v1_handler.create_fleet_launch_template(template_config)
+    call_args = mock_ec2.create_launch_template.call_args
+    launch_template_data = call_args.kwargs['LaunchTemplateData']
+    assert 'BlockDeviceMappings' in launch_template_data
+
+
+@patch('boto3.client')
+def test_create_fleet_launch_template_block_device_has_128gb_volume(mock_boto_client, v1_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_boto_client.return_value = mock_ec2
+    template_config = {'security_group_id': 'sg-1', 'iam_instance_profile': 'profile', 'ami_id': 'ami-123', 'user_data_base64': 'dXNlcmRhdGE=', 'job_id': 123, 'job_labels': ['test'], 'github_repo': 'test/repo'}
+    v1_handler.create_fleet_launch_template(template_config)
+    call_args = mock_ec2.create_launch_template.call_args
+    block_device = call_args.kwargs['LaunchTemplateData']['BlockDeviceMappings'][0]
+    assert block_device['Ebs']['VolumeSize'] == 128
 
 
 @patch('boto3.client')

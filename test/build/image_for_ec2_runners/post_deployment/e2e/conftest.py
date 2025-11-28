@@ -31,6 +31,14 @@ set -ex
 echo "=== User data script started at $(date) ==="
 echo "Instance ID: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
 
+echo "=== Setting up NVMe instance store ==="
+mkfs.ext4 -F /dev/nvme1n1
+mount /dev/nvme1n1 /mnt
+cp -a /home/github-runner/. /mnt/
+umount /mnt
+mount /dev/nvme1n1 /home/github-runner
+chown -R github-runner:github-runner /home/github-runner
+
 cd /home/github-runner/actions-runner
 
 echo "=== Starting config.sh at $(date) ==="
