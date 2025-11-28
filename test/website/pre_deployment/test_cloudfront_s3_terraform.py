@@ -154,6 +154,10 @@ def test_cloudfront_function_handles_rack_designer_path(cloudfront_s3_tf_content
     assert "uri === '/rack-designer'" in cloudfront_s3_tf_content
 
 
+def test_cloudfront_function_redirects_rack_designer_to_trailing_slash(cloudfront_s3_tf_content):
+    assert "'/rack-designer/'" in cloudfront_s3_tf_content
+
+
 def test_cloudfront_function_handles_rack_designer_trailing_slash(cloudfront_s3_tf_content):
     assert "uri === '/rack-designer/'" in cloudfront_s3_tf_content
 

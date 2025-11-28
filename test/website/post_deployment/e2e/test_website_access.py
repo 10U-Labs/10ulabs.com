@@ -65,6 +65,17 @@ def test_apex_redirect_preserves_path(config):
     assert '/some/path' in location
 
 
+def test_rack_designer_redirects_to_trailing_slash(website_url):
+    response = requests.get(f"{website_url}/rack-designer", timeout=30, allow_redirects=False)
+    assert response.status_code == 301
+
+
+def test_rack_designer_redirect_location_has_trailing_slash(website_url):
+    response = requests.get(f"{website_url}/rack-designer", timeout=30, allow_redirects=False)
+    location = response.headers.get('Location', '')
+    assert location.endswith('/rack-designer/')
+
+
 def test_rack_designer_returns_200(website_url):
     response = requests.get(f"{website_url}/rack-designer", timeout=30)
     assert response.status_code == 200
