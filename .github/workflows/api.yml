@@ -227,7 +227,7 @@ jobs:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs PyYAML types-PyYAML requests types-requests
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs[ecr] botocore dockerfile-parse types-dockerfile-parse PyYAML types-PyYAML requests types-requests
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
@@ -254,6 +254,15 @@ jobs:
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
+      - name: Run pylint on image_for_docker_runners files
+        run: |
+          python3 -m pylint \
+            src/build/image_for_docker_runners/entrypoint.py \
+            src/build/image_for_docker_runners/promote_docker_image.py \
+            test/build/image_for_docker_runners/ \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-on=C,R,W \
+            --fail-under=10.0
       - name: Static type checking Lambda files individually with mypy
         run: |
           for file in src/api/lambdas/*.py src/api/files/*.py; do
@@ -261,6 +270,12 @@ jobs:
           done
       - name: Static type checking test files with mypy
         run: python3 -m mypy test/api/
+      - name: Static type checking image_for_docker_runners files with mypy
+        run: |
+          python3 -m mypy \
+            src/build/image_for_docker_runners/entrypoint.py \
+            src/build/image_for_docker_runners/promote_docker_image.py \
+            test/build/image_for_docker_runners/
       - name: Terraform Format Check
         run: cd src/api && terraform fmt -check -recursive
       - name: Terraform Init
