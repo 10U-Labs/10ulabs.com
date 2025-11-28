@@ -120,7 +120,7 @@ jobs:
         run: python3 -m pip install boto3 pyyaml
       - name: Clean up old AMIs
         run: |
-          python src/build/image_for_ec2_runners/cleanup.py \
+          python3 src/build/image_for_ec2_runners/cleanup.py \
             --config src/build/image_for_ec2_runners/config.yml \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --ssm-parameter-name "${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
@@ -375,7 +375,7 @@ jobs:
         run: python3 -m pip install boto3
       - name: Promote AMI
         run: |
-          python src/build/image_for_ec2_runners/promote_ami.py \
+          python3 src/build/image_for_ec2_runners/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \
