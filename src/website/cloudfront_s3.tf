@@ -155,7 +155,16 @@ function handler(event) {
         };
     }
     var uri = request.uri;
-    if (uri === '/rack-designer' || uri === '/rack-designer/') {
+    if (uri === '/rack-designer') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: {
+                'location': { value: 'https://' + host + '/rack-designer/' }
+            }
+        };
+    }
+    if (uri === '/rack-designer/') {
         request.uri = '/rack-designer/index.html';
         return request;
     }
