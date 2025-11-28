@@ -108,7 +108,8 @@ def v1_handler(config: Dict[str, str]) -> Any:
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
-        'EC2_IAM_INSTANCE_PROFILE': 'test-profile'
+        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
+        'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-rack-designer-configurations'
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("v1.py", "v1_handler")
@@ -344,6 +345,35 @@ def workflow_job_event_factory():
 
 
 @pytest.fixture
+def rack_designer_post_event_factory():
+    def _create_event(configuration=None):
+        if configuration is None:
+            configuration = {
+                'rackHeight': 12,
+                'rackCount': 3,
+                'placedParts': []
+            }
+        return {
+            'path': '/v1/rack-designer/configurations',
+            'httpMethod': 'POST',
+            'body': json.dumps({'configuration': configuration}),
+            'headers': {'Content-Type': 'application/json'}
+        }
+    return _create_event
+
+
+@pytest.fixture
+def rack_designer_get_event_factory():
+    def _create_event(config_hash='ABCD1234'):
+        return {
+            'path': f'/v1/rack-designer/configurations/{config_hash}',
+            'httpMethod': 'GET',
+            'pathParameters': {'config_hash': config_hash}
+        }
+    return _create_event
+
+
+@pytest.fixture
 def sqs_event_factory():
     def _create_event(records=None):
         if records is None:
@@ -470,6 +500,7 @@ ENV_VAR_PRESETS = {
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
         'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
+        'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-rack-designer-configurations',
     },
     'webhook_router': {
         'AWS_REGION': 'us-east-1',

@@ -476,6 +476,23 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ses" {
   })
 }
 
+resource "aws_iam_role_policy" "lambda_v1_handler_dynamodb" {
+  name = "DynamoDBAccess"
+  role = aws_iam_role.lambda_v1_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem"
+      ]
+      Resource = [aws_dynamodb_table.rack_designer_configurations.arn]
+    }]
+  })
+}
+
 resource "aws_iam_role" "circuit_breaker_remediation" {
   name = "${local.resource_prefix}-CircuitBreakerRemediation-Role"
 

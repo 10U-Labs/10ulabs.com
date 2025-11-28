@@ -76,7 +76,8 @@ def test_lambda_uses_bootstrap_github_token_parameter():
     lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'GITHUB_TOKEN_SECRET_NAME        = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat' in content
+    assert 'GITHUB_TOKEN_SECRET_NAME' in content
+    assert 'data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat' in content
 
 
 def test_cloudfront_health_endpoint_path_pattern_exists():

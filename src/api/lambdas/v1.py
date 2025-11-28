@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -1205,6 +1206,12 @@ def get_ses_client():
     return _clients['ses']
 
 
+def get_dynamodb_client():
+    if 'dynamodb' not in _clients:
+        _clients['dynamodb'] = boto3.client('dynamodb')
+    return _clients['dynamodb']
+
+
 def get_recaptcha_secret() -> str:
     parameter_name = os.environ.get('RECAPTCHA_SECRET_PARAMETER_NAME')
     if not parameter_name:
@@ -1358,6 +1365,122 @@ def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def generate_config_hash(config: Dict[str, Any]) -> str:
+    canonical = json.dumps(config, sort_keys=True, separators=(',', ':'))
+    hash_bytes = hashlib.sha256(canonical.encode('utf-8')).digest()
+    hash_int = int.from_bytes(hash_bytes[:5], 'big')
+    chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    result_chars = []
+    remaining = hash_int
+    for _ in range(8):
+        result_chars.append(chars[remaining % 36])
+        remaining = remaining // 36
+    config_hash = ''.join(result_chars)
+    return config_hash
+
+
+def save_rack_configuration(config_hash: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    try:
+        get_dynamodb_client().put_item(
+            TableName=table_name,
+            Item={
+                'config_hash': {'S': config_hash},
+                'configuration': {'S': json.dumps(config)}
+            },
+            ConditionExpression='attribute_not_exists(config_hash)'
+        )
+        logger.info("Saved rack configuration: %s", config_hash)
+        result = {'success': True, 'config_hash': config_hash}
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            logger.info("Configuration already exists: %s", config_hash)
+            result = {'success': True, 'config_hash': config_hash}
+        else:
+            logger.error("Error saving rack configuration: %s", e)
+            result = {'success': False, 'error': str(e)}
+    return result
+
+
+def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
+    table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    try:
+        response = get_dynamodb_client().get_item(
+            TableName=table_name,
+            Key={'config_hash': {'S': config_hash}}
+        )
+        item = response.get('Item')
+        if not item:
+            result = {'success': False, 'error': 'Configuration not found'}
+        else:
+            config = json.loads(item['configuration']['S'])
+            result = {'success': True, 'config_hash': config_hash, 'configuration': config}
+    except ClientError as e:
+        logger.error("Error loading rack configuration: %s", e)
+        result = {'success': False, 'error': str(e)}
+    return result
+
+
+def _validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
+    error_msg = None
+    if 'rackHeight' not in config:
+        error_msg = 'Missing required field: rackHeight'
+    elif 'rackCount' not in config:
+        error_msg = 'Missing required field: rackCount'
+    elif 'placedParts' not in config:
+        error_msg = 'Missing required field: placedParts'
+    elif not isinstance(config['rackHeight'], int):
+        error_msg = 'rackHeight must be an integer'
+    elif not isinstance(config['rackCount'], int):
+        error_msg = 'rackCount must be an integer'
+    elif not isinstance(config['placedParts'], list):
+        error_msg = 'placedParts must be an array'
+    elif config['rackHeight'] < 1 or config['rackHeight'] > 42:
+        error_msg = 'rackHeight must be between 1 and 42'
+    elif config['rackCount'] < 1:
+        error_msg = 'rackCount must be at least 1'
+    return error_msg
+
+
+def handle_rack_designer_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        body = parse_body(event)
+        config = body.get('configuration')
+        if not config:
+            response = error_response(400, 'Missing required field: configuration')
+        else:
+            validation_error = _validate_rack_configuration(config)
+            if validation_error:
+                response = error_response(400, validation_error)
+            else:
+                config_hash = generate_config_hash(config)
+                result = save_rack_configuration(config_hash, config)
+                if result['success']:
+                    response = json_response(200, {'success': True, 'config_hash': config_hash})
+                else:
+                    response = error_response(500, result['error'])
+    except (ValueError, KeyError) as e:
+        logger.error("Error handling rack designer POST: %s", e, exc_info=True)
+        response = error_response(500, 'Internal server error', str(e))
+    return response
+
+
+def handle_rack_designer_get(event: Dict[str, Any]) -> Dict[str, Any]:
+    path_params = event.get('pathParameters') or {}
+    config_hash = path_params.get('config_hash')
+    if not config_hash:
+        response = error_response(400, 'Missing required path parameter: config_hash')
+    elif not re.match(r'^[0-9A-Z]{8}$', config_hash):
+        response = error_response(400, 'Invalid config_hash format')
+    else:
+        result = load_rack_configuration(config_hash)
+        if result['success']:
+            response = json_response(200, result)
+        else:
+            response = error_response(404, result['error'])
+    return response
+
+
 ROUTE_MAP = {
     ('/v1/contact', 'POST'): handle_contact_post,
     ('/v1/echo', 'POST'): handle_echo_post,
@@ -1371,7 +1494,8 @@ ROUTE_MAP = {
     ('/v1/image-for-docker-runners/latest', 'GET'): handle_docker_image_get,
     ('/v1/image-for-ec2-runners', 'POST'): lambda e: handle_post_request(e, launch_packer_builder),
     ('/v1/image-for-ec2-runners', 'GET'): handle_ec2_image_get,
-    ('/v1/image-for-ec2-runners/latest', 'GET'): handle_ec2_image_get
+    ('/v1/image-for-ec2-runners/latest', 'GET'): handle_ec2_image_get,
+    ('/v1/rack-designer/configurations', 'POST'): handle_rack_designer_post
 }
 
 
@@ -1418,6 +1542,11 @@ def lambda_handler(event, _context):
                 handler = handle_docker_image_delete
         elif path.startswith('/v1/image-for-ec2-runners/') and method == 'DELETE':
             handler = handle_ec2_image_delete
+        elif path.startswith('/v1/rack-designer/configurations/') and method == 'GET':
+            config_hash = path.split('/')[-1]
+            event['pathParameters'] = event.get('pathParameters') or {}
+            event['pathParameters']['config_hash'] = config_hash
+            handler = handle_rack_designer_get
 
     if handler:
         response = handler(event)

@@ -645,3 +645,85 @@ document.getElementById('partName').addEventListener('keypress', (e) => {
 document.getElementById('partColor').addEventListener('change', updatePartColor);
 document.getElementById('increasePartHeight').addEventListener('click', () => updatePartHeight(1));
 document.getElementById('decreasePartHeight').addEventListener('click', () => updatePartHeight(-1));
+
+const API_BASE_URL = 'https://api.10ulabs.com';
+
+function getConfiguration() {
+    const config = {
+        rackHeight: rackHeight,
+        rackCount: rackCount,
+        placedParts: placedParts.map(part => ({
+            type: part.type,
+            size: part.size,
+            rackId: part.rackId,
+            startSlot: part.startSlot,
+            customName: part.customName,
+            customColor: part.customColor
+        }))
+    };
+    return config;
+}
+
+function loadConfiguration(config) {
+    rackHeight = config.rackHeight;
+    rackCount = config.rackCount;
+    placedParts = config.placedParts.map((part, index) => ({
+        id: Date.now().toString() + index,
+        type: part.type,
+        size: part.size,
+        rackId: part.rackId,
+        startSlot: part.startSlot,
+        customName: part.customName,
+        customColor: part.customColor
+    }));
+    document.getElementById('heightValue').textContent = `${rackHeight}U`;
+    document.getElementById('rackCountValue').textContent = `${rackCount} Rack${rackCount > 1 ? 's' : ''}`;
+    initRacks();
+    renderParts();
+}
+
+function saveConfiguration() {
+    const config = getConfiguration();
+    fetch(`${API_BASE_URL}/v1/rack-designer/configurations`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ configuration: config })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const newUrl = `${window.location.origin}${window.location.pathname}?c=${data.config_hash}`;
+            window.history.pushState({ config_hash: data.config_hash }, '', newUrl);
+            alert(`Configuration saved! Share this URL:\n${newUrl}`);
+        } else {
+            alert(`Failed to save configuration: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        alert(`Error saving configuration: ${error.message}`);
+    });
+}
+
+function loadConfigurationFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const configHash = urlParams.get('c');
+    if (!configHash) {
+        return;
+    }
+    fetch(`${API_BASE_URL}/v1/rack-designer/configurations/${configHash}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadConfiguration(data.configuration);
+        } else {
+            alert(`Failed to load configuration: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        alert(`Error loading configuration: ${error.message}`);
+    });
+}
+
+loadConfigurationFromUrl();
