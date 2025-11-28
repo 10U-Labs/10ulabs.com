@@ -360,6 +360,38 @@ def get_latest_ecr_image() -> Dict[str, Any]:
         }
 
 
+def get_ecr_image_by_digest(image_digest: str) -> Dict[str, Any]:
+    ecr_repo = os.environ['ECR_REPOSITORY']
+    try:
+        response = get_ecr_client().describe_images(
+            repositoryName=ecr_repo,
+            imageIds=[{'imageDigest': image_digest}]
+        )
+
+        images = response.get('imageDetails', [])
+        if not images:
+            result = {'success': False, 'error': f'Image {image_digest} not found'}
+        else:
+            image = images[0]
+            result = {
+                'success': True,
+                'digest': image['imageDigest'],
+                'tags': image.get('imageTags', []),
+                'pushed_at': image['imagePushedAt'].isoformat(),
+                'size_bytes': image['imageSizeInBytes'],
+                'repository': ecr_repo
+            }
+            logger.info("Found image: %s", image_digest)
+    except ClientError as e:
+        error_code = e.response.get('Error', {}).get('Code', '')
+        if error_code == 'ImageNotFoundException':
+            result = {'success': False, 'error': f'Image {image_digest} not found'}
+        else:
+            logger.error("Error getting image %s: %s", image_digest, e)
+            result = {'success': False, 'error': str(e)}
+    return result
+
+
 def delete_ecr_image(image_digest: str) -> Dict[str, Any]:
     ecr_repo = os.environ['ECR_REPOSITORY']
     try:
@@ -1117,6 +1149,17 @@ def handle_docker_image_get(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def handle_docker_image_get_by_digest(event: Dict[str, Any]) -> Dict[str, Any]:
+    path_params = event.get('pathParameters') or {}
+    image_digest = path_params.get('digest')
+    if not image_digest:
+        response = error_response(400, 'Missing required path parameter: digest')
+    else:
+        result = get_ecr_image_by_digest(image_digest)
+        response = error_response(404, result['error']) if not result['success'] else success_response(result)
+    return response
+
+
 def handle_docker_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
     path_params = event.get('pathParameters', {})
     image_digest = path_params.get('digest')
@@ -1218,8 +1261,11 @@ def lambda_handler(event, _context):
     handler = ROUTE_MAP.get((path, method))
 
     if not handler:
-        if path.startswith('/v1/image-for-docker-runners/') and method == 'DELETE':
-            handler = handle_docker_image_delete
+        if path.startswith('/v1/image-for-docker-runners/') and not path.endswith('/latest'):
+            if method == 'GET':
+                handler = handle_docker_image_get_by_digest
+            elif method == 'DELETE':
+                handler = handle_docker_image_delete
         elif path.startswith('/v1/image-for-ec2-runners/') and method == 'DELETE':
             handler = handle_ec2_image_delete
 

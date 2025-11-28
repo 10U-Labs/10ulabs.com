@@ -2469,3 +2469,177 @@ def test_launch_ec2_spot_runner_fleet_empty_instances_default_error_message(mock
         with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
             result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
             assert result['error'] == 'No instances launched'
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_success(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageDigest': 'sha256:abc123',
+            'imageTags': ['v1.0.0', 'stable'],
+            'imagePushedAt': datetime(2024, 1, 15, 12, 0, 0),
+            'imageSizeInBytes': 123456789
+        }]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:abc123')
+        assert result['success'] is True
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_returns_digest(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageDigest': 'sha256:abc123',
+            'imageTags': ['v1.0.0'],
+            'imagePushedAt': datetime(2024, 1, 15, 12, 0, 0),
+            'imageSizeInBytes': 123456789
+        }]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:abc123')
+        assert result['digest'] == 'sha256:abc123'
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_returns_tags(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageDigest': 'sha256:abc123',
+            'imageTags': ['v1.0.0', 'stable'],
+            'imagePushedAt': datetime(2024, 1, 15, 12, 0, 0),
+            'imageSizeInBytes': 123456789
+        }]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:abc123')
+        assert result['tags'] == ['v1.0.0', 'stable']
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_returns_size(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageDigest': 'sha256:abc123',
+            'imageTags': ['v1.0.0'],
+            'imagePushedAt': datetime(2024, 1, 15, 12, 0, 0),
+            'imageSizeInBytes': 123456789
+        }]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:abc123')
+        assert result['size_bytes'] == 123456789
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_not_found_empty_response(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {'imageDetails': []}
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:notfound')
+        assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_not_found_error_message(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {'imageDetails': []}
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:notfound')
+        assert 'not found' in result['error']
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_image_not_found_exception(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'ImageNotFoundException'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:notfound')
+        assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_get_ecr_image_by_digest_client_error(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError', 'Message': 'Test'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        result = v1_handler.get_ecr_image_by_digest('sha256:test')
+        assert result['success'] is False
+
+
+def test_handle_docker_image_get_by_digest_missing_digest(v1_handler):
+    event = {'pathParameters': {}}
+    result = v1_handler.handle_docker_image_get_by_digest(event)
+    assert result['statusCode'] == 400
+
+
+def test_handle_docker_image_get_by_digest_null_path_params(v1_handler):
+    event = {'pathParameters': None}
+    result = v1_handler.handle_docker_image_get_by_digest(event)
+    assert result['statusCode'] == 400
+
+
+@patch('boto3.client')
+def test_handle_docker_image_get_by_digest_success(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {
+        'imageDetails': [{
+            'imageDigest': 'sha256:abc123',
+            'imageTags': ['v1.0.0'],
+            'imagePushedAt': datetime(2024, 1, 15, 12, 0, 0),
+            'imageSizeInBytes': 123456789
+        }]
+    }
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        event = {'pathParameters': {'digest': 'sha256:abc123'}}
+        result = v1_handler.handle_docker_image_get_by_digest(event)
+        assert result['statusCode'] == 200
+
+
+@patch('boto3.client')
+def test_handle_docker_image_get_by_digest_not_found(mock_boto_client, v1_handler):
+    mock_ecr = MagicMock()
+    mock_ecr.describe_images.return_value = {'imageDetails': []}
+    mock_boto_client.return_value = mock_ecr
+    with patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'}):
+        event = {'pathParameters': {'digest': 'sha256:notfound'}}
+        result = v1_handler.handle_docker_image_get_by_digest(event)
+        assert result['statusCode'] == 404
+
+
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_lambda_handler_routes_get_docker_image_by_digest(v1_handler):
+    with patch.object(v1_handler, 'handle_docker_image_get_by_digest', return_value={'statusCode': 200}) as mock_handler:
+        event = {'httpMethod': 'GET', 'path': '/v1/image-for-docker-runners/sha256:abc123', 'headers': {}}
+        v1_handler.lambda_handler(event, None)
+        mock_handler.assert_called_once()
+
+
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_lambda_handler_routes_delete_docker_image_by_digest(v1_handler):
+    with patch.object(v1_handler, 'handle_docker_image_delete', return_value={'statusCode': 200}) as mock_handler:
+        event = {'httpMethod': 'DELETE', 'path': '/v1/image-for-docker-runners/sha256:abc123', 'headers': {}}
+        v1_handler.lambda_handler(event, None)
+        mock_handler.assert_called_once()
+
+
+@patch.dict('os.environ', {'ECR_REPOSITORY': 'test-repo'})
+def test_lambda_handler_routes_latest_not_to_by_digest_handler(v1_handler):
+    with patch.object(v1_handler, 'handle_docker_image_get_by_digest', return_value={'statusCode': 200}) as mock_digest_handler:
+        with patch.object(v1_handler, 'get_latest_ecr_image', return_value={'success': True, 'digest': 'sha256:test'}):
+            event = {'httpMethod': 'GET', 'path': '/v1/image-for-docker-runners/latest', 'headers': {}}
+            v1_handler.lambda_handler(event, None)
+            mock_digest_handler.assert_not_called()
