@@ -89,7 +89,15 @@ jobs:
           aws s3 sync react/dist/ s3://${{ env.BUCKET_NAME }}/ \
             --delete \
             --cache-control no-cache \
-            --storage-class ONEZONE_IA
+            --storage-class ONEZONE_IA \
+            --exclude "rack-designer/*"
+      - name: Sync rack-designer to S3
+        run: |
+          aws s3 sync rack_designer/ s3://${{ env.BUCKET_NAME }}/rack-designer/ \
+            --delete \
+            --cache-control no-cache \
+            --storage-class ONEZONE_IA \
+            --exclude ".gitkeep"
       - id: check_files
         name: Check if website files changed
         run: |
@@ -101,7 +109,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/website/react/'; then
+            if grep -qE 'src/website/react/|src/website/rack_designer/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT

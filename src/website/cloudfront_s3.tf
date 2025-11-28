@@ -155,6 +155,13 @@ function handler(event) {
         };
     }
     var uri = request.uri;
+    if (uri === '/rack-designer' || uri === '/rack-designer/') {
+        request.uri = '/rack-designer/index.html';
+        return request;
+    }
+    if (uri.startsWith('/rack-designer/')) {
+        return request;
+    }
     if (uri.endsWith('/')) {
         request.uri = '/index.html';
     } else if (!uri.includes('.')) {
