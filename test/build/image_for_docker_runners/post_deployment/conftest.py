@@ -50,8 +50,16 @@ def docker_image():
     tag = get_docker_image_tag()
     build_context = os.path.dirname(path)
 
+    build_args = [
+        "--build-arg", f"NODE_VERSION={os.environ['NODE_VERSION']}",
+        "--build-arg", f"RUNNER_ARCH={os.environ['RUNNER_ARCH']}",
+        "--build-arg", f"RUNNER_VERSION={os.environ['RUNNER_VERSION']}",
+        "--build-arg", f"TERRAFORM_VERSION={os.environ['TERRAFORM_VERSION']}",
+        "--build-arg", f"YQ_VERSION={os.environ['YQ_VERSION']}",
+    ]
+
     result = subprocess.run(
-        ["docker", "build", "--platform", "linux/arm64", "-t", tag, "-f", path, build_context],
+        ["docker", "build", "--platform", "linux/arm64"] + build_args + ["-t", tag, "-f", path, build_context],
         check=False,
         capture_output=True,
         text=True,
