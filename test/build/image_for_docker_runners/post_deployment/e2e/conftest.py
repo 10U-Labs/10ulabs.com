@@ -81,13 +81,6 @@ def get_github_runners(pat, repo):
     return runners
 
 
-def run_runner_and_wait(uri, repo, name, labels, token):
-    process = start_runner_container(uri, repo, name, labels, token)
-    time.sleep(30)
-    process.terminate()
-    wait_for_process_with_backoff(process)
-
-
 def find_runner_by_name(runners, target_name):
     index = 0
     while index < len(runners):
