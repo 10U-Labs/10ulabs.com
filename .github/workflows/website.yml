@@ -114,7 +114,7 @@ jobs:
           python3 ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py \
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
-            --paths "/,/index.html"
+            --paths "/*"
   integration-testing:
     name: Integration testing
     needs:
