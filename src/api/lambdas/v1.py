@@ -7,7 +7,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, Any, List
+from typing import Any, Dict, List, Optional
 import boto3
 from botocore.exceptions import ClientError
 
@@ -1276,48 +1276,59 @@ def send_contact_email(recipient: str, sender_name: str, sender_email: str, mess
         return False
 
 
+def _validate_contact_fields(fields: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    validations = [
+        (not fields['recaptcha_token'], 'Missing required field: recaptcha_token'),
+        (not fields['name'], 'Missing required field: name'),
+        (len(fields['name']) > 100, 'Name must be less than 100 characters'),
+        (not fields['email'], 'Missing required field: email'),
+        (len(fields['email']) > 255, 'Email must be less than 255 characters'),
+        (fields['email'] and not validate_contact_email(fields['email']), 'Invalid email address'),
+        (not fields['message'], 'Missing required field: message'),
+        (len(fields['message']) > 1000, 'Message must be less than 1000 characters'),
+    ]
+    result = None
+    for condition, error_msg in validations:
+        if condition and result is None:
+            result = error_response(400, error_msg)
+    return result
+
+
+def _process_contact_submission(fields: Dict[str, str]) -> Dict[str, Any]:
+    recaptcha_secret = get_recaptcha_secret()
+    contact_email = os.environ.get('CONTACT_EMAIL', '')
+    response: Dict[str, Any]
+    if not recaptcha_secret:
+        logger.error("reCAPTCHA secret not configured")
+        response = error_response(500, 'Server configuration error')
+    elif not verify_recaptcha(fields['recaptcha_token'], recaptcha_secret):
+        response = error_response(400, 'reCAPTCHA verification failed')
+    elif not contact_email:
+        response = error_response(500, 'Server configuration error')
+    elif send_contact_email(contact_email, fields['name'], fields['email'], fields['message']):
+        logger.info("Contact form submitted: name=%s, email=%s", fields['name'], fields['email'])
+        response = json_response(200, {'success': True, 'message': 'Message sent successfully'})
+    else:
+        response = error_response(500, 'Failed to send message')
+    return response
+
+
 def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         body = parse_body(event)
-        recaptcha_token = body.get('recaptcha_token', '').strip()
-        name = body.get('name', '').strip()
-        email = body.get('email', '').strip()
-        message = body.get('message', '').strip()
-
-        if not recaptcha_token:
-            response = error_response(400, 'Missing required field: recaptcha_token')
-        elif not name:
-            response = error_response(400, 'Missing required field: name')
-        elif len(name) > 100:
-            response = error_response(400, 'Name must be less than 100 characters')
-        elif not email:
-            response = error_response(400, 'Missing required field: email')
-        elif len(email) > 255:
-            response = error_response(400, 'Email must be less than 255 characters')
-        elif not validate_contact_email(email):
-            response = error_response(400, 'Invalid email address')
-        elif not message:
-            response = error_response(400, 'Missing required field: message')
-        elif len(message) > 1000:
-            response = error_response(400, 'Message must be less than 1000 characters')
+        fields = {
+            'recaptcha_token': body.get('recaptcha_token', '').strip(),
+            'name': body.get('name', '').strip(),
+            'email': body.get('email', '').strip(),
+            'message': body.get('message', '').strip(),
+        }
+        validation_error = _validate_contact_fields(fields)
+        if validation_error:
+            response = validation_error
         elif is_test_mode():
             response = success_response(TEST_MODE_MOCK_PATHS['/v1/contact'])
         else:
-            recaptcha_secret = get_recaptcha_secret()
-            if not recaptcha_secret:
-                logger.error("reCAPTCHA secret not configured")
-                response = error_response(500, 'Server configuration error')
-            elif not verify_recaptcha(recaptcha_token, recaptcha_secret):
-                response = error_response(400, 'reCAPTCHA verification failed')
-            else:
-                contact_email = os.environ.get('CONTACT_EMAIL', '')
-                if not contact_email:
-                    response = error_response(500, 'Server configuration error')
-                elif send_contact_email(contact_email, name, email, message):
-                    logger.info("Contact form submitted: name=%s, email=%s", name, email)
-                    response = json_response(200, {'success': True, 'message': 'Message sent successfully'})
-                else:
-                    response = error_response(500, 'Failed to send message')
+            response = _process_contact_submission(fields)
     except (ValueError, KeyError) as e:
         logger.error("Error handling contact form: %s", e, exc_info=True)
         response = error_response(500, 'Internal server error', str(e))
