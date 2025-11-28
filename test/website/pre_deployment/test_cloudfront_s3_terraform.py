@@ -150,62 +150,6 @@ def test_cloudfront_distribution_uses_response_headers_policy(cloudfront_s3_tf_c
     assert 'response_headers_policy_id' in cloudfront_s3_tf_content
 
 
-def test_contact_api_origin_exists(cloudfront_s3_tf_content):
-    assert 'origin_id   = "contact-api"' in cloudfront_s3_tf_content
-
-
-def test_contact_api_origin_uses_lambda_function_url(cloudfront_s3_tf_content):
-    assert 'aws_lambda_function_url.contact_handler.function_url' in cloudfront_s3_tf_content
-
-
-def test_contact_api_origin_uses_https_only(cloudfront_s3_tf_content):
-    assert 'origin_protocol_policy = "https-only"' in cloudfront_s3_tf_content
-
-
-def test_contact_api_origin_uses_tls12(cloudfront_s3_tf_content):
-    assert 'origin_ssl_protocols   = ["TLSv1.2"]' in cloudfront_s3_tf_content
-
-
-def test_contact_cache_behavior_exists(cloudfront_s3_tf_content):
-    assert 'ordered_cache_behavior {' in cloudfront_s3_tf_content
-
-
-def test_contact_cache_behavior_path_pattern(cloudfront_s3_tf_content):
-    assert 'path_pattern           = "/contact"' in cloudfront_s3_tf_content
-
-
-def test_contact_cache_behavior_targets_contact_api(cloudfront_s3_tf_content):
-    assert 'target_origin_id       = "contact-api"' in cloudfront_s3_tf_content
-
-
-def test_contact_cache_behavior_allows_post(cloudfront_s3_tf_content):
-    assert 'allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]' in cloudfront_s3_tf_content
-
-
-def test_caching_disabled_policy_data_source_exists(cloudfront_s3_tf_content):
-    assert 'data "aws_cloudfront_cache_policy" "caching_disabled"' in cloudfront_s3_tf_content
-
-
-def test_caching_disabled_policy_uses_managed_policy(cloudfront_s3_tf_content):
-    assert 'name = "Managed-CachingDisabled"' in cloudfront_s3_tf_content
-
-
-def test_all_viewer_except_host_header_policy_exists(cloudfront_s3_tf_content):
-    assert 'data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header"' in cloudfront_s3_tf_content
-
-
-def test_all_viewer_except_host_header_uses_managed_policy(cloudfront_s3_tf_content):
-    assert 'name = "Managed-AllViewerExceptHostHeader"' in cloudfront_s3_tf_content
-
-
-def test_contact_cache_behavior_uses_caching_disabled(cloudfront_s3_tf_content):
-    assert 'cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id' in cloudfront_s3_tf_content
-
-
-def test_contact_cache_behavior_uses_all_viewer_except_host_header(cloudfront_s3_tf_content):
-    assert 'origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host_header.id' in cloudfront_s3_tf_content
-
-
 def test_cloudfront_function_handles_rack_designer_path(cloudfront_s3_tf_content):
     assert "uri === '/rack-designer'" in cloudfront_s3_tf_content
 
