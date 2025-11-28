@@ -9,10 +9,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fqdn", required=True)
     parser.add_argument("--region", required=True)
+    parser.add_argument("--paths", required=True, help="Comma-separated list of paths to invalidate")
     args = parser.parse_args()
 
     domain_subdomain = args.fqdn
     aws_region = args.region
+    paths = [p.strip() for p in args.paths.split(",")]
 
     cloudfront = boto3.client("cloudfront", region_name=aws_region)
 
@@ -28,7 +30,6 @@ def main():
         print(f"Error: No CloudFront distribution found for {domain_subdomain}")
         sys.exit(1)
 
-    paths = ["/", "/index.html", "/openapi.yml", "/404.html"]
     caller_reference = str(uuid.uuid4())
 
     print(f"Creating invalidation for distribution {distribution_id}")
