@@ -81,6 +81,15 @@ def get_github_runners(pat, repo):
     return runners
 
 
+def get_runner_and_cleanup(process, pat, repo, name):
+    time.sleep(30)
+    runners = get_github_runners(pat, repo)
+    runner = find_runner_by_name(runners, name)
+    process.terminate()
+    wait_for_process_with_backoff(process)
+    return runner
+
+
 def find_runner_by_name(runners, target_name):
     index = 0
     while index < len(runners):
