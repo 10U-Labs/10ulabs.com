@@ -1201,7 +1201,7 @@ def get_ses_client():
 
 
 def get_recaptcha_secret() -> str:
-    parameter_name = os.environ.get('RECAPTCHA_SECRET_PARAMETER_NAME', '')
+    parameter_name = os.environ.get('RECAPTCHA_SECRET_PARAMETER_NAME')
     if not parameter_name:
         return ''
     try:
@@ -1296,7 +1296,7 @@ def _validate_contact_fields(fields: Dict[str, str]) -> Optional[Dict[str, Any]]
 
 def _process_contact_submission(fields: Dict[str, str]) -> Dict[str, Any]:
     recaptcha_secret = get_recaptcha_secret()
-    contact_email = os.environ.get('CONTACT_EMAIL', '')
+    contact_email = os.environ.get('CONTACT_EMAIL')
     response: Dict[str, Any]
     if not recaptcha_secret:
         logger.error("reCAPTCHA secret not configured")
