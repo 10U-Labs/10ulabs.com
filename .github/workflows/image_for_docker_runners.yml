@@ -198,11 +198,14 @@ jobs:
             python -m mypy "$file"
           done
           MYPYPATH=src/build/image_for_docker_runners python -m mypy test/build/image_for_docker_runners/
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install hadolint
+        run: |
+          HADOLINT_VERSION=$(curl -fsSL https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name')
+          sudo curl -fsSL -o /usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
+          sudo chmod +x /usr/local/bin/hadolint
       - name: Validate Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: src/build/image_for_docker_runners/Dockerfile
-          ignore: DL3008,DL3013,DL3015,DL3016
+        run: hadolint --ignore DL3008 --ignore DL3013 --ignore DL3015 --ignore DL3016 src/build/image_for_docker_runners/Dockerfile
   promoting-image:
     name: Promoting image
     needs:
