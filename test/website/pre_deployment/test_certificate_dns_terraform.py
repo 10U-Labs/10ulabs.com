@@ -48,36 +48,57 @@ def test_acm_certificate_validation_exists():
     assert 'resource "aws_acm_certificate_validation" "website"' in content
 
 
-def test_route53_website_record_exists():
+def test_acm_certificate_has_subject_alternative_names():
     cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
     with open(cert_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_route53_record" "website"' in content
+    assert 'subject_alternative_names' in content
 
 
-def test_route53_website_record_is_alias():
+def test_route53_www_record_exists():
+    cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
+    with open(cert_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_route53_record" "www"' in content
+
+
+def test_route53_www_record_is_alias():
     cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
     with open(cert_file, encoding="utf-8") as f:
         content = f.read()
     assert 'alias' in content
 
 
-def test_route53_website_record_points_to_cloudfront():
+def test_route53_www_record_points_to_cloudfront():
     cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
     with open(cert_file, encoding="utf-8") as f:
         content = f.read()
     assert 'cloudfront' in content.lower()
 
 
-def test_route53_website_ipv6_record_exists():
+def test_route53_www_ipv6_record_exists():
     cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
     with open(cert_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_route53_record" "website_ipv6"' in content
+    assert 'resource "aws_route53_record" "www_ipv6"' in content
 
 
-def test_route53_website_ipv6_record_is_aaaa():
+def test_route53_www_ipv6_record_is_aaaa():
     cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
     with open(cert_file, encoding="utf-8") as f:
         content = f.read()
     assert 'type    = "AAAA"' in content
+
+
+def test_route53_apex_record_exists():
+    cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
+    with open(cert_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_route53_record" "apex"' in content
+
+
+def test_route53_apex_ipv6_record_exists():
+    cert_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "certificate_dns.tf"
+    with open(cert_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_route53_record" "apex_ipv6"' in content

@@ -228,3 +228,31 @@ def test_cloudfront_spa_routing_returns_index_html():
     with open(cf_file, encoding="utf-8") as f:
         content = f.read()
     assert '/index.html' in content
+
+
+def test_cloudfront_distribution_has_www_alias():
+    cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
+    with open(cf_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'local.www_fqdn' in content
+
+
+def test_cloudfront_distribution_has_apex_alias():
+    cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
+    with open(cf_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'local.apex_fqdn' in content
+
+
+def test_cloudfront_function_redirects_apex_to_www():
+    cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
+    with open(cf_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'statusCode: 301' in content
+
+
+def test_cloudfront_function_checks_host_header():
+    cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
+    with open(cf_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'request.headers.host.value' in content

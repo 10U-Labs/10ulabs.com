@@ -33,7 +33,8 @@ def parse_website_locals() -> Dict[str, str]:
                     elif 'module.shared.' in value:
                         ref = value.replace('module.shared.', '').strip()
                         config[key] = shared.get(ref, '')
-    config['website_fqdn'] = shared.get('domain_name', '')
+    config['www_fqdn'] = f"www.{shared.get('domain_name', '')}"
+    config['apex_fqdn'] = shared.get('domain_name', '')
     config['github_repo_full'] = f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}"
     return config
 
@@ -46,7 +47,8 @@ def config_fixture() -> Dict[str, str]:
     result['aws_region'] = website_locals.get('aws_region', '')
     result['aws_account_id'] = website_locals.get('aws_account_id', '')
     result['central_logs_bucket'] = shared.get('name_for_central_logs_bucket', '')
-    result['website_fqdn'] = website_locals.get('website_fqdn', '')
+    result['website_fqdn'] = website_locals.get('www_fqdn', '')
+    result['apex_fqdn'] = website_locals.get('apex_fqdn', '')
     result['github_org'] = shared.get('github_org', '')
     result['github_repo'] = website_locals.get('github_repo_full', '')
     result['resource_prefix'] = website_locals.get('resource_prefix', '')

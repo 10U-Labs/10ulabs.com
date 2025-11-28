@@ -11,9 +11,9 @@ output "cloudfront_domain_name" {
 }
 
 output "website_domain_name" {
-  value = local.website_fqdn
+  value = local.www_fqdn
 }
 
 output "website_url" {
-  value = "https://${local.website_fqdn}"
+  value = "https://${local.www_fqdn}"
 }

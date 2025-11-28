@@ -43,3 +43,23 @@ def test_website_spa_routing_returns_200(website_url):
 def test_website_spa_routing_returns_html(website_url):
     response = requests.get(f"{website_url}/nonexistent-page", timeout=30)
     assert 'text/html' in response.headers.get('Content-Type', '')
+
+
+def test_apex_redirects_to_www(config):
+    apex_url = f"https://{config['apex_fqdn']}"
+    response = requests.get(apex_url, timeout=30, allow_redirects=False)
+    assert response.status_code == 301
+
+
+def test_apex_redirect_location_is_www(config):
+    apex_url = f"https://{config['apex_fqdn']}"
+    response = requests.get(apex_url, timeout=30, allow_redirects=False)
+    location = response.headers.get('Location', '')
+    assert config['website_fqdn'] in location
+
+
+def test_apex_redirect_preserves_path(config):
+    apex_url = f"https://{config['apex_fqdn']}/some/path"
+    response = requests.get(apex_url, timeout=30, allow_redirects=False)
+    location = response.headers.get('Location', '')
+    assert '/some/path' in location

@@ -1,9 +1,9 @@
 resource "aws_s3_bucket" "website" {
-  bucket        = local.website_fqdn
+  bucket        = local.www_fqdn
   force_destroy = false
 
   tags = merge(local.common_tags, {
-    Name = "${local.website_fqdn}-website"
+    Name = "${local.www_fqdn}-website"
   })
 }
 
@@ -42,7 +42,7 @@ resource "aws_s3_bucket_logging" "website" {
 }
 
 resource "aws_cloudfront_origin_access_control" "website" {
-  name                              = "${local.website_fqdn}-oac"
+  name                              = "${local.www_fqdn}-oac"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -131,6 +131,16 @@ resource "aws_cloudfront_function" "spa_routing" {
   code    = <<-EOT
 function handler(event) {
     var request = event.request;
+    var host = request.headers.host.value;
+    if (host === '${local.apex_fqdn}') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: {
+                'location': { value: 'https://${local.www_fqdn}' + request.uri }
+            }
+        };
+    }
     var uri = request.uri;
     if (uri.endsWith('/')) {
         request.uri = '/index.html';
@@ -146,7 +156,7 @@ resource "aws_cloudfront_distribution" "website" {
   enabled             = true
   is_ipv6_enabled     = true
   default_root_object = "index.html"
-  aliases             = [local.website_fqdn]
+  aliases             = [local.www_fqdn, local.apex_fqdn]
   web_acl_id          = aws_wafv2_web_acl.website.arn
 
   logging_config {
@@ -202,7 +212,7 @@ resource "aws_cloudfront_distribution" "website" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.website_fqdn}-distribution"
+    Name = "${local.www_fqdn}-distribution"
   })
 
   depends_on = [aws_acm_certificate_validation.website]
