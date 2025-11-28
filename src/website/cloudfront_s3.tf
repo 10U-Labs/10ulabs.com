@@ -100,6 +100,19 @@ resource "aws_wafv2_web_acl" "website" {
   })
 }
 
+resource "aws_cloudfront_response_headers_policy" "website" {
+  name = "${local.resource_prefix}ResponseHeadersPolicy"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+  }
+}
+
 resource "aws_cloudfront_cache_policy" "website" {
   name        = "${local.resource_prefix}CachePolicy"
   default_ttl = 86400
@@ -178,8 +191,9 @@ resource "aws_cloudfront_distribution" "website" {
     cached_methods         = ["GET", "HEAD"]
     compress               = true
 
-    cache_policy_id          = aws_cloudfront_cache_policy.website.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.cors_s3_origin.id
+    cache_policy_id            = aws_cloudfront_cache_policy.website.id
+    origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.cors_s3_origin.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.website.id
 
     function_association {
       event_type   = "viewer-request"

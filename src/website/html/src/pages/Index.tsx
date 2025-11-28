@@ -114,7 +114,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="bg-secondary py-8 px-4 border-t border-border">
         <div className="container mx-auto max-w-6xl text-center text-muted-foreground">
-          <p>&copy; 2025 10U Labs, LLC. All rights reserved.</p>
+          <p>Copyright &copy; 2025 10U Labs, LLC. All rights reserved.</p>
         </div>
       </footer>
     </div>
