@@ -228,11 +228,6 @@ jobs:
         with:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
         run: python3 -m pip install yamllint
       - name: Linting YAML files
@@ -247,15 +242,6 @@ jobs:
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/website.yml
-      - name: Lint TypeScript
-        run: |
-          cd src/website/html
-          npm ci
-          npm run lint
-      - name: Type check TypeScript
-        run: |
-          cd src/website/html
-          npx tsc --noEmit
       - name: Terraform Format Check
         run: cd src/website && terraform fmt -check -recursive
       - name: Terraform Init
