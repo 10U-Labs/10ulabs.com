@@ -1,0 +1,231 @@
+resource "aws_s3_bucket" "website" {
+  bucket        = local.website_fqdn
+  force_destroy = false
+
+  tags = merge(local.common_tags, {
+    Name = "${local.website_fqdn}-website"
+  })
+}
+
+resource "aws_s3_bucket_versioning" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  versioning_configuration {
+    status = "Disabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_logging" "website" {
+  bucket = aws_s3_bucket.website.id
+
+  target_bucket = local.name_for_central_logs
+  target_prefix = "s3-access/website/"
+}
+
+resource "aws_cloudfront_origin_access_control" "website" {
+  name                              = "${local.website_fqdn}-oac"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+data "aws_iam_policy_document" "website_bucket_policy" {
+  statement {
+    sid    = "AllowCloudFrontServicePrincipal"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${aws_s3_bucket.website.arn}/*"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.website.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "website" {
+  bucket = aws_s3_bucket.website.id
+  policy = data.aws_iam_policy_document.website_bucket_policy.json
+}
+
+resource "aws_wafv2_web_acl" "website" {
+  provider = aws.us-east-1
+
+  name  = "WebsiteWafWebAcl"
+  scope = "CLOUDFRONT"
+
+  default_action {
+    allow {}
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "WebsiteWafMetrics"
+    sampled_requests_enabled   = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "WebsiteWafWebAcl"
+  })
+}
+
+resource "aws_cloudfront_cache_policy" "website" {
+  name        = "WebsiteCachePolicy"
+  default_ttl = 86400
+  max_ttl     = 31536000
+  min_ttl     = 60
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+  }
+}
+
+resource "aws_cloudfront_function" "spa_routing" {
+  name    = "WebsiteSpaRoutingFunction"
+  runtime = "cloudfront-js-2.0"
+  publish = true
+  code    = <<-EOT
+function handler(event) {
+    var request = event.request;
+    var uri = request.uri;
+    if (uri.endsWith('/')) {
+        request.uri = '/index.html';
+    } else if (!uri.includes('.')) {
+        request.uri = '/index.html';
+    }
+    return request;
+}
+EOT
+}
+
+resource "aws_cloudfront_distribution" "website" {
+  enabled             = true
+  is_ipv6_enabled     = true
+  default_root_object = "index.html"
+  aliases             = [local.website_fqdn]
+  web_acl_id          = aws_wafv2_web_acl.website.arn
+
+  logging_config {
+    include_cookies = false
+    bucket          = "${local.name_for_central_logs}.s3.amazonaws.com"
+    prefix          = "cloudfront-logs/website/"
+  }
+
+  origin {
+    domain_name              = aws_s3_bucket.website.bucket_regional_domain_name
+    origin_id                = "s3-website"
+    origin_access_control_id = aws_cloudfront_origin_access_control.website.id
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "s3-website"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+
+    cache_policy_id          = aws_cloudfront_cache_policy.website.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.cors_s3_origin.id
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.spa_routing.arn
+    }
+  }
+
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  custom_error_response {
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate.website.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.website_fqdn}-distribution"
+  })
+
+  depends_on = [aws_acm_certificate_validation.website]
+}
+
+data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
+  name = "Managed-CORS-S3Origin"
+}
+
+resource "aws_cloudwatch_log_group" "waf" {
+  provider = aws.us-east-1
+
+  name              = "aws-waf-logs-website"
+  retention_in_days = 30
+
+  tags = merge(local.common_tags, {
+    Name = "aws-waf-logs-website"
+  })
+}
+
+resource "aws_wafv2_web_acl_logging_configuration" "website" {
+  provider = aws.us-east-1
+
+  log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
+  resource_arn            = aws_wafv2_web_acl.website.arn
+}
