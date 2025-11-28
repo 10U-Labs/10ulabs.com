@@ -100,6 +100,10 @@ resource "aws_ecs_task_definition" "runner" {
   task_role_arn            = aws_iam_role.ecs_task_role.arn
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
 
+  ephemeral_storage {
+    size_in_gib = 128
+  }
+
   runtime_platform {
     cpu_architecture        = var.fargate_cpu_architecture
     operating_system_family = var.fargate_operating_system_family

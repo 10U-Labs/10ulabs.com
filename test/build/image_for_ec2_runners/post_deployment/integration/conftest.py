@@ -113,7 +113,7 @@ def get_subnet_ids():
 
 
 def get_spot_instance_types():
-    env_value = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
+    env_value = os.environ.get("SPOT_INSTANCE_TYPES", "")
     result = env_value.split(",") if env_value else []
     return result
 

@@ -147,13 +147,6 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Load configuration
-        run: |
-          echo "NODE_VERSION=$(yq '.node_version' src/build/image_for_docker_runners/config.yml)" >> $GITHUB_ENV
-          echo "RUNNER_ARCH=${{ needs.declaring-common-variables.outputs.fargate_cpu_architecture }}" >> $GITHUB_ENV
-          echo "RUNNER_VERSION=$(yq '.runner_version' src/build/image_for_docker_runners/config.yml)" >> $GITHUB_ENV
-          echo "TERRAFORM_VERSION=$(yq '.terraform_version' src/build/image_for_docker_runners/config.yml)" >> $GITHUB_ENV
-          echo "YQ_VERSION=$(yq '.yq_version' src/build/image_for_docker_runners/config.yml)" >> $GITHUB_ENV
       - name: Run pytest integration tests
         run: |
           pytest test/build/image_for_docker_runners/post_deployment/integration/ \

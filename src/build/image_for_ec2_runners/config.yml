@@ -61,7 +61,3 @@ commands: |
 source_ami: debian-13-arm64-20251117-2299
 tags:
   Purpose: GitHub self-hosted EC2 runner
-test_spot_instance_types:
-  - t4g.xlarge
-  - m8g.xlarge
-  - m7g.xlarge

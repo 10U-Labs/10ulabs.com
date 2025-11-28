@@ -139,7 +139,6 @@ jobs:
       os_version: ${{ steps.config.outputs.os_version }}
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-      test_spot_instance_types: ${{ steps.config.outputs.test_spot_instance_types }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
@@ -190,7 +189,6 @@ jobs:
           SOURCE_AMI=$(yq '.source_ami' src/build/image_for_ec2_runners/config.yml)
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
-          TEST_SPOT_INSTANCE_TYPES=$(yq '.test_spot_instance_types | join(",")' src/build/image_for_ec2_runners/config.yml)
           echo "aws_region=${{ steps.shared.outputs.aws_region }}" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=${{ steps.shared.outputs.github_actions_role_arn }}" >> $GITHUB_OUTPUT
           echo "os_architecture=${{ steps.api.outputs.os_architecture }}" >> $GITHUB_OUTPUT
@@ -198,7 +196,6 @@ jobs:
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo 'spot_instance_types=${{ steps.api.outputs.spot_instance_types }}' >> $GITHUB_OUTPUT
           echo "terraform_version=${{ steps.shared.outputs.terraform_version }}" >> $GITHUB_OUTPUT
-          echo "test_spot_instance_types=$TEST_SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -238,9 +235,9 @@ jobs:
           GITHUB_PAT=$(aws ssm get-parameter --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
+          SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
-          TEST_SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.test_spot_instance_types }}
           TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run E2E tests
         run: |
@@ -274,9 +271,9 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install boto3 pytest pyyaml
       - env:
+          SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
-          TEST_SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.test_spot_instance_types }}
           TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run pytest integration tests
         run: |

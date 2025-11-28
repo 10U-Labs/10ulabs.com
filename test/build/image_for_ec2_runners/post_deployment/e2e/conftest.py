@@ -77,7 +77,7 @@ def get_subnet_ids():
 
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
-    env_value = os.environ.get("TEST_SPOT_INSTANCE_TYPES", "")
+    env_value = os.environ.get("SPOT_INSTANCE_TYPES", "")
     spot_types = env_value.split(",") if env_value else []
     result = {
         "ami_id": test_ami_id,

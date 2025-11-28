@@ -45,29 +45,34 @@ def docker_image_tag():
 
 
 @pytest.fixture(scope="module")
-def docker_image():
-    path = get_dockerfile_path()
+def docker_image(aws_region, aws_account_id, ecr_repository):
     tag = get_docker_image_tag()
-    build_context = os.path.dirname(path)
+    ecr_tag = get_available_ecr_tag(aws_region, ecr_repository)
+    ecr_uri = f"{aws_account_id}.dkr.ecr.{aws_region}.amazonaws.com/{ecr_repository}:{ecr_tag}"
 
-    build_args = [
-        "--build-arg", f"NODE_VERSION={os.environ['NODE_VERSION']}",
-        "--build-arg", f"RUNNER_ARCH={os.environ['RUNNER_ARCH']}",
-        "--build-arg", f"RUNNER_VERSION={os.environ['RUNNER_VERSION']}",
-        "--build-arg", f"TERRAFORM_VERSION={os.environ['TERRAFORM_VERSION']}",
-        "--build-arg", f"YQ_VERSION={os.environ['YQ_VERSION']}",
-    ]
+    login_to_ecr(aws_region)
 
-    result = subprocess.run(
-        ["docker", "build", "--platform", "linux/arm64"] + build_args + ["-t", tag, "-f", path, build_context],
+    pull_result = subprocess.run(
+        ["docker", "pull", ecr_uri],
         check=False,
         capture_output=True,
         text=True,
         errors='replace'
     )
 
-    if result.returncode != 0:
-        pytest.fail(f"Docker build failed: {result.stderr}")
+    if pull_result.returncode != 0:
+        pytest.fail(f"Docker pull failed: {pull_result.stderr}")
+
+    tag_result = subprocess.run(
+        ["docker", "tag", ecr_uri, tag],
+        check=False,
+        capture_output=True,
+        text=True,
+        errors='replace'
+    )
+
+    if tag_result.returncode != 0:
+        pytest.fail(f"Docker tag failed: {tag_result.stderr}")
 
     yield tag
 

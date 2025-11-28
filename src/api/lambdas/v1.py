@@ -548,6 +548,13 @@ def create_ec2_user_data(registration_token: str, job_labels: List[str], github_
     return f"""#!/bin/bash
 set -e
 
+mkfs.ext4 -F /dev/nvme1n1
+mount /dev/nvme1n1 /mnt
+cp -a /home/github-runner/. /mnt/
+umount /mnt
+mount /dev/nvme1n1 /home/github-runner
+chown -R github-runner:github-runner /home/github-runner
+
 cd /home/github-runner/actions-runner
 
 sudo -u github-runner ./config.sh \
@@ -658,6 +665,14 @@ def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
                 'SecurityGroupIds': [template_config['security_group_id']],
                 'IamInstanceProfile': {'Name': template_config['iam_instance_profile']},
                 'UserData': template_config['user_data_base64'],
+                'BlockDeviceMappings': [{
+                    'DeviceName': '/dev/xvda',
+                    'Ebs': {
+                        'VolumeSize': 128,
+                        'VolumeType': 'gp3',
+                        'DeleteOnTermination': True
+                    }
+                }],
                 'MetadataOptions': {
                     'HttpTokens': 'required',
                     'HttpEndpoint': 'enabled'
