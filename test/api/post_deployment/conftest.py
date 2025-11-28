@@ -94,6 +94,13 @@ def ecr_image_count_fixture(ecr_client, config):
     return len(response.get("imageDetails", []))
 
 
+@pytest.fixture(name="ecr_has_latest_tag", scope="module")
+def ecr_has_latest_tag_fixture(ecr_client, config):
+    response = ecr_client.list_images(repositoryName=config["ecr_repository_name"])
+    image_tags = [img.get('imageTag') for img in response['imageIds'] if img.get('imageTag')]
+    return 'latest' in image_tags
+
+
 def create_runner_job_payload(github_repo, job_labels):
     job_id = int(time.time())
     payload = {

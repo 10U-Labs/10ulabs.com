@@ -26,21 +26,19 @@ def test_ecr_repository_has_images_when_populated(ecr_client, config, ecr_image_
     assert len(response['imageIds']) > 0
 
 
-def test_ecr_latest_image_exists(ecr_client, config, ecr_image_count):
+def test_ecr_latest_image_exists(ecr_client, config, ecr_has_latest_tag):
     repository_name = config["ecr_repository_name"]
-    skip_condition = ecr_image_count == 0
-    if skip_condition:
-        pytest.skip("Repository is empty")
+    if not ecr_has_latest_tag:
+        pytest.skip("No latest tag in repository")
     response = ecr_client.list_images(repositoryName=repository_name)
     image_tags = [img.get('imageTag') for img in response['imageIds'] if img.get('imageTag')]
     assert 'latest' in image_tags
 
 
-def test_ecr_image_has_manifest(ecr_client, config, ecr_image_count):
+def test_ecr_image_has_manifest(ecr_client, config, ecr_has_latest_tag):
     repository_name = config["ecr_repository_name"]
-    skip_condition = ecr_image_count == 0
-    if skip_condition:
-        pytest.skip("Repository is empty")
+    if not ecr_has_latest_tag:
+        pytest.skip("No latest tag in repository")
     response = ecr_client.batch_get_image(
         repositoryName=repository_name,
         imageIds=[{'imageTag': 'latest'}],
@@ -49,11 +47,10 @@ def test_ecr_image_has_manifest(ecr_client, config, ecr_image_count):
     assert len(response['images']) == 1
 
 
-def test_ecr_image_manifest_is_parseable(ecr_client, config, ecr_image_count):
+def test_ecr_image_manifest_is_parseable(ecr_client, config, ecr_has_latest_tag):
     repository_name = config["ecr_repository_name"]
-    skip_condition = ecr_image_count == 0
-    if skip_condition:
-        pytest.skip("Repository is empty")
+    if not ecr_has_latest_tag:
+        pytest.skip("No latest tag in repository")
     response = ecr_client.batch_get_image(
         repositoryName=repository_name,
         imageIds=[{'imageTag': 'latest'}],
@@ -64,11 +61,10 @@ def test_ecr_image_manifest_is_parseable(ecr_client, config, ecr_image_count):
     assert manifest is not None
 
 
-def test_ecr_image_is_multi_arch_or_single_arch(ecr_client, config, ecr_image_count):
+def test_ecr_image_is_multi_arch_or_single_arch(ecr_client, config, ecr_has_latest_tag):
     repository_name = config["ecr_repository_name"]
-    skip_condition = ecr_image_count == 0
-    if skip_condition:
-        pytest.skip("Repository is empty")
+    if not ecr_has_latest_tag:
+        pytest.skip("No latest tag in repository")
     response = ecr_client.batch_get_image(
         repositoryName=repository_name,
         imageIds=[{'imageTag': 'latest'}],
@@ -81,11 +77,10 @@ def test_ecr_image_is_multi_arch_or_single_arch(ecr_client, config, ecr_image_co
     assert has_manifests or has_layers
 
 
-def test_ecr_image_has_arm64_architecture(ecr_client, config, ecr_image_count):
+def test_ecr_image_has_arm64_architecture(ecr_client, config, ecr_has_latest_tag):
     repository_name = config["ecr_repository_name"]
-    skip_condition = ecr_image_count == 0
-    if skip_condition:
-        pytest.skip("Repository is empty")
+    if not ecr_has_latest_tag:
+        pytest.skip("No latest tag in repository")
     response = ecr_client.batch_get_image(
         repositoryName=repository_name,
         imageIds=[{'imageTag': 'latest'}],
@@ -98,11 +93,10 @@ def test_ecr_image_has_arm64_architecture(ecr_client, config, ecr_image_count):
     assert has_arm64 is True
 
 
-def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client, config, ecr_image_count):
+def test_ecr_image_architecture_matches_task_definition(ecr_client, ecs_client, config, ecr_has_latest_tag):
     repository_name = config["ecr_repository_name"]
-    skip_condition = ecr_image_count == 0
-    if skip_condition:
-        pytest.skip("Repository is empty")
+    if not ecr_has_latest_tag:
+        pytest.skip("No latest tag in repository")
     ecr_response = ecr_client.batch_get_image(
         repositoryName=repository_name,
         imageIds=[{'imageTag': 'latest'}],
