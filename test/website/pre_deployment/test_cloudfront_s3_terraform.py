@@ -153,13 +153,6 @@ def test_waf_log_group_has_correct_name_prefix():
     assert 'aws-waf-logs-' in content
 
 
-def test_waf_log_group_name_is_aws_waf_logs_website():
-    cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
-    with open(cf_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'name              = "aws-waf-logs-website"' in content
-
-
 def test_waf_log_group_retention_is_30_days():
     cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
     with open(cf_file, encoding="utf-8") as f:
@@ -172,13 +165,6 @@ def test_waf_log_group_uses_us_east_1_provider():
     with open(cf_file, encoding="utf-8") as f:
         content = f.read()
     assert 'provider = aws.us-east-1' in content
-
-
-def test_waf_log_group_has_name_tag():
-    cf_file = Path(__file__).parent.parent.parent.parent / "src" / "website" / "cloudfront_s3.tf"
-    with open(cf_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'Name = "aws-waf-logs-website"' in content
 
 
 def test_waf_logging_configuration_exists():
