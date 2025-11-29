@@ -734,7 +734,7 @@ paths:
                   error:
                     type: string
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${RackDesignerHandlerArn}
         httpMethod: POST
         type: aws_proxy
     options:
@@ -814,7 +814,7 @@ paths:
                   error:
                     type: string
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${RackDesignerHandlerArn}
         httpMethod: POST
         type: aws_proxy
     options:

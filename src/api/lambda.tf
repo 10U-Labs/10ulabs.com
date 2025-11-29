@@ -165,7 +165,6 @@ resource "aws_lambda_function" "v1_handler" {
       GITHUB_REPO                        = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME           = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
       IMAGE_API_ENDPOINT                 = "https://${local.api_fqdn}"
-      RACK_DESIGNER_CONFIGURATIONS_TABLE = aws_dynamodb_table.rack_designer_configurations.name
       RECAPTCHA_SECRET_PARAMETER_NAME    = aws_ssm_parameter.recaptcha_secret.name
       SECURITY_GROUPS                    = aws_security_group.runner_sg.id
       SUBNETS                            = join(",", aws_subnet.public[*].id)
