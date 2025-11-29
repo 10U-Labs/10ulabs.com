@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 import boto3
 from botocore.exceptions import ClientError
@@ -64,15 +65,24 @@ def generate_config_hash(config: Dict[str, Any]) -> str:
     return config_hash
 
 
-def save_rack_configuration(config_hash: str, config: Dict[str, Any]) -> Dict[str, Any]:
+def save_rack_configuration(
+    config_hash: str,
+    config: Dict[str, Any],
+    device_id: Optional[str] = None
+) -> Dict[str, Any]:
     table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    created_at = datetime.now(timezone.utc).isoformat()
+    item: Dict[str, Any] = {
+        'config_hash': {'S': config_hash},
+        'configuration': {'S': json.dumps(config)},
+        'created_at': {'S': created_at}
+    }
+    if device_id:
+        item['device_id'] = {'S': device_id}
     try:
         get_dynamodb_client().put_item(
             TableName=table_name,
-            Item={
-                'config_hash': {'S': config_hash},
-                'configuration': {'S': json.dumps(config)}
-            },
+            Item=item,
             ConditionExpression='attribute_not_exists(config_hash)'
         )
         logger.info("Saved rack configuration: %s", config_hash)
@@ -228,6 +238,7 @@ def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         body = parse_body(event)
         config = body.get('configuration')
+        device_id = body.get('device_id')
         if not config:
             response = error_response(400, 'Missing required field: configuration')
         else:
@@ -236,7 +247,7 @@ def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
                 response = error_response(400, validation_error)
             else:
                 config_hash = generate_config_hash(config)
-                result = save_rack_configuration(config_hash, config)
+                result = save_rack_configuration(config_hash, config, device_id)
                 if result['success']:
                     response = json_response(200, {'success': True, 'config_hash': config_hash})
                 else:

@@ -262,7 +262,7 @@ function handleDrop(e) {
 function addPart(type, size, rackId, startSlot) {
     if (!canPlacePart(rackId, startSlot, size)) {
         alert(`Cannot place part: slots ${startSlot} to ${startSlot + size - 1} are not available or exceed rack height.`);
-        Analytics.track('placement_failed', { part_type: type, size: size, rack_id: rackId, slot: startSlot, reason: 'slot_unavailable' });
+        Analytics.track('placement_failed', { part_type: type, size: size, rack_id: rackId, slot: startSlot, reason: 'slot_unavailable', rack_count: rackCount });
         return;
     }
 
@@ -277,7 +277,7 @@ function addPart(type, size, rackId, startSlot) {
     };
 
     placedParts.push(part);
-    Analytics.track('part_added', { part_type: type, size: size, rack_id: rackId, slot: startSlot, part_id: part.id });
+    Analytics.track('part_added', { part_type: type, size: size, rack_id: rackId, slot: startSlot, part_id: part.id, rack_count: rackCount });
     renderParts();
 }
 
@@ -292,7 +292,7 @@ function movePart(partId, newRackId, newStartSlot) {
     for (let i = newStartSlot; i < newStartSlot + part.size; i++) {
         if (i > rackHeight) {
             alert(`Cannot place part: exceeds rack height.`);
-            Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'exceeds_height' });
+            Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'exceeds_height', rack_count: rackCount });
             return;
         }
 
@@ -301,7 +301,7 @@ function movePart(partId, newRackId, newStartSlot) {
             const otherEnd = other.startSlot + other.size - 1;
             if (i >= other.startSlot && i <= otherEnd) {
                 alert(`Cannot place part: slot ${i} is occupied.`);
-                Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'slot_occupied' });
+                Analytics.track('placement_failed', { part_id: partId, part_type: part.type, rack_id: newRackId, slot: newStartSlot, reason: 'slot_occupied', rack_count: rackCount });
                 return;
             }
         }
@@ -309,7 +309,7 @@ function movePart(partId, newRackId, newStartSlot) {
 
     part.rackId = newRackId;
     part.startSlot = newStartSlot;
-    Analytics.track('part_moved', { part_id: partId, part_type: part.type, from_rack: oldRackId, from_slot: oldSlot, to_rack: newRackId, to_slot: newStartSlot });
+    Analytics.track('part_moved', { part_id: partId, part_type: part.type, from_rack: oldRackId, from_slot: oldSlot, to_rack: newRackId, to_slot: newStartSlot, rack_count: rackCount });
     renderParts();
 }
 
@@ -338,7 +338,7 @@ function canPlacePart(rackId, startSlot, size, excludeId = null) {
 function removePart(partId) {
     const part = placedParts.find(c => c.id === partId);
     if (part) {
-        Analytics.track('part_removed', { part_id: partId, part_type: part.type, rack_id: part.rackId, slot: part.startSlot, size: part.size });
+        Analytics.track('part_removed', { part_id: partId, part_type: part.type, rack_id: part.rackId, slot: part.startSlot, size: part.size, rack_count: rackCount });
     }
     placedParts = placedParts.filter(c => c.id !== partId);
     if (selectedPartId === partId) {
@@ -581,7 +581,7 @@ function updateHeight(delta) {
 
         if (totalUsedSlots > newHeight) {
             alert(`Cannot reduce height to ${newHeight}U: Rack ${rackId} has ${totalUsedSlots}U of parts that won't fit. Please remove some parts first.`);
-            Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'parts_exceed_height' });
+            Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'parts_exceed_height', rack_count: rackCount });
             return;
         }
     }
@@ -613,7 +613,7 @@ function updateHeight(delta) {
 
                 if (!foundSlot) {
                     alert(`Cannot reduce height to ${newHeight}U: Unable to automatically reposition parts in Rack ${rackId}. Please manually rearrange parts first.`);
-                    Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'cannot_reposition' });
+                    Analytics.track('rack_height_blocked', { old_height: oldHeight, attempted_height: newHeight, rack_id: rackId, reason: 'cannot_reposition', rack_count: rackCount });
                     return;
                 }
             }
@@ -622,7 +622,7 @@ function updateHeight(delta) {
 
     rackHeight = newHeight;
     document.getElementById('heightValue').textContent = `${rackHeight}U`;
-    Analytics.track('rack_height_changed', { old_height: oldHeight, new_height: newHeight });
+    Analytics.track('rack_height_changed', { old_height: oldHeight, new_height: newHeight, rack_count: rackCount });
     initRacks();
     renderParts();
 }
@@ -633,10 +633,10 @@ function resetAllRacks() {
         if (confirm('Are you sure you want to remove all parts from all racks?')) {
             placedParts = [];
             deselectPart();
-            Analytics.track('reset_confirmed', { part_count_before: partCountBefore });
+            Analytics.track('reset_confirmed', { part_count_before: partCountBefore, rack_count: rackCount });
             renderParts();
         } else {
-            Analytics.track('reset_cancelled', { part_count: partCountBefore });
+            Analytics.track('reset_cancelled', { part_count: partCountBefore, rack_count: rackCount });
         }
     }
 }
@@ -789,7 +789,7 @@ function saveConfiguration() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ configuration: config })
+        body: JSON.stringify({ configuration: config, device_id: Analytics.getDeviceId() })
     })
     .then(response => response.json())
     .then(data => {
@@ -797,7 +797,7 @@ function saveConfiguration() {
             const basePath = window.location.pathname.replace(/\/[A-Z0-9]{8,9}\/?$/, '').replace(/\/$/, '');
             const newUrl = `${window.location.origin}${basePath}/${data.config_hash}`;
             window.history.pushState({ config_hash: data.config_hash }, '', newUrl);
-            Analytics.track('save_succeeded', { config_hash: data.config_hash });
+            Analytics.track('configuration_saved', { config_hash: data.config_hash, part_count: config.placedParts.length, rack_height: config.rackHeight, rack_count: config.rackCount });
             showShareModal(newUrl);
         } else {
             alert(`Failed to save configuration: ${data.error}`);
@@ -839,3 +839,7 @@ function loadConfigurationFromUrl() {
 }
 
 loadConfigurationFromUrl();
+
+setTimeout(function() {
+    Analytics.track('designer_ready', { rack_count: rackCount, rack_height: rackHeight, part_count: placedParts.length });
+}, 100);

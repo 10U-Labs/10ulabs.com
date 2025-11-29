@@ -192,3 +192,63 @@ def test_lambda_handler_unknown_path_returns_404(handler):
     event = {'httpMethod': 'GET', 'path': '/v1/unknown', 'headers': {}}
     response = handler.lambda_handler(event, None)
     assert response['statusCode'] == 404
+
+
+@patch('boto3.client')
+def test_handle_post_with_device_id(mock_boto_client, handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.put_item.return_value = {}
+    mock_boto_client.return_value = mock_dynamodb
+    handler._clients.clear()
+    event = {
+        'body': json.dumps({
+            'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
+            'device_id': 'test-device-123'
+        }),
+        'headers': {}
+    }
+    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+        response = handler.handle_post(event)
+    assert response['statusCode'] == 200
+
+
+@patch('boto3.client')
+def test_save_rack_configuration_stores_created_at(mock_boto_client, handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.put_item.return_value = {}
+    mock_boto_client.return_value = mock_dynamodb
+    handler._clients.clear()
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+        handler.save_rack_configuration('ABCD12345', config)
+    call_args = mock_dynamodb.put_item.call_args
+    item = call_args.kwargs['Item']
+    assert 'created_at' in item
+
+
+@patch('boto3.client')
+def test_save_rack_configuration_stores_device_id(mock_boto_client, handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.put_item.return_value = {}
+    mock_boto_client.return_value = mock_dynamodb
+    handler._clients.clear()
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+        handler.save_rack_configuration('ABCD12345', config, 'test-device-123')
+    call_args = mock_dynamodb.put_item.call_args
+    item = call_args.kwargs['Item']
+    assert item['device_id'] == {'S': 'test-device-123'}
+
+
+@patch('boto3.client')
+def test_save_rack_configuration_without_device_id(mock_boto_client, handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.put_item.return_value = {}
+    mock_boto_client.return_value = mock_dynamodb
+    handler._clients.clear()
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
+        handler.save_rack_configuration('ABCD12345', config)
+    call_args = mock_dynamodb.put_item.call_args
+    item = call_args.kwargs['Item']
+    assert 'device_id' not in item
