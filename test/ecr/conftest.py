@@ -6,7 +6,7 @@ import pytest
 
 
 BASE_DIR = os.path.join(os.path.dirname(__file__), '../../src/ecr')
-SHARED_OUTPUTS_PATH = os.path.join(os.path.dirname(__file__), '../../src/modules/shared/outputs.tf')
+SHARED_OUTPUTS_PATH = os.path.join(os.path.dirname(__file__), '../../lib/terraform/outputs.tf')
 
 
 def parse_tf_output(file_path, output_name):
