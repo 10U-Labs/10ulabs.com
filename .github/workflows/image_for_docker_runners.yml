@@ -82,12 +82,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
