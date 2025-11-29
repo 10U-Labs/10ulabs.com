@@ -13,7 +13,7 @@ os.environ['EC2_AMI_PURPOSE_TAG'] = 'Purpose'
 os.environ['EC2_AMI_PURPOSE_VALUE'] = 'GitHub self-hosted EC2 runner'
 os.environ['EC2_AMI_STABLE_TAG'] = 'Stable'
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def load_module_from_path(module_name, module_path):
@@ -24,7 +24,7 @@ def load_module_from_path(module_name, module_path):
 
 
 def get_shared_outputs():
-    outputs_path = PROJECT_ROOT / "src" / "modules" / "shared" / "outputs.tf"
+    outputs_path = PROJECT_ROOT / "src" / "shared" / "modules" / "outputs.tf"
     outputs = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -34,7 +34,7 @@ def get_shared_outputs():
 
 
 def get_runner_config():
-    config_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "config.yml"
+    config_path = PROJECT_ROOT / "src" / "image_for_ec2_runners" / "config.yml"
     with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
@@ -42,8 +42,8 @@ def get_runner_config():
 def get_config():
     tfvars_path = PROJECT_ROOT / "src" / "api" / "terraform.tfvars"
     result = get_shared_outputs()
-    runner_config = get_runner_config()
-    source_ami = runner_config.get("source_ami", "")
+    runner_cfg = get_runner_config()
+    source_ami = runner_cfg.get("source_ami", "")
     source_ami_parts = source_ami.split("-")
     result["os_family"] = source_ami_parts[0] if source_ami_parts else ""
     result["os_version"] = source_ami_parts[1] if len(source_ami_parts) > 1 else ""
@@ -65,6 +65,21 @@ def get_config():
     return result
 
 
+@pytest.fixture
+def project_root():
+    return PROJECT_ROOT
+
+
+@pytest.fixture
+def load_module_from_path_fixture():
+    return load_module_from_path
+
+
+@pytest.fixture
+def runner_config():
+    return get_runner_config()
+
+
 @pytest.fixture(scope="session")
 def config():
     return get_config()
@@ -83,7 +98,7 @@ def v1_handler():
 
 @pytest.fixture
 def promote_ami():
-    return load_module_from_path("promote_ami", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "promote_ami.py")
+    return load_module_from_path("promote_ami", PROJECT_ROOT / "src" / "image_for_ec2_runners" / "promote_ami.py")
 
 
 @pytest.fixture

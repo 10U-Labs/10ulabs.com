@@ -1,46 +1,21 @@
-import importlib.util
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 import pytest
-import yaml
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
-
-
-def _load_module_from_path(module_name, module_path):
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 @pytest.fixture
-def project_root():
-    return PROJECT_ROOT
+def build_ami_module(project_root, load_module_from_path_fixture):
+    return load_module_from_path_fixture("build_ami", project_root / "src" / "image_for_ec2_runners" / "build_ami.py")
 
 
 @pytest.fixture
-def load_module_from_path():
-    return _load_module_from_path
+def cleanup(project_root, load_module_from_path_fixture):
+    return load_module_from_path_fixture("cleanup", project_root / "src" / "image_for_ec2_runners" / "cleanup.py")
 
 
 @pytest.fixture
-def build_ami_module():
-    return _load_module_from_path("build_ami", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "build_ami.py")
-
-
-@pytest.fixture
-def cleanup():
-    return _load_module_from_path("cleanup", PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "cleanup.py")
-
-
-@pytest.fixture
-def provision_script_content():
-    config_path = PROJECT_ROOT / "src" / "build" / "image_for_ec2_runners" / "config.yml"
-    with open(config_path, encoding="utf-8") as f:
-        config = yaml.safe_load(f)
-    return config.get("commands", "")
+def provision_script_content(runner_config):
+    return runner_config.get("commands", "")
 
 
 @pytest.fixture
