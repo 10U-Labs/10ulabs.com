@@ -392,85 +392,79 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
         return result
 
     runner_labels = build_runner_labels(job_labels, run_id)
-    result = _try_launch_fargate_task(job_id, runner_labels, github_repo, registration_token, run_id, runner_type)
-    return result
+    runner_config = {
+        'job_id': job_id, 'job_labels': runner_labels, 'github_repo': github_repo,
+        'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type
+    }
+    return _try_launch_fargate_task(runner_config)
 
 
-def _try_launch_fargate_task(
-    job_id: int, job_labels: list, github_repo: str, registration_token: str, run_id: int | None = None, runner_type: str = 'fargate'
-) -> Dict[str, Any]:
+def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:
+    runner_name = f"fargate-runner-{cfg['job_id']}"
+    response = get_ecs_client().run_task(
+        cluster=os.environ['ECS_CLUSTER'],
+        taskDefinition=os.environ['TASK_DEFINITION'],
+        enableECSManagedTags=True,
+        networkConfiguration={
+            'awsvpcConfiguration': {
+                'subnets': [subnet],
+                'securityGroups': os.environ['SECURITY_GROUPS'].split(','),
+                'assignPublicIp': 'ENABLED'
+            }
+        },
+        capacityProviderStrategy=[{'capacityProvider': 'FARGATE_SPOT', 'weight': 100, 'base': 0}],
+        overrides={
+            'containerOverrides': [{
+                'name': os.environ['CONTAINER_NAME'],
+                'command': [
+                    '--repo', cfg['github_repo'], '--name', runner_name,
+                    '--labels', ','.join(cfg['job_labels']), '--token', cfg['registration_token']
+                ]
+            }]
+        },
+        tags=[
+            {'key': 'Type', 'value': 'workflow-runner'},
+            {'key': 'ManagedBy', 'value': 'docker-runner-api'},
+            {'key': 'GitHubJobId', 'value': str(cfg['job_id'])},
+            {'key': 'JobLabels', 'value': ','.join(cfg['job_labels'])},
+            {'key': 'GitHubRepo', 'value': cfg['github_repo']},
+            {'key': 'RunId', 'value': str(cfg['run_id']) if cfg['run_id'] else ''},
+            {'key': 'RunnerType', 'value': cfg['runner_type']}
+        ]
+    )
+    return {'response': response, 'runner_name': runner_name}
+
+
+def _try_launch_fargate_task(cfg: Dict[str, Any]) -> Dict[str, Any]:
     last_error: Any = None
-    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
-    runner_name = f'fargate-runner-{job_id}'
-
+    result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
     for subnet in os.environ['SUBNETS'].split(','):
         try:
-            response = get_ecs_client().run_task(
-                cluster=os.environ['ECS_CLUSTER'],
-                taskDefinition=os.environ['TASK_DEFINITION'],
-                enableECSManagedTags=True,
-                networkConfiguration={
-                    'awsvpcConfiguration': {
-                        'subnets': [subnet],
-                        'securityGroups': os.environ['SECURITY_GROUPS'].split(','),
-                        'assignPublicIp': 'ENABLED'
-                    }
-                },
-                capacityProviderStrategy=[
-                    {'capacityProvider': 'FARGATE_SPOT', 'weight': 100, 'base': 0}
-                ],
-                overrides={
-                    'containerOverrides': [
-                        {
-                            'name': os.environ['CONTAINER_NAME'],
-                            'command': [
-                                '--repo', github_repo,
-                                '--name', runner_name,
-                                '--labels', ','.join(job_labels),
-                                '--token', registration_token
-                            ]
-                        }
-                    ]
-                },
-                tags=[
-                    {'key': 'Type', 'value': 'workflow-runner'},
-                    {'key': 'ManagedBy', 'value': 'docker-runner-api'},
-                    {'key': 'GitHubJobId', 'value': str(job_id)},
-                    {'key': 'JobLabels', 'value': ','.join(job_labels)},
-                    {'key': 'GitHubRepo', 'value': github_repo},
-                    {'key': 'RunId', 'value': str(run_id) if run_id else ''},
-                    {'key': 'RunnerType', 'value': runner_type}
-                ]
-            )
-
+            launch = _launch_fargate_task_in_subnet(cfg, subnet)
+            response, runner_name = launch['response'], launch['runner_name']
             if response['tasks']:
                 task_arn = response['tasks'][0]['taskArn']
-                logger.info("✅ Launched Fargate runner for job %s: %s", job_id, task_arn)
-                if run_id:
-                    store_workflow_runner(run_id, runner_type, task_arn, runner_name, github_repo)
+                logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
+                if cfg['run_id']:
+                    store_workflow_runner(cfg['run_id'], cfg['runner_type'], task_arn, runner_name, cfg['github_repo'])
                 result = {
-                    'success': True, 'task_arn': task_arn,
-                    'job_id': job_id, 'runner_type': runner_type,
-                    'run_id': run_id, 'runner_name': runner_name
+                    'success': True, 'task_arn': task_arn, 'job_id': cfg['job_id'],
+                    'runner_type': cfg['runner_type'], 'run_id': cfg['run_id'], 'runner_name': runner_name
                 }
                 return result
-
             failures = response.get('failures', [])
             if any('Capacity' in str(f.get('reason', '')) for f in failures):
                 logger.warning("No Fargate Spot capacity in subnet %s, trying next AZ...", subnet)
                 last_error = failures
                 continue
-
-            logger.error("❌ Failed to launch Fargate runner for job %s: %s", job_id, failures)
+            logger.error("Failed to launch Fargate runner for job %s: %s", cfg['job_id'], failures)
             result['error'] = failures
             return result
-
         except ClientError as e:
-            logger.error("❌ Error launching Fargate runner for job %s: %s", job_id, e)
+            logger.error("Error launching Fargate runner for job %s: %s", cfg['job_id'], e)
             result['error'] = str(e)
             return result
-
-    logger.error("❌ Failed to launch Fargate runner for job %s: no capacity in any AZ", job_id)
+    logger.error("Failed to launch Fargate runner for job %s: no capacity in any AZ", cfg['job_id'])
     result['error'] = last_error if last_error else 'No capacity in any availability zone'
     return result
 
@@ -790,30 +784,45 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str,
         return result
 
     runner_labels = build_runner_labels(job_labels, run_id)
-    result = _try_launch_ec2_fleet(job_id, runner_labels, github_repo, ami_id, registration_token, run_id, runner_type)
-    return result
-
-
-def _try_launch_ec2_fleet(
-    job_id: int, job_labels: List[str], github_repo: str, ami_id: str, registration_token: str, run_id: int | None = None, runner_type: str = 'ec2'
-) -> Dict[str, Any]:
-    config = get_ec2_config()
-    user_data = create_ec2_user_data(registration_token, job_labels, github_repo)
-    runner_name = f'ec2-spot-runner-{job_id}'
-    template_config = {
-        'ami_id': ami_id,
-        'security_group_id': config['security_group_id'],
-        'iam_instance_profile': config['iam_instance_profile'],
-        'user_data_base64': base64.b64encode(user_data.encode('utf-8')).decode('utf-8'),
-        'job_id': job_id,
-        'job_labels': job_labels,
-        'github_repo': github_repo,
-        'run_id': run_id,
-        'runner_type': runner_type
+    runner_config = {
+        'job_id': job_id, 'job_labels': runner_labels, 'github_repo': github_repo,
+        'ami_id': ami_id, 'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type
     }
-    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
-    launch_template_id = None
+    return _try_launch_ec2_fleet(runner_config)
 
+
+def _build_ec2_template_config(cfg: Dict[str, Any], ec2_config: Dict[str, Any]) -> Dict[str, Any]:
+    user_data = create_ec2_user_data(cfg['registration_token'], cfg['job_labels'], cfg['github_repo'])
+    return {
+        'ami_id': cfg['ami_id'],
+        'security_group_id': ec2_config['security_group_id'],
+        'iam_instance_profile': ec2_config['iam_instance_profile'],
+        'user_data_base64': base64.b64encode(user_data.encode('utf-8')).decode('utf-8'),
+        'job_id': cfg['job_id'], 'job_labels': cfg['job_labels'], 'github_repo': cfg['github_repo'],
+        'run_id': cfg['run_id'], 'runner_type': cfg['runner_type']
+    }
+
+
+def _handle_ec2_fleet_success(cfg: Dict[str, Any], instance: Dict[str, Any], instance_id: str) -> Dict[str, Any]:
+    runner_name = f"ec2-spot-runner-{cfg['job_id']}"
+    logger.info(
+        "Launched EC2 spot runner for job %s: %s (%s in %s)",
+        cfg['job_id'], instance_id, instance['InstanceType'], instance['Placement']['AvailabilityZone']
+    )
+    if cfg['run_id']:
+        store_workflow_runner(cfg['run_id'], cfg['runner_type'], instance_id, runner_name, cfg['github_repo'])
+    return {
+        'success': True, 'instance_id': instance_id, 'instance_type': instance['InstanceType'],
+        'availability_zone': instance['Placement']['AvailabilityZone'], 'job_id': cfg['job_id'],
+        'runner_type': cfg['runner_type'], 'run_id': cfg['run_id'], 'runner_name': runner_name
+    }
+
+
+def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    ec2_config = get_ec2_config()
+    template_config = _build_ec2_template_config(cfg, ec2_config)
+    result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
+    launch_template_id = None
     try:
         launch_template_id = create_fleet_launch_template(template_config)
         fleet_response = get_ec2_client().create_fleet(
@@ -823,41 +832,26 @@ def _try_launch_ec2_fleet(
             LaunchTemplateConfigs=[{
                 'LaunchTemplateSpecification': {'LaunchTemplateId': launch_template_id, 'Version': '$Latest'},
                 'Overrides': [
-                    {'InstanceType': itype, 'SubnetId': subnet, 'MaxPrice': config['max_price']}
-                    for subnet in config['subnet_ids']
-                    for itype in config['instance_types']
+                    {'InstanceType': itype, 'SubnetId': subnet, 'MaxPrice': ec2_config['max_price']}
+                    for subnet in ec2_config['subnet_ids'] for itype in ec2_config['instance_types']
                 ]
             }]
         )
-
         if fleet_response.get('Instances'):
             instance_ids = fleet_response['Instances'][0].get('InstanceIds', [])
             if instance_ids:
                 instance = wait_for_instance_describable(instance_ids[0])
-                logger.info(
-                    "Launched EC2 spot runner for job %s: %s (%s in %s)",
-                    job_id, instance_ids[0], instance['InstanceType'], instance['Placement']['AvailabilityZone']
-                )
-                if run_id:
-                    store_workflow_runner(run_id, runner_type, instance_ids[0], runner_name, github_repo)
-                result = {
-                    'success': True, 'instance_id': instance_ids[0], 'instance_type': instance['InstanceType'],
-                    'availability_zone': instance['Placement']['AvailabilityZone'], 'job_id': job_id,
-                    'runner_type': runner_type, 'run_id': run_id, 'runner_name': runner_name
-                }
+                result = _handle_ec2_fleet_success(cfg, instance, instance_ids[0])
                 return result
-
         errors = fleet_response.get('Errors', [])
         result['error'] = '; '.join([e.get('ErrorMessage', str(e)) for e in errors]) if errors else 'No instances launched'
-        logger.error("❌ Failed to launch EC2 runner for job %s: %s", job_id, result['error'])
-
+        logger.error("Failed to launch EC2 runner for job %s: %s", cfg['job_id'], result['error'])
     except ClientError as e:
-        logger.error("Error launching EC2 runner for job %s: %s", job_id, e)
+        logger.error("Error launching EC2 runner for job %s: %s", cfg['job_id'], e)
         result['error'] = str(e)
     finally:
         if launch_template_id:
             delete_launch_template(launch_template_id)
-
     return result
 
 
