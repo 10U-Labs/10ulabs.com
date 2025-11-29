@@ -6,7 +6,7 @@ import sys
 from dockerfile_parse import DockerfileParser
 import pytest
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../../src/build/image_for_docker_runners')
+BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../../src/image_for_docker_runners')
 sys.path.insert(0, BASE_DIR)
 entrypoint_path = os.path.join(BASE_DIR, 'entrypoint.py')
 entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)

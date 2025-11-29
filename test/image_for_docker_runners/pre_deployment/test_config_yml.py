@@ -2,7 +2,7 @@ import os
 import yaml
 
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), '../../../../src/build/image_for_docker_runners/config.yml')
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), '../../../../src/image_for_docker_runners/config.yml')
 
 
 def _read_config():

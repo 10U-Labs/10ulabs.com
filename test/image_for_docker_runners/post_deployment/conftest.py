@@ -22,7 +22,7 @@ def _get_tfvar_value(var_name):
 
 
 def get_dockerfile_path():
-    return os.path.join(os.path.dirname(__file__), "../../../../src/build/image_for_docker_runners/Dockerfile")
+    return os.path.join(os.path.dirname(__file__), "../../../../src/image_for_docker_runners/Dockerfile")
 
 
 def get_docker_image_tag():
