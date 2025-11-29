@@ -90,8 +90,15 @@ def api_credentials_fixture(api_url, api_key):
 
 @pytest.fixture(name="ecr_image_count", scope="module")
 def ecr_image_count_fixture(ecr_client, config):
-    response = ecr_client.describe_images(repositoryName=config["ecr_repository_name"])
-    return len(response.get("imageDetails", []))
+    response = ecr_client.describe_images(
+        repositoryName=config["ecr_repository_name"],
+        filter={'tagStatus': 'TAGGED'}
+    )
+    stable_count = 0
+    for image in response.get("imageDetails", []):
+        if 'stable' in image.get('imageTags', []):
+            stable_count += 1
+    return stable_count
 
 
 @pytest.fixture(name="ecr_has_latest_tag", scope="module")
