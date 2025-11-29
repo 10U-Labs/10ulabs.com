@@ -81,6 +81,7 @@ def config_fixture() -> Dict[str, str]:
     result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
     result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
     result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
+    result['ecr_repository_name'] = shared.get('ecr_repository_name', '')
     return result
 
 

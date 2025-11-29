@@ -72,6 +72,9 @@ jobs:
     needs:
       - declaring-common-variables
       - unit-testing
+    outputs:
+      ecr_repository: ${{ steps.build.outputs.ecr_repository }}
+      image_tag: ${{ steps.build.outputs.image_tag }}
     permissions:
       contents: read
       id-token: write
@@ -125,9 +128,6 @@ jobs:
             .
           echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
           echo "ecr_repository=${{ needs.declaring-common-variables.outputs.ecr_repository_name }}" >> $GITHUB_OUTPUT
-    outputs:
-      ecr_repository: ${{ steps.build.outputs.ecr_repository }}
-      image_tag: ${{ steps.build.outputs.image_tag }}
   integration-testing:
     name: Integration testing
     needs:
