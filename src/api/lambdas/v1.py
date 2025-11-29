@@ -383,6 +383,8 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
         result['error'] = 'GITHUB_TOKEN not configured'
         return result
 
+    cleanup_offline_runners(github_token, github_repo, job_labels)
+
     registration_token = get_runner_registration_token(github_token, github_repo)
     if not registration_token:
         logger.error("Failed to get runner registration token")
@@ -483,6 +485,94 @@ def get_runner_registration_token(github_token: str, github_repo: str) -> str:
     except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
         logger.error("Failed to get runner registration token: %s", e)
         return ''
+
+
+def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any]]:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    runners: List[Dict[str, Any]] = []
+    page = 1
+    while True:
+        req = urllib.request.Request(
+            f'https://api.github.com/repos/{github_repo}/actions/runners?per_page=100&page={page}',
+            headers=headers
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read())
+                page_runners = data.get('runners', [])
+                runners.extend(page_runners)
+                if len(page_runners) < 100:
+                    break
+                page += 1
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
+            logger.error("Failed to list runners: %s", e)
+            break
+    return runners
+
+
+def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    req = urllib.request.Request(
+        f'https://api.github.com/repos/{github_repo}/actions/runners/{runner_id}',
+        method='DELETE',
+        headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            success = response.status == 204
+            if success:
+                logger.info("Deleted runner %s", runner_id)
+            return success
+    except urllib.error.HTTPError as e:
+        if e.code == 204:
+            logger.info("Deleted runner %s", runner_id)
+            return True
+        logger.error("Failed to delete runner %s: %s", runner_id, e)
+        return False
+    except (urllib.error.URLError, ValueError) as e:
+        logger.error("Failed to delete runner %s: %s", runner_id, e)
+        return False
+
+
+def cleanup_offline_runners(github_token: str, github_repo: str, job_labels: List[str]) -> Dict[str, Any]:
+    runners = list_repo_runners(github_token, github_repo)
+    job_labels_set = set(job_labels)
+    offline_runners = []
+    for runner in runners:
+        if runner.get('status') != 'offline':
+            continue
+        runner_labels = {label.get('name') for label in runner.get('labels', [])}
+        if not job_labels_set.intersection(runner_labels):
+            continue
+        offline_runners.append(runner)
+    deleted_count = 0
+    failed_count = 0
+    for runner in offline_runners:
+        runner_id = runner.get('id')
+        runner_name = runner.get('name')
+        if runner_id is None:
+            continue
+        logger.info("Removing offline runner: %s (id=%s)", runner_name, runner_id)
+        if delete_runner(github_token, github_repo, int(runner_id)):
+            deleted_count += 1
+        else:
+            failed_count += 1
+    result = {
+        'found': len(offline_runners),
+        'deleted': deleted_count,
+        'failed': failed_count
+    }
+    if deleted_count > 0:
+        logger.info("Cleaned up %d offline runners matching labels %s", deleted_count, job_labels)
+    return result
 
 
 def create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str) -> str:
@@ -679,6 +769,8 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
         logger.error("GITHUB_TOKEN not set - cannot register runner")
         result['error'] = 'GITHUB_TOKEN not configured'
         return result
+
+    cleanup_offline_runners(github_token, github_repo, job_labels)
 
     registration_token = get_runner_registration_token(github_token, github_repo)
     if not registration_token:
