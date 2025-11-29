@@ -16,7 +16,10 @@ jobs:
       fargate_cpu_architecture: ${{ steps.config.outputs.fargate_cpu_architecture }}
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || format('[ecs-fargate-spot, runner-{0}]', github.run_id) }}
+    runs-on: >-
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      && 'ubuntu-latest'
+      || format('["ecs-fargate-spot", "runner-{0}"]', github.run_id) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -155,7 +158,10 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || format('[ecs-fargate-spot, runner-{0}]', github.run_id) }}
+    runs-on: >-
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      && 'ubuntu-latest'
+      || format('["ecs-fargate-spot", "runner-{0}"]', github.run_id) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -242,7 +248,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || format('[ecs-fargate-spot, runner-{0}]', github.run_id) }}
+    runs-on: >-
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      && 'ubuntu-latest'
+      || format('["ecs-fargate-spot", "runner-{0}"]', github.run_id) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -270,7 +279,10 @@ jobs:
     needs:
       - declaring-common-variables
       - performing-static-analysis
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || format('[ecs-fargate-spot, runner-{0}]', github.run_id) }}
+    runs-on: >-
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      && 'ubuntu-latest'
+      || format('["ecs-fargate-spot", "runner-{0}"]', github.run_id) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
