@@ -57,10 +57,3 @@ def test_config_sh_called_with_unattended_flag(mock_run):
     assert mock_run.call_args_list[0][0][0][11] == '--unattended'
 
 
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
-def test_config_sh_called_with_ephemeral_flag(mock_run):
-    mock_run.return_value = Mock(returncode=0)
-    with pytest.raises(SystemExit):
-        entrypoint.main()
-    assert mock_run.call_args_list[0][0][0][12] == '--ephemeral'

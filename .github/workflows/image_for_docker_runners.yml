@@ -211,10 +211,19 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Terraform Format Check
         run: cd src/image_for_docker_runners && terraform fmt -check -recursive
       - name: Terraform Init
         run: cd src/image_for_docker_runners && terraform init
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
