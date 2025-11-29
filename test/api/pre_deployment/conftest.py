@@ -293,18 +293,6 @@ def ec2_runner_post_event_factory():
 
 
 @pytest.fixture
-def image_docker_event_factory():
-    def _create_event(method='POST', path_suffix=''):
-        return {
-            'path': f'/v1/image-for-docker-runners{path_suffix}',
-            'httpMethod': method,
-            'body': json.dumps({}) if method == 'POST' else None,
-            'pathParameters': {'digest': 'sha256:test'} if 'digest' in path_suffix else None
-        }
-    return _create_event
-
-
-@pytest.fixture
 def image_ec2_event_factory():
     def _create_event(method='POST', path_suffix='', ami_id='ami-test123'):
         return {

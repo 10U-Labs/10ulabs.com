@@ -1,26 +1,6 @@
 from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
-import pytest
+
 import requests
-
-
-def test_docker_runner_endpoint_requires_auth(api_url):
-    url = f"{api_url}/v1/image-for-docker-runners/latest"
-    response = requests.get(url, timeout=10)
-    assert response.status_code == 403
-
-
-def test_docker_runner_endpoint_accepts_valid_api_key(api_url, api_key):
-    if api_key is None:
-        pytest.skip("API key not available")
-    response = make_authenticated_get(
-        f"{api_url}/v1/image-for-docker-runners/latest", api_key
-    )
-    assert response.status_code != 403
-
-
-def test_docker_runner_list_requires_auth(api_url):
-    response = requests.get(f"{api_url}/v1/image-for-docker-runners", timeout=10)
-    assert response.status_code == 403
 
 
 def test_docker_runner_status_requires_auth(api_url):

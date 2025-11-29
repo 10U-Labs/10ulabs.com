@@ -82,18 +82,6 @@ def test_openapi_spec_has_ec2_ami_delete_endpoint(openapi_spec):
     assert '/v1/image-for-ec2-runners/{ami_id}' in openapi_spec['paths']
 
 
-def test_openapi_spec_has_docker_image_base_endpoint(openapi_spec):
-    assert '/v1/image-for-docker-runners' in openapi_spec['paths']
-
-
-def test_openapi_spec_has_docker_image_latest_endpoint(openapi_spec):
-    assert '/v1/image-for-docker-runners/latest' in openapi_spec['paths']
-
-
-def test_openapi_spec_has_docker_image_delete_endpoint(openapi_spec):
-    assert '/v1/image-for-docker-runners/{digest}' in openapi_spec['paths']
-
-
 def test_openapi_spec_has_docker_runner_endpoint(openapi_spec):
     assert '/v1/docker-runner' in openapi_spec['paths']
 

@@ -283,62 +283,6 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(mock_boto_clie
     assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_docker_runners_post_returns_json_content_type(v1_handler, image_docker_event_factory, lambda_context):
-    event = image_docker_event_factory(method='POST')
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-@patch('boto3.client')
-def test_lambda_handler_image_for_docker_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_docker_event_factory, lambda_context):
-    mock_ecr = MagicMock()
-    mock_ecr.describe_images.return_value = {
-        'imageDetails': [{
-            'imageTags': ['stable'],
-            'imagePushedAt': datetime(2024, 1, 1),
-            'imageDigest': 'sha256:abc123',
-            'imageSizeInBytes': 1024000
-        }]
-    }
-
-    def mock_client(service_name):
-        if service_name == 'ecr':
-            return mock_ecr
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    event = image_docker_event_factory(method='GET')
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-@patch('boto3.client')
-def test_lambda_handler_image_for_docker_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
-    mock_ecr = MagicMock()
-    mock_ecr.batch_delete_image.return_value = {'imageIds': [{'imageDigest': 'sha256:abc123'}]}
-
-    def mock_client(service_name):
-        if service_name == 'ecr':
-            return mock_ecr
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    event = {
-        'path': '/v1/image-for-docker-runners/sha256:abc123',
-        'httpMethod': 'DELETE',
-        'pathParameters': {'digest': 'sha256:abc123'}
-    }
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-def test_lambda_handler_image_for_docker_runners_unsupported_method_returns_404(v1_handler, image_docker_event_factory, lambda_context):
-    event = image_docker_event_factory()
-    event['httpMethod'] = 'PUT'
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 404)
-
-
 def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
     event = image_ec2_event_factory(method='POST')
     response = v1_handler.lambda_handler(event, lambda_context)
@@ -1700,7 +1644,7 @@ def test_lambda_handler_options_request_allows_wildcard_origin(v1_handler, lambd
 
 
 def test_lambda_handler_options_request_allows_get_method(v1_handler, lambda_context):
-    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
     response = v1_handler.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     allowed_methods = headers['Access-Control-Allow-Methods']
@@ -1708,23 +1652,15 @@ def test_lambda_handler_options_request_allows_get_method(v1_handler, lambda_con
 
 
 def test_lambda_handler_options_request_allows_post_method(v1_handler, lambda_context):
-    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
     response = v1_handler.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     allowed_methods = headers['Access-Control-Allow-Methods']
     assert 'POST' in allowed_methods
 
 
-def test_lambda_handler_options_request_allows_delete_method(v1_handler, lambda_context):
-    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
-    response = v1_handler.lambda_handler(event, lambda_context)
-    headers = response.get('headers', {})
-    allowed_methods = headers['Access-Control-Allow-Methods']
-    assert 'DELETE' in allowed_methods
-
-
 def test_lambda_handler_options_request_allows_options_method(v1_handler, lambda_context):
-    event = {'path': '/v1/image-for-docker-runners', 'httpMethod': 'OPTIONS'}
+    event = {'path': '/v1/docker-runner', 'httpMethod': 'OPTIONS'}
     response = v1_handler.lambda_handler(event, lambda_context)
     headers = response.get('headers', {})
     allowed_methods = headers['Access-Control-Allow-Methods']
