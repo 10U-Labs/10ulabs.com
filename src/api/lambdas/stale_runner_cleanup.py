@@ -183,6 +183,19 @@ def terminate_ec2_instance(instance_id: str) -> bool:
         return False
 
 
+def _is_runner_stale(created_at: int, current_time: int) -> bool:
+    age_seconds = current_time - created_at if created_at else STALE_THRESHOLD_SECONDS + 1
+    return age_seconds >= STALE_THRESHOLD_SECONDS
+
+
+def _terminate_runner(runner_type: str, resource_id: str) -> bool:
+    if runner_type.startswith('ec2'):
+        return terminate_ec2_instance(resource_id)
+    if runner_type.startswith('fargate'):
+        return terminate_ecs_task(resource_id)
+    return False
+
+
 def cleanup_stale_runners() -> dict:
     github_token = get_github_token()
     if not github_token:
@@ -193,41 +206,28 @@ def cleanup_stale_runners() -> dict:
     cleaned_count = 0
     error_count = 0
     for runner in runners:
-        run_id = runner['run_id']
-        runner_type = runner['runner_type']
-        resource_id = runner['resource_id']
-        runner_name = runner['runner_name']
-        github_repo = runner['github_repo']
-        created_at = runner['created_at']
-        age_seconds = current_time - created_at if created_at else STALE_THRESHOLD_SECONDS + 1
-        if age_seconds < STALE_THRESHOLD_SECONDS:
+        if not _is_runner_stale(runner['created_at'], current_time):
             continue
-        workflow_status = get_workflow_run_status(github_token, github_repo, run_id)
+        workflow_status = get_workflow_run_status(github_token, runner['github_repo'], runner['run_id'])
         if workflow_status in ['queued', 'in_progress', 'waiting']:
-            logger.info("Workflow %s still active, skipping runner cleanup", run_id)
+            logger.info("Workflow %s still active, skipping runner cleanup", runner['run_id'])
             continue
         logger.info(
             "Cleaning up stale runner: run_id=%s, type=%s, resource=%s, workflow_status=%s",
-            run_id, runner_type, resource_id, workflow_status
+            runner['run_id'], runner['runner_type'], runner['resource_id'], workflow_status
         )
-        success = False
-        if runner_type.startswith('ec2'):
-            success = terminate_ec2_instance(resource_id)
-        elif runner_type.startswith('fargate'):
-            success = terminate_ecs_task(resource_id)
-        if success:
-            delete_workflow_runner(run_id, runner_type)
-            if runner_name and github_repo:
-                delete_github_runner(github_token, github_repo, runner_name)
+        if _terminate_runner(runner['runner_type'], runner['resource_id']):
+            delete_workflow_runner(runner['run_id'], runner['runner_type'])
+            if runner['runner_name'] and runner['github_repo']:
+                delete_github_runner(github_token, runner['github_repo'], runner['runner_name'])
             cleaned_count += 1
         else:
             error_count += 1
-    result = {'cleaned': cleaned_count, 'errors': error_count}
-    logger.info("Stale runner cleanup complete: %s", result)
-    return result
+    logger.info("Stale runner cleanup complete: cleaned=%d, errors=%d", cleaned_count, error_count)
+    return {'cleaned': cleaned_count, 'errors': error_count}
 
 
-def lambda_handler(event, _context):
+def lambda_handler(_event, _context):
     logger.info("Starting stale runner cleanup")
     result = cleanup_stale_runners()
     response = {
