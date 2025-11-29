@@ -12,6 +12,15 @@ import boto3
 from botocore.exceptions import ClientError
 import paramiko
 import yaml
+from ec2_spot.ec2_spot import (
+    create_fleet_instance as shared_create_fleet,
+    wait_for_instance_running as shared_wait_running,
+    wait_for_status_checks as shared_wait_status,
+    terminate_instance as shared_terminate,
+    delete_launch_template as shared_delete_template,
+    SpotCapacityError,
+    SpotTerminationError,
+)
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 
@@ -133,75 +142,31 @@ def create_launch_template(ec2, params: LaunchTemplateParams, tags):
 
 
 def delete_launch_template(ec2, template_name):
-    ec2.delete_launch_template(LaunchTemplateName=template_name)
+    try:
+        ec2.delete_launch_template(LaunchTemplateName=template_name)
+    except ClientError:
+        pass
 
 
 def create_fleet_instance(ec2, template_name, instance_types, subnet_ids):
-    overrides = [{"InstanceType": it, "SubnetId": sn} for it in instance_types for sn in subnet_ids]
-    response = ec2.create_fleet(
-        Type="instant",
-        TargetCapacitySpecification={"TotalTargetCapacity": 1, "DefaultTargetCapacityType": "spot"},
-        SpotOptions={"AllocationStrategy": "price-capacity-optimized"},
-        LaunchTemplateConfigs=[{
-            "LaunchTemplateSpecification": {"LaunchTemplateName": template_name, "Version": "$Latest"},
-            "Overrides": overrides,
-        }],
+    response = ec2.describe_launch_templates(LaunchTemplateNames=[template_name])
+    template_id = response["LaunchTemplates"][0]["LaunchTemplateId"]
+    return shared_create_fleet(
+        ec2, template_id, instance_types, subnet_ids,
+        allocation_strategy="price-capacity-optimized"
     )
-    instances = response.get("Instances", [])
-    if not instances or not instances[0].get("InstanceIds"):
-        raise RuntimeError(f"Fleet errors: {response.get('Errors', 'No instances launched')}")
-    return instances[0]["InstanceIds"][0]
 
 
 def wait_for_instance_running(ec2, instance_id):
     logging.info("Waiting for instance %s to be running...", instance_id)
-    poll_interval = 5
-    max_attempts = 60
-    running = False
-    for attempt in range(1, max_attempts + 1):
-        logging.info("Checking instance state (attempt %d/%d)...", attempt, max_attempts)
-        try:
-            response = ec2.describe_instances(InstanceIds=[instance_id])
-            state = response["Reservations"][0]["Instances"][0]["State"]["Name"]
-            logging.info("  Instance state: %s", state)
-            if state == "running":
-                logging.info("Instance is running")
-                running = True
-                break
-        except ClientError as e:
-            if e.response["Error"]["Code"] != "InvalidInstanceID.NotFound":
-                raise
-            logging.info("  Instance not yet visible, retrying...")
-        if attempt < max_attempts:
-            logging.info("  Waiting %ds before next check...", poll_interval)
-            time.sleep(poll_interval)
-    if not running:
-        raise RuntimeError(f"Instance did not reach running state after {max_attempts} attempts")
+    shared_wait_running(ec2, instance_id)
+    logging.info("Instance is running")
 
 
 def wait_for_status_checks(ec2, instance_id):
     logging.info("Waiting for status checks to pass...")
-    poll_interval = 15
-    max_attempts = 40
-    passed = False
-    for attempt in range(1, max_attempts + 1):
-        logging.info("Checking status (attempt %d/%d)...", attempt, max_attempts)
-        response = ec2.describe_instance_status(InstanceIds=[instance_id])
-        statuses = response.get("InstanceStatuses", [])
-        if statuses:
-            system_status = statuses[0]["SystemStatus"]["Status"]
-            instance_status = statuses[0]["InstanceStatus"]["Status"]
-            logging.info("  System status: %s", system_status)
-            logging.info("  Instance status: %s", instance_status)
-            if instance_status == "ok" and system_status == "ok":
-                logging.info("All status checks passed")
-                passed = True
-                break
-        if attempt < max_attempts:
-            logging.info("  Waiting %ds before next check...", poll_interval)
-            time.sleep(poll_interval)
-    if not passed:
-        raise RuntimeError(f"Status checks did not pass after {max_attempts} attempts")
+    shared_wait_status(ec2, instance_id)
+    logging.info("All status checks passed")
 
 
 def get_instance_public_ip(ec2, instance_id):
@@ -268,7 +233,7 @@ def create_ami(ec2, instance_id, ami_name, ami_description, tags):
 def terminate_instance(ec2, instance_id):
     ec2.terminate_instances(InstanceIds=[instance_id])
     waiter = ec2.get_waiter("instance_terminated")
-    waiter.wait(InstanceIds=[instance_id])
+    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
 
 
 def cleanup(ec2, instance_id, template_name, key_name, sg_id):

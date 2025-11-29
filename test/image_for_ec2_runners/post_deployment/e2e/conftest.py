@@ -3,7 +3,6 @@ import json
 import os
 import urllib.request
 import urllib.error
-from botocore.exceptions import ClientError
 from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
 import pytest
 
@@ -42,12 +41,12 @@ chown -R github-runner:github-runner /home/github-runner
 cd /home/github-runner/actions-runner
 
 echo "=== Starting config.sh at $(date) ==="
-sudo -u github-runner ./config.sh \
-    --url "https://github.com/{github_repo}" \
-    --token "{registration_token}" \
-    --name "e2e-test-runner-$(hostname)" \
-    --labels "e2e-test" \
-    --ephemeral \
+sudo -u github-runner ./config.sh \\
+    --url "https://github.com/{github_repo}" \\
+    --token "{registration_token}" \\
+    --name "e2e-test-runner-$(hostname)" \\
+    --labels "e2e-test" \\
+    --ephemeral \\
     --unattended
 echo "=== config.sh completed at $(date) ==="
 
@@ -75,18 +74,21 @@ def validate_e2e_inputs(test_ami_id, github_token):
 def get_subnet_ids():
     subnet_ids_env = os.environ.get("TEST_SUBNET_IDS", "")
     subnet_id_env = os.environ.get("TEST_SUBNET_ID", "")
+    result = []
     if subnet_ids_env:
         result = [s.strip() for s in subnet_ids_env.split(",") if s.strip()]
     elif subnet_id_env:
         result = [subnet_id_env]
-    else:
-        result = []
+    return result
+
+
+def get_spot_instance_types():
+    env_value = os.environ.get("SPOT_INSTANCE_TYPES", "")
+    result = env_value.split(",") if env_value else []
     return result
 
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
-    env_value = os.environ.get("SPOT_INSTANCE_TYPES", "")
-    spot_types = env_value.split(",") if env_value else []
     result = {
         "ami_id": test_ami_id,
         "subnet_ids": get_subnet_ids(),
@@ -94,7 +96,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
         "user_data": create_user_data(github_repo, registration_token),
         "max_spot_price": test_config.get("ec2_max_spot_price", "0.05"),
-        "spot_instance_types": spot_types,
+        "spot_instance_types": get_spot_instance_types(),
         "tags": [
             {"Key": "Name", "Value": "e2e-test-instance"},
             {"Key": "Purpose", "Value": "AMI E2E Testing"},
@@ -117,23 +119,7 @@ def e2e_test_instance(ec2_client, test_ami_id, config, github_token, github_repo
         pytest.fail("Failed to retrieve registration token")
 
     instance_config = build_e2e_config(test_ami_id, config, github_repo, registration_token)
-    instance_id = None
-    last_error = None
-
-    for subnet_id in instance_config["subnet_ids"]:
-        instance_config["subnet_id"] = subnet_id
-        for instance_type in instance_config["spot_instance_types"]:
-            instance_config["instance_type"] = instance_type
-            try:
-                instance_id = launch_spot_instance(ec2_client, instance_config)
-                break
-            except ClientError as err:
-                last_error = err
-        if instance_id:
-            break
-
-    if not instance_id:
-        pytest.fail(f"Could not launch spot instance with types {instance_config['spot_instance_types']} in subnets {instance_config['subnet_ids']}. Last error: {last_error}")
+    instance_id = launch_spot_instance(ec2_client, instance_config)
 
     wait_for_instance_ready(ec2_client, instance_id)
     yield instance_id

@@ -1,6 +1,5 @@
 import os
 import time
-from botocore.exceptions import ClientError
 from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
 import pytest
 
@@ -16,12 +15,13 @@ def fetched_ami(ec2_client, test_ami_id):
 
 
 def _get_tag_value(tags, key):
-    if not tags:
-        return None
-    for tag in tags:
-        if tag["Key"] == key:
-            return tag["Value"]
-    return None
+    result = None
+    if tags:
+        for tag in tags:
+            if tag["Key"] == key:
+                result = tag["Value"]
+                break
+    return result
 
 
 @pytest.fixture(scope="session")
@@ -124,6 +124,8 @@ def build_launch_config(test_ami_id, config):
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
         "max_spot_price": config.get("ec2_max_spot_price", "0.05"),
+        "subnet_ids": get_subnet_ids(),
+        "spot_instance_types": get_spot_instance_types(),
         "tags": [
             {"Key": "Name", "Value": "integration-test-instance"},
             {"Key": "Purpose", "Value": "AMI Integration Testing"},
@@ -131,23 +133,6 @@ def build_launch_config(test_ami_id, config):
         ],
     }
     return result
-
-
-def try_launch_spot_instance(ec2_client, launch_config, subnet_ids, spot_instance_types):
-    instance_id = None
-    last_error = None
-    for subnet_id in subnet_ids:
-        launch_config["subnet_id"] = subnet_id
-        for instance_type in spot_instance_types:
-            launch_config["instance_type"] = instance_type
-            try:
-                instance_id = launch_spot_instance(ec2_client, launch_config)
-                break
-            except ClientError as err:
-                last_error = err
-        if instance_id:
-            break
-    return instance_id, last_error
 
 
 @pytest.fixture(scope="session")
@@ -162,12 +147,8 @@ def test_instance(ec2_client, ssm_client, test_ami_id, config):
     if not os.environ.get("TEST_SECURITY_GROUP_ID", ""):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
-    spot_instance_types = get_spot_instance_types()
     launch_config = build_launch_config(test_ami_id, config)
-    instance_id, last_error = try_launch_spot_instance(ec2_client, launch_config, subnet_ids, spot_instance_types)
-
-    if not instance_id:
-        pytest.fail(f"Could not launch spot instance with types {spot_instance_types} in subnets {subnet_ids}. Last error: {last_error}")
+    instance_id = launch_spot_instance(ec2_client, launch_config)
 
     wait_for_instance_ready(ec2_client, instance_id)
     wait_for_ssm_ready(ssm_client, instance_id)

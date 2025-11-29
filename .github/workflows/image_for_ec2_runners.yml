@@ -51,6 +51,7 @@ jobs:
           OS_ARCH: ${{ needs.declaring-common-variables.outputs.os_architecture }}
           OS_FAMILY: ${{ needs.declaring-common-variables.outputs.os_family }}
           OS_VERSION: ${{ needs.declaring-common-variables.outputs.os_version }}
+          PYTHONPATH: lib
         id: build
         name: Build AMI with EC2 Fleet
         run: |
@@ -150,9 +151,9 @@ jobs:
       - id: shared
         name: Extract shared configuration values
         run: |
-          AWS_REGION=$(grep -A1 'output "aws_region"' src/shared/modules/outputs.tf | grep 'value' | cut -d'"' -f2)
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' src/shared/modules/outputs.tf | grep 'value' | cut -d'"' -f2)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/shared/modules/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
@@ -235,6 +236,7 @@ jobs:
           GITHUB_PAT=$(aws ssm get-parameter --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
+          PYTHONPATH: lib:test/image_for_ec2_runners/post_deployment
           SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
@@ -271,6 +273,7 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install boto3 pytest pyyaml
       - env:
+          PYTHONPATH: lib:test/image_for_ec2_runners/post_deployment
           SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
@@ -316,10 +319,11 @@ jobs:
         name: Install Python linting dependencies
         run: python3 -m pip install boto3 boto3-stubs mypy paramiko pylint pytest types-paramiko types-PyYAML
       - env:
-          PYTHONPATH: test/image_for_ec2_runners/post_deployment
+          PYTHONPATH: lib:test/image_for_ec2_runners/post_deployment
         name: Linting Python files
         run: |
           pylint \
+            lib/ec2_spot/*.py \
             src/image_for_ec2_runners/*.py \
             test/image_for_ec2_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
@@ -327,8 +331,8 @@ jobs:
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          python3 -m mypy src/image_for_ec2_runners/*.py
-          MYPYPATH=test/image_for_ec2_runners/post_deployment python3 -m mypy --explicit-package-bases test/image_for_ec2_runners/
+          MYPYPATH=lib python3 -m mypy src/image_for_ec2_runners/*.py
+          MYPYPATH=lib:test/image_for_ec2_runners/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_spot/ test/image_for_ec2_runners/
   promoting-ami:
     name: Promoting AMI
     needs:

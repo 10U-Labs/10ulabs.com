@@ -1,9 +1,0 @@
-{
-  "account_id": 781581267945,
-  "region": "us-east-1",
-  "bedrock": {
-    "budget_tokens": 10000,
-    "max_tokens": 64000,
-    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0"
-  }
-}

@@ -1,5 +1,5 @@
 locals {
-  shared_config                 = yamldecode(file("${path.module}/../shared/config/config.yml"))
+  shared_config                 = yamldecode(file("${path.module}/../../etc/runners.yml"))
   aws_account_id                = module.shared.aws_account_id
   aws_region                    = module.shared.aws_region
   domain_name                   = module.shared.domain_name

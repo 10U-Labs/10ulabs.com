@@ -1,60 +1,61 @@
-import time
 from botocore.exceptions import ClientError
+from ec2_spot.ec2_spot import (
+    launch_spot_instance_with_retry,
+    wait_for_instance_running,
+    wait_for_status_checks,
+    terminate_instance,
+)
+
+
+def build_launch_template_config(config):
+    template_config = {
+        "ami_id": config["ami_id"],
+        "security_group_id": config["security_group_id"],
+        "iam_instance_profile": config["instance_profile"],
+        "metadata_options": {
+            "HttpTokens": "required",
+            "HttpEndpoint": "enabled",
+        },
+    }
+    if "user_data" in config:
+        template_config["user_data"] = config["user_data"]
+    tags = config.get("tags", [
+        {"Key": "Name", "Value": "test-instance"},
+        {"Key": "Purpose", "Value": "AMI Integration Testing"},
+        {"Key": "ManagedBy", "Value": "pytest"}
+    ])
+    template_config["tag_specifications"] = [{
+        "ResourceType": "instance",
+        "Tags": tags,
+    }]
+    return template_config
 
 
 def launch_spot_instance(ec2_client, config):
-    run_params = {
-        "ImageId": config["ami_id"],
-        "InstanceType": config["instance_type"],
-        "MinCount": 1,
-        "MaxCount": 1,
-        "SubnetId": config["subnet_id"],
-        "SecurityGroupIds": [config["security_group_id"]],
-        "IamInstanceProfile": {"Name": config["instance_profile"]},
-        "InstanceMarketOptions": {
-            "MarketType": "spot",
-            "SpotOptions": {
-                "MaxPrice": config["max_spot_price"],
-                "SpotInstanceType": "one-time"
-            }
-        },
-        "MetadataOptions": {
-            "HttpTokens": "required",
-            "HttpEndpoint": "enabled"
-        },
-        "TagSpecifications": [{
-            "ResourceType": "instance",
-            "Tags": config.get("tags", [
-                {"Key": "Name", "Value": "test-instance"},
-                {"Key": "Purpose", "Value": "AMI Testing"},
-                {"Key": "ManagedBy", "Value": "pytest"}
-            ])
-        }]
-    }
-    if "user_data" in config:
-        run_params["UserData"] = config["user_data"]
-    response = ec2_client.run_instances(**run_params)
-    return response["Instances"][0]["InstanceId"]
+    template_config = build_launch_template_config(config)
+    instance_types = config.get("spot_instance_types", [config.get("instance_type", "m7gd.xlarge")])
+    subnet_ids = config.get("subnet_ids", [config.get("subnet_id")])
+    max_price = config.get("max_spot_price")
+    return launch_spot_instance_with_retry(
+        ec2_client,
+        template_config,
+        instance_types,
+        subnet_ids,
+        allocation_strategy="capacity-optimized",
+        max_price=max_price,
+        max_retries=2,
+        wait_for_ready=False,
+    )
 
 
 def wait_for_instance_ready(ec2_client, instance_id):
-    waiter = ec2_client.get_waiter("instance_running")
-    waiter.wait(InstanceIds=[instance_id], WaiterConfig={"Delay": 15, "MaxAttempts": 40})
-    max_wait_time = 600
-    start_time = time.time()
-    while time.time() - start_time < max_wait_time:
-        response = ec2_client.describe_instance_status(InstanceIds=[instance_id])
-        if response["InstanceStatuses"]:
-            status = response["InstanceStatuses"][0]
-            instance_status = status.get("InstanceStatus", {}).get("Status", "")
-            system_status = status.get("SystemStatus", {}).get("Status", "")
-            if instance_status == "ok" and system_status == "ok":
-                return True
-        time.sleep(15)
-    return False
+    wait_for_instance_running(ec2_client, instance_id)
+    wait_for_status_checks(ec2_client, instance_id)
+    return True
 
 
 def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=60):
+    import time
     start_time = time.time()
     while time.time() - start_time < max_wait:
         time.sleep(3)
@@ -105,14 +106,11 @@ ps aux | grep -E 'runner|Runner' || echo 'No runner processes'
         stderr = output.get("StandardErrorContent", "")
         result = stdout
         if stderr:
-            result += f"\n=== STDERR ===\n{stderr}"
+            result = result + f"\n=== STDERR ===\n{stderr}"
         return result
     except ClientError as err:
         return f"Failed to retrieve logs: {err}"
 
 
 def terminate_instance_safely(ec2_client, instance_id):
-    try:
-        ec2_client.terminate_instances(InstanceIds=[instance_id])
-    except ClientError:
-        pass
+    terminate_instance(ec2_client, instance_id)
