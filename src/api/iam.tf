@@ -263,7 +263,10 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
         Action = [
           "sqs:SendMessage"
         ]
-        Resource = [aws_sqs_queue.job_queue.arn]
+        Resource = [
+          aws_sqs_queue.job_queue.arn,
+          aws_sqs_queue.webhook_dlq.arn,
+        ]
       },
       {
         Effect = "Allow"
