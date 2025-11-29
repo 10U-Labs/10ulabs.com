@@ -16,10 +16,7 @@ from ec2_spot.ec2_spot import (
     create_fleet_instance as shared_create_fleet,
     wait_for_instance_running as shared_wait_running,
     wait_for_status_checks as shared_wait_status,
-    terminate_instance as shared_terminate,
-    delete_launch_template as shared_delete_template,
-    SpotCapacityError,
-    SpotTerminationError,
+    SpotLaunchOptions,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
@@ -151,10 +148,12 @@ def delete_launch_template(ec2, template_name):
 def create_fleet_instance(ec2, template_name, instance_types, subnet_ids):
     response = ec2.describe_launch_templates(LaunchTemplateNames=[template_name])
     template_id = response["LaunchTemplates"][0]["LaunchTemplateId"]
-    return shared_create_fleet(
-        ec2, template_id, instance_types, subnet_ids,
-        allocation_strategy="price-capacity-optimized"
+    options = SpotLaunchOptions(
+        instance_types=instance_types,
+        subnet_ids=subnet_ids,
+        allocation_strategy="price-capacity-optimized",
     )
+    return shared_create_fleet(ec2, template_id, options)
 
 
 def wait_for_instance_running(ec2, instance_id):

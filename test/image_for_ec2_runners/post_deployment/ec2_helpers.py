@@ -1,9 +1,11 @@
+import time
 from botocore.exceptions import ClientError
 from ec2_spot.ec2_spot import (
     launch_spot_instance_with_retry,
     wait_for_instance_running,
     wait_for_status_checks,
     terminate_instance,
+    SpotLaunchOptions,
 )
 
 
@@ -35,17 +37,15 @@ def launch_spot_instance(ec2_client, config):
     template_config = build_launch_template_config(config)
     instance_types = config.get("spot_instance_types", [config.get("instance_type", "m7gd.xlarge")])
     subnet_ids = config.get("subnet_ids", [config.get("subnet_id")])
-    max_price = config.get("max_spot_price")
-    return launch_spot_instance_with_retry(
-        ec2_client,
-        template_config,
-        instance_types,
-        subnet_ids,
+    options = SpotLaunchOptions(
+        instance_types=instance_types,
+        subnet_ids=subnet_ids,
         allocation_strategy="capacity-optimized",
-        max_price=max_price,
+        max_price=config.get("max_spot_price"),
         max_retries=2,
         wait_for_ready=False,
     )
+    return launch_spot_instance_with_retry(ec2_client, template_config, options)
 
 
 def wait_for_instance_ready(ec2_client, instance_id):
@@ -55,7 +55,6 @@ def wait_for_instance_ready(ec2_client, instance_id):
 
 
 def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=60):
-    import time
     start_time = time.time()
     while time.time() - start_time < max_wait:
         time.sleep(3)

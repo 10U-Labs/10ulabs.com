@@ -2,18 +2,20 @@ import ast
 import importlib.util
 import os
 import re
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 import pytest
 import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "lib"))
 
 os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
 os.environ['AWS_REGION'] = 'us-east-1'
 os.environ['EC2_AMI_PURPOSE_TAG'] = 'Purpose'
 os.environ['EC2_AMI_PURPOSE_VALUE'] = 'GitHub self-hosted EC2 runner'
 os.environ['EC2_AMI_STABLE_TAG'] = 'Stable'
-
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def load_module_from_path(module_name, module_path):
