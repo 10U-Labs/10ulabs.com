@@ -1,8 +1,9 @@
 import subprocess
-import yaml
-import pytest
 
 from test.image_for_docker_runners.conftest import CONFIG_PATH
+
+import pytest
+import yaml
 
 
 def _read_config():

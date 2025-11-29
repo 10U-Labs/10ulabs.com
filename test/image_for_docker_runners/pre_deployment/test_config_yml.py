@@ -1,6 +1,6 @@
-import yaml
-
 from test.image_for_docker_runners.conftest import CONFIG_PATH
+
+import yaml
 
 
 def _read_config():

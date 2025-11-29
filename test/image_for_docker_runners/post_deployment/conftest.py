@@ -1,9 +1,10 @@
 import os
 import subprocess
-import boto3
-import pytest
 
 from test.image_for_docker_runners.conftest import DOCKERFILE_PATH, TFVARS_PATH
+
+import boto3
+import pytest
 
 
 def _get_tfvar_value(var_name):

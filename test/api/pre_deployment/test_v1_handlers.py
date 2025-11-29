@@ -2227,4 +2227,3 @@ def test_launch_ec2_spot_runner_fleet_empty_instances_default_error_message(mock
         with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
             result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
             assert result['error'] == 'No instances launched'
-

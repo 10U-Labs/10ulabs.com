@@ -3,10 +3,10 @@ import os
 import re
 import sys
 
+from test.image_for_docker_runners.conftest import BASE_DIR, FILES_DIR, DOCKERFILE_PATH
+
 from dockerfile_parse import DockerfileParser
 import pytest
-
-from test.image_for_docker_runners.conftest import BASE_DIR, FILES_DIR, DOCKERFILE_PATH
 
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, FILES_DIR)
