@@ -45,8 +45,7 @@ def main():
         '--name', runner_name,
         '--labels', runner_labels,
         '--work', '_work',
-        '--unattended',
-        '--ephemeral'
+        '--unattended'
     ], check=False)
 
     if config_result.returncode != 0:

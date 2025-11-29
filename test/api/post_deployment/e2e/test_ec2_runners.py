@@ -120,7 +120,7 @@ def test_ec2_runner_instance_has_type_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    assert tag_dict.get("Type") == "ephemeral-runner"
+    assert tag_dict.get("Type") == "workflow-runner"
 
 
 def test_ec2_runner_instance_has_managed_by_tag(

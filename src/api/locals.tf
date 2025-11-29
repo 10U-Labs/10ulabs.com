@@ -13,8 +13,10 @@ locals {
   github_repo_full             = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
   name_for_central_logs        = module.shared.name_for_central_logs_bucket
   resource_prefix              = module.shared.resource_prefix
-  runner_label_ec2_spot        = local.shared_config.runner_labels.ec2_spot
-  runner_label_fargate_spot    = local.shared_config.runner_labels.fargate_spot
+  runner_label_ec2_spot            = local.shared_config.runner_labels.ec2_spot
+  runner_label_ec2_spot_e2e        = local.shared_config.runner_labels.ec2_spot_e2e_test
+  runner_label_fargate_spot        = local.shared_config.runner_labels.fargate_spot
+  runner_label_fargate_spot_e2e    = local.shared_config.runner_labels.fargate_spot_e2e_test
 
   common_tags = {
     ManagedBy = "terraform"

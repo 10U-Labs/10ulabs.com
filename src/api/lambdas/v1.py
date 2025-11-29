@@ -367,7 +367,7 @@ def trigger_image_creation() -> Dict[str, Any]:
     return result
 
 
-def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Dict[str, Any]:
+def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_id: int | None = None, runner_type: str = 'fargate') -> Dict[str, Any]:
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
 
     try:
@@ -391,15 +391,17 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str) -> Di
         result['error'] = 'Failed to get runner registration token'
         return result
 
-    result = _try_launch_fargate_task(job_id, job_labels, github_repo, registration_token)
+    runner_labels = build_runner_labels(job_labels, run_id)
+    result = _try_launch_fargate_task(job_id, runner_labels, github_repo, registration_token, run_id, runner_type)
     return result
 
 
 def _try_launch_fargate_task(
-    job_id: int, job_labels: list, github_repo: str, registration_token: str
+    job_id: int, job_labels: list, github_repo: str, registration_token: str, run_id: int | None = None, runner_type: str = 'fargate'
 ) -> Dict[str, Any]:
     last_error: Any = None
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
+    runner_name = f'fargate-runner-{job_id}'
 
     for subnet in os.environ['SUBNETS'].split(','):
         try:
@@ -423,7 +425,7 @@ def _try_launch_fargate_task(
                             'name': os.environ['CONTAINER_NAME'],
                             'command': [
                                 '--repo', github_repo,
-                                '--name', f'fargate-runner-{job_id}',
+                                '--name', runner_name,
                                 '--labels', ','.join(job_labels),
                                 '--token', registration_token
                             ]
@@ -431,19 +433,25 @@ def _try_launch_fargate_task(
                     ]
                 },
                 tags=[
-                    {'key': 'Type', 'value': 'ephemeral-runner'},
+                    {'key': 'Type', 'value': 'workflow-runner'},
                     {'key': 'ManagedBy', 'value': 'docker-runner-api'},
                     {'key': 'GitHubJobId', 'value': str(job_id)},
                     {'key': 'JobLabels', 'value': ','.join(job_labels)},
-                    {'key': 'GitHubRepo', 'value': github_repo}
+                    {'key': 'GitHubRepo', 'value': github_repo},
+                    {'key': 'RunId', 'value': str(run_id) if run_id else ''},
+                    {'key': 'RunnerType', 'value': runner_type}
                 ]
             )
 
             if response['tasks']:
-                logger.info("✅ Launched Fargate runner for job %s: %s", job_id, response['tasks'][0]['taskArn'])
+                task_arn = response['tasks'][0]['taskArn']
+                logger.info("✅ Launched Fargate runner for job %s: %s", job_id, task_arn)
+                if run_id:
+                    store_workflow_runner(run_id, runner_type, task_arn, runner_name, github_repo)
                 result = {
-                    'success': True, 'task_arn': response['tasks'][0]['taskArn'],
-                    'job_id': job_id, 'runner_type': 'fargate-spot'
+                    'success': True, 'task_arn': task_arn,
+                    'job_id': job_id, 'runner_type': runner_type,
+                    'run_id': run_id, 'runner_name': runner_name
                 }
                 return result
 
@@ -602,7 +610,6 @@ sudo -u github-runner ./config.sh \
     --token "{registration_token}" \
     --name "ec2-spot-$(hostname)" \
     --labels "{runner_labels}" \
-    --ephemeral \
     --unattended
 
 sudo -u github-runner ./run.sh
@@ -697,6 +704,8 @@ def wait_for_instance_describable(instance_id: str, max_attempts: int = 3) -> Di
 def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
     ec2 = get_ec2_client()
     template_name = f"github-runner-fleet-{template_config['job_id']}"
+    run_id = template_config.get('run_id')
+    runner_type = template_config.get('runner_type', 'ec2')
     try:
         response = ec2.create_launch_template(
             LaunchTemplateName=template_name,
@@ -721,11 +730,13 @@ def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
                     'ResourceType': 'instance',
                     'Tags': [
                         {'Key': 'Name', 'Value': f"github-runner-ec2-{template_config['job_id']}"},
-                        {'Key': 'Type', 'Value': 'ephemeral-runner'},
+                        {'Key': 'Type', 'Value': 'workflow-runner'},
                         {'Key': 'ManagedBy', 'Value': os.environ['EC2_MANAGED_BY_TAG']},
                         {'Key': 'GitHubJobId', 'Value': str(template_config['job_id'])},
                         {'Key': 'JobLabels', 'Value': ','.join(template_config['job_labels'])},
-                        {'Key': 'GitHubRepo', 'Value': template_config['github_repo']}
+                        {'Key': 'GitHubRepo', 'Value': template_config['github_repo']},
+                        {'Key': 'RunId', 'Value': str(run_id) if run_id else ''},
+                        {'Key': 'RunnerType', 'Value': runner_type}
                     ]
                 }]
             }
@@ -743,7 +754,7 @@ def delete_launch_template(template_id: str):
         logger.warning("Failed to delete launch template %s: %s", template_id, e)
 
 
-def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
+def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None, runner_type: str = 'ec2') -> Dict[str, Any]:
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
 
     try:
@@ -778,15 +789,17 @@ def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str)
         result['error'] = 'Failed to get runner registration token'
         return result
 
-    result = _try_launch_ec2_fleet(job_id, job_labels, github_repo, ami_id, registration_token)
+    runner_labels = build_runner_labels(job_labels, run_id)
+    result = _try_launch_ec2_fleet(job_id, runner_labels, github_repo, ami_id, registration_token, run_id, runner_type)
     return result
 
 
 def _try_launch_ec2_fleet(
-    job_id: int, job_labels: List[str], github_repo: str, ami_id: str, registration_token: str
+    job_id: int, job_labels: List[str], github_repo: str, ami_id: str, registration_token: str, run_id: int | None = None, runner_type: str = 'ec2'
 ) -> Dict[str, Any]:
     config = get_ec2_config()
     user_data = create_ec2_user_data(registration_token, job_labels, github_repo)
+    runner_name = f'ec2-spot-runner-{job_id}'
     template_config = {
         'ami_id': ami_id,
         'security_group_id': config['security_group_id'],
@@ -794,7 +807,9 @@ def _try_launch_ec2_fleet(
         'user_data_base64': base64.b64encode(user_data.encode('utf-8')).decode('utf-8'),
         'job_id': job_id,
         'job_labels': job_labels,
-        'github_repo': github_repo
+        'github_repo': github_repo,
+        'run_id': run_id,
+        'runner_type': runner_type
     }
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
     launch_template_id = None
@@ -823,10 +838,12 @@ def _try_launch_ec2_fleet(
                     "Launched EC2 spot runner for job %s: %s (%s in %s)",
                     job_id, instance_ids[0], instance['InstanceType'], instance['Placement']['AvailabilityZone']
                 )
+                if run_id:
+                    store_workflow_runner(run_id, runner_type, instance_ids[0], runner_name, github_repo)
                 result = {
                     'success': True, 'instance_id': instance_ids[0], 'instance_type': instance['InstanceType'],
                     'availability_zone': instance['Placement']['AvailabilityZone'], 'job_id': job_id,
-                    'runner_type': 'ec2-spot'
+                    'runner_type': runner_type, 'run_id': run_id, 'runner_name': runner_name
                 }
                 return result
 
@@ -978,6 +995,8 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
         job_id = body.get('job_id')
         job_labels = body.get('job_labels', [])
         github_repo = body.get('github_repo')
+        run_id = body.get('run_id')
+        runner_type = body.get('runner_type', 'fargate')
 
         if not job_id:
             response = error_response(400, 'Missing required field: job_id')
@@ -997,7 +1016,7 @@ def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
                     'trigger_result': trigger_result
                 })
             else:
-                result = launch_fargate_runner(job_id, job_labels, github_repo)
+                result = launch_fargate_runner(job_id, job_labels, github_repo, run_id, runner_type)
                 response_body = result.copy()
                 capacity_error = not result.get('success') and is_capacity_error(result)
                 status_code = 503 if capacity_error else (200 if result.get('success') else 500)
@@ -1125,6 +1144,8 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
         job_id = body.get('job_id')
         job_labels = body.get('job_labels', [])
         github_repo = body.get('github_repo')
+        run_id = body.get('run_id')
+        runner_type = body.get('runner_type', 'ec2')
 
         if not job_id:
             response = error_response(400, 'Missing required field: job_id')
@@ -1133,7 +1154,7 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
         elif is_test_mode():
             response = success_response(TEST_MODE_MOCK_PATHS['/v1/ec2-runner'])
         else:
-            result = launch_ec2_spot_runner(job_id, job_labels, github_repo)
+            result = launch_ec2_spot_runner(job_id, job_labels, github_repo, run_id, runner_type)
             response_body = result.copy()
             capacity_error = not result.get('success') and is_capacity_error(result)
             status_code = 503 if capacity_error else (200 if result.get('success') else 500)
@@ -1178,6 +1199,45 @@ def get_dynamodb_client():
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
+
+
+def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str) -> bool:
+    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
+    if not table_name:
+        logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
+        return False
+    if not run_id:
+        logger.warning("run_id not provided, skipping runner storage")
+        return False
+    try:
+        ttl = int(time.time()) + 86400
+        get_dynamodb_client().put_item(
+            TableName=table_name,
+            Item={
+                'run_id': {'S': str(run_id)},
+                'runner_type': {'S': runner_type},
+                'resource_id': {'S': resource_id},
+                'runner_name': {'S': runner_name},
+                'github_repo': {'S': github_repo},
+                'ttl': {'N': str(ttl)},
+                'created_at': {'N': str(int(time.time()))}
+            }
+        )
+        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s", run_id, runner_type, resource_id)
+        return True
+    except ClientError as e:
+        logger.error("Failed to store workflow runner: %s", e)
+        return False
+
+
+def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
+    base_labels = ['self-hosted', 'linux', 'x64']
+    for label in job_labels:
+        if label not in base_labels:
+            base_labels.append(label)
+    if run_id:
+        base_labels.append(f'runner-{run_id}')
+    return base_labels
 
 
 def get_recaptcha_secret() -> str:

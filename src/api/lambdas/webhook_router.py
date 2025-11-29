@@ -16,7 +16,7 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None, 'ecs': None, 'ec2': None}
 webhook_secret_cache = {'value': None}
 api_key_cache = {'value': None}
 circuit_breaker_state: Dict[str, Any] = {
@@ -48,6 +48,37 @@ def get_cloudwatch_client():
     if clients['cloudwatch'] is None:
         clients['cloudwatch'] = boto3.client('cloudwatch')
     return clients['cloudwatch']
+
+
+def get_ecs_client():
+    if clients['ecs'] is None:
+        clients['ecs'] = boto3.client('ecs')
+    return clients['ecs']
+
+
+def get_ec2_client():
+    if clients['ec2'] is None:
+        clients['ec2'] = boto3.client('ec2')
+    return clients['ec2']
+
+
+github_token_cache = {'value': None}
+
+
+def get_github_token() -> str:
+    if github_token_cache['value']:
+        return github_token_cache['value']
+    parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '')
+    if not parameter_name:
+        return ''
+    try:
+        response = get_ssm_client().get_parameter(Name=parameter_name, WithDecryption=True)
+        token = response['Parameter']['Value']
+        github_token_cache['value'] = token
+        return token
+    except ClientError as e:
+        logger.error("Failed to retrieve GitHub token: %s", e)
+        return ''
 
 
 test_mode_enabled = {'value': False}
@@ -182,6 +213,170 @@ def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
         return {'success': False, 'error': str(e)}
 
 
+def get_workflow_runners(run_id: str) -> List[Dict[str, Any]]:
+    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
+    if not table_name:
+        return []
+    try:
+        dynamodb = get_dynamodb_client()
+        response = dynamodb.query(
+            TableName=table_name,
+            KeyConditionExpression='run_id = :rid',
+            ExpressionAttributeValues={':rid': {'S': str(run_id)}}
+        )
+        runners = []
+        for item in response.get('Items', []):
+            runners.append({
+                'run_id': item['run_id']['S'],
+                'runner_type': item['runner_type']['S'],
+                'resource_id': item['resource_id']['S'],
+                'runner_name': item.get('runner_name', {}).get('S', ''),
+                'github_repo': item.get('github_repo', {}).get('S', '')
+            })
+        return runners
+    except ClientError as e:
+        logger.error("Failed to get workflow runners: %s", e)
+        return []
+
+
+def delete_workflow_runner(run_id: str, runner_type: str) -> bool:
+    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
+    if not table_name:
+        return False
+    try:
+        dynamodb = get_dynamodb_client()
+        dynamodb.delete_item(
+            TableName=table_name,
+            Key={
+                'run_id': {'S': str(run_id)},
+                'runner_type': {'S': runner_type}
+            }
+        )
+        return True
+    except ClientError as e:
+        logger.error("Failed to delete workflow runner: %s", e)
+        return False
+
+
+def delete_github_runner(github_token: str, github_repo: str, runner_name: str) -> bool:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    try:
+        req = urllib.request.Request(
+            f'https://api.github.com/repos/{github_repo}/actions/runners',
+            headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read())
+            runners = data.get('runners', [])
+            runner_id = None
+            for runner in runners:
+                if runner.get('name') == runner_name:
+                    runner_id = runner.get('id')
+                    break
+            if runner_id is None:
+                logger.info("Runner %s not found in GitHub", runner_name)
+                return True
+        delete_req = urllib.request.Request(
+            f'https://api.github.com/repos/{github_repo}/actions/runners/{runner_id}',
+            method='DELETE',
+            headers=headers
+        )
+        with urllib.request.urlopen(delete_req, timeout=10):
+            logger.info("Deleted GitHub runner %s (id=%s)", runner_name, runner_id)
+            return True
+    except urllib.error.HTTPError as e:
+        if e.code == 204:
+            return True
+        logger.error("Failed to delete GitHub runner %s: %s", runner_name, e)
+        return False
+    except (urllib.error.URLError, ValueError) as e:
+        logger.error("Failed to delete GitHub runner %s: %s", runner_name, e)
+        return False
+
+
+def terminate_ecs_task(task_arn: str) -> bool:
+    cluster = os.environ.get('ECS_CLUSTER', '')
+    if not cluster:
+        return False
+    try:
+        get_ecs_client().stop_task(cluster=cluster, task=task_arn, reason='Workflow completed')
+        logger.info("Stopped ECS task: %s", task_arn)
+        return True
+    except ClientError as e:
+        logger.error("Failed to stop ECS task %s: %s", task_arn, e)
+        return False
+
+
+def terminate_ec2_instance(instance_id: str) -> bool:
+    try:
+        get_ec2_client().terminate_instances(InstanceIds=[instance_id])
+        logger.info("Terminated EC2 instance: %s", instance_id)
+        return True
+    except ClientError as e:
+        logger.error("Failed to terminate EC2 instance %s: %s", instance_id, e)
+        return False
+
+
+def terminate_runners_for_workflow(run_id: str) -> Dict[str, Any]:
+    runners = get_workflow_runners(run_id)
+    if not runners:
+        logger.info("No runners found for workflow run %s", run_id)
+        return {'terminated': 0, 'failed': 0}
+    github_token = get_github_token()
+    terminated_count = 0
+    failed_count = 0
+    for runner in runners:
+        runner_type = runner['runner_type']
+        resource_id = runner['resource_id']
+        runner_name = runner.get('runner_name', '')
+        github_repo = runner.get('github_repo', '')
+        success = False
+        if runner_type.startswith('ec2'):
+            success = terminate_ec2_instance(resource_id)
+        elif runner_type.startswith('fargate'):
+            success = terminate_ecs_task(resource_id)
+        if success:
+            terminated_count += 1
+            delete_workflow_runner(run_id, runner_type)
+            if github_token and runner_name and github_repo:
+                delete_github_runner(github_token, github_repo, runner_name)
+        else:
+            failed_count += 1
+    result = {'terminated': terminated_count, 'failed': failed_count}
+    logger.info("Terminated runners for workflow %s: %s", run_id, result)
+    return result
+
+
+def handle_workflow_run(event_data: Dict[str, Any]) -> Dict[str, Any]:
+    action = event_data.get('action')
+    workflow_run = event_data.get('workflow_run', {})
+    run_id = workflow_run.get('id')
+    workflow_name = workflow_run.get('name')
+    conclusion = workflow_run.get('conclusion')
+    logger.info("Received workflow_run event: action=%s, run_id=%s, workflow=%s, conclusion=%s",
+                action, run_id, workflow_name, conclusion)
+    if action != 'completed':
+        logger.info("Ignoring action '%s' (only handle 'completed')", action)
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'message': f"Ignored action: {action}"})
+        }
+    result = terminate_runners_for_workflow(str(run_id))
+    return {
+        'statusCode': 200,
+        'body': json.dumps({
+            'message': 'Workflow run completed, runners terminated',
+            'run_id': run_id,
+            'terminated': result['terminated'],
+            'failed': result['failed']
+        })
+    }
+
+
 def get_webhook_secret(force_refresh: bool = False) -> str:
     if force_refresh:
         webhook_secret_cache['value'] = None
@@ -261,21 +456,36 @@ def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | N
     return (False, None, 'Max retries exceeded', last_status_code)
 
 
-def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -> Dict[str, Any]:
+def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
+    runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2_SPOT', '')
+    runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_SPOT_E2E', '')
+    runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE_SPOT', '')
+    runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_SPOT_E2E', '')
+    is_ec2 = runner_label_ec2 in job_labels or runner_label_ec2_e2e in job_labels
+    is_fargate = runner_label_fargate in job_labels or runner_label_fargate_e2e in job_labels
+    is_e2e = runner_label_ec2_e2e in job_labels or runner_label_fargate_e2e in job_labels
+    if is_ec2 and is_e2e:
+        return ('ec2-e2e', 'ec2-runner')
+    if is_ec2:
+        return ('ec2', 'ec2-runner')
+    if is_fargate and is_e2e:
+        return ('fargate-e2e', 'docker-runner')
+    if is_fargate:
+        return ('fargate', 'docker-runner')
+    return (None, None)
+
+
+def route_runner_request(job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None) -> Dict[str, Any]:
     if not check_circuit_breaker():
         logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
         return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
 
     api_base_url = os.environ['API_BASE_URL']
-    runner_label_ec2 = os.environ['RUNNER_LABEL_EC2_SPOT']
-    runner_label_fargate = os.environ['RUNNER_LABEL_FARGATE_SPOT']
-    if runner_label_ec2 in job_labels:
-        endpoint, runner_type = f"{api_base_url}/v1/ec2-runner", "ec2"
-    elif runner_label_fargate in job_labels:
-        endpoint, runner_type = f"{api_base_url}/v1/docker-runner", "fargate"
-    else:
+    runner_type, endpoint_suffix = get_runner_type_from_labels(job_labels)
+    if not runner_type:
         logger.error("No matching runner type for labels: %s", job_labels)
         return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
+    endpoint = f"{api_base_url}/v1/{endpoint_suffix}"
 
     try:
         api_key = get_api_key()
@@ -283,9 +493,9 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
         logger.error("Cannot route job %s: %s", job_id, e)
         return {'success': False, 'error': str(e)}
 
-    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo}
+    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo, 'run_id': run_id, 'runner_type': runner_type}
     headers = {'x-api-key': api_key}
-    logger.info("Routing job %s to %s runner: %s", job_id, runner_type, endpoint)
+    logger.info("Routing job %s to %s runner: %s (run_id=%s)", job_id, runner_type, endpoint, run_id)
 
     success, response_data, error, status_code = make_http_request_with_retry(endpoint, payload, headers)
     if success:
@@ -307,10 +517,11 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
     job_name = job.get('name')
     job_labels = job.get('labels', [])
     job_status = job.get('status')
+    run_id = job.get('run_id')
     repo_full_name = event_data.get('repository', {}).get('full_name')
 
-    logger.info("Received workflow_job event: action=%s, job=%s, status=%s, labels=%s, repo=%s",
-               action, job_name, job_status, job_labels, repo_full_name)
+    logger.info("Received workflow_job event: action=%s, job=%s, status=%s, labels=%s, repo=%s, run_id=%s",
+               action, job_name, job_status, job_labels, repo_full_name, run_id)
 
     if action != 'queued':
         logger.info("Ignoring action '%s' (only handle 'queued')", action)
@@ -319,24 +530,22 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'body': json.dumps({'message': f"Ignored action: {action}"})
         }
 
-    runner_label_ec2 = os.environ['RUNNER_LABEL_EC2_SPOT']
-    runner_label_fargate = os.environ['RUNNER_LABEL_FARGATE_SPOT']
-    is_ec2_runner = runner_label_ec2 in job_labels
-    is_fargate_runner = runner_label_fargate in job_labels
-
-    if not (is_ec2_runner or is_fargate_runner):
+    runner_type, _ = get_runner_type_from_labels(job_labels)
+    if not runner_type:
         logger.info("Job labels %s don't contain EC2 or Fargate runner type labels", job_labels)
         return {
             'statusCode': 200,
             'body': json.dumps({'message': 'No matching runner type, ignoring'})
         }
 
-    logger.info("Enqueueing runner request for job %s (%s)", job_id, job_name)
+    logger.info("Enqueueing runner request for job %s (%s), runner_type=%s", job_id, job_name, runner_type)
 
     job_data = {
         'job_id': job_id,
         'job_labels': job_labels,
-        'github_repo': repo_full_name
+        'github_repo': repo_full_name,
+        'run_id': run_id,
+        'runner_type': runner_type
     }
 
     result = enqueue_job(job_data)
@@ -346,6 +555,7 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
         response_body = {
             'message': 'Job enqueued successfully',
             'job_id': job_id,
+            'run_id': run_id,
             'message_id': result.get('message_id')
         }
     else:
@@ -368,10 +578,11 @@ def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
         job_id = body.get('job_id')
         job_labels = body.get('job_labels', [])
         github_repo = body.get('github_repo')
+        run_id = body.get('run_id')
 
-        logger.info("Processing job from SQS: job_id=%s, labels=%s, repo=%s", job_id, job_labels, github_repo)
+        logger.info("Processing job from SQS: job_id=%s, labels=%s, repo=%s, run_id=%s", job_id, job_labels, github_repo, run_id)
 
-        result = route_runner_request(job_id, job_labels, github_repo)
+        result = route_runner_request(job_id, job_labels, github_repo, run_id)
 
         if result['success']:
             logger.info("Successfully processed SQS message for job %s", job_id)
@@ -483,6 +694,10 @@ def _process_webhook_event(event: dict, headers: dict, start_time: float) -> dic
 
     if event_type == 'workflow_job':
         result = handle_workflow_job(payload)
+        return result
+
+    if event_type == 'workflow_run':
+        result = handle_workflow_run(payload)
         return result
 
     logger.info("Received ping event" if event_type == 'ping' else f"Ignoring event type: {event_type}")

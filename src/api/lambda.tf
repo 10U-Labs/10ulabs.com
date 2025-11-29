@@ -88,13 +88,19 @@ resource "aws_lambda_function" "runners_handler" {
 
   environment {
     variables = {
-      WEBHOOK_SECRET_NAME       = aws_ssm_parameter.webhook_secret.name
-      API_KEY_PARAMETER_NAME    = aws_ssm_parameter.api_key.name
-      API_BASE_URL              = "https://${local.api_fqdn}"
-      IDEMPOTENCY_TABLE_NAME    = aws_dynamodb_table.idempotency.name
-      JOB_QUEUE_URL             = aws_sqs_queue.job_queue.url
-      RUNNER_LABEL_EC2_SPOT     = local.runner_label_ec2_spot
-      RUNNER_LABEL_FARGATE_SPOT = local.runner_label_fargate_spot
+      WEBHOOK_SECRET_NAME        = aws_ssm_parameter.webhook_secret.name
+      API_KEY_PARAMETER_NAME     = aws_ssm_parameter.api_key.name
+      API_BASE_URL               = "https://${local.api_fqdn}"
+      IDEMPOTENCY_TABLE_NAME     = aws_dynamodb_table.idempotency.name
+      JOB_QUEUE_URL              = aws_sqs_queue.job_queue.url
+      RUNNER_LABEL_EC2_SPOT          = local.runner_label_ec2_spot
+      RUNNER_LABEL_EC2_SPOT_E2E      = local.runner_label_ec2_spot_e2e
+      RUNNER_LABEL_FARGATE_SPOT      = local.runner_label_fargate_spot
+      RUNNER_LABEL_FARGATE_SPOT_E2E  = local.runner_label_fargate_spot_e2e
+      WORKFLOW_RUNNERS_TABLE     = aws_dynamodb_table.workflow_runners.name
+      GITHUB_TOKEN_SECRET_NAME   = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      ECS_CLUSTER                = aws_ecs_cluster.runner.arn
+      GITHUB_REPO                = local.github_repo_full
     }
   }
 
@@ -172,6 +178,7 @@ resource "aws_lambda_function" "v1_handler" {
       SUBNETS                         = join(",", aws_subnet.public[*].id)
       TASK_DEFINITION                 = aws_ecs_task_definition.runner.arn
       VPC_ID                          = aws_vpc.runner_vpc.id
+      WORKFLOW_RUNNERS_TABLE          = aws_dynamodb_table.workflow_runners.name
     }
   }
 
@@ -378,4 +385,180 @@ resource "aws_lambda_event_source_mapping" "drift_recovery_sqs" {
   event_source_arn = aws_sqs_queue.drift_recovery.arn
   function_name    = aws_lambda_function.drift_recovery.arn
   batch_size       = 1
+}
+
+data "archive_file" "spot_interruption_handler" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/spot_interruption_handler.py"
+  output_path = "${path.module}/.terraform/lambda_packages/spot_interruption_handler.zip"
+}
+
+resource "aws_lambda_function" "spot_interruption_handler" {
+  filename         = data.archive_file.spot_interruption_handler.output_path
+  function_name    = "${local.resource_prefix}-SpotInterruptionHandler"
+  role             = aws_iam_role.spot_interruption_handler.arn
+  handler          = "spot_interruption_handler.lambda_handler"
+  source_code_hash = data.archive_file.spot_interruption_handler.output_base64sha256
+  runtime          = "python3.13"
+  timeout          = 60
+  memory_size      = 256
+  description      = "Handles spot interruption events and launches replacement runners"
+
+  environment {
+    variables = {
+      API_BASE_URL             = "https://${local.api_fqdn}"
+      API_KEY                  = random_password.api_key.result
+      ECS_CLUSTER              = aws_ecs_cluster.runner.arn
+      GITHUB_REPO              = local.github_repo_full
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
+    }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.spot_interruption_handler.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-SpotInterruptionHandler"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
+  name              = "/aws/lambda/${local.resource_prefix}-SpotInterruptionHandler"
+  retention_in_days = 7
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-SpotInterruptionHandler-logs"
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "ecs_task_stopped" {
+  name        = "${local.resource_prefix}-ECSTaskStopped"
+  description = "Triggers on ECS task stopped events for spot interruption handling"
+
+  event_pattern = jsonencode({
+    source      = ["aws.ecs"]
+    detail-type = ["ECS Task State Change"]
+    detail = {
+      clusterArn = [aws_ecs_cluster.runner.arn]
+      lastStatus = ["STOPPED"]
+    }
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-ECSTaskStopped"
+  })
+}
+
+resource "aws_cloudwatch_event_target" "ecs_task_stopped" {
+  rule      = aws_cloudwatch_event_rule.ecs_task_stopped.name
+  target_id = "SpotInterruptionHandler"
+  arn       = aws_lambda_function.spot_interruption_handler.arn
+}
+
+resource "aws_lambda_permission" "ecs_task_stopped" {
+  statement_id  = "AllowECSTaskStoppedEvent"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.spot_interruption_handler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ecs_task_stopped.arn
+}
+
+resource "aws_cloudwatch_event_rule" "ec2_spot_interruption" {
+  name        = "${local.resource_prefix}-EC2SpotInterruption"
+  description = "Triggers on EC2 spot interruption warnings"
+
+  event_pattern = jsonencode({
+    source      = ["aws.ec2"]
+    detail-type = ["EC2 Spot Instance Interruption Warning"]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-EC2SpotInterruption"
+  })
+}
+
+resource "aws_cloudwatch_event_target" "ec2_spot_interruption" {
+  rule      = aws_cloudwatch_event_rule.ec2_spot_interruption.name
+  target_id = "SpotInterruptionHandler"
+  arn       = aws_lambda_function.spot_interruption_handler.arn
+}
+
+resource "aws_lambda_permission" "ec2_spot_interruption" {
+  statement_id  = "AllowEC2SpotInterruptionEvent"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.spot_interruption_handler.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.ec2_spot_interruption.arn
+}
+
+data "archive_file" "stale_runner_cleanup" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/stale_runner_cleanup.py"
+  output_path = "${path.module}/.terraform/lambda_packages/stale_runner_cleanup.zip"
+}
+
+resource "aws_lambda_function" "stale_runner_cleanup" {
+  filename         = data.archive_file.stale_runner_cleanup.output_path
+  function_name    = "${local.resource_prefix}-StaleRunnerCleanup"
+  role             = aws_iam_role.stale_runner_cleanup.arn
+  handler          = "stale_runner_cleanup.lambda_handler"
+  source_code_hash = data.archive_file.stale_runner_cleanup.output_base64sha256
+  runtime          = "python3.13"
+  timeout          = 300
+  memory_size      = 256
+  description      = "Cleans up stale runners from completed or failed workflows"
+
+  environment {
+    variables = {
+      ECS_CLUSTER              = aws_ecs_cluster.runner.arn
+      GITHUB_REPO              = local.github_repo_full
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
+    }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.stale_runner_cleanup.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-StaleRunnerCleanup"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "stale_runner_cleanup" {
+  name              = "/aws/lambda/${local.resource_prefix}-StaleRunnerCleanup"
+  retention_in_days = 7
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-StaleRunnerCleanup-logs"
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "stale_runner_cleanup_schedule" {
+  name                = "${local.resource_prefix}-StaleRunnerCleanupSchedule"
+  description         = "Triggers stale runner cleanup every 15 minutes"
+  schedule_expression = "rate(15 minutes)"
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-StaleRunnerCleanupSchedule"
+  })
+}
+
+resource "aws_cloudwatch_event_target" "stale_runner_cleanup" {
+  rule      = aws_cloudwatch_event_rule.stale_runner_cleanup_schedule.name
+  target_id = "StaleRunnerCleanup"
+  arn       = aws_lambda_function.stale_runner_cleanup.arn
+}
+
+resource "aws_lambda_permission" "stale_runner_cleanup" {
+  statement_id  = "AllowScheduledEvent"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stale_runner_cleanup.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.stale_runner_cleanup_schedule.arn
 }

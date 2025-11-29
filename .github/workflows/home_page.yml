@@ -11,7 +11,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,7 +45,9 @@ jobs:
     needs:
       - declaring-common-variables
       - integration-testing
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,7 +66,9 @@ jobs:
     needs:
       - declaring-common-variables
       - unit-testing
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -127,7 +133,9 @@ jobs:
     needs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -142,7 +150,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -181,7 +191,9 @@ jobs:
     needs:
       - declaring-common-variables
       - performing-static-analysis
-    runs-on: ephemeral-ecs-fargate-spot
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

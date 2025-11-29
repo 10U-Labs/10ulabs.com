@@ -295,8 +295,57 @@ resource "aws_iam_role_policy" "lambda_runners_handler_dynamodb" {
         "dynamodb:Scan"
       ]
       Resource = [
-        aws_dynamodb_table.idempotency.arn
+        aws_dynamodb_table.idempotency.arn,
+        aws_dynamodb_table.workflow_runners.arn
       ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_runners_handler_ssm_github_pat" {
+  name = "SSMGitHubPATAccess"
+  role = aws_iam_role.lambda_runners_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameter"]
+      Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_runners_handler_ecs" {
+  name = "ECSAccess"
+  role = aws_iam_role.lambda_runners_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ecs:StopTask",
+        "ecs:DescribeTasks"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_runners_handler_ec2" {
+  name = "EC2Access"
+  role = aws_iam_role.lambda_runners_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ec2:TerminateInstances",
+        "ec2:DescribeInstances"
+      ]
+      Resource = ["*"]
     }]
   })
 }
@@ -472,6 +521,26 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ses" {
           "ses:FromAddress" = "contact@${local.domain_name}"
         }
       }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_v1_handler_dynamodb" {
+  name = "DynamoDBAccess"
+  role = aws_iam_role.lambda_v1_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query"
+      ]
+      Resource = [aws_dynamodb_table.workflow_runners.arn]
     }]
   })
 }
@@ -731,6 +800,137 @@ resource "aws_iam_role_policy" "drift_recovery_permissions" {
           "sqs:GetQueueAttributes"
         ]
         Resource = [aws_sqs_queue.drift_recovery.arn]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "spot_interruption_handler" {
+  name = "${local.resource_prefix}-SpotInterruptionHandler-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-SpotInterruptionHandler-Role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "spot_interruption_handler_basic" {
+  role       = aws_iam_role.spot_interruption_handler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
+  name = "SpotInterruptionHandlerPermissions"
+  role = aws_iam_role.spot_interruption_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query"
+        ]
+        Resource = [aws_dynamodb_table.workflow_runners.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances"
+        ]
+        Resource = ["*"]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "stale_runner_cleanup" {
+  name = "${local.resource_prefix}-StaleRunnerCleanup-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-StaleRunnerCleanup-Role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "stale_runner_cleanup_basic" {
+  role       = aws_iam_role.stale_runner_cleanup.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
+  name = "StaleRunnerCleanupPermissions"
+  role = aws_iam_role.stale_runner_cleanup.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Scan",
+          "dynamodb:DeleteItem"
+        ]
+        Resource = [aws_dynamodb_table.workflow_runners.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:StopTask"
+        ]
+        Resource = ["*"]
+        Condition = {
+          ArnEquals = {
+            "ecs:cluster" = aws_ecs_cluster.runner.arn
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:TerminateInstances"
+        ]
+        Resource = ["*"]
+        Condition = {
+          StringEquals = {
+            "ec2:ResourceTag/ManagedBy" = local.ec2_runner_managed_by_tag
+          }
+        }
       }
     ]
   })

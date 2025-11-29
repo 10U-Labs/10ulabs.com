@@ -97,7 +97,7 @@ def test_docker_runner_task_has_type_tag(
     task_arn = test_fargate_task.get("task_arn")
     cluster_name = test_fargate_task.get("cluster_name")
     tag_dict = get_ecs_task_tags(ecs_client, cluster_name, task_arn)
-    assert tag_dict.get("Type") == "ephemeral-runner"
+    assert tag_dict.get("Type") == "workflow-runner"
 
 
 def test_docker_runner_task_has_managed_by_tag(
