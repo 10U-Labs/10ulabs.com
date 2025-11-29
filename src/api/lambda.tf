@@ -1,3 +1,42 @@
+resource "time_sleep" "wait_for_iam_propagation" {
+  create_duration = "60s"
+
+  depends_on = [
+    aws_iam_role_policy.lambda_runners_handler_cloudwatch,
+    aws_iam_role_policy.lambda_runners_handler_dynamodb,
+    aws_iam_role_policy.lambda_runners_handler_ec2,
+    aws_iam_role_policy.lambda_runners_handler_ecs,
+    aws_iam_role_policy.lambda_runners_handler_sqs,
+    aws_iam_role_policy.lambda_runners_handler_ssm,
+    aws_iam_role_policy.lambda_runners_handler_ssm_github_pat,
+    aws_iam_role_policy_attachment.lambda_runners_handler_basic,
+    aws_iam_role_policy_attachment.lambda_runners_handler_xray,
+    aws_iam_role_policy_attachment.lambda_health_handler_basic,
+    aws_iam_role_policy_attachment.lambda_catchall_handler_basic,
+    aws_iam_role_policy.lambda_v1_handler_dynamodb,
+    aws_iam_role_policy.lambda_v1_handler_ec2,
+    aws_iam_role_policy.lambda_v1_handler_ecr,
+    aws_iam_role_policy.lambda_v1_handler_ecs,
+    aws_iam_role_policy.lambda_v1_handler_iam_pass_role,
+    aws_iam_role_policy.lambda_v1_handler_kms,
+    aws_iam_role_policy.lambda_v1_handler_ses,
+    aws_iam_role_policy.lambda_v1_handler_ssm,
+    aws_iam_role_policy_attachment.lambda_v1_handler_basic,
+    aws_iam_role_policy.circuit_breaker_remediation_permissions,
+    aws_iam_role_policy_attachment.circuit_breaker_remediation_basic,
+    aws_iam_role_policy.dlq_reprocessor_permissions,
+    aws_iam_role_policy_attachment.dlq_reprocessor_basic,
+    aws_iam_role_policy.circuit_breaker_recovery_permissions,
+    aws_iam_role_policy_attachment.circuit_breaker_recovery_basic,
+    aws_iam_role_policy.drift_recovery_permissions,
+    aws_iam_role_policy_attachment.drift_recovery_basic,
+    aws_iam_role_policy.spot_interruption_handler_permissions,
+    aws_iam_role_policy_attachment.spot_interruption_handler_basic,
+    aws_iam_role_policy.stale_runner_cleanup_permissions,
+    aws_iam_role_policy_attachment.stale_runner_cleanup_basic,
+  ]
+}
+
 data "archive_file" "health_handler" {
   type        = "zip"
   source_file = "${path.module}/lambdas/health.py"
@@ -14,9 +53,7 @@ resource "aws_lambda_function" "health_handler" {
   timeout          = 10
   description      = "Health check endpoint for API"
 
-  depends_on = [
-    aws_iam_role_policy_attachment.lambda_health_handler_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   logging_config {
     log_format = "Text"
@@ -53,9 +90,7 @@ resource "aws_lambda_function" "catchall_handler" {
   timeout          = 10
   description      = "Catch-all handler for undefined routes"
 
-  depends_on = [
-    aws_iam_role_policy_attachment.lambda_catchall_handler_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   logging_config {
     log_format = "Text"
@@ -94,17 +129,7 @@ resource "aws_lambda_function" "runners_handler" {
   reserved_concurrent_executions = -1
   description                    = "GitHub webhook router for GitHub self-hosted runners"
 
-  depends_on = [
-    aws_iam_role_policy.lambda_runners_handler_cloudwatch,
-    aws_iam_role_policy.lambda_runners_handler_dynamodb,
-    aws_iam_role_policy.lambda_runners_handler_ec2,
-    aws_iam_role_policy.lambda_runners_handler_ecs,
-    aws_iam_role_policy.lambda_runners_handler_sqs,
-    aws_iam_role_policy.lambda_runners_handler_ssm,
-    aws_iam_role_policy.lambda_runners_handler_ssm_github_pat,
-    aws_iam_role_policy_attachment.lambda_runners_handler_basic,
-    aws_iam_role_policy_attachment.lambda_runners_handler_xray,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -175,17 +200,7 @@ resource "aws_lambda_function" "v1_handler" {
   memory_size      = var.lambda_memory_mb
   description      = "Unified Lambda handler for all /v1/* API endpoints"
 
-  depends_on = [
-    aws_iam_role_policy.lambda_v1_handler_dynamodb,
-    aws_iam_role_policy.lambda_v1_handler_ec2,
-    aws_iam_role_policy.lambda_v1_handler_ecr,
-    aws_iam_role_policy.lambda_v1_handler_ecs,
-    aws_iam_role_policy.lambda_v1_handler_iam_pass_role,
-    aws_iam_role_policy.lambda_v1_handler_kms,
-    aws_iam_role_policy.lambda_v1_handler_ses,
-    aws_iam_role_policy.lambda_v1_handler_ssm,
-    aws_iam_role_policy_attachment.lambda_v1_handler_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -250,10 +265,7 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
   memory_size      = 256
   description      = "Automatic remediation for circuit breaker alarms"
 
-  depends_on = [
-    aws_iam_role_policy.circuit_breaker_remediation_permissions,
-    aws_iam_role_policy_attachment.circuit_breaker_remediation_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -300,10 +312,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
   memory_size      = 256
   description      = "Reprocesses messages from DLQs"
 
-  depends_on = [
-    aws_iam_role_policy.dlq_reprocessor_permissions,
-    aws_iam_role_policy_attachment.dlq_reprocessor_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -351,10 +360,7 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
   memory_size      = 256
   description      = "Automatic self-healing recovery for circuit breaker"
 
-  depends_on = [
-    aws_iam_role_policy.circuit_breaker_recovery_permissions,
-    aws_iam_role_policy_attachment.circuit_breaker_recovery_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -401,10 +407,7 @@ resource "aws_lambda_function" "drift_recovery" {
   memory_size      = 256
   description      = "Triggers API workflow when infrastructure drift is detected"
 
-  depends_on = [
-    aws_iam_role_policy.drift_recovery_permissions,
-    aws_iam_role_policy_attachment.drift_recovery_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -456,10 +459,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
   memory_size      = 256
   description      = "Handles spot interruption events and launches replacement runners"
 
-  depends_on = [
-    aws_iam_role_policy.spot_interruption_handler_permissions,
-    aws_iam_role_policy_attachment.spot_interruption_handler_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
@@ -568,10 +568,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
   memory_size      = 256
   description      = "Cleans up stale runners from completed or failed workflows"
 
-  depends_on = [
-    aws_iam_role_policy.stale_runner_cleanup_permissions,
-    aws_iam_role_policy_attachment.stale_runner_cleanup_basic,
-  ]
+  depends_on = [time_sleep.wait_for_iam_propagation]
 
   environment {
     variables = {
