@@ -1,3 +1,4 @@
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -183,16 +184,19 @@ def wait_for_instance_running(
     running = False
     attempt = 0
     while not running and attempt < max_attempts:
+        attempt = attempt + 1
+        logging.info("Checking instance state (attempt %d/%d)...", attempt, max_attempts)
         state = get_instance_state(ec2_client, instance_id)
+        logging.info("  Instance state: %s", state)
         if state == "running":
             running = True
         elif state in ("terminated", "shutting-down"):
             if is_spot_terminated(ec2_client, instance_id):
                 raise SpotTerminationError(f"Instance {instance_id} was terminated due to spot interruption")
             raise RuntimeError(f"Instance {instance_id} entered {state} state")
-        else:
+        elif attempt < max_attempts:
+            logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)
-        attempt = attempt + 1
     if not running:
         raise RuntimeError(f"Instance {instance_id} did not reach running state after {max_attempts} attempts")
 
@@ -203,21 +207,27 @@ def wait_for_status_checks(
     passed = False
     attempt = 0
     while not passed and attempt < max_attempts:
+        attempt = attempt + 1
+        logging.info("Checking status (attempt %d/%d)...", attempt, max_attempts)
         state = get_instance_state(ec2_client, instance_id)
         if state in ("terminated", "shutting-down"):
             if is_spot_terminated(ec2_client, instance_id):
                 raise SpotTerminationError(f"Instance {instance_id} was terminated due to spot interruption")
             raise RuntimeError(f"Instance {instance_id} entered {state} state")
         response = ec2_client.describe_instance_status(InstanceIds=[instance_id])
+        system_status = ""
+        instance_status = ""
         if response.get("InstanceStatuses"):
             status = response["InstanceStatuses"][0]
             system_status = status.get("SystemStatus", {}).get("Status", "")
             instance_status = status.get("InstanceStatus", {}).get("Status", "")
             if system_status == "ok" and instance_status == "ok":
                 passed = True
-        if not passed:
+        logging.info("  System status: %s", system_status or "initializing")
+        logging.info("  Instance status: %s", instance_status or "initializing")
+        if not passed and attempt < max_attempts:
+            logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)
-        attempt = attempt + 1
     if not passed:
         raise RuntimeError(f"Instance {instance_id} did not pass status checks after {max_attempts} attempts")
 
