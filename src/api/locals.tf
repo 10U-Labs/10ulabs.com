@@ -1,4 +1,5 @@
 locals {
+  shared_config                = yamldecode(file("${path.module}/../shared/config/config.yml"))
   aws_account_id               = module.shared.aws_account_id
   aws_region                   = module.shared.aws_region
   domain_name                  = module.shared.domain_name
@@ -12,6 +13,8 @@ locals {
   github_repo_full             = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
   name_for_central_logs        = module.shared.name_for_central_logs_bucket
   resource_prefix              = module.shared.resource_prefix
+  runner_label_ec2_spot        = local.shared_config.runner_labels.ec2_spot
+  runner_label_fargate_spot    = local.shared_config.runner_labels.fargate_spot
 
   common_tags = {
     ManagedBy = "terraform"

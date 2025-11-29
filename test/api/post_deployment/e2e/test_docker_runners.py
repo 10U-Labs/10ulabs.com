@@ -38,12 +38,13 @@ def stop_task_safely(ecs_client, cluster_name, task_arn):
 
 @pytest.fixture(name="test_fargate_task", scope="module")
 def test_fargate_task_fixture(
-    api_credentials, github_repo, ecr_image_count, ecs_client, cluster_name
+    api_credentials, github_repo, ecr_image_count, ecs_client, cluster_name, config
 ):
     if ecr_image_count == 0:
         yield None
         return
-    job_id, payload = create_runner_job_payload(github_repo, ["ephemeral-ecs-fargate-spot"])
+    runner_label = config['runner_label_fargate_spot_e2e_test']
+    job_id, payload = create_runner_job_payload(github_repo, [runner_label])
     response = make_e2e_post(
         f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload
     )

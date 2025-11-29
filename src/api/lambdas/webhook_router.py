@@ -267,9 +267,11 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str) -
         return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
 
     api_base_url = os.environ['API_BASE_URL']
-    if 'ephemeral-ec2-spot-instance' in job_labels:
+    runner_label_ec2 = os.environ['RUNNER_LABEL_EC2_SPOT']
+    runner_label_fargate = os.environ['RUNNER_LABEL_FARGATE_SPOT']
+    if runner_label_ec2 in job_labels:
         endpoint, runner_type = f"{api_base_url}/v1/ec2-runner", "ec2"
-    elif 'ephemeral-ecs-fargate-spot' in job_labels:
+    elif runner_label_fargate in job_labels:
         endpoint, runner_type = f"{api_base_url}/v1/docker-runner", "fargate"
     else:
         logger.error("No matching runner type for labels: %s", job_labels)
@@ -317,8 +319,10 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'body': json.dumps({'message': f"Ignored action: {action}"})
         }
 
-    is_ec2_runner = 'ephemeral-ec2-spot-instance' in job_labels
-    is_fargate_runner = 'ephemeral-ecs-fargate-spot' in job_labels
+    runner_label_ec2 = os.environ['RUNNER_LABEL_EC2_SPOT']
+    runner_label_fargate = os.environ['RUNNER_LABEL_FARGATE_SPOT']
+    is_ec2_runner = runner_label_ec2 in job_labels
+    is_fargate_runner = runner_label_fargate in job_labels
 
     if not (is_ec2_runner or is_fargate_runner):
         logger.info("Job labels %s don't contain EC2 or Fargate runner type labels", job_labels)

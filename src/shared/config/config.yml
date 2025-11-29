@@ -1,0 +1,5 @@
+runner_labels:
+  ec2_spot: ephemeral-ec2-spot-instance
+  fargate_spot: ephemeral-ecs-fargate-spot
+  ec2_spot_e2e_test: ephemeral-ec2-spot-instance-e2e-test
+  fargate_spot_e2e_test: ephemeral-ecs-fargate-spot-e2e-test

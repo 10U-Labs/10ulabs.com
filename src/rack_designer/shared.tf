@@ -1,3 +1,3 @@
 module "shared" {
-  source = "../modules/shared"
+  source = "../shared/modules"
 }

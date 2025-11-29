@@ -4,10 +4,17 @@ from pathlib import Path
 from typing import Any, Dict, List
 import boto3
 import pytest
+import yaml
+
+
+def parse_shared_config() -> Dict[str, Any]:
+    config_path = Path(__file__).parent.parent.parent / "src" / "shared" / "config" / "config.yml"
+    with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent.parent / "src" / "modules" / "shared" / "outputs.tf"
+    outputs_path = Path(__file__).parent.parent.parent / "src" / "shared" / "modules" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -82,6 +89,12 @@ def config_fixture() -> Dict[str, str]:
     result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
     result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
     result['ecr_repository_name'] = shared.get('ecr_repository_name', '')
+    shared_config = parse_shared_config()
+    runner_labels = shared_config.get('runner_labels', {})
+    result['runner_label_ec2_spot'] = runner_labels.get('ec2_spot', '')
+    result['runner_label_fargate_spot'] = runner_labels.get('fargate_spot', '')
+    result['runner_label_ec2_spot_e2e_test'] = runner_labels.get('ec2_spot_e2e_test', '')
+    result['runner_label_fargate_spot_e2e_test'] = runner_labels.get('fargate_spot_e2e_test', '')
     return result
 
 
