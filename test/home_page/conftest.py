@@ -5,7 +5,7 @@ import pytest
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent.parent / "src" / "modules" / "shared" / "outputs.tf"
+    outputs_path = Path(__file__).parent.parent / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -17,7 +17,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 
 def parse_website_locals() -> Dict[str, str]:
-    locals_path = Path(__file__).parent.parent.parent / "src" / "website" / "locals.tf"
+    locals_path = Path(__file__).parent.parent / "src" / "home_page" / "locals.tf"
     shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
