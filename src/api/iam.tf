@@ -803,6 +803,15 @@ resource "aws_iam_role_policy" "drift_recovery_permissions" {
           "sqs:GetQueueAttributes"
         ]
         Resource = [aws_sqs_queue.drift_recovery.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups"
+        ]
+        Resource = ["*"]
       }
     ]
   })

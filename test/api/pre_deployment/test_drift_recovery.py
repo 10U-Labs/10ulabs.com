@@ -204,7 +204,9 @@ class TestLambdaHandlerDriftTrigger:
     def test_triggers_workflow_on_drift_event(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'test-rule'
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
@@ -224,7 +226,9 @@ class TestLambdaHandlerDriftTrigger:
     def test_sends_notification_on_successful_trigger(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'test-rule'
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_client = MagicMock()
@@ -246,7 +250,9 @@ class TestLambdaHandlerGitHubTokenFailure:
     def test_returns_500_when_token_retrieval_fails(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'test-rule'
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
@@ -261,7 +267,9 @@ class TestLambdaHandlerGitHubTokenFailure:
     def test_sends_failure_notification_when_token_fails(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'test-rule'
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_client = MagicMock()
@@ -278,7 +286,9 @@ class TestLambdaHandlerWorkflowTrigger:
     def test_returns_200_on_successful_workflow_trigger(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'test-rule'
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
@@ -298,7 +308,9 @@ class TestLambdaHandlerWorkflowTrigger:
     def test_returns_500_on_workflow_trigger_failure(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'test-rule'
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
@@ -314,7 +326,11 @@ class TestLambdaHandlerWorkflowTrigger:
 
 class TestLambdaHandlerEventParsing:
     def test_handles_missing_config_rule_name(self, drift_recovery, lambda_context):
-        event = wrap_in_sqs_event({'source': 'drift-recovery-trigger'})
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
+        })
         with patch('boto3.client') as mock_boto_client:
             mock_ssm = MagicMock()
             mock_ssm.get_parameter.return_value = {
@@ -333,7 +349,9 @@ class TestLambdaHandlerEventParsing:
     def test_extracts_rule_name_from_event(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'source': 'drift-recovery-trigger',
-            'configRuleName': 'required-tags-rule'
+            'configRuleName': 'required-tags-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
         })
         with patch('boto3.client') as mock_boto_client:
             mock_client = MagicMock()
@@ -354,8 +372,8 @@ class TestLambdaHandlerEventParsing:
     def test_notification_includes_resource_details(self, drift_recovery, lambda_context):
         event = wrap_in_sqs_event({
             'configRuleName': 'required-tags',
-            'resourceType': 'AWS::EC2::SecurityGroup',
-            'resourceId': 'sg-12345678',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123',
             'awsRegion': 'us-east-1'
         })
         with patch('boto3.client') as mock_boto_client:
@@ -372,7 +390,7 @@ class TestLambdaHandlerEventParsing:
                 mock_urlopen.return_value = mock_response
                 drift_recovery.lambda_handler(event, lambda_context)
                 call_args = mock_client.publish.call_args
-        assert 'AWS::EC2::SecurityGroup (sg-12345678) in us-east-1' in call_args[1]['Message']
+        assert 'AWS::EC2::VPC (vpc-managed123) in us-east-1' in call_args[1]['Message']
 
 
 class TestClientCaching:
@@ -393,3 +411,139 @@ class TestClientCaching:
             drift_recovery.get_sns_client()
             drift_recovery.get_sns_client()
         assert mock_boto_client.call_count == 1
+
+    def test_ec2_client_is_cached(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            drift_recovery.get_ec2_client()
+            drift_recovery.get_ec2_client()
+        assert mock_boto_client.call_count == 1
+
+
+class TestIsResourceInManagedVpc:
+    def test_returns_true_for_managed_vpc(self, drift_recovery):
+        result = drift_recovery.is_resource_in_managed_vpc('vpc-managed123', 'AWS::EC2::VPC')
+        assert result is True
+
+    def test_returns_false_for_unmanaged_vpc(self, drift_recovery):
+        result = drift_recovery.is_resource_in_managed_vpc('vpc-other456', 'AWS::EC2::VPC')
+        assert result is False
+
+    def test_returns_true_for_subnet_in_managed_vpc(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_subnets.return_value = {
+                'Subnets': [{'VpcId': 'vpc-managed123'}]
+            }
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('subnet-123', 'AWS::EC2::Subnet')
+        assert result is True
+
+    def test_returns_false_for_subnet_in_unmanaged_vpc(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_subnets.return_value = {
+                'Subnets': [{'VpcId': 'vpc-other456'}]
+            }
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('subnet-123', 'AWS::EC2::Subnet')
+        assert result is False
+
+    def test_returns_true_for_security_group_in_managed_vpc(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_security_groups.return_value = {
+                'SecurityGroups': [{'VpcId': 'vpc-managed123'}]
+            }
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('sg-123', 'AWS::EC2::SecurityGroup')
+        assert result is True
+
+    def test_returns_false_for_security_group_in_unmanaged_vpc(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_security_groups.return_value = {
+                'SecurityGroups': [{'VpcId': 'vpc-other456'}]
+            }
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('sg-123', 'AWS::EC2::SecurityGroup')
+        assert result is False
+
+    def test_returns_false_when_subnet_not_found(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_subnets.return_value = {'Subnets': []}
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('subnet-missing', 'AWS::EC2::Subnet')
+        assert result is False
+
+    def test_returns_false_when_security_group_not_found(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_security_groups.return_value = {'SecurityGroups': []}
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('sg-missing', 'AWS::EC2::SecurityGroup')
+        assert result is False
+
+    def test_returns_false_on_client_error(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_subnets.side_effect = ClientError(
+                {'Error': {'Code': 'InvalidSubnetID.NotFound'}},
+                'DescribeSubnets'
+            )
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('subnet-invalid', 'AWS::EC2::Subnet')
+        assert result is False
+
+    def test_returns_true_when_managed_vpc_id_not_configured(self, drift_recovery):
+        with patch.dict(os.environ, {'MANAGED_VPC_ID': ''}):
+            result = drift_recovery.is_resource_in_managed_vpc('vpc-any', 'AWS::EC2::VPC')
+        assert result is True
+
+    def test_returns_true_for_unknown_resource_type(self, drift_recovery):
+        result = drift_recovery.is_resource_in_managed_vpc('unknown-123', 'AWS::EC2::Unknown')
+        assert result is True
+
+
+class TestLambdaHandlerVpcFiltering:
+    def test_skips_resource_not_in_managed_vpc(self, drift_recovery, lambda_context):
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-other456'
+        })
+        response = drift_recovery.lambda_handler(event, lambda_context)
+        assert response['body'] == 'Resource not in managed VPC, skipping'
+
+    def test_processes_resource_in_managed_vpc(self, drift_recovery, lambda_context):
+        event = wrap_in_sqs_event({
+            'source': 'drift-recovery-trigger',
+            'configRuleName': 'test-rule',
+            'resourceType': 'AWS::EC2::VPC',
+            'resourceId': 'vpc-managed123'
+        })
+        with patch('boto3.client') as mock_boto_client:
+            mock_ssm = MagicMock()
+            mock_ssm.get_parameter.return_value = {
+                'Parameter': {'Value': 'test-token'}
+            }
+            mock_boto_client.return_value = mock_ssm
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_response = Mock()
+                mock_response.status = 204
+                mock_response.__enter__ = Mock(return_value=mock_response)
+                mock_response.__exit__ = Mock(return_value=False)
+                mock_urlopen.return_value = mock_response
+                response = drift_recovery.lambda_handler(event, lambda_context)
+        assert_response_status(response, 200)

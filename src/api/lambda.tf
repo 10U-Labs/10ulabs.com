@@ -367,6 +367,7 @@ resource "aws_lambda_function" "drift_recovery" {
       GITHUB_REPO                 = local.github_repo_full
       GITHUB_TOKEN_PARAMETER_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
+      MANAGED_VPC_ID              = aws_vpc.runner_vpc.id
     }
   }
 

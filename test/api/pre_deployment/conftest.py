@@ -187,7 +187,8 @@ def drift_recovery(config):
         'AWS_REGION': config['aws_region'],
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_PARAMETER_NAME': config['ssm_parameter_name_for_github_pat'],
-        'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123456789012:test-topic'
+        'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123456789012:test-topic',
+        'MANAGED_VPC_ID': 'vpc-managed123'
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("drift_recovery.py", "drift_recovery")

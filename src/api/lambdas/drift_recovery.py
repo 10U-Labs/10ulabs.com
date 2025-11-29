@@ -29,6 +29,39 @@ def get_sns_client():
     return _clients['sns']
 
 
+def get_ec2_client():
+    if 'ec2' not in _clients:
+        _clients['ec2'] = boto3.client('ec2')
+    return _clients['ec2']
+
+
+def is_resource_in_managed_vpc(resource_id, resource_type):
+    managed_vpc_id = os.environ.get('MANAGED_VPC_ID', '')
+    if not managed_vpc_id:
+        return True
+
+    ec2 = get_ec2_client()
+    try:
+        if resource_type == 'AWS::EC2::VPC':
+            return resource_id == managed_vpc_id
+        if resource_type == 'AWS::EC2::Subnet':
+            response = ec2.describe_subnets(SubnetIds=[resource_id])
+            subnets = response.get('Subnets', [])
+            if subnets:
+                return subnets[0].get('VpcId') == managed_vpc_id
+            return False
+        if resource_type == 'AWS::EC2::SecurityGroup':
+            response = ec2.describe_security_groups(GroupIds=[resource_id])
+            groups = response.get('SecurityGroups', [])
+            if groups:
+                return groups[0].get('VpcId') == managed_vpc_id
+            return False
+    except ClientError as e:
+        logger.warning("Failed to check resource VPC: %s", e)
+        return False
+    return True
+
+
 def get_github_token():
     parameter_name = os.environ['GITHUB_TOKEN_PARAMETER_NAME']
     try:
@@ -113,6 +146,10 @@ def lambda_handler(event, _context):
     drift = format_drift_details(trigger_event)
 
     logger.info("Drift detected: %s", drift['summary'])
+
+    if not is_resource_in_managed_vpc(drift['resource_id'], drift['resource_type']):
+        logger.info("Resource %s is not in managed VPC, skipping", drift['resource_id'])
+        return {'statusCode': 200, 'body': 'Resource not in managed VPC, skipping'}
 
     github_repo = os.environ.get('GITHUB_REPO', '')
 
