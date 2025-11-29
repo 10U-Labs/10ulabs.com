@@ -706,20 +706,21 @@ function showShareModal(url) {
     urlInput.readOnly = true;
     urlInput.className = 'url-input';
     const copyBtn = document.createElement('button');
-    copyBtn.textContent = 'Copy';
+    copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
     copyBtn.className = 'copy-btn';
+    copyBtn.title = 'Copy URL';
     copyBtn.onclick = function() {
         navigator.clipboard.writeText(url).then(function() {
-            copyBtn.textContent = 'Copied!';
+            copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
             setTimeout(function() {
-                copyBtn.textContent = 'Copy';
+                copyBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
             }, 2000);
         });
     };
-    urlContainer.appendChild(urlInput);
     urlContainer.appendChild(copyBtn);
+    urlContainer.appendChild(urlInput);
     const closeBtn = document.createElement('button');
-    closeBtn.textContent = 'Close';
+    closeBtn.innerHTML = '&times;';
     closeBtn.className = 'modal-close-btn';
     closeBtn.onclick = function() {
         overlay.remove();
