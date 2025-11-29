@@ -31,6 +31,7 @@
 - Never add inline comments (`#` comments).
 - Never create linter configuration files.
 - Never disable lint checks.
+- Never use `break` statements.
 
 ## Credentials and Environment
 
@@ -54,4 +55,4 @@
 - Use unit tests for everything except functionality that explicitly requires integration or e2e flows.
 - Unit tests must be atomic and follow the single-responsibility principle.
 - Tests must have only one assert.
-- Tests must not use iteration (no loops, comprehensions, `all()`, `any()`, `in`, `.get()`, or other iterative operations).
+- Asserts in tests must have a single variable only (e.g., `assert such_thing_is_true` or `assert such_thing_is_false`).
