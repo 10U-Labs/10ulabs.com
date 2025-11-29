@@ -364,7 +364,7 @@ def rack_designer_post_event_factory():
 
 @pytest.fixture
 def rack_designer_get_event_factory():
-    def _create_event(config_hash='ABCD1234'):
+    def _create_event(config_hash='ABCD12345'):
         return {
             'path': f'/v1/rack-designer/configurations/{config_hash}',
             'httpMethod': 'GET',

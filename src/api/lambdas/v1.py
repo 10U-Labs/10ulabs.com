@@ -1368,11 +1368,11 @@ def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
 def generate_config_hash(config: Dict[str, Any]) -> str:
     canonical = json.dumps(config, sort_keys=True, separators=(',', ':'))
     hash_bytes = hashlib.sha256(canonical.encode('utf-8')).digest()
-    hash_int = int.from_bytes(hash_bytes[:5], 'big')
+    hash_int = int.from_bytes(hash_bytes[:6], 'big')
     chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     result_chars = []
     remaining = hash_int
-    for _ in range(8):
+    for _ in range(9):
         result_chars.append(chars[remaining % 36])
         remaining = remaining // 36
     config_hash = ''.join(result_chars)
@@ -1402,6 +1402,30 @@ def save_rack_configuration(config_hash: str, config: Dict[str, Any]) -> Dict[st
     return result
 
 
+def migrate_rack_configuration(old_hash: str, config: Dict[str, Any]) -> Optional[str]:
+    new_hash = generate_config_hash(config)
+    if old_hash == new_hash:
+        return None
+    table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
+    try:
+        get_dynamodb_client().put_item(
+            TableName=table_name,
+            Item={
+                'config_hash': {'S': new_hash},
+                'configuration': {'S': json.dumps(config)}
+            }
+        )
+        get_dynamodb_client().delete_item(
+            TableName=table_name,
+            Key={'config_hash': {'S': old_hash}}
+        )
+        logger.info("Migrated rack configuration: %s -> %s", old_hash, new_hash)
+    except ClientError as e:
+        logger.error("Error migrating rack configuration: %s", e)
+        return None
+    return new_hash
+
+
 def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
     table_name = os.environ['RACK_DESIGNER_CONFIGURATIONS_TABLE']
     try:
@@ -1414,7 +1438,12 @@ def load_rack_configuration(config_hash: str) -> Dict[str, Any]:
             result = {'success': False, 'error': 'Configuration not found'}
         else:
             config = json.loads(item['configuration']['S'])
-            result = {'success': True, 'config_hash': config_hash, 'configuration': config}
+            result_hash = config_hash
+            if len(config_hash) == 8:
+                new_hash = migrate_rack_configuration(config_hash, config)
+                if new_hash:
+                    result_hash = new_hash
+            result = {'success': True, 'config_hash': result_hash, 'configuration': config}
     except ClientError as e:
         logger.error("Error loading rack configuration: %s", e)
         result = {'success': False, 'error': str(e)}
@@ -1470,7 +1499,7 @@ def handle_rack_designer_get(event: Dict[str, Any]) -> Dict[str, Any]:
     config_hash = path_params.get('config_hash')
     if not config_hash:
         response = error_response(400, 'Missing required path parameter: config_hash')
-    elif not re.match(r'^[0-9A-Z]{8}$', config_hash):
+    elif not re.match(r'^[0-9A-Z]{8,9}$', config_hash):
         response = error_response(400, 'Invalid config_hash format')
     else:
         result = load_rack_configuration(config_hash)

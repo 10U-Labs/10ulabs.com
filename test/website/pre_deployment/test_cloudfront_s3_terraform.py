@@ -168,3 +168,11 @@ def test_cloudfront_function_rewrites_rack_designer_to_index(cloudfront_s3_tf_co
 
 def test_cloudfront_function_passes_through_rack_designer_subpaths(cloudfront_s3_tf_content):
     assert "uri.startsWith('/rack-designer/')" in cloudfront_s3_tf_content
+
+
+def test_cloudfront_function_matches_config_hash(cloudfront_s3_tf_content):
+    assert "uri.match(/^\\/rack-designer\\/[A-Z0-9]{8,9}$/)" in cloudfront_s3_tf_content
+
+
+def test_cloudfront_function_rewrites_config_hash_to_index(cloudfront_s3_tf_content):
+    assert "configHashMatch" in cloudfront_s3_tf_content

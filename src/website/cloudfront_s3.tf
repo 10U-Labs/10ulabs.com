@@ -168,6 +168,11 @@ function handler(event) {
         request.uri = '/rack-designer/index.html';
         return request;
     }
+    var configHashMatch = uri.match(/^\/rack-designer\/[A-Z0-9]{8,9}$/);
+    if (configHashMatch) {
+        request.uri = '/rack-designer/index.html';
+        return request;
+    }
     if (uri.startsWith('/rack-designer/')) {
         return request;
     }

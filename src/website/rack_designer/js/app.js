@@ -682,6 +682,57 @@ function loadConfiguration(config) {
     renderParts();
 }
 
+function showShareModal(url) {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = function(e) {
+        if (e.target === overlay) {
+            overlay.remove();
+        }
+    };
+    const modal = document.createElement('div');
+    modal.className = 'share-modal';
+    const title = document.createElement('h3');
+    title.textContent = 'Configuration Saved';
+    title.className = 'modal-title';
+    const message = document.createElement('p');
+    message.textContent = 'Share this URL with others:';
+    message.className = 'modal-message';
+    const urlContainer = document.createElement('div');
+    urlContainer.className = 'url-container';
+    const urlInput = document.createElement('input');
+    urlInput.type = 'text';
+    urlInput.value = url;
+    urlInput.readOnly = true;
+    urlInput.className = 'url-input';
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.className = 'copy-btn';
+    copyBtn.onclick = function() {
+        navigator.clipboard.writeText(url).then(function() {
+            copyBtn.textContent = 'Copied!';
+            setTimeout(function() {
+                copyBtn.textContent = 'Copy';
+            }, 2000);
+        });
+    };
+    urlContainer.appendChild(urlInput);
+    urlContainer.appendChild(copyBtn);
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.className = 'modal-close-btn';
+    closeBtn.onclick = function() {
+        overlay.remove();
+    };
+    modal.appendChild(title);
+    modal.appendChild(message);
+    modal.appendChild(urlContainer);
+    modal.appendChild(closeBtn);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    urlInput.select();
+}
+
 function saveConfiguration() {
     const config = getConfiguration();
     fetch(`${API_BASE_URL}/v1/rack-designer/configurations`, {
@@ -694,9 +745,10 @@ function saveConfiguration() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            const newUrl = `${window.location.origin}${window.location.pathname}?c=${data.config_hash}`;
+            const basePath = window.location.pathname.replace(/\/[A-Z0-9]{8,9}\/?$/, '').replace(/\/$/, '');
+            const newUrl = `${window.location.origin}${basePath}/${data.config_hash}`;
             window.history.pushState({ config_hash: data.config_hash }, '', newUrl);
-            alert(`Configuration saved! Share this URL:\n${newUrl}`);
+            showShareModal(newUrl);
         } else {
             alert(`Failed to save configuration: ${data.error}`);
         }
@@ -707,16 +759,21 @@ function saveConfiguration() {
 }
 
 function loadConfigurationFromUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const configHash = urlParams.get('c');
-    if (!configHash) {
+    const pathMatch = window.location.pathname.match(/\/([A-Z0-9]{8,9})\/?$/);
+    if (!pathMatch) {
         return;
     }
+    const configHash = pathMatch[1];
     fetch(`${API_BASE_URL}/v1/rack-designer/configurations/${configHash}`)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             loadConfiguration(data.configuration);
+            if (data.config_hash !== configHash) {
+                const basePath = window.location.pathname.replace(/\/[A-Z0-9]{8,9}\/?$/, '');
+                const newUrl = `${window.location.origin}${basePath}/${data.config_hash}`;
+                window.history.replaceState({ config_hash: data.config_hash }, '', newUrl);
+            }
         } else {
             alert(`Failed to load configuration: ${data.error}`);
         }

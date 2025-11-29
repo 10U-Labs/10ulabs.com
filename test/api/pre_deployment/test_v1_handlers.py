@@ -2645,10 +2645,10 @@ def test_lambda_handler_routes_latest_not_to_by_digest_handler(v1_handler):
             mock_digest_handler.assert_not_called()
 
 
-def test_generate_config_hash_returns_8_char_string(v1_handler):
+def test_generate_config_hash_returns_9_char_string(v1_handler):
     config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
     result = v1_handler.generate_config_hash(config)
-    assert len(result) == 8
+    assert len(result) == 9
 
 
 def test_generate_config_hash_uses_only_valid_chars(v1_handler):
@@ -2777,14 +2777,14 @@ def test_handle_rack_designer_post_returns_config_hash(mock_boto_client, v1_hand
 
 
 @patch('boto3.client')
-def test_handle_rack_designer_post_config_hash_is_8_chars(mock_boto_client, v1_handler, rack_designer_post_event_factory, lambda_context):
+def test_handle_rack_designer_post_config_hash_is_9_chars(mock_boto_client, v1_handler, rack_designer_post_event_factory, lambda_context):
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
     event = rack_designer_post_event_factory()
     response = v1_handler.lambda_handler(event, lambda_context)
     body = json.loads(response['body'])
-    assert len(body['config_hash']) == 8
+    assert len(body['config_hash']) == 9
 
 
 def test_handle_rack_designer_get_missing_config_hash(v1_handler):
@@ -2804,7 +2804,7 @@ def test_handle_rack_designer_get_not_found(mock_boto_client, v1_handler, rack_d
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    event = rack_designer_get_event_factory(config_hash='ABCD1234')
+    event = rack_designer_get_event_factory(config_hash='ABCD12345')
     response = v1_handler.handle_rack_designer_get(event)
     assert response['statusCode'] == 404
 
@@ -2814,12 +2814,12 @@ def test_handle_rack_designer_get_success(mock_boto_client, v1_handler, rack_des
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {
-            'config_hash': {'S': 'ABCD1234'},
+            'config_hash': {'S': 'ABCD12345'},
             'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
         }
     }
     mock_boto_client.return_value = mock_dynamodb
-    event = rack_designer_get_event_factory(config_hash='ABCD1234')
+    event = rack_designer_get_event_factory(config_hash='ABCD12345')
     response = v1_handler.handle_rack_designer_get(event)
     assert response['statusCode'] == 200
 
@@ -2829,12 +2829,12 @@ def test_handle_rack_designer_get_returns_configuration(mock_boto_client, v1_han
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {
-            'config_hash': {'S': 'ABCD1234'},
+            'config_hash': {'S': 'ABCD12345'},
             'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
         }
     }
     mock_boto_client.return_value = mock_dynamodb
-    event = rack_designer_get_event_factory(config_hash='ABCD1234')
+    event = rack_designer_get_event_factory(config_hash='ABCD12345')
     response = v1_handler.handle_rack_designer_get(event)
     body = json.loads(response['body'])
     assert 'configuration' in body
@@ -2852,7 +2852,7 @@ def test_lambda_handler_routes_rack_designer_post(mock_boto_client, v1_handler, 
 
 def test_lambda_handler_routes_rack_designer_get(v1_handler, lambda_context):
     with patch.object(v1_handler, 'handle_rack_designer_get', return_value={'statusCode': 200, 'body': '{}'}) as mock_handler:
-        event = {'httpMethod': 'GET', 'path': '/v1/rack-designer/configurations/ABCD1234', 'headers': {}}
+        event = {'httpMethod': 'GET', 'path': '/v1/rack-designer/configurations/ABCD12345', 'headers': {}}
         v1_handler.lambda_handler(event, lambda_context)
         mock_handler.assert_called_once()
 
@@ -2870,7 +2870,7 @@ def test_save_rack_configuration_success(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.save_rack_configuration('ABCD1234', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
+    result = v1_handler.save_rack_configuration('ABCD12345', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
     assert result['success'] is True
 
 
@@ -2879,8 +2879,8 @@ def test_save_rack_configuration_returns_config_hash(mock_boto_client, v1_handle
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.save_rack_configuration('ABCD1234', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
-    assert result['config_hash'] == 'ABCD1234'
+    result = v1_handler.save_rack_configuration('ABCD12345', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
+    assert result['config_hash'] == 'ABCD12345'
 
 
 @patch('boto3.client')
@@ -2888,7 +2888,7 @@ def test_save_rack_configuration_already_exists(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = ClientError({'Error': {'Code': 'ConditionalCheckFailedException'}}, 'PutItem')
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.save_rack_configuration('ABCD1234', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
+    result = v1_handler.save_rack_configuration('ABCD12345', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
     assert result['success'] is True
 
 
@@ -2897,7 +2897,7 @@ def test_save_rack_configuration_dynamodb_error(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'PutItem')
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.save_rack_configuration('ABCD1234', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
+    result = v1_handler.save_rack_configuration('ABCD12345', {'rackHeight': 12, 'rackCount': 3, 'placedParts': []})
     assert result['success'] is False
 
 
@@ -2906,17 +2906,77 @@ def test_load_rack_configuration_success(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {
-            'config_hash': {'S': 'ABCD1234'},
+            'config_hash': {'S': 'ABCD12345'},
             'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
         }
     }
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.load_rack_configuration('ABCD1234')
+    result = v1_handler.load_rack_configuration('ABCD12345')
     assert result['success'] is True
 
 
 @patch('boto3.client')
 def test_load_rack_configuration_returns_configuration(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.get_item.return_value = {
+        'Item': {
+            'config_hash': {'S': 'ABCD12345'},
+            'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
+        }
+    }
+    mock_boto_client.return_value = mock_dynamodb
+    result = v1_handler.load_rack_configuration('ABCD12345')
+    assert result['configuration']['rackHeight'] == 12
+
+
+@patch('boto3.client')
+def test_load_rack_configuration_not_found(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.get_item.return_value = {}
+    mock_boto_client.return_value = mock_dynamodb
+    result = v1_handler.load_rack_configuration('NOTFOUND0')
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_load_rack_configuration_dynamodb_error(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.get_item.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'GetItem')
+    mock_boto_client.return_value = mock_dynamodb
+    result = v1_handler.load_rack_configuration('ABCD12345')
+    assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_load_rack_configuration_8_char_triggers_migration(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.get_item.return_value = {
+        'Item': {
+            'config_hash': {'S': 'ABCD1234'},
+            'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
+        }
+    }
+    mock_boto_client.return_value = mock_dynamodb
+    v1_handler.load_rack_configuration('ABCD1234')
+    assert mock_dynamodb.put_item.call_count == 1
+
+
+@patch('boto3.client')
+def test_load_rack_configuration_8_char_migration_deletes_old(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_dynamodb.get_item.return_value = {
+        'Item': {
+            'config_hash': {'S': 'ABCD1234'},
+            'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
+        }
+    }
+    mock_boto_client.return_value = mock_dynamodb
+    v1_handler.load_rack_configuration('ABCD1234')
+    assert mock_dynamodb.delete_item.call_count == 1
+
+
+@patch('boto3.client')
+def test_load_rack_configuration_8_char_returns_new_hash(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {
         'Item': {
@@ -2926,22 +2986,59 @@ def test_load_rack_configuration_returns_configuration(mock_boto_client, v1_hand
     }
     mock_boto_client.return_value = mock_dynamodb
     result = v1_handler.load_rack_configuration('ABCD1234')
-    assert result['configuration']['rackHeight'] == 12
+    assert len(result['config_hash']) == 9
 
 
 @patch('boto3.client')
-def test_load_rack_configuration_not_found(mock_boto_client, v1_handler):
+def test_load_rack_configuration_9_char_no_migration(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
-    mock_dynamodb.get_item.return_value = {}
+    mock_dynamodb.get_item.return_value = {
+        'Item': {
+            'config_hash': {'S': 'ABCD12345'},
+            'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
+        }
+    }
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.load_rack_configuration('NOTFOUND')
-    assert result['success'] is False
+    v1_handler.load_rack_configuration('ABCD12345')
+    assert mock_dynamodb.put_item.call_count == 0
 
 
 @patch('boto3.client')
-def test_load_rack_configuration_dynamodb_error(mock_boto_client, v1_handler):
+def test_load_rack_configuration_9_char_no_delete(mock_boto_client, v1_handler):
     mock_dynamodb = MagicMock()
-    mock_dynamodb.get_item.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'GetItem')
+    mock_dynamodb.get_item.return_value = {
+        'Item': {
+            'config_hash': {'S': 'ABCD12345'},
+            'configuration': {'S': json.dumps({'rackHeight': 12, 'rackCount': 3, 'placedParts': []})}
+        }
+    }
     mock_boto_client.return_value = mock_dynamodb
-    result = v1_handler.load_rack_configuration('ABCD1234')
-    assert result['success'] is False
+    v1_handler.load_rack_configuration('ABCD12345')
+    assert mock_dynamodb.delete_item.call_count == 0
+
+
+@patch('boto3.client')
+def test_migrate_rack_configuration_returns_new_hash(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_boto_client.return_value = mock_dynamodb
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    result = v1_handler.migrate_rack_configuration('ABCD1234', config)
+    assert len(result) == 9
+
+
+@patch('boto3.client')
+def test_migrate_rack_configuration_puts_new_item(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_boto_client.return_value = mock_dynamodb
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    v1_handler.migrate_rack_configuration('ABCD1234', config)
+    assert mock_dynamodb.put_item.call_count == 1
+
+
+@patch('boto3.client')
+def test_migrate_rack_configuration_deletes_old_item(mock_boto_client, v1_handler):
+    mock_dynamodb = MagicMock()
+    mock_boto_client.return_value = mock_dynamodb
+    config = {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}
+    v1_handler.migrate_rack_configuration('ABCD1234', config)
+    assert mock_dynamodb.delete_item.call_count == 1

@@ -22,7 +22,7 @@ def test_rack_designer_post_returns_config_hash(api_url):
     assert "config_hash" in data
 
 
-def test_rack_designer_post_config_hash_is_8_chars(api_url):
+def test_rack_designer_post_config_hash_is_9_chars(api_url):
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -30,7 +30,7 @@ def test_rack_designer_post_config_hash_is_8_chars(api_url):
         timeout=10
     )
     data = response.json()
-    assert len(data["config_hash"]) == 8
+    assert len(data["config_hash"]) == 9
 
 
 def test_rack_designer_post_config_hash_uses_valid_chars(api_url):
@@ -81,7 +81,7 @@ def test_rack_designer_post_invalid_configuration_returns_400(api_url):
 
 def test_rack_designer_get_not_found_returns_404(api_url):
     response = requests.get(
-        f"{api_url}/v1/rack-designer/configurations/NOTFOUND",
+        f"{api_url}/v1/rack-designer/configurations/NOTFOUND0",
         timeout=10
     )
     assert response.status_code == 404
