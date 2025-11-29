@@ -273,3 +273,125 @@ resource "aws_quicksight_data_source" "athena" {
     Name = "${local.resource_prefix}-rack-designer-quicksight"
   })
 }
+
+data "archive_file" "crawler_trigger" {
+  type        = "zip"
+  output_path = "${path.module}/lambdas/crawler_trigger.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/crawler_trigger.py")
+    filename = "crawler_trigger.py"
+  }
+}
+
+resource "aws_iam_role" "crawler_trigger" {
+  name = "${local.resource_prefix}-RackDesignerCrawlerTrigger-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-RackDesignerCrawlerTrigger-Role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "crawler_trigger_basic" {
+  role       = aws_iam_role.crawler_trigger.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "crawler_trigger_glue" {
+  name = "GlueAccess"
+  role = aws_iam_role.crawler_trigger.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "glue:StartCrawler"
+      Resource = aws_glue_crawler.events.arn
+    }]
+  })
+}
+
+resource "aws_lambda_function" "crawler_trigger" {
+  function_name    = "${local.resource_prefix}-RackDesignerCrawlerTrigger"
+  role             = aws_iam_role.crawler_trigger.arn
+  handler          = "crawler_trigger.lambda_handler"
+  runtime          = "python3.13"
+  filename         = data.archive_file.crawler_trigger.output_path
+  source_code_hash = data.archive_file.crawler_trigger.output_base64sha256
+  timeout          = 30
+
+  environment {
+    variables = {
+      CRAWLER_NAME = aws_glue_crawler.events.name
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-RackDesignerCrawlerTrigger"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "crawler_trigger" {
+  name              = "/aws/lambda/${aws_lambda_function.crawler_trigger.function_name}"
+  retention_in_days = 7
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-RackDesignerCrawlerTrigger-Logs"
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "export_completed" {
+  name = "${local.resource_prefix}-RackDesignerExportCompleted"
+
+  event_pattern = jsonencode({
+    source      = ["aws.dynamodb"]
+    detail-type = ["DynamoDB Export Completed"]
+    detail = {
+      eventType   = ["ExportCompleted"]
+      tableArn    = [aws_dynamodb_table.events.arn]
+      exportState = ["COMPLETED"]
+    }
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-RackDesignerExportCompleted"
+  })
+}
+
+resource "aws_cloudwatch_event_target" "crawler_trigger" {
+  rule = aws_cloudwatch_event_rule.export_completed.name
+  arn  = aws_lambda_function.crawler_trigger.arn
+}
+
+resource "aws_lambda_permission" "eventbridge_crawler" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.crawler_trigger.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.export_completed.arn
+}
+
+resource "terraform_data" "initial_export" {
+  triggers_replace = [aws_lambda_function.export.arn]
+
+  provisioner "local-exec" {
+    command = "aws lambda invoke --function-name ${aws_lambda_function.export.function_name} --region ${local.aws_region} /dev/null"
+  }
+
+  depends_on = [
+    aws_lambda_function.export,
+    aws_iam_role_policy.export_permissions,
+    aws_s3_bucket.analytics
+  ]
+}
