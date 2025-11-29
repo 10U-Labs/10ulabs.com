@@ -38,6 +38,22 @@ jobs:
           terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on: ephemeral-ecs-fargate-spot
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Run E2E tests
+        run: python3 -m pytest test/ecr/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -45,7 +61,7 @@ jobs:
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
-      - performing-static-analysis
+      - unit-testing
     runs-on: ephemeral-ecs-fargate-spot
     steps:
       - name: Checkout code
@@ -113,6 +129,17 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/ecr && terraform plan
+  unit-testing:
+    name: Unit testing
+    needs:
+      - declaring-common-variables
+      - performing-static-analysis
+    runs-on: ephemeral-ecs-fargate-spot
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run unit tests
+        run: python3 -m pytest test/ecr/pre_deployment/ -v
 name: Ensuring ECR repository exists and is properly configured
 on:
   push:

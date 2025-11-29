@@ -2,56 +2,6 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  building-image:
-    name: Building image
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    outputs:
-      ecr_repository: ${{ needs.declaring-common-variables.outputs.ecr_repository_name }}
-      image_tag: ${{ steps.build.outputs.image_tag }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: ephemeral-ec2-spot-instance
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Load configuration
-        run: |
-          NODE_VERSION=$(yq '.node_version' src/image_for_docker_runners/files/config.yml)
-          RUNNER_VERSION=$(yq '.runner_version' src/image_for_docker_runners/files/config.yml)
-          TERRAFORM_VERSION=$(yq '.terraform_version' src/image_for_docker_runners/files/config.yml)
-          YQ_VERSION=$(yq '.yq_version' src/image_for_docker_runners/files/config.yml)
-          echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
-          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-          echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-      - id: build
-        name: Build and push Docker image
-        run: |
-          cd src/image_for_docker_runners/files
-          BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
-          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.declaring-common-variables.outputs.ecr_repository_name }}"
-          docker buildx build \
-            --build-arg NODE_VERSION=${{ steps.config.outputs.node_version }} \
-            --build-arg RUNNER_ARCH=${{ needs.declaring-common-variables.outputs.fargate_cpu_architecture }} \
-            --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
-            --build-arg TERRAFORM_VERSION=${{ steps.config.outputs.terraform_version }} \
-            --build-arg YQ_VERSION=${{ steps.config.outputs.yq_version }} \
-            -t $ECR_URL:available \
-            -t $ECR_URL:$BUILD_TAG \
-            --push \
-            .
-          echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
   declaring-common-variables:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -80,7 +30,7 @@ jobs:
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          TERRAFORM_VERSION=$(grep 'required_version' src/ecr/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/image_for_docker_runners/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_name=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
@@ -90,7 +40,6 @@ jobs:
   e2e-testing:
     name: E2E testing
     needs:
-      - building-image
       - declaring-common-variables
       - integration-testing
     runs-on: ephemeral-ec2-spot-instance
@@ -118,12 +67,72 @@ jobs:
           pytest test/image_for_docker_runners/post_deployment/e2e/ \
             --confcutdir=test/image_for_docker_runners \
             -v
+  ensuring-infrastructure-in-desired-state:
+    name: Ensuring infrastructure is in desired state
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ephemeral-ec2-spot-instance
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Terraform Init
+        run: cd src/image_for_docker_runners && terraform init
+      - name: Terraform Apply
+        run: cd src/image_for_docker_runners && terraform apply -auto-approve
+      - id: config
+        name: Load Docker build configuration
+        run: |
+          NODE_VERSION=$(yq '.node_version' src/image_for_docker_runners/files/config.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/image_for_docker_runners/files/config.yml)
+          TERRAFORM_VERSION=$(yq '.terraform_version' src/image_for_docker_runners/files/config.yml)
+          YQ_VERSION=$(yq '.yq_version' src/image_for_docker_runners/files/config.yml)
+          echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: build
+        name: Build and push Docker image
+        run: |
+          cd src/image_for_docker_runners/files
+          BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
+          ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.declaring-common-variables.outputs.ecr_repository_name }}"
+          docker buildx build \
+            --build-arg NODE_VERSION=${{ steps.config.outputs.node_version }} \
+            --build-arg RUNNER_ARCH=${{ needs.declaring-common-variables.outputs.fargate_cpu_architecture }} \
+            --build-arg RUNNER_VERSION=${{ steps.config.outputs.runner_version }} \
+            --build-arg TERRAFORM_VERSION=${{ steps.config.outputs.terraform_version }} \
+            --build-arg YQ_VERSION=${{ steps.config.outputs.yq_version }} \
+            -t $ECR_URL:available \
+            -t $ECR_URL:$BUILD_TAG \
+            --push \
+            .
+          echo "image_tag=$BUILD_TAG" >> $GITHUB_OUTPUT
+          echo "ecr_repository=${{ needs.declaring-common-variables.outputs.ecr_repository_name }}" >> $GITHUB_OUTPUT
+    outputs:
+      ecr_repository: ${{ steps.build.outputs.ecr_repository }}
+      image_tag: ${{ steps.build.outputs.image_tag }}
   integration-testing:
     name: Integration testing
     needs:
-      - building-image
       - declaring-common-variables
-      - ensuring-lambda-infrastructure
+      - ensuring-infrastructure-in-desired-state
     runs-on: ephemeral-ec2-spot-instance
     steps:
       - name: Checkout code
@@ -210,39 +219,12 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/image_for_docker_runners && terraform plan
-  ensuring-lambda-infrastructure:
-    defaults:
-      run:
-        working-directory: src/image_for_docker_runners
-    name: Ensuring Lambda infrastructure is in desired state
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
   promoting-image:
     name: Promoting image
     needs:
-      - building-image
       - declaring-common-variables
       - e2e-testing
+      - ensuring-infrastructure-in-desired-state
     permissions:
       contents: read
       id-token: write
@@ -266,8 +248,8 @@ jobs:
       - name: Promote image
         run: |
           python3 src/image_for_docker_runners/promote_docker_image.py \
-            --repository "${{ needs.building-image.outputs.ecr_repository }}" \
-            --image-tag "${{ needs.building-image.outputs.image_tag }}" \
+            --repository "${{ needs.ensuring-infrastructure-in-desired-state.outputs.ecr_repository }}" \
+            --image-tag "${{ needs.ensuring-infrastructure-in-desired-state.outputs.image_tag }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}"
   unit-testing:
     name: Unit testing
