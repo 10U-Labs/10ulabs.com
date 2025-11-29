@@ -55,5 +55,3 @@ def test_config_sh_called_with_unattended_flag(mock_run):
     with pytest.raises(SystemExit):
         entrypoint.main()
     assert mock_run.call_args_list[0][0][0][11] == '--unattended'
-
-
