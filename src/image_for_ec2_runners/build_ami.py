@@ -207,7 +207,7 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    full_cmd = f"sudo bash -e << 'EOFSCRIPT'\nPS4=''\nexport DEBIAN_FRONTEND=noninteractive\nexport TERM=dumb\nexport NO_COLOR=1\necho 'quiet \"1\";' > /etc/apt/apt.conf.d/99quiet\necho '--no-progress-meter' > /etc/curlrc\nset -x\n{params.commands}\nEOFSCRIPT"
+    full_cmd = f"sudo bash -e << 'EOFSCRIPT'\nPS4=''\nexport DEBIAN_FRONTEND=noninteractive\nexport TERM=dumb\nexport NO_COLOR=1\necho 'quiet \"1\";' > /etc/apt/apt.conf.d/99quiet\nset -x\n{params.commands}\nEOFSCRIPT"
     run_ssh_command(client, full_cmd)
     client.close()
 

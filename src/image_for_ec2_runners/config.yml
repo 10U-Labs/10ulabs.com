@@ -41,20 +41,20 @@ commands: |
     types-dockerfile-parse \
     types-requests \
     yamllint
-  curl -o /usr/local/bin/yq -L https://github.com/mikefarah/yq/releases/download/v${VERSION_YQ}/yq_linux_${ARCH} &&
+  curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v${VERSION_YQ}/yq_linux_${ARCH} &&
     chmod +x /usr/local/bin/yq
   useradd -m -s /bin/bash $RUNNER_USER
   usermod -aG docker $RUNNER_USER
-  sudo -u $RUNNER_USER curl -o /tmp/actions-runner.tar.gz -L \
+  sudo -u $RUNNER_USER curl -sSL -o /tmp/actions-runner.tar.gz \
     https://github.com/actions/runner/releases/download/v${VERSION_RUNNER}/actions-runner-linux-${ARCH}-${VERSION_RUNNER}.tar.gz
   sudo -u $RUNNER_USER mkdir -p /home/$RUNNER_USER/actions-runner
   sudo -u $RUNNER_USER tar xzf /tmp/actions-runner.tar.gz -C /home/$RUNNER_USER/actions-runner
   /home/$RUNNER_USER/actions-runner/bin/installdependencies.sh
-  curl -o /tmp/amazon-ssm-agent.deb -L \
+  curl -sSL -o /tmp/amazon-ssm-agent.deb \
     https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${ARCH}/amazon-ssm-agent.deb
   dpkg -i /tmp/amazon-ssm-agent.deb
   systemctl enable amazon-ssm-agent
-  curl -o /tmp/amazon-cloudwatch-agent.deb -L \
+  curl -sSL -o /tmp/amazon-cloudwatch-agent.deb \
     https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb
   dpkg -i /tmp/amazon-cloudwatch-agent.deb
   rm -rf /tmp/*
