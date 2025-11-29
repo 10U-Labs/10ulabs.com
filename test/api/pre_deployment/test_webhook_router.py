@@ -89,7 +89,7 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
 
 @patch('urllib.request.urlopen')
 @patch('boto3.client')
-def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context, config):
+def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context):
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-test123', 'CreationDate': '2024-01-01'}]
@@ -107,7 +107,7 @@ def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_
     event = sqs_event_factory(records=[{
         'messageId': 'test-message-id',
         'eventSource': 'aws:sqs',
-        'body': json.dumps({'job_id': 123, 'job_labels': [config['runner_label_ec2_spot']], 'github_repo': 'test-org/test-repo'}),
+        'body': json.dumps({'job_id': 123, 'job_labels': [os.environ['RUNNER_LABEL_EC2_SPOT']], 'github_repo': 'test-org/test-repo'}),
         'attributes': {},
         'messageAttributes': {}
     }])
