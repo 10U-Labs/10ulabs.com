@@ -475,39 +475,45 @@ def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
     return (None, None)
 
 
-def route_runner_request(job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None) -> Dict[str, Any]:
-    if not check_circuit_breaker():
-        logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
-        return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
+def _build_runner_endpoint(endpoint_suffix: str) -> str:
+    return f"{os.environ['API_BASE_URL']}/v1/{endpoint_suffix}"
 
-    api_base_url = os.environ['API_BASE_URL']
-    runner_type, endpoint_suffix = get_runner_type_from_labels(job_labels)
-    if not runner_type:
-        logger.error("No matching runner type for labels: %s", job_labels)
-        return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
-    endpoint = f"{api_base_url}/v1/{endpoint_suffix}"
 
-    try:
-        api_key = get_api_key()
-    except RuntimeError as e:
-        logger.error("Cannot route job %s: %s", job_id, e)
-        return {'success': False, 'error': str(e)}
+def _handle_route_success(job_id: int, runner_type: str, response_data: Any) -> Dict[str, Any]:
+    logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
+    record_circuit_breaker_success()
+    return {'success': True, 'runner_type': runner_type, 'response': response_data}
 
-    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo, 'run_id': run_id, 'runner_type': runner_type}
-    headers = {'x-api-key': api_key}
-    logger.info("Routing job %s to %s runner: %s (run_id=%s)", job_id, runner_type, endpoint, run_id)
 
-    success, response_data, error, status_code = make_http_request_with_retry(endpoint, payload, headers)
-    if success:
-        logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
-        record_circuit_breaker_success()
-        return {'success': True, 'runner_type': runner_type, 'response': response_data}
+def _handle_route_failure(job_id: int, error: str, status_code: int | None) -> Dict[str, Any]:
     logger.error("Failed to route job %s: %s", job_id, error)
     if should_record_circuit_breaker_failure(status_code):
         record_circuit_breaker_failure()
     else:
         logger.warning("Status %s for job %s - not counting as circuit breaker failure", status_code, job_id)
     return {'success': False, 'error': error}
+
+
+def route_runner_request(job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None) -> Dict[str, Any]:
+    if not check_circuit_breaker():
+        logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
+        return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
+    runner_type, endpoint_suffix = get_runner_type_from_labels(job_labels)
+    if not runner_type:
+        logger.error("No matching runner type for labels: %s", job_labels)
+        return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
+    try:
+        api_key = get_api_key()
+    except RuntimeError as e:
+        logger.error("Cannot route job %s: %s", job_id, e)
+        return {'success': False, 'error': str(e)}
+    endpoint = _build_runner_endpoint(endpoint_suffix)
+    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo, 'run_id': run_id, 'runner_type': runner_type}
+    logger.info("Routing job %s to %s runner: %s (run_id=%s)", job_id, runner_type, endpoint, run_id)
+    success, response_data, error, status_code = make_http_request_with_retry(endpoint, payload, {'x-api-key': api_key})
+    if success:
+        return _handle_route_success(job_id, runner_type, response_data)
+    return _handle_route_failure(job_id, error, status_code)
 
 
 def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
