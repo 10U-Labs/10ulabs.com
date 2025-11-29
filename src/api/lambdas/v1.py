@@ -1089,7 +1089,7 @@ def get_ec2_runner_status() -> Dict[str, Any]:
         ec2 = get_ec2_client()
         response = ec2.describe_instances(
             Filters=[
-                {'Name': 'tag:Type', 'Values': ['ephemeral-runner']},
+                {'Name': 'tag:Type', 'Values': ['workflow-runner']},
                 {'Name': 'tag:ManagedBy', 'Values': [os.environ['EC2_MANAGED_BY_TAG']]},
                 {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
             ]
