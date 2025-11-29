@@ -419,6 +419,53 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
     return _try_launch_fargate_task(runner_config)
 
 
+FARGATE_SPOT_MAX_RETRIES = 3
+FARGATE_SPOT_POLL_INTERVAL = 2
+FARGATE_SPOT_MAX_POLL_ATTEMPTS = 10
+
+
+def get_fargate_task_status(cluster: str, task_arn: str) -> Dict[str, Any]:
+    try:
+        response = get_ecs_client().describe_tasks(cluster=cluster, tasks=[task_arn])
+        if response.get('tasks'):
+            task = response['tasks'][0]
+            return {
+                'status': task.get('lastStatus', ''),
+                'stopped_reason': task.get('stoppedReason', ''),
+                'started_at': task.get('startedAt')
+            }
+    except ClientError as e:
+        logger.warning("Failed to get task status for %s: %s", task_arn, e)
+    return {'status': 'UNKNOWN', 'stopped_reason': '', 'started_at': None}
+
+
+def is_fargate_spot_interruption(task_status: Dict[str, Any]) -> bool:
+    return 'Spot' in task_status.get('stopped_reason', '') and 'interrupt' in task_status.get('stopped_reason', '').lower()
+
+
+def wait_for_fargate_task_provisioned(cluster: str, task_arn: str) -> Dict[str, Any]:
+    result = {'success': False, 'spot_interrupted': False, 'status': ''}
+    for attempt in range(FARGATE_SPOT_MAX_POLL_ATTEMPTS):
+        task_status = get_fargate_task_status(cluster, task_arn)
+        status = task_status['status']
+        result['status'] = status
+        if status == 'RUNNING':
+            result['success'] = True
+            return result
+        if status == 'STOPPED':
+            if is_fargate_spot_interruption(task_status):
+                logger.warning("Task %s was interrupted by Spot reclamation: %s", task_arn, task_status['stopped_reason'])
+                result['spot_interrupted'] = True
+            return result
+        if status in ('PENDING', 'PROVISIONING', 'ACTIVATING'):
+            if attempt < FARGATE_SPOT_MAX_POLL_ATTEMPTS - 1:
+                time.sleep(FARGATE_SPOT_POLL_INTERVAL)
+            continue
+        return result
+    result['success'] = True
+    return result
+
+
 def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:
     runner_name = f"fargate-runner-{cfg['run_id']}" if cfg['run_id'] else f"fargate-runner-{cfg['job_id']}"
     response = get_ecs_client().run_task(
@@ -455,36 +502,70 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
     return {'response': response, 'runner_name': runner_name}
 
 
-def _try_launch_fargate_task(cfg: Dict[str, Any]) -> Dict[str, Any]:
-    last_error: Any = None
-    result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
-    for subnet in os.environ['SUBNETS'].split(','):
-        try:
-            launch = _launch_fargate_task_in_subnet(cfg, subnet)
-            response, runner_name = launch['response'], launch['runner_name']
-            if response['tasks']:
-                task_arn = response['tasks'][0]['taskArn']
-                logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
-                if cfg['run_id']:
-                    store_workflow_runner(cfg['run_id'], cfg['runner_type'], task_arn, runner_name, cfg['github_repo'])
-                result = {
-                    'success': True, 'task_arn': task_arn, 'job_id': cfg['job_id'],
-                    'runner_type': cfg['runner_type'], 'run_id': cfg['run_id'], 'runner_name': runner_name
-                }
-                return result
+def _try_launch_in_subnet(cfg: Dict[str, Any], subnet: str, cluster: str) -> Dict[str, Any]:
+    result: Dict[str, Any] = {'success': False, 'spot_interrupted': False, 'retry': False}
+    try:
+        launch = _launch_fargate_task_in_subnet(cfg, subnet)
+        response, runner_name = launch['response'], launch['runner_name']
+        if not response['tasks']:
             failures = response.get('failures', [])
             if any('Capacity' in str(f.get('reason', '')) for f in failures):
                 logger.warning("No Fargate Spot capacity in subnet %s, trying next AZ...", subnet)
-                last_error = failures
-                continue
+                result['retry'] = True
+                result['error'] = failures
+                return result
             logger.error("Failed to launch Fargate runner for job %s: %s", cfg['job_id'], failures)
             result['error'] = failures
             return result
-        except ClientError as e:
-            logger.error("Error launching Fargate runner for job %s: %s", cfg['job_id'], e)
-            result['error'] = str(e)
+        task_arn = response['tasks'][0]['taskArn']
+        logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
+        provision_result = wait_for_fargate_task_provisioned(cluster, task_arn)
+        if provision_result['spot_interrupted']:
+            logger.warning("Task %s spot interrupted before running, will retry in different AZ", task_arn)
+            result['spot_interrupted'] = True
+            result['retry'] = True
             return result
-    logger.error("Failed to launch Fargate runner for job %s: no capacity in any AZ", cfg['job_id'])
+        if cfg['run_id']:
+            store_workflow_runner(cfg['run_id'], cfg['runner_type'], task_arn, runner_name, cfg['github_repo'])
+        result = {
+            'success': True, 'task_arn': task_arn, 'job_id': cfg['job_id'],
+            'runner_type': cfg['runner_type'], 'run_id': cfg['run_id'], 'runner_name': runner_name
+        }
+    except ClientError as e:
+        logger.error("Error launching Fargate runner for job %s: %s", cfg['job_id'], e)
+        result['error'] = str(e)
+    return result
+
+
+def _try_launch_fargate_task(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    last_error: Any = None
+    result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
+    cluster = os.environ['ECS_CLUSTER']
+    all_subnets = os.environ['SUBNETS'].split(',')
+    excluded_subnets: List[str] = []
+    for attempt in range(FARGATE_SPOT_MAX_RETRIES):
+        available_subnets = [s for s in all_subnets if s not in excluded_subnets]
+        if not available_subnets:
+            logger.error("No subnets remaining after excluding spot-interrupted AZs")
+            break
+        for subnet in available_subnets:
+            launch_result = _try_launch_in_subnet(cfg, subnet, cluster)
+            if launch_result.get('success'):
+                return launch_result
+            if launch_result.get('spot_interrupted'):
+                excluded_subnets.append(subnet)
+                last_error = 'Spot interruption'
+                break
+            if launch_result.get('retry'):
+                last_error = launch_result.get('error', 'Capacity unavailable')
+                continue
+            result['error'] = launch_result.get('error', 'Unknown error')
+            return result
+        if launch_result.get('spot_interrupted'):
+            logger.info("Retrying after spot interruption (attempt %d/%d)", attempt + 1, FARGATE_SPOT_MAX_RETRIES)
+            continue
+        break
+    logger.error("Failed to launch Fargate runner for job %s after %d attempts: %s", cfg['job_id'], FARGATE_SPOT_MAX_RETRIES, last_error)
     result['error'] = last_error if last_error else 'No capacity in any availability zone'
     return result
 

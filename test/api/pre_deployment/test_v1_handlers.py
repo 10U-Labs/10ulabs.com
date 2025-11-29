@@ -2163,3 +2163,141 @@ def test_launch_ec2_spot_runner_fleet_empty_instances_default_error_message(mock
         with patch.object(v1_handler, 'get_runner_registration_token', return_value='reg-token'):
             result = v1_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
             assert result['error'] == 'No instances launched'
+
+
+def test_get_fargate_task_status_returns_status_from_describe_tasks(v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{
+            'lastStatus': 'RUNNING',
+            'stoppedReason': '',
+            'startedAt': '2024-01-01T00:00:00Z'
+        }]
+    }
+    with patch.object(v1_handler, 'get_ecs_client', return_value=mock_ecs):
+        result = v1_handler.get_fargate_task_status('test-cluster', 'arn:aws:ecs:us-east-1:123:task/test')
+        assert result['status'] == 'RUNNING'
+
+
+def test_get_fargate_task_status_returns_unknown_on_empty_response(v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.describe_tasks.return_value = {'tasks': []}
+    with patch.object(v1_handler, 'get_ecs_client', return_value=mock_ecs):
+        result = v1_handler.get_fargate_task_status('test-cluster', 'arn:aws:ecs:us-east-1:123:task/test')
+        assert result['status'] == 'UNKNOWN'
+
+
+def test_get_fargate_task_status_returns_unknown_on_client_error(v1_handler):
+    mock_ecs = MagicMock()
+    mock_ecs.describe_tasks.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeTasks')
+    with patch.object(v1_handler, 'get_ecs_client', return_value=mock_ecs):
+        result = v1_handler.get_fargate_task_status('test-cluster', 'arn:aws:ecs:us-east-1:123:task/test')
+        assert result['status'] == 'UNKNOWN'
+
+
+def test_is_fargate_spot_interruption_returns_true_for_spot_interrupt_reason(v1_handler):
+    task_status = {'stopped_reason': 'Your Spot Task was interrupted.'}
+    assert v1_handler.is_fargate_spot_interruption(task_status) is True
+
+
+def test_is_fargate_spot_interruption_returns_false_for_other_reasons(v1_handler):
+    task_status = {'stopped_reason': 'Essential container exited'}
+    assert v1_handler.is_fargate_spot_interruption(task_status) is False
+
+
+def test_is_fargate_spot_interruption_returns_false_for_empty_reason(v1_handler):
+    task_status = {'stopped_reason': ''}
+    assert v1_handler.is_fargate_spot_interruption(task_status) is False
+
+
+def test_wait_for_fargate_task_provisioned_returns_success_when_running(v1_handler):
+    with patch.object(v1_handler, 'get_fargate_task_status', return_value={'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}):
+        result = v1_handler.wait_for_fargate_task_provisioned('test-cluster', 'arn:aws:ecs:us-east-1:123:task/test')
+        assert result['success'] is True
+        assert result['spot_interrupted'] is False
+
+
+def test_wait_for_fargate_task_provisioned_detects_spot_interruption(v1_handler):
+    with patch.object(v1_handler, 'get_fargate_task_status', return_value={'status': 'STOPPED', 'stopped_reason': 'Your Spot Task was interrupted.', 'started_at': None}):
+        result = v1_handler.wait_for_fargate_task_provisioned('test-cluster', 'arn:aws:ecs:us-east-1:123:task/test')
+        assert result['success'] is False
+        assert result['spot_interrupted'] is True
+
+
+def test_wait_for_fargate_task_provisioned_returns_failure_for_non_spot_stop(v1_handler):
+    with patch.object(v1_handler, 'get_fargate_task_status', return_value={'status': 'STOPPED', 'stopped_reason': 'Essential container exited', 'started_at': None}):
+        result = v1_handler.wait_for_fargate_task_provisioned('test-cluster', 'arn:aws:ecs:us-east-1:123:task/test')
+        assert result['success'] is False
+        assert result['spot_interrupted'] is False
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_retries_on_spot_interruption(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        success_response = {'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id'}], 'failures': []}
+        mock_ecs.run_task.return_value = success_response
+        spot_interrupted_status = {'status': 'STOPPED', 'stopped_reason': 'Your Spot Task was interrupted.', 'started_at': None}
+        running_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            with patch.object(v1_handler, 'get_fargate_task_status', side_effect=[spot_interrupted_status, running_status]):
+                result = v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+                assert result['success'] is True
+                assert mock_ecs.run_task.call_count == 2
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_excludes_subnet_after_spot_interruption(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1,subnet-2', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        success_response = {'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id'}], 'failures': []}
+        mock_ecs.run_task.return_value = success_response
+        spot_interrupted_status = {'status': 'STOPPED', 'stopped_reason': 'Your Spot Task was interrupted.', 'started_at': None}
+        running_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            with patch.object(v1_handler, 'get_fargate_task_status', side_effect=[spot_interrupted_status, running_status]):
+                v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+                run_task_calls = mock_ecs.run_task.call_args_list
+                first_subnet = run_task_calls[0][1]['networkConfiguration']['awsvpcConfiguration']['subnets'][0]
+                second_subnet = run_task_calls[1][1]['networkConfiguration']['awsvpcConfiguration']['subnets'][0]
+                assert first_subnet != second_subnet
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_fails_after_max_retries(mock_boto_client, v1_handler):
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1,subnet-2,subnet-3', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        success_response = {'tasks': [{'taskArn': 'arn:aws:ecs:us-east-1:123:task/cluster/task-id'}], 'failures': []}
+        mock_ecs.run_task.return_value = success_response
+        spot_interrupted_status = {'status': 'STOPPED', 'stopped_reason': 'Your Spot Task was interrupted.', 'started_at': None}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        with patch.object(v1_handler, 'get_runner_registration_token', return_value='test-reg-token'):
+            with patch.object(v1_handler, 'get_fargate_task_status', return_value=spot_interrupted_status):
+                result = v1_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+                assert result['success'] is False
