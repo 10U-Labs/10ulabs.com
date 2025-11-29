@@ -117,7 +117,7 @@ def test_handle_post_success(mock_boto_client, handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.put_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    handler._dynamodb_client = None
+    handler._clients.clear()
     event = {
         'body': json.dumps({'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}),
         'headers': {}
@@ -144,7 +144,7 @@ def test_handle_get_not_found(mock_boto_client, handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.get_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    handler._dynamodb_client = None
+    handler._clients.clear()
     event = {'pathParameters': {'config_hash': 'ABCD12345'}, 'headers': {}}
     with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
         response = handler.handle_get(event)
@@ -161,7 +161,7 @@ def test_handle_get_success(mock_boto_client, handler):
         }
     }
     mock_boto_client.return_value = mock_dynamodb
-    handler._dynamodb_client = None
+    handler._clients.clear()
     event = {'pathParameters': {'config_hash': 'ABCD12345'}, 'headers': {}}
     with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
         response = handler.handle_get(event)

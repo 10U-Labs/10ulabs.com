@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import json
 import logging
@@ -10,14 +11,13 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_dynamodb_client = None
+_clients: Dict[str, Any] = {}
 
 
 def get_dynamodb_client():
-    global _dynamodb_client
-    if _dynamodb_client is None:
-        _dynamodb_client = boto3.client('dynamodb')
-    return _dynamodb_client
+    if 'dynamodb' not in _clients:
+        _clients['dynamodb'] = boto3.client('dynamodb')
+    return _clients['dynamodb']
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
@@ -45,7 +45,6 @@ def error_response(status_code: int, message: str, details: str = '') -> Dict[st
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
     body = event.get('body', '{}')
     if event.get('isBase64Encoded'):
-        import base64
         body = base64.b64decode(body).decode('utf-8')
     result = json.loads(body) if body else {}
     return result

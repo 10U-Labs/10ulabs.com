@@ -9,5 +9,5 @@ sys.path.insert(0, str(src_path))
 @pytest.fixture(name="handler")
 def handler_fixture():
     import handler
-    handler._dynamodb_client = None
+    handler._clients.clear()
     return handler
