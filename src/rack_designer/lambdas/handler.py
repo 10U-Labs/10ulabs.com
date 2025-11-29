@@ -156,6 +156,74 @@ def validate_rack_configuration(config: Dict[str, Any]) -> Optional[str]:
     return error_msg
 
 
+def validate_analytics_event(event: Dict[str, Any]) -> Optional[str]:
+    error_msg = None
+    if 'event_type' not in event:
+        error_msg = 'Missing required field: event_type'
+    elif 'timestamp' not in event:
+        error_msg = 'Missing required field: timestamp'
+    elif not isinstance(event['event_type'], str):
+        error_msg = 'event_type must be a string'
+    elif not isinstance(event['timestamp'], str):
+        error_msg = 'timestamp must be a string'
+    elif not re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', event['timestamp']):
+        error_msg = 'timestamp must be in ISO8601 format'
+    return error_msg
+
+
+def validate_analytics_request(body: Dict[str, Any]) -> Optional[str]:
+    error_msg = None
+    if 'session_id' not in body:
+        error_msg = 'Missing required field: session_id'
+    elif 'device_id' not in body:
+        error_msg = 'Missing required field: device_id'
+    elif 'events' not in body:
+        error_msg = 'Missing required field: events'
+    elif not isinstance(body['session_id'], str):
+        error_msg = 'session_id must be a string'
+    elif not isinstance(body['device_id'], str):
+        error_msg = 'device_id must be a string'
+    elif not isinstance(body['events'], list):
+        error_msg = 'events must be an array'
+    elif len(body['events']) == 0:
+        error_msg = 'events array cannot be empty'
+    elif len(body['events']) > 25:
+        error_msg = 'events array cannot exceed 25 items'
+    return error_msg
+
+
+def save_analytics_events(
+    session_id: str,
+    device_id: str,
+    events: list,
+    session_context: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    table_name = os.environ['RACK_DESIGNER_EVENTS_TABLE']
+    result: Dict[str, Any] = {}
+    try:
+        write_requests = []
+        for event in events:
+            item: Dict[str, Any] = {
+                'session_id': {'S': session_id},
+                'timestamp': {'S': event['timestamp']},
+                'device_id': {'S': device_id},
+                'event_type': {'S': event['event_type']},
+                'event_data': {'S': json.dumps(event)}
+            }
+            if session_context:
+                item['session_context'] = {'S': json.dumps(session_context)}
+            write_requests.append({'PutRequest': {'Item': item}})
+        get_dynamodb_client().batch_write_item(
+            RequestItems={table_name: write_requests}
+        )
+        logger.info("Saved %d analytics events for session: %s", len(events), session_id)
+        result = {'success': True, 'events_saved': len(events)}
+    except ClientError as e:
+        logger.error("Error saving analytics events: %s", e)
+        result = {'success': False, 'error': str(e)}
+    return result
+
+
 def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         body = parse_body(event)
@@ -195,6 +263,38 @@ def handle_get(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
+def handle_events(event: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        body = parse_body(event)
+        validation_error = validate_analytics_request(body)
+        if validation_error:
+            response = error_response(400, validation_error)
+        else:
+            events_list = body['events']
+            event_errors = []
+            for i, evt in enumerate(events_list):
+                evt_error = validate_analytics_event(evt)
+                if evt_error:
+                    event_errors.append(f'Event {i}: {evt_error}')
+            if event_errors:
+                response = error_response(400, 'Invalid events', '; '.join(event_errors))
+            else:
+                result = save_analytics_events(
+                    body['session_id'],
+                    body['device_id'],
+                    events_list,
+                    body.get('session_context')
+                )
+                if result['success']:
+                    response = json_response(200, result)
+                else:
+                    response = error_response(500, result['error'])
+    except (ValueError, KeyError) as e:
+        logger.error("Error handling analytics events: %s", e, exc_info=True)
+        response = error_response(500, 'Internal server error', str(e))
+    return response
+
+
 def lambda_handler(event, _context):
     logger.info("Received API request: %s", json.dumps(event))
 
@@ -216,6 +316,8 @@ def lambda_handler(event, _context):
         response = handle_post(event)
     elif path.startswith('/v1/rack-designer/configurations/') and method == 'GET':
         response = handle_get(event)
+    elif path == '/v1/rack-designer/events' and method == 'POST':
+        response = handle_events(event)
     else:
         response = error_response(404, 'Not found')
 

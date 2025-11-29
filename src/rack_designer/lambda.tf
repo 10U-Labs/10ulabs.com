@@ -18,6 +18,7 @@ resource "aws_lambda_function" "handler" {
   environment {
     variables = {
       RACK_DESIGNER_CONFIGURATIONS_TABLE = aws_dynamodb_table.configurations.name
+      RACK_DESIGNER_EVENTS_TABLE         = aws_dynamodb_table.events.name
     }
   }
 

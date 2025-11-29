@@ -28,14 +28,24 @@ resource "aws_iam_role_policy" "dynamodb_access" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "dynamodb:DeleteItem",
-        "dynamodb:GetItem",
-        "dynamodb:PutItem"
-      ]
-      Resource = [aws_dynamodb_table.configurations.arn]
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem"
+        ]
+        Resource = [aws_dynamodb_table.configurations.arn]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:BatchWriteItem",
+          "dynamodb:PutItem"
+        ]
+        Resource = [aws_dynamodb_table.events.arn]
+      }
+    ]
   })
 }
