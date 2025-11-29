@@ -58,6 +58,19 @@ def cloudfront_client_fixture():
     return boto3.client("cloudfront")
 
 
+@pytest.fixture(name="api_distribution_id", scope="module")
+def api_distribution_id_fixture(cloudfront_client, config):
+    distributions = cloudfront_client.list_distributions()
+    api_fqdn = config['api_fqdn']
+    dist_id = None
+    for item in distributions['DistributionList']['Items']:
+        aliases = item.get('Aliases', {}).get('Items', [])
+        if api_fqdn in aliases:
+            dist_id = item['Id']
+            break
+    return dist_id
+
+
 @pytest.fixture(name="acm_client", scope="module")
 def acm_client_fixture(aws_region):
     return boto3.client("acm", region_name=aws_region)

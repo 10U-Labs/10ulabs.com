@@ -94,16 +94,11 @@ def test_cloudfront_logging_bucket_is_central_logs(cloudfront_client, config):
     assert bucket_correct
 
 
-def test_cloudfront_logging_prefix_is_correct(cloudfront_client):
-    distributions = cloudfront_client.list_distributions()
-    prefix_correct = False
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        config = cloudfront_client.get_distribution_config(Id=dist_id)
-        logging_config = config['DistributionConfig'].get('Logging', {})
-        prefix = logging_config.get('Prefix', '')
-        prefix_correct = prefix == 'cloudfront-logs/api/'
-    assert prefix_correct
+def test_cloudfront_logging_prefix_is_correct(cloudfront_client, api_distribution_id):
+    config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
+    logging_config = config['DistributionConfig'].get('Logging', {})
+    prefix = logging_config.get('Prefix', '')
+    assert prefix == 'cloudfront-logs/api/'
 
 
 def test_cloudfront_logging_excludes_cookies(cloudfront_client):
