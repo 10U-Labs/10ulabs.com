@@ -708,7 +708,7 @@ def test_get_runner_registration_token_url_error(v1_handler):
 def test_create_ec2_user_data_formatting(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
         create_ec2_user_data = getattr(v1_handler, 'create_ec2_user_data')
-        result = create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo')
+        result = create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo', 'test-runner')
         assert 'test-token' in result
 
 
@@ -1133,25 +1133,25 @@ def test_handle_docker_runner_post_returns_500_on_non_capacity_error(mock_boto_c
 
 def test_create_ec2_user_data_includes_region(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-west-2'}):
-        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo', 'test-runner')
         assert 'us-west-2' in user_data
 
 
 def test_create_ec2_user_data_includes_nvme_format(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
-        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo', 'test-runner')
         assert 'mkfs.ext4' in user_data
 
 
 def test_create_ec2_user_data_includes_nvme_mount(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
-        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo', 'test-runner')
         assert 'mount "$INSTANCE_STORE" /home/github-runner' in user_data
 
 
 def test_create_ec2_user_data_detects_instance_store_dynamically(v1_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
-        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo')
+        user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1'], 'test/repo', 'test-runner')
         assert 'INSTANCE_STORE=$(lsblk' in user_data
 
 
@@ -1505,37 +1505,37 @@ def test_v1_get_ec2_runner_status_ec2_error(mock_boto_client, v1_handler):
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
 def test_v1_create_ec2_user_data_includes_config_script(v1_handler):
-    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo', 'test-runner')
     assert 'config.sh' in user_data
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
 def test_v1_create_ec2_user_data_includes_registration_token(v1_handler):
-    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo', 'test-runner')
     assert 'test-token' in user_data
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
 def test_v1_create_ec2_user_data_includes_labels(v1_handler):
-    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo', 'test-runner')
     assert 'label1,label2' in user_data
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'})
 def test_v1_create_ec2_user_data_includes_repo(v1_handler):
-    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo')
+    user_data = getattr(v1_handler, "create_ec2_user_data")('test-token', ['label1', 'label2'], 'owner/repo', 'test-runner')
     assert 'owner/repo' in user_data
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
 def test_v1_create_ec2_user_data_includes_region(v1_handler):
-    user_data = getattr(v1_handler, "create_ec2_user_data")('token', ['label'], 'repo')
+    user_data = getattr(v1_handler, "create_ec2_user_data")('token', ['label'], 'repo', 'test-runner')
     assert 'us-east-1' in user_data
 
 
 @patch.dict('os.environ', {'AWS_REGION': 'us-east-1'})
 def test_v1_create_ec2_user_data_includes_self_termination(v1_handler):
-    user_data = getattr(v1_handler, "create_ec2_user_data")('token', ['label'], 'repo')
+    user_data = getattr(v1_handler, "create_ec2_user_data")('token', ['label'], 'repo', 'test-runner')
     assert 'terminate-instances' in user_data
 
 

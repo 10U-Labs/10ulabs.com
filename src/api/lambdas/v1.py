@@ -367,6 +367,16 @@ def trigger_image_creation() -> Dict[str, Any]:
     return result
 
 
+def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int) -> Dict[str, Any] | None:
+    runners = list_repo_runners(github_token, github_repo)
+    runner_label = f'runner-{run_id}'
+    for runner in runners:
+        runner_labels = {label.get('name') for label in runner.get('labels', [])}
+        if runner_label in runner_labels and runner.get('status') == 'online':
+            return runner
+    return None
+
+
 def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_id: int | None = None, runner_type: str = 'fargate') -> Dict[str, Any]:
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
 
@@ -382,6 +392,16 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
         logger.error("GITHUB_TOKEN not set - cannot register runner")
         result['error'] = 'GITHUB_TOKEN not configured'
         return result
+
+    if run_id:
+        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id)
+        if existing_runner:
+            logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
+            result = {
+                'success': True, 'job_id': job_id, 'runner_type': runner_type, 'run_id': run_id,
+                'runner_name': existing_runner.get('name'), 'reused': True
+            }
+            return result
 
     cleanup_offline_runners(github_token, github_repo, job_labels)
 
@@ -400,7 +420,7 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
 
 
 def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:
-    runner_name = f"fargate-runner-{cfg['job_id']}"
+    runner_name = f"fargate-runner-{cfg['run_id']}" if cfg['run_id'] else f"fargate-runner-{cfg['job_id']}"
     response = get_ecs_client().run_task(
         cluster=os.environ['ECS_CLUSTER'],
         taskDefinition=os.environ['TASK_DEFINITION'],
@@ -577,7 +597,7 @@ def cleanup_offline_runners(github_token: str, github_repo: str, job_labels: Lis
     return result
 
 
-def create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str) -> str:
+def create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str, runner_name: str) -> str:
     aws_region = os.environ['AWS_REGION']
     runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
@@ -602,7 +622,7 @@ cd /home/github-runner/actions-runner
 sudo -u github-runner ./config.sh \
     --url "https://github.com/{github_repo}" \
     --token "{registration_token}" \
-    --name "ec2-spot-$(hostname)" \
+    --name "{runner_name}" \
     --labels "{runner_labels}" \
     --unattended
 
@@ -760,6 +780,22 @@ def launch_ec2_spot_runner(
         result['error'] = str(e)
         return result
 
+    github_token = get_github_token()
+    if not github_token:
+        logger.error("GITHUB_TOKEN not set - cannot register runner")
+        result['error'] = 'GITHUB_TOKEN not configured'
+        return result
+
+    if run_id:
+        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id)
+        if existing_runner:
+            logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
+            result = {
+                'success': True, 'job_id': job_id, 'runner_type': runner_type, 'run_id': run_id,
+                'runner_name': existing_runner.get('name'), 'reused': True
+            }
+            return result
+
     ami_id = get_latest_ami()
     if not ami_id:
         logger.warning("No AMI available - triggering AMI creation")
@@ -769,12 +805,6 @@ def launch_ec2_spot_runner(
             result['error'] = 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.'
         else:
             result['error'] = f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
-        return result
-
-    github_token = get_github_token()
-    if not github_token:
-        logger.error("GITHUB_TOKEN not set - cannot register runner")
-        result['error'] = 'GITHUB_TOKEN not configured'
         return result
 
     cleanup_offline_runners(github_token, github_repo, job_labels)
@@ -794,19 +824,20 @@ def launch_ec2_spot_runner(
 
 
 def _build_ec2_template_config(cfg: Dict[str, Any], ec2_config: Dict[str, Any]) -> Dict[str, Any]:
-    user_data = create_ec2_user_data(cfg['registration_token'], cfg['job_labels'], cfg['github_repo'])
+    runner_name = f"ec2-spot-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-spot-runner-{cfg['job_id']}"
+    user_data = create_ec2_user_data(cfg['registration_token'], cfg['job_labels'], cfg['github_repo'], runner_name)
     return {
         'ami_id': cfg['ami_id'],
         'security_group_id': ec2_config['security_group_id'],
         'iam_instance_profile': ec2_config['iam_instance_profile'],
         'user_data_base64': base64.b64encode(user_data.encode('utf-8')).decode('utf-8'),
         'job_id': cfg['job_id'], 'job_labels': cfg['job_labels'], 'github_repo': cfg['github_repo'],
-        'run_id': cfg['run_id'], 'runner_type': cfg['runner_type']
+        'run_id': cfg['run_id'], 'runner_type': cfg['runner_type'], 'runner_name': runner_name
     }
 
 
 def _handle_ec2_fleet_success(cfg: Dict[str, Any], instance: Dict[str, Any], instance_id: str) -> Dict[str, Any]:
-    runner_name = f"ec2-spot-runner-{cfg['job_id']}"
+    runner_name = cfg.get('runner_name') or (f"ec2-spot-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-spot-runner-{cfg['job_id']}")
     logger.info(
         "Launched EC2 spot runner for job %s: %s (%s in %s)",
         cfg['job_id'], instance_id, instance['InstanceType'], instance['Placement']['AvailabilityZone']
