@@ -79,8 +79,8 @@ jobs:
         run: terraform apply -auto-approve
       - name: Get website bucket name
         run: |
-          terraform -chdir=../website init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform -chdir=../website output -raw bucket_name)
+          terraform -chdir=../home_page init -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=../home_page output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Sync frontend to S3
         run: |
@@ -108,7 +108,7 @@ jobs:
       - if: steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          WEBSITE_FQDN=$(terraform -chdir=../website output -raw website_domain_name)
+          WEBSITE_FQDN=$(terraform -chdir=../home_page output -raw website_domain_name)
           python3 ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py \
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
