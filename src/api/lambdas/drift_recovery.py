@@ -91,13 +91,28 @@ def extract_event_from_sqs(event):
     return json.loads(body)
 
 
+def format_drift_details(trigger_event):
+    rule_name = trigger_event.get('configRuleName', 'Unknown')
+    resource_type = trigger_event.get('resourceType', 'Unknown')
+    resource_id = trigger_event.get('resourceId', 'Unknown')
+    aws_region = trigger_event.get('awsRegion', 'Unknown')
+
+    return {
+        'rule_name': rule_name,
+        'resource_type': resource_type,
+        'resource_id': resource_id,
+        'aws_region': aws_region,
+        'summary': f"{resource_type} ({resource_id}) in {aws_region}"
+    }
+
+
 def lambda_handler(event, _context):
     logger.info("Received SQS event: %s", json.dumps(event))
 
     trigger_event = extract_event_from_sqs(event)
-    rule_name = trigger_event.get('configRuleName', 'Unknown')
+    drift = format_drift_details(trigger_event)
 
-    logger.info("Drift detected for config rule: %s", rule_name)
+    logger.info("Drift detected: %s", drift['summary'])
 
     github_repo = os.environ.get('GITHUB_REPO', '')
 
@@ -106,8 +121,10 @@ def lambda_handler(event, _context):
         error_msg = 'Failed to retrieve GitHub token'
         logger.error(error_msg)
         send_notification(
-            f"Drift Recovery FAILED: {rule_name}",
+            f"Drift Recovery FAILED: {drift['rule_name']}",
             f"Infrastructure drift was detected.\n\n"
+            f"Resource: {drift['summary']}\n"
+            f"Rule: {drift['rule_name']}\n\n"
             f"FAILED to trigger recovery workflow: {error_msg}\n\n"
             f"MANUAL INTERVENTION REQUIRED"
         )
@@ -118,8 +135,10 @@ def lambda_handler(event, _context):
     if result['success']:
         logger.info("Successfully triggered api.yml workflow for drift recovery")
         send_notification(
-            f"Drift Recovery Triggered: {rule_name}",
+            f"Drift Recovery Triggered: {drift['rule_name']}",
             f"Infrastructure drift was detected.\n\n"
+            f"Resource: {drift['summary']}\n"
+            f"Rule: {drift['rule_name']}\n\n"
             f"Automatically triggered api.yml workflow to recover infrastructure.\n\n"
             f"Monitor the workflow at: https://github.com/{github_repo}/actions"
         )
@@ -127,8 +146,10 @@ def lambda_handler(event, _context):
 
     logger.error("Failed to trigger workflow: %s", result.get('error'))
     send_notification(
-        f"Drift Recovery FAILED: {rule_name}",
+        f"Drift Recovery FAILED: {drift['rule_name']}",
         f"Infrastructure drift was detected.\n\n"
+        f"Resource: {drift['summary']}\n"
+        f"Rule: {drift['rule_name']}\n\n"
         f"FAILED to trigger recovery workflow: {result.get('error')}\n\n"
         f"MANUAL INTERVENTION REQUIRED"
     )

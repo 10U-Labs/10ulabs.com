@@ -17,6 +17,53 @@ def wrap_in_sqs_event(config_event):
     }
 
 
+class TestFormatDriftDetails:
+    def test_extracts_rule_name(self, drift_recovery):
+        event = {'configRuleName': 'required-tags'}
+        result = drift_recovery.format_drift_details(event)
+        assert result['rule_name'] == 'required-tags'
+
+    def test_extracts_resource_type(self, drift_recovery):
+        event = {'resourceType': 'AWS::EC2::SecurityGroup'}
+        result = drift_recovery.format_drift_details(event)
+        assert result['resource_type'] == 'AWS::EC2::SecurityGroup'
+
+    def test_extracts_resource_id(self, drift_recovery):
+        event = {'resourceId': 'sg-12345678'}
+        result = drift_recovery.format_drift_details(event)
+        assert result['resource_id'] == 'sg-12345678'
+
+    def test_extracts_aws_region(self, drift_recovery):
+        event = {'awsRegion': 'us-east-1'}
+        result = drift_recovery.format_drift_details(event)
+        assert result['aws_region'] == 'us-east-1'
+
+    def test_formats_summary(self, drift_recovery):
+        event = {
+            'resourceType': 'AWS::EC2::SecurityGroup',
+            'resourceId': 'sg-12345678',
+            'awsRegion': 'us-east-1'
+        }
+        result = drift_recovery.format_drift_details(event)
+        assert result['summary'] == 'AWS::EC2::SecurityGroup (sg-12345678) in us-east-1'
+
+    def test_uses_unknown_for_missing_rule_name(self, drift_recovery):
+        result = drift_recovery.format_drift_details({})
+        assert result['rule_name'] == 'Unknown'
+
+    def test_uses_unknown_for_missing_resource_type(self, drift_recovery):
+        result = drift_recovery.format_drift_details({})
+        assert result['resource_type'] == 'Unknown'
+
+    def test_uses_unknown_for_missing_resource_id(self, drift_recovery):
+        result = drift_recovery.format_drift_details({})
+        assert result['resource_id'] == 'Unknown'
+
+    def test_uses_unknown_for_missing_aws_region(self, drift_recovery):
+        result = drift_recovery.format_drift_details({})
+        assert result['aws_region'] == 'Unknown'
+
+
 class TestExtractEventFromSqs:
     def test_extracts_event_from_sqs_body(self, drift_recovery):
         config_event = {'detail': {'configRuleName': 'test-rule'}}
@@ -303,6 +350,29 @@ class TestLambdaHandlerEventParsing:
                 drift_recovery.lambda_handler(event, lambda_context)
                 call_args = mock_client.publish.call_args
         assert 'required-tags-rule' in call_args[1]['Subject']
+
+    def test_notification_includes_resource_details(self, drift_recovery, lambda_context):
+        event = wrap_in_sqs_event({
+            'configRuleName': 'required-tags',
+            'resourceType': 'AWS::EC2::SecurityGroup',
+            'resourceId': 'sg-12345678',
+            'awsRegion': 'us-east-1'
+        })
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_parameter.return_value = {
+                'Parameter': {'Value': 'test-token'}
+            }
+            mock_boto_client.return_value = mock_client
+            with patch('urllib.request.urlopen') as mock_urlopen:
+                mock_response = Mock()
+                mock_response.status = 204
+                mock_response.__enter__ = Mock(return_value=mock_response)
+                mock_response.__exit__ = Mock(return_value=False)
+                mock_urlopen.return_value = mock_response
+                drift_recovery.lambda_handler(event, lambda_context)
+                call_args = mock_client.publish.call_args
+        assert 'AWS::EC2::SecurityGroup (sg-12345678) in us-east-1' in call_args[1]['Message']
 
 
 class TestClientCaching:
