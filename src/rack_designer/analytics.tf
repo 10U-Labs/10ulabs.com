@@ -242,38 +242,6 @@ resource "aws_iam_role_policy" "scheduler_invoke" {
   })
 }
 
-resource "aws_quicksight_data_source" "athena" {
-  data_source_id = "rack-designer-analytics"
-  aws_account_id = local.aws_account_id
-  name           = "Rack Designer Analytics"
-  type           = "ATHENA"
-
-  parameters {
-    athena {
-      work_group = "primary"
-    }
-  }
-
-  permission {
-    actions = [
-      "quicksight:DescribeDataSource",
-      "quicksight:DescribeDataSourcePermissions",
-      "quicksight:PassDataSource",
-      "quicksight:UpdateDataSource",
-      "quicksight:UpdateDataSourcePermissions"
-    ]
-    principal = "arn:aws:quicksight:${local.aws_region}:${local.aws_account_id}:user/default/${module.shared.admin_iam_user}"
-  }
-
-  ssl_properties {
-    disable_ssl = false
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rack-designer-quicksight"
-  })
-}
-
 data "archive_file" "crawler_trigger" {
   type        = "zip"
   output_path = "${path.module}/lambdas/crawler_trigger.zip"
