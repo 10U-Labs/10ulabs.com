@@ -68,7 +68,7 @@ github_token_cache = {'value': None}
 def get_github_token() -> str:
     if github_token_cache['value']:
         return github_token_cache['value']
-    parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '')
+    parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME')
     if not parameter_name:
         return ''
     try:
@@ -176,7 +176,7 @@ def record_circuit_breaker_failure():
         circuit_breaker_state['state'] = 'open'
 
 
-def should_record_circuit_breaker_failure(status_code: int) -> bool:
+def should_record_circuit_breaker_failure(status_code: int | None) -> bool:
     if status_code is None:
         return True
     if status_code == 503:
@@ -299,7 +299,7 @@ def delete_github_runner(github_token: str, github_repo: str, runner_name: str) 
 
 
 def terminate_ecs_task(task_arn: str) -> bool:
-    cluster = os.environ.get('ECS_CLUSTER', '')
+    cluster = os.environ.get('ECS_CLUSTER')
     if not cluster:
         return False
     try:
@@ -457,10 +457,10 @@ def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | N
 
 
 def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
-    runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2_SPOT', '')
-    runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_SPOT_E2E', '')
-    runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE_SPOT', '')
-    runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_SPOT_E2E', '')
+    runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2_SPOT')
+    runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_SPOT_E2E')
+    runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE_SPOT')
+    runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_SPOT_E2E')
     is_ec2 = runner_label_ec2 in job_labels or runner_label_ec2_e2e in job_labels
     is_fargate = runner_label_fargate in job_labels or runner_label_fargate_e2e in job_labels
     is_e2e = runner_label_ec2_e2e in job_labels or runner_label_fargate_e2e in job_labels

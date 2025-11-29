@@ -45,10 +45,10 @@ def test_lambda_handler_with_invalid_json_returns_400(webhook_router, lambda_con
 
 
 
-def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, lambda_context):
+def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, workflow_job_event_factory, mock_sqs, lambda_context, config):
     mock_sqs.send_message.return_value = {'MessageId': 'test-message-id'}
     mock_sqs.get_queue_attributes.return_value = {'Attributes': {'ApproximateNumberOfMessages': '5'}}
-    event = workflow_job_event_factory(action='queued', labels=['ephemeral-ec2-spot-instance'])
+    event = workflow_job_event_factory(action='queued', labels=[config['runner_label_ec2_spot']])
     with patch.object(webhook_router, 'verify_signature', return_value=True):
         with patch.dict('os.environ', {'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue'}):
             response = webhook_router.lambda_handler(event, lambda_context)
@@ -56,8 +56,8 @@ def test_lambda_handler_workflow_job_queued_action_returns_200(webhook_router, w
 
 
 
-def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router, workflow_job_event_factory, lambda_context):
-    event = workflow_job_event_factory(action='completed', labels=['ephemeral-ec2-spot-instance'])
+def test_lambda_handler_workflow_job_non_queued_action_returns_200(webhook_router, workflow_job_event_factory, lambda_context, config):
+    event = workflow_job_event_factory(action='completed', labels=[config['runner_label_ec2_spot']])
     with patch.object(webhook_router, 'verify_signature', return_value=True):
         with patch('boto3.client'):
             response = webhook_router.lambda_handler(event, lambda_context)
@@ -89,7 +89,7 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
 
 @patch('urllib.request.urlopen')
 @patch('boto3.client')
-def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context):
+def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context, config):
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-test123', 'CreationDate': '2024-01-01'}]
@@ -107,7 +107,7 @@ def test_lambda_handler_sqs_event_processes_successfully(mock_boto_client, mock_
     event = sqs_event_factory(records=[{
         'messageId': 'test-message-id',
         'eventSource': 'aws:sqs',
-        'body': json.dumps({'job_id': 123, 'job_labels': ['ephemeral-ec2-spot-instance'], 'github_repo': 'test-org/test-repo'}),
+        'body': json.dumps({'job_id': 123, 'job_labels': [config['runner_label_ec2_spot']], 'github_repo': 'test-org/test-repo'}),
         'attributes': {},
         'messageAttributes': {}
     }])
@@ -197,7 +197,7 @@ def test_enqueue_job_returns_error_when_queue_url_not_set(webhook_router):
 
 
 
-def test_route_runner_request_with_ec2_label_calls_ec2_endpoint(webhook_router):
+def test_route_runner_request_with_ec2_label_calls_ec2_endpoint(webhook_router, config):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
@@ -205,12 +205,12 @@ def test_route_runner_request_with_ec2_label_calls_ec2_endpoint(webhook_router):
         mock_response.read.return_value = json.dumps({'success': True}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+        result = webhook_router.route_runner_request(123, [config['runner_label_ec2_spot']], 'test/repo')
     assert result['success'] is True
 
 
 
-def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_router):
+def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_router, config):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
@@ -218,7 +218,7 @@ def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_r
         mock_response.read.return_value = json.dumps({'success': True}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        result = webhook_router.route_runner_request(123, ['ephemeral-ecs-fargate-spot'], 'test/repo')
+        result = webhook_router.route_runner_request(123, [config['runner_label_fargate_spot']], 'test/repo')
     assert result['success'] is True
 
 
@@ -232,41 +232,41 @@ def test_route_runner_request_with_no_matching_labels_returns_error(webhook_rout
 
 
 
-def test_route_runner_request_rejected_when_circuit_breaker_open(webhook_router):
+def test_route_runner_request_rejected_when_circuit_breaker_open(webhook_router, config):
     webhook_router.circuit_breaker_state['state'] = 'open'
     webhook_router.circuit_breaker_state['last_failure_time'] = time.time()
     with patch('boto3.client'):
-        result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+        result = webhook_router.route_runner_request(123, [config['runner_label_ec2_spot']], 'test/repo')
     assert result['success'] is False
 
 
-def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webhook_router):
+def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webhook_router, config):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
         with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
-            webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+            webhook_router.route_runner_request(123, [config['runner_label_ec2_spot']], 'test/repo')
             mock_record.assert_not_called()
 
 
-def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_router):
+def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_router, config):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
         mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
         with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
-            webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+            webhook_router.route_runner_request(123, [config['runner_label_ec2_spot']], 'test/repo')
             mock_record.assert_called_once()
 
 
-def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs):
+def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs, config):
     event_data = {
         'action': 'queued',
         'workflow_job': {
             'id': 123,
             'name': 'test',
-            'labels': ['ephemeral-ec2-spot-instance'],
+            'labels': [config['runner_label_ec2_spot']],
             'status': 'queued'
         },
         'repository': {'full_name': 'test/repo'}
@@ -281,13 +281,13 @@ def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs):
 
 
 
-def test_handle_workflow_job_enqueues_fargate_job(webhook_router, mock_sqs):
+def test_handle_workflow_job_enqueues_fargate_job(webhook_router, mock_sqs, config):
     event_data = {
         'action': 'queued',
         'workflow_job': {
             'id': 456,
             'name': 'test',
-            'labels': ['ephemeral-ecs-fargate-spot'],
+            'labels': [config['runner_label_fargate_spot']],
             'status': 'queued'
         },
         'repository': {'full_name': 'test/repo'}
@@ -302,11 +302,11 @@ def test_handle_workflow_job_enqueues_fargate_job(webhook_router, mock_sqs):
 
 
 
-def test_handle_sqs_message_processes_valid_message(webhook_router):
+def test_handle_sqs_message_processes_valid_message(webhook_router, config):
     message = {
         'body': json.dumps({
             'job_id': 123,
-            'job_labels': ['ephemeral-ec2-spot-instance'],
+            'job_labels': [config['runner_label_ec2_spot']],
             'github_repo': 'test/repo'
         })
     }
@@ -509,7 +509,7 @@ def test_verify_webhook_signature_with_invalid_signature_returns_401(webhook_rou
 
 
 
-def test_handle_api_gateway_event_with_workflow_job_processes_correctly(webhook_router):
+def test_handle_api_gateway_event_with_workflow_job_processes_correctly(webhook_router, config):
     event = {
         'path': '/v1/runners',
         'body': json.dumps({
@@ -517,7 +517,7 @@ def test_handle_api_gateway_event_with_workflow_job_processes_correctly(webhook_
             'workflow_job': {
                 'id': 123,
                 'name': 'test',
-                'labels': ['ephemeral-ec2-spot-instance'],
+                'labels': [config['runner_label_ec2_spot']],
                 'status': 'queued'
             },
             'repository': {'full_name': 'test/repo'}
@@ -646,13 +646,13 @@ def test_get_api_key_missing_env_var_error_mentions_parameter_name(_mock_boto_cl
 
 
 
-def test_route_runner_request_ssm_failure(webhook_router):
+def test_route_runner_request_ssm_failure(webhook_router, config):
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'):
         with patch.object(webhook_router, 'get_api_key', side_effect=RuntimeError('SSM error')):
             with patch.dict('os.environ', {'API_BASE_URL': 'https://api.test.com'}):
-                result = webhook_router.route_runner_request(123, ['ephemeral-ec2-spot-instance'], 'test/repo')
+                result = webhook_router.route_runner_request(123, [config['runner_label_ec2_spot']], 'test/repo')
                 assert result['success'] is False
 
 
