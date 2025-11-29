@@ -1,13 +1,9 @@
-import sys
-from pathlib import Path
+from test.rack_designer import load_lambda_module
 import pytest
-
-src_path = Path(__file__).parent.parent.parent.parent / "src" / "rack_designer" / "lambdas"
-sys.path.insert(0, str(src_path))
 
 
 @pytest.fixture(name="handler")
 def handler_fixture():
-    import handler
-    handler._clients.clear()
-    return handler
+    module = load_lambda_module("handler.py", "handler")
+    module.clear_clients()
+    return module

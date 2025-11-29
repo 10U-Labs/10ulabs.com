@@ -52,7 +52,7 @@ def test_handle_events_success_single_event(mock_boto_client, handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.batch_write_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    handler._clients.clear()
+    handler.clear_clients()
     events = [{'event_type': 'test', 'timestamp': '2025-01-01T00:00:00Z'}]
     event = {'body': json.dumps({'session_id': 'abc', 'device_id': 'def', 'events': events}), 'headers': {}}
     with patch.dict('os.environ', {'RACK_DESIGNER_EVENTS_TABLE': 'test-events-table'}):
@@ -65,7 +65,7 @@ def test_handle_events_success_multiple_events(mock_boto_client, handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.batch_write_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    handler._clients.clear()
+    handler.clear_clients()
     events = [
         {'event_type': 'test1', 'timestamp': '2025-01-01T00:00:00Z'},
         {'event_type': 'test2', 'timestamp': '2025-01-01T00:00:01Z'}
@@ -81,7 +81,7 @@ def test_handle_events_with_session_context(mock_boto_client, handler):
     mock_dynamodb = MagicMock()
     mock_dynamodb.batch_write_item.return_value = {}
     mock_boto_client.return_value = mock_dynamodb
-    handler._clients.clear()
+    handler.clear_clients()
     events = [{'event_type': 'test', 'timestamp': '2025-01-01T00:00:00Z'}]
     session_context = {'user_agent': 'test', 'referrer': 'http://example.com'}
     event = {

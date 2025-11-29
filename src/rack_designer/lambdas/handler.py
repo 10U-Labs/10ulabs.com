@@ -15,6 +15,10 @@ logger.setLevel(logging.INFO)
 _clients: Dict[str, Any] = {}
 
 
+def clear_clients() -> None:
+    _clients.clear()
+
+
 def get_dynamodb_client():
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
