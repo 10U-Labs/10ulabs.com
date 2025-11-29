@@ -19,14 +19,14 @@ def test_config_has_vpc_name(config):
 
 
 def test_shared_module_has_github_org():
-    outputs_path = Path(__file__).parent.parent.parent.parent / "src" / "shared" / "modules" / "outputs.tf"
+    outputs_path = Path(__file__).parent.parent.parent.parent / "lib" / "terraform" / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
     assert 'github_org' in content
 
 
 def test_shared_module_has_github_repo():
-    outputs_path = Path(__file__).parent.parent.parent.parent / "src" / "shared" / "modules" / "outputs.tf"
+    outputs_path = Path(__file__).parent.parent.parent.parent / "lib" / "terraform" / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
     assert 'name_for_github_repo' in content
