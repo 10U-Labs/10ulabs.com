@@ -126,6 +126,14 @@ jobs:
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/ecr.yml
+      - name: Run pylint
+        run: |
+          python3 -m pylint test/ecr/ \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run mypy
+        run: python3 -m mypy test/ecr/
       - name: Terraform Format Check
         run: cd src/ecr && terraform fmt -check -recursive
       - name: Terraform Init
