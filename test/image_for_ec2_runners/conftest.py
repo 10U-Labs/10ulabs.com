@@ -26,7 +26,7 @@ def load_module_from_path(module_name, module_path):
 
 
 def get_shared_outputs():
-    outputs_path = PROJECT_ROOT / "src" / "shared" / "modules" / "outputs.tf"
+    outputs_path = PROJECT_ROOT / "lib" / "terraform" / "outputs.tf"
     outputs = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
