@@ -748,7 +748,9 @@ def delete_launch_template(template_id: str):
         logger.warning("Failed to delete launch template %s: %s", template_id, e)
 
 
-def launch_ec2_spot_runner(job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None, runner_type: str = 'ec2') -> Dict[str, Any]:
+def launch_ec2_spot_runner(
+    job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None, runner_type: str = 'ec2'
+) -> Dict[str, Any]:
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
 
     try:
