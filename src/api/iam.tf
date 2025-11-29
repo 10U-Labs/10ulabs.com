@@ -485,8 +485,9 @@ resource "aws_iam_role_policy" "lambda_v1_handler_dynamodb" {
     Statement = [{
       Effect = "Allow"
       Action = [
-        "dynamodb:PutItem",
-        "dynamodb:GetItem"
+        "dynamodb:DeleteItem",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem"
       ]
       Resource = [aws_dynamodb_table.rack_designer_configurations.arn]
     }]
