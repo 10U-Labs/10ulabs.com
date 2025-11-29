@@ -426,7 +426,7 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
             {'key': 'Type', 'value': 'workflow-runner'},
             {'key': 'ManagedBy', 'value': 'docker-runner-api'},
             {'key': 'GitHubJobId', 'value': str(cfg['job_id'])},
-            {'key': 'JobLabels', 'value': ','.join(cfg['job_labels'])},
+            {'key': 'JobLabels', 'value': ' '.join(cfg['job_labels'])},
             {'key': 'GitHubRepo', 'value': cfg['github_repo']},
             {'key': 'RunId', 'value': str(cfg['run_id']) if cfg['run_id'] else ''},
             {'key': 'RunnerType', 'value': cfg['runner_type']}

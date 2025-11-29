@@ -44,6 +44,7 @@ def stop_task_safely(ecs_client, cluster_name, task_arn):
 @pytest.fixture(name="test_fargate_task", scope="module")
 def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs_context, config):
     if ecr_image_count == 0:
+        print("Skipping docker runner test: ecr_image_count is 0")
         yield None
         return
     runner_label = config['runner_label_fargate_spot_e2e_test']
@@ -52,10 +53,13 @@ def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs
         f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload
     )
     if response.status_code not in [200, 202]:
+        print(f"Docker runner POST failed: status={response.status_code}, body={response.text}")
         yield None
         return
-    task_arn = response.json().get("task_arn")
+    response_json = response.json()
+    task_arn = response_json.get("task_arn")
     if not task_arn:
+        print(f"Docker runner POST returned no task_arn: {response_json}")
         yield None
         return
     wait_for_task_running(ecs_context["client"], ecs_context["cluster_name"], task_arn)
