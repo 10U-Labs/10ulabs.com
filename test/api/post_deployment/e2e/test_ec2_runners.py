@@ -64,23 +64,20 @@ def terminate_instance_safely(ec2_client, instance_id):
 
 
 @pytest.fixture(name="test_ec2_runner_instance", scope="module")
-def test_ec2_runner_instance_fixture(
-    api_url, api_key, github_repo, latest_ami_exists, ec2_client, config
-):
+def test_ec2_runner_instance_fixture(api_credentials, github_repo, latest_ami_exists, ec2_client, config):
     if not latest_ami_exists:
         yield None
         return
     runner_label = config['runner_label_ec2_spot_e2e_test']
     job_id, payload = create_runner_job_payload(github_repo, [runner_label])
-    timeout = calculate_ec2_runner_timeout()
     response = make_e2e_post(
-        f"{api_url}/v1/ec2-runner", api_key, json=payload, timeout=timeout
+        f"{api_credentials['url']}/v1/ec2-runner", api_credentials["key"],
+        json=payload, timeout=calculate_ec2_runner_timeout()
     )
     if response.status_code != 200:
         yield None
         return
-    data = response.json()
-    instance_id = data.get("instance_id")
+    instance_id = response.json().get("instance_id")
     if not instance_id:
         yield None
         return
