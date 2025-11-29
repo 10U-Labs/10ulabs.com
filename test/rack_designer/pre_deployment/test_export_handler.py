@@ -112,3 +112,15 @@ def test_lambda_handler_returns_timestamp(mock_dynamodb):
     }
     result = lambda_handler({}, None)
     assert 'timestamp' in result['body']
+
+
+def test_lambda_handler_uses_correct_s3_prefix(mock_dynamodb):
+    from src.rack_designer.lambdas.export_handler import lambda_handler
+    mock_dynamodb.export_table_to_point_in_time.return_value = {
+        'ExportDescription': {
+            'ExportArn': 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events/export/123'
+        }
+    }
+    lambda_handler({}, None)
+    call_kwargs = mock_dynamodb.export_table_to_point_in_time.call_args[1]
+    assert call_kwargs['S3Prefix'].startswith('exports/events/')
