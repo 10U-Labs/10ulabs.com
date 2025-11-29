@@ -41,13 +41,7 @@ def get_aws_account_id():
 
 
 def get_ecr_repository():
-    result = subprocess.run(
-        ["grep", "ecr_repository_name", "src/api/terraform.tfvars"],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    return result.stdout.split('"')[1]
+    return _get_terraform_output_value("ecr_repository_name")
 
 
 def get_github_repo():
