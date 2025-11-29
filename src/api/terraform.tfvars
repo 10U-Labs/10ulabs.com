@@ -8,7 +8,6 @@ cluster_name                          = "TenULabsRunnerCluster"
 container_name                        = "github-runner"
 ec2_max_spot_price                    = "0.25"
 ec2_spot_instance_types               = ["m8gd.xlarge", "m7gd.xlarge"]
-ecr_repository_name                   = "10ulabs"
 fargate_cpu                           = "2048"
 fargate_cpu_architecture              = "ARM64"
 fargate_memory                        = "8192"

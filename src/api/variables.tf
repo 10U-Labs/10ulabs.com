@@ -62,10 +62,6 @@ variable "public_subnet_cidr_mask" {
   type = number
 }
 
-variable "ecr_repository_name" {
-  type = string
-}
-
 variable "fargate_cpu" {
   type = string
 }

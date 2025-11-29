@@ -319,7 +319,7 @@ paths:
         '200':
           description: Docker image build started successfully
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForDockerRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
     get:
@@ -334,7 +334,7 @@ paths:
         '200':
           description: List of Docker images
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForDockerRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/image-for-docker-runners/latest:
@@ -350,7 +350,7 @@ paths:
         '200':
           description: Latest Docker image information
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForDockerRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/image-for-docker-runners/{digest}:
@@ -372,7 +372,7 @@ paths:
         '200':
           description: Docker image information
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForDockerRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
     delete:
@@ -393,7 +393,7 @@ paths:
         '200':
           description: Docker image deleted successfully
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForDockerRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/docker-runner:

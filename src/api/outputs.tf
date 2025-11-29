@@ -62,12 +62,16 @@ output "ec2_spot_instance_types" {
   value = var.ec2_spot_instance_types
 }
 
+output "ecr_repository_arn" {
+  value = data.terraform_remote_state.ecr.outputs.repository_arn
+}
+
 output "ecr_repository_name" {
-  value = aws_ecr_repository.runner.name
+  value = data.terraform_remote_state.ecr.outputs.repository_name
 }
 
 output "ecr_repository_uri" {
-  value = aws_ecr_repository.runner.repository_url
+  value = data.terraform_remote_state.ecr.outputs.repository_url
 }
 
 output "execution_role_arn" {

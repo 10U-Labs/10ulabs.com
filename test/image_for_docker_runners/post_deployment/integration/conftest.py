@@ -1,10 +1,8 @@
-import os
 import subprocess
 import yaml
 import pytest
 
-
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), '../../../../../src/image_for_docker_runners/config.yml')
+from test.image_for_docker_runners.conftest import CONFIG_PATH
 
 
 def _read_config():

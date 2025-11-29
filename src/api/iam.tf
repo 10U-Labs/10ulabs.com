@@ -416,7 +416,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ecr" {
         "ecr:GetDownloadUrlForLayer",
         "ecr:BatchDeleteImage"
       ]
-      Resource = [aws_ecr_repository.runner.arn]
+      Resource = [data.terraform_remote_state.ecr.outputs.repository_arn]
     }]
   })
 }

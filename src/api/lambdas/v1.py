@@ -285,43 +285,6 @@ def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
     return response
 
 
-def list_ecr_images() -> Dict[str, Any]:
-    ecr_repo = os.environ['ECR_REPOSITORY']
-    try:
-        response = get_ecr_client().describe_images(
-            repositoryName=ecr_repo,
-            filter={'tagStatus': 'TAGGED'}
-        )
-
-        images = []
-        for image in response['imageDetails']:
-            image_tags = image.get('imageTags', [])
-            if not image_tags:
-                continue
-
-            images.append({
-                'digest': image['imageDigest'],
-                'tags': image_tags,
-                'pushed_at': image['imagePushedAt'].isoformat(),
-                'size_bytes': image['imageSizeInBytes']
-            })
-
-        images.sort(key=lambda x: x['pushed_at'], reverse=True)
-        logger.info("Listed %s images", len(images))
-        return {
-            'success': True,
-            'images': images,
-            'count': len(images),
-            'repository': ecr_repo
-        }
-    except ClientError as e:
-        logger.error("Error listing images: %s", e)
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-
 def get_latest_ecr_image() -> Dict[str, Any]:
     ecr_repo = os.environ['ECR_REPOSITORY']
     try:
@@ -367,60 +330,6 @@ def get_latest_ecr_image() -> Dict[str, Any]:
         }
 
 
-def get_ecr_image_by_digest(image_digest: str) -> Dict[str, Any]:
-    ecr_repo = os.environ['ECR_REPOSITORY']
-    try:
-        response = get_ecr_client().describe_images(
-            repositoryName=ecr_repo,
-            imageIds=[{'imageDigest': image_digest}]
-        )
-
-        images = response.get('imageDetails', [])
-        if not images:
-            result = {'success': False, 'error': f'Image {image_digest} not found'}
-        else:
-            image = images[0]
-            result = {
-                'success': True,
-                'digest': image['imageDigest'],
-                'tags': image.get('imageTags', []),
-                'pushed_at': image['imagePushedAt'].isoformat(),
-                'size_bytes': image['imageSizeInBytes'],
-                'repository': ecr_repo
-            }
-            logger.info("Found image: %s", image_digest)
-    except ClientError as e:
-        error_code = e.response.get('Error', {}).get('Code', '')
-        if error_code == 'ImageNotFoundException':
-            result = {'success': False, 'error': f'Image {image_digest} not found'}
-        else:
-            logger.error("Error getting image %s: %s", image_digest, e)
-            result = {'success': False, 'error': str(e)}
-    return result
-
-
-def delete_ecr_image(image_digest: str) -> Dict[str, Any]:
-    ecr_repo = os.environ['ECR_REPOSITORY']
-    try:
-        get_ecr_client().batch_delete_image(
-            repositoryName=ecr_repo,
-            imageIds=[{'imageDigest': image_digest}]
-        )
-
-        logger.info("Deleted image: %s", image_digest)
-        return {
-            'success': True,
-            'digest': image_digest,
-            'message': f'Image {image_digest} deleted successfully'
-        }
-    except ClientError as e:
-        logger.error("Error deleting image %s: %s", image_digest, e)
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-
 def get_github_token() -> str:
     if _github_token_cache['value']:
         return _github_token_cache['value']
@@ -434,12 +343,6 @@ def get_github_token() -> str:
     except (ClientError, ValueError, KeyError) as e:
         logger.error("Failed to retrieve GitHub token: %s", e)
         return ''
-
-
-def trigger_docker_image_build(_config: Dict[str, Any]) -> Dict[str, Any]:
-    payload = {'ref': 'main', 'inputs': {}}
-    result = trigger_github_workflow('image_for_docker_runner.yml', payload)
-    return result
 
 
 def trigger_image_creation() -> Dict[str, Any]:
@@ -1149,32 +1052,6 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def handle_docker_image_get(event: Dict[str, Any]) -> Dict[str, Any]:
-    path = event.get('path', '')
-    result = get_latest_ecr_image() if path.endswith('/latest') else list_ecr_images()
-    response = success_response(result)
-    return response
-
-
-def handle_docker_image_get_by_digest(event: Dict[str, Any]) -> Dict[str, Any]:
-    path_params = event.get('pathParameters') or {}
-    image_digest = path_params.get('digest')
-    if not image_digest:
-        response = error_response(400, 'Missing required path parameter: digest')
-    else:
-        result = get_ecr_image_by_digest(image_digest)
-        response = error_response(404, result['error']) if not result['success'] else success_response(result)
-    return response
-
-
-def handle_docker_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
-    path_params = event.get('pathParameters', {})
-    image_digest = path_params.get('digest')
-    result = delete_ecr_image(image_digest) if image_digest else {'success': False, 'error': 'Missing required path parameter: digest'}
-    response = error_response(400, result['error']) if not image_digest else success_response(result)
-    return response
-
-
 def handle_ec2_image_get(event: Dict[str, Any]) -> Dict[str, Any]:
     path = event.get('path', '')
     result = get_latest_ami_details() if path.endswith('/latest') else list_amis()
@@ -1372,9 +1249,6 @@ ROUTE_MAP = {
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,
     ('/v1/ec2-runner', 'GET'): handle_ec2_runner_get,
-    ('/v1/image-for-docker-runners', 'POST'): lambda e: handle_post_request(e, trigger_docker_image_build),
-    ('/v1/image-for-docker-runners', 'GET'): handle_docker_image_get,
-    ('/v1/image-for-docker-runners/latest', 'GET'): handle_docker_image_get,
     ('/v1/image-for-ec2-runners', 'POST'): lambda e: handle_post_request(e, launch_packer_builder),
     ('/v1/image-for-ec2-runners', 'GET'): handle_ec2_image_get,
     ('/v1/image-for-ec2-runners/latest', 'GET'): handle_ec2_image_get
@@ -1385,8 +1259,7 @@ TEST_MODE_MOCK_PATHS = {
     '/v1/contact': {'success': True, 'message': 'Test mode - contact form not submitted', 'test_mode': True},
     '/v1/ec2-runner': {'success': True, 'instance_id': 'i-test-mode-mock', 'test_mode': True},
     '/v1/docker-runner': {'success': True, 'task_arn': 'arn:aws:ecs:test-mode-mock', 'test_mode': True},
-    '/v1/image-for-ec2-runners': {'success': True, 'message': 'Test mode - no AMI created', 'test_mode': True},
-    '/v1/image-for-docker-runners': {'success': True, 'message': 'Test mode - no image built', 'test_mode': True}
+    '/v1/image-for-ec2-runners': {'success': True, 'message': 'Test mode - no AMI created', 'test_mode': True}
 }
 
 
@@ -1417,12 +1290,7 @@ def lambda_handler(event, _context):
     handler = ROUTE_MAP.get((path, method))
 
     if not handler:
-        if path.startswith('/v1/image-for-docker-runners/') and not path.endswith('/latest'):
-            if method == 'GET':
-                handler = handle_docker_image_get_by_digest
-            elif method == 'DELETE':
-                handler = handle_docker_image_delete
-        elif path.startswith('/v1/image-for-ec2-runners/') and method == 'DELETE':
+        if path.startswith('/v1/image-for-ec2-runners/') and method == 'DELETE':
             handler = handle_ec2_image_delete
 
     if handler:

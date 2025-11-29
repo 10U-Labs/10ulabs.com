@@ -20,10 +20,10 @@ jobs:
       - id: config
         name: Load configuration
         run: |
-          NODE_VERSION=$(yq '.node_version' src/image_for_docker_runners/config.yml)
-          RUNNER_VERSION=$(yq '.runner_version' src/image_for_docker_runners/config.yml)
-          TERRAFORM_VERSION=$(yq '.terraform_version' src/image_for_docker_runners/config.yml)
-          YQ_VERSION=$(yq '.yq_version' src/image_for_docker_runners/config.yml)
+          NODE_VERSION=$(yq '.node_version' src/image_for_docker_runners/files/config.yml)
+          RUNNER_VERSION=$(yq '.runner_version' src/image_for_docker_runners/files/config.yml)
+          TERRAFORM_VERSION=$(yq '.terraform_version' src/image_for_docker_runners/files/config.yml)
+          YQ_VERSION=$(yq '.yq_version' src/image_for_docker_runners/files/config.yml)
           echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
@@ -38,7 +38,7 @@ jobs:
       - id: build
         name: Build and push Docker image
         run: |
-          cd src/image_for_docker_runners
+          cd src/image_for_docker_runners/files
           BUILD_TAG=$(date -u +%Y-%m-%d-%H-%M-%S-%3N)
           ECR_URL="${{ needs.declaring-common-variables.outputs.aws_account_id }}.dkr.ecr.${{ needs.declaring-common-variables.outputs.aws_region }}.amazonaws.com/${{ needs.declaring-common-variables.outputs.ecr_repository_name }}"
           docker buildx build \
@@ -62,8 +62,8 @@ jobs:
     outputs:
       aws_account_id: ${{ steps.config.outputs.aws_account_id }}
       aws_region: ${{ steps.config.outputs.aws_region }}
-      ecr_repository_name: ${{ steps.api.outputs.ecr_repository_name }}
-      fargate_cpu_architecture: ${{ steps.api.outputs.fargate_cpu_architecture }}
+      ecr_repository_name: ${{ steps.config.outputs.ecr_repository_name }}
+      fargate_cpu_architecture: ${{ steps.config.outputs.fargate_cpu_architecture }}
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
@@ -75,33 +75,18 @@ jobs:
         run: |
           AWS_REGION=$(grep -A1 'output "aws_region"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+          ECR_REPOSITORY_NAME=$(grep -A1 'output "ecr_repository_name"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+          FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' src/api/terraform.tfvars | cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' src/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/ecr/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_account_id=$AWS_ACCOUNT_ID" >> $GITHUB_OUTPUT
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ steps.config.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
-      - id: api
-        name: Get API terraform outputs
-        run: |
-          cd src/api
-          terraform init -backend=true -input=false
-          ECR_REPOSITORY_NAME=$(terraform output -raw ecr_repository_name)
-          FARGATE_CPU_ARCHITECTURE=$(terraform output -raw fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
           echo "ecr_repository_name=$ECR_REPOSITORY_NAME" >> $GITHUB_OUTPUT
           echo "fargate_cpu_architecture=$FARGATE_CPU_ARCHITECTURE" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -138,6 +123,7 @@ jobs:
     needs:
       - building-image
       - declaring-common-variables
+      - ensuring-lambda-infrastructure
     runs-on: ephemeral-ec2-spot-instance
     steps:
       - name: Checkout code
@@ -179,25 +165,25 @@ jobs:
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_docker_runners.yml \
-            src/image_for_docker_runners/config.yml
+            src/image_for_docker_runners/files/config.yml
       - name: Run pylint
         run: |
-          for file in src/image_for_docker_runners/*.py; do
+          for file in src/image_for_docker_runners/*.py src/image_for_docker_runners/files/*.py src/image_for_docker_runners/lambdas/*.py; do
             pylint "$file" \
               --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
-          PYTHONPATH=src/image_for_docker_runners pylint test/image_for_docker_runners/ \
+          PYTHONPATH=src/image_for_docker_runners:src/image_for_docker_runners/files pylint test/image_for_docker_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          for file in src/image_for_docker_runners/*.py; do
+          for file in src/image_for_docker_runners/*.py src/image_for_docker_runners/files/*.py src/image_for_docker_runners/lambdas/*.py; do
             python3 -m mypy "$file"
           done
-          MYPYPATH=src/image_for_docker_runners python3 -m mypy test/image_for_docker_runners/
+          MYPYPATH=src/image_for_docker_runners:src/image_for_docker_runners/files python3 -m mypy test/image_for_docker_runners/
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install hadolint
         run: |
@@ -205,7 +191,52 @@ jobs:
           sudo curl -fsSL -o /usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64"
           sudo chmod +x /usr/local/bin/hadolint
       - name: Validate Dockerfile
-        run: hadolint --ignore DL3008 --ignore DL3013 --ignore DL3015 --ignore DL3016 src/image_for_docker_runners/Dockerfile
+        run: hadolint --ignore DL3008 --ignore DL3013 --ignore DL3015 --ignore DL3016 src/image_for_docker_runners/files/Dockerfile
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Terraform Format Check
+        run: cd src/image_for_docker_runners && terraform fmt -check -recursive
+      - name: Terraform Init
+        run: cd src/image_for_docker_runners && terraform init
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: |
+          cd src/image_for_docker_runners && \
+            tflint --init && \
+            tflint
+      - name: Terraform Plan
+        run: cd src/image_for_docker_runners && terraform plan
+  ensuring-lambda-infrastructure:
+    defaults:
+      run:
+        working-directory: src/image_for_docker_runners
+    name: Ensuring Lambda infrastructure is in desired state
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    runs-on: ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')) && 'ubuntu-latest' || 'ephemeral-ecs-fargate-spot' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
   promoting-image:
     name: Promoting image
     needs:

@@ -6,9 +6,11 @@ import sys
 from dockerfile_parse import DockerfileParser
 import pytest
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../../src/image_for_docker_runners')
+from test.image_for_docker_runners.conftest import BASE_DIR, FILES_DIR, DOCKERFILE_PATH
+
 sys.path.insert(0, BASE_DIR)
-entrypoint_path = os.path.join(BASE_DIR, 'entrypoint.py')
+sys.path.insert(0, FILES_DIR)
+entrypoint_path = os.path.join(FILES_DIR, 'entrypoint.py')
 entrypoint_spec = importlib.util.spec_from_file_location("entrypoint", entrypoint_path)
 if entrypoint_spec is None or entrypoint_spec.loader is None:
     raise ImportError("Could not load entrypoint module")
@@ -23,8 +25,6 @@ if promote_spec is None or promote_spec.loader is None:
 promote_docker_image = importlib.util.module_from_spec(promote_spec)
 sys.modules['promote_docker_image'] = promote_docker_image
 promote_spec.loader.exec_module(promote_docker_image)
-
-DOCKERFILE_PATH = os.path.join(BASE_DIR, 'Dockerfile')
 
 
 def _read_dockerfile():

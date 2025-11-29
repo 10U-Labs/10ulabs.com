@@ -3,8 +3,7 @@ import subprocess
 import boto3
 import pytest
 
-
-TFVARS_PATH = os.path.join(os.path.dirname(__file__), "../../../../src/api/terraform.tfvars")
+from test.image_for_docker_runners.conftest import DOCKERFILE_PATH, TFVARS_PATH
 
 
 def _get_tfvar_value(var_name):
@@ -22,7 +21,7 @@ def _get_tfvar_value(var_name):
 
 
 def get_dockerfile_path():
-    return os.path.join(os.path.dirname(__file__), "../../../../src/image_for_docker_runners/Dockerfile")
+    return DOCKERFILE_PATH
 
 
 def get_docker_image_tag():

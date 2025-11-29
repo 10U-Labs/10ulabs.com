@@ -160,7 +160,7 @@ resource "aws_lambda_function" "v1_handler" {
       EC2_IAM_INSTANCE_PROFILE        = aws_iam_instance_profile.ec2_runner.name
       EC2_INSTANCE_TYPES              = join(",", var.ec2_spot_instance_types)
       EC2_MAX_PRICE                   = var.ec2_max_spot_price
-      ECR_REPOSITORY                  = aws_ecr_repository.runner.name
+      ECR_REPOSITORY                  = data.terraform_remote_state.ecr.outputs.repository_name
       ECS_CLUSTER                     = aws_ecs_cluster.runner.arn
       GITHUB_REPO                     = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME        = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
