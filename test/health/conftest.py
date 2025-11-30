@@ -3,9 +3,12 @@ from pathlib import Path
 from typing import Dict
 import pytest
 
+REPO_ROOT = Path(__file__).parent.parent.parent
+HEALTH_SRC = REPO_ROOT / "src" / "health"
+
 
 def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent / "lib" / "terraform" / "outputs.tf"
+    outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -18,7 +21,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
-    tfvars_path = Path(__file__).parent.parent.parent / "src" / "health" / "terraform.tfvars"
+    tfvars_path = HEALTH_SRC / "terraform.tfvars"
     result = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:

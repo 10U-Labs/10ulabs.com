@@ -1,74 +1,69 @@
-from pathlib import Path
+from test.health.conftest import HEALTH_SRC, REPO_ROOT
+
+LAMBDA_FILE = HEALTH_SRC / "lambda.tf"
+API_SRC = REPO_ROOT / "src" / "api"
 
 
 def test_lambda_terraform_file_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    assert lambda_file.exists()
+    assert LAMBDA_FILE.exists()
 
 
 def test_health_handler_archive_file_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'data "archive_file" "health_handler"' in content
 
 
 def test_health_handler_lambda_function_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_lambda_function" "health_handler"' in content
 
 
 def test_health_handler_cloudwatch_log_group_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_cloudwatch_log_group" "health_handler"' in content
 
 
 def test_health_handler_log_subscription_exists():
-    log_subs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    log_subs_file = API_SRC / "log_subscriptions.tf"
     with open(log_subs_file, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_cloudwatch_log_subscription_filter" "health_handler"' in content
 
 
 def test_health_handler_api_gateway_permission_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "apigateway.tf"
+    apigateway_file = API_SRC / "apigateway.tf"
     with open(apigateway_file, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_lambda_permission" "health_handler"' in content
 
 
 def test_health_handler_uses_python_313_runtime():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'runtime          = "python3.13"' in content
 
 
 def test_health_handler_has_timeout():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'timeout          = 10' in content
 
 
 def test_health_handler_has_description():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'description      = "Health check endpoint for API"' in content
 
 
 def test_health_handler_source_file_path():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'source_file = "${path.module}/lambda/handler.py"' in content
 
 
 def test_health_handler_py_file_exists():
-    handler_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda" / "handler.py"
+    handler_file = HEALTH_SRC / "lambda" / "handler.py"
     assert handler_file.exists()

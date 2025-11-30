@@ -1,9 +1,11 @@
 import importlib.util
 import json
-from pathlib import Path
-from typing import Any, Dict
 from types import ModuleType
+from typing import Any, Dict
 from unittest.mock import Mock
+
+from test.health.conftest import HEALTH_SRC
+
 import pytest
 
 
@@ -24,7 +26,7 @@ def assert_cors_headers(response: Dict[str, Any]) -> None:
 
 
 def load_health_handler_module() -> ModuleType:
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda" / "handler.py"
+    handler_path = HEALTH_SRC / "lambda" / "handler.py"
     spec = importlib.util.spec_from_file_location("health_handler", handler_path)
     assert spec is not None
     assert spec.loader is not None
