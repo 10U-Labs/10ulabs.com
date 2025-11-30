@@ -1,7 +1,7 @@
 locals {
   openapi_spec = templatefile("${path.module}/files/openapi.yml", {
     CatchAllHandlerArn              = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
-    HealthHandlerArn                = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.health_handler.arn}/invocations"
+    HealthHandlerArn                = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations"
     ImageForDockerRunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_docker_runners.outputs.lambda_function_arn}/invocations"
     RackDesignerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
     RunnersHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
@@ -108,14 +108,6 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
 resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
   role       = aws_iam_role.api_gateway_cloudwatch.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
-}
-
-resource "aws_lambda_permission" "health_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.health_handler.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/GET/health"
 }
 
 resource "aws_lambda_permission" "v1_handler" {

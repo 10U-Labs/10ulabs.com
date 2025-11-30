@@ -117,3 +117,15 @@ output "webhook_parameter_arn" {
 output "webhook_parameter_name" {
   value = aws_ssm_parameter.webhook_secret.name
 }
+
+output "api_gateway_execution_arn" {
+  value = aws_api_gateway_rest_api.main.execution_arn
+}
+
+output "cloudwatch_logs_firehose_role_arn" {
+  value = aws_iam_role.cloudwatch_logs_firehose.arn
+}
+
+output "firehose_delivery_stream_arn" {
+  value = aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn
+}

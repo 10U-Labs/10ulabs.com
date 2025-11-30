@@ -38,6 +38,16 @@ data "terraform_remote_state" "rack_designer" {
   }
 }
 
+data "terraform_remote_state" "health" {
+  backend = "s3"
+
+  config = {
+    bucket = "10ulabs-terraform-state"
+    key    = "health/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
 data "aws_ssm_parameter" "github_pat" {
   name            = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
   with_decryption = true

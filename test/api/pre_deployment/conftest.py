@@ -83,11 +83,6 @@ def openapi_spec() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def health_handler() -> ModuleType:
-    return load_lambda_module("health.py", "health_handler")
-
-
-@pytest.fixture
 def v1_handler(config: Dict[str, str]) -> Any:
     env_vars = {
         'AWS_REGION': config['aws_region'],
@@ -235,16 +230,6 @@ def mock_cloudwatch():
 @pytest.fixture
 def lambda_context():
     return Mock()
-
-
-@pytest.fixture
-def health_get_event():
-    return {'path': '/health', 'httpMethod': 'GET'}
-
-
-@pytest.fixture
-def health_dependencies_get_event():
-    return {'path': '/health/dependencies', 'httpMethod': 'GET'}
 
 
 @pytest.fixture
