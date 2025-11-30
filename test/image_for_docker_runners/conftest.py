@@ -9,7 +9,7 @@ BASE_DIR = os.path.join(os.path.dirname(__file__), '../../src/image_for_docker_r
 FILES_DIR = os.path.join(BASE_DIR, 'files')
 CONFIG_PATH = os.path.join(FILES_DIR, 'config.yml')
 DOCKERFILE_PATH = os.path.join(FILES_DIR, 'Dockerfile')
-TFVARS_PATH = os.path.join(os.path.dirname(__file__), '../../src/api/terraform.tfvars')
+TFVARS_PATH = os.path.join(os.path.dirname(__file__), '../../src/api/backend/terraform.tfvars')
 
 
 def _get_terraform_output_value(output_name):

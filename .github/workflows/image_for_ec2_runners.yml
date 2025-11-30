@@ -36,7 +36,7 @@ jobs:
       - id: terraform
         name: Get infrastructure info from Terraform state
         run: |
-          cd src/api
+          cd src/api/backend
           terraform init -backend=true -input=false
           AMI_STABLE_TAG=$(terraform output -raw ec2_runner_ami_stable_tag)
           SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
@@ -156,7 +156,7 @@ jobs:
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/backend/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
@@ -173,7 +173,7 @@ jobs:
       - id: api
         name: Get API terraform outputs
         run: |
-          cd src/api
+          cd src/api/backend
           terraform init -backend=true -input=false
           OS_ARCHITECTURE=$(terraform output -raw fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
           SPOT_INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types | tr -d '[]" ')
@@ -365,7 +365,7 @@ jobs:
       - id: config
         name: Get SSM parameter name from Terraform
         run: |
-          cd src/api
+          cd src/api/backend
           terraform init -backend=true -input=false
           AMI_SSM_PARAMETER=$(terraform output -raw ssm_parameter_name_for_latest_ami)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT

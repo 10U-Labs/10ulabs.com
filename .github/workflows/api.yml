@@ -27,7 +27,7 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/backend/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
@@ -80,11 +80,11 @@ jobs:
       - env:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
         name: Run E2E tests
-        run: python3 -m pytest test/api/post_deployment/e2e/ -v
+        run: python3 -m pytest test/api/backend/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
-        working-directory: src/api
+        working-directory: src/api/backend
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
@@ -126,7 +126,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/api/files/(index\.html|openapi\.yml|404\.html)'; then
+            if grep -qE 'src/api/backend/files/(index\.html|openapi\.yml|404\.html)'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -195,7 +195,7 @@ jobs:
       - env:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
         name: Run integration tests
-        run: python3 -m pytest test/api/post_deployment/integration/ -v
+        run: python3 -m pytest test/api/backend/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -245,37 +245,37 @@ jobs:
             .github/workflows/api.yml
       - name: Run pylint
         run: |
-          for file in src/api/lambdas/*.py src/api/files/*.py; do
+          for file in src/api/backend/lambdas/*.py src/api/backend/files/*.py; do
             python3 -m pylint "$file" \
               --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
-          python3 -m pylint test/api/ \
+          python3 -m pylint test/api/backend/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          for file in src/api/lambdas/*.py src/api/files/*.py; do
+          for file in src/api/backend/lambdas/*.py src/api/backend/files/*.py; do
             python3 -m mypy "$file"
           done
-          python3 -m mypy test/api/
+          python3 -m mypy test/api/backend/
       - name: Terraform Format Check
-        run: cd src/api && terraform fmt -check -recursive
+        run: cd src/api/backend && terraform fmt -check -recursive
       - name: Terraform Init
-        run: cd src/api && terraform init
+        run: cd src/api/backend && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api && \
+          cd src/api/backend && \
             tflint --init && \
             tflint
       - env:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Plan
-        run: cd src/api && terraform plan
+        run: cd src/api/backend && terraform plan
   unit-testing:
     name: Unit testing
     needs:
@@ -300,7 +300,7 @@ jobs:
       - env:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
         name: Run unit tests
-        run: python3 -m pytest test/api/pre_deployment/ -v
+        run: python3 -m pytest test/api/backend/pre_deployment/ -v
 name: Ensuring API exists and is properly configured
 on:
   push:
@@ -308,8 +308,8 @@ on:
       - main
     paths:
       - '.github/workflows/api.yml'
-      - 'src/api/**'
-      - 'test/api/**'
+      - 'src/api/backend/**'
+      - 'test/api/backend/**'
   workflow_dispatch:
     inputs:
       github_hosted:
