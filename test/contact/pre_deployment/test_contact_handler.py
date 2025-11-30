@@ -61,7 +61,8 @@ def test_handle_contact_post_with_valid_data_returns_success_true(contact_handle
                     event = create_contact_event()
                     response = contact_handler.handler(event, lambda_context)
                     body = parse_response_body(response)
-                    assert body["success"] is True
+                    success_is_true = body["success"] is True
+                    assert success_is_true
 
 
 def test_handle_contact_post_with_missing_recaptcha_token_returns_400(contact_handler, lambda_context):
@@ -172,32 +173,37 @@ def test_handle_contact_post_in_test_mode_returns_test_mode_true(contact_handler
     event["headers"] = {"x-test-mode": "true"}
     response = contact_handler.handler(event, lambda_context)
     body = parse_response_body(response)
-    assert body["test_mode"] is True
+    test_mode_is_true = body["test_mode"] is True
+    assert test_mode_is_true
 
 
 def test_validate_contact_email_with_valid_email_returns_true(contact_handler):
     result = contact_handler.validate_contact_email("test@example.com")
-    assert result is True
+    assert result
 
 
 def test_validate_contact_email_with_invalid_email_returns_false(contact_handler):
     result = contact_handler.validate_contact_email("not-an-email")
-    assert result is False
+    result_is_false = result is False
+    assert result_is_false
 
 
 def test_validate_contact_email_with_empty_string_returns_false(contact_handler):
     result = contact_handler.validate_contact_email("")
-    assert result is False
+    result_is_false = result is False
+    assert result_is_false
 
 
 def test_verify_recaptcha_with_empty_token_returns_false(contact_handler):
     result = contact_handler.verify_recaptcha("", "secret")
-    assert result is False
+    result_is_false = result is False
+    assert result_is_false
 
 
 def test_verify_recaptcha_with_empty_secret_returns_false(contact_handler):
     result = contact_handler.verify_recaptcha("token", "")
-    assert result is False
+    result_is_false = result is False
+    assert result_is_false
 
 
 def test_get_ses_client_returns_client(contact_handler):
@@ -206,7 +212,8 @@ def test_get_ses_client_returns_client(contact_handler):
         mock_boto.return_value = mock_ses
         with patch.dict(contact_handler.__dict__.get("_clients", {}), clear=True):
             client = contact_handler.get_ses_client()
-            assert client is not None
+            client_is_not_none = client is not None
+            assert client_is_not_none
 
 
 def test_send_contact_email_calls_ses_send_email(contact_handler):
@@ -220,7 +227,7 @@ def test_send_contact_email_returns_true_on_success(contact_handler):
     mock_ses = MagicMock()
     with patch.object(contact_handler, "get_ses_client", return_value=mock_ses):
         result = contact_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
-        assert result is True
+        assert result
 
 
 def test_send_contact_email_returns_false_on_client_error(contact_handler):
@@ -231,7 +238,8 @@ def test_send_contact_email_returns_false_on_client_error(contact_handler):
     )
     with patch.object(contact_handler, "get_ses_client", return_value=mock_ses):
         result = contact_handler.send_contact_email("to@test.com", "John", "from@test.com", "Hello")
-        assert result is False
+        result_is_false = result is False
+        assert result_is_false
 
 
 def test_handler_returns_cors_headers_for_options_request(contact_handler, lambda_context):
@@ -253,7 +261,8 @@ def test_handler_returns_cors_allow_origin_header(contact_handler, lambda_contex
         "body": None
     }
     response = contact_handler.handler(event, lambda_context)
-    assert response['headers']['Access-Control-Allow-Origin'] == '*'
+    header_is_star = response['headers']['Access-Control-Allow-Origin'] == '*'
+    assert header_is_star
 
 
 def test_handler_returns_404_for_unknown_path(contact_handler, lambda_context):
