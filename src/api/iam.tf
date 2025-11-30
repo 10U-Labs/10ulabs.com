@@ -461,8 +461,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_ssm" {
       Resource = [
         "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter/github-runner/*",
         data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
-        aws_ssm_parameter.api_key.arn,
-        aws_ssm_parameter.recaptcha_secret.arn
+        aws_ssm_parameter.api_key.arn
       ]
     }]
   })
@@ -481,25 +480,6 @@ resource "aws_iam_role_policy" "lambda_v1_handler_kms" {
         "kms:DescribeKey"
       ]
       Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "lambda_v1_handler_ses" {
-  name = "SESAccess"
-  role = aws_iam_role.lambda_v1_handler.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ses:SendEmail"]
-      Resource = ["*"]
-      Condition = {
-        StringEquals = {
-          "ses:FromAddress" = "contact@${local.domain_name}"
-        }
-      }
     }]
   })
 }

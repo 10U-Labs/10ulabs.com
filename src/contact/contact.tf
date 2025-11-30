@@ -3,12 +3,12 @@ resource "aws_ses_email_identity" "contact" {
 }
 
 resource "aws_ssm_parameter" "recaptcha_secret" {
-  name        = "/${local.resource_prefix}/recaptcha-secret-key"
+  name        = "/10ulabs/contact/recaptcha-secret-key"
   description = "Google reCAPTCHA v3 secret key for contact form verification"
   type        = "SecureString"
   value       = var.recaptcha_secret_key
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-recaptcha-secret"
+    Name = "10ulabs-contact-recaptcha-secret"
   })
 }

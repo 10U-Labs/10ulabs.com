@@ -125,28 +125,26 @@ resource "aws_lambda_function" "v1_handler" {
 
   environment {
     variables = {
-      API_DOMAIN                      = local.api_fqdn
-      API_KEY_PARAMETER_NAME          = aws_ssm_parameter.api_key.name
-      CONTACT_EMAIL                   = "contact@${local.domain_name}"
-      CONTAINER_NAME                  = var.container_name
-      EC2_AMI_PURPOSE_TAG             = local.ec2_runner_ami_purpose_tag
-      EC2_AMI_PURPOSE_VALUE           = local.ec2_runner_ami_purpose_value
-      EC2_AMI_STABLE_TAG              = local.ec2_runner_ami_stable_tag
-      EC2_MANAGED_BY_TAG              = local.ec2_runner_managed_by_tag
-      EC2_IAM_INSTANCE_PROFILE        = aws_iam_instance_profile.ec2_runner.name
-      EC2_INSTANCE_TYPES              = join(",", var.ec2_spot_instance_types)
-      EC2_MAX_PRICE                   = var.ec2_max_spot_price
-      ECR_REPOSITORY                  = data.terraform_remote_state.ecr.outputs.repository_name
-      ECS_CLUSTER                     = aws_ecs_cluster.runner.arn
-      GITHUB_REPO                     = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME        = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
-      IMAGE_API_ENDPOINT              = "https://${local.api_fqdn}"
-      RECAPTCHA_SECRET_PARAMETER_NAME = aws_ssm_parameter.recaptcha_secret.name
-      SECURITY_GROUPS                 = aws_security_group.runner_sg.id
-      SUBNETS                         = join(",", aws_subnet.public[*].id)
-      TASK_DEFINITION                 = aws_ecs_task_definition.runner.arn
-      VPC_ID                          = aws_vpc.runner_vpc.id
-      WORKFLOW_RUNNERS_TABLE          = aws_dynamodb_table.workflow_runners.name
+      API_DOMAIN               = local.api_fqdn
+      API_KEY_PARAMETER_NAME   = aws_ssm_parameter.api_key.name
+      CONTAINER_NAME           = var.container_name
+      EC2_AMI_PURPOSE_TAG      = local.ec2_runner_ami_purpose_tag
+      EC2_AMI_PURPOSE_VALUE    = local.ec2_runner_ami_purpose_value
+      EC2_AMI_STABLE_TAG       = local.ec2_runner_ami_stable_tag
+      EC2_MANAGED_BY_TAG       = local.ec2_runner_managed_by_tag
+      EC2_IAM_INSTANCE_PROFILE = aws_iam_instance_profile.ec2_runner.name
+      EC2_INSTANCE_TYPES       = join(",", var.ec2_spot_instance_types)
+      EC2_MAX_PRICE            = var.ec2_max_spot_price
+      ECR_REPOSITORY           = data.terraform_remote_state.ecr.outputs.repository_name
+      ECS_CLUSTER              = aws_ecs_cluster.runner.arn
+      GITHUB_REPO              = local.github_repo_full
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      IMAGE_API_ENDPOINT       = "https://${local.api_fqdn}"
+      SECURITY_GROUPS          = aws_security_group.runner_sg.id
+      SUBNETS                  = join(",", aws_subnet.public[*].id)
+      TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
+      VPC_ID                   = aws_vpc.runner_vpc.id
+      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
     }
   }
 

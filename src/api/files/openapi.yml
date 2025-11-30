@@ -619,7 +619,7 @@ paths:
                   error:
                     type: string
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ContactHandlerArn}
         httpMethod: POST
         type: aws_proxy
     options:
