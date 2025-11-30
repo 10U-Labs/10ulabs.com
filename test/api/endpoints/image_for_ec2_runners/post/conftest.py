@@ -7,8 +7,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
-FILES_DIR = ENDPOINT_SRC / "files"
-CONFIG_PATH = FILES_DIR / "config.yml"
+POST_DIR = ENDPOINT_SRC / "post"
+CONFIG_PATH = POST_DIR / "config.yml"
 SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
 TFVARS_PATH = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
 
@@ -78,8 +78,8 @@ def project_root():
 
 
 @pytest.fixture(scope="module")
-def files_dir():
-    return FILES_DIR
+def post_dir():
+    return POST_DIR
 
 
 @pytest.fixture(scope="module")

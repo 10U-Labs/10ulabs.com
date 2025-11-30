@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 import pytest
 
-from test.api.endpoints.image_for_ec2_runners.post.conftest import ENDPOINT_SRC, FILES_DIR
+from test.api.endpoints.image_for_ec2_runners.post.conftest import ENDPOINT_SRC, POST_DIR
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 LIB_PATH = str(REPO_ROOT / "lib")
@@ -34,17 +34,17 @@ def load_module_from_path_fixture() -> Callable[[str, Path], ModuleType]:
 
 @pytest.fixture
 def build_ami_module(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("build_ami", ENDPOINT_SRC / "files" / "build_ami.py")
+    return load_module_from_path_fixture("build_ami", POST_DIR / "build_ami.py")
 
 
 @pytest.fixture
 def cleanup(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("cleanup", ENDPOINT_SRC / "files" / "cleanup.py")
+    return load_module_from_path_fixture("cleanup", POST_DIR / "cleanup.py")
 
 
 @pytest.fixture
 def promote_ami_module(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("promote_ami", ENDPOINT_SRC / "files" / "promote_ami.py")
+    return load_module_from_path_fixture("promote_ami", POST_DIR / "promote_ami.py")
 
 
 @pytest.fixture

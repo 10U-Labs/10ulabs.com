@@ -8,7 +8,7 @@ import pytest
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
-ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
+ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "endpoint"
 SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
 
 

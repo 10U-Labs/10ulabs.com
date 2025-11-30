@@ -29,7 +29,7 @@ jobs:
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/image_for_ec2_runners/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/image_for_ec2_runners/endpoint/providers.tf | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
@@ -60,9 +60,9 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform init
+        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform init
       - name: Terraform Apply
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform apply -auto-approve
+        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform apply -auto-approve
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -100,14 +100,14 @@ jobs:
       - name: Linting Python files
         run: |
           pylint \
-            src/api/endpoints/image_for_ec2_runners/lambda/handler.py \
+            src/api/endpoints/image_for_ec2_runners/endpoint/lambda/handler.py \
             test/api/endpoints/image_for_ec2_runners/endpoint/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/lambda/handler.py
+          MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/endpoint/lambda/handler.py
           MYPYPATH=lib python3 -m mypy --explicit-package-bases test/api/endpoints/image_for_ec2_runners/endpoint/
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -121,9 +121,9 @@ jobs:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
           terraform_wrapper: false
       - name: Terraform Format Check
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform fmt -check -recursive
+        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform fmt -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform init
+        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform init
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup tflint
         uses: terraform-linters/setup-tflint@v4
@@ -131,11 +131,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api/endpoints/image_for_ec2_runners && \
+          cd src/api/endpoints/image_for_ec2_runners/endpoint && \
             tflint --init && \
             tflint
       - name: Terraform Plan
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
+        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform plan
   unit-testing:
     name: Unit testing
     needs:
@@ -169,8 +169,7 @@ on:
       - main
     paths:
       - '.github/workflows/image_for_ec2_runners_endpoint.yml'
-      - 'src/api/endpoints/image_for_ec2_runners/**'
-      - '!src/api/endpoints/image_for_ec2_runners/files/**'
+      - 'src/api/endpoints/image_for_ec2_runners/endpoint/**'
       - 'test/api/endpoints/image_for_ec2_runners/endpoint/**'
   workflow_dispatch:
     inputs:
