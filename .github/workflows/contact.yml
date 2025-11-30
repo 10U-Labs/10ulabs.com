@@ -76,7 +76,9 @@ jobs:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
       - name: Terraform Init
         run: terraform init
-      - name: Terraform Apply
+      - env:
+          TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
+        name: Terraform Apply
         run: terraform apply -auto-approve
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
@@ -152,7 +154,9 @@ jobs:
           cd src/contact && \
             tflint --init && \
             tflint
-      - name: Terraform Plan
+      - env:
+          TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
+        name: Terraform Plan
         run: cd src/contact && terraform plan
   unit-testing:
     name: Unit testing
