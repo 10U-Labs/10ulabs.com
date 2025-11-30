@@ -203,3 +203,42 @@ resource "aws_api_gateway_usage_plan_key" "main" {
   key_type      = "API_KEY"
   usage_plan_id = aws_api_gateway_usage_plan.main.id
 }
+
+resource "null_resource" "api_gateway_propagation_wait" {
+  depends_on = [
+    aws_api_gateway_stage.prod,
+    aws_lambda_permission.echo_handler
+  ]
+
+  triggers = {
+    deployment_id = aws_api_gateway_deployment.main.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      N=0
+      MAX_N=8
+      SUCCESS=false
+      while [ $N -le $MAX_N ]; do
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%%{http_code}" -X POST \
+          -H "Content-Type: application/json" \
+          -d '{"test":"health"}' \
+          "https://${local.api_fqdn}/v1/echo" || echo "000")
+        if [ "$HTTP_STATUS" = "200" ]; then
+          echo "API Gateway is ready (status: $HTTP_STATUS)"
+          SUCCESS=true
+          N=$((MAX_N + 1))
+        else
+          DELAY=$((1 << N))
+          echo "Attempt $((N + 1))/$((MAX_N + 1)): API returned status $HTTP_STATUS, waiting $${DELAY}s..."
+          sleep $DELAY
+          N=$((N + 1))
+        fi
+      done
+      if [ "$SUCCESS" = "false" ]; then
+        echo "ERROR: API Gateway not ready after ~8.5 minutes" >&2
+        exit 1
+      fi
+    EOT
+  }
+}
