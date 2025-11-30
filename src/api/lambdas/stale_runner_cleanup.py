@@ -195,8 +195,26 @@ def _is_runner_stale(created_at: int, current_time: int) -> bool:
     return age_seconds >= STALE_THRESHOLD_SECONDS
 
 
+def _is_orphaned_ecs_task(task: dict, current_time: datetime) -> dict | None:
+    tags = {t['key']: t['value'] for t in task.get('tags', [])}
+    if tags.get('Type') != WORKFLOW_RUNNER_TYPE_TAG or tags.get('ManagedBy') != ECS_MANAGED_BY_TAG:
+        return None
+    started_at = task.get('startedAt')
+    if not started_at:
+        return None
+    age_seconds = (current_time - started_at).total_seconds()
+    if age_seconds < STALE_THRESHOLD_SECONDS:
+        return None
+    return {
+        'task_arn': task['taskArn'],
+        'age_seconds': int(age_seconds),
+        'runner_name': tags.get('Name', ''),
+        'github_repo': tags.get('GitHubRepo', '')
+    }
+
+
 def get_orphaned_ecs_tasks() -> list:
-    tasks = []
+    tasks: list[dict] = []
     cluster = os.environ.get('ECS_CLUSTER', '')
     if not cluster:
         return tasks
@@ -208,29 +226,21 @@ def get_orphaned_ecs_tasks() -> list:
             task_arns.extend(page.get('taskArns', []))
         if not task_arns:
             return tasks
+        current_time = datetime.now(timezone.utc)
         for i in range(0, len(task_arns), 100):
             batch = task_arns[i:i + 100]
             response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=['TAGS'])
             for task in response.get('tasks', []):
-                tags = {t['key']: t['value'] for t in task.get('tags', [])}
-                if tags.get('Type') == WORKFLOW_RUNNER_TYPE_TAG and tags.get('ManagedBy') == ECS_MANAGED_BY_TAG:
-                    started_at = task.get('startedAt')
-                    if started_at:
-                        age_seconds = (datetime.now(timezone.utc) - started_at).total_seconds()
-                        if age_seconds >= STALE_THRESHOLD_SECONDS:
-                            tasks.append({
-                                'task_arn': task['taskArn'],
-                                'age_seconds': int(age_seconds),
-                                'runner_name': tags.get('Name', ''),
-                                'github_repo': tags.get('GitHubRepo', '')
-                            })
+                orphaned = _is_orphaned_ecs_task(task, current_time)
+                if orphaned:
+                    tasks.append(orphaned)
     except ClientError as e:
         logger.error("Failed to get orphaned ECS tasks: %s", e)
     return tasks
 
 
 def get_orphaned_ec2_instances() -> list:
-    instances = []
+    instances: list[dict] = []
     ec2_managed_by_tag = os.environ.get('EC2_MANAGED_BY_TAG', '')
     if not ec2_managed_by_tag:
         return instances

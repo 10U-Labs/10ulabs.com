@@ -1,3 +1,4 @@
+import os
 import time
 import boto3
 import pytest
@@ -111,11 +112,12 @@ def ecr_has_latest_tag_fixture(ecr_client, config):
 
 def create_runner_job_payload(github_repo, job_labels):
     job_id = int(time.time())
+    run_id = int(os.environ.get('GITHUB_RUN_ID', job_id))
     payload = {
         "job_id": job_id,
         "job_labels": job_labels,
         "github_repo": github_repo,
-        "run_id": job_id
+        "run_id": run_id
     }
     return job_id, payload
 
