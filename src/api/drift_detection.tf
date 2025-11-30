@@ -214,11 +214,17 @@ resource "aws_cloudwatch_event_target" "drift_recovery" {
   input_transformer {
     input_paths = {
       configRuleName = "$.detail.configRuleName"
+      resourceType   = "$.detail.resourceType"
+      resourceId     = "$.detail.resourceId"
+      awsRegion      = "$.detail.awsRegion"
     }
     input_template = <<EOF
 {
   "source": "drift-recovery-trigger",
-  "configRuleName": <configRuleName>
+  "configRuleName": <configRuleName>,
+  "resourceType": <resourceType>,
+  "resourceId": <resourceId>,
+  "awsRegion": <awsRegion>
 }
 EOF
   }
