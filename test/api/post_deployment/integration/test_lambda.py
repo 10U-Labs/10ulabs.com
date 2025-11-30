@@ -1,15 +1,3 @@
-def test_lambda_health_handler_exists(lambda_client, config):
-    function_name = config["health_handler_function_name"]
-    response = lambda_client.get_function(FunctionName=function_name)
-    assert response["Configuration"]["FunctionName"] == function_name
-
-
-def test_lambda_health_handler_runtime(lambda_client, config):
-    function_name = config["health_handler_function_name"]
-    response = lambda_client.get_function(FunctionName=function_name)
-    assert response["Configuration"]["Runtime"] == "python3.13"
-
-
 def test_lambda_v1_handler_exists(lambda_client, config):
     function_name = config["v1_handler_function_name"]
     response = lambda_client.get_function(FunctionName=function_name)

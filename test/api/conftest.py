@@ -30,6 +30,20 @@ def get_bootstrap_output(output_name: str, default: str = "") -> str:
     return os.environ.get(env_var_name, default)
 
 
+def parse_health_tfvars() -> Dict[str, str]:
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "health" / "terraform.tfvars"
+    config = {}
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+                if match:
+                    key, value = match.groups()
+                    config[key] = value.strip('"')
+    return config
+
+
 def parse_api_locals() -> Dict[str, str]:
     locals_path = Path(__file__).parent.parent.parent / "src" / "api" / "locals.tf"
     shared = parse_shared_module_outputs()
@@ -95,6 +109,9 @@ def config_fixture() -> Dict[str, str]:
     result['runner_label_fargate_spot'] = runner_labels.get('fargate_spot', '')
     result['runner_label_ec2_spot_e2e_test'] = runner_labels.get('ec2_spot_e2e_test', '')
     result['runner_label_fargate_spot_e2e_test'] = runner_labels.get('fargate_spot_e2e_test', '')
+    health_config = parse_health_tfvars()
+    result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
+    result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')
     return result
 
 
