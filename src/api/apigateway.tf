@@ -139,7 +139,7 @@ resource "aws_lambda_permission" "health_handler" {
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.health.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/GET/health"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/GET/health*"
 }
 
 resource "aws_lambda_permission" "image_for_docker_runners_handler" {

@@ -48,3 +48,8 @@ def lambda_context():
 @pytest.fixture
 def health_get_event():
     return {'path': '/health', 'httpMethod': 'GET'}
+
+
+@pytest.fixture
+def health_dependencies_get_event():
+    return {'path': '/health/dependencies', 'httpMethod': 'GET'}

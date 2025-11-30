@@ -204,7 +204,7 @@ paths:
                   checked_resources:
                     type: object
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${HealthHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/runners:

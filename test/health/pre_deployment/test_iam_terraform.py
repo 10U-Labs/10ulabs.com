@@ -29,3 +29,27 @@ def test_health_handler_uses_basic_execution_policy():
     with open(IAM_FILE, encoding="utf-8") as f:
         content = f.read()
     assert 'AWSLambdaBasicExecutionRole' in content
+
+
+def test_health_handler_has_ec2_describe_permissions():
+    with open(IAM_FILE, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_iam_role_policy" "lambda_health_handler_ec2_describe"' in content
+
+
+def test_health_handler_can_describe_security_groups():
+    with open(IAM_FILE, encoding="utf-8") as f:
+        content = f.read()
+    assert 'ec2:DescribeSecurityGroups' in content
+
+
+def test_health_handler_can_describe_subnets():
+    with open(IAM_FILE, encoding="utf-8") as f:
+        content = f.read()
+    assert 'ec2:DescribeSubnets' in content
+
+
+def test_health_handler_can_describe_vpcs():
+    with open(IAM_FILE, encoding="utf-8") as f:
+        content = f.read()
+    assert 'ec2:DescribeVpcs' in content

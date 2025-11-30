@@ -1483,28 +1483,9 @@ def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
-    result = validate_all_dependencies()
-    if result['valid']:
-        response = json_response(200, {
-            'status': 'healthy',
-            'message': 'All infrastructure dependencies are valid',
-            'checked_resources': result['checked_resources']
-        })
-    else:
-        response = json_response(503, {
-            'status': 'unhealthy',
-            'message': 'Infrastructure dependencies are invalid',
-            'errors': result['errors'],
-            'checked_resources': result['checked_resources']
-        })
-    return response
-
-
 ROUTE_MAP = {
     ('/v1/contact', 'POST'): handle_contact_post,
     ('/v1/echo', 'POST'): handle_echo_post,
-    ('/health/dependencies', 'GET'): handle_dependencies_health,
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,

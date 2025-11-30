@@ -14,6 +14,13 @@ resource "aws_lambda_function" "health_handler" {
   timeout          = 10
   description      = "Health check endpoint for API"
 
+  environment {
+    variables = {
+      SECURITY_GROUPS = data.terraform_remote_state.api.outputs.runner_security_group_id
+      SUBNETS         = data.terraform_remote_state.api.outputs.vpc_public_subnet_ids
+      VPC_ID          = data.terraform_remote_state.api.outputs.vpc_id
+    }
+  }
 
   logging_config {
     log_format = "Text"

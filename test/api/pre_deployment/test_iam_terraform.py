@@ -76,13 +76,6 @@ def test_ec2_instance_profile_exists():
     assert 'resource "aws_iam_instance_profile" "ec2_runner"' in content
 
 
-def test_lambda_health_handler_role_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role" "lambda_health_handler"' in content
-
-
 def test_lambda_catchall_handler_role_exists():
     iam_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "iam.tf"
     with open(iam_file, encoding="utf-8") as f:
