@@ -5,6 +5,7 @@ locals {
     EchoHandlerArn                  = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations"
     HealthHandlerArn                = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations"
     ImageForDockerRunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_docker_runners.outputs.lambda_function_arn}/invocations"
+    ImageForEC2RunnersHandlerArn    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
     RackDesignerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
     RunnersHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
     V1HandlerArn                    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.v1_handler.arn}/invocations"
@@ -166,6 +167,14 @@ resource "aws_lambda_permission" "image_for_docker_runners_handler" {
   function_name = data.terraform_remote_state.image_for_docker_runners.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-docker-runners*"
+}
+
+resource "aws_lambda_permission" "image_for_ec2_runners_handler" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-ec2-runners*"
 }
 
 resource "random_password" "api_key" {

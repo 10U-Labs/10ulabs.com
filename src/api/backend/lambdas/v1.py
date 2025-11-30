@@ -969,134 +969,6 @@ def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
-    subnet_ids = os.environ['SUBNETS'].split(',')
-    vpc_id = os.environ['VPC_ID']
-    region = os.environ['AWS_REGION']
-
-    payload = {
-        'ref': 'main',
-        'inputs': {
-            'vpc_id': vpc_id,
-            'subnet_id': subnet_ids[0],
-            'region': region
-        }
-    }
-
-    result = trigger_github_workflow('image_for_ec2_runners_post.yml', payload)
-    return result
-
-
-def list_amis() -> Dict[str, Any]:
-    ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
-    ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
-    try:
-        response = get_ec2_client().describe_images(
-            Owners=['self'],
-            Filters=[
-                {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]}
-            ]
-        )
-
-        amis = []
-        for image in response['Images']:
-            amis.append({
-                'ami_id': image['ImageId'],
-                'name': image['Name'],
-                'state': image['State'],
-                'creation_date': image['CreationDate'],
-                'architecture': image['Architecture'],
-                'tags': {tag['Key']: tag['Value'] for tag in image.get('Tags', [])}
-            })
-
-        amis.sort(key=lambda x: str(x['creation_date']), reverse=True)
-        logger.info("Listed %s AMIs", len(amis))
-        return {'success': True, 'amis': amis, 'count': len(amis)}
-    except ClientError as e:
-        logger.error("Error listing AMIs: %s", e)
-        return {'success': False, 'error': str(e)}
-
-
-def get_latest_ami_details() -> Dict[str, Any]:
-    ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
-    ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
-    ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
-    try:
-        try:
-            param_response = get_ssm_client().get_parameter(Name='/github-runner/ami/latest')
-            ami_id = param_response['Parameter']['Value']
-            logger.info("Retrieved latest AMI from SSM Parameter Store: %s", ami_id)
-        except ClientError as ssm_error:
-            if ssm_error.response['Error']['Code'] == 'ParameterNotFound':
-                logger.warning("SSM parameter not found, falling back to EC2 query")
-                response = get_ec2_client().describe_images(
-                    Owners=['self'],
-                    Filters=[
-                        {'Name': f'tag:{ami_purpose_tag}', 'Values': [ami_purpose_value]},
-                        {'Name': f'tag:{ami_stable_tag}', 'Values': ['true']}
-                    ]
-                )
-                if not response['Images']:
-                    return {'success': False, 'error': 'No available AMI found'}
-                images = sorted(response['Images'], key=lambda x: x['CreationDate'], reverse=True)
-                ami_id = images[0]['ImageId']
-                logger.info("Retrieved latest AMI from EC2 query: %s", ami_id)
-            else:
-                raise
-
-        image_response = get_ec2_client().describe_images(ImageIds=[ami_id])
-        if not image_response['Images']:
-            return {'success': False, 'error': f'AMI {ami_id} not found'}
-
-        latest_image = image_response['Images'][0]
-        result = {
-            'success': True,
-            'ami_id': latest_image['ImageId'],
-            'name': latest_image['Name'],
-            'state': latest_image['State'],
-            'creation_date': latest_image['CreationDate'],
-            'architecture': latest_image['Architecture'],
-            'tags': {tag['Key']: tag['Value'] for tag in latest_image.get('Tags', [])}
-        }
-        logger.info("Latest AMI details: %s", result['ami_id'])
-        return result
-    except ClientError as e:
-        logger.error("Error getting latest AMI: %s", e)
-        return {'success': False, 'error': str(e)}
-
-
-def deregister_ami(ami_id: str) -> Dict[str, Any]:
-    try:
-        image_response = get_ec2_client().describe_images(ImageIds=[ami_id])
-        if not image_response['Images']:
-            return {'success': False, 'error': 'AMI not found'}
-
-        snapshot_ids = []
-        for mapping in image_response['Images'][0].get('BlockDeviceMappings', []):
-            if 'Ebs' in mapping and 'SnapshotId' in mapping['Ebs']:
-                snapshot_ids.append(mapping['Ebs']['SnapshotId'])
-
-        get_ec2_client().deregister_image(ImageId=ami_id)
-        logger.info("Deregistered AMI: %s", ami_id)
-
-        for snapshot_id in snapshot_ids:
-            try:
-                get_ec2_client().delete_snapshot(SnapshotId=snapshot_id)
-                logger.info("Deleted snapshot: %s", snapshot_id)
-            except ClientError as e:
-                logger.warning("Failed to delete snapshot %s: %s", snapshot_id, e)
-
-        return {
-            'success': True,
-            'ami_id': ami_id,
-            'deleted_snapshots': snapshot_ids,
-            'message': f'AMI {ami_id} deregistered successfully'
-        }
-    except ClientError as e:
-        logger.error("Error deregistering AMI %s: %s", ami_id, e)
-        return {'success': False, 'error': str(e)}
-
-
 def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         body = parse_body(event)
@@ -1273,21 +1145,6 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def handle_ec2_image_get(event: Dict[str, Any]) -> Dict[str, Any]:
-    path = event.get('path', '')
-    result = get_latest_ami_details() if path.endswith('/latest') else list_amis()
-    response = success_response(result)
-    return response
-
-
-def handle_ec2_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
-    path_params = event.get('pathParameters', {})
-    ami_id = path_params.get('ami_id')
-    result = deregister_ami(ami_id) if ami_id else {'success': False, 'error': 'Missing required path parameter: ami_id'}
-    response = error_response(400, result['error']) if not ami_id else success_response(result)
-    return response
-
-
 def get_dynamodb_client():
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
@@ -1337,17 +1194,13 @@ ROUTE_MAP = {
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,
-    ('/v1/ec2-runner', 'GET'): handle_ec2_runner_get,
-    ('/v1/image-for-ec2-runners', 'POST'): lambda e: handle_post_request(e, launch_packer_builder),
-    ('/v1/image-for-ec2-runners', 'GET'): handle_ec2_image_get,
-    ('/v1/image-for-ec2-runners/latest', 'GET'): handle_ec2_image_get
+    ('/v1/ec2-runner', 'GET'): handle_ec2_runner_get
 }
 
 
 TEST_MODE_MOCK_PATHS = {
     '/v1/ec2-runner': {'success': True, 'instance_id': 'i-test-mode-mock', 'test_mode': True},
-    '/v1/docker-runner': {'success': True, 'task_arn': 'arn:aws:ecs:test-mode-mock', 'test_mode': True},
-    '/v1/image-for-ec2-runners': {'success': True, 'message': 'Test mode - no AMI created', 'test_mode': True}
+    '/v1/docker-runner': {'success': True, 'task_arn': 'arn:aws:ecs:test-mode-mock', 'test_mode': True}
 }
 
 
@@ -1376,10 +1229,6 @@ def lambda_handler(event, _context):
     path = event.get('path', '')
 
     handler = ROUTE_MAP.get((path, method))
-
-    if not handler:
-        if path.startswith('/v1/image-for-ec2-runners/') and method == 'DELETE':
-            handler = handle_ec2_image_delete
 
     if handler:
         response = handler(event)

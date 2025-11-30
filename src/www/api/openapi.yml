@@ -250,7 +250,7 @@ paths:
         '200':
           description: AMI build started successfully
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForEC2RunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
     get:
@@ -265,7 +265,7 @@ paths:
         '200':
           description: List of AMIs
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForEC2RunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/image-for-ec2-runners/latest:
@@ -281,7 +281,7 @@ paths:
         '200':
           description: Latest AMI information
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForEC2RunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/image-for-ec2-runners/{ami_id}:
@@ -303,7 +303,7 @@ paths:
         '200':
           description: AMI deleted successfully
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${ImageForEC2RunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /v1/image-for-docker-runners:

@@ -1,0 +1,65 @@
+resource "aws_iam_role" "lambda" {
+  name = "${local.resource_prefix}-ImageForEC2RunnersLambda-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-ImageForEC2RunnersLambda-Role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  role       = aws_iam_role.lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "ec2_access" {
+  name = "EC2Access"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DeleteSnapshot",
+          "ec2:DeregisterImage",
+          "ec2:DescribeImages",
+          "ec2:DescribeSnapshots"
+        ]
+        Resource = ["*"]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "ssm_access" {
+  name = "SSMAccess"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter"
+        ]
+        Resource = [
+          data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
+          "arn:aws:ssm:${local.aws_region}:${module.shared.aws_account_id}:parameter/github-runner/*"
+        ]
+      }
+    ]
+  })
+}
