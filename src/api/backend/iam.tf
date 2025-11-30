@@ -17,6 +17,27 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 }
 
+resource "aws_iam_role_policy" "ecs_task_cloudwatch_logs" {
+  name = "CloudWatchLogsAccess"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ]
+      Resource = [
+        "arn:aws:logs:${local.aws_region}:${local.aws_account_id}:log-group:/github-runner/diag:*"
+      ]
+    }]
+  })
+}
+
 resource "aws_iam_role" "ecs_execution_role" {
   name = "${var.task_family}-ExecutionRole"
 

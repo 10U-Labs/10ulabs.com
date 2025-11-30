@@ -32,6 +32,9 @@ RUN apt-get update && \
 RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o awscliv2.zip && \
     unzip -q awscliv2.zip && \
     ./aws/install && \
+    curl -fsSL -o /tmp/amazon-cloudwatch-agent.deb "https://amazoncloudwatch-agent.s3.amazonaws.com/debian/arm64/latest/amazon-cloudwatch-agent.deb" && \
+    dpkg -i /tmp/amazon-cloudwatch-agent.deb && \
+    rm /tmp/amazon-cloudwatch-agent.deb && \
     curl -fsSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_arm64" && \
     chmod +x /usr/local/bin/yq && \
     HADOLINT_VERSION=$(curl -fsSL https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name') && \
@@ -78,6 +81,7 @@ RUN curl -fsSL -o runner.tar.gz \
     chown -R runner:runner /home/runner
 
 COPY --chown=runner:runner --chmod=755 entrypoint.py /home/runner/entrypoint.py
+COPY --chmod=644 cloudwatch-agent-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
 USER runner
 

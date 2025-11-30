@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "run_as_user": "root"
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/home/runner/_diag/Runner_*.log",
+            "log_group_name": "/github-runner/diag",
+            "log_stream_name": "{hostname}/Runner",
+            "retention_in_days": 7
+          },
+          {
+            "file_path": "/home/runner/_diag/Worker_*.log",
+            "log_group_name": "/github-runner/diag",
+            "log_stream_name": "{hostname}/Worker",
+            "retention_in_days": 7
+          }
+        ]
+      }
+    }
+  }
+}

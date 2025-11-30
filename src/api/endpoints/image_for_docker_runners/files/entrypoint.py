@@ -13,6 +13,31 @@ def cleanup_runner(registration_token):
     )
 
 
+def start_cloudwatch_agent():
+    print("Starting CloudWatch agent...")
+    result = subprocess.run(
+        ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
+         '-a', 'fetch-config', '-m', 'ec2', '-s',
+         '-c', 'file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json'],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode != 0:
+        print(f"Warning: CloudWatch agent failed to start: {result.stderr}")
+    else:
+        print("CloudWatch agent started successfully")
+
+
+def stop_cloudwatch_agent():
+    subprocess.run(
+        ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
+         '-a', 'stop'],
+        check=False,
+        capture_output=True
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description='GitHub Actions self-hosted runner for Fargate')
     parser.add_argument('--repo', required=True, help='GitHub repository (org/repo)')
@@ -32,6 +57,7 @@ def main():
     print(f"Labels: {runner_labels}")
 
     def signal_handler(_signum, _frame):
+        stop_cloudwatch_agent()
         cleanup_runner(registration_token)
         sys.exit(0)
 
@@ -52,8 +78,12 @@ def main():
         print(f"Error: config.sh failed with exit code {config_result.returncode}")
         sys.exit(1)
 
+    start_cloudwatch_agent()
+
     print("Starting runner...")
     run_result = subprocess.run(['./run.sh'], check=False)
+
+    stop_cloudwatch_agent()
 
     print(f"Runner exited with code {run_result.returncode}")
     sys.exit(run_result.returncode)
