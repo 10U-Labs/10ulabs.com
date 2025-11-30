@@ -938,11 +938,6 @@ resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
           "ec2:TerminateInstances"
         ]
         Resource = ["*"]
-        Condition = {
-          StringEquals = {
-            "ec2:ResourceTag/ManagedBy" = local.ec2_runner_managed_by_tag
-          }
-        }
       }
     ]
   })

@@ -178,7 +178,8 @@ def terminate_ec2_instance(instance_id: str) -> bool:
         logger.info("Terminated EC2 instance: %s", instance_id)
         result = True
     except ClientError as e:
-        if 'InvalidInstanceID' in str(e):
+        error_code = e.response.get('Error', {}).get('Code', '')
+        if error_code in ['InvalidInstanceID.NotFound', 'InvalidInstanceID.Malformed']:
             logger.info("Instance already terminated or not found: %s", instance_id)
             result = True
         else:
