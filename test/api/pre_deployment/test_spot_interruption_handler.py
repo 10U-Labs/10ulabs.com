@@ -1,5 +1,6 @@
 import os
-from unittest.mock import patch, MagicMock
+import urllib.error
+from unittest.mock import patch, MagicMock, Mock
 from botocore.exceptions import ClientError
 
 
@@ -29,7 +30,7 @@ def test_get_ecs_task_tags_returns_tags_from_describe_tasks(spot_interruption_ha
                 'tasks': [{
                     'tags': [
                         {'key': 'RunId', 'value': '123'},
-                        {'key': 'RunnerType', 'value': 'fargate'},
+                        {'key': 'GitHubJobId', 'value': '456'},
                         {'key': 'GitHubRepo', 'value': 'test/repo'}
                     ]
                 }]
@@ -40,7 +41,7 @@ def test_get_ecs_task_tags_returns_tags_from_describe_tasks(spot_interruption_ha
     assert result['RunId'] == '123'
 
 
-def test_get_ecs_task_tags_returns_runner_type(spot_interruption_handler):
+def test_get_ecs_task_tags_returns_job_id(spot_interruption_handler):
     with patch.dict(os.environ, {'ECS_CLUSTER': 'test-cluster'}):
         with patch.object(spot_interruption_handler, 'get_ecs_client') as mock_get_client:
             mock_ecs = MagicMock()
@@ -48,7 +49,7 @@ def test_get_ecs_task_tags_returns_runner_type(spot_interruption_handler):
                 'tasks': [{
                     'tags': [
                         {'key': 'RunId', 'value': '123'},
-                        {'key': 'RunnerType', 'value': 'fargate'},
+                        {'key': 'GitHubJobId', 'value': '456'},
                         {'key': 'GitHubRepo', 'value': 'test/repo'}
                     ]
                 }]
@@ -56,7 +57,7 @@ def test_get_ecs_task_tags_returns_runner_type(spot_interruption_handler):
             mock_get_client.return_value = mock_ecs
             get_ecs_task_tags = getattr(spot_interruption_handler, "_get_ecs_task_tags")
             result = get_ecs_task_tags('arn:aws:ecs:test:task/123')
-    assert result['RunnerType'] == 'fargate'
+    assert result['GitHubJobId'] == '456'
 
 
 def test_get_ecs_task_tags_returns_github_repo(spot_interruption_handler):
@@ -67,7 +68,7 @@ def test_get_ecs_task_tags_returns_github_repo(spot_interruption_handler):
                 'tasks': [{
                     'tags': [
                         {'key': 'RunId', 'value': '123'},
-                        {'key': 'RunnerType', 'value': 'fargate'},
+                        {'key': 'GitHubJobId', 'value': '456'},
                         {'key': 'GitHubRepo', 'value': 'test/repo'}
                     ]
                 }]
@@ -127,6 +128,48 @@ def test_get_ecs_task_tags_uses_ecs_cluster_env_var(spot_interruption_handler):
     assert call_kwargs['cluster'] == 'my-custom-cluster'
 
 
+def test_rerun_github_job_returns_false_when_no_job_id(spot_interruption_handler):
+    result = spot_interruption_handler.rerun_github_job('token', 'test/repo', '')
+    assert result is False
+
+
+def test_rerun_github_job_calls_github_api(spot_interruption_handler):
+    mock_response = Mock()
+    mock_response.status = 201
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    with patch('urllib.request.urlopen', return_value=mock_response) as mock_urlopen:
+        spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+        call_args = mock_urlopen.call_args[0][0]
+    assert 'actions/jobs/123/rerun' in call_args.full_url
+
+
+def test_rerun_github_job_returns_true_on_success(spot_interruption_handler):
+    mock_response = Mock()
+    mock_response.status = 201
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+    assert result is True
+
+
+def test_rerun_github_job_returns_false_on_http_error(spot_interruption_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            'http://test', 404, 'Not Found', {}, None
+        )
+        result = spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+    assert result is False
+
+
+def test_rerun_github_job_returns_false_on_url_error(spot_interruption_handler):
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.URLError('Connection refused')
+        result = spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+    assert result is False
+
+
 def test_handle_ecs_task_stopped_fetches_tags_from_api(spot_interruption_handler):
     event = {
         'detail': {
@@ -168,12 +211,12 @@ def test_handle_ecs_task_stopped_skips_when_no_run_id(spot_interruption_handler)
     }
     get_ecs_task_tags_fn = getattr(spot_interruption_handler, "_get_ecs_task_tags")
     with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
-        mock_get_tags.return_value = {'RunnerType': 'fargate'}
+        mock_get_tags.return_value = {'GitHubJobId': '456'}
         result = spot_interruption_handler.handle_ecs_task_stopped(event)
-    assert result['body'] == 'No run_id or runner_type'
+    assert result['body'] == 'No run_id or job_id'
 
 
-def test_handle_ecs_task_stopped_skips_when_no_runner_type(spot_interruption_handler):
+def test_handle_ecs_task_stopped_skips_when_no_job_id(spot_interruption_handler):
     event = {
         'detail': {
             'taskArn': 'arn:aws:ecs:test:task/123',
@@ -185,7 +228,7 @@ def test_handle_ecs_task_stopped_skips_when_no_runner_type(spot_interruption_han
     with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
         mock_get_tags.return_value = {'RunId': '123'}
         result = spot_interruption_handler.handle_ecs_task_stopped(event)
-    assert result['body'] == 'No run_id or runner_type'
+    assert result['body'] == 'No run_id or job_id'
 
 
 def test_handle_ecs_task_stopped_skips_non_spot_interruption(spot_interruption_handler):
@@ -200,14 +243,14 @@ def test_handle_ecs_task_stopped_skips_non_spot_interruption(spot_interruption_h
     with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'RunnerType': 'fargate',
+            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         result = spot_interruption_handler.handle_ecs_task_stopped(event)
     assert result['body'] == 'Not a spot interruption'
 
 
-def test_handle_ecs_task_stopped_triggers_replacement_on_spot_interruption(spot_interruption_handler):
+def test_handle_ecs_task_stopped_triggers_job_rerun_on_spot_interruption(spot_interruption_handler):
     event = {
         'detail': {
             'taskArn': 'arn:aws:ecs:test:task/123',
@@ -219,20 +262,20 @@ def test_handle_ecs_task_stopped_triggers_replacement_on_spot_interruption(spot_
     with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'RunnerType': 'fargate',
+            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
             mock_get_token.return_value = 'test-token'
             with patch.object(spot_interruption_handler, 'get_workflow_run_status') as mock_get_status:
                 mock_get_status.return_value = 'in_progress'
-                with patch.object(spot_interruption_handler, 'trigger_runner_replacement') as mock_trigger:
-                    mock_trigger.return_value = True
+                with patch.object(spot_interruption_handler, 'rerun_github_job') as mock_rerun:
+                    mock_rerun.return_value = True
                     result = spot_interruption_handler.handle_ecs_task_stopped(event)
-    assert result['body'] == 'Replacement runner triggered'
+    assert result['body'] == 'Job re-run triggered'
 
 
-def test_handle_ecs_task_stopped_checks_workflow_status_before_replacement(spot_interruption_handler):
+def test_handle_ecs_task_stopped_passes_job_id_to_rerun(spot_interruption_handler):
     event = {
         'detail': {
             'taskArn': 'arn:aws:ecs:test:task/123',
@@ -244,7 +287,33 @@ def test_handle_ecs_task_stopped_checks_workflow_status_before_replacement(spot_
     with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'RunnerType': 'fargate',
+            'GitHubJobId': '789',
+            'GitHubRepo': 'test/repo'
+        }
+        with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
+            mock_get_token.return_value = 'test-token'
+            with patch.object(spot_interruption_handler, 'get_workflow_run_status') as mock_get_status:
+                mock_get_status.return_value = 'in_progress'
+                with patch.object(spot_interruption_handler, 'rerun_github_job') as mock_rerun:
+                    mock_rerun.return_value = True
+                    spot_interruption_handler.handle_ecs_task_stopped(event)
+                    call_args = mock_rerun.call_args[0]
+    assert call_args[2] == '789'
+
+
+def test_handle_ecs_task_stopped_checks_workflow_status_before_rerun(spot_interruption_handler):
+    event = {
+        'detail': {
+            'taskArn': 'arn:aws:ecs:test:task/123',
+            'stopCode': 'SpotInterruption',
+            'stoppedReason': 'Your Spot Task was interrupted.'
+        }
+    }
+    get_ecs_task_tags_fn = getattr(spot_interruption_handler, "_get_ecs_task_tags")
+    with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
+        mock_get_tags.return_value = {
+            'RunId': '123',
+            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
@@ -267,7 +336,7 @@ def test_handle_ecs_task_stopped_fails_when_no_github_token(spot_interruption_ha
     with patch.object(spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'RunnerType': 'fargate',
+            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
