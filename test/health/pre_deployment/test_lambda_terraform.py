@@ -35,8 +35,8 @@ def test_health_handler_log_subscription_exists():
 
 
 def test_health_handler_api_gateway_permission_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    apigateway_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "apigateway.tf"
+    with open(apigateway_file, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_lambda_permission" "health_handler"' in content
 
