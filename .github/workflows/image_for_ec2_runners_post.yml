@@ -236,46 +236,16 @@ jobs:
           GITHUB_PAT=$(aws ssm get-parameter --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
-          PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post_deployment
+          PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
           SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run E2E tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/post_deployment/e2e/ \
-            --confcutdir=test/api/endpoints/image_for_ec2_runners \
+          pytest test/api/endpoints/image_for_ec2_runners/post/post_deployment/e2e/ \
+            --confcutdir=test/api/endpoints/image_for_ec2_runners/post \
             -v
-  ensuring-endpoint-infrastructure-in-desired-state:
-    name: Ensuring endpoint infrastructure is in desired state
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform init
-      - name: Terraform Apply
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform apply -auto-approve
   integration-testing:
     name: Integration testing
     needs:
@@ -303,15 +273,15 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install boto3 pytest pyyaml
       - env:
-          PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post_deployment
+          PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
           SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
         name: Run pytest integration tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/post_deployment/integration/ \
-            --confcutdir=test/api/endpoints/image_for_ec2_runners \
+          pytest test/api/endpoints/image_for_ec2_runners/post/post_deployment/integration/ \
+            --confcutdir=test/api/endpoints/image_for_ec2_runners/post \
             -v
   performing-static-analysis:
     name: Performing static analysis
@@ -343,53 +313,26 @@ jobs:
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/image_for_ec2_runners.yml \
+            .github/workflows/image_for_ec2_runners_post.yml \
             src/api/endpoints/image_for_ec2_runners/files/config.yml
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
         run: python3 -m pip install boto3 boto3-stubs mypy paramiko pylint pytest types-paramiko types-PyYAML
       - env:
-          PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post_deployment
+          PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
         name: Linting Python files
         run: |
           pylint \
             lib/ec2_spot/*.py \
             src/api/endpoints/image_for_ec2_runners/files/*.py \
-            test/api/endpoints/image_for_ec2_runners/ \
+            test/api/endpoints/image_for_ec2_runners/post/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
           MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/files/*.py
-          MYPYPATH=lib:test/api/endpoints/image_for_ec2_runners/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_spot/ test/api/endpoints/image_for_ec2_runners/
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Terraform Format Check
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform fmt -check -recursive
-      - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform init
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Setup tflint
-        uses: terraform-linters/setup-tflint@v4
-      - env:
-          GITHUB_TOKEN: ${{ github.token }}
-        name: Run tflint
-        run: |
-          cd src/api/endpoints/image_for_ec2_runners && \
-            tflint --init && \
-            tflint
-      - name: Terraform Plan
-        run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
+          MYPYPATH=lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_spot/ test/api/endpoints/image_for_ec2_runners/post/
   promoting-ami:
     name: Promoting AMI
     needs:
@@ -465,8 +408,8 @@ jobs:
         run: python3 -m pip install boto3 botocore paramiko pytest pyyaml
       - name: Run unit tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/pre_deployment/ \
-            --confcutdir=test/api/endpoints/image_for_ec2_runners \
+          pytest test/api/endpoints/image_for_ec2_runners/post/pre_deployment/ \
+            --confcutdir=test/api/endpoints/image_for_ec2_runners/post \
             -v
 name: Building AMI for EC2 self-hosted runners
 on:
@@ -474,9 +417,9 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/image_for_ec2_runners.yml'
-      - 'src/api/endpoints/image_for_ec2_runners/**'
-      - 'test/api/endpoints/image_for_ec2_runners/**'
+      - '.github/workflows/image_for_ec2_runners_post.yml'
+      - 'src/api/endpoints/image_for_ec2_runners/files/**'
+      - 'test/api/endpoints/image_for_ec2_runners/post/**'
   workflow_dispatch:
     inputs:
       dry_run:

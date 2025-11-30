@@ -1,16 +1,55 @@
+import importlib.util
+import sys
+from pathlib import Path
+from types import ModuleType
+from typing import Any, Callable, Dict
 from unittest.mock import MagicMock, patch
 from botocore.exceptions import ClientError
 import pytest
 
+from test.api.endpoints.image_for_ec2_runners.post.conftest import ENDPOINT_SRC, FILES_DIR
+
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+LIB_PATH = str(REPO_ROOT / "lib")
+if LIB_PATH not in sys.path:
+    sys.path.insert(0, LIB_PATH)
+
+
+@pytest.fixture
+def project_root() -> Path:
+    return Path(__file__).parent.parent.parent.parent.parent.parent.parent
+
+
+@pytest.fixture
+def load_module_from_path_fixture() -> Callable[[str, Path], ModuleType]:
+    def _load(name: str, path: Path) -> ModuleType:
+        spec = importlib.util.spec_from_file_location(name, path)
+        assert spec is not None
+        assert spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return _load
+
 
 @pytest.fixture
 def build_ami_module(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("build_ami", project_root / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "files" / "build_ami.py")
+    return load_module_from_path_fixture("build_ami", ENDPOINT_SRC / "files" / "build_ami.py")
 
 
 @pytest.fixture
 def cleanup(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("cleanup", project_root / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "files" / "cleanup.py")
+    return load_module_from_path_fixture("cleanup", ENDPOINT_SRC / "files" / "cleanup.py")
+
+
+@pytest.fixture
+def promote_ami_module(project_root, load_module_from_path_fixture):
+    return load_module_from_path_fixture("promote_ami", ENDPOINT_SRC / "files" / "promote_ami.py")
+
+
+@pytest.fixture
+def runner_config():
+    return {"commands": "echo hello"}
 
 
 @pytest.fixture
@@ -19,30 +58,8 @@ def provision_script_content(runner_config):
 
 
 @pytest.fixture
-def mock_ec2(v1_handler):
-    with patch('boto3.client') as mock_boto_client:
-        mock_ec2_client = MagicMock()
-        mock_boto_client.return_value = mock_ec2_client
-        v1_handler.ec2 = mock_ec2_client
-        yield mock_ec2_client
-
-
-@pytest.fixture
-def mock_env_vars():
-    env_vars = {
-        'AWS_REGION': 'us-east-1',
-        'SUBNETS': 'subnet-123,subnet-456,subnet-789',
-        'VPC_ID': 'vpc-test123',
-        'SECURITY_GROUPS': 'sg-12345',
-        'EC2_INSTANCE_TYPES': 't4g.large,t4g.medium',
-        'EC2_IAM_INSTANCE_PROFILE': 'TestInstanceProfile',
-        'EC2_MAX_PRICE': '0.10',
-        'EC2_MANAGED_BY_TAG': 'api-ec2-spot-runner',
-        'GITHUB_TOKEN': 'ghp_test_token',
-        'API_DOMAIN': 'api.test.com'
-    }
-    with patch.dict('os.environ', env_vars, clear=False):
-        yield env_vars
+def raise_runtime_error():
+    return pytest.raises(RuntimeError)
 
 
 def _create_mock_ssh_client(exit_code, encoded_output_chunks):
@@ -118,3 +135,13 @@ def _make_ami_cleanup_params(cleanup_module, **overrides):
 @pytest.fixture
 def make_ami_cleanup_params():
     return _make_ami_cleanup_params
+
+
+@pytest.fixture
+def mock_ec2_client():
+    return MagicMock()
+
+
+@pytest.fixture
+def promote_ami(promote_ami_module):
+    return promote_ami_module

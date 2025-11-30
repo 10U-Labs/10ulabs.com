@@ -3,34 +3,34 @@ from botocore.exceptions import ClientError
 
 class TestDeregisterAmi:
 
-    def test_successful_deregistration_returns_success(self, v1_handler, mock_ec2):
+    def test_successful_deregistration_returns_success(self, handler, mock_ec2):
         mock_ec2.deregister_image.return_value = {}
 
-        result = v1_handler.deregister_ami('ami-123')
+        result = handler.deregister_ami('ami-123')
 
         assert result['success'] is True
 
-    def test_successful_deregistration_calls_deregister_image(self, v1_handler, mock_ec2):
+    def test_successful_deregistration_calls_deregister_image(self, handler, mock_ec2):
         mock_ec2.deregister_image.return_value = {}
 
-        v1_handler.deregister_ami('ami-123')
+        handler.deregister_ami('ami-123')
 
         mock_ec2.deregister_image.assert_called_once_with(ImageId='ami-123')
 
-    def test_handles_invalid_ami_id(self, v1_handler, mock_ec2):
+    def test_handles_invalid_ami_id(self, handler, mock_ec2):
         mock_ec2.deregister_image.side_effect = ClientError(
             {'Error': {'Code': 'InvalidAMIID.Malformed'}}, 'deregister_image'
         )
 
-        result = v1_handler.deregister_ami('invalid-ami')
+        result = handler.deregister_ami('invalid-ami')
 
         assert result['success'] is False
 
-    def test_handles_ami_not_found(self, v1_handler, mock_ec2):
+    def test_handles_ami_not_found(self, handler, mock_ec2):
         mock_ec2.deregister_image.side_effect = ClientError(
             {'Error': {'Code': 'InvalidAMIID.NotFound'}}, 'deregister_image'
         )
 
-        result = v1_handler.deregister_ami('ami-notfound')
+        result = handler.deregister_ami('ami-notfound')
 
         assert result['success'] is False
