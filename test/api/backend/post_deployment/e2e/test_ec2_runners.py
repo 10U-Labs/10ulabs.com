@@ -1,12 +1,14 @@
-from test.api.backend.post_deployment.conftest import (
+import time
+
+import boto3
+import pytest
+from botocore.exceptions import ClientError
+
+from ..conftest import (
     create_runner_job_payload,
     make_e2e_get,
     make_e2e_post,
 )
-import time
-import boto3
-import pytest
-from botocore.exceptions import ClientError
 
 
 SECONDS_PER_AZ_CAPACITY_CHECK = 19

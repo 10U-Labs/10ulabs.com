@@ -1,6 +1,9 @@
 import os
 from unittest.mock import patch, MagicMock
-from test.api.backend.pre_deployment.conftest import (
+
+from botocore.exceptions import ClientError
+
+from .conftest import (
     parse_response_body,
     assert_response_status,
     create_mock_lambda_list_mappings_error,
@@ -10,7 +13,6 @@ from test.api.backend.pre_deployment.conftest import (
     create_mock_lambda_with_disabled_mappings,
     create_mock_lambda_delete_concurrency_error
 )
-from botocore.exceptions import ClientError
 
 
 def test_disable_sqs_event_source_lists_mappings(circuit_breaker_remediation):

@@ -1,13 +1,15 @@
-from test.api.backend.post_deployment.conftest import (
+import time
+
+import pytest
+from botocore.exceptions import ClientError
+
+from ..conftest import (
     create_runner_job_payload,
     DOCKER_RUNNER_REQUEST_TIMEOUT,
     get_ecs_task_tags,
     make_e2e_get,
     make_e2e_post,
 )
-import time
-import pytest
-from botocore.exceptions import ClientError
 
 
 @pytest.fixture(name="stable_ecr_image_exists", scope="module")

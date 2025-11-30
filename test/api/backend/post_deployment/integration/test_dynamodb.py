@@ -1,6 +1,8 @@
 import time
-from test.api.backend.post_deployment.integration.conftest import create_test_dynamodb_item, cleanup_test_dynamodb_item
+
 from botocore.exceptions import ClientError
+
+from .conftest import create_test_dynamodb_item, cleanup_test_dynamodb_item
 
 
 def test_dynamodb_idempotency_table_exists(dynamodb_client, config):

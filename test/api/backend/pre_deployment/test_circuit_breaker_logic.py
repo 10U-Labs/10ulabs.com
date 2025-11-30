@@ -1,9 +1,10 @@
 import json
 import time
 from unittest.mock import patch, MagicMock
-from test.api.backend.pre_deployment.conftest import parse_response_body, assert_response_status, assert_no_hardcoded_env_defaults, get_lambda_path
 
 from botocore.exceptions import ClientError
+
+from .conftest import parse_response_body, assert_response_status, assert_no_hardcoded_env_defaults, get_lambda_path
 
 
 def test_check_circuit_breaker_closed_state_returns_true(webhook_router):

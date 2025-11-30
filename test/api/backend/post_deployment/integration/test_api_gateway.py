@@ -1,4 +1,4 @@
-from test.api.backend.post_deployment.integration.conftest import get_api_gateway_id_by_name
+from .conftest import get_api_gateway_id_by_name
 
 
 def test_api_gateway_stage_configuration(apigateway_client, config):

@@ -3,9 +3,10 @@ import os
 import urllib.error
 from datetime import datetime
 from unittest.mock import patch, MagicMock, Mock
-from test.api.backend.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type, create_multi_client_mock
 
 from botocore.exceptions import ClientError
+
+from .conftest import parse_response_body, assert_response_status, assert_json_content_type, create_multi_client_mock
 
 
 def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(v1_handler, docker_runner_post_event_factory, lambda_context):

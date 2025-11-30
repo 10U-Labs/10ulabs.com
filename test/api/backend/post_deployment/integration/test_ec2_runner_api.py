@@ -1,5 +1,6 @@
-from test.api.backend.post_deployment.conftest import make_authenticated_get, make_authenticated_post
 import requests
+
+from ..conftest import make_authenticated_get, make_authenticated_post
 
 
 def test_protected_endpoint_requires_auth(api_url):
