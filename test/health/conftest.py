@@ -18,7 +18,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
-    tfvars_path = Path(__file__).parent.parent / "src" / "health" / "terraform.tfvars"
+    tfvars_path = Path(__file__).parent.parent.parent / "src" / "health" / "terraform.tfvars"
     result = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
