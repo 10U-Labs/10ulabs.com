@@ -24,7 +24,7 @@ def assert_cors_headers(response: Dict[str, Any]) -> None:
 
 
 def load_health_handler_module() -> ModuleType:
-    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "health" / "health.py"
+    handler_path = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda" / "handler.py"
     spec = importlib.util.spec_from_file_location("health_handler", handler_path)
     assert spec is not None
     assert spec.loader is not None

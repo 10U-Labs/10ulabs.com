@@ -60,3 +60,15 @@ def test_health_handler_has_description():
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
     assert 'description      = "Health check endpoint for API"' in content
+
+
+def test_health_handler_source_file_path():
+    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'source_file = "${path.module}/lambda/handler.py"' in content
+
+
+def test_health_handler_py_file_exists():
+    handler_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda" / "handler.py"
+    assert handler_file.exists()

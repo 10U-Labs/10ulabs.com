@@ -1,6 +1,6 @@
 data "archive_file" "health_handler" {
   type        = "zip"
-  source_file = "${path.module}/health.py"
+  source_file = "${path.module}/lambda/handler.py"
   output_path = "${path.module}/.terraform/lambda_packages/health_handler.zip"
 }
 
@@ -8,7 +8,7 @@ resource "aws_lambda_function" "health_handler" {
   filename         = data.archive_file.health_handler.output_path
   function_name    = var.health_handler_function_name
   role             = aws_iam_role.lambda_health_handler.arn
-  handler          = "health.handler"
+  handler          = "handler.handler"
   source_code_hash = data.archive_file.health_handler.output_base64sha256
   runtime          = "python3.13"
   timeout          = 10
