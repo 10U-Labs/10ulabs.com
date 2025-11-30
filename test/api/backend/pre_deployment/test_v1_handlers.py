@@ -8,40 +8,6 @@ from test.api.pre_deployment.conftest import parse_response_body, assert_respons
 from botocore.exceptions import ClientError
 
 
-def test_lambda_handler_echo_endpoint_returns_200_status_code(v1_handler, echo_post_event_factory, lambda_context):
-    event = echo_post_event_factory()
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 200)
-
-
-def test_lambda_handler_echo_endpoint_returns_json_content_type(v1_handler, echo_post_event_factory, lambda_context):
-    event = echo_post_event_factory()
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-def test_lambda_handler_echo_endpoint_echoes_input_data(v1_handler, echo_post_event_factory, lambda_context):
-    payload = {'message': 'hello', 'number': 42}
-    event = echo_post_event_factory(body_data=payload)
-    response = v1_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
-    assert body['echo'] == payload
-
-
-def test_lambda_handler_echo_endpoint_includes_received_at(v1_handler, echo_post_event_factory, lambda_context):
-    event = echo_post_event_factory()
-    response = v1_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
-    assert 'received_at' in body
-
-
-def test_lambda_handler_echo_endpoint_with_invalid_json_returns_400(v1_handler, echo_post_event_factory, lambda_context):
-    event = echo_post_event_factory()
-    event['body'] = 'not valid json'
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 400)
-
-
 def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(v1_handler, docker_runner_post_event_factory, lambda_context):
     event = docker_runner_post_event_factory()
     body = parse_response_body({'body': event['body']})
@@ -1333,13 +1299,6 @@ def test_get_ec2_runner_status_extracts_metadata(mock_boto_client, v1_handler):
     assert result['instances'][0]['job_id'] == '999'
 
 
-def test_lambda_handler_routes_to_echo(v1_handler, lambda_context):
-    event = {'path': '/v1/echo', 'httpMethod': 'POST', 'body': '{"test": "data"}'}
-    response = v1_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
-    assert 'echo' in body
-
-
 def test_lambda_handler_routes_to_docker_runner_get(v1_handler, lambda_context):
     event = {'path': '/v1/docker-runner', 'httpMethod': 'GET'}
     with patch.object(v1_handler, 'get_docker_runner_status', return_value={'success': True, 'running_tasks': 0, 'tasks': [], 'cluster': 'test'}):
@@ -1815,14 +1774,6 @@ def test_lambda_handler_options_allows_x_test_mode_header(v1_handler, lambda_con
     headers = response.get('headers', {})
     allowed_headers = headers['Access-Control-Allow-Headers']
     assert 'x-test-mode' in allowed_headers
-
-
-def test_lambda_handler_test_mode_does_not_affect_echo_endpoint(v1_handler, lambda_context):
-    v1_handler.set_test_mode(False)
-    event = {'path': '/v1/echo', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{"test": "data"}', 'requestContext': {'requestId': 'test-id'}}
-    response = v1_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
-    assert 'echo' in body
 
 
 @patch('boto3.client')

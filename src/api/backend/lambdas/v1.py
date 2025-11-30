@@ -1288,15 +1288,6 @@ def handle_ec2_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
     return response
 
 
-def handle_echo_post(event: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        body = parse_body(event)
-        response = json_response(200, {'echo': body, 'received_at': event.get('requestContext', {}).get('requestId', 'N/A')})
-    except (ValueError, KeyError):
-        response = error_response(400, 'Invalid JSON')
-    return response
-
-
 def get_dynamodb_client():
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
@@ -1343,7 +1334,6 @@ def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
 
 
 ROUTE_MAP = {
-    ('/v1/echo', 'POST'): handle_echo_post,
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,

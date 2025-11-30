@@ -130,7 +130,7 @@ paths:
                     type: string
                     example: Invalid JSON
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${EchoHandlerArn}
         httpMethod: POST
         type: aws_proxy
   /health/dependencies:

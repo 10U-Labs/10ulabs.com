@@ -256,22 +256,6 @@ def catchall_unknown_event():
 
 
 @pytest.fixture
-def echo_post_event_factory():
-    def _create_event(body_data=None, is_base64_encoded=False, content_type='application/json'):
-        if body_data is None:
-            body_data = {'test': 'data'}
-        return {
-            'path': '/v1/echo',
-            'httpMethod': 'POST',
-            'body': json.dumps(body_data) if not is_base64_encoded else body_data,
-            'isBase64Encoded': is_base64_encoded,
-            'headers': {'Content-Type': content_type},
-            'requestContext': {'requestId': 'test-request-id'}
-        }
-    return _create_event
-
-
-@pytest.fixture
 def docker_runner_post_event_factory():
     def _create_event(job_id=123, job_labels=None, github_repo='test/repo'):
         if job_labels is None:
