@@ -1,6 +1,6 @@
 data "archive_file" "handler" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/v1.py"
+  source_file = "${path.module}/lambda/handler.py"
   output_path = "${path.module}/.terraform/lambda_packages/handler.zip"
 }
 
@@ -8,7 +8,7 @@ resource "aws_lambda_function" "handler" {
   filename         = data.archive_file.handler.output_path
   function_name    = "${local.resource_prefix}-ImageForDockerRunnersHandler"
   role             = aws_iam_role.lambda.arn
-  handler          = "v1.lambda_handler"
+  handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.handler.output_base64sha256
   runtime          = "python3.13"
   timeout          = 10
