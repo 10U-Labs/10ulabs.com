@@ -114,7 +114,8 @@ def create_runner_job_payload(github_repo, job_labels):
     payload = {
         "job_id": job_id,
         "job_labels": job_labels,
-        "github_repo": github_repo
+        "github_repo": github_repo,
+        "run_id": job_id
     }
     return job_id, payload
 

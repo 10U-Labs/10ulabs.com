@@ -4,6 +4,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 import boto3
 from botocore.exceptions import ClientError
 
@@ -13,6 +14,8 @@ logger.setLevel(logging.INFO)
 _clients = {}
 
 STALE_THRESHOLD_SECONDS = 3600
+ECS_MANAGED_BY_TAG = 'docker-runner-api'
+WORKFLOW_RUNNER_TYPE_TAG = 'workflow-runner'
 
 
 def get_dynamodb_client():
@@ -192,6 +195,103 @@ def _is_runner_stale(created_at: int, current_time: int) -> bool:
     return age_seconds >= STALE_THRESHOLD_SECONDS
 
 
+def get_orphaned_ecs_tasks() -> list:
+    tasks = []
+    cluster = os.environ.get('ECS_CLUSTER', '')
+    if not cluster:
+        return tasks
+    try:
+        ecs = get_ecs_client()
+        paginator = ecs.get_paginator('list_tasks')
+        task_arns = []
+        for page in paginator.paginate(cluster=cluster, desiredStatus='RUNNING'):
+            task_arns.extend(page.get('taskArns', []))
+        if not task_arns:
+            return tasks
+        for i in range(0, len(task_arns), 100):
+            batch = task_arns[i:i + 100]
+            response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=['TAGS'])
+            for task in response.get('tasks', []):
+                tags = {t['key']: t['value'] for t in task.get('tags', [])}
+                if tags.get('Type') == WORKFLOW_RUNNER_TYPE_TAG and tags.get('ManagedBy') == ECS_MANAGED_BY_TAG:
+                    started_at = task.get('startedAt')
+                    if started_at:
+                        age_seconds = (datetime.now(timezone.utc) - started_at).total_seconds()
+                        if age_seconds >= STALE_THRESHOLD_SECONDS:
+                            tasks.append({
+                                'task_arn': task['taskArn'],
+                                'age_seconds': int(age_seconds),
+                                'runner_name': tags.get('Name', ''),
+                                'github_repo': tags.get('GitHubRepo', '')
+                            })
+    except ClientError as e:
+        logger.error("Failed to get orphaned ECS tasks: %s", e)
+    return tasks
+
+
+def get_orphaned_ec2_instances() -> list:
+    instances = []
+    ec2_managed_by_tag = os.environ.get('EC2_MANAGED_BY_TAG', '')
+    if not ec2_managed_by_tag:
+        return instances
+    try:
+        ec2 = get_ec2_client()
+        response = ec2.describe_instances(
+            Filters=[
+                {'Name': 'tag:Type', 'Values': [WORKFLOW_RUNNER_TYPE_TAG]},
+                {'Name': 'tag:ManagedBy', 'Values': [ec2_managed_by_tag]},
+                {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
+            ]
+        )
+        current_time = datetime.now(timezone.utc)
+        for reservation in response.get('Reservations', []):
+            for instance in reservation.get('Instances', []):
+                launch_time = instance.get('LaunchTime')
+                if launch_time:
+                    age_seconds = (current_time - launch_time).total_seconds()
+                    if age_seconds >= STALE_THRESHOLD_SECONDS:
+                        tags = {t['Key']: t['Value'] for t in instance.get('Tags', [])}
+                        instances.append({
+                            'instance_id': instance['InstanceId'],
+                            'age_seconds': int(age_seconds),
+                            'runner_name': tags.get('Name', ''),
+                            'github_repo': tags.get('GitHubRepo', '')
+                        })
+    except ClientError as e:
+        logger.error("Failed to get orphaned EC2 instances: %s", e)
+    return instances
+
+
+def cleanup_orphaned_resources(github_token: str) -> dict:
+    counts = {'ecs_cleaned': 0, 'ec2_cleaned': 0, 'errors': 0}
+    github_repo = os.environ.get('GITHUB_REPO', '')
+    orphaned_tasks = get_orphaned_ecs_tasks()
+    for task in orphaned_tasks:
+        logger.info("Cleaning up orphaned ECS task: %s (age=%ds)", task['task_arn'], task['age_seconds'])
+        if terminate_ecs_task(task['task_arn']):
+            counts['ecs_cleaned'] += 1
+            runner_name = task.get('runner_name', '')
+            task_repo = task.get('github_repo', '') or github_repo
+            if runner_name and task_repo and github_token:
+                delete_github_runner(github_token, task_repo, runner_name)
+        else:
+            counts['errors'] += 1
+    orphaned_instances = get_orphaned_ec2_instances()
+    for instance in orphaned_instances:
+        logger.info("Cleaning up orphaned EC2 instance: %s (age=%ds)", instance['instance_id'], instance['age_seconds'])
+        if terminate_ec2_instance(instance['instance_id']):
+            counts['ec2_cleaned'] += 1
+            runner_name = instance.get('runner_name', '')
+            instance_repo = instance.get('github_repo', '') or github_repo
+            if runner_name and instance_repo and github_token:
+                delete_github_runner(github_token, instance_repo, runner_name)
+        else:
+            counts['errors'] += 1
+    logger.info("Orphaned resource cleanup complete: ecs=%d, ec2=%d, errors=%d",
+                counts['ecs_cleaned'], counts['ec2_cleaned'], counts['errors'])
+    return counts
+
+
 def _terminate_runner(runner_type: str, resource_id: str) -> bool:
     result = False
     if runner_type.startswith('ec2'):
@@ -237,7 +337,16 @@ def cleanup_stale_runners() -> dict:
 
 def lambda_handler(_event, _context):
     logger.info("Starting stale runner cleanup")
-    result = cleanup_stale_runners()
+    github_token = get_github_token()
+    dynamo_result = cleanup_stale_runners()
+    orphan_result = cleanup_orphaned_resources(github_token)
+    result = {
+        'dynamodb_cleaned': dynamo_result['cleaned'],
+        'orphaned_ecs_cleaned': orphan_result['ecs_cleaned'],
+        'orphaned_ec2_cleaned': orphan_result['ec2_cleaned'],
+        'errors': dynamo_result['errors'] + orphan_result['errors']
+    }
+    logger.info("Full cleanup complete: %s", result)
     response = {
         'statusCode': 200,
         'body': json.dumps(result)
