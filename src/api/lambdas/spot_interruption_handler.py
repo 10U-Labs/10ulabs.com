@@ -25,6 +25,12 @@ def get_ssm_client():
     return _clients['ssm']
 
 
+def get_ecs_client():
+    if 'ecs' not in _clients:
+        _clients['ecs'] = boto3.client('ecs')
+    return _clients['ecs']
+
+
 def get_github_token() -> str:
     result = ''
     parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '')
@@ -127,8 +133,7 @@ def handle_ecs_task_stopped(event: dict) -> dict:
     stop_code = detail.get('stopCode', '')
     stopped_reason = detail.get('stoppedReason', '')
     task_arn = detail.get('taskArn', '')
-    tags = detail.get('tags', [])
-    tag_dict = {tag['key']: tag['value'] for tag in tags}
+    tag_dict = _get_ecs_task_tags(task_arn)
     run_id = tag_dict.get('RunId', '')
     runner_type = tag_dict.get('RunnerType', '')
     github_repo = tag_dict.get('GitHubRepo', '')
@@ -159,6 +164,24 @@ def handle_ecs_task_stopped(event: dict) -> dict:
                     success = trigger_runner_replacement(run_id, runner_type, github_repo)
                     result = {'statusCode': 200, 'body': 'Replacement runner triggered'} if success else {'statusCode': 500, 'body': 'Failed to trigger replacement'}
     return result
+
+
+def _get_ecs_task_tags(task_arn: str) -> dict:
+    tag_dict: dict = {}
+    try:
+        cluster = os.environ.get('ECS_CLUSTER', '')
+        response = get_ecs_client().describe_tasks(
+            cluster=cluster,
+            tasks=[task_arn],
+            include=['TAGS']
+        )
+        tasks = response.get('tasks', [])
+        if tasks:
+            tags = tasks[0].get('tags', [])
+            tag_dict = {tag['key']: tag['value'] for tag in tags}
+    except (ClientError, IndexError, KeyError) as e:
+        logger.error("Failed to get ECS task tags: %s", e)
+    return tag_dict
 
 
 def _get_ec2_instance_tags(instance_id: str) -> dict:

@@ -193,6 +193,24 @@ def drift_recovery(config):
 
 
 @pytest.fixture
+def spot_interruption_handler(config):
+    env_vars = {
+        'AWS_REGION': config['aws_region'],
+        'ECS_CLUSTER': config['cluster_name'],
+        'GITHUB_REPO': config['github_repo'],
+        'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
+        'API_BASE_URL': f"https://{config['api_fqdn']}",
+        'API_KEY': 'test-api-key',
+        'WORKFLOW_RUNNERS_TABLE': 'test-workflow-runners'
+    }
+    with patch.dict('os.environ', env_vars):
+        module = load_lambda_module("spot_interruption_handler.py", "spot_interruption_handler")
+        if hasattr(module, '_clients'):
+            setattr(module, '_clients', {})
+        yield module
+
+
+@pytest.fixture
 def mock_sqs():
     with patch('boto3.client') as mock_boto_client:
         mock_sqs_client = MagicMock()
