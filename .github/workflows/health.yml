@@ -183,7 +183,7 @@ jobs:
             .github/workflows/health.yml
       - name: Run pylint on source
         run: |
-          python3 -m pylint src/health/health.py \
+          python3 -m pylint src/health/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
@@ -194,7 +194,7 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy on source
-        run: python3 -m mypy src/health/health.py
+        run: python3 -m mypy src/health/lambda/handler.py
       - name: Run mypy on tests
         run: python3 -m mypy test/health/
       - name: Terraform Format Check
