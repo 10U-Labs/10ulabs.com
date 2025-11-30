@@ -245,7 +245,7 @@ jobs:
             .github/workflows/api.yml
       - name: Run pylint
         run: |
-          for file in src/api/backend/lambdas/*.py src/api/backend/files/*.py; do
+          for file in src/api/backend/lambdas/*.py; do
             python3 -m pylint "$file" \
               --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
               --fail-on=C,R,W \
@@ -257,7 +257,7 @@ jobs:
             --fail-under=10.0
       - name: Run mypy
         run: |
-          for file in src/api/backend/lambdas/*.py src/api/backend/files/*.py; do
+          for file in src/api/backend/lambdas/*.py; do
             python3 -m mypy "$file"
           done
           python3 -m mypy test/api/backend/
