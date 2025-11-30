@@ -66,12 +66,12 @@ def terminate_instance_safely(ec2_client, instance_id):
 
 
 @pytest.fixture(name="test_ec2_runner_instance", scope="module")
-def test_ec2_runner_instance_fixture(api_credentials, github_repo, latest_ami_exists, ec2_client, config):
+def test_ec2_runner_instance_fixture(api_credentials, github_repo, latest_ami_exists, ec2_client, config, github_run_id):
     if not latest_ami_exists:
         yield None
         return
     runner_label = config['runner_label_ec2_spot_e2e_test']
-    job_id, payload = create_runner_job_payload(github_repo, [runner_label])
+    job_id, payload = create_runner_job_payload(github_repo, [runner_label], github_run_id)
     response = make_e2e_post(
         f"{api_credentials['url']}/v1/ec2-runner", api_credentials["key"],
         json=payload, timeout=calculate_ec2_runner_timeout()
@@ -84,7 +84,7 @@ def test_ec2_runner_instance_fixture(api_credentials, github_repo, latest_ami_ex
         yield None
         return
     wait_for_instance_running(ec2_client, instance_id)
-    yield {"instance_id": instance_id, "job_id": job_id, "github_repo": github_repo}
+    yield {"instance_id": instance_id, "job_id": job_id, "github_repo": github_repo, "run_id": github_run_id}
     terminate_instance_safely(ec2_client, instance_id)
 
 
@@ -191,3 +191,34 @@ def test_ec2_runner_instance_enforces_imdsv2(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     metadata_options = response['Reservations'][0]['Instances'][0].get('MetadataOptions', {})
     assert metadata_options.get("HttpTokens") == "required"
+
+
+def test_ec2_runner_instance_has_run_id_tag(
+    test_ec2_runner_instance, ec2_client, latest_ami_exists
+):
+    if not latest_ami_exists:
+        pytest.skip("No AMI available")
+    if test_ec2_runner_instance is None:
+        pytest.fail("Test instance not created")
+    instance_id = test_ec2_runner_instance.get("instance_id")
+    run_id = test_ec2_runner_instance.get("run_id")
+    response = ec2_client.describe_instances(InstanceIds=[instance_id])
+    tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
+    tag_dict = {tag['Key']: tag['Value'] for tag in tags}
+    assert tag_dict.get("RunId") == str(run_id)
+
+
+def test_ec2_runner_stored_in_dynamodb(
+    test_ec2_runner_instance, dynamodb_client, workflow_runners_table_name, latest_ami_exists
+):
+    if not latest_ami_exists:
+        pytest.skip("No AMI available")
+    if test_ec2_runner_instance is None:
+        pytest.fail("Test instance not created")
+    run_id = test_ec2_runner_instance.get("run_id")
+    response = dynamodb_client.query(
+        TableName=workflow_runners_table_name,
+        KeyConditionExpression='run_id = :rid',
+        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
+    )
+    assert len(response.get('Items', [])) > 0

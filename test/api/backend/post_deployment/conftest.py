@@ -1,3 +1,4 @@
+import os
 import time
 import boto3
 import pytest
@@ -89,6 +90,21 @@ def api_credentials_fixture(api_url, api_key):
     return {"url": api_url, "key": api_key}
 
 
+@pytest.fixture(name="github_run_id", scope="module")
+def github_run_id_fixture():
+    return os.environ.get("GITHUB_RUN_ID")
+
+
+@pytest.fixture(name="dynamodb_client", scope="module")
+def dynamodb_client_fixture(aws_region):
+    return boto3.client("dynamodb", region_name=aws_region)
+
+
+@pytest.fixture(name="workflow_runners_table_name", scope="module")
+def workflow_runners_table_name_fixture(config):
+    return config["workflow_runners_table_name"]
+
+
 @pytest.fixture(name="ecr_image_count", scope="module")
 def ecr_image_count_fixture(ecr_client, config):
     response = ecr_client.describe_images(
@@ -109,12 +125,13 @@ def ecr_has_latest_tag_fixture(ecr_client, config):
     return 'latest' in image_tags
 
 
-def create_runner_job_payload(github_repo, job_labels):
+def create_runner_job_payload(github_repo, job_labels, run_id=None):
     job_id = int(time.time())
     payload = {
         "job_id": job_id,
         "job_labels": job_labels,
-        "github_repo": github_repo
+        "github_repo": github_repo,
+        "run_id": int(run_id) if run_id else None
     }
     return job_id, payload
 

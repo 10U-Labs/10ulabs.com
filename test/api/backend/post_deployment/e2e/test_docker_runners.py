@@ -45,13 +45,13 @@ def stop_task_safely(ecs_client, cluster_name, task_arn):
 
 
 @pytest.fixture(name="test_fargate_task", scope="module")
-def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs_context, config):
+def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs_context, config, github_run_id):
     if ecr_image_count == 0:
         print("Skipping docker runner test: ecr_image_count is 0")
         yield None
         return
     runner_label = config['runner_label_fargate_spot_e2e_test']
-    job_id, payload = create_runner_job_payload(github_repo, [runner_label])
+    job_id, payload = create_runner_job_payload(github_repo, [runner_label], github_run_id)
     response = make_e2e_post(
         f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload,
         timeout=DOCKER_RUNNER_REQUEST_TIMEOUT
@@ -67,7 +67,7 @@ def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs
         yield None
         return
     wait_for_task_running(ecs_context["client"], ecs_context["cluster_name"], task_arn)
-    yield {"task_arn": task_arn, "job_id": job_id, "github_repo": github_repo, "cluster_name": ecs_context["cluster_name"]}
+    yield {"task_arn": task_arn, "job_id": job_id, "github_repo": github_repo, "cluster_name": ecs_context["cluster_name"], "run_id": github_run_id}
     stop_task_safely(ecs_context["client"], ecs_context["cluster_name"], task_arn)
 
 
@@ -145,3 +145,31 @@ def test_docker_runner_appears_in_status_endpoint(
     tasks = status_response.json().get("tasks", [])
     task_arns = [task.get("task_arn") for task in tasks]
     assert task_arn in task_arns
+
+
+def test_docker_runner_task_has_run_id_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
+    if not stable_ecr_image_exists:
+        pytest.skip("No stable ECR image available")
+    if test_fargate_task is None:
+        pytest.fail("Test task not created")
+    run_id = test_fargate_task.get("run_id")
+    tag_dict = get_ecs_task_tags(
+        ecs_context["client"], test_fargate_task.get("cluster_name"), test_fargate_task.get("task_arn")
+    )
+    assert tag_dict.get("RunId") == str(run_id)
+
+
+def test_docker_runner_stored_in_dynamodb(
+    test_fargate_task, dynamodb_client, workflow_runners_table_name, stable_ecr_image_exists
+):
+    if not stable_ecr_image_exists:
+        pytest.skip("No stable ECR image available")
+    if test_fargate_task is None:
+        pytest.fail("Test task not created")
+    run_id = test_fargate_task.get("run_id")
+    response = dynamodb_client.query(
+        TableName=workflow_runners_table_name,
+        KeyConditionExpression='run_id = :rid',
+        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
+    )
+    assert len(response.get('Items', [])) > 0
