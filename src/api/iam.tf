@@ -834,7 +834,7 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
         Resource = ["*"]
         Condition = {
           ArnEquals = {
-            "ecs:cluster" = data.terraform_remote_state.bootstrap.outputs.arn_for_runner_cluster
+            "ecs:cluster" = aws_ecs_cluster.runner.arn
           }
         }
       }
