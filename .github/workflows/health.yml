@@ -78,6 +78,34 @@ jobs:
         run: terraform init
       - name: Terraform Apply
         run: terraform apply -auto-approve
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install pytest requests PyYAML boto3
+      - name: Run E2E tests
+        run: python3 -m pytest test/health/post_deployment/e2e/ -v
   integration-testing:
     name: Integration testing
     needs:
