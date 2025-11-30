@@ -57,7 +57,7 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           AMI_NAME="ami-github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
-          python3 src/api/endpoints/image_for_ec2_runners/build_ami.py build src/api/endpoints/image_for_ec2_runners/config.yml \
+          python3 src/api/endpoints/image_for_ec2_runners/files/build_ami.py build src/api/endpoints/image_for_ec2_runners/files/config.yml \
             --var "ami_name=${AMI_NAME}" \
             --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
             --var "region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
@@ -121,8 +121,8 @@ jobs:
         run: python3 -m pip install boto3 pyyaml
       - name: Clean up old AMIs
         run: |
-          python3 src/api/endpoints/image_for_ec2_runners/cleanup.py \
-            --config src/api/endpoints/image_for_ec2_runners/config.yml \
+          python3 src/api/endpoints/image_for_ec2_runners/files/cleanup.py \
+            --config src/api/endpoints/image_for_ec2_runners/files/config.yml \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --ssm-parameter-name "${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
   declaring-common-variables:
@@ -187,7 +187,7 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          SOURCE_AMI=$(yq '.source_ami' src/api/endpoints/image_for_ec2_runners/config.yml)
+          SOURCE_AMI=$(yq '.source_ami' src/api/endpoints/image_for_ec2_runners/files/config.yml)
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
           echo "aws_region=${{ steps.shared.outputs.aws_region }}" >> $GITHUB_OUTPUT
@@ -314,7 +314,7 @@ jobs:
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners.yml \
-            src/api/endpoints/image_for_ec2_runners/config.yml
+            src/api/endpoints/image_for_ec2_runners/files/config.yml
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
         run: python3 -m pip install boto3 boto3-stubs mypy paramiko pylint pytest types-paramiko types-PyYAML
@@ -324,14 +324,14 @@ jobs:
         run: |
           pylint \
             lib/ec2_spot/*.py \
-            src/api/endpoints/image_for_ec2_runners/*.py \
+            src/api/endpoints/image_for_ec2_runners/files/*.py \
             test/api/endpoints/image_for_ec2_runners/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/*.py
+          MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/files/*.py
           MYPYPATH=lib:test/api/endpoints/image_for_ec2_runners/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_spot/ test/api/endpoints/image_for_ec2_runners/
   promoting-ami:
     name: Promoting AMI
@@ -379,7 +379,7 @@ jobs:
         run: python3 -m pip install boto3
       - name: Promote AMI
         run: |
-          python3 src/api/endpoints/image_for_ec2_runners/promote_ami.py \
+          python3 src/api/endpoints/image_for_ec2_runners/files/promote_ami.py \
             --ami-id "${{ needs.building-ami.outputs.ami_id }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --run-id "${{ github.run_id }}" \

@@ -5,12 +5,12 @@ import pytest
 
 @pytest.fixture
 def build_ami_module(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("build_ami", project_root / "src" / "image_for_ec2_runners" / "build_ami.py")
+    return load_module_from_path_fixture("build_ami", project_root / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "files" / "build_ami.py")
 
 
 @pytest.fixture
 def cleanup(project_root, load_module_from_path_fixture):
-    return load_module_from_path_fixture("cleanup", project_root / "src" / "image_for_ec2_runners" / "cleanup.py")
+    return load_module_from_path_fixture("cleanup", project_root / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "files" / "cleanup.py")
 
 
 @pytest.fixture
