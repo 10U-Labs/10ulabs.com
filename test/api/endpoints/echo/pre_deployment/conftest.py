@@ -1,12 +1,14 @@
 import importlib.util
 import json
+from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import Mock
 
-from test.api.endpoints.echo.conftest import ECHO_SRC
-
 import pytest
+
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
+ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
