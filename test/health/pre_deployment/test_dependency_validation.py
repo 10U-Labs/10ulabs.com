@@ -1,8 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
-from botocore.exceptions import ClientError
 
-from test.health.pre_deployment.conftest import parse_response_body, assert_response_status
+from botocore.exceptions import ClientError
 
 
 class TestValidateSecurityGroupsReturnsValid:
