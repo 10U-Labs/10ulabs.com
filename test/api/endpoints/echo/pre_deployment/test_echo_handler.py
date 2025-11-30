@@ -41,14 +41,16 @@ def test_echo_handler_echoes_input_data(echo_handler, echo_post_event_factory, l
     event = echo_post_event_factory(body_data=payload)
     response = echo_handler.handler(event, lambda_context)
     body = parse_response_body(response)
-    assert body['echo'] == payload
+    echoed_data_matches = body['echo'] == payload
+    assert echoed_data_matches
 
 
 def test_echo_handler_includes_received_at(echo_handler, echo_post_event_factory, lambda_context):
     event = echo_post_event_factory()
     response = echo_handler.handler(event, lambda_context)
     body = parse_response_body(response)
-    assert 'received_at' in body
+    has_received_at = 'received_at' in body
+    assert has_received_at
 
 
 def test_echo_handler_with_invalid_json_returns_400(echo_handler, echo_post_event_factory, lambda_context):
@@ -62,7 +64,8 @@ def test_echo_handler_body_contains_echo_key(echo_handler, echo_post_event_facto
     event = echo_post_event_factory()
     response = echo_handler.handler(event, lambda_context)
     body = parse_response_body(response)
-    assert 'echo' in body
+    has_echo_key = 'echo' in body
+    assert has_echo_key
 
 
 def test_echo_handler_options_returns_200(echo_handler, lambda_context):
