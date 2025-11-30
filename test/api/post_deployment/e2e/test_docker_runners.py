@@ -1,5 +1,6 @@
 from test.api.post_deployment.conftest import (
     create_runner_job_payload,
+    DOCKER_RUNNER_REQUEST_TIMEOUT,
     get_ecs_task_tags,
     make_e2e_get,
     make_e2e_post,
@@ -50,7 +51,8 @@ def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs
     runner_label = config['runner_label_fargate_spot_e2e_test']
     job_id, payload = create_runner_job_payload(github_repo, [runner_label])
     response = make_e2e_post(
-        f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload
+        f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload,
+        timeout=DOCKER_RUNNER_REQUEST_TIMEOUT
     )
     if response.status_code not in [200, 202]:
         print(f"Docker runner POST failed: status={response.status_code}, body={response.text}")

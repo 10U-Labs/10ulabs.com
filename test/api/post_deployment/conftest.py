@@ -5,6 +5,7 @@ import requests
 
 
 DEFAULT_REQUEST_TIMEOUT = 10
+DOCKER_RUNNER_REQUEST_TIMEOUT = 30
 
 
 @pytest.fixture(name="aws_region", scope="module")
