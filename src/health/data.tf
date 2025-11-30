@@ -1,9 +1,9 @@
-data "terraform_remote_state" "api" {
-  backend = "s3"
+import {
+  id = "HealthHandler-ServiceRole"
+  to = aws_iam_role.lambda_health_handler
+}
 
-  config = {
-    bucket = "10ulabs-terraform-state"
-    key    = "api/terraform.tfstate"
-    region = "us-east-1"
-  }
+import {
+  id = "/aws/lambda/TenULabsHealthHandler"
+  to = aws_cloudwatch_log_group.health_handler
 }
