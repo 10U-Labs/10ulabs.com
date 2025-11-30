@@ -350,27 +350,25 @@ class TestResetDependencyValidation:
 
 class TestHandleDependenciesHealthReturnsHealthy:
 
-    def test_returns_200_when_dependencies_valid(self, v1_handler, lambda_context):
+    def test_returns_200_when_dependencies_valid(self, v1_handler, lambda_context, health_dependencies_get_event):
         mock_ec2 = MagicMock()
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
         v1_handler.set_client('ec2', mock_ec2)
-        event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
-        response = v1_handler.lambda_handler(event, lambda_context)
+        response = v1_handler.lambda_handler(health_dependencies_get_event, lambda_context)
 
         assert response['statusCode'] == 200
 
-    def test_returns_healthy_status_when_dependencies_valid(self, v1_handler, lambda_context):
+    def test_returns_healthy_status_when_dependencies_valid(self, v1_handler, lambda_context, health_dependencies_get_event):
         mock_ec2 = MagicMock()
         mock_ec2.describe_security_groups.return_value = {'SecurityGroups': [{'GroupId': 'sg-test'}]}
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
         v1_handler.set_client('ec2', mock_ec2)
-        event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
-        response = v1_handler.lambda_handler(event, lambda_context)
+        response = v1_handler.lambda_handler(health_dependencies_get_event, lambda_context)
         body = json.loads(response['body'])
 
         assert body['status'] == 'healthy'
@@ -378,7 +376,7 @@ class TestHandleDependenciesHealthReturnsHealthy:
 
 class TestHandleDependenciesHealthReturnsUnhealthy:
 
-    def test_returns_503_when_security_group_missing(self, v1_handler, lambda_context):
+    def test_returns_503_when_security_group_missing(self, v1_handler, lambda_context, health_dependencies_get_event):
         mock_ec2 = MagicMock()
         mock_ec2.describe_security_groups.side_effect = ClientError(
             {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
@@ -387,13 +385,12 @@ class TestHandleDependenciesHealthReturnsUnhealthy:
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
         v1_handler.set_client('ec2', mock_ec2)
-        event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
-        response = v1_handler.lambda_handler(event, lambda_context)
+        response = v1_handler.lambda_handler(health_dependencies_get_event, lambda_context)
 
         assert response['statusCode'] == 503
 
-    def test_returns_unhealthy_status_when_security_group_missing(self, v1_handler, lambda_context):
+    def test_returns_unhealthy_status_when_security_group_missing(self, v1_handler, lambda_context, health_dependencies_get_event):
         mock_ec2 = MagicMock()
         mock_ec2.describe_security_groups.side_effect = ClientError(
             {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
@@ -402,14 +399,13 @@ class TestHandleDependenciesHealthReturnsUnhealthy:
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
         v1_handler.set_client('ec2', mock_ec2)
-        event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
-        response = v1_handler.lambda_handler(event, lambda_context)
+        response = v1_handler.lambda_handler(health_dependencies_get_event, lambda_context)
         body = json.loads(response['body'])
 
         assert body['status'] == 'unhealthy'
 
-    def test_returns_errors_when_security_group_missing(self, v1_handler, lambda_context):
+    def test_returns_errors_when_security_group_missing(self, v1_handler, lambda_context, health_dependencies_get_event):
         mock_ec2 = MagicMock()
         mock_ec2.describe_security_groups.side_effect = ClientError(
             {'Error': {'Code': 'InvalidGroup.NotFound', 'Message': 'Not found'}},
@@ -418,9 +414,8 @@ class TestHandleDependenciesHealthReturnsUnhealthy:
         mock_ec2.describe_subnets.return_value = {'Subnets': [{'SubnetId': 'subnet-test1'}, {'SubnetId': 'subnet-test2'}]}
         mock_ec2.describe_vpcs.return_value = {'Vpcs': [{'VpcId': 'vpc-test'}]}
         v1_handler.set_client('ec2', mock_ec2)
-        event = {'path': '/v1/health/dependencies', 'httpMethod': 'GET'}
 
-        response = v1_handler.lambda_handler(event, lambda_context)
+        response = v1_handler.lambda_handler(health_dependencies_get_event, lambda_context)
         body = json.loads(response['body'])
 
         assert len(body['errors']) > 0

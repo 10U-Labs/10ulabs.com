@@ -243,6 +243,11 @@ def health_get_event():
 
 
 @pytest.fixture
+def health_dependencies_get_event():
+    return {'path': '/health/dependencies', 'httpMethod': 'GET'}
+
+
+@pytest.fixture
 def catchall_unknown_event():
     return {'path': '/unknown', 'httpMethod': 'GET'}
 

@@ -133,7 +133,7 @@ paths:
         uri: ${V1HandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/health/dependencies:
+  /health/dependencies:
     get:
       summary: Infrastructure Dependencies Health Check
       description: Validates that all infrastructure dependencies (security groups, subnets, VPC) exist and are accessible

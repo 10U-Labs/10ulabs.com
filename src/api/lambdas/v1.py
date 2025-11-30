@@ -1504,7 +1504,7 @@ def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
 ROUTE_MAP = {
     ('/v1/contact', 'POST'): handle_contact_post,
     ('/v1/echo', 'POST'): handle_echo_post,
-    ('/v1/health/dependencies', 'GET'): handle_dependencies_health,
+    ('/health/dependencies', 'GET'): handle_dependencies_health,
     ('/v1/docker-runner', 'POST'): handle_docker_runner_post,
     ('/v1/docker-runner', 'GET'): handle_docker_runner_get,
     ('/v1/ec2-runner', 'POST'): handle_ec2_runner_post,
