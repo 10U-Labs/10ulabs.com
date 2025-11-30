@@ -1,10 +1,11 @@
 import importlib.util
 from types import ModuleType
-from typing import Any, Dict
-from unittest.mock import patch
+from typing import Generator
+from unittest.mock import MagicMock, patch
+
 import pytest
 
-from test.api.endpoints.image_for_ec2_runners.endpoint.conftest import ENDPOINT_SRC, get_aws_region, get_github_repo
+from ..helpers import ENDPOINT_SRC, get_aws_region, get_github_repo
 
 
 def load_handler_module() -> ModuleType:
@@ -17,8 +18,8 @@ def load_handler_module() -> ModuleType:
     return module
 
 
-@pytest.fixture
-def handler() -> ModuleType:
+@pytest.fixture(name="handler_module")
+def _handler_module_fixture() -> Generator[ModuleType, None, None]:
     env_vars = {
         'AWS_REGION': get_aws_region(),
         'EC2_AMI_PURPOSE_TAG': 'Purpose',
@@ -40,24 +41,22 @@ def handler() -> ModuleType:
         yield module
 
 
-@pytest.fixture
-def mock_ec2(handler):
-    from unittest.mock import MagicMock
+@pytest.fixture(name="mock_ec2")
+def _mock_ec2_fixture(handler_module: ModuleType) -> Generator[MagicMock, None, None]:
     mock_ec2_client = MagicMock()
-    handler.set_client('ec2', mock_ec2_client)
+    handler_module.set_client('ec2', mock_ec2_client)
     yield mock_ec2_client
 
 
-@pytest.fixture
-def mock_ssm(handler):
-    from unittest.mock import MagicMock
+@pytest.fixture(name="mock_ssm")
+def _mock_ssm_fixture(handler_module: ModuleType) -> Generator[MagicMock, None, None]:
     mock_ssm_client = MagicMock()
-    handler.set_client('ssm', mock_ssm_client)
+    handler_module.set_client('ssm', mock_ssm_client)
     yield mock_ssm_client
 
 
-@pytest.fixture
-def mock_env_vars():
+@pytest.fixture(name="mock_env_vars")
+def _mock_env_vars_fixture() -> Generator[None, None, None]:
     env_vars = {
         'AWS_REGION': get_aws_region(),
         'EC2_AMI_PURPOSE_TAG': 'Purpose',
