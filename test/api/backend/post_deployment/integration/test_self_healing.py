@@ -1,4 +1,4 @@
-from test.api.conftest import find_sns_topic_arns
+from test.api.backend.conftest import find_sns_topic_arns
 
 
 def test_circuit_breaker_remediation_lambda_deployed(lambda_client, config):

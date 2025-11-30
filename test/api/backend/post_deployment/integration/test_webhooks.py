@@ -1,4 +1,4 @@
-from test.api.post_deployment.conftest import assert_circuit_breaker_state_in_response, make_health_check_request
+from test.api.backend.post_deployment.conftest import assert_circuit_breaker_state_in_response, make_health_check_request
 import requests
 
 

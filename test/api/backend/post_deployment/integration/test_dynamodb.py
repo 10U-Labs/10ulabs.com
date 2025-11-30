@@ -1,5 +1,5 @@
 import time
-from test.api.post_deployment.integration.conftest import create_test_dynamodb_item, cleanup_test_dynamodb_item
+from test.api.backend.post_deployment.integration.conftest import create_test_dynamodb_item, cleanup_test_dynamodb_item
 from botocore.exceptions import ClientError
 
 

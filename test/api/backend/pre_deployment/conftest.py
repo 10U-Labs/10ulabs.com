@@ -47,7 +47,7 @@ def create_client_error(error_code: str, operation_name: str = 'TestOperation') 
 
 
 def get_lambda_path(filename: str) -> Path:
-    return Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / filename
+    return Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "lambdas" / filename
 
 
 def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
@@ -77,7 +77,7 @@ def parse_lambda_response_payload(response: Any) -> Any:
 
 @pytest.fixture
 def openapi_spec() -> Dict[str, Any]:
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "files" / "openapi.yml"
+    openapi_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "www" / "api" / "openapi.yml"
     with open(openapi_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 

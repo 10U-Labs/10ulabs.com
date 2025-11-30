@@ -1,4 +1,4 @@
-from test.api.post_deployment.conftest import make_authenticated_get, make_authenticated_post
+from test.api.backend.post_deployment.conftest import make_authenticated_get, make_authenticated_post
 
 import requests
 

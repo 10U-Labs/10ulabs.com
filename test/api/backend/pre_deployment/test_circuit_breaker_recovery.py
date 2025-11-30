@@ -2,7 +2,7 @@ import json
 import os
 import time
 from unittest.mock import patch, MagicMock
-from test.api.pre_deployment.conftest import (
+from test.api.backend.pre_deployment.conftest import (
     parse_response_body,
     assert_response_status,
     create_mock_lambda_list_mappings_error,

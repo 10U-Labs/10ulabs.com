@@ -1,4 +1,4 @@
-from test.api.conftest import find_sns_topic_arns
+from test.api.backend.conftest import find_sns_topic_arns
 
 
 def test_sns_circuit_breaker_alerts_topic_exists(sns_client, config):

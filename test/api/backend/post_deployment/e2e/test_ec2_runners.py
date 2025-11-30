@@ -1,4 +1,4 @@
-from test.api.post_deployment.conftest import (
+from test.api.backend.post_deployment.conftest import (
     create_runner_job_payload,
     make_e2e_get,
     make_e2e_post,

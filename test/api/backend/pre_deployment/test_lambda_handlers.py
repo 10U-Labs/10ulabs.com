@@ -1,4 +1,4 @@
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type, assert_cors_headers
+from test.api.backend.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type, assert_cors_headers
 
 
 def test_lambda_handler_catchall_returns_404_for_unknown_path(catchall_handler, catchall_unknown_event, lambda_context):

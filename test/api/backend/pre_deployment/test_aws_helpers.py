@@ -1,6 +1,6 @@
 from unittest.mock import patch, MagicMock
 
-from test.api.pre_deployment.conftest import parse_response_body, assert_no_hardcoded_env_defaults, get_lambda_path
+from test.api.backend.pre_deployment.conftest import parse_response_body, assert_no_hardcoded_env_defaults, get_lambda_path
 import pytest
 
 

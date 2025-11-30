@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 def test_openapi_spec_file_exists():
-    openapi_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "files" / "openapi.yml"
+    openapi_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "www" / "api" / "openapi.yml"
     assert openapi_path.exists()
 
 

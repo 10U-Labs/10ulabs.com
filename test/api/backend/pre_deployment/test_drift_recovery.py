@@ -2,7 +2,7 @@ import json
 import os
 import urllib.error
 from unittest.mock import patch, MagicMock, Mock
-from test.api.pre_deployment.conftest import assert_response_status, create_mock_sns_publish_error
+from test.api.backend.pre_deployment.conftest import assert_response_status, create_mock_sns_publish_error
 
 import pytest
 from botocore.exceptions import ClientError

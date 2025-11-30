@@ -3,7 +3,7 @@ import os
 import urllib.error
 from datetime import datetime
 from unittest.mock import patch, MagicMock, Mock
-from test.api.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type, create_multi_client_mock
+from test.api.backend.pre_deployment.conftest import parse_response_body, assert_response_status, assert_json_content_type, create_multi_client_mock
 
 from botocore.exceptions import ClientError
 

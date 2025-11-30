@@ -1,4 +1,4 @@
-from test.api.post_deployment.conftest import (
+from test.api.backend.post_deployment.conftest import (
     create_runner_job_payload,
     DOCKER_RUNNER_REQUEST_TIMEOUT,
     get_ecs_task_tags,

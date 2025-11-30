@@ -8,13 +8,13 @@ import yaml
 
 
 def parse_shared_config() -> Dict[str, Any]:
-    config_path = Path(__file__).parent.parent.parent / "etc" / "runners.yml"
+    config_path = Path(__file__).parent.parent.parent.parent / "etc" / "runners.yml"
     with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent.parent / "lib" / "terraform" / "outputs.tf"
+    outputs_path = Path(__file__).parent.parent.parent.parent / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -31,7 +31,7 @@ def get_bootstrap_output(output_name: str, default: str = "") -> str:
 
 
 def parse_health_tfvars() -> Dict[str, str]:
-    tfvars_path = Path(__file__).parent.parent.parent / "src" / "health" / "terraform.tfvars"
+    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "endpoints" / "health" / "terraform.tfvars"
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
@@ -45,7 +45,7 @@ def parse_health_tfvars() -> Dict[str, str]:
 
 
 def parse_api_locals() -> Dict[str, str]:
-    locals_path = Path(__file__).parent.parent.parent / "src" / "api" / "locals.tf"
+    locals_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "backend" / "locals.tf"
     shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
@@ -68,7 +68,7 @@ def parse_api_locals() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
-    tfvars_path = Path(__file__).parent.parent.parent / "src" / "api" / "terraform.tfvars"
+    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "backend" / "terraform.tfvars"
     result = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:

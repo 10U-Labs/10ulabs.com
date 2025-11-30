@@ -3,13 +3,13 @@ from pathlib import Path
 
 
 def get_lambda_source():
-    lambda_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "lambdas" / "v1.py"
+    lambda_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "lambdas" / "v1.py"
     with open(lambda_path, 'r', encoding='utf-8') as f:
         return f.read()
 
 
 def get_iam_terraform():
-    iam_path = Path(__file__).parent.parent.parent.parent / "src" / "api" / "iam.tf"
+    iam_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
     with open(iam_path, 'r', encoding='utf-8') as f:
         return f.read()
 
