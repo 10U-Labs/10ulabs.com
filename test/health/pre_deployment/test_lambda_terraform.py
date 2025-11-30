@@ -28,8 +28,8 @@ def test_health_handler_cloudwatch_log_group_exists():
 
 
 def test_health_handler_log_subscription_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent / "src" / "health" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
+    log_subs_file = Path(__file__).parent.parent.parent.parent / "src" / "api" / "log_subscriptions.tf"
+    with open(log_subs_file, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_cloudwatch_log_subscription_filter" "health_handler"' in content
 
