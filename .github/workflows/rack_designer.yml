@@ -24,7 +24,7 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/rack_designer/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/rack_designer/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
@@ -57,11 +57,11 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Run E2E tests
-        run: python3 -m pytest test/rack_designer/post_deployment/e2e/ -v
+        run: python3 -m pytest test/api/endpoints/rack_designer/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
-        working-directory: src/rack_designer
+        working-directory: src/api/endpoints/rack_designer
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
@@ -85,12 +85,12 @@ jobs:
         run: terraform apply -auto-approve
       - name: Get website bucket name
         run: |
-          terraform -chdir=../home_page init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform -chdir=../home_page output -raw bucket_name)
+          terraform -chdir=../../../www/home_page init -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=../../../www/home_page output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Sync frontend to S3
         run: |
-          aws s3 sync frontend/ s3://${{ env.BUCKET_NAME }}/rack-designer/ \
+          aws s3 sync ../../../www/rack_designer/ s3://${{ env.BUCKET_NAME }}/rack-designer/ \
             --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA \
@@ -106,7 +106,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/rack_designer/frontend/'; then
+            if grep -qE 'src/www/rack_designer/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -114,11 +114,12 @@ jobs:
       - if: steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          WEBSITE_FQDN=$(terraform -chdir=../home_page output -raw website_domain_name)
+          WEBSITE_FQDN=$(terraform -chdir=../../../www/home_page output -raw website_domain_name)
           python3 ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py \
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/rack-designer/*"
+        working-directory: src/api/endpoints/rack_designer
   integration-testing:
     name: Integration testing
     needs:
@@ -136,7 +137,7 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Run integration tests
-        run: python3 -m pytest test/rack_designer/post_deployment/integration/ -v
+        run: python3 -m pytest test/api/endpoints/rack_designer/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -166,35 +167,35 @@ jobs:
             .github/workflows/rack_designer.yml
       - name: Run pylint
         run: |
-          for file in src/rack_designer/lambdas/*.py; do
+          for file in src/api/endpoints/rack_designer/lambdas/*.py; do
             python3 -m pylint "$file" \
               --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
-          python3 -m pylint test/rack_designer/ \
+          python3 -m pylint test/api/endpoints/rack_designer/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          for file in src/rack_designer/lambdas/*.py; do
+          for file in src/api/endpoints/rack_designer/lambdas/*.py; do
             python3 -m mypy "$file"
           done
-          python3 -m mypy test/rack_designer/
+          python3 -m mypy test/api/endpoints/rack_designer/
       - name: Terraform Format Check
-        run: cd src/rack_designer && terraform fmt -check -recursive
+        run: cd src/api/endpoints/rack_designer && terraform fmt -check -recursive
       - name: Terraform Init
-        run: cd src/rack_designer && terraform init
+        run: cd src/api/endpoints/rack_designer && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/rack_designer && \
+          cd src/api/endpoints/rack_designer && \
             tflint --init && \
             tflint
       - name: Terraform Plan
-        run: cd src/rack_designer && terraform plan
+        run: cd src/api/endpoints/rack_designer && terraform plan
   unit-testing:
     name: Unit testing
     needs:
@@ -207,7 +208,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Run unit tests
-        run: python3 -m pytest test/rack_designer/pre_deployment/ -v
+        run: python3 -m pytest test/api/endpoints/rack_designer/pre_deployment/ -v
 name: Ensuring Rack Designer exists and is properly configured
 on:
   push:
@@ -215,8 +216,9 @@ on:
       - main
     paths:
       - '.github/workflows/rack_designer.yml'
-      - 'src/rack_designer/**'
-      - 'test/rack_designer/**'
+      - 'src/api/endpoints/rack_designer/**'
+      - 'src/www/rack_designer/**'
+      - 'test/api/endpoints/rack_designer/**'
   workflow_dispatch:
 permissions:
   contents: read

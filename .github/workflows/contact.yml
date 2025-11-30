@@ -26,7 +26,7 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/contact/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/contact/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
@@ -75,11 +75,11 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest requests PyYAML boto3
       - name: Run E2E tests
-        run: python3 -m pytest test/contact/post_deployment/e2e/ -v
+        run: python3 -m pytest test/api/endpoints/contact/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
-        working-directory: src/contact
+        working-directory: src/api/endpoints/contact
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
@@ -135,7 +135,7 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest requests PyYAML
       - name: Run integration tests
-        run: python3 -m pytest test/contact/post_deployment/integration/ -v
+        run: python3 -m pytest test/api/endpoints/contact/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -185,35 +185,35 @@ jobs:
             .github/workflows/contact.yml
       - name: Run pylint on source
         run: |
-          python3 -m pylint src/contact/lambda/handler.py \
+          python3 -m pylint src/api/endpoints/contact/lambda/handler.py \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run pylint on tests
         run: |
-          python3 -m pylint test/contact/ \
+          python3 -m pylint test/api/endpoints/contact/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy on source
-        run: python3 -m mypy src/contact/lambda/handler.py
+        run: python3 -m mypy src/api/endpoints/contact/lambda/handler.py
       - name: Run mypy on tests
-        run: python3 -m mypy test/contact/
+        run: python3 -m mypy test/api/endpoints/contact/
       - name: Terraform Format Check
-        run: cd src/contact && terraform fmt -check -recursive
+        run: cd src/api/endpoints/contact && terraform fmt -check -recursive
       - name: Terraform Init
-        run: cd src/contact && terraform init
+        run: cd src/api/endpoints/contact && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/contact && \
+          cd src/api/endpoints/contact && \
             tflint --init && \
             tflint
       - env:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Plan
-        run: cd src/contact && terraform plan
+        run: cd src/api/endpoints/contact && terraform plan
   unit-testing:
     name: Unit testing
     needs:
@@ -236,7 +236,7 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest PyYAML boto3
       - name: Run unit tests
-        run: python3 -m pytest test/contact/pre_deployment/ -v
+        run: python3 -m pytest test/api/endpoints/contact/pre_deployment/ -v
 name: Ensuring contact endpoint exists and is properly configured
 on:
   push:
@@ -244,8 +244,8 @@ on:
       - main
     paths:
       - '.github/workflows/contact.yml'
-      - 'src/contact/**'
-      - 'test/contact/**'
+      - 'src/api/endpoints/contact/**'
+      - 'test/api/endpoints/contact/**'
   workflow_dispatch:
     inputs:
       github_hosted:

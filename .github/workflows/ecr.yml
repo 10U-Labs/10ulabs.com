@@ -24,7 +24,7 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/ecr/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/shared/ecr/backend.tf | cut -d'"' -f2 | sed 's/>= //')
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
@@ -57,11 +57,11 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Run E2E tests
-        run: python3 -m pytest test/ecr/post_deployment/e2e/ -v
+        run: python3 -m pytest test/api/shared/ecr/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
-        working-directory: src/ecr
+        working-directory: src/api/shared/ecr
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
@@ -98,7 +98,7 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Run integration tests
-        run: python3 -m pytest test/ecr/post_deployment/integration/ -v
+        run: python3 -m pytest test/api/shared/ecr/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -128,25 +128,25 @@ jobs:
             .github/workflows/ecr.yml
       - name: Run pylint
         run: |
-          python3 -m pylint test/ecr/ \
+          python3 -m pylint test/api/shared/ecr/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy test/ecr/
+        run: python3 -m mypy test/api/shared/ecr/
       - name: Terraform Format Check
-        run: cd src/ecr && terraform fmt -check -recursive
+        run: cd src/api/shared/ecr && terraform fmt -check -recursive
       - name: Terraform Init
-        run: cd src/ecr && terraform init
+        run: cd src/api/shared/ecr && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/ecr && \
+          cd src/api/shared/ecr && \
             tflint --init && \
             tflint
       - name: Terraform Plan
-        run: cd src/ecr && terraform plan
+        run: cd src/api/shared/ecr && terraform plan
   unit-testing:
     name: Unit testing
     needs:
@@ -159,7 +159,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Run unit tests
-        run: python3 -m pytest test/ecr/pre_deployment/ -v
+        run: python3 -m pytest test/api/shared/ecr/pre_deployment/ -v
 name: Ensuring ECR repository exists and is properly configured
 on:
   push:
@@ -167,9 +167,9 @@ on:
       - main
     paths:
       - '.github/workflows/ecr.yml'
-      - 'src/ecr/**'
+      - 'src/api/shared/ecr/**'
       - 'lib/terraform/**'
-      - 'test/ecr/**'
+      - 'test/api/shared/ecr/**'
   workflow_dispatch:
 permissions:
   contents: read
