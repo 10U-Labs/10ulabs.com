@@ -246,6 +246,36 @@ jobs:
           pytest test/api/endpoints/image_for_ec2_runners/post_deployment/e2e/ \
             --confcutdir=test/api/endpoints/image_for_ec2_runners \
             -v
+  ensuring-endpoint-infrastructure-in-desired-state:
+    name: Ensuring endpoint infrastructure is in desired state
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Terraform Init
+        run: cd src/api/endpoints/image_for_ec2_runners && terraform init
+      - name: Terraform Apply
+        run: cd src/api/endpoints/image_for_ec2_runners && terraform apply -auto-approve
   integration-testing:
     name: Integration testing
     needs:
@@ -333,6 +363,33 @@ jobs:
         run: |
           MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/files/*.py
           MYPYPATH=lib:test/api/endpoints/image_for_ec2_runners/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_spot/ test/api/endpoints/image_for_ec2_runners/
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Terraform Format Check
+        run: cd src/api/endpoints/image_for_ec2_runners && terraform fmt -check -recursive
+      - name: Terraform Init
+        run: cd src/api/endpoints/image_for_ec2_runners && terraform init
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: |
+          cd src/api/endpoints/image_for_ec2_runners && \
+            tflint --init && \
+            tflint
+      - name: Terraform Plan
+        run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
   promoting-ami:
     name: Promoting AMI
     needs:
