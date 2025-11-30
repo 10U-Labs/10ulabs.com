@@ -825,6 +825,18 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
           "ec2:DescribeInstances"
         ]
         Resource = ["*"]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeTasks"
+        ]
+        Resource = ["*"]
+        Condition = {
+          ArnEquals = {
+            "ecs:cluster" = data.terraform_remote_state.bootstrap.outputs.arn_for_runner_cluster
+          }
+        }
       }
     ]
   })

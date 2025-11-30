@@ -367,13 +367,14 @@ def trigger_image_creation() -> Dict[str, Any]:
 
 
 def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int) -> Dict[str, Any] | None:
+    result = None
     runners = list_repo_runners(github_token, github_repo)
     runner_label = f'runner-{run_id}'
     for runner in runners:
         runner_labels = {label.get('name') for label in runner.get('labels', [])}
-        if runner_label in runner_labels and runner.get('status') == 'online':
-            return runner
-    return None
+        if runner_label in runner_labels and runner.get('status') in ('online', 'busy'):
+            result = runner
+    return result
 
 
 def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_id: int | None = None, runner_type: str = 'fargate') -> Dict[str, Any]:
