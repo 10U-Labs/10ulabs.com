@@ -44,25 +44,25 @@ resource "aws_s3_bucket_logging" "docs" {
 resource "aws_s3_object" "index_html" {
   bucket       = aws_s3_bucket.docs.id
   key          = "index.html"
-  source       = "${path.module}/files/index.html"
+  source       = "${path.module}/../../www/api/index.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/files/index.html")
+  etag         = filemd5("${path.module}/../../www/api/index.html")
 }
 
 resource "aws_s3_object" "not_found_html" {
   bucket       = aws_s3_bucket.docs.id
   key          = "404.html"
-  source       = "${path.module}/files/404.html"
+  source       = "${path.module}/../../www/api/404.html"
   content_type = "text/html"
-  etag         = filemd5("${path.module}/files/404.html")
+  etag         = filemd5("${path.module}/../../www/api/404.html")
 }
 
 resource "aws_s3_object" "openapi_yml" {
   bucket       = aws_s3_bucket.docs.id
   key          = "openapi.yml"
-  source       = "${path.module}/files/openapi.yml"
+  source       = "${path.module}/../../www/api/openapi.yml"
   content_type = "application/x-yaml"
-  etag         = filemd5("${path.module}/files/openapi.yml")
+  etag         = filemd5("${path.module}/../../www/api/openapi.yml")
 }
 
 resource "aws_cloudfront_origin_access_control" "s3" {

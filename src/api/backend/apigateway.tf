@@ -1,5 +1,5 @@
 locals {
-  openapi_spec = templatefile("${path.module}/files/openapi.yml", {
+  openapi_spec = templatefile("${path.module}/../../www/api/openapi.yml", {
     CatchAllHandlerArn              = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
     ContactHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.contact.outputs.lambda_function_arn}/invocations"
     EchoHandlerArn                  = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations"
