@@ -141,3 +141,7 @@ output "ec2_runner_managed_by_tag" {
 output "ec2_runner_role_arn" {
   value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_arn
 }
+
+output "container_name" {
+  value = var.container_name
+}

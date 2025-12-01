@@ -10,7 +10,7 @@ resource "aws_lambda_function" "handler" {
 
   environment {
     variables = {
-      CONTAINER_NAME           = data.terraform_remote_state.api.outputs.ecr_repository_name
+      CONTAINER_NAME           = data.terraform_remote_state.api.outputs.container_name
       ECR_REPOSITORY           = data.terraform_remote_state.api.outputs.ecr_repository_name
       ECS_CLUSTER              = data.terraform_remote_state.api.outputs.cluster_name
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.api.outputs.github_token_secret_name
