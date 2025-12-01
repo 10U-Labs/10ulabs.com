@@ -16,4 +16,10 @@ data "terraform_remote_state" "api" {
     key    = "api/terraform.tfstate"
     region = local.aws_region
   }
+
+  defaults = {
+    api_key_ssm_parameter_arn   = ""
+    workflow_runners_table_arn  = ""
+    workflow_runners_table_name = ""
+  }
 }
