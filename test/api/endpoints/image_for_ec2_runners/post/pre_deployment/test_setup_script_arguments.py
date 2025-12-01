@@ -7,7 +7,8 @@ class TestSetupScriptRunnerVersionArgument:
         assert has_flag
 
     def test_script_requires_runner_version(self, setup_script_content):
-        has_validation = 'if [[ -z "$RUNNER_VERSION" ]]' in setup_script_content
+        has_validation = 'if [[ -z "$runner_version" ]]' in setup_script_content or \
+                         'elif [[ -z "$runner_version" ]]' in setup_script_content
         assert has_validation
 
 
@@ -17,7 +18,8 @@ class TestSetupScriptYqVersionArgument:
         assert has_flag
 
     def test_script_requires_yq_version(self, setup_script_content):
-        has_validation = 'if [[ -z "$YQ_VERSION" ]]' in setup_script_content
+        has_validation = 'if [[ -z "$yq_version" ]]' in setup_script_content or \
+                         'elif [[ -z "$yq_version" ]]' in setup_script_content
         assert has_validation
 
 
@@ -27,7 +29,8 @@ class TestSetupScriptRunnerUserArgument:
         assert has_flag
 
     def test_script_requires_runner_user(self, setup_script_content):
-        has_validation = 'if [[ -z "$RUNNER_USER" ]]' in setup_script_content
+        has_validation = 'if [[ -z "$runner_user" ]]' in setup_script_content or \
+                         'elif [[ -z "$runner_user" ]]' in setup_script_content
         assert has_validation
 
 
