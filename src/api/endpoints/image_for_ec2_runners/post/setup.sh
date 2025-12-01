@@ -45,24 +45,24 @@ __main__() {
         docker_key=/etc/apt/keyrings/docker.asc
 
         add_docker_apt_repository \
-            --version-codename "$version_codename" \
-            --docker-key "$docker_key"
+            --docker-key "$docker_key" \
+            --version-codename "$version_codename"
 
         install_system_packages
 
         install_python_packages
 
         install_yq \
-            --yq-version "$yq_version" \
-            --arch "$arch"
+            --arch "$arch" \
+            --yq-version "$yq_version"
 
         create_runner_user \
             --runner-user "$runner_user"
 
         install_github_actions_runner \
+            --arch "$arch" \
             --runner-user "$runner_user" \
-            --runner-version "$runner_version" \
-            --arch "$arch"
+            --runner-version "$runner_version"
 
         install_ssm_agent \
             --arch "$arch"
