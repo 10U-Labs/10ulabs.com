@@ -48,12 +48,12 @@ def api_key_fixture():
     return get_api_key()
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ec2_client():
     return boto3.client('ec2', region_name='us-east-1')
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def dynamodb_client():
     return boto3.client('dynamodb', region_name='us-east-1')
 
