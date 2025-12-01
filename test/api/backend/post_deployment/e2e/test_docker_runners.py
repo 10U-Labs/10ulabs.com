@@ -9,6 +9,7 @@ from ..conftest import (
     get_ecs_task_tags,
     make_e2e_get,
     make_e2e_post,
+    query_workflow_runners_by_run_id,
 )
 
 
@@ -45,16 +46,18 @@ def stop_task_safely(ecs_client, cluster_name, task_arn):
 
 
 @pytest.fixture(name="test_fargate_task", scope="module")
-def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs_context, config, github_run_id):
+def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config):
     if ecr_image_count == 0:
         print("Skipping docker runner test: ecr_image_count is 0")
         yield None
         return
     runner_label = config['runner_label_fargate_spot_e2e_test']
-    job_id, payload = create_runner_job_payload(github_repo, [runner_label], github_run_id)
+    job_id, payload = create_runner_job_payload(
+        test_context["github_repo"], [runner_label], test_context["github_run_id"]
+    )
     response = make_e2e_post(
-        f"{api_credentials['url']}/v1/docker-runner", api_credentials["key"], json=payload,
-        timeout=DOCKER_RUNNER_REQUEST_TIMEOUT
+        f"{test_context['api_credentials']['url']}/v1/docker-runner",
+        test_context["api_credentials"]["key"], json=payload, timeout=DOCKER_RUNNER_REQUEST_TIMEOUT
     )
     if response.status_code not in [200, 202]:
         print(f"Docker runner POST failed: status={response.status_code}, body={response.text}")
@@ -67,7 +70,10 @@ def test_fargate_task_fixture(api_credentials, github_repo, ecr_image_count, ecs
         yield None
         return
     wait_for_task_running(ecs_context["client"], ecs_context["cluster_name"], task_arn)
-    yield {"task_arn": task_arn, "job_id": job_id, "github_repo": github_repo, "cluster_name": ecs_context["cluster_name"], "run_id": github_run_id}
+    yield {
+        "task_arn": task_arn, "job_id": job_id, "github_repo": test_context["github_repo"],
+        "cluster_name": ecs_context["cluster_name"], "run_id": test_context["github_run_id"]
+    }
     stop_task_safely(ecs_context["client"], ecs_context["cluster_name"], task_arn)
 
 
@@ -167,9 +173,5 @@ def test_docker_runner_stored_in_dynamodb(
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     run_id = test_fargate_task.get("run_id")
-    response = dynamodb_client.query(
-        TableName=workflow_runners_table_name,
-        KeyConditionExpression='run_id = :rid',
-        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
-    )
-    assert len(response.get('Items', [])) > 0
+    items = query_workflow_runners_by_run_id(dynamodb_client, workflow_runners_table_name, run_id)
+    assert len(items) > 0

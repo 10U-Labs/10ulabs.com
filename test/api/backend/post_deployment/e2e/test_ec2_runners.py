@@ -8,6 +8,7 @@ from ..conftest import (
     create_runner_job_payload,
     make_e2e_get,
     make_e2e_post,
+    query_workflow_runners_by_run_id,
 )
 
 
@@ -66,15 +67,17 @@ def terminate_instance_safely(ec2_client, instance_id):
 
 
 @pytest.fixture(name="test_ec2_runner_instance", scope="module")
-def test_ec2_runner_instance_fixture(api_credentials, github_repo, latest_ami_exists, ec2_client, config, github_run_id):
+def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client, config):
     if not latest_ami_exists:
         yield None
         return
     runner_label = config['runner_label_ec2_spot_e2e_test']
-    job_id, payload = create_runner_job_payload(github_repo, [runner_label], github_run_id)
+    job_id, payload = create_runner_job_payload(
+        test_context["github_repo"], [runner_label], test_context["github_run_id"]
+    )
     response = make_e2e_post(
-        f"{api_credentials['url']}/v1/ec2-runner", api_credentials["key"],
-        json=payload, timeout=calculate_ec2_runner_timeout()
+        f"{test_context['api_credentials']['url']}/v1/ec2-runner",
+        test_context["api_credentials"]["key"], json=payload, timeout=calculate_ec2_runner_timeout()
     )
     if response.status_code != 200:
         yield None
@@ -84,7 +87,10 @@ def test_ec2_runner_instance_fixture(api_credentials, github_repo, latest_ami_ex
         yield None
         return
     wait_for_instance_running(ec2_client, instance_id)
-    yield {"instance_id": instance_id, "job_id": job_id, "github_repo": github_repo, "run_id": github_run_id}
+    yield {
+        "instance_id": instance_id, "job_id": job_id,
+        "github_repo": test_context["github_repo"], "run_id": test_context["github_run_id"]
+    }
     terminate_instance_safely(ec2_client, instance_id)
 
 
@@ -216,9 +222,5 @@ def test_ec2_runner_stored_in_dynamodb(
     if test_ec2_runner_instance is None:
         pytest.fail("Test instance not created")
     run_id = test_ec2_runner_instance.get("run_id")
-    response = dynamodb_client.query(
-        TableName=workflow_runners_table_name,
-        KeyConditionExpression='run_id = :rid',
-        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
-    )
-    assert len(response.get('Items', [])) > 0
+    items = query_workflow_runners_by_run_id(dynamodb_client, workflow_runners_table_name, run_id)
+    assert len(items) > 0

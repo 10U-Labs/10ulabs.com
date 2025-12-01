@@ -144,3 +144,21 @@ def get_ecs_task_tags(ecs_client, cluster_name, task_arn):
     )
     tags = response['tasks'][0].get('tags', [])
     return {tag['key']: tag['value'] for tag in tags}
+
+
+@pytest.fixture(name="test_context", scope="module")
+def test_context_fixture(api_credentials, github_repo, github_run_id):
+    return {
+        "api_credentials": api_credentials,
+        "github_repo": github_repo,
+        "github_run_id": github_run_id
+    }
+
+
+def query_workflow_runners_by_run_id(dynamodb_client, table_name, run_id):
+    response = dynamodb_client.query(
+        TableName=table_name,
+        KeyConditionExpression='run_id = :rid',
+        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
+    )
+    return response.get('Items', [])
