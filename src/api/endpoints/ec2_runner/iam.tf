@@ -145,10 +145,10 @@ resource "aws_iam_role_policy" "ssm_access" {
       Action = [
         "ssm:GetParameter"
       ]
-      Resource = [
+      Resource = compact([
         data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
         data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
-      ]
+      ])
     }]
   })
 }
@@ -171,8 +171,9 @@ resource "aws_iam_role_policy" "kms_access" {
 }
 
 resource "aws_iam_role_policy" "dynamodb_access" {
-  name = "DynamoDBAccess"
-  role = aws_iam_role.lambda.id
+  count = data.terraform_remote_state.api.outputs.workflow_runners_table_arn != "" ? 1 : 0
+  name  = "DynamoDBAccess"
+  role  = aws_iam_role.lambda.id
 
   policy = jsonencode({
     Version = "2012-10-17"
