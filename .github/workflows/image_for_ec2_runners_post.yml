@@ -73,7 +73,7 @@ jobs:
             --tag "OSArchitecture=${OS_ARCH}" \
             --tag "OSFamily=${OS_FAMILY^}" \
             --tag "OSVersion=${OS_VERSION}" \
-            --tag "Purpose=Building AMI for EC2 runners" \
+            --tag "Purpose=GitHub self-hosted EC2 runner" \
             --tag "Repository=${{ github.repository }}" \
             --tag "RunId=${{ github.run_id }}" \
             --tag "Workflow=${{ github.workflow }}" \

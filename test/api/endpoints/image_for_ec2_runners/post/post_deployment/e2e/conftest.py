@@ -95,7 +95,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
         "user_data": create_user_data(github_repo, registration_token),
-        "max_spot_price": test_config.get("ec2_max_spot_price", "0.05"),
+        "max_spot_price": test_config.get("ec2_max_spot_price", "0.25"),
         "spot_instance_types": get_spot_instance_types(),
         "tags": [
             {"Key": "Name", "Value": "e2e-test-instance"},

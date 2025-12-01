@@ -95,6 +95,6 @@ def config():
         "os_version": parts[1] if len(parts) > 1 else "",
         "os_architecture": parts[2] if len(parts) > 2 else "",
         "github_runner_iam_instance_profile_name": "GitHubSelfHostedRunnerInstanceProfile",
-        "ec2_max_spot_price": "0.05",
+        "ec2_max_spot_price": "0.25",
     }
     return result

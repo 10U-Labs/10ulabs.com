@@ -123,7 +123,7 @@ def build_launch_config(test_ami_id, config):
         "ami_id": test_ami_id,
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
-        "max_spot_price": config.get("ec2_max_spot_price", "0.05"),
+        "max_spot_price": config.get("ec2_max_spot_price", "0.25"),
         "subnet_ids": get_subnet_ids(),
         "spot_instance_types": get_spot_instance_types(),
         "tags": [
