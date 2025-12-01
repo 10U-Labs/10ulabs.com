@@ -304,6 +304,8 @@ def cmd_build(args: argparse.Namespace):
     else:
         unique_id = uuid.uuid4().hex[:8]
         ec2 = boto3.client("ec2", region_name=args.region)
+        args.subnet_ids = [s.strip() for s in args.subnet_ids.split(",")]
+        args.instance_types = [t.strip() for t in args.instance_types.split(",")]
         logging.info("Looking up AMI ID for: %s", args.source_ami)
         ami_id = lookup_source_ami(ec2, args.source_ami)
         logging.info("Found AMI ID: %s", ami_id)
@@ -327,8 +329,8 @@ def main():
     parser.add_argument("--ami-description", help="Description for the created AMI")
     parser.add_argument("--region", required=True, help="AWS region")
     parser.add_argument("--source-ami", required=True, help="Source AMI name to look up")
-    parser.add_argument("--subnet-ids", required=True, nargs="+", help="Subnet IDs for launching instances")
-    parser.add_argument("--instance-types", required=True, nargs="+", help="Instance types for spot fleet")
+    parser.add_argument("--subnet-ids", required=True, help="Comma-separated subnet IDs for launching instances")
+    parser.add_argument("--instance-types", required=True, help="Comma-separated instance types for spot fleet")
     parser.add_argument("--runner-version", required=True, help="GitHub Actions runner version")
     parser.add_argument("--yq-version", required=True, help="yq version")
     parser.add_argument("--runner-user", required=True, help="Username for the GitHub runner")

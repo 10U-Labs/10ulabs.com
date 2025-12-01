@@ -57,21 +57,25 @@ jobs:
         run: |
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           AMI_NAME="ami-github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
-          python3 src/api/endpoints/image_for_ec2_runners/post/build_ami.py build src/api/endpoints/image_for_ec2_runners/post/config.yml \
-            --var "ami_name=${AMI_NAME}" \
-            --var 'instance_types=${{ needs.declaring-common-variables.outputs.spot_instance_types }}' \
-            --var "region=${{ needs.declaring-common-variables.outputs.aws_region }}" \
-            --var 'subnet_ids=${{ steps.terraform.outputs.subnet_ids }}' \
-            --var "tags.${{ steps.terraform.outputs.ami_stable_tag }}=false" \
-            --var "tags.BuildDate=${TIMESTAMP}" \
-            --var "tags.ManagedBy=GitHubActions" \
-            --var "tags.Name=${AMI_NAME}" \
-            --var "tags.OSArchitecture=${OS_ARCH}" \
-            --var "tags.OSFamily=${OS_FAMILY^}" \
-            --var "tags.OSVersion=${OS_VERSION}" \
-            --var "tags.Repository=${{ github.repository }}" \
-            --var "tags.RunId=${{ github.run_id }}" \
-            --var "tags.Workflow=${{ github.workflow }}" \
+          python3 src/api/endpoints/image_for_ec2_runners/post/build_ami.py \
+            --ami-name "$AMI_NAME" \
+            --instance-types "${{ needs.declaring-common-variables.outputs.spot_instance_types }}" \
+            --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
+            --runner-user "${{ needs.declaring-common-variables.outputs.runner_user }}" \
+            --runner-version "${{ needs.declaring-common-variables.outputs.runner_version }}" \
+            --source-ami "${{ needs.declaring-common-variables.outputs.source_ami }}" \
+            --subnet-ids "${{ steps.terraform.outputs.subnet_ids }}" \
+            --yq-version "${{ needs.declaring-common-variables.outputs.yq_version }}" \
+            --tag "${{ steps.terraform.outputs.ami_stable_tag }}=false" \
+            --tag "BuildDate=${TIMESTAMP}" \
+            --tag "ManagedBy=GitHubActions" \
+            --tag "Name=${AMI_NAME}" \
+            --tag "OSArchitecture=${OS_ARCH}" \
+            --tag "OSFamily=${OS_FAMILY^}" \
+            --tag "OSVersion=${OS_VERSION}" \
+            --tag "Repository=${{ github.repository }}" \
+            --tag "RunId=${{ github.run_id }}" \
+            --tag "Workflow=${{ github.workflow }}" \
             | tee build.log
           BUILD_EXIT_CODE=${PIPESTATUS[0]}
           if [ $BUILD_EXIT_CODE -ne 0 ]; then
@@ -138,8 +142,12 @@ jobs:
       os_architecture: ${{ steps.config.outputs.os_architecture }}
       os_family: ${{ steps.config.outputs.os_family }}
       os_version: ${{ steps.config.outputs.os_version }}
+      runner_user: ${{ steps.config.outputs.runner_user }}
+      runner_version: ${{ steps.config.outputs.runner_version }}
+      source_ami: ${{ steps.config.outputs.source_ami }}
       spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
+      yq_version: ${{ steps.config.outputs.yq_version }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
@@ -187,7 +195,11 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          SOURCE_AMI=$(yq '.source_ami' src/api/endpoints/image_for_ec2_runners/post/config.yml)
+          CONFIG_FILE="src/api/endpoints/image_for_ec2_runners/post/config.yml"
+          RUNNER_USER=$(yq '.runner_user' "$CONFIG_FILE")
+          RUNNER_VERSION=$(yq '.runner_version' "$CONFIG_FILE")
+          SOURCE_AMI=$(yq '.source_ami' "$CONFIG_FILE")
+          YQ_VERSION=$(yq '.yq_version' "$CONFIG_FILE")
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
           echo "aws_region=${{ steps.shared.outputs.aws_region }}" >> $GITHUB_OUTPUT
@@ -195,8 +207,12 @@ jobs:
           echo "os_architecture=${{ steps.api.outputs.os_architecture }}" >> $GITHUB_OUTPUT
           echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
+          echo "runner_user=$RUNNER_USER" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
+          echo "source_ami=$SOURCE_AMI" >> $GITHUB_OUTPUT
           echo 'spot_instance_types=${{ steps.api.outputs.spot_instance_types }}' >> $GITHUB_OUTPUT
           echo "terraform_version=${{ steps.shared.outputs.terraform_version }}" >> $GITHUB_OUTPUT
+          echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
