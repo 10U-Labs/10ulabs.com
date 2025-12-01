@@ -8,23 +8,18 @@ data "terraform_remote_state" "bootstrap" {
   }
 }
 
-data "terraform_remote_state" "ecr" {
+data "terraform_remote_state" "runners" {
   backend = "s3"
 
   config = {
     bucket = "10ulabs-terraform-state"
-    key    = "ecr/terraform.tfstate"
+    key    = "runners/terraform.tfstate"
     region = "us-east-1"
   }
-}
 
-data "terraform_remote_state" "image_for_docker_runners" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state"
-    key    = "image_for_docker_runners/terraform.tfstate"
-    region = "us-east-1"
+  defaults = {
+    lambda_function_arn  = ""
+    lambda_function_name = ""
   }
 }
 
@@ -68,6 +63,16 @@ data "terraform_remote_state" "echo" {
   }
 }
 
+data "terraform_remote_state" "image_for_docker_runners" {
+  backend = "s3"
+
+  config = {
+    bucket = "10ulabs-terraform-state"
+    key    = "image_for_docker_runners/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
 data "terraform_remote_state" "image_for_ec2_runners" {
   backend = "s3"
 
@@ -103,21 +108,7 @@ data "terraform_remote_state" "ec2_runner" {
   }
 
   defaults = {
-    ec2_instance_profile_name    = ""
-    ec2_max_spot_price           = ""
-    ec2_runner_ami_purpose_tag   = ""
-    ec2_runner_ami_purpose_value = ""
-    ec2_runner_ami_stable_tag    = ""
-    ec2_runner_managed_by_tag    = ""
-    ec2_runner_role_arn          = ""
-    ec2_runner_role_name         = ""
-    ec2_spot_instance_types      = []
-    lambda_function_arn          = ""
-    lambda_function_name         = ""
+    lambda_function_arn  = ""
+    lambda_function_name = ""
   }
-}
-
-data "aws_ssm_parameter" "github_pat" {
-  name            = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
-  with_decryption = true
 }

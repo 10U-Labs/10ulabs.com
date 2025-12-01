@@ -1,36 +1,3 @@
-resource "aws_sqs_queue" "webhook_dlq" {
-  name                       = var.webhook_dlq_name
-  message_retention_seconds  = 1209600
-  visibility_timeout_seconds = 300
-
-  tags = merge(local.common_tags, {
-    Name = var.webhook_dlq_name
-  })
-}
-
-resource "aws_sqs_queue" "job_queue_dlq" {
-  name                      = var.job_queue_dlq_name
-  message_retention_seconds = 1209600
-
-  tags = merge(local.common_tags, {
-    Name = var.job_queue_dlq_name
-  })
-}
-
-resource "aws_sqs_queue" "job_queue" {
-  name                       = var.job_queue_name
-  visibility_timeout_seconds = var.lambda_timeout_seconds * 6
-
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.job_queue_dlq.arn
-    maxReceiveCount     = 3
-  })
-
-  tags = merge(local.common_tags, {
-    Name = var.job_queue_name
-  })
-}
-
 resource "aws_dynamodb_table" "idempotency" {
   name         = var.idempotency_table_name
   billing_mode = "PAY_PER_REQUEST"

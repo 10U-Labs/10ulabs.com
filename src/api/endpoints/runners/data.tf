@@ -1,0 +1,66 @@
+data "terraform_remote_state" "bootstrap" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "bootstrap/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+}
+
+data "terraform_remote_state" "ecr" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "ecr/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+}
+
+data "terraform_remote_state" "ec2_runner" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "ec2_runner/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+
+  defaults = {
+    ec2_instance_profile_name    = ""
+    ec2_max_spot_price           = ""
+    ec2_runner_ami_purpose_tag   = ""
+    ec2_runner_ami_purpose_value = ""
+    ec2_runner_ami_stable_tag    = ""
+    ec2_runner_managed_by_tag    = ""
+    ec2_runner_role_arn          = ""
+    ec2_runner_role_name         = ""
+    ec2_spot_instance_types      = []
+    lambda_function_arn          = ""
+    lambda_function_name         = ""
+  }
+}
+
+data "terraform_remote_state" "api" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+
+  defaults = {
+    api_key_ssm_parameter_arn = ""
+  }
+}
+
+data "aws_ssm_parameter" "github_pat" {
+  name            = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+  with_decryption = true
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}

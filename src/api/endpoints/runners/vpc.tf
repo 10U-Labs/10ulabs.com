@@ -2,10 +2,6 @@ locals {
   azs = slice(data.aws_availability_zones.available.names, 0, min(length(data.aws_availability_zones.available.names), var.vpc_max_azs))
 }
 
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
 resource "aws_vpc" "runner_vpc" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true

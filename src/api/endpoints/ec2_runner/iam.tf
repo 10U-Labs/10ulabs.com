@@ -171,7 +171,7 @@ resource "aws_iam_role_policy" "kms_access" {
 }
 
 resource "aws_iam_role_policy" "dynamodb_access" {
-  count = data.terraform_remote_state.api.outputs.workflow_runners_table_arn != "" ? 1 : 0
+  count = data.terraform_remote_state.runners.outputs.workflow_runners_table_arn != "" ? 1 : 0
   name  = "DynamoDBAccess"
   role  = aws_iam_role.lambda.id
 
@@ -186,7 +186,7 @@ resource "aws_iam_role_policy" "dynamodb_access" {
         "dynamodb:DeleteItem",
         "dynamodb:Query"
       ]
-      Resource = [data.terraform_remote_state.api.outputs.workflow_runners_table_arn]
+      Resource = [data.terraform_remote_state.runners.outputs.workflow_runners_table_arn]
     }]
   })
 }

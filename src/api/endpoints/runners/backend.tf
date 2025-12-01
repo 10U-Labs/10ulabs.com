@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket       = "10ulabs-terraform-state"
-    key          = "api/terraform.tfstate"
+    key          = "runners/terraform.tfstate"
     region       = "us-east-1"
     encrypt      = true
     use_lockfile = true
@@ -18,9 +18,9 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    null = {
-      source  = "hashicorp/null"
-      version = "~> 3.0"
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
     }
     random = {
       source  = "hashicorp/random"

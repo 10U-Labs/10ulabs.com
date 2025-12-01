@@ -9,7 +9,7 @@ locals {
     ImageForDockerRunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_docker_runners.outputs.lambda_function_arn}/invocations"
     ImageForEC2RunnersHandlerArn    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
     RackDesignerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
-    RunnersHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.runners_handler.arn}/invocations"
+    RunnersHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations"
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }
@@ -117,7 +117,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
 resource "aws_lambda_permission" "runners_handler" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.runners_handler.function_name
+  function_name = data.terraform_remote_state.runners.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/runners*"
 }

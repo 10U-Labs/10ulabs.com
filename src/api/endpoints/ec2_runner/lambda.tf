@@ -17,7 +17,7 @@ resource "aws_lambda_function" "handler" {
 
   environment {
     variables = {
-      API_DOMAIN               = data.terraform_remote_state.api.outputs.api_domain_name
+      API_DOMAIN               = data.terraform_remote_state.runners.outputs.api_endpoint
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       EC2_AMI_PURPOSE_TAG      = local.ec2_runner_ami_purpose_tag
       EC2_AMI_PURPOSE_VALUE    = local.ec2_runner_ami_purpose_value
@@ -27,11 +27,11 @@ resource "aws_lambda_function" "handler" {
       EC2_MANAGED_BY_TAG       = local.ec2_runner_managed_by_tag
       EC2_MAX_PRICE            = var.ec2_max_spot_price
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.api.outputs.github_token_secret_name
-      SECURITY_GROUPS          = data.terraform_remote_state.api.outputs.runner_security_group_id
-      SUBNETS                  = data.terraform_remote_state.api.outputs.vpc_public_subnet_ids
-      VPC_ID                   = data.terraform_remote_state.api.outputs.vpc_id
-      WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.api.outputs.workflow_runners_table_name
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
+      SECURITY_GROUPS          = data.terraform_remote_state.runners.outputs.runner_security_group_id
+      SUBNETS                  = data.terraform_remote_state.runners.outputs.vpc_public_subnet_ids
+      VPC_ID                   = data.terraform_remote_state.runners.outputs.vpc_id
+      WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.runners.outputs.workflow_runners_table_name
     }
   }
 

@@ -43,7 +43,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
         Resource = "*"
         Condition = {
           ArnEquals = {
-            "ecs:cluster" = data.terraform_remote_state.api.outputs.cluster_arn
+            "ecs:cluster" = data.terraform_remote_state.runners.outputs.cluster_arn
           }
         }
       },
@@ -52,7 +52,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
         Action = [
           "ecs:RunTask"
         ]
-        Resource = data.terraform_remote_state.api.outputs.task_definition_arn
+        Resource = data.terraform_remote_state.runners.outputs.task_definition_arn
       },
       {
         Effect = "Allow"
@@ -83,7 +83,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
         Action = [
           "dynamodb:PutItem"
         ]
-        Resource = data.terraform_remote_state.api.outputs.workflow_runners_table_arn
+        Resource = data.terraform_remote_state.runners.outputs.workflow_runners_table_arn
       },
       {
         Effect = "Allow"
@@ -91,8 +91,8 @@ resource "aws_iam_role_policy" "lambda_execution" {
           "iam:PassRole"
         ]
         Resource = [
-          data.terraform_remote_state.api.outputs.execution_role_arn,
-          data.terraform_remote_state.api.outputs.task_role_arn
+          data.terraform_remote_state.runners.outputs.execution_role_arn,
+          data.terraform_remote_state.runners.outputs.task_role_arn
         ]
       }
     ]
