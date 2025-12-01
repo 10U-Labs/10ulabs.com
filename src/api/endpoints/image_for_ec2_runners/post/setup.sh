@@ -2,25 +2,25 @@
 set -euo pipefail
 
 __main__() {
-    local runner_version=""
-    local yq_version=""
-    local runner_user=""
     local arch=""
-    local version_codename=""
     local docker_key=""
+    local runner_user=""
+    local runner_version=""
+    local version_codename=""
+    local yq_version=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --runner-user)
+                runner_user="$2"
+                shift 2
+                ;;
             --runner-version)
                 runner_version="$2"
                 shift 2
                 ;;
             --yq-version)
                 yq_version="$2"
-                shift 2
-                ;;
-            --runner-user)
-                runner_user="$2"
                 shift 2
                 ;;
             *)
@@ -30,19 +30,19 @@ __main__() {
         esac
     done
 
-    if [[ -z "$runner_version" ]]; then
+    if [[ -z "$runner_user" ]]; then
+        echo "Error: --runner-user is required"
+        usage
+    elif [[ -z "$runner_version" ]]; then
         echo "Error: --runner-version is required"
         usage
     elif [[ -z "$yq_version" ]]; then
         echo "Error: --yq-version is required"
         usage
-    elif [[ -z "$runner_user" ]]; then
-        echo "Error: --runner-user is required"
-        usage
     else
         arch=$(dpkg --print-architecture)
-        version_codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
         docker_key=/etc/apt/keyrings/docker.asc
+        version_codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
 
         add_docker_apt_repository \
             --docker-key "$docker_key" \
