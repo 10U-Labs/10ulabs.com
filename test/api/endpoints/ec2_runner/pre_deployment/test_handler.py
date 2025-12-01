@@ -51,7 +51,8 @@ def test_get_ec2_runner_status_returns_success_with_no_instances(ec2_runner_hand
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
         result = ec2_runner_handler.get_ec2_runner_status()
-        assert result['success'] is True
+        is_success = result['success']
+        assert is_success
 
 
 def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(ec2_runner_handler):
@@ -60,7 +61,8 @@ def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(ec2_run
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
         result = ec2_runner_handler.get_ec2_runner_status()
-        assert result['running_instances'] == 0
+        has_zero_instances = result['running_instances'] == 0
+        assert has_zero_instances
 
 
 def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(ec2_runner_handler):
@@ -69,7 +71,8 @@ def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(ec2
         mock_ec2.describe_instances.return_value = {'Reservations': []}
         mock_get_client.return_value = mock_ec2
         result = ec2_runner_handler.get_ec2_runner_status()
-        assert result['instances'] == []
+        is_empty_list = result['instances'] == []
+        assert is_empty_list
 
 
 def test_get_ec2_runner_status_handles_client_error(ec2_runner_handler):
@@ -81,7 +84,8 @@ def test_get_ec2_runner_status_handles_client_error(ec2_runner_handler):
         )
         mock_get_client.return_value = mock_ec2
         result = ec2_runner_handler.get_ec2_runner_status()
-        assert result['success'] is False
+        is_failure = not result['success']
+        assert is_failure
 
 
 def test_get_ec2_runner_status_filters_by_managed_by_tag_from_env(ec2_runner_handler):
@@ -93,7 +97,8 @@ def test_get_ec2_runner_status_filters_by_managed_by_tag_from_env(ec2_runner_han
         call_args = mock_ec2.describe_instances.call_args
         filters = call_args[1]['Filters']
         managed_by_filter = next(f for f in filters if f['Name'] == 'tag:ManagedBy')
-        assert managed_by_filter['Values'] == ['api-ec2-spot-runner']
+        has_correct_tag = managed_by_filter['Values'] == ['api-ec2-spot-runner']
+        assert has_correct_tag
 
 
 def test_handle_ec2_runner_get_returns_200_status(ec2_runner_handler, ec2_runner_get_event, lambda_context):
@@ -114,7 +119,8 @@ def test_create_ec2_user_data_formatting(ec2_runner_handler):
     with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
         create_ec2_user_data = getattr(ec2_runner_handler, 'create_ec2_user_data')
         result = create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo', 'test-runner')
-        assert 'test-token' in result
+        contains_token = 'test-token' in result
+        assert contains_token
 
 
 @patch('boto3.client')
@@ -128,7 +134,8 @@ def test_get_latest_ami_multiple_amis(mock_boto_client, ec2_runner_handler):
     }
     mock_boto_client.return_value = mock_ec2
     result = ec2_runner_handler.get_latest_ami()
-    assert result == 'ami-new'
+    is_newest_ami = result == 'ami-new'
+    assert is_newest_ami
 
 
 @patch('boto3.client')
@@ -137,7 +144,8 @@ def test_get_latest_ami_no_amis(mock_boto_client, ec2_runner_handler):
     mock_ec2.describe_images.return_value = {'Images': []}
     mock_boto_client.return_value = mock_ec2
     result = ec2_runner_handler.get_latest_ami()
-    assert result == ''
+    is_empty = result == ''
+    assert is_empty
 
 
 @patch('boto3.client')
@@ -146,7 +154,8 @@ def test_get_latest_ami_client_error(mock_boto_client, ec2_runner_handler):
     mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeImages')
     mock_boto_client.return_value = mock_ec2
     result = ec2_runner_handler.get_latest_ami()
-    assert result == ''
+    is_empty = result == ''
+    assert is_empty
 
 
 def test_get_ec2_config_parsing(ec2_runner_handler):
@@ -158,7 +167,8 @@ def test_get_ec2_config_parsing(ec2_runner_handler):
         'EC2_MAX_PRICE': '0.05'
     }):
         result = getattr(ec2_runner_handler, "get_ec2_config")()
-        assert result['max_price'] == '0.05'
+        has_correct_price = result['max_price'] == '0.05'
+        assert has_correct_price
 
 
 @patch('boto3.client')
@@ -176,7 +186,8 @@ def test_launch_ec2_spot_runner_no_ami(mock_boto_client, ec2_runner_handler):
     }):
         with patch.object(ec2_runner_handler, 'trigger_ami_creation', return_value={'success': True}):
             result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
-            assert result['success'] is False
+            is_failure = not result['success']
+            assert is_failure
 
 
 @patch('boto3.client')
@@ -210,7 +221,8 @@ def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, 
             mock_response.__exit__ = Mock(return_value=False)
             mock_urlopen.return_value = mock_response
             result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
-            assert result['success'] is False
+            is_failure = not result['success']
+            assert is_failure
 
 
 @patch('boto3.client')
@@ -229,7 +241,8 @@ def test_launch_ec2_spot_runner_no_github_token(mock_boto_client, ec2_runner_han
     }):
         with patch.object(ec2_runner_handler, 'get_github_token', return_value=''):
             result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
-            assert result['success'] is False
+            is_failure = not result['success']
+            assert is_failure
 
 
 @patch('boto3.client')
@@ -249,28 +262,33 @@ def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, ec2_runner
         with patch.object(ec2_runner_handler, 'get_github_token', return_value='token'):
             with patch.object(ec2_runner_handler, 'get_runner_registration_token', return_value=''):
                 result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
-                assert result['success'] is False
+                is_failure = not result['success']
+                assert is_failure
 
 
 def test_create_ec2_user_data_includes_region(ec2_runner_handler):
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     region = os.environ.get('AWS_REGION', 'us-east-1')
-    assert region in result
+    contains_region = region in result
+    assert contains_region
 
 
 def test_create_ec2_user_data_includes_nvme_format(ec2_runner_handler):
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
-    assert 'mkfs.ext4' in result
+    contains_mkfs = 'mkfs.ext4' in result
+    assert contains_mkfs
 
 
 def test_create_ec2_user_data_includes_nvme_mount(ec2_runner_handler):
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
-    assert 'mount' in result
+    contains_mount = 'mount' in result
+    assert contains_mount
 
 
 def test_create_ec2_user_data_detects_instance_store_dynamically(ec2_runner_handler):
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
-    assert 'lsblk' in result
+    contains_lsblk = 'lsblk' in result
+    assert contains_lsblk
 
 
 def test_lambda_handler_options_returns_200(ec2_runner_handler, lambda_context):
@@ -290,7 +308,8 @@ def test_test_mode_header_sets_test_mode(ec2_runner_handler, lambda_context):
     with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
         mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
         ec2_runner_handler.lambda_handler(event, lambda_context)
-        assert ec2_runner_handler.is_test_mode() is True
+        is_test_mode = ec2_runner_handler.is_test_mode()
+        assert is_test_mode
 
 
 def test_test_mode_post_returns_mock_response(
@@ -300,4 +319,5 @@ def test_test_mode_post_returns_mock_response(
     event['headers'] = {'x-test-mode': 'true'}
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
     body = parse_response_body(response)
-    assert body.get('test_mode') is True
+    is_test_mode = body.get('test_mode')
+    assert is_test_mode
