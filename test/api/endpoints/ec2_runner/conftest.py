@@ -98,6 +98,7 @@ def config_fixture() -> Dict[str, Any]:
     result['ssm_parameter_name_for_github_pat'] = os.environ.get(
         'SSM_PARAMETER_NAME_FOR_GITHUB_PAT', '/test/github/pat'
     )
+    result['ssm_parameter_name_for_api_key'] = result.get('ssm_parameter_name_for_api_key', '/api/key')
     shared_config = parse_shared_config()
     runner_labels = shared_config.get('runner_labels', {})
     result['runner_label_ec2_spot'] = runner_labels.get('ec2_spot', '')

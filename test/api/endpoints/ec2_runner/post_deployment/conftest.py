@@ -4,7 +4,7 @@ import boto3
 import pytest
 import requests
 
-from ..conftest import parse_shared_module_outputs
+from ..conftest import parse_shared_module_outputs, parse_tfvars, REPO_ROOT
 
 
 def get_api_url():
@@ -13,11 +13,15 @@ def get_api_url():
     return f"https://api.{domain}"
 
 
+def get_api_key_parameter_name():
+    tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
+    tfvars = parse_tfvars(tfvars_path)
+    return tfvars.get('ssm_parameter_name_for_api_key', '/api/key')
+
+
 def get_api_key():
     ssm = boto3.client('ssm')
-    shared = parse_shared_module_outputs()
-    resource_prefix = shared.get('resource_prefix', '')
-    parameter_name = f"/github-runner/{resource_prefix}/api-key"
+    parameter_name = get_api_key_parameter_name()
     response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
     return response['Parameter']['Value']
 
