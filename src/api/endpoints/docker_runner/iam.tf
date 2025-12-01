@@ -37,7 +37,8 @@ resource "aws_iam_role_policy" "lambda_execution" {
           "ecs:RunTask",
           "ecs:DescribeTasks",
           "ecs:ListTasks",
-          "ecs:StopTask"
+          "ecs:StopTask",
+          "ecs:TagResource"
         ]
         Resource = "*"
         Condition = {
