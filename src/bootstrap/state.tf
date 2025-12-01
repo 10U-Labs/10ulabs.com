@@ -1,13 +1,3 @@
-resource "aws_kms_key" "terraform_state" {
-  deletion_window_in_days = 30
-  enable_key_rotation     = true
-}
-
-resource "aws_kms_alias" "terraform_state" {
-  name          = "alias/terraform-state"
-  target_key_id = aws_kms_key.terraform_state.key_id
-}
-
 resource "aws_s3_bucket" "terraform_state" {
   bucket        = local.name_for_terraform_state_bucket
   force_destroy = true
@@ -25,8 +15,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.terraform_state.arn
+      sse_algorithm = "aws:kms"
     }
     bucket_key_enabled = true
   }
