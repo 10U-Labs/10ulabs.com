@@ -164,7 +164,7 @@ jobs:
           python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/ \
             --confcutdir=test/api/endpoints/ec2_runner \
             -v
-name: Deploying ec2_runner endpoint
+name: Ensuring the ec2-runner endpoint exists and is configured properly
 on:
   push:
     branches:
