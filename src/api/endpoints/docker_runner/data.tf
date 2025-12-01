@@ -1,7 +1,7 @@
 data "terraform_remote_state" "api" {
   backend = "s3"
   config = {
-    bucket = module.shared.terraform_state_bucket
+    bucket = module.shared.name_for_terraform_state_bucket
     key    = "api/terraform.tfstate"
     region = module.shared.aws_region
   }
@@ -10,7 +10,7 @@ data "terraform_remote_state" "api" {
 data "terraform_remote_state" "bootstrap" {
   backend = "s3"
   config = {
-    bucket = module.shared.terraform_state_bucket
+    bucket = module.shared.name_for_terraform_state_bucket
     key    = "bootstrap/terraform.tfstate"
     region = module.shared.aws_region
   }
