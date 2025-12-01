@@ -100,5 +100,3 @@ def test_dlq_reprocessor_role_has_sqs_permissions(iam_client, config):
     role_name = f"{config['resource_prefix']}-DLQReprocessor-Role"
     policies = iam_client.list_role_policies(RoleName=role_name)
     assert len(policies['PolicyNames']) >= 1
-
-
