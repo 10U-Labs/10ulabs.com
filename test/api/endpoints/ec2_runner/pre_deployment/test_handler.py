@@ -2,6 +2,7 @@ import json
 import os
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 from botocore.exceptions import ClientError
 
 from .conftest import (
@@ -34,8 +35,9 @@ def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(
     assert_response_status(response, 400)
 
 
+@pytest.mark.usefixtures('mock_boto_client')
 def test_lambda_handler_ec2_runner_post_returns_json_content_type(
-    _mock_boto_client, ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
+    ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
 ):
     event = ec2_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
