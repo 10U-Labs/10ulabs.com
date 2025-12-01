@@ -49,6 +49,7 @@ __main__() {
             --docker-key "$docker_key"
 
         install_system_packages
+
         install_python_packages
 
         install_yq \
@@ -65,8 +66,10 @@ __main__() {
 
         install_ssm_agent \
             --arch "$arch"
+
         install_cloudwatch_agent \
             --arch "$arch"
+
         cleanup_temp_files
     fi
 }
