@@ -104,10 +104,17 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
     terminate_instance_safely(ec2_client, instance_id)
 
 
-def test_ec2_runner_post_returns_instance_id(test_ec2_runner_instance, latest_ami_exists):
+def test_ec2_runner_post_returns_response(test_ec2_runner_instance, latest_ami_exists):
     if not latest_ami_exists:
         pytest.skip("No AMI available")
     assert test_ec2_runner_instance is not None
+
+
+def test_ec2_runner_post_returns_instance_id(test_ec2_runner_instance, latest_ami_exists):
+    if not latest_ami_exists:
+        pytest.skip("No AMI available")
+    if test_ec2_runner_instance is None:
+        pytest.fail("Test instance not created")
     assert test_ec2_runner_instance.get("instance_id") is not None
 
 
@@ -233,4 +240,5 @@ def test_ec2_runner_stored_in_dynamodb(
         pytest.fail("Test instance not created")
     run_id = test_ec2_runner_instance.get("run_id")
     items = query_workflow_runners_by_run_id(dynamodb_client, workflow_runners_table_name, run_id)
-    assert len(items) > 0
+    has_items = len(items) > 0
+    assert has_items

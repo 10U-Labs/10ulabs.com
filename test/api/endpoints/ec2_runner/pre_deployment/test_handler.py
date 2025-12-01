@@ -254,7 +254,8 @@ def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, ec2_runner
 
 def test_create_ec2_user_data_includes_region(ec2_runner_handler):
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
-    assert 'AWS_REGION' in os.environ or 'us-east-1' in result
+    region = os.environ.get('AWS_REGION', 'us-east-1')
+    assert region in result
 
 
 def test_create_ec2_user_data_includes_nvme_format(ec2_runner_handler):
