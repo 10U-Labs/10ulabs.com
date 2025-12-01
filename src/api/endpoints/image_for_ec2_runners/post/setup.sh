@@ -33,14 +33,10 @@ __main__() {
     if [[ -z "$runner_version" ]]; then
         echo "Error: --runner-version is required"
         usage
-    fi
-
-    if [[ -z "$yq_version" ]]; then
+    elif [[ -z "$yq_version" ]]; then
         echo "Error: --yq-version is required"
         usage
-    fi
-
-    if [[ -z "$runner_user" ]]; then
+    elif [[ -z "$runner_user" ]]; then
         echo "Error: --runner-user is required"
         usage
     fi
