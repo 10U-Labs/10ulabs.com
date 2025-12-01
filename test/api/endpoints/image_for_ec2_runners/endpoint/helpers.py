@@ -6,6 +6,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "endpoint"
 SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
+API_BACKEND_PATH = REPO_ROOT / "src" / "api" / "backend"
 
 
 def _get_terraform_output_value(output_name: str) -> str:
@@ -27,3 +28,13 @@ def get_aws_region() -> str:
 
 def get_github_repo() -> str:
     return _get_terraform_output_value("github_org") + "/" + _get_terraform_output_value("name_for_github_repo")
+
+
+def get_api_fqdn() -> str:
+    locals_path = API_BACKEND_PATH / "locals.tf"
+    with open(locals_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    pattern = r'api_fqdn\s*=\s*"([^"]+)"'
+    match = re.search(pattern, content)
+    result = match.group(1) if match else ''
+    return result

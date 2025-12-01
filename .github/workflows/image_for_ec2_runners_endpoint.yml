@@ -63,6 +63,40 @@ jobs:
         run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform init
       - name: Terraform Apply
         run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform apply -auto-approve
+  integration-testing:
+    name: Integration testing
+    needs:
+      - declaring-common-variables
+      - ensuring-endpoint-infrastructure-in-desired-state
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{ ( github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install boto3 pytest requests
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Run integration tests
+        run: |
+          pytest test/api/endpoints/image_for_ec2_runners/endpoint/post_deployment/integration/ \
+            --confcutdir=test/api/endpoints/image_for_ec2_runners/endpoint \
+            -v
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables

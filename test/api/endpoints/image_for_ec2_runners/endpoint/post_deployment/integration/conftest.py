@@ -1,0 +1,11 @@
+import pytest
+
+
+@pytest.fixture(name="amis_endpoint", scope="module")
+def amis_endpoint_fixture(api_url) -> str:
+    return f"{api_url}/v1/image-for-ec2-runners"
+
+
+@pytest.fixture(name="latest_ami_endpoint", scope="module")
+def latest_ami_endpoint_fixture(api_url) -> str:
+    return f"{api_url}/v1/image-for-ec2-runners/latest"
