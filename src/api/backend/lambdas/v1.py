@@ -366,13 +366,17 @@ def trigger_image_creation() -> Dict[str, Any]:
     return result
 
 
-def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int) -> Dict[str, Any] | None:
+def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int, job_labels: list) -> Dict[str, Any] | None:
     result = None
     runners = list_repo_runners(github_token, github_repo)
     runner_label = f'runner-{run_id}'
+    required_labels = set(job_labels)
     for runner in runners:
         runner_labels = {label.get('name') for label in runner.get('labels', [])}
-        if runner_label in runner_labels and runner.get('status') in ('online', 'busy'):
+        has_run_id_label = runner_label in runner_labels
+        has_required_labels = required_labels.issubset(runner_labels)
+        is_available = runner.get('status') in ('online', 'busy')
+        if has_run_id_label and has_required_labels and is_available:
             result = runner
     return result
 
@@ -394,7 +398,7 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
         return result
 
     if run_id:
-        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id)
+        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id, job_labels)
         if existing_runner:
             logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
             result = {
@@ -868,7 +872,7 @@ def launch_ec2_spot_runner(
         return result
 
     if run_id:
-        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id)
+        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id, job_labels)
         if existing_runner:
             logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
             result = {
