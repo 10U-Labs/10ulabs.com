@@ -101,13 +101,13 @@ add_docker_apt_repository() {
         install -m 0755 -d /etc/apt/keyrings
         curl -fsSL https://download.docker.com/linux/debian/gpg -o "$docker_key"
         chmod a+r "$docker_key"
-        cat > /etc/apt/sources.list.d/docker.sources << EOF
-Types: deb
-URIs: https://download.docker.com/linux/debian
-Suites: $version_codename
-Components: stable
-Signed-By: $docker_key
-EOF
+        printf '%s\n' \
+            "Types: deb" \
+            "URIs: https://download.docker.com/linux/debian" \
+            "Suites: $version_codename" \
+            "Components: stable" \
+            "Signed-By: $docker_key" \
+            > /etc/apt/sources.list.d/docker.sources
     fi
 }
 
