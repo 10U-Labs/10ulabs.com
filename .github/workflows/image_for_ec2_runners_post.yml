@@ -38,9 +38,11 @@ jobs:
         run: |
           cd src/api/backend
           terraform init -backend=true -input=false
+          AMI_PURPOSE_VALUE=$(terraform output -raw ec2_runner_ami_purpose_value)
           AMI_STABLE_TAG=$(terraform output -raw ec2_runner_ami_stable_tag)
           SECURITY_GROUP_ID=$(terraform output -raw runner_security_group_id)
           SUBNET_IDS=$(terraform output -raw vpc_public_subnet_ids)
+          echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
@@ -73,7 +75,7 @@ jobs:
             --tag "OSArchitecture=${OS_ARCH}" \
             --tag "OSFamily=${OS_FAMILY^}" \
             --tag "OSVersion=${OS_VERSION}" \
-            --tag "Purpose=GitHub self-hosted EC2 runner" \
+            --tag "Purpose=${{ steps.terraform.outputs.ami_purpose_value }}" \
             --tag "Repository=${{ github.repository }}" \
             --tag "RunId=${{ github.run_id }}" \
             --tag "Workflow=${{ github.workflow }}" \
