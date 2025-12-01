@@ -47,6 +47,32 @@ jobs:
         run: cd src/api/endpoints/ec2_runner && terraform init
       - name: Terraform Apply
         run: cd src/api/endpoints/ec2_runner && terraform apply -auto-approve
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on:
+      - ecs-fargate-spot
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        name: Run E2E tests
+        run: |
+          pytest test/api/endpoints/ec2_runner/post_deployment/e2e/ \
+            --confcutdir=test/api/endpoints/ec2_runner \
+            -v
   integration-testing:
     name: Integration testing
     needs:
