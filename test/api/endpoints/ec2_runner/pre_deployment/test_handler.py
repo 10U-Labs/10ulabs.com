@@ -1,0 +1,302 @@
+import json
+import os
+import urllib.error
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+from botocore.exceptions import ClientError
+
+from test.api.endpoints.ec2_runner.pre_deployment.conftest import (
+    assert_json_content_type,
+    assert_response_status,
+    create_client_error,
+    create_multi_client_mock,
+    parse_response_body,
+)
+
+
+def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(
+    ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
+):
+    event = ec2_runner_post_event_factory()
+    body = json.loads(event['body'])
+    del body['job_id']
+    event['body'] = json.dumps(body)
+    response = ec2_runner_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(
+    ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
+):
+    event = ec2_runner_post_event_factory()
+    body = json.loads(event['body'])
+    del body['github_repo']
+    event['body'] = json.dumps(body)
+    response = ec2_runner_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 400)
+
+
+def test_lambda_handler_ec2_runner_post_returns_json_content_type(
+    mock_boto_client, ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
+):
+    event = ec2_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
+    response = ec2_runner_handler.lambda_handler(event, lambda_context)
+    assert_json_content_type(response)
+
+
+def test_get_ec2_runner_status_returns_success_with_no_instances(ec2_runner_handler):
+    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+        result = ec2_runner_handler.get_ec2_runner_status()
+        assert result['success'] is True
+
+
+def test_get_ec2_runner_status_returns_zero_running_instances_when_empty(ec2_runner_handler):
+    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+        result = ec2_runner_handler.get_ec2_runner_status()
+        assert result['running_instances'] == 0
+
+
+def test_get_ec2_runner_status_returns_empty_instance_list_when_none_running(ec2_runner_handler):
+    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+        result = ec2_runner_handler.get_ec2_runner_status()
+        assert result['instances'] == []
+
+
+def test_get_ec2_runner_status_handles_client_error(ec2_runner_handler):
+    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.side_effect = ClientError(
+            {'Error': {'Code': 'TestError', 'Message': 'Test error'}},
+            'describe_instances'
+        )
+        mock_get_client.return_value = mock_ec2
+        result = ec2_runner_handler.get_ec2_runner_status()
+        assert result['success'] is False
+
+
+def test_get_ec2_runner_status_filters_by_managed_by_tag_from_env(ec2_runner_handler):
+    with patch.object(ec2_runner_handler, 'get_ec2_client') as mock_get_client:
+        mock_ec2 = MagicMock()
+        mock_ec2.describe_instances.return_value = {'Reservations': []}
+        mock_get_client.return_value = mock_ec2
+        ec2_runner_handler.get_ec2_runner_status()
+        call_args = mock_ec2.describe_instances.call_args
+        filters = call_args[1]['Filters']
+        managed_by_filter = next(f for f in filters if f['Name'] == 'tag:ManagedBy')
+        assert managed_by_filter['Values'] == ['api-ec2-spot-runner']
+
+
+def test_handle_ec2_runner_get_returns_200_status(ec2_runner_handler, ec2_runner_get_event, lambda_context):
+    with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        response = ec2_runner_handler.lambda_handler(ec2_runner_get_event, lambda_context)
+        assert_response_status(response, 200)
+
+
+def test_handle_ec2_runner_get_returns_json_content_type(ec2_runner_handler, ec2_runner_get_event, lambda_context):
+    with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        response = ec2_runner_handler.lambda_handler(ec2_runner_get_event, lambda_context)
+        assert_json_content_type(response)
+
+
+def test_create_ec2_user_data_formatting(ec2_runner_handler):
+    with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
+        create_ec2_user_data = getattr(ec2_runner_handler, 'create_ec2_user_data')
+        result = create_ec2_user_data('test-token', ['label1', 'label2'], 'test/repo', 'test-runner')
+        assert 'test-token' in result
+
+
+@patch('boto3.client')
+def test_get_latest_ami_multiple_amis(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [
+            {'ImageId': 'ami-old', 'CreationDate': '2024-01-01T00:00:00'},
+            {'ImageId': 'ami-new', 'CreationDate': '2024-01-05T00:00:00'}
+        ]
+    }
+    mock_boto_client.return_value = mock_ec2
+    result = ec2_runner_handler.get_latest_ami()
+    assert result == 'ami-new'
+
+
+@patch('boto3.client')
+def test_get_latest_ami_no_amis(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    result = ec2_runner_handler.get_latest_ami()
+    assert result == ''
+
+
+@patch('boto3.client')
+def test_get_latest_ami_client_error(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeImages')
+    mock_boto_client.return_value = mock_ec2
+    result = ec2_runner_handler.get_latest_ami()
+    assert result == ''
+
+
+def test_get_ec2_config_parsing(ec2_runner_handler):
+    with patch.dict('os.environ', {
+        'SUBNETS': 'subnet-1,subnet-2',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small,t3.medium',
+        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
+        'EC2_MAX_PRICE': '0.05'
+    }):
+        result = getattr(ec2_runner_handler, "get_ec2_config")()
+        assert result['max_price'] == '0.05'
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_no_ami(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {'Images': []}
+    mock_boto_client.return_value = mock_ec2
+    with patch.dict('os.environ', {
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small',
+        'EC2_IAM_INSTANCE_PROFILE': 'profile',
+        'EC2_MAX_PRICE': '0.05',
+        'API_DOMAIN': 'api.test.com'
+    }):
+        with patch.object(ec2_runner_handler, 'trigger_ami_creation', return_value={'success': True}):
+            result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    mock_ec2.create_launch_template.return_value = {'LaunchTemplate': {'LaunchTemplateId': 'lt-12345'}}
+    mock_ec2.create_fleet.return_value = {
+        'Instances': [],
+        'Errors': [{'ErrorCode': 'InsufficientInstanceCapacity', 'ErrorMessage': 'No capacity'}]
+    }
+    mock_ssm = MagicMock()
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+
+    mock_boto_client.side_effect = create_multi_client_mock(mock_ec2, mock_ssm)
+
+    with patch.dict('os.environ', {
+        'SUBNETS': 'subnet-1,subnet-2',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small',
+        'EC2_IAM_INSTANCE_PROFILE': 'profile',
+        'EC2_MAX_PRICE': '0.05',
+        'GITHUB_TOKEN_SECRET_NAME': '/token'
+    }):
+        with patch('urllib.request.urlopen') as mock_urlopen:
+            mock_response = MagicMock()
+            mock_response.read.return_value = json.dumps({'token': 'reg-token'}).encode()
+            mock_response.__enter__ = Mock(return_value=mock_response)
+            mock_response.__exit__ = Mock(return_value=False)
+            mock_urlopen.return_value = mock_response
+            result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_no_github_token(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    mock_boto_client.return_value = mock_ec2
+    with patch.dict('os.environ', {
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small',
+        'EC2_IAM_INSTANCE_PROFILE': 'profile',
+        'EC2_MAX_PRICE': '0.05'
+    }):
+        with patch.object(ec2_runner_handler, 'get_github_token', return_value=''):
+            result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            assert result['success'] is False
+
+
+@patch('boto3.client')
+def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, ec2_runner_handler):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_images.return_value = {
+        'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
+    }
+    mock_boto_client.return_value = mock_ec2
+    with patch.dict('os.environ', {
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'EC2_INSTANCE_TYPES': 't3.small',
+        'EC2_IAM_INSTANCE_PROFILE': 'profile',
+        'EC2_MAX_PRICE': '0.05'
+    }):
+        with patch.object(ec2_runner_handler, 'get_github_token', return_value='token'):
+            with patch.object(ec2_runner_handler, 'get_runner_registration_token', return_value=''):
+                result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+                assert result['success'] is False
+
+
+def test_create_ec2_user_data_includes_region(ec2_runner_handler):
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    assert 'AWS_REGION' in os.environ or 'us-east-1' in result
+
+
+def test_create_ec2_user_data_includes_nvme_format(ec2_runner_handler):
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    assert 'mkfs.ext4' in result
+
+
+def test_create_ec2_user_data_includes_nvme_mount(ec2_runner_handler):
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    assert 'mount' in result
+
+
+def test_create_ec2_user_data_detects_instance_store_dynamically(ec2_runner_handler):
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    assert 'lsblk' in result
+
+
+def test_lambda_handler_options_returns_200(ec2_runner_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'OPTIONS', 'headers': {}}
+    response = ec2_runner_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
+
+
+def test_lambda_handler_unknown_path_returns_404(ec2_runner_handler, lambda_context):
+    event = {'path': '/v1/unknown', 'httpMethod': 'GET', 'headers': {}}
+    response = ec2_runner_handler.lambda_handler(event, lambda_context)
+    assert_response_status(response, 404)
+
+
+def test_test_mode_header_sets_test_mode(ec2_runner_handler, lambda_context):
+    event = {'path': '/v1/ec2-runner', 'httpMethod': 'GET', 'headers': {'x-test-mode': 'true'}}
+    with patch.object(ec2_runner_handler, 'get_ec2_runner_status') as mock_status:
+        mock_status.return_value = {'success': True, 'running_instances': 0, 'instances': []}
+        ec2_runner_handler.lambda_handler(event, lambda_context)
+        assert ec2_runner_handler.is_test_mode() is True
+
+
+def test_test_mode_post_returns_mock_response(
+    ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
+):
+    event = ec2_runner_post_event_factory(job_id=123, github_repo='test/repo')
+    event['headers'] = {'x-test-mode': 'true'}
+    response = ec2_runner_handler.lambda_handler(event, lambda_context)
+    body = parse_response_body(response)
+    assert body.get('test_mode') is True

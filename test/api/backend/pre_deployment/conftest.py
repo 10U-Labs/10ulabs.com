@@ -86,24 +86,17 @@ def openapi_spec() -> Dict[str, Any]:
 def v1_handler(config: Dict[str, str]) -> Any:
     env_vars = {
         'AWS_REGION': config['aws_region'],
-        'EC2_AMI_PURPOSE_TAG': 'Purpose',
-        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
-        'EC2_AMI_STABLE_TAG': 'Stable',
-        'EC2_MANAGED_BY_TAG': 'api-ec2-spot-runner',
         'ECR_REPOSITORY': config['ecr_repository_name'],
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
         'ECS_CLUSTER': config['cluster_name'],
         'CONTAINER_NAME': config['container_name'],
         'TASK_DEFINITION': config['task_family'],
-        'EC2_INSTANCE_TYPES': ','.join(config['ec2_spot_instance_types']),
-        'EC2_MAX_PRICE': config['ec2_max_spot_price'],
         'API_DOMAIN': config['api_fqdn'],
         'IMAGE_API_ENDPOINT': f"https://{config['api_fqdn']}/{config['api_version']}",
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
-        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
         'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-rack-designer-configurations'
     }
     with patch.dict('os.environ', env_vars):
@@ -273,23 +266,6 @@ def docker_runner_post_event_factory():
 
 
 @pytest.fixture
-def ec2_runner_post_event_factory():
-    def _create_event(job_id=456, job_labels=None, github_repo='test/repo'):
-        if job_labels is None:
-            job_labels = ['ec2', 'self-hosted']
-        return {
-            'path': '/v1/ec2-runner',
-            'httpMethod': 'POST',
-            'body': json.dumps({
-                'job_id': job_id,
-                'job_labels': job_labels,
-                'github_repo': github_repo
-            })
-        }
-    return _create_event
-
-
-@pytest.fixture
 def workflow_job_event_factory():
     def _create_event(action='queued', job_id=123, labels=None, repo='test/repo', run_id=456):
         if labels is None:
@@ -426,24 +402,17 @@ ENV_VAR_PRESETS = {
     },
     'v1_handler': {
         'AWS_REGION': 'us-east-1',
-        'EC2_AMI_PURPOSE_TAG': 'Purpose',
-        'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
-        'EC2_AMI_STABLE_TAG': 'Stable',
-        'EC2_MANAGED_BY_TAG': 'api-ec2-spot-runner',
         'ECR_REPOSITORY': 'test-ecr-repo',
         'GITHUB_REPO': 'test/repo',
         'GITHUB_TOKEN_SECRET_NAME': 'test-github-token',
         'ECS_CLUSTER': 'test-cluster',
         'CONTAINER_NAME': 'test-container',
         'TASK_DEFINITION': 'test-task-family',
-        'EC2_INSTANCE_TYPES': 't3.micro,t3.small',
-        'EC2_MAX_PRICE': '0.05',
         'API_DOMAIN': 'api.test.com',
         'IMAGE_API_ENDPOINT': 'https://api.test.com/v1',
         'SUBNETS': 'subnet-test1,subnet-test2',
         'SECURITY_GROUPS': 'sg-test',
         'VPC_ID': 'vpc-test',
-        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
         'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-rack-designer-configurations',
     },
     'webhook_router': {

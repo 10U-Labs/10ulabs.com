@@ -78,6 +78,16 @@ data "terraform_remote_state" "image_for_ec2_runners" {
   }
 }
 
+data "terraform_remote_state" "ec2_runner" {
+  backend = "s3"
+
+  config = {
+    bucket = "10ulabs-terraform-state"
+    key    = "ec2_runner/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
 data "aws_ssm_parameter" "github_pat" {
   name            = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
   with_decryption = true

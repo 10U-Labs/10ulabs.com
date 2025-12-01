@@ -4,11 +4,10 @@ import boto3
 import pytest
 from botocore.exceptions import ClientError
 
-from ..conftest import (
+from test.api.endpoints.ec2_runner.post_deployment.conftest import (
     create_runner_job_payload,
-    make_e2e_get,
-    make_e2e_post,
-    query_workflow_runners_by_run_id,
+    make_authenticated_get,
+    make_authenticated_post,
 )
 
 
@@ -18,7 +17,7 @@ SECONDS_FOR_SETUP_AND_LAUNCH = 7
 
 def get_ec2_runner_subnet_count():
     lambda_client = boto3.client('lambda')
-    response = lambda_client.get_function_configuration(FunctionName='TenULabsV1ApiHandler')
+    response = lambda_client.get_function_configuration(FunctionName='TenULabs-EC2RunnerHandler')
     subnets_env = response.get('Environment', {}).get('Variables', {}).get('SUBNETS', '')
     subnet_count = len(subnets_env.split(',')) if subnets_env else 1
     return subnet_count
@@ -66,6 +65,15 @@ def terminate_instance_safely(ec2_client, instance_id):
         pass
 
 
+def query_workflow_runners_by_run_id(dynamodb_client, table_name, run_id):
+    response = dynamodb_client.query(
+        TableName=table_name,
+        KeyConditionExpression='run_id = :rid',
+        ExpressionAttributeValues={':rid': {'S': str(run_id)}}
+    )
+    return response.get('Items', [])
+
+
 @pytest.fixture(name="test_ec2_runner_instance", scope="module")
 def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client, config):
     if not latest_ami_exists:
@@ -75,9 +83,11 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
     job_id, payload = create_runner_job_payload(
         test_context["github_repo"], [runner_label], test_context["github_run_id"]
     )
-    response = make_e2e_post(
+    response = make_authenticated_post(
         f"{test_context['api_credentials']['url']}/v1/ec2-runner",
-        test_context["api_credentials"]["key"], json=payload, timeout=calculate_ec2_runner_timeout()
+        test_context["api_credentials"]["key"],
+        json=payload,
+        timeout=calculate_ec2_runner_timeout()
     )
     if response.status_code != 200:
         yield None
@@ -180,7 +190,7 @@ def test_ec2_runner_appears_in_status_endpoint(
     if test_ec2_runner_instance is None:
         pytest.fail("Test instance not created")
     instance_id = test_ec2_runner_instance.get("instance_id")
-    status_response = make_e2e_get(f"{api_url}/v1/ec2-runner", api_key)
+    status_response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key, timeout=10)
     instances = status_response.json().get("instances", [])
     instance_ids = [inst.get("instance_id") for inst in instances]
     assert instance_id in instance_ids

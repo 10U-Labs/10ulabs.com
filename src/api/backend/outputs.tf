@@ -117,3 +117,27 @@ output "webhook_parameter_arn" {
 output "webhook_parameter_name" {
   value = aws_ssm_parameter.webhook_secret.name
 }
+
+output "workflow_runners_table_arn" {
+  value = aws_dynamodb_table.workflow_runners.arn
+}
+
+output "workflow_runners_table_name" {
+  value = aws_dynamodb_table.workflow_runners.name
+}
+
+output "api_key_ssm_parameter_arn" {
+  value = aws_ssm_parameter.api_key.arn
+}
+
+output "ec2_runner_managed_by_tag" {
+  value = local.ec2_runner_managed_by_tag
+}
+
+output "ec2_runner_role_arn" {
+  value = aws_iam_role.ec2_runner_role.arn
+}
+
+output "ec2_max_spot_price" {
+  value = var.ec2_max_spot_price
+}

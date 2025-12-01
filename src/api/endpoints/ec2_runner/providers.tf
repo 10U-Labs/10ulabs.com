@@ -1,0 +1,12 @@
+provider "aws" {
+  region = local.aws_region
+
+  default_tags {
+    tags = {
+      ManagedBy  = "Terraform"
+      Project    = "10UF"
+      Repository = local.github_repo_full
+      Stack      = "ec2_runner"
+    }
+  }
+}

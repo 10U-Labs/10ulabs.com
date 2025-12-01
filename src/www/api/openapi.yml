@@ -484,7 +484,7 @@ paths:
         '200':
           description: EC2 runner created successfully
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${EC2RunnerHandlerArn}
         httpMethod: POST
         type: aws_proxy
     get:
@@ -537,7 +537,7 @@ paths:
                         github_repo:
                           type: string
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${EC2RunnerHandlerArn}
         httpMethod: POST
         type: aws_proxy
       x-amazon-apigateway-api-key-required: true
