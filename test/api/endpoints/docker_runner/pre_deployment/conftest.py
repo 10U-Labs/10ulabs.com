@@ -1,15 +1,12 @@
 import importlib.util
 import json
-from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import Mock, patch
 
 import pytest
 
-
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
-DOCKER_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "docker_runner"
+from ..conftest import DOCKER_RUNNER_SRC
 
 
 def load_handler_module() -> ModuleType:
