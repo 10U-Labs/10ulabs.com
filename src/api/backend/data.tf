@@ -88,8 +88,17 @@ data "terraform_remote_state" "ec2_runner" {
   }
 
   defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
+    ec2_instance_profile_name    = ""
+    ec2_max_spot_price           = ""
+    ec2_runner_ami_purpose_tag   = ""
+    ec2_runner_ami_purpose_value = ""
+    ec2_runner_ami_stable_tag    = ""
+    ec2_runner_managed_by_tag    = ""
+    ec2_runner_role_arn          = ""
+    ec2_runner_role_name         = ""
+    ec2_spot_instance_types      = []
+    lambda_function_arn          = ""
+    lambda_function_name         = ""
   }
 }
 

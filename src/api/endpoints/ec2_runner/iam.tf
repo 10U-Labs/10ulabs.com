@@ -1,3 +1,69 @@
+resource "aws_iam_role" "ec2_runner" {
+  name = "GitHubSelfHostedRunnerEC2Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "GitHubSelfHostedRunnerEC2Role"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_runner_ssm_policy" {
+  role       = aws_iam_role.ec2_runner.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy" "ec2_runner_ecr_access" {
+  name = "ECRAccess"
+  role = aws_iam_role.ec2_runner.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ecr:*"]
+      Resource = ["*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ec2_runner_self_terminate" {
+  name = "SelfTerminate"
+  role = aws_iam_role.ec2_runner.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ec2:TerminateInstances"]
+      Resource = ["*"]
+      Condition = {
+        StringEquals = {
+          "ec2:ResourceTag/ManagedBy" = local.ec2_runner_managed_by_tag
+        }
+      }
+    }]
+  })
+}
+
+resource "aws_iam_instance_profile" "ec2_runner" {
+  name = "GitHubSelfHostedRunnerInstanceProfile"
+  role = aws_iam_role.ec2_runner.name
+
+  tags = merge(local.common_tags, {
+    Name = "GitHubSelfHostedRunnerInstanceProfile"
+  })
+}
+
 resource "aws_iam_role" "lambda" {
   name = "${local.resource_prefix}-EC2RunnerLambda-Role"
 
@@ -58,7 +124,7 @@ resource "aws_iam_role_policy" "iam_pass_role" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["iam:PassRole"]
-      Resource = [data.terraform_remote_state.api.outputs.ec2_runner_role_arn]
+      Resource = [aws_iam_role.ec2_runner.arn]
       Condition = {
         StringEquals = {
           "iam:PassedToService" = "ec2.amazonaws.com"

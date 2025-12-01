@@ -39,27 +39,27 @@ output "cluster_name" {
 }
 
 output "ec2_instance_profile_name" {
-  value = aws_iam_instance_profile.ec2_runner.name
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_profile_name
 }
 
 output "ec2_runner_ami_purpose_tag" {
-  value = local.ec2_runner_ami_purpose_tag
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_purpose_tag
 }
 
 output "ec2_runner_ami_purpose_value" {
-  value = local.ec2_runner_ami_purpose_value
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_purpose_value
 }
 
 output "ec2_runner_ami_stable_tag" {
-  value = local.ec2_runner_ami_stable_tag
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_stable_tag
 }
 
 output "ec2_runner_role_name" {
-  value = aws_iam_role.ec2_runner_role.name
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_name
 }
 
 output "ec2_spot_instance_types" {
-  value = var.ec2_spot_instance_types
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_spot_instance_types
 }
 
 output "ecr_repository_arn" {
@@ -130,14 +130,14 @@ output "api_key_ssm_parameter_arn" {
   value = aws_ssm_parameter.api_key.arn
 }
 
+output "ec2_max_spot_price" {
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_max_spot_price
+}
+
 output "ec2_runner_managed_by_tag" {
-  value = local.ec2_runner_managed_by_tag
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
 }
 
 output "ec2_runner_role_arn" {
-  value = aws_iam_role.ec2_runner_role.arn
-}
-
-output "ec2_max_spot_price" {
-  value = var.ec2_max_spot_price
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_arn
 }

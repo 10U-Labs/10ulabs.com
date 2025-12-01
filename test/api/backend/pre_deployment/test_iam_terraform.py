@@ -41,41 +41,6 @@ def test_ecs_execution_kms_access_policy_exists():
     assert 'resource "aws_iam_role_policy" "ecs_execution_kms_access"' in content
 
 
-def test_ec2_runner_role_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role" "ec2_runner_role"' in content
-
-
-def test_ec2_runner_ssm_policy_attachment_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy_attachment" "ec2_runner_ssm_policy"' in content
-
-
-def test_ec2_runner_ecr_access_policy_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "ec2_runner_ecr_access"' in content
-
-
-def test_ec2_runner_self_terminate_policy_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "ec2_runner_self_terminate"' in content
-
-
-def test_ec2_instance_profile_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_instance_profile" "ec2_runner"' in content
-
-
 def test_lambda_catchall_handler_role_exists():
     iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
     with open(iam_file, encoding="utf-8") as f:

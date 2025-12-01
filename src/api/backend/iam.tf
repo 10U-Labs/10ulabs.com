@@ -98,72 +98,6 @@ resource "aws_iam_role_policy" "ecs_execution_kms_access" {
   })
 }
 
-resource "aws_iam_role" "ec2_runner_role" {
-  name = "GitHubSelfHostedRunnerEC2Role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "ec2.amazonaws.com"
-      }
-      Action = "sts:AssumeRole"
-    }]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = "GitHubSelfHostedRunnerEC2Role"
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ec2_runner_ssm_policy" {
-  role       = aws_iam_role.ec2_runner_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
-resource "aws_iam_role_policy" "ec2_runner_ecr_access" {
-  name = "ECRAccess"
-  role = aws_iam_role.ec2_runner_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ecr:*"]
-      Resource = ["*"]
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "ec2_runner_self_terminate" {
-  name = "SelfTerminate"
-  role = aws_iam_role.ec2_runner_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ec2:TerminateInstances"]
-      Resource = ["*"]
-      Condition = {
-        StringEquals = {
-          "ec2:ResourceTag/ManagedBy" = local.ec2_runner_managed_by_tag
-        }
-      }
-    }]
-  })
-}
-
-resource "aws_iam_instance_profile" "ec2_runner" {
-  name = "GitHubSelfHostedRunnerInstanceProfile"
-  role = aws_iam_role.ec2_runner_role.name
-
-  tags = merge(local.common_tags, {
-    Name = "GitHubSelfHostedRunnerInstanceProfile"
-  })
-}
-
 resource "aws_iam_role" "lambda_catchall_handler" {
   name = "CatchAllHandler-ServiceRole"
 
@@ -436,7 +370,7 @@ resource "aws_iam_role_policy" "lambda_v1_handler_iam_pass_role" {
       Resource = [
         aws_iam_role.ecs_task_role.arn,
         aws_iam_role.ecs_execution_role.arn,
-        aws_iam_role.ec2_runner_role.arn
+        data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_arn
       ]
       Condition = {
         StringEquals = {
