@@ -75,27 +75,35 @@ __main__() {
 }
 
 add_docker_apt_repository() {
-    local version_codename=""
     local docker_key=""
+    local version_codename=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --version-codename)
-                version_codename="$2"
-                shift 2
-                ;;
             --docker-key)
                 docker_key="$2"
+                shift 2
+                ;;
+            --version-codename)
+                version_codename="$2"
                 shift 2
                 ;;
         esac
     done
 
-    install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/debian/gpg -o "$docker_key"
-    chmod a+r "$docker_key"
-    echo -e "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: $version_codename\nComponents: stable\nSigned-By: $docker_key" | \
-        tee /etc/apt/sources.list.d/docker.sources > /dev/null
+    if [[ -z "$docker_key" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --docker-key"
+        exit 1
+    elif [[ -z "$version_codename" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --version-codename"
+        exit 1
+    else
+        install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/debian/gpg -o "$docker_key"
+        chmod a+r "$docker_key"
+        echo -e "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: $version_codename\nComponents: stable\nSigned-By: $docker_key" | \
+            tee /etc/apt/sources.list.d/docker.sources > /dev/null
+    fi
 }
 
 cleanup_temp_files() {
@@ -114,8 +122,13 @@ create_runner_user() {
         esac
     done
 
-    useradd -m -s /bin/bash "$runner_user"
-    usermod -aG docker "$runner_user"
+    if [[ -z "$runner_user" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --runner-user"
+        exit 1
+    else
+        useradd -m -s /bin/bash "$runner_user"
+        usermod -aG docker "$runner_user"
+    fi
 }
 
 install_cloudwatch_agent() {
@@ -130,18 +143,27 @@ install_cloudwatch_agent() {
         esac
     done
 
-    curl -sSL -o /tmp/amazon-cloudwatch-agent.deb \
-        "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${arch}/latest/amazon-cloudwatch-agent.deb"
-    dpkg -i /tmp/amazon-cloudwatch-agent.deb
+    if [[ -z "$arch" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --arch"
+        exit 1
+    else
+        curl -sSL -o /tmp/amazon-cloudwatch-agent.deb \
+            "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${arch}/latest/amazon-cloudwatch-agent.deb"
+        dpkg -i /tmp/amazon-cloudwatch-agent.deb
+    fi
 }
 
 install_github_actions_runner() {
+    local arch=""
     local runner_user=""
     local runner_version=""
-    local arch=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --arch)
+                arch="$2"
+                shift 2
+                ;;
             --runner-user)
                 runner_user="$2"
                 shift 2
@@ -150,18 +172,25 @@ install_github_actions_runner() {
                 runner_version="$2"
                 shift 2
                 ;;
-            --arch)
-                arch="$2"
-                shift 2
-                ;;
         esac
     done
 
-    sudo -u "$runner_user" curl -sSL -o /tmp/actions-runner.tar.gz \
-        "https://github.com/actions/runner/releases/download/v${runner_version}/actions-runner-linux-${arch}-${runner_version}.tar.gz"
-    sudo -u "$runner_user" mkdir -p "/home/$runner_user/actions-runner"
-    sudo -u "$runner_user" tar xzf /tmp/actions-runner.tar.gz -C "/home/$runner_user/actions-runner"
-    "/home/$runner_user/actions-runner/bin/installdependencies.sh"
+    if [[ -z "$arch" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --arch"
+        exit 1
+    elif [[ -z "$runner_user" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --runner-user"
+        exit 1
+    elif [[ -z "$runner_version" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --runner-version"
+        exit 1
+    else
+        sudo -u "$runner_user" curl -sSL -o /tmp/actions-runner.tar.gz \
+            "https://github.com/actions/runner/releases/download/v${runner_version}/actions-runner-linux-${arch}-${runner_version}.tar.gz"
+        sudo -u "$runner_user" mkdir -p "/home/$runner_user/actions-runner"
+        sudo -u "$runner_user" tar xzf /tmp/actions-runner.tar.gz -C "/home/$runner_user/actions-runner"
+        "/home/$runner_user/actions-runner/bin/installdependencies.sh"
+    fi
 }
 
 install_python_packages() {
@@ -197,10 +226,15 @@ install_ssm_agent() {
         esac
     done
 
-    curl -sSL -o /tmp/amazon-ssm-agent.deb \
-        "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${arch}/amazon-ssm-agent.deb"
-    dpkg -i /tmp/amazon-ssm-agent.deb
-    systemctl enable amazon-ssm-agent
+    if [[ -z "$arch" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --arch"
+        exit 1
+    else
+        curl -sSL -o /tmp/amazon-ssm-agent.deb \
+            "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${arch}/amazon-ssm-agent.deb"
+        dpkg -i /tmp/amazon-ssm-agent.deb
+        systemctl enable amazon-ssm-agent
+    fi
 }
 
 install_system_packages() {
@@ -220,24 +254,32 @@ install_system_packages() {
 }
 
 install_yq() {
-    local yq_version=""
     local arch=""
+    local yq_version=""
 
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --yq-version)
-                yq_version="$2"
-                shift 2
-                ;;
             --arch)
                 arch="$2"
+                shift 2
+                ;;
+            --yq-version)
+                yq_version="$2"
                 shift 2
                 ;;
         esac
     done
 
-    curl -sSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${yq_version}/yq_linux_${arch}"
-    chmod +x /usr/local/bin/yq
+    if [[ -z "$arch" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --arch"
+        exit 1
+    elif [[ -z "$yq_version" ]]; then
+        echo "Error: ${FUNCNAME[0]} requires --yq-version"
+        exit 1
+    else
+        curl -sSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${yq_version}/yq_linux_${arch}"
+        chmod +x /usr/local/bin/yq
+    fi
 }
 
 usage() {
