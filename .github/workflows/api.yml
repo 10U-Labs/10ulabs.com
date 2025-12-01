@@ -123,7 +123,7 @@ jobs:
       - if: steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          python3 ../../scripts/invalidate_cloudfront/invalidate_cloudfront.py \
+          python3 ../../scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.API_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/,/index.html,/openapi.yml,/404.html"
