@@ -191,6 +191,37 @@ def _perform_successful_recovery(state_table: str, webhook_function: str, sns_to
     logger.info("Recovery attempt successful - moved to half-open state with concurrency %d", concurrency_level)
 
 
+def _handle_half_open_circuit(config: dict, result: dict):
+    state_table = config['state_table']
+    webhook_function = config['webhook_function']
+    sns_topic = config['sns_topic']
+    logger.info("Circuit in half-open state, checking if ready to close")
+    health_check = check_health(webhook_function)
+    if not health_check.get('healthy'):
+        logger.warning("Health check failed in half-open state: %s", health_check.get('reason'))
+        result['actions_taken'].append('Health check failed in half-open state')
+        concurrency_result = set_lambda_reserved_concurrency(webhook_function, 0)
+        if concurrency_result['success']:
+            result['actions_taken'].append('Removed concurrency limit (disabled function)')
+        update_circuit_breaker_state(state_table, 'open', 0)
+        result['new_state'] = 'open'
+        result['message'] = f"Health check failed: {health_check.get('reason')} - reopening circuit"
+        if sns_topic:
+            send_recovery_notification(sns_topic, 'OPEN', 0,
+                                       ['Health check failed in half-open state', 'Circuit reopened'])
+    else:
+        result['actions_taken'].append('Health check passed in half-open state')
+        concurrency_result = set_lambda_reserved_concurrency(webhook_function, 0)
+        if concurrency_result['success']:
+            result['actions_taken'].append('Removed reserved concurrency limit')
+        update_circuit_breaker_state(state_table, 'closed', 0)
+        result['new_state'] = 'closed'
+        result['message'] = 'Circuit breaker fully closed'
+        if sns_topic:
+            send_recovery_notification(sns_topic, 'CLOSED', 0, result['actions_taken'])
+        logger.info("Circuit breaker fully closed - concurrency limit removed")
+
+
 def _handle_open_circuit(config: dict, state: dict, result: dict):
     state_table = config['state_table']
     webhook_function = config['webhook_function']
@@ -240,18 +271,20 @@ def attempt_recovery() -> dict:
             'recovery_attempts': recovery_attempts,
             'actions_taken': []
         }
-        if current_state['state'] != 'open':
-            logger.info("Circuit breaker not in open state (%s), no recovery needed", current_state['state'])
-            result['message'] = 'Circuit breaker not in open state'
-        else:
-            config = {
-                'state_table': state_table,
-                'webhook_function': webhook_function,
-                'sns_topic': sns_topic,
-                'max_recovery_attempts': max_recovery_attempts
-            }
+        config = {
+            'state_table': state_table,
+            'webhook_function': webhook_function,
+            'sns_topic': sns_topic,
+            'max_recovery_attempts': max_recovery_attempts
+        }
+        if current_state['state'] == 'open':
             state = {'recovery_attempts': recovery_attempts, 'last_recovery': last_recovery}
             _handle_open_circuit(config, state, result)
+        elif current_state['state'] == 'half-open':
+            _handle_half_open_circuit(config, result)
+        else:
+            logger.info("Circuit breaker in closed state, no recovery needed")
+            result['message'] = 'Circuit breaker already closed'
     return result
 
 

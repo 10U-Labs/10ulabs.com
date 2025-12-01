@@ -567,3 +567,192 @@ def test_send_recovery_notification_handles_api_error(circuit_breaker_recovery):
         mock_boto_client.return_value = create_mock_sns_publish_error()
         result = circuit_breaker_recovery.send_recovery_notification('arn:aws:sns:test', 'half-open', 2, [])
     assert result['success'] is False
+
+
+def test_attempt_recovery_handles_half_open_state(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '1'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker': 'closed'})
+                }).encode())
+            }
+            mock_boto_client.return_value = mock_client
+            result = circuit_breaker_recovery.attempt_recovery()
+    assert result['new_state'] == 'closed'
+
+
+def test_attempt_recovery_removes_concurrency_when_closing(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '1'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker': 'closed'})
+                }).encode())
+            }
+            mock_boto_client.return_value = mock_client
+            circuit_breaker_recovery.attempt_recovery()
+    assert mock_client.delete_function_concurrency.called
+
+
+def test_attempt_recovery_half_open_reopens_on_health_failure(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '1'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 500,
+                    'body': json.dumps({'error': 'Internal error'})
+                }).encode())
+            }
+            mock_boto_client.return_value = mock_client
+            result = circuit_breaker_recovery.attempt_recovery()
+    assert result['new_state'] == 'open'
+
+
+def test_attempt_recovery_half_open_updates_state_to_closed(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '2'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker': 'closed'})
+                }).encode())
+            }
+            mock_boto_client.return_value = mock_client
+            circuit_breaker_recovery.attempt_recovery()
+            put_item_calls = list(mock_client.put_item.call_args_list)
+            state_update = put_item_calls[-1][1]['Item']
+    assert state_update['state']['S'] == 'closed'
+
+
+def test_attempt_recovery_half_open_resets_recovery_attempts(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '3'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker': 'closed'})
+                }).encode())
+            }
+            mock_boto_client.return_value = mock_client
+            circuit_breaker_recovery.attempt_recovery()
+            put_item_calls = list(mock_client.put_item.call_args_list)
+            state_update = put_item_calls[-1][1]['Item']
+    assert state_update['recovery_attempts']['N'] == '0'
+
+
+def test_attempt_recovery_half_open_logs_actions(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '1'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker': 'closed'})
+                }).encode())
+            }
+            mock_boto_client.return_value = mock_client
+            result = circuit_breaker_recovery.attempt_recovery()
+    actions_str = str(result.get('actions_taken', []))
+    assert 'Health check passed' in actions_str
+
+
+def test_attempt_recovery_half_open_sends_notification_on_close(circuit_breaker_recovery):
+    with patch.dict(os.environ, {
+        'STATE_TABLE_NAME': 'test-table',
+        'WEBHOOK_FUNCTION_NAME': 'test-function',
+        'SNS_TOPIC_ARN': 'arn:aws:sns:test'
+    }):
+        with patch('boto3.client') as mock_boto_client:
+            mock_client = MagicMock()
+            mock_client.get_item.return_value = {
+                'Item': {
+                    'state': {'S': 'half-open'},
+                    'recovery_attempts': {'N': '1'},
+                    'last_recovery_attempt': {'N': '0'},
+                    'last_failure_time': {'N': '0'}
+                }
+            }
+            mock_client.invoke.return_value = {
+                'Payload': MagicMock(read=lambda: json.dumps({
+                    'statusCode': 200,
+                    'body': json.dumps({'circuit_breaker': 'closed'})
+                }).encode())
+            }
+            mock_client.publish.return_value = {'MessageId': 'test-id'}
+            mock_boto_client.return_value = mock_client
+            circuit_breaker_recovery.attempt_recovery()
+    assert mock_client.publish.called
