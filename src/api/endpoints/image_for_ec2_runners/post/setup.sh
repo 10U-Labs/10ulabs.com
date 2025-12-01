@@ -135,12 +135,16 @@ cleanup_temp_files() {
     rm -rf /tmp/*
 }
 
-add_docker_apt_repository
-install_system_packages
-install_python_packages
-install_yq
-create_runner_user
-install_github_actions_runner
-install_ssm_agent
-install_cloudwatch_agent
-cleanup_temp_files
+main() {
+    add_docker_apt_repository
+    install_system_packages
+    install_python_packages
+    install_yq
+    create_runner_user
+    install_github_actions_runner
+    install_ssm_agent
+    install_cloudwatch_agent
+    cleanup_temp_files
+}
+
+main
