@@ -3,7 +3,6 @@ import logging
 import os
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 from typing import Any, Dict, List
 import boto3
@@ -12,11 +11,10 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-_clients = {}
-_github_token_cache = {'value': None}
-_api_key_cache = {'value': None}
+_clients: Dict[str, Any] = {}
+_github_token_cache: Dict[str, str] = {'value': ''}
 _test_mode = {'enabled': False}
-_dependencies_validated = {'checked': False, 'valid': False, 'errors': []}
+_dependencies_validated: Dict[str, Any] = {'checked': False, 'valid': False, 'errors': []}
 
 
 def is_test_mode() -> bool:
@@ -60,16 +58,14 @@ def get_ssm_client():
     return _clients['ssm']
 
 
-def get_api_key() -> str:
-    api_key = _api_key_cache['value']
-    if api_key:
-        return api_key
-    parameter_name = os.environ['API_KEY_PARAMETER_NAME']
-    ssm = get_ssm_client()
-    response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
-    api_key = response['Parameter']['Value']
-    _api_key_cache['value'] = api_key
-    return api_key
+def get_dynamodb_client():
+    if 'dynamodb' not in _clients:
+        _clients['dynamodb'] = boto3.client('dynamodb')
+    return _clients['dynamodb']
+
+
+def set_client(name: str, client: Any):
+    _clients[name] = client
 
 
 def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
@@ -187,10 +183,6 @@ def set_dependencies_status(checked, valid, errors):
     _dependencies_validated['errors'] = errors
 
 
-def set_client(name, client):
-    _clients[name] = client
-
-
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     return {
         'statusCode': status_code,
@@ -210,7 +202,7 @@ def success_response(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def error_response(status_code: int, error: str, details: str | None = None) -> Dict[str, Any]:
-    body = {'success': False, 'error': error}
+    body: Dict[str, Any] = {'success': False, 'error': error}
     if details:
         body['details'] = details
     return json_response(status_code, body)
@@ -229,58 +221,6 @@ def is_capacity_error(result: Dict[str, Any]) -> bool:
     if isinstance(error, list):
         return any('Capacity' in str(e.get('reason', '')) for e in error if isinstance(e, dict))
     return False
-
-
-def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    github_repo = os.environ['GITHUB_REPO']
-    github_token = os.environ.get('GITHUB_TOKEN')
-
-    if not github_token:
-        logger.error("GITHUB_TOKEN not set")
-        result = {'success': False, 'error': 'GITHUB_TOKEN not configured'}
-    else:
-        workflow_url = f'https://api.github.com/repos/{github_repo}/actions/workflows/{workflow_file}/dispatches'
-
-        try:
-            req = urllib.request.Request(
-                workflow_url,
-                data=json.dumps(payload).encode('utf-8'),
-                headers={
-                    'Accept': 'application/vnd.github+json',
-                    'Authorization': f'Bearer {github_token}',
-                    'X-GitHub-Api-Version': '2022-11-28',
-                    'Content-Type': 'application/json'
-                },
-                method='POST'
-            )
-
-            with urllib.request.urlopen(req, timeout=10) as response:
-                if response.status == 204:
-                    logger.info("GitHub Actions workflow triggered successfully")
-                    result = {'success': True, 'message': f'{workflow_file} workflow triggered via GitHub Actions'}
-                else:
-                    logger.warning("Unexpected response status: %s", response.status)
-                    result = {'success': False, 'error': f'Unexpected response status: {response.status}'}
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as e:
-            logger.error("Failed to trigger GitHub Actions workflow: %s", e)
-            result = {'success': False, 'error': str(e)}
-
-    return result
-
-
-def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
-    try:
-        path = event.get('path', '')
-        if is_test_mode() and path in TEST_MODE_MOCK_PATHS:
-            response = success_response(TEST_MODE_MOCK_PATHS[path])
-        else:
-            body = parse_body(event)
-            result = handler_func(body)
-            response = success_response(result)
-    except (ValueError, KeyError) as e:
-        logger.error("Error handling POST request: %s", e, exc_info=True)
-        response = error_response(500, 'Internal server error', str(e))
-    return response
 
 
 def get_latest_ecr_image() -> Dict[str, Any]:
@@ -345,7 +285,7 @@ def get_github_token() -> str:
 
 def trigger_image_creation() -> Dict[str, Any]:
     api_endpoint = os.environ['IMAGE_API_ENDPOINT']
-    image_endpoint = f'{api_endpoint}/v1/image-for-docker-runner'
+    image_endpoint = f'{api_endpoint}/v1/image-for-docker-runners'
 
     try:
         req = urllib.request.Request(
@@ -365,6 +305,114 @@ def trigger_image_creation() -> Dict[str, Any]:
     return result
 
 
+def get_runner_registration_token(github_token: str, github_repo: str) -> str:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    req = urllib.request.Request(
+        f'https://api.github.com/repos/{github_repo}/actions/runners/registration-token',
+        method='POST',
+        headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read())
+            return data.get('token', '')
+    except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
+        logger.error("Failed to get runner registration token: %s", e)
+        return ''
+
+
+def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any]]:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    runners: List[Dict[str, Any]] = []
+    page = 1
+    while True:
+        req = urllib.request.Request(
+            f'https://api.github.com/repos/{github_repo}/actions/runners?per_page=100&page={page}',
+            headers=headers
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read())
+                page_runners = data.get('runners', [])
+                runners.extend(page_runners)
+                if len(page_runners) < 100:
+                    break
+                page += 1
+        except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
+            logger.error("Failed to list runners: %s", e)
+            break
+    return runners
+
+
+def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    req = urllib.request.Request(
+        f'https://api.github.com/repos/{github_repo}/actions/runners/{runner_id}',
+        method='DELETE',
+        headers=headers
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as response:
+            success = response.status == 204
+            if success:
+                logger.info("Deleted runner %s", runner_id)
+            return success
+    except urllib.error.HTTPError as e:
+        if e.code == 204:
+            logger.info("Deleted runner %s", runner_id)
+            return True
+        logger.error("Failed to delete runner %s: %s", runner_id, e)
+        return False
+    except (urllib.error.URLError, ValueError) as e:
+        logger.error("Failed to delete runner %s: %s", runner_id, e)
+        return False
+
+
+def cleanup_offline_runners(github_token: str, github_repo: str, job_labels: List[str]) -> Dict[str, Any]:
+    runners = list_repo_runners(github_token, github_repo)
+    job_labels_set = set(job_labels)
+    offline_runners = []
+    for runner in runners:
+        if runner.get('status') != 'offline':
+            continue
+        runner_labels = {label.get('name') for label in runner.get('labels', [])}
+        if not job_labels_set.intersection(runner_labels):
+            continue
+        offline_runners.append(runner)
+    deleted_count = 0
+    failed_count = 0
+    for runner in offline_runners:
+        runner_id = runner.get('id')
+        runner_name = runner.get('name')
+        if runner_id is None:
+            continue
+        logger.info("Removing offline runner: %s (id=%s)", runner_name, runner_id)
+        if delete_runner(github_token, github_repo, int(runner_id)):
+            deleted_count += 1
+        else:
+            failed_count += 1
+    result = {
+        'found': len(offline_runners),
+        'deleted': deleted_count,
+        'failed': failed_count
+    }
+    if deleted_count > 0:
+        logger.info("Cleaned up %d offline runners matching labels %s", deleted_count, job_labels)
+    return result
+
+
 def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int, job_labels: list) -> Dict[str, Any] | None:
     result = None
     runners = list_repo_runners(github_token, github_repo)
@@ -380,46 +428,43 @@ def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id
     return result
 
 
-def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_id: int | None = None, runner_type: str = 'fargate') -> Dict[str, Any]:
-    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
-
-    try:
-        ensure_dependencies_valid()
-    except RuntimeError as e:
-        logger.error("Dependency validation failed: %s", e)
-        result['error'] = str(e)
-        return result
-
-    github_token = get_github_token()
-    if not github_token:
-        logger.error("GITHUB_TOKEN not set - cannot register runner")
-        result['error'] = 'GITHUB_TOKEN not configured'
-        return result
-
+def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
+    base_labels = ['self-hosted', 'linux', 'x64']
+    for label in job_labels:
+        if label not in base_labels:
+            base_labels.append(label)
     if run_id:
-        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id, job_labels)
-        if existing_runner:
-            logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
-            result = {
-                'success': True, 'job_id': job_id, 'runner_type': runner_type, 'run_id': run_id,
-                'runner_name': existing_runner.get('name'), 'reused': True
+        base_labels.append(f'runner-{run_id}')
+    return base_labels
+
+
+def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str) -> bool:
+    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
+    if not table_name:
+        logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
+        return False
+    if not run_id:
+        logger.warning("run_id not provided, skipping runner storage")
+        return False
+    try:
+        ttl = int(time.time()) + 86400
+        get_dynamodb_client().put_item(
+            TableName=table_name,
+            Item={
+                'run_id': {'S': str(run_id)},
+                'runner_type': {'S': runner_type},
+                'resource_id': {'S': resource_id},
+                'runner_name': {'S': runner_name},
+                'github_repo': {'S': github_repo},
+                'ttl': {'N': str(ttl)},
+                'created_at': {'N': str(int(time.time()))}
             }
-            return result
-
-    cleanup_offline_runners(github_token, github_repo, job_labels)
-
-    registration_token = get_runner_registration_token(github_token, github_repo)
-    if not registration_token:
-        logger.error("Failed to get runner registration token")
-        result['error'] = 'Failed to get runner registration token'
-        return result
-
-    runner_labels = build_runner_labels(job_labels, run_id)
-    runner_config = {
-        'job_id': job_id, 'job_labels': runner_labels, 'github_repo': github_repo,
-        'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type
-    }
-    return _try_launch_fargate_task(runner_config)
+        )
+        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s", run_id, runner_type, resource_id)
+        return True
+    except ClientError as e:
+        logger.error("Failed to store workflow runner: %s", e)
+        return False
 
 
 FARGATE_SPOT_MAX_RETRIES = 3
@@ -573,112 +618,46 @@ def _try_launch_fargate_task(cfg: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def get_runner_registration_token(github_token: str, github_repo: str) -> str:
-    headers = {
-        'Authorization': f'Bearer {github_token}',
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-    }
-    req = urllib.request.Request(
-        f'https://api.github.com/repos/{github_repo}/actions/runners/registration-token',
-        method='POST',
-        headers=headers
-    )
+def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_id: int | None = None, runner_type: str = 'fargate') -> Dict[str, Any]:
+    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
+
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read())
-            return data.get('token', '')
-    except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
-        logger.error("Failed to get runner registration token: %s", e)
-        return ''
+        ensure_dependencies_valid()
+    except RuntimeError as e:
+        logger.error("Dependency validation failed: %s", e)
+        result['error'] = str(e)
+        return result
 
+    github_token = get_github_token()
+    if not github_token:
+        logger.error("GITHUB_TOKEN not set - cannot register runner")
+        result['error'] = 'GITHUB_TOKEN not configured'
+        return result
 
-def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any]]:
-    headers = {
-        'Authorization': f'Bearer {github_token}',
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
+    if run_id:
+        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id, job_labels)
+        if existing_runner:
+            logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
+            result = {
+                'success': True, 'job_id': job_id, 'runner_type': runner_type, 'run_id': run_id,
+                'runner_name': existing_runner.get('name'), 'reused': True
+            }
+            return result
+
+    cleanup_offline_runners(github_token, github_repo, job_labels)
+
+    registration_token = get_runner_registration_token(github_token, github_repo)
+    if not registration_token:
+        logger.error("Failed to get runner registration token")
+        result['error'] = 'Failed to get runner registration token'
+        return result
+
+    runner_labels = build_runner_labels(job_labels, run_id)
+    runner_config = {
+        'job_id': job_id, 'job_labels': runner_labels, 'github_repo': github_repo,
+        'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type
     }
-    runners: List[Dict[str, Any]] = []
-    page = 1
-    while True:
-        req = urllib.request.Request(
-            f'https://api.github.com/repos/{github_repo}/actions/runners?per_page=100&page={page}',
-            headers=headers
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=10) as response:
-                data = json.loads(response.read())
-                page_runners = data.get('runners', [])
-                runners.extend(page_runners)
-                if len(page_runners) < 100:
-                    break
-                page += 1
-        except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as e:
-            logger.error("Failed to list runners: %s", e)
-            break
-    return runners
-
-
-def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
-    headers = {
-        'Authorization': f'Bearer {github_token}',
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28'
-    }
-    req = urllib.request.Request(
-        f'https://api.github.com/repos/{github_repo}/actions/runners/{runner_id}',
-        method='DELETE',
-        headers=headers
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            success = response.status == 204
-            if success:
-                logger.info("Deleted runner %s", runner_id)
-            return success
-    except urllib.error.HTTPError as e:
-        if e.code == 204:
-            logger.info("Deleted runner %s", runner_id)
-            return True
-        logger.error("Failed to delete runner %s: %s", runner_id, e)
-        return False
-    except (urllib.error.URLError, ValueError) as e:
-        logger.error("Failed to delete runner %s: %s", runner_id, e)
-        return False
-
-
-def cleanup_offline_runners(github_token: str, github_repo: str, job_labels: List[str]) -> Dict[str, Any]:
-    runners = list_repo_runners(github_token, github_repo)
-    job_labels_set = set(job_labels)
-    offline_runners = []
-    for runner in runners:
-        if runner.get('status') != 'offline':
-            continue
-        runner_labels = {label.get('name') for label in runner.get('labels', [])}
-        if not job_labels_set.intersection(runner_labels):
-            continue
-        offline_runners.append(runner)
-    deleted_count = 0
-    failed_count = 0
-    for runner in offline_runners:
-        runner_id = runner.get('id')
-        runner_name = runner.get('name')
-        if runner_id is None:
-            continue
-        logger.info("Removing offline runner: %s (id=%s)", runner_name, runner_id)
-        if delete_runner(github_token, github_repo, int(runner_id)):
-            deleted_count += 1
-        else:
-            failed_count += 1
-    result = {
-        'found': len(offline_runners),
-        'deleted': deleted_count,
-        'failed': failed_count
-    }
-    if deleted_count > 0:
-        logger.info("Cleaned up %d offline runners matching labels %s", deleted_count, job_labels)
-    return result
+    return _try_launch_fargate_task(runner_config)
 
 
 def handle_docker_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
@@ -780,53 +759,6 @@ def handle_docker_runner_get(_event: Dict[str, Any]) -> Dict[str, Any]:
     result = get_docker_runner_status()
     response = success_response(result)
     return response
-
-
-
-
-def get_dynamodb_client():
-    if 'dynamodb' not in _clients:
-        _clients['dynamodb'] = boto3.client('dynamodb')
-    return _clients['dynamodb']
-
-
-def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str) -> bool:
-    table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
-    if not table_name:
-        logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
-        return False
-    if not run_id:
-        logger.warning("run_id not provided, skipping runner storage")
-        return False
-    try:
-        ttl = int(time.time()) + 86400
-        get_dynamodb_client().put_item(
-            TableName=table_name,
-            Item={
-                'run_id': {'S': str(run_id)},
-                'runner_type': {'S': runner_type},
-                'resource_id': {'S': resource_id},
-                'runner_name': {'S': runner_name},
-                'github_repo': {'S': github_repo},
-                'ttl': {'N': str(ttl)},
-                'created_at': {'N': str(int(time.time()))}
-            }
-        )
-        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s", run_id, runner_type, resource_id)
-        return True
-    except ClientError as e:
-        logger.error("Failed to store workflow runner: %s", e)
-        return False
-
-
-def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
-    base_labels = ['self-hosted', 'linux', 'x64']
-    for label in job_labels:
-        if label not in base_labels:
-            base_labels.append(label)
-    if run_id:
-        base_labels.append(f'runner-{run_id}')
-    return base_labels
 
 
 ROUTE_MAP = {

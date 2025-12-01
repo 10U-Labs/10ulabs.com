@@ -14,14 +14,6 @@ resource "aws_cloudwatch_log_subscription_filter" "runners_handler" {
   role_arn        = aws_iam_role.cloudwatch_logs_firehose.arn
 }
 
-resource "aws_cloudwatch_log_subscription_filter" "v1_handler" {
-  name            = "v1-handler-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.v1_handler.name
-  filter_pattern  = ""
-  destination_arn = aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn
-  role_arn        = aws_iam_role.cloudwatch_logs_firehose.arn
-}
-
 resource "aws_cloudwatch_log_subscription_filter" "circuit_breaker_remediation" {
   name            = "circuit-breaker-remediation-to-firehose"
   log_group_name  = aws_cloudwatch_log_group.circuit_breaker_remediation.name

@@ -78,6 +78,21 @@ data "terraform_remote_state" "image_for_ec2_runners" {
   }
 }
 
+data "terraform_remote_state" "docker_runner" {
+  backend = "s3"
+
+  config = {
+    bucket = "10ulabs-terraform-state"
+    key    = "api/endpoints/docker_runner/terraform.tfstate"
+    region = "us-east-1"
+  }
+
+  defaults = {
+    lambda_function_arn  = ""
+    lambda_function_name = ""
+  }
+}
+
 data "terraform_remote_state" "ec2_runner" {
   backend = "s3"
 

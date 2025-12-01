@@ -409,7 +409,7 @@ paths:
         '200':
           description: Docker runner created successfully
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${DockerRunnerHandlerArn}
         httpMethod: POST
         type: aws_proxy
     get:
@@ -467,7 +467,7 @@ paths:
                   cluster:
                     type: string
       x-amazon-apigateway-integration:
-        uri: ${V1HandlerArn}
+        uri: ${DockerRunnerHandlerArn}
         httpMethod: POST
         type: aws_proxy
       x-amazon-apigateway-api-key-required: true

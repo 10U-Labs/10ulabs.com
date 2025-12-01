@@ -105,68 +105,6 @@ resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
   maximum_batching_window_in_seconds = 0
 }
 
-data "archive_file" "v1_handler" {
-  type        = "zip"
-  source_file = "${path.module}/lambdas/v1.py"
-  output_path = "${path.module}/.terraform/lambda_packages/v1_handler.zip"
-}
-
-resource "aws_lambda_function" "v1_handler" {
-  filename         = data.archive_file.v1_handler.output_path
-  function_name    = var.v1_handler_function_name
-  role             = aws_iam_role.lambda_v1_handler.arn
-  handler          = "v1.lambda_handler"
-  source_code_hash = data.archive_file.v1_handler.output_base64sha256
-  runtime          = "python3.13"
-  timeout          = var.lambda_timeout_seconds
-  memory_size      = var.lambda_memory_mb
-  description      = "Unified Lambda handler for all /v1/* API endpoints"
-
-
-  environment {
-    variables = {
-      API_DOMAIN               = local.api_fqdn
-      API_KEY_PARAMETER_NAME   = aws_ssm_parameter.api_key.name
-      CONTAINER_NAME           = var.container_name
-      EC2_AMI_PURPOSE_TAG      = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_purpose_tag
-      EC2_AMI_PURPOSE_VALUE    = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_purpose_value
-      EC2_AMI_STABLE_TAG       = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_stable_tag
-      EC2_IAM_INSTANCE_PROFILE = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_profile_name
-      EC2_INSTANCE_TYPES       = join(",", data.terraform_remote_state.ec2_runner.outputs.ec2_spot_instance_types)
-      EC2_MANAGED_BY_TAG       = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
-      EC2_MAX_PRICE            = data.terraform_remote_state.ec2_runner.outputs.ec2_max_spot_price
-      ECR_REPOSITORY           = data.terraform_remote_state.ecr.outputs.repository_name
-      ECS_CLUSTER              = aws_ecs_cluster.runner.arn
-      GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
-      IMAGE_API_ENDPOINT       = "https://${local.api_fqdn}"
-      SECURITY_GROUPS          = aws_security_group.runner_sg.id
-      SUBNETS                  = join(",", aws_subnet.public[*].id)
-      TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
-      VPC_ID                   = aws_vpc.runner_vpc.id
-      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
-    }
-  }
-
-  logging_config {
-    log_format = "Text"
-    log_group  = aws_cloudwatch_log_group.v1_handler.name
-  }
-
-  tags = merge(local.common_tags, {
-    Name = var.v1_handler_function_name
-  })
-}
-
-resource "aws_cloudwatch_log_group" "v1_handler" {
-  name              = var.v1_handler_log_group_name
-  retention_in_days = 7
-
-  tags = merge(local.common_tags, {
-    Name = "${var.v1_handler_function_name}-logs"
-  })
-}
-
 data "archive_file" "circuit_breaker_remediation" {
   type        = "zip"
   source_file = "${path.module}/lambdas/circuit_breaker_remediation.py"
