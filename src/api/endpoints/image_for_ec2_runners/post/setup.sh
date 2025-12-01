@@ -9,10 +9,26 @@ __main__() {
     local version_codename=""
     local docker_key=""
 
-    parse_arguments --output-runner-version runner_version \
-                    --output-yq-version yq_version \
-                    --output-runner-user runner_user \
-                    "$@"
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --runner-version)
+                runner_version="$2"
+                shift 2
+                ;;
+            --yq-version)
+                yq_version="$2"
+                shift 2
+                ;;
+            --runner-user)
+                runner_user="$2"
+                shift 2
+                ;;
+            *)
+                echo "Error: Unknown argument: $1"
+                usage
+                ;;
+        esac
+    done
 
     validate_arguments --runner-version "$runner_version" \
                        --yq-version "$yq_version" \
@@ -206,45 +222,6 @@ install_yq() {
 
     curl -sSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${yq_version}/yq_linux_${arch}"
     chmod +x /usr/local/bin/yq
-}
-
-parse_arguments() {
-    local -n _output_runner_version
-    local -n _output_yq_version
-    local -n _output_runner_user
-
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --output-runner-version)
-                local -n _output_runner_version="$2"
-                shift 2
-                ;;
-            --output-yq-version)
-                local -n _output_yq_version="$2"
-                shift 2
-                ;;
-            --output-runner-user)
-                local -n _output_runner_user="$2"
-                shift 2
-                ;;
-            --runner-version)
-                _output_runner_version="$2"
-                shift 2
-                ;;
-            --yq-version)
-                _output_yq_version="$2"
-                shift 2
-                ;;
-            --runner-user)
-                _output_runner_user="$2"
-                shift 2
-                ;;
-            *)
-                echo "Error: Unknown argument: $1"
-                usage
-                ;;
-        esac
-    done
 }
 
 set_environment_variables() {
