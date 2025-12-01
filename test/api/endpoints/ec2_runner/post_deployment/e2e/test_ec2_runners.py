@@ -1,14 +1,14 @@
 import time
 
-import boto3
-import pytest
-from botocore.exceptions import ClientError
-
 from test.api.endpoints.ec2_runner.post_deployment.conftest import (
     create_runner_job_payload,
     make_authenticated_get,
     make_authenticated_post,
 )
+
+import boto3
+import pytest
+from botocore.exceptions import ClientError
 
 
 SECONDS_PER_AZ_CAPACITY_CHECK = 19

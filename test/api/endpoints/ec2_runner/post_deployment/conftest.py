@@ -1,26 +1,10 @@
-import os
 import random
-import re
-from pathlib import Path
+
+from test.api.endpoints.ec2_runner.conftest import parse_shared_module_outputs
 
 import boto3
 import pytest
 import requests
-
-
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
-
-
-def parse_shared_module_outputs():
-    outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
-    config = {}
-    with open(outputs_path, encoding="utf-8") as f:
-        content = f.read()
-    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
-    matches = re.findall(pattern, content)
-    for key, value in matches:
-        config[key] = value
-    return config
 
 
 def get_api_url():
@@ -38,16 +22,16 @@ def get_api_key():
     return response['Parameter']['Value']
 
 
-def make_authenticated_get(url, api_key, **kwargs):
+def make_authenticated_get(url, api_key, timeout=30, **kwargs):
     headers = kwargs.pop('headers', {})
     headers['x-api-key'] = api_key
-    return requests.get(url, headers=headers, **kwargs)
+    return requests.get(url, headers=headers, timeout=timeout, **kwargs)
 
 
-def make_authenticated_post(url, api_key, **kwargs):
+def make_authenticated_post(url, api_key, timeout=30, **kwargs):
     headers = kwargs.pop('headers', {})
     headers['x-api-key'] = api_key
-    return requests.post(url, headers=headers, **kwargs)
+    return requests.post(url, headers=headers, timeout=timeout, **kwargs)
 
 
 @pytest.fixture(name="api_url", scope="module")

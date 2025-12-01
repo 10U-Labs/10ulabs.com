@@ -1,9 +1,9 @@
-import requests
-
 from test.api.endpoints.ec2_runner.post_deployment.conftest import (
     make_authenticated_get,
     make_authenticated_post,
 )
+
+import requests
 
 
 def test_runner_creation_requires_auth(api_url):

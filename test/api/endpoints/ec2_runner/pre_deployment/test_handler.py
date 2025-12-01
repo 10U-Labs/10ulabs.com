@@ -1,18 +1,15 @@
 import json
 import os
-import urllib.error
 from unittest.mock import MagicMock, Mock, patch
-
-import pytest
-from botocore.exceptions import ClientError
 
 from test.api.endpoints.ec2_runner.pre_deployment.conftest import (
     assert_json_content_type,
     assert_response_status,
-    create_client_error,
     create_multi_client_mock,
     parse_response_body,
 )
+
+from botocore.exceptions import ClientError
 
 
 def test_lambda_handler_ec2_runner_post_with_missing_job_id_returns_400(
@@ -40,6 +37,7 @@ def test_lambda_handler_ec2_runner_post_with_missing_repo_returns_400(
 def test_lambda_handler_ec2_runner_post_returns_json_content_type(
     mock_boto_client, ec2_runner_handler, ec2_runner_post_event_factory, lambda_context
 ):
+    _ = mock_boto_client
     event = ec2_runner_post_event_factory(job_id=12345, github_repo='test-org/test-repo')
     response = ec2_runner_handler.lambda_handler(event, lambda_context)
     assert_json_content_type(response)

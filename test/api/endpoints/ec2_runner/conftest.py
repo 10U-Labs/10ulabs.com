@@ -63,7 +63,6 @@ def config_fixture() -> Dict[str, str]:
                 if match:
                     key, value = match.groups()
                     result[key] = value.strip('"')
-    shared = parse_shared_module_outputs()
     api_locals = parse_api_locals()
     result['aws_region'] = api_locals.get('aws_region', '')
     result['api_fqdn'] = api_locals.get('api_fqdn', '')
