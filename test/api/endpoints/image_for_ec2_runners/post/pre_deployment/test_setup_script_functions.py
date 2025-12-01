@@ -1,14 +1,15 @@
-import pytest
-
-
 class TestSetupScriptMainFunction:
+    def test_script_calls_main_function(self, setup_script_content):
+        has_call = '__main__ "$@"' in setup_script_content
+        assert has_call
+
     def test_script_defines_main_function(self, setup_script_content):
         has_function = "__main__()" in setup_script_content
         assert has_function
 
-    def test_script_calls_main_function(self, setup_script_content):
-        has_call = '__main__ "$@"' in setup_script_content
-        assert has_call
+    def test_script_defines_usage_function(self, setup_script_content):
+        has_function = "usage()" in setup_script_content
+        assert has_function
 
 
 class TestSetupScriptAddDockerAptRepositoryFunction:
@@ -81,12 +82,6 @@ class TestSetupScriptInstallGithubActionsRunnerFunction:
         assert has_validation
 
 
-class TestSetupScriptInstallPythonPackagesFunction:
-    def test_script_defines_install_python_packages(self, setup_script_content):
-        has_function = "install_python_packages()" in setup_script_content
-        assert has_function
-
-
 class TestSetupScriptInstallSsmAgentFunction:
     def test_script_defines_install_ssm_agent(self, setup_script_content):
         has_function = "install_ssm_agent()" in setup_script_content
@@ -97,17 +92,7 @@ class TestSetupScriptInstallSsmAgentFunction:
         assert has_validation
 
 
-class TestSetupScriptInstallSystemPackagesFunction:
-    def test_script_defines_install_system_packages(self, setup_script_content):
-        has_function = "install_system_packages()" in setup_script_content
-        assert has_function
-
-
 class TestSetupScriptInstallYqFunction:
-    def test_script_defines_install_yq(self, setup_script_content):
-        has_function = "install_yq()" in setup_script_content
-        assert has_function
-
     def test_function_validates_arch(self, setup_script_content):
         has_validation = '${FUNCNAME[0]} requires --arch' in setup_script_content
         assert has_validation
@@ -116,8 +101,16 @@ class TestSetupScriptInstallYqFunction:
         has_validation = '${FUNCNAME[0]} requires --yq-version' in setup_script_content
         assert has_validation
 
+    def test_script_defines_install_yq(self, setup_script_content):
+        has_function = "install_yq()" in setup_script_content
+        assert has_function
 
-class TestSetupScriptUsageFunction:
-    def test_script_defines_usage_function(self, setup_script_content):
-        has_function = "usage()" in setup_script_content
+
+class TestSetupScriptSimpleInstallFunctions:
+    def test_script_defines_install_python_packages(self, setup_script_content):
+        has_function = "install_python_packages()" in setup_script_content
+        assert has_function
+
+    def test_script_defines_install_system_packages(self, setup_script_content):
+        has_function = "install_system_packages()" in setup_script_content
         assert has_function

@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestSetupScriptYq:
     def test_script_downloads_yq(self, setup_script_content):
         has_download = "github.com/mikefarah/yq/releases" in setup_script_content

@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestSetupScriptPipAwsPackages:
     def test_script_installs_boto3(self, setup_script_content):
         has_package = "boto3" in setup_script_content
@@ -11,7 +8,7 @@ class TestSetupScriptPipAwsPackages:
         assert has_package
 
 
-class TestSetupScriptPipLintingPackages:
+class TestSetupScriptPipDevelopmentPackages:
     def test_script_installs_mypy(self, setup_script_content):
         has_package = "mypy" in setup_script_content
         assert has_package
@@ -20,14 +17,12 @@ class TestSetupScriptPipLintingPackages:
         has_package = "pylint" in setup_script_content
         assert has_package
 
-    def test_script_installs_yamllint(self, setup_script_content):
-        has_package = "yamllint" in setup_script_content
-        assert has_package
-
-
-class TestSetupScriptPipTestingPackages:
     def test_script_installs_pytest(self, setup_script_content):
         has_package = "pytest" in setup_script_content
+        assert has_package
+
+    def test_script_installs_yamllint(self, setup_script_content):
+        has_package = "yamllint" in setup_script_content
         assert has_package
 
 

@@ -7,7 +7,7 @@ import uuid
 from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import boto3
 from botocore.exceptions import ClientError
 import paramiko
@@ -52,8 +52,8 @@ class BuildState:
 
 @dataclass
 class BuildContext:
-    ec2: object
-    args: object
+    ec2: Any
+    args: Any
     script_dir: Path
     unique_id: str
 
@@ -118,7 +118,7 @@ def delete_security_group(ec2, sg_id):
 
 
 def create_launch_template(ec2, params: LaunchTemplateParams, tags):
-    data = {"ImageId": params.base_ami, "KeyName": params.key_name, "SecurityGroupIds": [params.sg_id]}
+    data: dict[str, Any] = {"ImageId": params.base_ami, "KeyName": params.key_name, "SecurityGroupIds": [params.sg_id]}
     if params.iam_profile:
         data["IamInstanceProfile"] = {"Name": params.iam_profile}
     tag_specs = []
@@ -295,7 +295,7 @@ def run_build(ctx: BuildContext, state: BuildState):
     state.result = create_ami(ctx.ec2, state.instance_id, ctx.args.ami_name, ctx.args.ami_description, tags)
 
 
-def cmd_build(args):
+def cmd_build(args: argparse.Namespace):
     script_dir = Path(__file__).parent
     script_path = script_dir / SETUP_SCRIPT
     exit_code = 1

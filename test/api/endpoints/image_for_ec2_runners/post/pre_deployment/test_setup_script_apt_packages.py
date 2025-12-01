@@ -1,6 +1,3 @@
-import pytest
-
-
 class TestSetupScriptDockerPackages:
     def test_script_installs_docker_ce(self, setup_script_content):
         has_package = "docker-ce" in setup_script_content
