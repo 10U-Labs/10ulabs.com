@@ -70,7 +70,7 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
         name: Run E2E tests
         run: |
-          pytest test/api/endpoints/ec2_runner/post_deployment/e2e/ \
+          python3 -m pytest test/api/endpoints/ec2_runner/post_deployment/e2e/ \
             --confcutdir=test/api/endpoints/ec2_runner \
             -v
   integration-testing:
@@ -94,7 +94,7 @@ jobs:
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Run integration tests
         run: |
-          pytest test/api/endpoints/ec2_runner/post_deployment/integration/ \
+          python3 -m pytest test/api/endpoints/ec2_runner/post_deployment/integration/ \
             --confcutdir=test/api/endpoints/ec2_runner \
             -v
   performing-static-analysis:
@@ -161,7 +161,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Run unit tests
         run: |
-          pytest test/api/endpoints/ec2_runner/pre_deployment/ \
+          python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/ \
             --confcutdir=test/api/endpoints/ec2_runner \
             -v
 name: Deploying ec2_runner endpoint
