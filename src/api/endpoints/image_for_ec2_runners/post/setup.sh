@@ -44,23 +44,29 @@ __main__() {
         version_codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
         docker_key=/etc/apt/keyrings/docker.asc
 
-        add_docker_apt_repository --version-codename "$version_codename" \
-                                  --docker-key "$docker_key"
+        add_docker_apt_repository \
+            --version-codename "$version_codename" \
+            --docker-key "$docker_key"
 
         install_system_packages
         install_python_packages
 
-        install_yq --yq-version "$yq_version" \
-                   --arch "$arch"
+        install_yq \
+            --yq-version "$yq_version" \
+            --arch "$arch"
 
-        create_runner_user --runner-user "$runner_user"
+        create_runner_user \
+            --runner-user "$runner_user"
 
-        install_github_actions_runner --runner-user "$runner_user" \
-                                      --runner-version "$runner_version" \
-                                      --arch "$arch"
+        install_github_actions_runner \
+            --runner-user "$runner_user" \
+            --runner-version "$runner_version" \
+            --arch "$arch"
 
-        install_ssm_agent --arch "$arch"
-        install_cloudwatch_agent --arch "$arch"
+        install_ssm_agent \
+            --arch "$arch"
+        install_cloudwatch_agent \
+            --arch "$arch"
         cleanup_temp_files
     fi
 }
