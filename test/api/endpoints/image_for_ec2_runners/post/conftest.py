@@ -84,13 +84,8 @@ def post_dir():
 
 
 @pytest.fixture(scope="session")
-def config_path():
-    return CONFIG_PATH
-
-
-@pytest.fixture(scope="session")
-def config(config_path):
-    with open(config_path, 'r', encoding='utf-8') as f:
+def config():
+    with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
         raw_config = yaml.safe_load(f)
     source_ami = raw_config.get("source_ami", "")
     parts = source_ami.split("-")
