@@ -1,22 +1,12 @@
 import os
-from pathlib import Path
-
-from test.api.endpoints.ec2_runner.conftest import (
-    parse_api_locals,
-    parse_shared_module_outputs,
-)
 
 import pytest
-import yaml
 
-
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
-
-
-def parse_shared_config():
-    config_path = REPO_ROOT / "etc" / "runners.yml"
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+from ...conftest import (
+    parse_api_locals,
+    parse_shared_config,
+    parse_shared_module_outputs,
+)
 
 
 @pytest.fixture(name="config", scope="module")

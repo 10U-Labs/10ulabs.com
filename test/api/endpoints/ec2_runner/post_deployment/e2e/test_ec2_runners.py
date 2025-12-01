@@ -1,14 +1,14 @@
 import time
 
-from test.api.endpoints.ec2_runner.post_deployment.conftest import (
+import boto3
+import pytest
+from botocore.exceptions import ClientError
+
+from ..conftest import (
     create_runner_job_payload,
     make_authenticated_get,
     make_authenticated_post,
 )
-
-import boto3
-import pytest
-from botocore.exceptions import ClientError
 
 
 SECONDS_PER_AZ_CAPACITY_CHECK = 19
@@ -107,8 +107,8 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
 def test_ec2_runner_post_returns_response(test_ec2_runner_instance, latest_ami_exists):
     if not latest_ami_exists:
         pytest.skip("No AMI available")
-    instance_is_created = test_ec2_runner_instance is not None
-    assert instance_is_created
+    has_response = test_ec2_runner_instance is not None
+    assert has_response
 
 
 def test_ec2_runner_post_returns_instance_id(test_ec2_runner_instance, latest_ami_exists):
@@ -116,8 +116,8 @@ def test_ec2_runner_post_returns_instance_id(test_ec2_runner_instance, latest_am
         pytest.skip("No AMI available")
     if test_ec2_runner_instance is None:
         pytest.fail("Test instance not created")
-    instance_has_id = test_ec2_runner_instance.get("instance_id") is not None
-    assert instance_has_id
+    has_instance_id = test_ec2_runner_instance.get("instance_id") is not None
+    assert has_instance_id
 
 
 def test_ec2_runner_instance_reaches_running_state(
@@ -130,8 +130,8 @@ def test_ec2_runner_instance_reaches_running_state(
     instance_id = test_ec2_runner_instance.get("instance_id")
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     state = response['Reservations'][0]['Instances'][0]['State']['Name']
-    state_is_running = state == 'running'
-    assert state_is_running
+    is_running = state == 'running'
+    assert is_running
 
 
 def test_ec2_runner_instance_has_type_tag(
@@ -145,8 +145,8 @@ def test_ec2_runner_instance_has_type_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    type_tag_is_correct = tag_dict.get("Type") == "workflow-runner"
-    assert type_tag_is_correct
+    has_correct_type = tag_dict.get("Type") == "workflow-runner"
+    assert has_correct_type
 
 
 def test_ec2_runner_instance_has_managed_by_tag(
@@ -160,8 +160,8 @@ def test_ec2_runner_instance_has_managed_by_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    managed_by_tag_is_correct = tag_dict.get("ManagedBy") == "api-ec2-spot-runner"
-    assert managed_by_tag_is_correct
+    has_correct_managed_by = tag_dict.get("ManagedBy") == "api-ec2-spot-runner"
+    assert has_correct_managed_by
 
 
 def test_ec2_runner_instance_has_job_id_tag(
@@ -176,8 +176,8 @@ def test_ec2_runner_instance_has_job_id_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    job_id_tag_is_correct = tag_dict.get("GitHubJobId") == str(job_id)
-    assert job_id_tag_is_correct
+    has_correct_job_id = tag_dict.get("GitHubJobId") == str(job_id)
+    assert has_correct_job_id
 
 
 def test_ec2_runner_instance_has_repo_tag(
@@ -192,8 +192,8 @@ def test_ec2_runner_instance_has_repo_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    repo_tag_is_correct = tag_dict.get("GitHubRepo") == github_repo
-    assert repo_tag_is_correct
+    has_correct_repo = tag_dict.get("GitHubRepo") == github_repo
+    assert has_correct_repo
 
 
 def test_ec2_runner_appears_in_status_endpoint(
@@ -207,8 +207,8 @@ def test_ec2_runner_appears_in_status_endpoint(
     status_response = make_authenticated_get(f"{api_url}/v1/ec2-runner", api_key, timeout=10)
     instances = status_response.json().get("instances", [])
     instance_ids = [inst.get("instance_id") for inst in instances]
-    instance_is_in_list = instance_id in instance_ids
-    assert instance_is_in_list
+    is_in_list = instance_id in instance_ids
+    assert is_in_list
 
 
 def test_ec2_runner_instance_enforces_imdsv2(
@@ -221,8 +221,8 @@ def test_ec2_runner_instance_enforces_imdsv2(
     instance_id = test_ec2_runner_instance.get("instance_id")
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     metadata_options = response['Reservations'][0]['Instances'][0].get('MetadataOptions', {})
-    imdsv2_is_required = metadata_options.get("HttpTokens") == "required"
-    assert imdsv2_is_required
+    requires_tokens = metadata_options.get("HttpTokens") == "required"
+    assert requires_tokens
 
 
 def test_ec2_runner_instance_has_run_id_tag(
@@ -237,8 +237,8 @@ def test_ec2_runner_instance_has_run_id_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    run_id_tag_is_correct = tag_dict.get("RunId") == str(run_id)
-    assert run_id_tag_is_correct
+    has_correct_run_id = tag_dict.get("RunId") == str(run_id)
+    assert has_correct_run_id
 
 
 def test_ec2_runner_stored_in_dynamodb(
@@ -250,5 +250,5 @@ def test_ec2_runner_stored_in_dynamodb(
         pytest.fail("Test instance not created")
     run_id = test_ec2_runner_instance.get("run_id")
     items = query_workflow_runners_by_run_id(dynamodb_client, workflow_runners_table_name, run_id)
-    items_are_present = len(items) > 0
-    assert items_are_present
+    has_items = len(items) > 0
+    assert has_items

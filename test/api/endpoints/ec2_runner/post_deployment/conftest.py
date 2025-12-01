@@ -1,10 +1,10 @@
 import random
 
-from test.api.endpoints.ec2_runner.conftest import parse_shared_module_outputs
-
 import boto3
 import pytest
 import requests
+
+from ..conftest import parse_shared_module_outputs
 
 
 def get_api_url():

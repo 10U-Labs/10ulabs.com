@@ -4,10 +4,10 @@ from typing import Any, Callable, Dict
 from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
 
-from test.api.endpoints.ec2_runner.conftest import EC2_RUNNER_SRC
-
 import pytest
 from botocore.exceptions import ClientError
+
+from ..conftest import EC2_RUNNER_SRC
 
 
 def load_handler_module() -> ModuleType:
