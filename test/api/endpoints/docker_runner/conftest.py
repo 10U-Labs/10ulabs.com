@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 import boto3
 import pytest
 import yaml

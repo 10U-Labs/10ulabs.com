@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from ..conftest import parse_response_body, assert_response_status, assert_json_content_type
+from .conftest import parse_response_body, assert_response_status, assert_json_content_type
 
 
 def test_lambda_handler_docker_runner_post_with_missing_job_id_returns_400(docker_runner_handler, docker_runner_post_event_factory, lambda_context):
