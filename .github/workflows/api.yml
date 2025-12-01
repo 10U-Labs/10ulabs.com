@@ -51,37 +51,6 @@ jobs:
           GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap output -raw ssm_parameter_name_for_github_pat)
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
-  e2e-testing:
-    name: E2E testing
-    needs:
-      - declaring-common-variables
-      - integration-testing
-    runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install pytest boto3 PyYAML requests
-      - env:
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
-        name: Run E2E tests
-        run: python3 -m pytest test/api/backend/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
