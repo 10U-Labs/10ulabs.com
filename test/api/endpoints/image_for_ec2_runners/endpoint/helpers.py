@@ -4,7 +4,8 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
-ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "endpoint"
+ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
+POST_DIR = ENDPOINT_SRC / "post"
 SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
 
 

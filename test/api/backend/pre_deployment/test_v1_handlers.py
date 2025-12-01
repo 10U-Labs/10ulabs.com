@@ -281,16 +281,6 @@ def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(mock
     assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_ec2_runners_delete_without_ami_id_returns_400(v1_handler, lambda_context):
-    event = {
-        'path': '/v1/image-for-ec2-runners/ami-abc123',
-        'httpMethod': 'DELETE',
-        'pathParameters': {}
-    }
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 400)
-
-
 @patch('boto3.client')
 def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
     mock_ec2 = MagicMock()
@@ -811,108 +801,6 @@ def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, v1_handler
                 assert result['success'] is False
 
 
-def test_launch_packer_builder_workflow(v1_handler, mock_urllib_response_factory):
-    with patch.dict('os.environ', {'GITHUB_TOKEN': 'test-token', 'GITHUB_REPO': 'test/repo', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-123', 'AWS_REGION': 'us-east-1'}):
-        with patch('urllib.request.urlopen') as mock_urlopen:
-            mock_response = mock_urllib_response_factory(status=204)
-            mock_urlopen.return_value = mock_response
-            result = v1_handler.launch_packer_builder({})
-            assert result['success'] is True
-
-
-@patch('boto3.client')
-def test_list_amis_multiple_amis(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [
-            {'ImageId': 'ami-1', 'Name': 'test-1', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': []},
-            {'ImageId': 'ami-2', 'Name': 'test-2', 'State': 'available', 'CreationDate': '2024-01-02', 'Architecture': 'x86_64', 'Tags': []}
-        ]
-    }
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.list_amis()
-    assert result['count'] == 2
-
-
-@patch('boto3.client')
-def test_list_amis_no_amis(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {'Images': []}
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.list_amis()
-    assert result['count'] == 0
-
-
-@patch('boto3.client')
-def test_list_amis_client_error(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'TestError'}}, 'DescribeImages')
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.list_amis()
-    assert result['success'] is False
-
-
-@patch('boto3.client')
-def test_get_latest_ami_details_from_ssm(mock_boto_client, v1_handler):
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'ami-ssm'}}
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'ImageId': 'ami-ssm', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': []}]
-    }
-
-    def mock_client(service):
-        if service == 'ssm':
-            return mock_ssm
-        if service == 'ec2':
-            return mock_ec2
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    result = v1_handler.get_latest_ami_details()
-    assert result['ami_id'] == 'ami-ssm'
-
-
-@patch('boto3.client')
-def test_get_latest_ami_details_fallback_to_ec2(mock_boto_client, v1_handler):
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'ImageId': 'ami-ec2', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': [{'Key': 'Stable', 'Value': 'true'}]}]
-    }
-
-    def mock_client(service):
-        if service == 'ssm':
-            return mock_ssm
-        if service == 'ec2':
-            return mock_ec2
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    result = v1_handler.get_latest_ami_details()
-    assert result['ami_id'] == 'ami-ec2'
-
-
-@patch('boto3.client')
-def test_get_latest_ami_details_no_ami_found(mock_boto_client, v1_handler):
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {'Images': []}
-
-    def mock_client(service):
-        if service == 'ssm':
-            return mock_ssm
-        if service == 'ec2':
-            return mock_ec2
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    result = v1_handler.get_latest_ami_details()
-    assert result['success'] is False
-
-
 @patch('boto3.client')
 def test_launch_fargate_runner_ecs_run_task_success(mock_boto_client, v1_handler):
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
@@ -1123,20 +1011,6 @@ def test_create_ec2_user_data_detects_instance_store_dynamically(v1_handler):
 
 
 @patch('boto3.client')
-def test_list_amis_sorts_by_creation_date(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [
-            {'ImageId': 'ami-old', 'Name': 'old', 'State': 'available', 'CreationDate': '2023-01-01', 'Architecture': 'x86_64', 'Tags': []},
-            {'ImageId': 'ami-new', 'Name': 'new', 'State': 'available', 'CreationDate': '2024-01-01', 'Architecture': 'x86_64', 'Tags': []}
-        ]
-    }
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.list_amis()
-    assert result['amis'][0]['ami_id'] == 'ami-new'
-
-
-@patch('boto3.client')
 def test_trigger_ami_creation_http_error(_mock_boto_client, v1_handler):
     with patch.dict('os.environ', {'API_DOMAIN': 'test.com', 'SUBNETS': 'subnet-1', 'VPC_ID': 'vpc-1', 'API_KEY_PARAMETER_NAME': '/test/api-key'}):
         with patch.object(v1_handler, 'get_api_key', return_value='test-api-key'):
@@ -1168,46 +1042,6 @@ def test_get_latest_ami_filters_by_stable_tag(mock_boto_client, v1_handler):
     filters = call_args[1]['Filters']
     stable_filter = next(f for f in filters if f['Name'] == 'tag:Stable')
     assert stable_filter['Values'][0] == 'true'
-
-
-@patch('boto3.client')
-def test_deregister_ami_deletes_snapshot(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
-    }
-    mock_boto_client.return_value = mock_ec2
-    v1_handler.deregister_ami('ami-123')
-    assert mock_ec2.delete_snapshot.called
-
-
-@patch('boto3.client')
-def test_deregister_ami_handles_multiple_snapshots(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'BlockDeviceMappings': [
-            {'Ebs': {'SnapshotId': 'snap-1'}},
-            {'Ebs': {'SnapshotId': 'snap-2'}}
-        ]}]
-    }
-    mock_boto_client.return_value = mock_ec2
-    v1_handler.deregister_ami('ami-123')
-    assert mock_ec2.delete_snapshot.call_count == 2
-
-
-@patch('boto3.client')
-def test_deregister_ami_continues_on_snapshot_error(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'BlockDeviceMappings': [
-            {'Ebs': {'SnapshotId': 'snap-1'}},
-            {'Ebs': {'SnapshotId': 'snap-2'}}
-        ]}]
-    }
-    mock_ec2.delete_snapshot.side_effect = [ClientError({'Error': {'Code': 'SnapshotInUse'}}, 'DeleteSnapshot'), None]
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.deregister_ami('ami-123')
-    assert result['success'] is True
 
 
 @patch('boto3.client')
@@ -1523,52 +1357,6 @@ def test_v1_launch_fargate_runner_no_tasks_in_response(mock_boto_client, v1_hand
             assert result['success'] is False
 
 
-@patch('boto3.client')
-def test_v1_deregister_ami_snapshot_deletion_failure(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
-    }
-    mock_ec2.deregister_image.return_value = {}
-    mock_ec2.delete_snapshot.side_effect = ClientError({'Error': {'Code': 'InvalidSnapshot.InUse', 'Message': 'In use'}}, 'DeleteSnapshot')
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.deregister_ami('ami-123')
-    assert result['success'] is True
-
-
-@patch('boto3.client')
-def test_v1_deregister_ami_image_not_found(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {'Images': []}
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.deregister_ami('ami-123')
-    assert result['success'] is False
-
-
-@patch('boto3.client')
-def test_v1_list_amis_client_error(mock_boto_client, v1_handler):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Error'}}, 'DescribeImages')
-    mock_boto_client.return_value = mock_ec2
-    result = v1_handler.list_amis()
-    assert result['success'] is False
-
-
-@patch('boto3.client')
-def test_v1_get_latest_ami_details_ssm_parameter_not_found_fallback(mock_boto_client, v1_handler):
-    mock_ssm = MagicMock()
-    mock_ssm.get_parameter.side_effect = ClientError({'Error': {'Code': 'ParameterNotFound', 'Message': 'Not found'}}, 'GetParameter')
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'ImageId': 'ami-123', 'Name': 'test', 'State': 'available', 'CreationDate': '2024-01-01T00:00:00.000Z', 'Architecture': 'x86_64', 'Tags': [{'Key': 'stable', 'Value': 'true'}]}]
-    }
-    def client_side_effect(service_name):
-        return mock_ssm if service_name == 'ssm' else mock_ec2
-    mock_boto_client.side_effect = client_side_effect
-    result = v1_handler.get_latest_ami_details()
-    assert result['success'] is True
-
-
 def test_lambda_handler_options_request_returns_200(v1_handler, lambda_context):
     event = {'path': '/v1/echo', 'httpMethod': 'OPTIONS'}
     response = v1_handler.lambda_handler(event, lambda_context)
@@ -1735,14 +1523,6 @@ def test_lambda_handler_test_mode_returns_mock_task_arn_for_docker(v1_handler, l
     response = v1_handler.lambda_handler(event, lambda_context)
     body = parse_response_body(response)
     assert body['task_arn'] == 'arn:aws:ecs:test-mode-mock'
-
-
-def test_lambda_handler_test_mode_returns_mock_for_image_ec2_post(v1_handler, lambda_context):
-    v1_handler.set_test_mode(False)
-    event = {'path': '/v1/image-for-ec2-runners', 'httpMethod': 'POST', 'headers': {'x-test-mode': 'true'}, 'body': '{}'}
-    response = v1_handler.lambda_handler(event, lambda_context)
-    body = parse_response_body(response)
-    assert body['test_mode'] is True
 
 
 def test_lambda_handler_test_mode_does_not_affect_get_requests(v1_handler, lambda_context):
