@@ -1,33 +1,68 @@
 #!/bin/bash
 set -euo pipefail
 
-RUNNER_VERSION=""
-YQ_VERSION=""
-RUNNER_USER=""
-ARCH=""
-VERSION_CODENAME=""
-DOCKER_KEY=""
-
 __main__() {
-    parse_arguments "$@"
-    validate_arguments
-    set_environment_variables
-    add_docker_apt_repository
+    local runner_version=""
+    local yq_version=""
+    local runner_user=""
+    local arch=""
+    local version_codename=""
+    local docker_key=""
+
+    parse_arguments --output-runner-version runner_version \
+                    --output-yq-version yq_version \
+                    --output-runner-user runner_user \
+                    "$@"
+
+    validate_arguments --runner-version "$runner_version" \
+                       --yq-version "$yq_version" \
+                       --runner-user "$runner_user"
+
+    set_environment_variables --output-arch arch \
+                              --output-version-codename version_codename \
+                              --output-docker-key docker_key
+
+    add_docker_apt_repository --version-codename "$version_codename" \
+                              --docker-key "$docker_key"
+
     install_system_packages
     install_python_packages
-    install_yq
-    create_runner_user
-    install_github_actions_runner
-    install_ssm_agent
-    install_cloudwatch_agent
+
+    install_yq --yq-version "$yq_version" \
+               --arch "$arch"
+
+    create_runner_user --runner-user "$runner_user"
+
+    install_github_actions_runner --runner-user "$runner_user" \
+                                  --runner-version "$runner_version" \
+                                  --arch "$arch"
+
+    install_ssm_agent --arch "$arch"
+    install_cloudwatch_agent --arch "$arch"
     cleanup_temp_files
 }
 
 add_docker_apt_repository() {
+    local version_codename=""
+    local docker_key=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --version-codename)
+                version_codename="$2"
+                shift 2
+                ;;
+            --docker-key)
+                docker_key="$2"
+                shift 2
+                ;;
+        esac
+    done
+
     install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/debian/gpg -o "$DOCKER_KEY"
-    chmod a+r "$DOCKER_KEY"
-    echo -e "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: $VERSION_CODENAME\nComponents: stable\nSigned-By: $DOCKER_KEY" | \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o "$docker_key"
+    chmod a+r "$docker_key"
+    echo -e "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: $version_codename\nComponents: stable\nSigned-By: $docker_key" | \
         tee /etc/apt/sources.list.d/docker.sources > /dev/null
 }
 
@@ -36,22 +71,65 @@ cleanup_temp_files() {
 }
 
 create_runner_user() {
-    useradd -m -s /bin/bash "$RUNNER_USER"
-    usermod -aG docker "$RUNNER_USER"
+    local runner_user=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --runner-user)
+                runner_user="$2"
+                shift 2
+                ;;
+        esac
+    done
+
+    useradd -m -s /bin/bash "$runner_user"
+    usermod -aG docker "$runner_user"
 }
 
 install_cloudwatch_agent() {
+    local arch=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --arch)
+                arch="$2"
+                shift 2
+                ;;
+        esac
+    done
+
     curl -sSL -o /tmp/amazon-cloudwatch-agent.deb \
-        "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb"
+        "https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${arch}/latest/amazon-cloudwatch-agent.deb"
     dpkg -i /tmp/amazon-cloudwatch-agent.deb
 }
 
 install_github_actions_runner() {
-    sudo -u "$RUNNER_USER" curl -sSL -o /tmp/actions-runner.tar.gz \
-        "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${ARCH}-${RUNNER_VERSION}.tar.gz"
-    sudo -u "$RUNNER_USER" mkdir -p "/home/$RUNNER_USER/actions-runner"
-    sudo -u "$RUNNER_USER" tar xzf /tmp/actions-runner.tar.gz -C "/home/$RUNNER_USER/actions-runner"
-    "/home/$RUNNER_USER/actions-runner/bin/installdependencies.sh"
+    local runner_user=""
+    local runner_version=""
+    local arch=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --runner-user)
+                runner_user="$2"
+                shift 2
+                ;;
+            --runner-version)
+                runner_version="$2"
+                shift 2
+                ;;
+            --arch)
+                arch="$2"
+                shift 2
+                ;;
+        esac
+    done
+
+    sudo -u "$runner_user" curl -sSL -o /tmp/actions-runner.tar.gz \
+        "https://github.com/actions/runner/releases/download/v${runner_version}/actions-runner-linux-${arch}-${runner_version}.tar.gz"
+    sudo -u "$runner_user" mkdir -p "/home/$runner_user/actions-runner"
+    sudo -u "$runner_user" tar xzf /tmp/actions-runner.tar.gz -C "/home/$runner_user/actions-runner"
+    "/home/$runner_user/actions-runner/bin/installdependencies.sh"
 }
 
 install_python_packages() {
@@ -76,8 +154,19 @@ install_python_packages() {
 }
 
 install_ssm_agent() {
+    local arch=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --arch)
+                arch="$2"
+                shift 2
+                ;;
+        esac
+    done
+
     curl -sSL -o /tmp/amazon-ssm-agent.deb \
-        "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${ARCH}/amazon-ssm-agent.deb"
+        "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${arch}/amazon-ssm-agent.deb"
     dpkg -i /tmp/amazon-ssm-agent.deb
     systemctl enable amazon-ssm-agent
 }
@@ -99,23 +188,55 @@ install_system_packages() {
 }
 
 install_yq() {
-    curl -sSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_${ARCH}"
+    local yq_version=""
+    local arch=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --yq-version)
+                yq_version="$2"
+                shift 2
+                ;;
+            --arch)
+                arch="$2"
+                shift 2
+                ;;
+        esac
+    done
+
+    curl -sSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${yq_version}/yq_linux_${arch}"
     chmod +x /usr/local/bin/yq
 }
 
 parse_arguments() {
+    local -n _output_runner_version
+    local -n _output_yq_version
+    local -n _output_runner_user
+
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --output-runner-version)
+                local -n _output_runner_version="$2"
+                shift 2
+                ;;
+            --output-yq-version)
+                local -n _output_yq_version="$2"
+                shift 2
+                ;;
+            --output-runner-user)
+                local -n _output_runner_user="$2"
+                shift 2
+                ;;
             --runner-version)
-                RUNNER_VERSION="$2"
+                _output_runner_version="$2"
                 shift 2
                 ;;
             --yq-version)
-                YQ_VERSION="$2"
+                _output_yq_version="$2"
                 shift 2
                 ;;
             --runner-user)
-                RUNNER_USER="$2"
+                _output_runner_user="$2"
                 shift 2
                 ;;
             *)
@@ -127,9 +248,30 @@ parse_arguments() {
 }
 
 set_environment_variables() {
-    ARCH=$(dpkg --print-architecture)
-    VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
-    DOCKER_KEY=/etc/apt/keyrings/docker.asc
+    local -n _output_arch
+    local -n _output_version_codename
+    local -n _output_docker_key
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --output-arch)
+                local -n _output_arch="$2"
+                shift 2
+                ;;
+            --output-version-codename)
+                local -n _output_version_codename="$2"
+                shift 2
+                ;;
+            --output-docker-key)
+                local -n _output_docker_key="$2"
+                shift 2
+                ;;
+        esac
+    done
+
+    _output_arch=$(dpkg --print-architecture)
+    _output_version_codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+    _output_docker_key=/etc/apt/keyrings/docker.asc
 }
 
 usage() {
@@ -143,17 +285,38 @@ usage() {
 }
 
 validate_arguments() {
-    if [[ -z "$RUNNER_VERSION" ]]; then
+    local runner_version=""
+    local yq_version=""
+    local runner_user=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --runner-version)
+                runner_version="$2"
+                shift 2
+                ;;
+            --yq-version)
+                yq_version="$2"
+                shift 2
+                ;;
+            --runner-user)
+                runner_user="$2"
+                shift 2
+                ;;
+        esac
+    done
+
+    if [[ -z "$runner_version" ]]; then
         echo "Error: --runner-version is required"
         usage
     fi
 
-    if [[ -z "$YQ_VERSION" ]]; then
+    if [[ -z "$yq_version" ]]; then
         echo "Error: --yq-version is required"
         usage
     fi
 
-    if [[ -z "$RUNNER_USER" ]]; then
+    if [[ -z "$runner_user" ]]; then
         echo "Error: --runner-user is required"
         usage
     fi
