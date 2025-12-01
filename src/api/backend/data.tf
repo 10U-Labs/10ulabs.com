@@ -86,6 +86,11 @@ data "terraform_remote_state" "ec2_runner" {
     key    = "ec2_runner/terraform.tfstate"
     region = "us-east-1"
   }
+
+  defaults = {
+    lambda_function_arn  = ""
+    lambda_function_name = ""
+  }
 }
 
 data "aws_ssm_parameter" "github_pat" {
