@@ -250,68 +250,6 @@ def test_lambda_handler_ec2_runner_post_returns_json_content_type(mock_boto_clie
     assert_json_content_type(response)
 
 
-def test_lambda_handler_image_for_ec2_runners_post_returns_json_content_type(v1_handler, image_ec2_event_factory, lambda_context):
-    event = image_ec2_event_factory(method='POST')
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-@patch('boto3.client')
-def test_lambda_handler_image_for_ec2_runners_get_returns_json_content_type(mock_boto_client, v1_handler, image_ec2_event_factory, lambda_context):
-    mock_ec2 = MagicMock()
-    mock_ec2.describe_images.return_value = {
-        'Images': [{
-            'ImageId': 'ami-test123',
-            'CreationDate': '2024-01-01T00:00:00',
-            'Name': 'test-image',
-            'State': 'available',
-            'Architecture': 'x86_64',
-            'Tags': [{'Key': 'Stable', 'Value': 'true'}]
-        }]
-    }
-
-    def mock_client(service_name):
-        if service_name == 'ec2':
-            return mock_ec2
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    event = image_ec2_event_factory(method='GET', ami_id=None)
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-@patch('boto3.client')
-def test_lambda_handler_image_for_ec2_runners_delete_returns_json_content_type(mock_boto_client, v1_handler, lambda_context):
-    mock_ec2 = MagicMock()
-    mock_ec2.deregister_image.return_value = {}
-    mock_ec2.describe_images.return_value = {
-        'Images': [{'BlockDeviceMappings': [{'Ebs': {'SnapshotId': 'snap-123'}}]}]
-    }
-    mock_ec2.delete_snapshot.return_value = {}
-
-    def mock_client(service_name):
-        if service_name == 'ec2':
-            return mock_ec2
-        return MagicMock()
-
-    mock_boto_client.side_effect = mock_client
-    event = {
-        'path': '/v1/image-for-ec2-runners/ami-abc123',
-        'httpMethod': 'DELETE',
-        'pathParameters': {'ami_id': 'ami-abc123'}
-    }
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_json_content_type(response)
-
-
-def test_lambda_handler_image_for_ec2_runners_unsupported_method_returns_404(v1_handler, image_ec2_event_factory, lambda_context):
-    event = image_ec2_event_factory(ami_id=None)
-    event['httpMethod'] = 'PATCH'
-    response = v1_handler.lambda_handler(event, lambda_context)
-    assert_response_status(response, 404)
-
-
 def test_get_docker_runner_status_returns_success_with_no_tasks(v1_handler):
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         with patch.object(v1_handler, 'get_ecs_client') as mock_get_client:

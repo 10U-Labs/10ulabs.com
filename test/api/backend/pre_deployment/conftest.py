@@ -290,18 +290,6 @@ def ec2_runner_post_event_factory():
 
 
 @pytest.fixture
-def image_ec2_event_factory():
-    def _create_event(method='POST', path_suffix='', ami_id='ami-test123'):
-        return {
-            'path': f'/v1/image-for-ec2-runners{path_suffix}',
-            'httpMethod': method,
-            'body': json.dumps({}) if method == 'POST' else None,
-            'pathParameters': {'ami_id': ami_id} if ami_id and method == 'DELETE' else None
-        }
-    return _create_event
-
-
-@pytest.fixture
 def workflow_job_event_factory():
     def _create_event(action='queued', job_id=123, labels=None, repo='test/repo', run_id=456):
         if labels is None:

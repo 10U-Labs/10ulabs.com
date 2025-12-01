@@ -1,63 +1,6 @@
-commands: |
-  ARCH=$(dpkg --print-architecture)
-  DOCKER_KEY=/etc/apt/keyrings/docker.asc
-  RUNNER_USER=github-runner
-  VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
-  VERSION_RUNNER=2.330.0
-  VERSION_YQ=4.44.1
-  install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/debian/gpg -o $DOCKER_KEY
-  chmod a+r $DOCKER_KEY
-  echo -e "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: $VERSION_CODENAME\nComponents: stable\nSigned-By: $DOCKER_KEY" | \
-    tee /etc/apt/sources.list.d/docker.sources > /dev/null
-  apt-get update
-  apt-get install -y \
-    containerd.io \
-    docker-buildx-plugin \
-    docker-ce \
-    docker-ce-cli \
-    docker-compose-plugin \
-    git \
-    jq \
-    python3-pip \
-    unzip \
-    wget
-  systemctl enable docker
-  python3 -m pip install --break-system-packages \
-    boto3 \
-    boto3-stubs[ecr] \
-    botocore \
-    dnspython \
-    dockerfile-parse \
-    mypy \
-    paramiko \
-    pylint \
-    pytest \
-    python-hcl2 \
-    pyyaml \
-    requests \
-    types-paramiko \
-    types-PyYAML \
-    types-dockerfile-parse \
-    types-requests \
-    yamllint
-  curl -sSL -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v${VERSION_YQ}/yq_linux_${ARCH} &&
-    chmod +x /usr/local/bin/yq
-  useradd -m -s /bin/bash $RUNNER_USER
-  usermod -aG docker $RUNNER_USER
-  sudo -u $RUNNER_USER curl -sSL -o /tmp/actions-runner.tar.gz \
-    https://github.com/actions/runner/releases/download/v${VERSION_RUNNER}/actions-runner-linux-${ARCH}-${VERSION_RUNNER}.tar.gz
-  sudo -u $RUNNER_USER mkdir -p /home/$RUNNER_USER/actions-runner
-  sudo -u $RUNNER_USER tar xzf /tmp/actions-runner.tar.gz -C /home/$RUNNER_USER/actions-runner
-  /home/$RUNNER_USER/actions-runner/bin/installdependencies.sh
-  curl -sSL -o /tmp/amazon-ssm-agent.deb \
-    https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_${ARCH}/amazon-ssm-agent.deb
-  dpkg -i /tmp/amazon-ssm-agent.deb
-  systemctl enable amazon-ssm-agent
-  curl -sSL -o /tmp/amazon-cloudwatch-agent.deb \
-    https://s3.amazonaws.com/amazoncloudwatch-agent/debian/${ARCH}/latest/amazon-cloudwatch-agent.deb
-  dpkg -i /tmp/amazon-cloudwatch-agent.deb
-  rm -rf /tmp/*
+runner_version: "2.330.0"
+yq_version: "4.44.1"
+runner_user: "github-runner"
 source_ami: debian-13-arm64-20251117-2299
 tags:
   Purpose: GitHub self-hosted EC2 runner

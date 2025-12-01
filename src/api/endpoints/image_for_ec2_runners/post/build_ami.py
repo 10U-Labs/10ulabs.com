@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import logging
 import sys
 import time
 import uuid
 from dataclasses import dataclass
 from io import StringIO
-from typing import Any, Optional
+from pathlib import Path
+from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 import paramiko
-import yaml
 from ec2_spot.ec2_spot import (
     create_fleet_instance as shared_create_fleet,
     wait_for_instance_running as shared_wait_running,
@@ -20,6 +19,8 @@ from ec2_spot.ec2_spot import (
 )
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
+
+SETUP_SCRIPT = "setup.sh"
 
 
 @dataclass
@@ -32,41 +33,29 @@ class LaunchTemplateParams:
 
 
 @dataclass
-class CommandParams:
+class ScriptParams:
     ip_addr: str
     key_material: str
-    commands: str
-
-REQUIRED_FIELDS = ["ami_name", "region", "source_ami", "subnet_ids", "instance_types"]
-
-
-def validate_commands(config):
-    errors = []
-    commands = config.get("commands")
-    if commands is not None and not isinstance(commands, str):
-        errors.append("commands must be a string (use YAML block scalar |)")
-    return errors
+    script_path: str
+    runner_version: str
+    yq_version: str
+    runner_user: str
 
 
-def validate_config(config):
-    errors = []
-    for field in REQUIRED_FIELDS:
-        if field not in config:
-            errors.append(f"Missing required field: {field}")
-    if "instance_types" in config:
-        if not isinstance(config["instance_types"], list):
-            errors.append("instance_types must be a list")
-        elif not config["instance_types"]:
-            errors.append("instance_types cannot be empty")
-    if "subnet_ids" in config:
-        if not isinstance(config["subnet_ids"], list):
-            errors.append("subnet_ids must be a list")
-        elif not config["subnet_ids"]:
-            errors.append("subnet_ids cannot be empty")
-    errors.extend(validate_commands(config))
-    if "tags" in config and not isinstance(config["tags"], dict):
-        errors.append("tags must be a dict")
-    return errors
+@dataclass
+class BuildState:
+    instance_id: Optional[str] = None
+    sg_id: Optional[str] = None
+    key_material: Optional[str] = None
+    result: Optional[str] = None
+
+
+@dataclass
+class BuildContext:
+    ec2: object
+    args: object
+    script_dir: Path
+    unique_id: str
 
 
 def get_vpc_from_subnet(ec2, subnet_id):
@@ -129,7 +118,7 @@ def delete_security_group(ec2, sg_id):
 
 
 def create_launch_template(ec2, params: LaunchTemplateParams, tags):
-    data: dict[str, Any] = {"ImageId": params.base_ami, "KeyName": params.key_name, "SecurityGroupIds": [params.sg_id]}
+    data = {"ImageId": params.base_ami, "KeyName": params.key_name, "SecurityGroupIds": [params.sg_id]}
     if params.iam_profile:
         data["IamInstanceProfile"] = {"Name": params.iam_profile}
     tag_specs = []
@@ -195,7 +184,7 @@ def run_ssh_command(client, cmd):
         raise RuntimeError(f"Command failed with exit code {exit_code}")
 
 
-def run_commands(params: CommandParams):
+def run_script(params: ScriptParams):
     key = paramiko.Ed25519Key.from_private_key(StringIO(params.key_material))
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -207,7 +196,13 @@ def run_commands(params: CommandParams):
             if attempt == 29:
                 raise
             time.sleep(10)
-    full_cmd = f"sudo bash -e << 'EOFSCRIPT'\nPS4=''\nexport DEBIAN_FRONTEND=noninteractive\nexport TERM=dumb\nexport NO_COLOR=1\necho 'quiet \"1\";' > /etc/apt/apt.conf.d/99quiet\nset -x\n{params.commands}\nEOFSCRIPT"
+    sftp = client.open_sftp()
+    remote_script = "/tmp/setup.sh"
+    sftp.put(params.script_path, remote_script)
+    sftp.chmod(remote_script, 0o755)
+    sftp.close()
+    args_str = f"--runner-version {params.runner_version} --yq-version {params.yq_version} --runner-user {params.runner_user}"
+    full_cmd = f"sudo bash -c 'export DEBIAN_FRONTEND=noninteractive && export TERM=dumb && export NO_COLOR=1 && echo quiet \\\"1\\\"\\; > /etc/apt/apt.conf.d/99quiet && {remote_script} {args_str}'"
     run_ssh_command(client, full_cmd)
     client.close()
 
@@ -256,73 +251,20 @@ def cleanup(ec2, instance_id, template_name, key_name, sg_id):
         logging.info("Temporary security group deleted.")
 
 
-def load_config(config_path):
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-
-def parse_value(value_str):
-    result = value_str
-    try:
-        result = json.loads(value_str)
-    except json.JSONDecodeError:
-        pass
-    return result
-
-
-def apply_vars(config, var_list):
-    csv_keys = {"instance_types", "subnet_ids"}
-    for item in var_list or []:
-        if "=" not in item:
-            continue
-        key, value = item.split("=", 1)
-        if key in csv_keys:
-            parsed_value = [v.strip() for v in value.split(",")]
-        elif key.startswith("tags."):
-            child_key = key[5:]
-            if "tags" not in config:
-                config["tags"] = {}
-            config["tags"][child_key] = parse_value(value)
-            continue
-        else:
-            parsed_value = parse_value(value)
-        config[key] = parsed_value
-
-
-def cmd_validate(args):
-    config = load_config(args.config)
-    apply_vars(config, args.var)
-    errors = validate_config(config)
-    exit_code = 0
-    if errors:
-        for err in errors:
-            logging.error("Error: %s", err)
-        exit_code = 1
-    else:
-        logging.info("Configuration is valid.")
-    return exit_code
-
-
-@dataclass
-class BuildState:
-    instance_id: Optional[str] = None
-    sg_id: Optional[str] = None
-    key_material: Optional[str] = None
-    result: Optional[str] = None
-
-
-@dataclass
-class BuildContext:
-    ec2: object
-    config: dict
-    unique_id: str
+def parse_tags(tag_list):
+    tags = {}
+    for item in tag_list or []:
+        if "=" in item:
+            key, value = item.split("=", 1)
+            tags[key] = value
+    return tags
 
 
 def run_build(ctx: BuildContext, state: BuildState):
     key_name = f"ami-builder-{ctx.unique_id}"
     template_name = f"ami-builder-{ctx.unique_id}"
-    subnet_ids = ctx.config["subnet_ids"]
-    tags = ctx.config.get("tags", {})
+    subnet_ids = ctx.args.subnet_ids
+    tags = parse_tags(ctx.args.tag)
     logging.info("Subnets: %s", subnet_ids)
     vpc_id = get_vpc_from_subnet(ctx.ec2, subnet_ids[0])
     logging.info("VPC: %s", vpc_id)
@@ -331,36 +273,42 @@ def run_build(ctx: BuildContext, state: BuildState):
     logging.info("Creating temporary security group...")
     state.sg_id = create_security_group(ctx.ec2, vpc_id, f"ami-builder-{ctx.unique_id}", tags)
     logging.info("Creating launch template...")
-    lt_params = LaunchTemplateParams(template_name, ctx.config["source_ami"], state.sg_id, key_name, ctx.config.get("iam_instance_profile"))
+    lt_params = LaunchTemplateParams(template_name, ctx.args.source_ami, state.sg_id, key_name, ctx.args.iam_instance_profile)
     create_launch_template(ctx.ec2, lt_params, tags)
-    logging.info("Creating EC2 Fleet with %d instance types x %d subnets...", len(ctx.config['instance_types']), len(subnet_ids))
-    state.instance_id = create_fleet_instance(ctx.ec2, template_name, ctx.config["instance_types"], subnet_ids)
+    logging.info("Creating EC2 Fleet with %d instance types x %d subnets...", len(ctx.args.instance_types), len(subnet_ids))
+    state.instance_id = create_fleet_instance(ctx.ec2, template_name, ctx.args.instance_types, subnet_ids)
     logging.info("Instance launched: %s", state.instance_id)
     public_ip = wait_for_instance(ctx.ec2, state.instance_id)
     logging.info("Instance ready at %s", public_ip)
-    if ctx.config.get("commands"):
-        logging.info("Running commands...")
-        cmd_params = CommandParams(public_ip, state.key_material, ctx.config["commands"])
-        run_commands(cmd_params)
-    state.result = create_ami(ctx.ec2, state.instance_id, ctx.config["ami_name"], ctx.config.get("ami_description"), ctx.config.get("tags", {}))
+    script_path = ctx.script_dir / SETUP_SCRIPT
+    if script_path.exists():
+        logging.info("Running setup script...")
+        script_params = ScriptParams(
+            public_ip,
+            state.key_material,
+            str(script_path),
+            ctx.args.runner_version,
+            ctx.args.yq_version,
+            ctx.args.runner_user,
+        )
+        run_script(script_params)
+    state.result = create_ami(ctx.ec2, state.instance_id, ctx.args.ami_name, ctx.args.ami_description, tags)
 
 
 def cmd_build(args):
-    config = load_config(args.config)
-    apply_vars(config, args.var)
-    errors = validate_config(config)
+    script_dir = Path(__file__).parent
+    script_path = script_dir / SETUP_SCRIPT
     exit_code = 1
-    if errors:
-        for err in errors:
-            logging.error("Error: %s", err)
+    if not script_path.exists():
+        logging.error("Error: setup script not found: %s", script_path)
     else:
         unique_id = uuid.uuid4().hex[:8]
-        ec2 = boto3.client("ec2", region_name=config["region"])
-        logging.info("Looking up AMI ID for: %s", config['source_ami'])
-        ami_id = lookup_source_ami(ec2, config["source_ami"])
+        ec2 = boto3.client("ec2", region_name=args.region)
+        logging.info("Looking up AMI ID for: %s", args.source_ami)
+        ami_id = lookup_source_ami(ec2, args.source_ami)
         logging.info("Found AMI ID: %s", ami_id)
-        config["source_ami"] = ami_id
-        ctx = BuildContext(ec2, config, unique_id)
+        args.source_ami = ami_id
+        ctx = BuildContext(ec2, args, script_dir, unique_id)
         state = BuildState()
         try:
             run_build(ctx, state)
@@ -375,20 +323,19 @@ def cmd_build(args):
 
 def main():
     parser = argparse.ArgumentParser(description="Build AMI using EC2 Fleet spot instances")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    build_parser = subparsers.add_parser("build", help="Build an AMI from config")
-    build_parser.add_argument("config", help="Path to YAML config file")
-    build_parser.add_argument("--var", action="append", metavar="KEY=VALUE", help="Override config value")
-    validate_parser = subparsers.add_parser("validate", help="Validate config file")
-    validate_parser.add_argument("config", help="Path to YAML config file")
-    validate_parser.add_argument("--var", action="append", metavar="KEY=VALUE", help="Override config value")
+    parser.add_argument("--ami-name", required=True, help="Name for the created AMI")
+    parser.add_argument("--ami-description", help="Description for the created AMI")
+    parser.add_argument("--region", required=True, help="AWS region")
+    parser.add_argument("--source-ami", required=True, help="Source AMI name to look up")
+    parser.add_argument("--subnet-ids", required=True, nargs="+", help="Subnet IDs for launching instances")
+    parser.add_argument("--instance-types", required=True, nargs="+", help="Instance types for spot fleet")
+    parser.add_argument("--runner-version", required=True, help="GitHub Actions runner version")
+    parser.add_argument("--yq-version", required=True, help="yq version")
+    parser.add_argument("--runner-user", required=True, help="Username for the GitHub runner")
+    parser.add_argument("--iam-instance-profile", help="IAM instance profile name")
+    parser.add_argument("--tag", action="append", metavar="KEY=VALUE", help="Tag to apply (can be repeated)")
     args = parser.parse_args()
-    exit_code = 1
-    if args.command == "build":
-        exit_code = cmd_build(args)
-    elif args.command == "validate":
-        exit_code = cmd_validate(args)
-    return exit_code
+    return cmd_build(args)
 
 
 if __name__ == "__main__":
