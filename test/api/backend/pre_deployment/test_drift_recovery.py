@@ -425,11 +425,19 @@ class TestClientCaching:
 
 class TestIsResourceInManagedVpc:
     def test_returns_true_for_managed_vpc(self, drift_recovery):
-        result = drift_recovery.is_resource_in_managed_vpc('vpc-managed123', 'AWS::EC2::VPC')
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('vpc-managed123', 'AWS::EC2::VPC')
         assert result is True
 
     def test_returns_false_for_unmanaged_vpc(self, drift_recovery):
-        result = drift_recovery.is_resource_in_managed_vpc('vpc-other456', 'AWS::EC2::VPC')
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('vpc-other456', 'AWS::EC2::VPC')
         assert result is False
 
     def test_returns_true_for_subnet_in_managed_vpc(self, drift_recovery):
@@ -512,7 +520,11 @@ class TestIsResourceInManagedVpc:
         assert result is True
 
     def test_returns_true_for_unknown_resource_type(self, drift_recovery):
-        result = drift_recovery.is_resource_in_managed_vpc('unknown-123', 'AWS::EC2::Unknown')
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('unknown-123', 'AWS::EC2::Unknown')
         assert result is True
 
 
@@ -524,7 +536,11 @@ class TestLambdaHandlerVpcFiltering:
             'resourceType': 'AWS::EC2::VPC',
             'resourceId': 'vpc-other456'
         })
-        response = drift_recovery.lambda_handler(event, lambda_context)
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            response = drift_recovery.lambda_handler(event, lambda_context)
         assert response['body'] == 'Resource not in managed VPC, skipping'
 
     def test_processes_resource_in_managed_vpc(self, drift_recovery, lambda_context):
