@@ -12,7 +12,7 @@ def test_ami_purpose_tag_value(ami_purpose_tag):
     if ami_purpose_tag is None:
         pytest.fail("AMI details not available")
 
-    assert "GitHub" in ami_purpose_tag or "Github" in ami_purpose_tag or "github" in ami_purpose_tag
+    assert ami_purpose_tag == "GitHub self-hosted EC2 runner"
 
 
 def test_ami_has_os_family_tag(ami_tags_dict):

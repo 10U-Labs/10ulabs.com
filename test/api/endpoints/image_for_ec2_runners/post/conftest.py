@@ -3,6 +3,7 @@ import re
 import subprocess
 from pathlib import Path
 import pytest
+import yaml
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
@@ -85,3 +86,20 @@ def post_dir():
 @pytest.fixture(scope="session")
 def config_path():
     return CONFIG_PATH
+
+
+@pytest.fixture(scope="session")
+def config(config_path):
+    with open(config_path, 'r', encoding='utf-8') as f:
+        raw_config = yaml.safe_load(f)
+    source_ami = raw_config.get("source_ami", "")
+    parts = source_ami.split("-")
+    result = {
+        **raw_config,
+        "os_family": parts[0] if len(parts) > 0 else "",
+        "os_version": parts[1] if len(parts) > 1 else "",
+        "os_architecture": parts[2] if len(parts) > 2 else "",
+        "github_runner_iam_instance_profile_name": "GitHubSelfHostedRunnerInstanceProfile",
+        "ec2_max_spot_price": "0.05",
+    }
+    return result
