@@ -30,9 +30,20 @@ __main__() {
         esac
     done
 
-    validate_arguments --runner-version "$runner_version" \
-                       --yq-version "$yq_version" \
-                       --runner-user "$runner_user"
+    if [[ -z "$runner_version" ]]; then
+        echo "Error: --runner-version is required"
+        usage
+    fi
+
+    if [[ -z "$yq_version" ]]; then
+        echo "Error: --yq-version is required"
+        usage
+    fi
+
+    if [[ -z "$runner_user" ]]; then
+        echo "Error: --runner-user is required"
+        usage
+    fi
 
     set_environment_variables --output-arch arch \
                               --output-version-codename version_codename \
@@ -259,44 +270,6 @@ usage() {
     echo "  --yq-version        yq version (e.g., 4.44.1)"
     echo "  --runner-user       Username for the GitHub runner"
     exit 1
-}
-
-validate_arguments() {
-    local runner_version=""
-    local yq_version=""
-    local runner_user=""
-
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --runner-version)
-                runner_version="$2"
-                shift 2
-                ;;
-            --yq-version)
-                yq_version="$2"
-                shift 2
-                ;;
-            --runner-user)
-                runner_user="$2"
-                shift 2
-                ;;
-        esac
-    done
-
-    if [[ -z "$runner_version" ]]; then
-        echo "Error: --runner-version is required"
-        usage
-    fi
-
-    if [[ -z "$yq_version" ]]; then
-        echo "Error: --yq-version is required"
-        usage
-    fi
-
-    if [[ -z "$runner_user" ]]; then
-        echo "Error: --runner-user is required"
-        usage
-    fi
 }
 
 __main__ "$@"
