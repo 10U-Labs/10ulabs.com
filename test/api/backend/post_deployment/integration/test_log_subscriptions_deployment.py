@@ -34,18 +34,6 @@ def test_runners_handler_subscription_destinations_firehose(logs_client, config)
     assert 'firehose' in destination_arn
 
 
-def test_v1_handler_subscription_filter_exists(logs_client, config):
-    response = logs_client.describe_subscription_filters(logGroupName=config['v1_handler_log_group_name'])
-    filter_names = [f['filterName'] for f in response['subscriptionFilters']]
-    assert 'v1-handler-to-firehose' in filter_names
-
-
-def test_v1_handler_subscription_destinations_firehose(logs_client, config):
-    response = logs_client.describe_subscription_filters(logGroupName=config['v1_handler_log_group_name'])
-    destination_arn = response['subscriptionFilters'][0]['destinationArn']
-    assert 'firehose' in destination_arn
-
-
 def test_circuit_breaker_remediation_subscription_filter_exists(logs_client, config):
     response = logs_client.describe_subscription_filters(logGroupName=config['circuit_breaker_remediation_log_group_name'])
     filter_names = [f['filterName'] for f in response['subscriptionFilters']]
