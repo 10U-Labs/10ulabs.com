@@ -83,34 +83,6 @@ def openapi_spec() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def v1_handler(config: Dict[str, str]) -> Any:
-    env_vars = {
-        'AWS_REGION': config['aws_region'],
-        'ECR_REPOSITORY': config['ecr_repository_name'],
-        'GITHUB_REPO': config['github_repo'],
-        'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
-        'ECS_CLUSTER': config['cluster_name'],
-        'CONTAINER_NAME': config['container_name'],
-        'TASK_DEFINITION': config['task_family'],
-        'API_DOMAIN': config['api_fqdn'],
-        'IMAGE_API_ENDPOINT': f"https://{config['api_fqdn']}/{config['api_version']}",
-        'SUBNETS': 'subnet-test1,subnet-test2',
-        'SECURITY_GROUPS': 'sg-test',
-        'VPC_ID': 'vpc-test',
-        'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-rack-designer-configurations'
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("v1.py", "v1_handler")
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
-        if hasattr(module, '_github_token_cache'):
-            setattr(module, '_github_token_cache', {'value': None})
-        if hasattr(module, '_dependencies_validated'):
-            setattr(module, '_dependencies_validated', {'checked': True, 'valid': True, 'errors': []})
-        yield module
-
-
-@pytest.fixture
 def catchall_handler():
     return load_lambda_module("catchall.py", "catchall_handler")
 
@@ -399,21 +371,6 @@ TEST_CONSTANTS = {
 ENV_VAR_PRESETS = {
     'base': {
         'AWS_REGION': 'us-east-1',
-    },
-    'v1_handler': {
-        'AWS_REGION': 'us-east-1',
-        'ECR_REPOSITORY': 'test-ecr-repo',
-        'GITHUB_REPO': 'test/repo',
-        'GITHUB_TOKEN_SECRET_NAME': 'test-github-token',
-        'ECS_CLUSTER': 'test-cluster',
-        'CONTAINER_NAME': 'test-container',
-        'TASK_DEFINITION': 'test-task-family',
-        'API_DOMAIN': 'api.test.com',
-        'IMAGE_API_ENDPOINT': 'https://api.test.com/v1',
-        'SUBNETS': 'subnet-test1,subnet-test2',
-        'SECURITY_GROUPS': 'sg-test',
-        'VPC_ID': 'vpc-test',
-        'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-rack-designer-configurations',
     },
     'webhook_router': {
         'AWS_REGION': 'us-east-1',

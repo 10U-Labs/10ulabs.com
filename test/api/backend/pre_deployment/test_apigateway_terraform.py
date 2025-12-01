@@ -62,13 +62,6 @@ def test_lambda_permission_health_handler_exists():
     assert 'resource "aws_lambda_permission" "health_handler"' in content
 
 
-def test_lambda_permission_v1_handler_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_lambda_permission" "v1_handler"' in content
-
-
 def test_lambda_permission_runners_handler_exists():
     apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
     with open(apigateway_file, encoding="utf-8") as f:

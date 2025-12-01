@@ -55,27 +55,6 @@ def test_runners_handler_cloudwatch_log_group_exists():
     assert 'resource "aws_cloudwatch_log_group" "runners_handler"' in content
 
 
-def test_v1_handler_archive_file_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'data "archive_file" "v1_handler"' in content
-
-
-def test_v1_handler_lambda_function_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_lambda_function" "v1_handler"' in content
-
-
-def test_v1_handler_cloudwatch_log_group_exists():
-    lambda_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_cloudwatch_log_group" "v1_handler"' in content
-
-
 def test_circuit_breaker_remediation_archive_file_exists():
     lambda_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:

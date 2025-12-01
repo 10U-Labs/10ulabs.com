@@ -90,55 +90,6 @@ def test_lambda_runners_handler_has_dynamodb_policy():
     assert 'resource "aws_iam_role_policy" "lambda_runners_handler_dynamodb"' in content
 
 
-def test_lambda_v1_handler_role_exists():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role" "lambda_v1_handler"' in content
-
-
-def test_lambda_v1_handler_has_ecs_policy():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "lambda_v1_handler_ecs"' in content
-
-
-def test_lambda_v1_handler_has_ec2_policy():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "lambda_v1_handler_ec2"' in content
-
-
-def test_lambda_v1_handler_has_iam_pass_role_policy():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "lambda_v1_handler_iam_pass_role"' in content
-
-
-def test_lambda_v1_handler_has_ecr_policy():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "lambda_v1_handler_ecr"' in content
-
-
-def test_lambda_v1_handler_has_ssm_policy():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "lambda_v1_handler_ssm"' in content
-
-
-def test_lambda_v1_handler_has_kms_policy():
-    iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
-    with open(iam_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_iam_role_policy" "lambda_v1_handler_kms"' in content
-
-
 def test_circuit_breaker_remediation_role_exists():
     iam_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "iam.tf"
     with open(iam_file, encoding="utf-8") as f:

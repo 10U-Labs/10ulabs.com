@@ -27,13 +27,6 @@ def test_runners_handler_subscription_filter_exists():
     assert 'resource "aws_cloudwatch_log_subscription_filter" "runners_handler"' in content
 
 
-def test_v1_handler_subscription_filter_exists():
-    log_subscriptions_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "log_subscriptions.tf"
-    with open(log_subscriptions_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'resource "aws_cloudwatch_log_subscription_filter" "v1_handler"' in content
-
-
 def test_circuit_breaker_remediation_subscription_filter_exists():
     log_subscriptions_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "log_subscriptions.tf"
     with open(log_subscriptions_file, encoding="utf-8") as f:
@@ -88,13 +81,6 @@ def test_runners_handler_subscription_has_name():
     with open(log_subscriptions_file, encoding="utf-8") as f:
         content = f.read()
     assert 'name            = "runners-handler-to-firehose"' in content
-
-
-def test_v1_handler_subscription_has_name():
-    log_subscriptions_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "log_subscriptions.tf"
-    with open(log_subscriptions_file, encoding="utf-8") as f:
-        content = f.read()
-    assert 'name            = "v1-handler-to-firehose"' in content
 
 
 def test_circuit_breaker_remediation_subscription_has_name():
