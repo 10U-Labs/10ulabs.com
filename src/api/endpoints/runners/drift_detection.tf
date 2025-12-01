@@ -101,6 +101,11 @@ resource "aws_config_configuration_recorder" "main" {
   recording_mode {
     recording_frequency = "CONTINUOUS"
   }
+
+  depends_on = [
+    aws_iam_role_policy.config_recorder_s3,
+    aws_iam_role_policy_attachment.config_recorder_policy,
+  ]
 }
 
 resource "aws_config_delivery_channel" "main" {

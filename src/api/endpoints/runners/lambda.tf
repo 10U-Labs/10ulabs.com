@@ -51,6 +51,18 @@ resource "aws_lambda_function" "runners_handler" {
   tags = merge(local.common_tags, {
     Name = var.webhook_handler_function_name
   })
+
+  depends_on = [
+    aws_iam_role_policy.lambda_runners_handler_ssm,
+    aws_iam_role_policy.lambda_runners_handler_cloudwatch,
+    aws_iam_role_policy.lambda_runners_handler_sqs,
+    aws_iam_role_policy.lambda_runners_handler_dynamodb,
+    aws_iam_role_policy.lambda_runners_handler_ssm_github_pat,
+    aws_iam_role_policy.lambda_runners_handler_ecs,
+    aws_iam_role_policy.lambda_runners_handler_ec2,
+    aws_iam_role_policy_attachment.lambda_runners_handler_basic,
+    aws_iam_role_policy_attachment.lambda_runners_handler_xray,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "runners_handler" {
@@ -104,6 +116,11 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRemediation"
   })
+
+  depends_on = [
+    aws_iam_role_policy.circuit_breaker_remediation_permissions,
+    aws_iam_role_policy_attachment.circuit_breaker_remediation_basic,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
@@ -151,6 +168,11 @@ resource "aws_lambda_function" "dlq_reprocessor" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-DLQReprocessor"
   })
+
+  depends_on = [
+    aws_iam_role_policy.dlq_reprocessor_permissions,
+    aws_iam_role_policy_attachment.dlq_reprocessor_basic,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
@@ -197,6 +219,11 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-CircuitBreakerRecovery"
   })
+
+  depends_on = [
+    aws_iam_role_policy.circuit_breaker_recovery_permissions,
+    aws_iam_role_policy_attachment.circuit_breaker_recovery_basic,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
@@ -243,6 +270,11 @@ resource "aws_lambda_function" "drift_recovery" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-DriftRecovery"
   })
+
+  depends_on = [
+    aws_iam_role_policy.drift_recovery_permissions,
+    aws_iam_role_policy_attachment.drift_recovery_basic,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "drift_recovery" {
@@ -297,6 +329,11 @@ resource "aws_lambda_function" "spot_interruption_handler" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-SpotInterruptionHandler"
   })
+
+  depends_on = [
+    aws_iam_role_policy.spot_interruption_handler_permissions,
+    aws_iam_role_policy_attachment.spot_interruption_handler_basic,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
@@ -343,6 +380,11 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-StaleRunnerCleanup"
   })
+
+  depends_on = [
+    aws_iam_role_policy.stale_runner_cleanup_permissions,
+    aws_iam_role_policy_attachment.stale_runner_cleanup_basic,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "stale_runner_cleanup" {

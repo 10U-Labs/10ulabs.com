@@ -61,6 +61,13 @@ resource "aws_ecs_task_definition" "runner" {
   tags = merge(local.common_tags, {
     Name = var.task_family
   })
+
+  depends_on = [
+    aws_iam_role_policy.ecs_task_cloudwatch_logs,
+    aws_iam_role_policy.ecs_execution_ssm_access,
+    aws_iam_role_policy.ecs_execution_kms_access,
+    aws_iam_role_policy_attachment.ecs_execution_role_policy,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "runner" {
