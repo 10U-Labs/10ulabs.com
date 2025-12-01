@@ -87,7 +87,7 @@ def dynamodb_client_fixture(aws_region):
 
 @pytest.fixture(name="workflow_runners_table_name", scope="module")
 def workflow_runners_table_name_fixture(config):
-    return config.get("workflow_runners_table_name", "TenULabsWorkflowRunners")
+    return config.get("workflow_runners_table_name", "TenULabs-workflow-runners")
 
 
 @pytest.fixture(name="ecr_image_count", scope="module")
