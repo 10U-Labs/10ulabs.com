@@ -40,9 +40,9 @@ __main__() {
         echo "Error: --runner-user is required"
         usage
     else
-        set_environment_variables --output-arch arch \
-                                  --output-version-codename version_codename \
-                                  --output-docker-key docker_key
+        arch=$(dpkg --print-architecture)
+        version_codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
+        docker_key=/etc/apt/keyrings/docker.asc
 
         add_docker_apt_repository --version-codename "$version_codename" \
                                   --docker-key "$docker_key"
@@ -229,33 +229,6 @@ install_yq() {
 
     curl -sSL -o /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${yq_version}/yq_linux_${arch}"
     chmod +x /usr/local/bin/yq
-}
-
-set_environment_variables() {
-    local -n _output_arch
-    local -n _output_version_codename
-    local -n _output_docker_key
-
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --output-arch)
-                local -n _output_arch="$2"
-                shift 2
-                ;;
-            --output-version-codename)
-                local -n _output_version_codename="$2"
-                shift 2
-                ;;
-            --output-docker-key)
-                local -n _output_docker_key="$2"
-                shift 2
-                ;;
-        esac
-    done
-
-    _output_arch=$(dpkg --print-architecture)
-    _output_version_codename=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2)
-    _output_docker_key=/etc/apt/keyrings/docker.asc
 }
 
 usage() {
