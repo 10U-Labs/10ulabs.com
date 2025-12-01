@@ -66,7 +66,7 @@ resource "aws_iam_role_policy" "lambda_execution" {
         Action = [
           "ssm:GetParameter"
         ]
-        Resource = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_arn_for_github_pat
+        Resource = data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter
       },
       {
         Effect = "Allow"
