@@ -57,31 +57,31 @@ def get_github_repo() -> str:
     return repo
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def aws_region():
     return get_aws_region()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def aws_account_id():
     return get_aws_account_id()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def github_repo():
     return get_github_repo()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def project_root():
     return REPO_ROOT
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def post_dir():
     return POST_DIR
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def config_path():
     return CONFIG_PATH

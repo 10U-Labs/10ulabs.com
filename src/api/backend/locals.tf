@@ -20,6 +20,6 @@ locals {
 
   common_tags = {
     ManagedBy = "terraform"
-    Purpose   = "api-infrastructure"
+    Purpose   = "API infrastructure"
   }
 }

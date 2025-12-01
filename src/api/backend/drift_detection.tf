@@ -126,10 +126,8 @@ resource "aws_config_config_rule" "required_tags" {
   }
 
   input_parameters = jsonencode({
-    tag1Key   = "ManagedBy"
-    tag1Value = "terraform"
-    tag2Key   = "Purpose"
-    tag2Value = "api-infrastructure"
+    tag1Key = "ManagedBy"
+    tag2Key = "Purpose"
   })
 
   scope {
