@@ -94,7 +94,8 @@ def config_fixture() -> Dict[str, Any]:
         'SSM_PARAMETER_NAME_FOR_GITHUB_PAT', '/test/github/pat'
     )
     result['ssm_parameter_name_for_api_key'] = result.get('ssm_parameter_name_for_api_key', '/api/key')
-    result['ecr_repository_name'] = result.get('container_name', 'github-runner')
+    shared = parse_shared_module_outputs()
+    result['ecr_repository_name'] = shared.get('ecr_repository_name', '10ulabs')
     shared_config = parse_shared_config()
     runner_labels = shared_config.get('runner_labels', {})
     result['runner_label_fargate_spot'] = runner_labels.get('fargate_spot', '')
