@@ -310,7 +310,6 @@ on:
     paths:
       - '.github/workflows/api.yml'
       - 'src/api/backend/**'
-      - 'src/api/endpoints/docker_runner/**'
       - 'test/api/backend/**'
   workflow_dispatch:
     inputs:
