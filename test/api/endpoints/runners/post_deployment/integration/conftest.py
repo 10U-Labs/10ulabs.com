@@ -1,4 +1,3 @@
-import os
 import boto3
 import pytest
 import requests
@@ -42,10 +41,12 @@ def api_key_fixture(ssm_client):
 
 
 @pytest.fixture(name="github_pat", scope="module")
-def github_pat_fixture():
-    pat = os.environ.get("GITHUB_PAT")
-    assert pat is not None
-    return pat
+def github_pat_fixture(ssm_client):
+    param_response = ssm_client.get_parameter(Name='/github/pat', WithDecryption=True)
+    result = None
+    if param_response:
+        result = param_response['Parameter']['Value']
+    return result
 
 
 @pytest.fixture(name="github_repo", scope="module")
