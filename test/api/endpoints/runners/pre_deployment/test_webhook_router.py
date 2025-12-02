@@ -35,7 +35,8 @@ def test_lambda_handler_health_check_returns_healthy_status(webhook_router, lamb
 
 
 def test_webhook_router_fixture_sets_api_key_parameter_name(webhook_router):
-    assert hasattr(webhook_router, 'lambda_handler') and os.environ['API_KEY_PARAMETER_NAME']
+    has_handler_and_param = hasattr(webhook_router, 'lambda_handler') and os.environ['API_KEY_PARAMETER_NAME']
+    assert has_handler_and_param
 
 
 

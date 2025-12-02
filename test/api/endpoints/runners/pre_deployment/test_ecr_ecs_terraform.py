@@ -136,13 +136,16 @@ def test_variables_tf_fargate_cpu_architecture_has_no_default(runners_src_path):
     with open(variables_file, encoding="utf-8") as f:
         lines = f.readlines()
     in_cpu_arch_block = False
+    has_default = False
     for line in lines:
         if 'variable "fargate_cpu_architecture"' in line:
             in_cpu_arch_block = True
         if in_cpu_arch_block and line.strip().startswith('}'):
             in_cpu_arch_block = False
-        if in_cpu_arch_block:
-            assert 'default' not in line
+        if in_cpu_arch_block and 'default' in line:
+            has_default = True
+    no_default_found = not has_default
+    assert no_default_found
 
 
 def test_variables_tf_fargate_operating_system_family_has_no_default(runners_src_path):
@@ -150,10 +153,13 @@ def test_variables_tf_fargate_operating_system_family_has_no_default(runners_src
     with open(variables_file, encoding="utf-8") as f:
         lines = f.readlines()
     in_os_family_block = False
+    has_default = False
     for line in lines:
         if 'variable "fargate_operating_system_family"' in line:
             in_os_family_block = True
         if in_os_family_block and line.strip().startswith('}'):
             in_os_family_block = False
-        if in_os_family_block:
-            assert 'default' not in line
+        if in_os_family_block and 'default' in line:
+            has_default = True
+    no_default_found = not has_default
+    assert no_default_found
