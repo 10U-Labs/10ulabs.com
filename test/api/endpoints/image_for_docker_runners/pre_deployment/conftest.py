@@ -18,7 +18,7 @@ entrypoint = importlib.util.module_from_spec(entrypoint_spec)
 sys.modules['entrypoint'] = entrypoint
 entrypoint_spec.loader.exec_module(entrypoint)
 
-promote_path = os.path.join(BASE_DIR, 'promote_docker_image.py')
+promote_path = os.path.join(FILES_DIR, 'promote_docker_image.py')
 promote_spec = importlib.util.spec_from_file_location("promote_docker_image", promote_path)
 if promote_spec is None or promote_spec.loader is None:
     raise ImportError("Could not load promote_docker_image module")
