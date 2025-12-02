@@ -79,7 +79,38 @@ def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) ->
     return result
 
 
-def delete_github_runner(github_token: str, github_repo: str, runner_name: str) -> bool:
+def get_all_github_runners(github_token: str, github_repo: str) -> list:
+    runners: list = []
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    try:
+        page = 1
+        while True:
+            req = urllib.request.Request(
+                f'https://api.github.com/repos/{github_repo}/actions/runners?per_page=100&page={page}',
+                headers=headers
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read())
+                page_runners = data.get('runners', [])
+                runners.extend(page_runners)
+                if len(page_runners) < 100:
+                    page = -1
+                else:
+                    page += 1
+            if page < 0:
+                runners = runners
+    except urllib.error.HTTPError as e:
+        logger.error("Failed to list GitHub runners: %s", e)
+    except urllib.error.URLError as e:
+        logger.error("Failed to list GitHub runners: %s", e)
+    return runners
+
+
+def delete_github_runner_by_id(github_token: str, github_repo: str, runner_id: int, runner_name: str) -> bool:
     result = False
     headers = {
         'Authorization': f'Bearer {github_token}',
@@ -87,35 +118,35 @@ def delete_github_runner(github_token: str, github_repo: str, runner_name: str) 
         'X-GitHub-Api-Version': '2022-11-28'
     }
     try:
-        req = urllib.request.Request(
-            f'https://api.github.com/repos/{github_repo}/actions/runners',
+        delete_req = urllib.request.Request(
+            f'https://api.github.com/repos/{github_repo}/actions/runners/{runner_id}',
+            method='DELETE',
             headers=headers
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read())
-            runners = data.get('runners', [])
-            runner_id = None
-            for runner in runners:
-                if runner.get('name') == runner_name:
-                    runner_id = runner.get('id')
-        if runner_id is None:
+        with urllib.request.urlopen(delete_req, timeout=10):
+            logger.info("Deleted GitHub runner: %s", runner_name)
             result = True
-        else:
-            delete_req = urllib.request.Request(
-                f'https://api.github.com/repos/{github_repo}/actions/runners/{runner_id}',
-                method='DELETE',
-                headers=headers
-            )
-            with urllib.request.urlopen(delete_req, timeout=10):
-                logger.info("Deleted GitHub runner: %s", runner_name)
-                result = True
     except urllib.error.HTTPError as e:
         if e.code == 204:
             result = True
         else:
-            logger.error("Failed to delete GitHub runner: %s", e)
+            logger.error("Failed to delete GitHub runner %s: %s", runner_name, e)
     except urllib.error.URLError as e:
-        logger.error("Failed to delete GitHub runner: %s", e)
+        logger.error("Failed to delete GitHub runner %s: %s", runner_name, e)
+    return result
+
+
+def delete_github_runner(github_token: str, github_repo: str, runner_name: str) -> bool:
+    result = False
+    runners = get_all_github_runners(github_token, github_repo)
+    runner_id = None
+    for runner in runners:
+        if runner.get('name') == runner_name:
+            runner_id = runner.get('id')
+    if runner_id is None:
+        result = True
+    else:
+        result = delete_github_runner_by_id(github_token, github_repo, runner_id, runner_name)
     return result
 
 
@@ -272,6 +303,86 @@ def get_orphaned_ec2_instances() -> list:
     return instances
 
 
+def _has_running_ec2_by_name(runner_name: str) -> bool:
+    result = False
+    ec2_managed_by_tag = os.environ.get('EC2_MANAGED_BY_TAG', '')
+    if not ec2_managed_by_tag:
+        result = False
+    else:
+        try:
+            response = get_ec2_client().describe_instances(
+                Filters=[
+                    {'Name': 'tag:Name', 'Values': [runner_name]},
+                    {'Name': 'tag:ManagedBy', 'Values': [ec2_managed_by_tag]},
+                    {'Name': 'instance-state-name', 'Values': ['pending', 'running']}
+                ]
+            )
+            for reservation in response.get('Reservations', []):
+                if reservation.get('Instances'):
+                    result = True
+        except ClientError as e:
+            logger.error("Failed to check EC2 instance by name %s: %s", runner_name, e)
+    return result
+
+
+def _has_running_ecs_task_by_name(runner_name: str) -> bool:
+    result = False
+    cluster = os.environ.get('ECS_CLUSTER', '')
+    if not cluster:
+        result = False
+    else:
+        try:
+            ecs = get_ecs_client()
+            paginator = ecs.get_paginator('list_tasks')
+            task_arns = []
+            for page in paginator.paginate(cluster=cluster, desiredStatus='RUNNING'):
+                task_arns.extend(page.get('taskArns', []))
+            for i in range(0, len(task_arns), 100):
+                batch = task_arns[i:i + 100]
+                response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=['TAGS'])
+                for task in response.get('tasks', []):
+                    tags = {t['key']: t['value'] for t in task.get('tags', [])}
+                    if tags.get('Name') == runner_name:
+                        result = True
+        except ClientError as e:
+            logger.error("Failed to check ECS task by name %s: %s", runner_name, e)
+    return result
+
+
+def _runner_has_infrastructure(runner_name: str) -> bool:
+    has_ec2 = _has_running_ec2_by_name(runner_name)
+    has_ecs = _has_running_ecs_task_by_name(runner_name) if not has_ec2 else False
+    return has_ec2 or has_ecs
+
+
+def cleanup_orphaned_github_runners(github_token: str) -> dict:
+    counts = {'github_cleaned': 0, 'errors': 0}
+    github_repo = os.environ.get('GITHUB_REPO', '')
+    if not github_repo or not github_token:
+        counts['errors'] = 1
+    else:
+        runners = get_all_github_runners(github_token, github_repo)
+        for runner in runners:
+            status = runner.get('status', '')
+            runner_name = runner.get('name', '')
+            runner_id = runner.get('id')
+            if status != 'offline':
+                continue
+            if not runner_name or not runner_id:
+                continue
+            if _runner_has_infrastructure(runner_name):
+                logger.info("Offline runner %s has infrastructure, skipping", runner_name)
+                continue
+            logger.info("Cleaning up orphaned GitHub runner: %s (id=%s)", runner_name, runner_id)
+            if delete_github_runner_by_id(github_token, github_repo, runner_id, runner_name):
+                counts['github_cleaned'] += 1
+            else:
+                counts['errors'] += 1
+    logger.info("Orphaned GitHub runner cleanup complete: cleaned=%d, errors=%d",
+                counts['github_cleaned'], counts['errors'])
+    return counts
+
+
 def cleanup_orphaned_resources(github_token: str) -> dict:
     counts = {'ecs_cleaned': 0, 'ec2_cleaned': 0, 'errors': 0}
     github_repo = os.environ.get('GITHUB_REPO', '')
@@ -350,11 +461,13 @@ def lambda_handler(_event, _context):
     github_token = get_github_token()
     dynamo_result = cleanup_stale_runners()
     orphan_result = cleanup_orphaned_resources(github_token)
+    github_result = cleanup_orphaned_github_runners(github_token)
     result = {
         'dynamodb_cleaned': dynamo_result['cleaned'],
         'orphaned_ecs_cleaned': orphan_result['ecs_cleaned'],
         'orphaned_ec2_cleaned': orphan_result['ec2_cleaned'],
-        'errors': dynamo_result['errors'] + orphan_result['errors']
+        'orphaned_github_cleaned': github_result['github_cleaned'],
+        'errors': dynamo_result['errors'] + orphan_result['errors'] + github_result['errors']
     }
     logger.info("Full cleanup complete: %s", result)
     response = {
