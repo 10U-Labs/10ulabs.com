@@ -3,9 +3,11 @@ from pathlib import Path
 from typing import Dict
 import pytest
 
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
+
 
 def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent.parent / "lib" / "terraform" / "outputs.tf"
+    outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -17,7 +19,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 
 def parse_website_locals() -> Dict[str, str]:
-    locals_path = Path(__file__).parent.parent.parent / "src" / "home_page" / "locals.tf"
+    locals_path = REPO_ROOT / "src" / "www" / "home_page" / "locals.tf"
     shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
@@ -53,3 +55,32 @@ def config_fixture() -> Dict[str, str]:
     result['github_repo'] = website_locals.get('github_repo_full', '')
     result['resource_prefix'] = website_locals.get('resource_prefix', '')
     return result
+
+
+@pytest.fixture(name="website_src_path")
+def fixture_website_src_path():
+    return REPO_ROOT / "src" / "www" / "home_page"
+
+
+@pytest.fixture(name="cloudfront_s3_tf_content")
+def fixture_cloudfront_s3_tf_content(website_src_path):
+    with open(website_src_path / "cloudfront_s3.tf", encoding="utf-8") as f:
+        return f.read()
+
+
+@pytest.fixture(name="certificate_dns_tf_content")
+def fixture_certificate_dns_tf_content(website_src_path):
+    with open(website_src_path / "certificate_dns.tf", encoding="utf-8") as f:
+        return f.read()
+
+
+@pytest.fixture(name="contact_form_tf_content")
+def fixture_contact_form_tf_content(website_src_path):
+    with open(website_src_path / "contact_form.tf", encoding="utf-8") as f:
+        return f.read()
+
+
+@pytest.fixture(name="contact_lambda_content")
+def fixture_contact_lambda_content(website_src_path):
+    with open(website_src_path / "lambdas" / "contact.py", encoding="utf-8") as f:
+        return f.read()
