@@ -1,6 +1,6 @@
 import time
 
-from ..conftest import make_health_check_request, assert_circuit_breaker_state_in_response
+from .conftest import make_health_check_request, assert_circuit_breaker_state_in_response
 
 
 def test_circuit_breaker_opens_after_threshold_failures(api_url, api_key):

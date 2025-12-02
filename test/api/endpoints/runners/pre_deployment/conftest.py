@@ -171,6 +171,23 @@ def spot_interruption_handler(config):
 
 
 @pytest.fixture
+def stale_runner_cleanup(config):
+    env_vars = {
+        'AWS_REGION': config['aws_region'],
+        'ECS_CLUSTER': config['cluster_name'],
+        'GITHUB_REPO': config['github_repo'],
+        'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
+        'WORKFLOW_RUNNERS_TABLE': 'test-workflow-runners',
+        'EC2_MANAGED_BY_TAG': 'ec2-runner-api'
+    }
+    with patch.dict('os.environ', env_vars):
+        module = load_lambda_module("stale_runner_cleanup.py", "stale_runner_cleanup")
+        if hasattr(module, '_clients'):
+            setattr(module, '_clients', {})
+        yield module
+
+
+@pytest.fixture
 def mock_sqs():
     with patch('boto3.client') as mock_boto_client:
         mock_sqs_client = MagicMock()
