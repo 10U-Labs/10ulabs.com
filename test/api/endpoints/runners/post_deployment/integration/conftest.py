@@ -41,8 +41,9 @@ def api_key_fixture(ssm_client):
 
 
 @pytest.fixture(name="github_pat", scope="module")
-def github_pat_fixture(ssm_client):
-    param_response = ssm_client.get_parameter(Name='/github/pat', WithDecryption=True)
+def github_pat_fixture(ssm_client, config):
+    param_name = config.get('ssm_parameter_name_for_github_pat')
+    param_response = ssm_client.get_parameter(Name=param_name, WithDecryption=True)
     result = None
     if param_response:
         result = param_response['Parameter']['Value']
