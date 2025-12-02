@@ -116,15 +116,21 @@ jobs:
             else
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
-      - if: steps.check_files.outputs.changed == 'true'
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
         name: Get website domain from Terraform output
         run: |
           WEBSITE_FQDN=$(terraform output -raw website_domain_name)
           echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
-      - if: steps.check_files.outputs.changed == 'true'
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          python3 ../../scripts/invalidate_cloudfront.py \
+          python3 ../../../scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/*"
@@ -217,6 +223,11 @@ on:
       - 'src/www/home_page/**'
       - 'test/www/home_page/**'
   workflow_dispatch:
+    inputs:
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
+        type: boolean
 permissions:
   contents: read
   id-token: write
