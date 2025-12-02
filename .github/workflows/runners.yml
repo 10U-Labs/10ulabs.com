@@ -96,6 +96,7 @@ jobs:
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run integration tests
         run: |
+          export GITHUB_PAT=$(aws ssm get-parameter --name "/github/pat" --with-decryption --query "Parameter.Value" --output text)
           python3 -m pytest test/api/endpoints/runners/post_deployment/integration/ \
             --confcutdir=test/api/endpoints/runners \
             -v
