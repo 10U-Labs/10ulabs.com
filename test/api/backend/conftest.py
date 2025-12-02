@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List
@@ -25,9 +24,18 @@ def parse_shared_module_outputs() -> Dict[str, str]:
     return config
 
 
-def get_bootstrap_output(output_name: str, default: str = "") -> str:
-    env_var_name = output_name.upper()
-    return os.environ.get(env_var_name, default)
+def parse_bootstrap_tfvar(var_name: str) -> str:
+    tfvars_path = Path(__file__).parent.parent.parent.parent / "src" / "bootstrap" / "terraform.tfvars"
+    with open(tfvars_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+                if match:
+                    key, value = match.groups()
+                    if key == var_name:
+                        return value.strip('"')
+    return ""
 
 
 def parse_health_tfvars() -> Dict[str, str]:
@@ -87,7 +95,7 @@ def config_fixture() -> Dict[str, str]:
     result['github_org'] = shared.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
-    result['ssm_parameter_name_for_github_pat'] = get_bootstrap_output('ssm_parameter_name_for_github_pat', '/test/github/pat')
+    result['ssm_parameter_name_for_github_pat'] = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
     prefix = result['resource_prefix']
     lambda_fn = result.get('lambda_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
