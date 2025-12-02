@@ -294,13 +294,32 @@ body {
     transform: translateY(0);
 }
 
+.right-panel {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .details-panel {
     background: #f8f9fa;
     border-radius: 15px;
     padding: 15px;
     animation: slideIn 0.3s ease;
-    width: 260px;
-    flex-shrink: 0;
+}
+
+.ads-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.ad-slot {
+    width: 230px;
+    height: 329px;
+    margin: 0 auto;
 }
 
 @keyframes slideIn {
