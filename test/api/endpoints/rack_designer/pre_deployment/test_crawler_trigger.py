@@ -1,25 +1,3 @@
-import os
-from unittest.mock import patch, MagicMock
-from test.rack_designer import load_lambda_module
-import pytest
-
-
-@pytest.fixture(autouse=True)
-def set_env_vars():
-    os.environ['CRAWLER_NAME'] = 'test-crawler'
-    yield
-    del os.environ['CRAWLER_NAME']
-
-
-@pytest.fixture(name="crawler_module")
-def crawler_module_fixture():
-    with patch('boto3.client') as mock_client:
-        mock_glue_client = MagicMock()
-        mock_client.return_value = mock_glue_client
-        module = load_lambda_module("crawler_trigger.py", "crawler_trigger")
-        yield module, mock_glue_client
-
-
 def test_lambda_handler_returns_status_code_200(crawler_module):
     module, _ = crawler_module
     result = module.lambda_handler({}, None)

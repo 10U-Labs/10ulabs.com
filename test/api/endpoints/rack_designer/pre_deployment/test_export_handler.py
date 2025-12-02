@@ -1,29 +1,3 @@
-import os
-from unittest.mock import patch, MagicMock
-from test.rack_designer import load_lambda_module
-import pytest
-
-
-@pytest.fixture(autouse=True)
-def set_env_vars():
-    os.environ['DYNAMODB_TABLE_ARN'] = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events'
-    os.environ['S3_BUCKET'] = 'test-bucket'
-    os.environ['S3_PREFIX'] = 'exports/events'
-    yield
-    del os.environ['DYNAMODB_TABLE_ARN']
-    del os.environ['S3_BUCKET']
-    del os.environ['S3_PREFIX']
-
-
-@pytest.fixture(name="export_module")
-def export_module_fixture():
-    with patch('boto3.client') as mock_client:
-        mock_dynamodb_client = MagicMock()
-        mock_client.return_value = mock_dynamodb_client
-        module = load_lambda_module("export_handler.py", "export_handler")
-        yield module, mock_dynamodb_client
-
-
 def test_lambda_handler_returns_status_code_200(export_module):
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
