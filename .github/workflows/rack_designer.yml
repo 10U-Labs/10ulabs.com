@@ -118,7 +118,7 @@ jobs:
         name: Invalidate CloudFront cache
         run: |
           WEBSITE_FQDN=$(terraform -chdir=../../../www/home_page output -raw website_domain_name)
-          python3 ../../scripts/invalidate_cloudfront.py \
+          python3 ../../../../scripts/invalidate_cloudfront.py \
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/rack-designer/*"
