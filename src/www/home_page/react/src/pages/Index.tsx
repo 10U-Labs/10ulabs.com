@@ -114,6 +114,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="bg-secondary py-8 px-4 border-t border-border">
         <div className="container mx-auto max-w-6xl text-center text-muted-foreground">
+          <a href="/privacy.html" className="text-primary hover:underline mb-2 inline-block">Privacy Notice</a>
           <p>Copyright &copy; 2025 10U Labs, LLC. All rights reserved.</p>
         </div>
       </footer>
