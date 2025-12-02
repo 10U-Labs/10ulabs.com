@@ -202,7 +202,7 @@ jobs:
           python3 -m pytest test/api/endpoints/runners/pre_deployment/ \
             --confcutdir=test/api/endpoints/runners \
             -v
-name: Ensuring the '/v1/runners' API endpoint exists and is properly configured
+name: Ensuring the /v1/runners API endpoint exists and is properly configured
 on:
   push:
     branches:
