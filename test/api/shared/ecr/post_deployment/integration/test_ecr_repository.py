@@ -1,3 +1,6 @@
+import json
+
+
 def test_ecr_repository_exists(ecr_client, config):
     repository_name = config["ecr_repository_name"]
     response = ecr_client.describe_repositories(repositoryNames=[repository_name])
@@ -16,3 +19,97 @@ def test_ecr_repository_has_encryption_enabled(ecr_client, config):
     response = ecr_client.describe_repositories(repositoryNames=[repository_name])
     repo = response['repositories'][0]
     assert 'encryptionConfiguration' in repo
+
+
+def test_ecr_repository_encryption_type_is_aes256(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo = response['repositories'][0]
+    assert repo['encryptionConfiguration']['encryptionType'] == 'AES256'
+
+
+def test_ecr_repository_image_tag_mutability_is_mutable(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo = response['repositories'][0]
+    assert repo['imageTagMutability'] == 'MUTABLE'
+
+
+def test_ecr_repository_has_managed_by_tag(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo_arn = response['repositories'][0]['repositoryArn']
+    tags_response = ecr_client.list_tags_for_resource(resourceArn=repo_arn)
+    tags = {tag['Key']: tag['Value'] for tag in tags_response['tags']}
+    assert tags.get('ManagedBy') == 'terraform'
+
+
+def test_ecr_repository_has_purpose_tag(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo_arn = response['repositories'][0]['repositoryArn']
+    tags_response = ecr_client.list_tags_for_resource(resourceArn=repo_arn)
+    tags = {tag['Key']: tag['Value'] for tag in tags_response['tags']}
+    assert tags.get('Purpose') == 'ecr'
+
+
+def test_ecr_repository_has_name_tag(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo_arn = response['repositories'][0]['repositoryArn']
+    tags_response = ecr_client.list_tags_for_resource(resourceArn=repo_arn)
+    tags = {tag['Key']: tag['Value'] for tag in tags_response['tags']}
+    assert tags.get('Name') == repository_name
+
+
+def test_ecr_lifecycle_policy_exists(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.get_lifecycle_policy(repositoryName=repository_name)
+    assert 'lifecyclePolicyText' in response
+
+
+def test_ecr_lifecycle_policy_has_rule_priority_1(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.get_lifecycle_policy(repositoryName=repository_name)
+    policy = json.loads(response['lifecyclePolicyText'])
+    priorities = [rule['rulePriority'] for rule in policy['rules']]
+    assert 1 in priorities
+
+
+def test_ecr_lifecycle_policy_has_rule_priority_2(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.get_lifecycle_policy(repositoryName=repository_name)
+    policy = json.loads(response['lifecyclePolicyText'])
+    priorities = [rule['rulePriority'] for rule in policy['rules']]
+    assert 2 in priorities
+
+
+def test_ecr_lifecycle_policy_has_rule_priority_10(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.get_lifecycle_policy(repositoryName=repository_name)
+    policy = json.loads(response['lifecyclePolicyText'])
+    priorities = [rule['rulePriority'] for rule in policy['rules']]
+    assert 10 in priorities
+
+
+def test_ecr_lifecycle_policy_has_rule_priority_20(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.get_lifecycle_policy(repositoryName=repository_name)
+    policy = json.loads(response['lifecyclePolicyText'])
+    priorities = [rule['rulePriority'] for rule in policy['rules']]
+    assert 20 in priorities
+
+
+def test_ecr_repository_name_matches_expected(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo = response['repositories'][0]
+    assert repo['repositoryName'] == repository_name
+
+
+def test_ecr_repository_url_contains_region(ecr_client, config):
+    repository_name = config["ecr_repository_name"]
+    aws_region = config["aws_region"]
+    response = ecr_client.describe_repositories(repositoryNames=[repository_name])
+    repo = response['repositories'][0]
+    assert aws_region in repo['repositoryUri']
