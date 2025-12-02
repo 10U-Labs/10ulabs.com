@@ -79,8 +79,8 @@ def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) ->
     return result
 
 
-def get_all_github_runners(github_token: str, github_repo: str) -> list:
-    runners: list = []
+def get_all_github_runners(github_token: str, github_repo: str) -> list | None:
+    runners: list | None = []
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -88,7 +88,8 @@ def get_all_github_runners(github_token: str, github_repo: str) -> list:
     }
     try:
         page = 1
-        while True:
+        has_more = True
+        while has_more:
             req = urllib.request.Request(
                 f'https://api.github.com/repos/{github_repo}/actions/runners?per_page=100&page={page}',
                 headers=headers
@@ -98,15 +99,15 @@ def get_all_github_runners(github_token: str, github_repo: str) -> list:
                 page_runners = data.get('runners', [])
                 runners.extend(page_runners)
                 if len(page_runners) < 100:
-                    page = -1
+                    has_more = False
                 else:
                     page += 1
-            if page < 0:
-                runners = runners
     except urllib.error.HTTPError as e:
         logger.error("Failed to list GitHub runners: %s", e)
+        runners = None
     except urllib.error.URLError as e:
         logger.error("Failed to list GitHub runners: %s", e)
+        runners = None
     return runners
 
 
@@ -139,14 +140,17 @@ def delete_github_runner_by_id(github_token: str, github_repo: str, runner_id: i
 def delete_github_runner(github_token: str, github_repo: str, runner_name: str) -> bool:
     result = False
     runners = get_all_github_runners(github_token, github_repo)
-    runner_id = None
-    for runner in runners:
-        if runner.get('name') == runner_name:
-            runner_id = runner.get('id')
-    if runner_id is None:
-        result = True
+    if runners is None:
+        result = False
     else:
-        result = delete_github_runner_by_id(github_token, github_repo, runner_id, runner_name)
+        runner_id = None
+        for runner in runners:
+            if runner.get('name') == runner_name:
+                runner_id = runner.get('id')
+        if runner_id is None:
+            result = True
+        else:
+            result = delete_github_runner_by_id(github_token, github_repo, runner_id, runner_name)
     return result
 
 
@@ -362,6 +366,9 @@ def cleanup_orphaned_github_runners(github_token: str) -> dict:
         counts['errors'] = 1
     else:
         runners = get_all_github_runners(github_token, github_repo)
+        if runners is None:
+            counts['errors'] = 1
+            runners = []
         for runner in runners:
             status = runner.get('status', '')
             runner_name = runner.get('name', '')
