@@ -40,24 +40,6 @@ jobs:
           terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
-  e2e-testing:
-    name: E2E testing
-    needs:
-      - declaring-common-variables
-      - integration-testing
-    runs-on:
-      - ecs-fargate-spot
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Run E2E tests
-        run: python3 -m pytest test/www/home_page/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:

@@ -176,3 +176,67 @@ def test_rack_designer_post_returns_cors_headers(api_url):
         timeout=10
     )
     assert "Access-Control-Allow-Origin" in response.headers
+
+
+def test_rack_designer_roundtrip_returns_correct_rack_count(api_url):
+    config = {
+        "rackHeight": 24,
+        "rackCount": 3,
+        "placedParts": []
+    }
+    post_response = requests.post(
+        f"{api_url}/v1/rack-designer/configurations",
+        json={"configuration": config},
+        timeout=10
+    )
+    config_hash = post_response.json()["config_hash"]
+    get_response = requests.get(
+        f"{api_url}/v1/rack-designer/configurations/{config_hash}",
+        timeout=10
+    )
+    data = get_response.json()
+    assert data["configuration"]["rackCount"] == 3
+
+
+def test_rack_designer_roundtrip_preserves_custom_name(api_url):
+    config = {
+        "rackHeight": 12,
+        "rackCount": 1,
+        "placedParts": [
+            {"type": "server", "size": 2, "rackId": 1, "startSlot": 1, "customName": "Web Server", "customColor": None}
+        ]
+    }
+    post_response = requests.post(
+        f"{api_url}/v1/rack-designer/configurations",
+        json={"configuration": config},
+        timeout=10
+    )
+    config_hash = post_response.json()["config_hash"]
+    get_response = requests.get(
+        f"{api_url}/v1/rack-designer/configurations/{config_hash}",
+        timeout=10
+    )
+    data = get_response.json()
+    assert data["configuration"]["placedParts"][0]["customName"] == "Web Server"
+
+
+def test_rack_designer_roundtrip_preserves_custom_color(api_url):
+    config = {
+        "rackHeight": 12,
+        "rackCount": 1,
+        "placedParts": [
+            {"type": "server", "size": 2, "rackId": 1, "startSlot": 1, "customName": None, "customColor": "#3498db"}
+        ]
+    }
+    post_response = requests.post(
+        f"{api_url}/v1/rack-designer/configurations",
+        json={"configuration": config},
+        timeout=10
+    )
+    config_hash = post_response.json()["config_hash"]
+    get_response = requests.get(
+        f"{api_url}/v1/rack-designer/configurations/{config_hash}",
+        timeout=10
+    )
+    data = get_response.json()
+    assert data["configuration"]["placedParts"][0]["customColor"] == "#3498db"
