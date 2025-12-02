@@ -140,7 +140,7 @@ jobs:
           tflint_version: latest
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3
+        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs
       - name: Linting YAML files
         run: |
           DOCUMENT_START='document-start: disable'
