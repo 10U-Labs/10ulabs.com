@@ -80,7 +80,8 @@ def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) ->
 
 
 def get_all_github_runners(github_token: str, github_repo: str) -> list | None:
-    runners: list | None = []
+    result: list | None = None
+    runners: list = []
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -102,13 +103,12 @@ def get_all_github_runners(github_token: str, github_repo: str) -> list | None:
                     has_more = False
                 else:
                     page += 1
+        result = runners
     except urllib.error.HTTPError as e:
         logger.error("Failed to list GitHub runners: %s", e)
-        runners = None
     except urllib.error.URLError as e:
         logger.error("Failed to list GitHub runners: %s", e)
-        runners = None
-    return runners
+    return result
 
 
 def delete_github_runner_by_id(github_token: str, github_repo: str, runner_id: int, runner_name: str) -> bool:
