@@ -176,6 +176,22 @@ function handler(event) {
     if (uri.startsWith('/rack-designer/')) {
         return request;
     }
+    if (uri === '/simulations/soc') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: {
+                'location': { value: 'https://' + host + '/simulations/soc/' }
+            }
+        };
+    }
+    if (uri === '/simulations/soc/') {
+        request.uri = '/simulations/soc/index.html';
+        return request;
+    }
+    if (uri.startsWith('/simulations/soc/')) {
+        return request;
+    }
     if (uri.endsWith('/')) {
         request.uri = '/index.html';
     } else if (!uri.includes('.')) {
