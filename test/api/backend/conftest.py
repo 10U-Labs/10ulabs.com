@@ -1,10 +1,10 @@
 import re
 from pathlib import Path
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 from typing import Any, Dict, List
+
 import boto3
 import pytest
-
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
