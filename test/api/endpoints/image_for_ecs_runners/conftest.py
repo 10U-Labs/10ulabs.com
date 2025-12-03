@@ -4,12 +4,12 @@ import subprocess
 import pytest
 
 
-SHARED_MODULE_PATH = os.path.join(os.path.dirname(__file__), '../../lib/terraform/outputs.tf')
+SHARED_MODULE_PATH = os.path.join(os.path.dirname(__file__), '../../../../lib/terraform/outputs.tf')
 BASE_DIR = os.path.join(os.path.dirname(__file__), '../../../../src/api/endpoints/image_for_ecs_runners')
 FILES_DIR = os.path.join(BASE_DIR, 'files')
 CONFIG_PATH = os.path.join(FILES_DIR, 'config.yml')
 DOCKERFILE_PATH = os.path.join(FILES_DIR, 'Dockerfile')
-TFVARS_PATH = os.path.join(os.path.dirname(__file__), '../../src/api/backend/terraform.tfvars')
+TFVARS_PATH = os.path.join(os.path.dirname(__file__), '../../../../src/api/backend/terraform.tfvars')
 
 
 def _get_terraform_output_value(output_name):
