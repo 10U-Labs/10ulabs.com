@@ -30,7 +30,7 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
         'EC2_MANAGED_BY_TAG': 'api-ec2-spot-runner',
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
-        'EC2_INSTANCE_TYPES': ','.join(config['ec2_spot_instance_types']),
+        'EC2_INSTANCE_TYPES': ','.join(config['ec2_instance_types']),
         'EC2_MAX_PRICE': config['ec2_max_spot_price'],
         'API_DOMAIN': config['api_fqdn'],
         'SUBNETS': 'subnet-test1,subnet-test2',

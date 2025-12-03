@@ -23,7 +23,7 @@ resource "aws_lambda_function" "handler" {
       EC2_AMI_PURPOSE_VALUE    = local.ec2_runner_ami_purpose_value
       EC2_AMI_STABLE_TAG       = local.ec2_runner_ami_stable_tag
       EC2_IAM_INSTANCE_PROFILE = aws_iam_instance_profile.ec2_runner.name
-      EC2_INSTANCE_TYPES       = join(",", var.ec2_spot_instance_types)
+      EC2_INSTANCE_TYPES       = join(",", var.ec2_instance_types)
       EC2_MANAGED_BY_TAG       = local.ec2_runner_managed_by_tag
       EC2_MAX_PRICE            = var.ec2_max_spot_price
       GITHUB_REPO              = local.github_repo_full

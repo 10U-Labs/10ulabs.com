@@ -70,8 +70,8 @@ output "ec2_runner_role_name" {
   value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_role_name
 }
 
-output "ec2_spot_instance_types" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_spot_instance_types
+output "ec2_instance_types" {
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_types
 }
 
 output "ec2_max_spot_price" {

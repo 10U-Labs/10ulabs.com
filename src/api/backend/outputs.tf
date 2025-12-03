@@ -42,6 +42,6 @@ output "ec2_runner_ami_stable_tag" {
   value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_ami_stable_tag
 }
 
-output "ec2_spot_instance_types" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_spot_instance_types
+output "ec2_instance_types" {
+  value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_types
 }

@@ -36,7 +36,7 @@ data "terraform_remote_state" "ec2_runner" {
     ec2_runner_managed_by_tag    = ""
     ec2_runner_role_arn          = ""
     ec2_runner_role_name         = ""
-    ec2_spot_instance_types      = []
+    ec2_instance_types           = []
     lambda_function_arn          = ""
     lambda_function_name         = ""
   }

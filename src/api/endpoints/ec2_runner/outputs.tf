@@ -30,8 +30,8 @@ output "ec2_runner_role_name" {
   value = aws_iam_role.ec2_runner.name
 }
 
-output "ec2_spot_instance_types" {
-  value = var.ec2_spot_instance_types
+output "ec2_instance_types" {
+  value = var.ec2_instance_types
 }
 
 output "lambda_function_arn" {

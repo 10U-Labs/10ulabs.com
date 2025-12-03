@@ -187,7 +187,7 @@ jobs:
           cd src/api/backend
           terraform init -backend=true -input=false
           OS_ARCHITECTURE=$(terraform output -raw fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
-          INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types | tr -d '[]" ')
+          INSTANCE_TYPES=$(terraform output -json ec2_instance_types | tr -d '[]" ')
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
           echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
       - name: Install yq
