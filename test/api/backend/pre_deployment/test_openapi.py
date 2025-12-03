@@ -163,3 +163,15 @@ def test_openapi_spec_health_options_allows_wildcard_origin(openapi_spec):
     response_params = integration['responses']['default']['responseParameters']
     origin_value = response_params['method.response.header.Access-Control-Allow-Origin']
     assert "'*'" in origin_value
+
+
+def test_openapi_spec_has_simulation_soc_endpoint(openapi_spec):
+    assert '/v1/simultation-soc' in openapi_spec['paths']
+
+
+def test_openapi_spec_simulation_soc_has_post_method(openapi_spec):
+    assert 'post' in openapi_spec['paths']['/v1/simultation-soc']
+
+
+def test_openapi_spec_simulation_soc_has_options_method(openapi_spec):
+    assert 'options' in openapi_spec['paths']['/v1/simultation-soc']

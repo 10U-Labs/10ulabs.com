@@ -144,3 +144,10 @@ def test_api_gateway_propagation_wait_polls_echo_endpoint():
     with open(apigateway_file, encoding="utf-8") as f:
         content = f.read()
     assert "/v1/echo" in content
+
+
+def test_lambda_permission_simulation_soc_handler_exists():
+    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
+    with open(apigateway_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_lambda_permission" "simulation_soc_handler"' in content
