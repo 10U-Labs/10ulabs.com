@@ -167,7 +167,7 @@ jobs:
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/www_simulations_soc.yml
+            .github/workflows/simulation_soc.yml
       - name: Run pylint on source
         run: |
           python3 -m pylint src/api/endpoints/simulation_soc/lambda/handler.py \
@@ -216,7 +216,7 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/www_simulations_soc.yml'
+      - '.github/workflows/simulation_soc.yml'
       - 'src/api/endpoints/simulation_soc/**'
       - 'src/www/paths/simulations/soc/**'
       - 'test/api/endpoints/simulation_soc/**'

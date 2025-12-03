@@ -149,7 +149,7 @@ jobs:
           RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/www_rack_designer.yml
+            .github/workflows/rack_designer.yml
       - name: Run pylint
         run: |
           for file in src/api/endpoints/rack_designer/lambdas/*.py; do
@@ -200,7 +200,7 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/www_rack_designer.yml'
+      - '.github/workflows/rack_designer.yml'
       - 'src/api/endpoints/rack_designer/**'
       - 'src/www/paths/rack_designer/**'
       - 'test/api/endpoints/rack_designer/**'
