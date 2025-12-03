@@ -30,7 +30,7 @@ resource "aws_lambda_function" "runners_handler" {
       RUNNER_LABEL_FARGATE_E2E  = local.runner_label_fargate_e2e
       WORKFLOW_RUNNERS_TABLE    = aws_dynamodb_table.workflow_runners.name
       GITHUB_TOKEN_SECRET_NAME  = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
-      ECS_CLUSTER               = aws_ecs_cluster.runner.arn
+      ECS_CLUSTER               = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO               = local.github_repo_full
     }
   }
@@ -314,7 +314,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
     variables = {
       API_BASE_URL             = "https://${local.api_fqdn}"
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      ECS_CLUSTER              = aws_ecs_cluster.runner.arn
+      ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
       WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
@@ -365,7 +365,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
 
   environment {
     variables = {
-      ECS_CLUSTER              = aws_ecs_cluster.runner.arn
+      ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
       WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name

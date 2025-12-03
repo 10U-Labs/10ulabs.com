@@ -91,7 +91,7 @@ resource "aws_cloudwatch_event_rule" "ecs_task_stopped" {
     source      = ["aws.ecs"]
     detail-type = ["ECS Task State Change"]
     detail = {
-      clusterArn = [aws_ecs_cluster.runner.arn]
+      clusterArn = [data.terraform_remote_state.ecs_runner.outputs.cluster_arn]
       lastStatus = ["STOPPED"]
     }
   })
