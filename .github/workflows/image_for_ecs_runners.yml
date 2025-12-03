@@ -29,7 +29,7 @@ jobs:
           AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           ECR_REPOSITORY_NAME=$(grep -A1 'output "ecr_repository_name"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' src/api/backend/terraform.tfvars | cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
+          FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' src/api/endpoints/ecs_runner/terraform.tfvars | cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
           RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
