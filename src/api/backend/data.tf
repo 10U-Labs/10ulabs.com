@@ -63,12 +63,12 @@ data "terraform_remote_state" "echo" {
   }
 }
 
-data "terraform_remote_state" "image_for_docker_runners" {
+data "terraform_remote_state" "image_for_ecs_runners" {
   backend = "s3"
 
   config = {
     bucket = "10ulabs-terraform-state"
-    key    = "image_for_docker_runners/terraform.tfstate"
+    key    = "image_for_ecs_runners/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -83,12 +83,12 @@ data "terraform_remote_state" "image_for_ec2_runners" {
   }
 }
 
-data "terraform_remote_state" "docker_runner" {
+data "terraform_remote_state" "ecs_runner" {
   backend = "s3"
 
   config = {
     bucket = "10ulabs-terraform-state"
-    key    = "api/endpoints/docker_runner/terraform.tfstate"
+    key    = "api/endpoints/ecs_runner/terraform.tfstate"
     region = "us-east-1"
   }
 

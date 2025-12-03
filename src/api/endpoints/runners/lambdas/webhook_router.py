@@ -469,9 +469,9 @@ def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
     if is_ec2:
         return ('ec2', 'ec2-runner')
     if is_fargate and is_e2e:
-        return ('fargate-e2e', 'docker-runner')
+        return ('fargate-e2e', 'ecs-runner')
     if is_fargate:
-        return ('fargate', 'docker-runner')
+        return ('fargate', 'ecs-runner')
     return (None, None)
 
 

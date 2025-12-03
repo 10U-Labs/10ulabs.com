@@ -24,7 +24,7 @@ def test_oversized_payload_returns_413(api_url):
 def test_internal_server_error_returns_500(api_url, api_key):
     headers = {"x-api-key": api_key, "x-test-mode": "true"}
     payload = {"job_id": "invalid-type", "github_repo": "test/repo"}
-    response = requests.post(f"{api_url}/v1/docker-runner", json=payload, headers=headers, timeout=10)
+    response = requests.post(f"{api_url}/v1/ecs-runner", json=payload, headers=headers, timeout=10)
     assert response.status_code in [200, 400, 403, 500]
 
 

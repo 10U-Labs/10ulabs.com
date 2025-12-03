@@ -221,12 +221,12 @@ def catchall_unknown_event():
 
 
 @pytest.fixture
-def docker_runner_post_event_factory():
+def ecs_runner_post_event_factory():
     def _create_event(job_id=123, job_labels=None, github_repo='test/repo'):
         if job_labels is None:
             job_labels = ['fargate', 'self-hosted']
         return {
-            'path': '/v1/docker-runner',
+            'path': '/v1/ecs-runner',
             'httpMethod': 'POST',
             'body': json.dumps({
                 'job_id': job_id,

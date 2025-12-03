@@ -262,7 +262,7 @@ def test_is_orphaned_ecs_task_returns_none_when_no_start_time(stale_runner_clean
     task = {
         'tags': [
             {'key': 'Type', 'value': 'workflow-runner'},
-            {'key': 'ManagedBy', 'value': 'docker-runner-api'}
+            {'key': 'ManagedBy', 'value': 'ecs-runner-api'}
         ],
         'taskArn': 'arn'
     }
@@ -276,7 +276,7 @@ def test_is_orphaned_ecs_task_returns_none_when_recent(stale_runner_cleanup):
     task = {
         'tags': [
             {'key': 'Type', 'value': 'workflow-runner'},
-            {'key': 'ManagedBy', 'value': 'docker-runner-api'}
+            {'key': 'ManagedBy', 'value': 'ecs-runner-api'}
         ],
         'taskArn': 'arn',
         'startedAt': current_time - timedelta(minutes=30)
@@ -290,7 +290,7 @@ def test_is_orphaned_ecs_task_returns_task_when_stale(stale_runner_cleanup):
     task = {
         'tags': [
             {'key': 'Type', 'value': 'workflow-runner'},
-            {'key': 'ManagedBy', 'value': 'docker-runner-api'},
+            {'key': 'ManagedBy', 'value': 'ecs-runner-api'},
             {'key': 'Name', 'value': 'runner-1'},
             {'key': 'GitHubRepo', 'value': 'owner/repo'}
         ],
@@ -396,7 +396,7 @@ def test_cleanup_orphaned_resources_cleans_ecs_tasks(stale_runner_cleanup):
             'startedAt': current_time - timedelta(hours=2),
             'tags': [
                 {'key': 'Type', 'value': 'workflow-runner'},
-                {'key': 'ManagedBy', 'value': 'docker-runner-api'}
+                {'key': 'ManagedBy', 'value': 'ecs-runner-api'}
             ]
         }]
     }

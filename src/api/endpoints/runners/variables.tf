@@ -34,14 +34,6 @@ variable "public_subnet_cidr_mask" {
   type = number
 }
 
-variable "fargate_cpu" {
-  type = string
-}
-
-variable "fargate_memory" {
-  type = string
-}
-
 variable "lambda_memory_mb" {
   type = number
 }
@@ -54,35 +46,11 @@ variable "vpc_name" {
   type = string
 }
 
-variable "cluster_name" {
-  type = string
-}
-
-variable "container_name" {
-  type = string
-}
-
-variable "task_family" {
-  type = string
-}
-
-variable "log_stream_prefix" {
-  type = string
-}
-
 variable "ssm_parameter_name_for_webhook_secret" {
   type = string
 }
 
 variable "circuit_breaker_alert_email" {
-  type = string
-}
-
-variable "fargate_cpu_architecture" {
-  type = string
-}
-
-variable "fargate_operating_system_family" {
   type = string
 }
 

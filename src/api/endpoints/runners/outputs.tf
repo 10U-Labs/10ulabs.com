@@ -18,26 +18,6 @@ output "runner_security_group_id" {
   value = aws_security_group.runner_sg.id
 }
 
-output "cluster_arn" {
-  value = aws_ecs_cluster.runner.arn
-}
-
-output "cluster_name" {
-  value = aws_ecs_cluster.runner.name
-}
-
-output "task_definition_arn" {
-  value = aws_ecs_task_definition.runner.arn
-}
-
-output "task_role_arn" {
-  value = aws_iam_role.ecs_task_role.arn
-}
-
-output "execution_role_arn" {
-  value = aws_iam_role.ecs_execution_role.arn
-}
-
 output "workflow_runners_table_name" {
   value = aws_dynamodb_table.workflow_runners.name
 }
@@ -56,10 +36,6 @@ output "webhook_parameter_name" {
 
 output "webhook_parameter_arn" {
   value = aws_ssm_parameter.webhook_secret.arn
-}
-
-output "container_name" {
-  value = var.container_name
 }
 
 output "ecr_repository_arn" {
@@ -112,10 +88,6 @@ output "ec2_runner_role_arn" {
 
 output "ssm_parameter_name_for_latest_ami" {
   value = aws_ssm_parameter.latest_ami.name
-}
-
-output "fargate_cpu_architecture" {
-  value = var.fargate_cpu_architecture
 }
 
 output "api_endpoint" {

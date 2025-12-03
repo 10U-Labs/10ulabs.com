@@ -1,0 +1,8 @@
+cluster_name                    = "TenULabsRunnerCluster"
+container_name                  = "github-runner"
+fargate_cpu                     = "4096"
+fargate_cpu_architecture        = "ARM64"
+fargate_memory                  = "16384"
+fargate_operating_system_family = "LINUX"
+log_stream_prefix               = "github-runner"
+task_family                     = "github-runner"

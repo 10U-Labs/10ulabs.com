@@ -56,6 +56,26 @@ data "terraform_remote_state" "api" {
   }
 }
 
+data "terraform_remote_state" "ecs_runner" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/endpoints/ecs_runner/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+
+  defaults = {
+    cluster_arn              = ""
+    cluster_name             = ""
+    container_name           = ""
+    execution_role_arn       = ""
+    fargate_cpu_architecture = ""
+    task_definition_arn      = ""
+    task_role_arn            = ""
+  }
+}
+
 data "aws_ssm_parameter" "github_pat" {
   name            = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
   with_decryption = true

@@ -306,60 +306,60 @@ paths:
         uri: ${ImageForEC2RunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runners:
+  /v1/image-for-ecs-runners:
     post:
-      summary: Build Image for Docker Runners
-      description: Triggers a build of a new Docker runner image
-      operationId: buildDockerRunnerImage
+      summary: Build Image for ECS Runners
+      description: Triggers a build of a new ECS runner image
+      operationId: buildEcsRunnerImage
       tags:
-        - Image for Docker runners
+        - Image for ECS runners
       security:
         - api_key: []
       responses:
         '200':
-          description: Docker image build started successfully
+          description: ECS image build started successfully
       x-amazon-apigateway-integration:
-        uri: ${ImageForDockerRunnersHandlerArn}
+        uri: ${ImageForEcsRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
     get:
-      summary: List Images for Docker Runners
-      description: Lists all available Docker runner images
-      operationId: listDockerRunnerImages
+      summary: List Images for ECS Runners
+      description: Lists all available ECS runner images
+      operationId: listEcsRunnerImages
       tags:
-        - Image for Docker runners
+        - Image for ECS runners
       security:
         - api_key: []
       responses:
         '200':
-          description: List of Docker images
+          description: List of ECS images
       x-amazon-apigateway-integration:
-        uri: ${ImageForDockerRunnersHandlerArn}
+        uri: ${ImageForEcsRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runners/latest:
+  /v1/image-for-ecs-runners/latest:
     get:
-      summary: Get Latest Image for Docker Runners
-      description: Returns the latest Docker runner image
-      operationId: getLatestDockerRunnerImage
+      summary: Get Latest Image for ECS Runners
+      description: Returns the latest ECS runner image
+      operationId: getLatestEcsRunnerImage
       tags:
-        - Image for Docker runners
+        - Image for ECS runners
       security:
         - api_key: []
       responses:
         '200':
-          description: Latest Docker image information
+          description: Latest ECS image information
       x-amazon-apigateway-integration:
-        uri: ${ImageForDockerRunnersHandlerArn}
+        uri: ${ImageForEcsRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/image-for-docker-runners/{digest}:
+  /v1/image-for-ecs-runners/{digest}:
     get:
-      summary: Get Image for Docker Runners by Digest
-      description: Returns a specific Docker runner image by digest
-      operationId: getDockerRunnerImageByDigest
+      summary: Get Image for ECS Runners by Digest
+      description: Returns a specific ECS runner image by digest
+      operationId: getEcsRunnerImageByDigest
       tags:
-        - Image for Docker runners
+        - Image for ECS runners
       security:
         - api_key: []
       parameters:
@@ -370,17 +370,17 @@ paths:
             type: string
       responses:
         '200':
-          description: Docker image information
+          description: ECS image information
       x-amazon-apigateway-integration:
-        uri: ${ImageForDockerRunnersHandlerArn}
+        uri: ${ImageForEcsRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
     delete:
-      summary: Delete Image for Docker Runners
-      description: Deletes a specific Docker runner image by digest
-      operationId: deleteDockerRunnerImage
+      summary: Delete Image for ECS Runners
+      description: Deletes a specific ECS runner image by digest
+      operationId: deleteEcsRunnerImage
       tags:
-        - Image for Docker runners
+        - Image for ECS runners
       security:
         - api_key: []
       parameters:
@@ -391,38 +391,38 @@ paths:
             type: string
       responses:
         '200':
-          description: Docker image deleted successfully
+          description: ECS image deleted successfully
       x-amazon-apigateway-integration:
-        uri: ${ImageForDockerRunnersHandlerArn}
+        uri: ${ImageForEcsRunnersHandlerArn}
         httpMethod: POST
         type: aws_proxy
-  /v1/docker-runner:
+  /v1/ecs-runner:
     post:
-      summary: Create Docker Runner
-      description: Creates a new Docker runner instance
-      operationId: createDockerRunner
+      summary: Create ECS Runner
+      description: Creates a new ECS runner instance
+      operationId: createEcsRunner
       tags:
         - Runners
       security:
         - api_key: []
       responses:
         '200':
-          description: Docker runner created successfully
+          description: ECS runner created successfully
       x-amazon-apigateway-integration:
-        uri: ${DockerRunnerHandlerArn}
+        uri: ${EcsRunnerHandlerArn}
         httpMethod: POST
         type: aws_proxy
     get:
-      summary: Get Docker Runner Status
-      description: Returns the status of currently running Docker (Fargate) runner instances
-      operationId: getDockerRunnerStatus
+      summary: Get ECS Runner Status
+      description: Returns the status of currently running ECS (Fargate) runner instances
+      operationId: getEcsRunnerStatus
       tags:
         - Runners
       security:
         - api_key: []
       responses:
         '200':
-          description: Docker runner status including running tasks count and task details
+          description: ECS runner status including running tasks count and task details
           content:
             application/json:
               schema:
@@ -467,7 +467,7 @@ paths:
                   cluster:
                     type: string
       x-amazon-apigateway-integration:
-        uri: ${DockerRunnerHandlerArn}
+        uri: ${EcsRunnerHandlerArn}
         httpMethod: POST
         type: aws_proxy
       x-amazon-apigateway-api-key-required: true
@@ -1005,8 +1005,8 @@ tags:
     description: GitHub runner management endpoints
   - name: Image for EC2 runners
     description: EC2 runner AMI management endpoints
-  - name: Image for Docker runners
-    description: Docker runner image management endpoints
+  - name: Image for ECS runners
+    description: ECS runner image management endpoints
   - name: Contact
     description: Contact form endpoints
   - name: Rack Designer

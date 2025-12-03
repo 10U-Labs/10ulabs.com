@@ -2,11 +2,11 @@ locals {
   openapi_spec = templatefile("${path.module}/../../www/api/openapi.yml", {
     CatchAllHandlerArn              = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
     ContactHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.contact.outputs.lambda_function_arn}/invocations"
-    DockerRunnerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.docker_runner.outputs.lambda_function_arn}/invocations"
+    EcsRunnerHandlerArn             = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ecs_runner.outputs.lambda_function_arn}/invocations"
     EC2RunnerHandlerArn             = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ec2_runner.outputs.lambda_function_arn}/invocations"
     EchoHandlerArn                  = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations"
     HealthHandlerArn                = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations"
-    ImageForDockerRunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_docker_runners.outputs.lambda_function_arn}/invocations"
+    ImageForEcsRunnersHandlerArn    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_arn}/invocations"
     ImageForEC2RunnersHandlerArn    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
     RackDesignerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
     RunnersHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations"
@@ -154,12 +154,12 @@ resource "aws_lambda_permission" "contact_handler" {
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/contact*"
 }
 
-resource "aws_lambda_permission" "image_for_docker_runners_handler" {
+resource "aws_lambda_permission" "image_for_ecs_runners_handler" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = data.terraform_remote_state.image_for_docker_runners.outputs.lambda_function_name
+  function_name = data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-docker-runners*"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-ecs-runners*"
 }
 
 resource "aws_lambda_permission" "image_for_ec2_runners_handler" {
@@ -170,12 +170,12 @@ resource "aws_lambda_permission" "image_for_ec2_runners_handler" {
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-ec2-runners*"
 }
 
-resource "aws_lambda_permission" "docker_runner_handler" {
+resource "aws_lambda_permission" "ecs_runner_handler" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = data.terraform_remote_state.docker_runner.outputs.lambda_function_name
+  function_name = data.terraform_remote_state.ecs_runner.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/docker-runner*"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/ecs-runner*"
 }
 
 resource "aws_lambda_permission" "ec2_runner_handler" {

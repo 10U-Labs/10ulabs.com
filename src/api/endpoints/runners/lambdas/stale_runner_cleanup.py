@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 _clients = {}
 
 STALE_THRESHOLD_SECONDS = 3600
-ECS_MANAGED_BY_TAG = 'docker-runner-api'
+ECS_MANAGED_BY_TAG = 'ecs-runner-api'
 WORKFLOW_RUNNER_TYPE_TAG = 'workflow-runner'
 
 
