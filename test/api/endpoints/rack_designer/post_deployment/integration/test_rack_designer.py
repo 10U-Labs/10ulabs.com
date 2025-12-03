@@ -1,43 +1,43 @@
 import requests
 
 
-def test_rack_designer_post_returns_200(api_url):
+def test_rack_designer_post_returns_200(api_url, test_device_id):
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     assert response.status_code == 200
 
 
-def test_rack_designer_post_returns_config_hash(api_url):
+def test_rack_designer_post_returns_config_hash(api_url, test_device_id):
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     data = response.json()
     assert "config_hash" in data
 
 
-def test_rack_designer_post_config_hash_is_9_chars(api_url):
+def test_rack_designer_post_config_hash_is_9_chars(api_url, test_device_id):
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     data = response.json()
     assert len(data["config_hash"]) == 9
 
 
-def test_rack_designer_post_config_hash_uses_valid_chars(api_url):
+def test_rack_designer_post_config_hash_uses_valid_chars(api_url, test_device_id):
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     data = response.json()
@@ -45,35 +45,45 @@ def test_rack_designer_post_config_hash_uses_valid_chars(api_url):
     assert all(c in valid_chars for c in data["config_hash"])
 
 
-def test_rack_designer_post_same_config_same_hash(api_url):
+def test_rack_designer_post_same_config_same_hash(api_url, test_device_id):
     config = {"rackHeight": 24, "rackCount": 2, "placedParts": []}
     response1 = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     response2 = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     assert response1.json()["config_hash"] == response2.json()["config_hash"]
 
 
-def test_rack_designer_post_missing_configuration_returns_400(api_url):
+def test_rack_designer_post_missing_device_id_returns_400(api_url):
+    config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={},
+        json={"configuration": config},
         timeout=10
     )
     assert response.status_code == 400
 
 
-def test_rack_designer_post_invalid_configuration_returns_400(api_url):
+def test_rack_designer_post_missing_configuration_returns_400(api_url, test_device_id):
+    response = requests.post(
+        f"{api_url}/v1/rack-designer/configurations",
+        json={"device_id": test_device_id},
+        timeout=10
+    )
+    assert response.status_code == 400
+
+
+def test_rack_designer_post_invalid_configuration_returns_400(api_url, test_device_id):
     config = {"rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     assert response.status_code == 400
@@ -95,7 +105,7 @@ def test_rack_designer_get_invalid_format_returns_400(api_url):
     assert response.status_code == 400
 
 
-def test_rack_designer_roundtrip_saves_and_loads(api_url):
+def test_rack_designer_roundtrip_saves_and_loads(api_url, test_device_id):
     config = {
         "rackHeight": 42,
         "rackCount": 5,
@@ -105,7 +115,7 @@ def test_rack_designer_roundtrip_saves_and_loads(api_url):
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     config_hash = post_response.json()["config_hash"]
@@ -116,7 +126,7 @@ def test_rack_designer_roundtrip_saves_and_loads(api_url):
     assert get_response.status_code == 200
 
 
-def test_rack_designer_roundtrip_returns_correct_config(api_url):
+def test_rack_designer_roundtrip_returns_correct_config(api_url, test_device_id):
     config = {
         "rackHeight": 36,
         "rackCount": 4,
@@ -126,7 +136,7 @@ def test_rack_designer_roundtrip_returns_correct_config(api_url):
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     config_hash = post_response.json()["config_hash"]
@@ -138,7 +148,7 @@ def test_rack_designer_roundtrip_returns_correct_config(api_url):
     assert data["configuration"]["rackHeight"] == 36
 
 
-def test_rack_designer_roundtrip_preserves_placed_parts(api_url):
+def test_rack_designer_roundtrip_preserves_placed_parts(api_url, test_device_id):
     config = {
         "rackHeight": 12,
         "rackCount": 1,
@@ -148,7 +158,7 @@ def test_rack_designer_roundtrip_preserves_placed_parts(api_url):
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     config_hash = post_response.json()["config_hash"]
@@ -168,17 +178,17 @@ def test_rack_designer_options_returns_cors_headers(api_url):
     assert response.status_code == 200
 
 
-def test_rack_designer_post_returns_cors_headers(api_url):
+def test_rack_designer_post_returns_cors_headers(api_url, test_device_id):
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     assert "Access-Control-Allow-Origin" in response.headers
 
 
-def test_rack_designer_roundtrip_returns_correct_rack_count(api_url):
+def test_rack_designer_roundtrip_returns_correct_rack_count(api_url, test_device_id):
     config = {
         "rackHeight": 24,
         "rackCount": 3,
@@ -186,7 +196,7 @@ def test_rack_designer_roundtrip_returns_correct_rack_count(api_url):
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     config_hash = post_response.json()["config_hash"]
@@ -198,7 +208,7 @@ def test_rack_designer_roundtrip_returns_correct_rack_count(api_url):
     assert data["configuration"]["rackCount"] == 3
 
 
-def test_rack_designer_roundtrip_preserves_custom_name(api_url):
+def test_rack_designer_roundtrip_preserves_custom_name(api_url, test_device_id):
     config = {
         "rackHeight": 12,
         "rackCount": 1,
@@ -208,7 +218,7 @@ def test_rack_designer_roundtrip_preserves_custom_name(api_url):
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     config_hash = post_response.json()["config_hash"]
@@ -220,7 +230,7 @@ def test_rack_designer_roundtrip_preserves_custom_name(api_url):
     assert data["configuration"]["placedParts"][0]["customName"] == "Web Server"
 
 
-def test_rack_designer_roundtrip_preserves_custom_color(api_url):
+def test_rack_designer_roundtrip_preserves_custom_color(api_url, test_device_id):
     config = {
         "rackHeight": 12,
         "rackCount": 1,
@@ -230,7 +240,7 @@ def test_rack_designer_roundtrip_preserves_custom_color(api_url):
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
-        json={"configuration": config},
+        json={"configuration": config, "device_id": test_device_id},
         timeout=10
     )
     config_hash = post_response.json()["config_hash"]

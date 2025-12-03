@@ -243,7 +243,9 @@ def handle_post(event: Dict[str, Any]) -> Dict[str, Any]:
         body = parse_body(event)
         config = body.get('configuration')
         device_id = body.get('device_id')
-        if not config:
+        if not device_id:
+            response = error_response(400, 'Missing required field: device_id')
+        elif not config:
             response = error_response(400, 'Missing required field: configuration')
         else:
             validation_error = validate_rack_configuration(config)

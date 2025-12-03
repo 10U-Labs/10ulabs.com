@@ -99,14 +99,29 @@ def test_validate_rack_configuration_valid_config_returns_none(handler):
     assert result is None
 
 
+def test_handle_post_missing_device_id(handler):
+    event = {
+        'body': json.dumps({'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}),
+        'headers': {}
+    }
+    response = handler.handle_post(event)
+    assert response['statusCode'] == 400
+
+
 def test_handle_post_missing_configuration(handler):
-    event = {'body': json.dumps({}), 'headers': {}}
+    event = {'body': json.dumps({'device_id': 'test-device'}), 'headers': {}}
     response = handler.handle_post(event)
     assert response['statusCode'] == 400
 
 
 def test_handle_post_invalid_configuration(handler):
-    event = {'body': json.dumps({'configuration': {'rackCount': 3, 'placedParts': []}}), 'headers': {}}
+    event = {
+        'body': json.dumps({
+            'configuration': {'rackCount': 3, 'placedParts': []},
+            'device_id': 'test-device'
+        }),
+        'headers': {}
+    }
     response = handler.handle_post(event)
     assert response['statusCode'] == 400
 
@@ -118,7 +133,10 @@ def test_handle_post_success(mock_boto_client, handler):
     mock_boto_client.return_value = mock_dynamodb
     handler.clear_clients()
     event = {
-        'body': json.dumps({'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []}}),
+        'body': json.dumps({
+            'configuration': {'rackHeight': 12, 'rackCount': 3, 'placedParts': []},
+            'device_id': 'test-device'
+        }),
         'headers': {}
     }
     with patch.dict('os.environ', {'RACK_DESIGNER_CONFIGURATIONS_TABLE': 'test-table'}):
