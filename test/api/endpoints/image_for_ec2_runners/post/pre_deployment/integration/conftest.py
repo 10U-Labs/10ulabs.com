@@ -62,6 +62,7 @@ def terraform_outputs(terraform_initialized):  # pylint: disable=redefined-outer
             "ec2_runner_ami_purpose_value": _run_terraform_output("ec2_runner_ami_purpose_value"),
             "ec2_runner_ami_stable_tag": _run_terraform_output("ec2_runner_ami_stable_tag"),
             "runner_security_group_id": _run_terraform_output("runner_security_group_id"),
+            "ssm_parameter_name_for_latest_ami": _run_terraform_output("ssm_parameter_name_for_latest_ami"),
             "vpc_public_subnet_ids": _run_terraform_output("vpc_public_subnet_ids"),
             "ec2_instance_types": _run_terraform_output("ec2_instance_types", as_json=True),
         }

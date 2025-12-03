@@ -14,6 +14,10 @@ class TestRequiredTerraformOutputs:
         has_output = terraform_outputs.get("runner_security_group_id") != ""
         assert has_output
 
+    def test_ssm_parameter_name_for_latest_ami_exists(self, terraform_outputs):
+        has_output = terraform_outputs.get("ssm_parameter_name_for_latest_ami") != ""
+        assert has_output
+
     def test_vpc_public_subnet_ids_exists(self, terraform_outputs):
         has_output = terraform_outputs.get("vpc_public_subnet_ids") != ""
         assert has_output
