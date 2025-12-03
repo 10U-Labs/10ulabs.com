@@ -7,7 +7,6 @@ jobs:
     needs:
       - declaring-common-variables
       - integration-testing-pre-deployment
-      - unit-testing
     outputs:
       ami_id: ${{ steps.build.outputs.ami_id }}
       ami_stable_tag: ${{ steps.terraform.outputs.ami_stable_tag }}
@@ -307,7 +306,7 @@ jobs:
     name: Pre-deployment integration testing
     needs:
       - declaring-common-variables
-      - performing-static-analysis
+      - unit-testing
     permissions:
       contents: read
       id-token: write
