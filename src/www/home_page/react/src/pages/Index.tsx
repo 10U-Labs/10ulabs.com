@@ -14,10 +14,7 @@ const Index = () => {
               10U Labs, LLC
             </h1>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
-              Computing Hardware Design and Development
-            </p>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Developing CPUs, CPU sockets, and motherboards with both proprietary and open-source solutions
+              Building flexible computing hardware for diverse environments
             </p>
             <div className="flex gap-4 justify-center pt-4">
               <Button size="lg" onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -45,7 +42,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-2xl font-semibold text-foreground">CPUs</h3>
                 <p className="text-muted-foreground">
-                  Proprietary and open-source processor designs
+                  Flexible processor designs for diverse workloads
                 </p>
               </CardContent>
             </Card>
@@ -57,7 +54,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-2xl font-semibold text-foreground">CPU Sockets</h3>
                 <p className="text-muted-foreground">
-                  Proprietary and open-source socket designs
+                  Robust socket designs built for reliability and longevity
                 </p>
               </CardContent>
             </Card>
@@ -69,7 +66,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-2xl font-semibold text-foreground">Motherboards</h3>
                 <p className="text-muted-foreground">
-                  Proprietary and open-source motherboard designs
+                  Systems engineered for heterogeneous deployment requirements
                 </p>
               </CardContent>
             </Card>
@@ -85,10 +82,10 @@ const Index = () => {
           </h2>
           <div className="space-y-6 text-lg text-muted-foreground">
             <p>
-              10U Labs, LLC develops computing hardware. We offer both proprietary and open hardware solutions, along with supporting software in both proprietary and open-source forms.
+              10U Labs develops computing hardware with a focus on flexibility, performance, and supply chain resilience.
             </p>
             <p>
-              We focus on building reliable, well-designed hardware. Whether you need proprietary solutions or prefer open-source projects, 10U Labs provides the components to support your computing needs.
+              Whether for commercial, government, or specialized applications, our hardware is designed for organizations operating in diverse computing environments.
             </p>
           </div>
         </div>
