@@ -192,7 +192,7 @@ resource "aws_lambda_permission" "simulation_soc_handler" {
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.simulation_soc.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/simultation-soc*"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/simulation-soc*"
 }
 
 resource "random_password" "api_key" {

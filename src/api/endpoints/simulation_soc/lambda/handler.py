@@ -111,7 +111,7 @@ def handle_simulation_soc_post(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 ROUTE_MAP = {
-    ('/v1/simultation-soc', 'POST'): handle_simulation_soc_post,
+    ('/v1/simulation-soc', 'POST'): handle_simulation_soc_post,
 }
 
 

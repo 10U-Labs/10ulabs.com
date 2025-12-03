@@ -83,7 +83,7 @@ function runSimulation() {
 
     var baseUrl = getApiBaseUrl();
 
-    fetch(baseUrl + '/v1/simultation-soc', {
+    fetch(baseUrl + '/v1/simulation-soc', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -116,7 +116,7 @@ function runSimulation() {
 function loadInitialConfig() {
     var baseUrl = getApiBaseUrl();
 
-    fetch(baseUrl + '/v1/simultation-soc', {
+    fetch(baseUrl + '/v1/simulation-soc', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'

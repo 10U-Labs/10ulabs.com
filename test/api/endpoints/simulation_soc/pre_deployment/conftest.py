@@ -53,7 +53,7 @@ def simulation_soc_post_event_factory():
         if body_data is None:
             body_data = {'persona': 'riscv'}
         return {
-            'path': '/v1/simultation-soc',
+            'path': '/v1/simulation-soc',
             'httpMethod': 'POST',
             'body': json.dumps(body_data),
             'headers': {'Content-Type': content_type},

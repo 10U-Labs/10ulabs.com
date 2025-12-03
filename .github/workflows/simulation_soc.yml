@@ -40,6 +40,24 @@ jobs:
           terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Run E2E tests
+        run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -123,24 +141,6 @@ jobs:
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Run integration tests
         run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/integration/ -v
-  e2e-testing:
-    name: E2E testing
-    needs:
-      - declaring-common-variables
-      - integration-testing
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Run E2E tests
-        run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/e2e/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -210,7 +210,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Run unit tests
         run: python3 -m pytest test/api/endpoints/simulation_soc/pre_deployment/ -v
-name: Ensuring simulation_soc endpoint exists and is properly configured
+name: Ensuring the /v1/simulation-soc API endpoint exists and is properly configured
 on:
   push:
     branches:

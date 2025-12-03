@@ -853,7 +853,7 @@ paths:
               method.response.header.Access-Control-Allow-Origin: "'*'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
-  /v1/simultation-soc:
+  /v1/simulation-soc:
     post:
       summary: Simulate Tri-mode SoC
       description: Simulates a tri-mode SoC running a workload in the specified persona (RISC-V, x86-64, or ARM64)

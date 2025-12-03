@@ -62,7 +62,7 @@ def test_handler_returns_400_for_missing_persona(simulation_soc_handler, simulat
 
 def test_handler_returns_400_for_invalid_json(simulation_soc_handler, lambda_context):
     event = {
-        'path': '/v1/simultation-soc',
+        'path': '/v1/simulation-soc',
         'httpMethod': 'POST',
         'body': 'not valid json',
         'headers': {'Content-Type': 'application/json'},
@@ -73,7 +73,7 @@ def test_handler_returns_400_for_invalid_json(simulation_soc_handler, lambda_con
 
 
 def test_handler_options_returns_200(simulation_soc_handler, lambda_context):
-    event = {'path': '/v1/simultation-soc', 'httpMethod': 'OPTIONS'}
+    event = {'path': '/v1/simulation-soc', 'httpMethod': 'OPTIONS'}
     response = simulation_soc_handler.handler(event, lambda_context)
     assert_response_status(response, 200)
 
