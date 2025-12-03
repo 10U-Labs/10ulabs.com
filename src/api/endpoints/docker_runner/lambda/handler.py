@@ -527,7 +527,7 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
                 'assignPublicIp': 'ENABLED'
             }
         },
-        capacityProviderStrategy=[{'capacityProvider': 'FARGATE_SPOT', 'weight': 100, 'base': 0}],
+        capacityProviderStrategy=[{'capacityProvider': 'FARGATE', 'weight': 100, 'base': 0}],
         overrides={
             'containerOverrides': [{
                 'name': os.environ['CONTAINER_NAME'],
