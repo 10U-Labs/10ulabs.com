@@ -2,11 +2,11 @@ import json
 import os
 import re
 from pathlib import Path
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 from typing import Any, Dict
+
 import boto3
 import pytest
-
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 DOCKER_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "docker_runner"
