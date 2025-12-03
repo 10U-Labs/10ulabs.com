@@ -6,20 +6,19 @@ from typing import Any
 from botocore.exceptions import ClientError
 
 
-class SpotTerminationError(Exception):
+class FleetError(Exception):
     pass
 
 
-class SpotCapacityError(Exception):
+class CapacityError(Exception):
     pass
 
 
 @dataclass
-class SpotLaunchOptions:
+class LaunchOptions:
     instance_types: list[str]
     subnet_ids: list[str]
-    allocation_strategy: str = "capacity-optimized"
-    max_price: str | None = None
+    allocation_strategy: str = "lowest-price"
     max_retries: int = 2
     wait_for_ready: bool = True
     excluded_azs: list[str] = field(default_factory=list)
@@ -96,16 +95,16 @@ def delete_launch_template(ec2_client: Any, template_id: str) -> None:
 
 
 def create_fleet_instance(
-    ec2_client: Any, template_id: str, options: SpotLaunchOptions
+    ec2_client: Any, template_id: str, options: LaunchOptions
 ) -> str:
     overrides = _build_fleet_overrides(options)
     response = ec2_client.create_fleet(
         Type="instant",
         TargetCapacitySpecification={
             "TotalTargetCapacity": 1,
-            "DefaultTargetCapacityType": "spot",
+            "DefaultTargetCapacityType": "on-demand",
         },
-        SpotOptions={"AllocationStrategy": options.allocation_strategy},
+        OnDemandOptions={"AllocationStrategy": options.allocation_strategy},
         LaunchTemplateConfigs=[
             {
                 "LaunchTemplateSpecification": {
@@ -119,7 +118,7 @@ def create_fleet_instance(
     return _extract_instance_id(response)
 
 
-def _build_fleet_overrides(options: SpotLaunchOptions) -> list[dict[str, Any]]:
+def _build_fleet_overrides(options: LaunchOptions) -> list[dict[str, Any]]:
     overrides = []
     for instance_type in options.instance_types:
         for subnet_id in options.subnet_ids:
@@ -127,8 +126,6 @@ def _build_fleet_overrides(options: SpotLaunchOptions) -> list[dict[str, Any]]:
                 "InstanceType": instance_type,
                 "SubnetId": subnet_id,
             }
-            if options.max_price:
-                override["MaxPrice"] = options.max_price
             overrides.append(override)
     return overrides
 
@@ -141,7 +138,7 @@ def _extract_instance_id(response: dict[str, Any]) -> str:
     else:
         errors = response.get("Errors", [])
         error_msg = "; ".join([e.get("ErrorMessage", str(e)) for e in errors]) if errors else "No instances launched"
-        raise SpotCapacityError(error_msg)
+        raise CapacityError(error_msg)
     return result
 
 
@@ -162,22 +159,6 @@ def get_instance_az(ec2_client: Any, instance_id: str) -> str:
     return response["Reservations"][0]["Instances"][0]["Placement"]["AvailabilityZone"]
 
 
-def is_spot_terminated(ec2_client: Any, instance_id: str) -> bool:
-    result = False
-    try:
-        response = ec2_client.describe_instances(InstanceIds=[instance_id])
-        if response["Reservations"] and response["Reservations"][0]["Instances"]:
-            instance = response["Reservations"][0]["Instances"][0]
-            state = instance["State"]["Name"]
-            state_reason = instance.get("StateReason", {}).get("Code", "")
-            if state in ("terminated", "shutting-down") and "Spot" in state_reason:
-                result = True
-    except ClientError as e:
-        if e.response.get("Error", {}).get("Code") != "InvalidInstanceID.NotFound":
-            raise
-    return result
-
-
 def wait_for_instance_running(
     ec2_client: Any, instance_id: str, max_attempts: int = 60, poll_interval: int = 5
 ) -> None:
@@ -191,8 +172,6 @@ def wait_for_instance_running(
         if state == "running":
             running = True
         elif state in ("terminated", "shutting-down"):
-            if is_spot_terminated(ec2_client, instance_id):
-                raise SpotTerminationError(f"Instance {instance_id} was terminated due to spot interruption")
             raise RuntimeError(f"Instance {instance_id} entered {state} state")
         elif attempt < max_attempts:
             logging.info("  Waiting %ds before next check...", poll_interval)
@@ -211,8 +190,6 @@ def wait_for_status_checks(
         logging.info("Checking status (attempt %d/%d)...", attempt, max_attempts)
         state = get_instance_state(ec2_client, instance_id)
         if state in ("terminated", "shutting-down"):
-            if is_spot_terminated(ec2_client, instance_id):
-                raise SpotTerminationError(f"Instance {instance_id} was terminated due to spot interruption")
             raise RuntimeError(f"Instance {instance_id} entered {state} state")
         response = ec2_client.describe_instance_status(InstanceIds=[instance_id])
         system_status = ""
@@ -239,10 +216,10 @@ def terminate_instance(ec2_client: Any, instance_id: str) -> None:
         pass
 
 
-def launch_spot_instance(
-    ec2_client: Any, launch_template_config: dict[str, Any], options: SpotLaunchOptions
+def launch_instance(
+    ec2_client: Any, launch_template_config: dict[str, Any], options: LaunchOptions
 ) -> str:
-    template_name = f"spot-launch-{uuid.uuid4().hex[:8]}"
+    template_name = f"fleet-launch-{uuid.uuid4().hex[:8]}"
     template_id = create_launch_template(ec2_client, template_name, launch_template_config)
     instance_id = ""
     try:
@@ -252,7 +229,7 @@ def launch_spot_instance(
     return instance_id
 
 
-def _handle_spot_termination(ec2_client: Any, instance_id: str, options: SpotLaunchOptions) -> None:
+def _handle_launch_failure(ec2_client: Any, instance_id: str, options: LaunchOptions) -> None:
     try:
         az = get_instance_az(ec2_client, instance_id)
         options.excluded_azs.append(az)
@@ -261,46 +238,45 @@ def _handle_spot_termination(ec2_client: Any, instance_id: str, options: SpotLau
     terminate_instance(ec2_client, instance_id)
 
 
-def _attempt_spot_launch(
-    ec2_client: Any, launch_template_config: dict[str, Any], options: SpotLaunchOptions
+def _attempt_launch(
+    ec2_client: Any, launch_template_config: dict[str, Any], options: LaunchOptions
 ) -> tuple[str, Exception | None]:
     available_subnets = filter_subnets_by_az(ec2_client, options.subnet_ids, options.excluded_azs)
     instance_id = ""
     last_error: Exception | None = None
     if not available_subnets:
         return instance_id, last_error
-    attempt_options = SpotLaunchOptions(
+    attempt_options = LaunchOptions(
         instance_types=options.instance_types,
         subnet_ids=available_subnets,
         allocation_strategy=options.allocation_strategy,
-        max_price=options.max_price,
     )
     current_instance_id = ""
     try:
-        current_instance_id = launch_spot_instance(ec2_client, launch_template_config, attempt_options)
+        current_instance_id = launch_instance(ec2_client, launch_template_config, attempt_options)
         if options.wait_for_ready:
             wait_for_instance_running(ec2_client, current_instance_id)
             wait_for_status_checks(ec2_client, current_instance_id)
         instance_id = current_instance_id
-    except SpotTerminationError:
+    except CapacityError as e:
+        last_error = e
+    except RuntimeError as e:
         if current_instance_id:
-            _handle_spot_termination(ec2_client, current_instance_id, options)
-        last_error = SpotTerminationError("Spot instance terminated")
-    except SpotCapacityError as e:
+            _handle_launch_failure(ec2_client, current_instance_id, options)
         last_error = e
     return instance_id, last_error
 
 
-def launch_spot_instance_with_retry(
-    ec2_client: Any, launch_template_config: dict[str, Any], options: SpotLaunchOptions
+def launch_instance_with_retry(
+    ec2_client: Any, launch_template_config: dict[str, Any], options: LaunchOptions
 ) -> str:
     attempt = 0
     instance_id = ""
     last_error: Exception | None = None
     while not instance_id and attempt <= options.max_retries:
-        instance_id, last_error = _attempt_spot_launch(ec2_client, launch_template_config, options)
+        instance_id, last_error = _attempt_launch(ec2_client, launch_template_config, options)
         attempt = attempt + 1
     if not instance_id:
         error_msg = str(last_error) if last_error else "No subnets available"
-        raise SpotCapacityError(f"Failed to launch spot instance after {attempt} attempts: {error_msg}")
+        raise CapacityError(f"Failed to launch instance after {attempt} attempts: {error_msg}")
     return instance_id

@@ -1,6 +1,6 @@
 import os
 import time
-from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
+from ec2_helpers import launch_instance, wait_for_instance_ready, terminate_instance_safely
 import pytest
 
 
@@ -112,8 +112,8 @@ def get_subnet_ids():
     return result
 
 
-def get_spot_instance_types():
-    env_value = os.environ.get("SPOT_INSTANCE_TYPES", "")
+def get_instance_types():
+    env_value = os.environ.get("INSTANCE_TYPES", "")
     result = env_value.split(",") if env_value else []
     return result
 
@@ -123,9 +123,8 @@ def build_launch_config(test_ami_id, config):
         "ami_id": test_ami_id,
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
-        "max_spot_price": config.get("ec2_max_spot_price", "0.25"),
         "subnet_ids": get_subnet_ids(),
-        "spot_instance_types": get_spot_instance_types(),
+        "instance_types": get_instance_types(),
         "tags": [
             {"Key": "Name", "Value": "integration-test-instance"},
             {"Key": "Purpose", "Value": "AMI Integration Testing"},
@@ -148,7 +147,7 @@ def test_instance(ec2_client, ssm_client, test_ami_id, config):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
 
     launch_config = build_launch_config(test_ami_id, config)
-    instance_id = launch_spot_instance(ec2_client, launch_config)
+    instance_id = launch_instance(ec2_client, launch_config)
 
     wait_for_instance_ready(ec2_client, instance_id)
     wait_for_ssm_ready(ssm_client, instance_id)

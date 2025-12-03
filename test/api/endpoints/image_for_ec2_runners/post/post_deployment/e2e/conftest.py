@@ -3,7 +3,7 @@ import json
 import os
 import urllib.request
 import urllib.error
-from ec2_helpers import launch_spot_instance, wait_for_instance_ready, terminate_instance_safely
+from ec2_helpers import launch_instance, wait_for_instance_ready, terminate_instance_safely
 import pytest
 
 
@@ -82,8 +82,8 @@ def get_subnet_ids():
     return result
 
 
-def get_spot_instance_types():
-    env_value = os.environ.get("SPOT_INSTANCE_TYPES", "")
+def get_instance_types():
+    env_value = os.environ.get("INSTANCE_TYPES", "")
     result = env_value.split(",") if env_value else []
     return result
 
@@ -95,8 +95,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
         "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
         "user_data": create_user_data(github_repo, registration_token),
-        "max_spot_price": test_config.get("ec2_max_spot_price", "0.25"),
-        "spot_instance_types": get_spot_instance_types(),
+        "instance_types": get_instance_types(),
         "tags": [
             {"Key": "Name", "Value": "e2e-test-instance"},
             {"Key": "Purpose", "Value": "AMI E2E Testing"},
@@ -119,7 +118,7 @@ def e2e_test_instance(ec2_client, test_ami_id, config, github_token, github_repo
         pytest.fail("Failed to retrieve registration token")
 
     instance_config = build_e2e_config(test_ami_id, config, github_repo, registration_token)
-    instance_id = launch_spot_instance(ec2_client, instance_config)
+    instance_id = launch_instance(ec2_client, instance_config)
 
     wait_for_instance_ready(ec2_client, instance_id)
     yield instance_id

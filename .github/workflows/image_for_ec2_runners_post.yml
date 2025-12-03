@@ -61,7 +61,7 @@ jobs:
           AMI_NAME="ami-github-ec2-runner-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}-${TIMESTAMP}"
           python3 src/api/endpoints/image_for_ec2_runners/post/build_ami.py \
             --ami-name "$AMI_NAME" \
-            --instance-types "${{ needs.declaring-common-variables.outputs.spot_instance_types }}" \
+            --instance-types "${{ needs.declaring-common-variables.outputs.instance_types }}" \
             --region "${{ needs.declaring-common-variables.outputs.aws_region }}" \
             --runner-user "${{ needs.declaring-common-variables.outputs.runner_user }}" \
             --runner-version "${{ needs.declaring-common-variables.outputs.runner_version }}" \
@@ -142,13 +142,13 @@ jobs:
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
+      instance_types: ${{ steps.config.outputs.instance_types }}
       os_architecture: ${{ steps.config.outputs.os_architecture }}
       os_family: ${{ steps.config.outputs.os_family }}
       os_version: ${{ steps.config.outputs.os_version }}
       runner_user: ${{ steps.config.outputs.runner_user }}
       runner_version: ${{ steps.config.outputs.runner_version }}
       source_ami: ${{ steps.config.outputs.source_ami }}
-      spot_instance_types: ${{ steps.config.outputs.spot_instance_types }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
       yq_version: ${{ steps.config.outputs.yq_version }}
     runs-on: >-
@@ -187,9 +187,9 @@ jobs:
           cd src/api/backend
           terraform init -backend=true -input=false
           OS_ARCHITECTURE=$(terraform output -raw fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
-          SPOT_INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types | tr -d '[]" ')
+          INSTANCE_TYPES=$(terraform output -json ec2_spot_instance_types | tr -d '[]" ')
           echo "os_architecture=$OS_ARCHITECTURE" >> $GITHUB_OUTPUT
-          echo "spot_instance_types=$SPOT_INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
       - name: Install yq
         run: |
           ARCH=$(dpkg --print-architecture)
@@ -213,7 +213,7 @@ jobs:
           echo "runner_user=$RUNNER_USER" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "source_ami=$SOURCE_AMI" >> $GITHUB_OUTPUT
-          echo 'spot_instance_types=${{ steps.api.outputs.spot_instance_types }}' >> $GITHUB_OUTPUT
+          echo 'instance_types=${{ steps.api.outputs.instance_types }}' >> $GITHUB_OUTPUT
           echo "terraform_version=${{ steps.shared.outputs.terraform_version }}" >> $GITHUB_OUTPUT
           echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
@@ -255,8 +255,8 @@ jobs:
           GITHUB_PAT=$(aws ssm get-parameter --name "$GITHUB_TOKEN_SECRET_NAME" --with-decryption --query 'Parameter.Value' --output text)
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
+          INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.instance_types }}
           PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
-          SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
@@ -292,8 +292,8 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install boto3 pytest pyyaml
       - env:
+          INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.instance_types }}
           PYTHONPATH: lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
-          SPOT_INSTANCE_TYPES: ${{ needs.declaring-common-variables.outputs.spot_instance_types }}
           TEST_AMI_ID: ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: ${{ needs.building-ami.outputs.security_group_id }}
           TEST_SUBNET_IDS: ${{ needs.building-ami.outputs.subnet_ids }}
@@ -342,7 +342,7 @@ jobs:
         name: Linting Python files
         run: |
           pylint \
-            lib/ec2_spot/*.py \
+            lib/ec2_fleet/*.py \
             src/api/endpoints/image_for_ec2_runners/post/*.py \
             test/api/endpoints/image_for_ec2_runners/post/ \
             --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
@@ -351,7 +351,7 @@ jobs:
       - name: Static type checking Python files with mypy
         run: |
           MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/post/*.py
-          MYPYPATH=lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_spot/ test/api/endpoints/image_for_ec2_runners/post/
+          MYPYPATH=lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment python3 -m mypy --explicit-package-bases lib/ec2_fleet/ test/api/endpoints/image_for_ec2_runners/post/
   promoting-ami:
     name: Promoting AMI
     needs:

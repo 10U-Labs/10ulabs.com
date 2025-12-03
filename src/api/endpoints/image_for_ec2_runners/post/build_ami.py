@@ -11,11 +11,11 @@ from typing import Any, Optional
 import boto3
 from botocore.exceptions import ClientError
 import paramiko
-from ec2_spot.ec2_spot import (
+from ec2_fleet.ec2_fleet import (
     create_fleet_instance as shared_create_fleet,
     wait_for_instance_running as shared_wait_running,
     wait_for_status_checks as shared_wait_status,
-    SpotLaunchOptions,
+    LaunchOptions,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
@@ -137,10 +137,10 @@ def delete_launch_template(ec2, template_name):
 def create_fleet_instance(ec2, template_name, instance_types, subnet_ids):
     response = ec2.describe_launch_templates(LaunchTemplateNames=[template_name])
     template_id = response["LaunchTemplates"][0]["LaunchTemplateId"]
-    options = SpotLaunchOptions(
+    options = LaunchOptions(
         instance_types=instance_types,
         subnet_ids=subnet_ids,
-        allocation_strategy="price-capacity-optimized",
+        allocation_strategy="lowest-price",
     )
     return shared_create_fleet(ec2, template_id, options)
 

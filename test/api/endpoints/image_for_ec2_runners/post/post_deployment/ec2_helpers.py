@@ -1,11 +1,11 @@
 import time
 from botocore.exceptions import ClientError
-from ec2_spot.ec2_spot import (
-    launch_spot_instance_with_retry,
+from ec2_fleet.ec2_fleet import (
+    launch_instance_with_retry,
     wait_for_instance_running,
     wait_for_status_checks,
     terminate_instance,
-    SpotLaunchOptions,
+    LaunchOptions,
 )
 
 
@@ -33,19 +33,18 @@ def build_launch_template_config(config):
     return template_config
 
 
-def launch_spot_instance(ec2_client, config):
+def launch_instance(ec2_client, config):
     template_config = build_launch_template_config(config)
-    instance_types = config.get("spot_instance_types", [config.get("instance_type", "m7gd.xlarge")])
+    instance_types = config.get("instance_types", [config.get("instance_type", "m7gd.xlarge")])
     subnet_ids = config.get("subnet_ids", [config.get("subnet_id")])
-    options = SpotLaunchOptions(
+    options = LaunchOptions(
         instance_types=instance_types,
         subnet_ids=subnet_ids,
-        allocation_strategy="capacity-optimized",
-        max_price=config.get("max_spot_price"),
+        allocation_strategy="lowest-price",
         max_retries=2,
         wait_for_ready=False,
     )
-    return launch_spot_instance_with_retry(ec2_client, template_config, options)
+    return launch_instance_with_retry(ec2_client, template_config, options)
 
 
 def wait_for_instance_ready(ec2_client, instance_id):
