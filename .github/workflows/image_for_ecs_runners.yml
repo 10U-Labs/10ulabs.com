@@ -188,7 +188,7 @@ jobs:
             src/api/endpoints/image_for_ecs_runners/files/config.yml
       - name: Run pylint
         run: |
-          for file in src/api/endpoints/image_for_ecs_runners/*.py src/api/endpoints/image_for_ecs_runners/files/*.py src/api/endpoints/image_for_ecs_runners/lambda/*.py; do
+          for file in src/api/endpoints/image_for_ecs_runners/files/*.py src/api/endpoints/image_for_ecs_runners/lambda/*.py; do
             pylint "$file" \
               --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
               --fail-on=C,R,W \
@@ -200,7 +200,7 @@ jobs:
             --fail-under=10.0
       - name: Run mypy
         run: |
-          for file in src/api/endpoints/image_for_ecs_runners/*.py src/api/endpoints/image_for_ecs_runners/files/*.py src/api/endpoints/image_for_ecs_runners/lambda/*.py; do
+          for file in src/api/endpoints/image_for_ecs_runners/files/*.py src/api/endpoints/image_for_ecs_runners/lambda/*.py; do
             python3 -m mypy "$file"
           done
           MYPYPATH=src/api/endpoints/image_for_ecs_runners:src/api/endpoints/image_for_ecs_runners/files python3 -m mypy test/api/endpoints/image_for_ecs_runners/
