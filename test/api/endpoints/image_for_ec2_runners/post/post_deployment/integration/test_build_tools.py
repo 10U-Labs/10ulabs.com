@@ -32,7 +32,7 @@ def test_docker_buildx_is_available(ssm_client, test_instance, run_ssm_command):
     if not test_instance:
         pytest.fail("Test instance not created")
 
-    output = run_ssm_command(ssm_client, test_instance, "docker buildx version")
+    output = run_ssm_command(ssm_client, test_instance, "docker buildx version", 15)
 
     assert output["Status"] == "Success"
 
