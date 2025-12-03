@@ -9,6 +9,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
@@ -82,6 +83,16 @@ def config_fixture() -> Dict[str, str]:
     runner_labels = get_runner_labels()
     result.update(runner_labels)
     result['api_version'] = 'v1'
+    ecs_runner_tfvars = ECS_RUNNER_SRC_PATH / "terraform.tfvars"
+    with open(ecs_runner_tfvars, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+                if match:
+                    key, value = match.groups()
+                    if key == 'cluster_name':
+                        result['cluster_name'] = value.strip('"')
     return result
 
 
