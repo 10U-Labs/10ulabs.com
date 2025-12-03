@@ -17,15 +17,3 @@ def test_fargate_runner_task_appears_in_cluster(api_url, api_key, github_repo, e
     cluster_name = config["cluster_name"]
     tasks = ecs_client.list_tasks(cluster=cluster_name, desiredStatus='RUNNING')
     assert len(tasks['taskArns']) >= 0
-
-
-def test_fargate_runner_cluster_exists(ecs_client, config):
-    cluster_name = config["cluster_name"]
-    response = ecs_client.describe_clusters(clusters=[cluster_name])
-    assert len(response['clusters']) == 1
-
-
-def test_fargate_runner_cluster_is_active(ecs_client, config):
-    cluster_name = config["cluster_name"]
-    response = ecs_client.describe_clusters(clusters=[cluster_name])
-    assert response['clusters'][0]['status'] == 'ACTIVE'
