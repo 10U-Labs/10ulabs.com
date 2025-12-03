@@ -540,8 +540,8 @@ function renderParts() {
 
 function getPartName(type) {
     const names = {
-        'blank-panel-1u': 'Blank Panel (1U)',
-        'blank-panel-2u': 'Blank Panel (2U)',
+        'blank-panel-1u': 'Blank Panel',
+        'blank-panel-2u': 'Blank Panel',
         'custom': 'Custom Part',
         'display': 'Display',
         'nas': 'NAS',
@@ -552,8 +552,8 @@ function getPartName(type) {
         'shelf': 'Shelf',
         'switch': 'Switch',
         'ups': 'UPS',
-        'venting-1u': 'Venting Panel (1U)',
-        'venting-2u': 'Venting Panel (2U)',
+        'venting-1u': 'Venting Panel',
+        'venting-2u': 'Venting Panel',
         'wifi-bridge': 'WiFi Bridge'
     };
     return names[type] || type;
