@@ -1,8 +1,8 @@
 import os
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 
 import pytest
 
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 from ...conftest import parse_api_locals
 
 
