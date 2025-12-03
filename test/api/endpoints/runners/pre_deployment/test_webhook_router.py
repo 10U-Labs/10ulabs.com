@@ -220,7 +220,7 @@ def test_route_runner_request_with_fargate_label_calls_docker_endpoint(webhook_r
         mock_response.read.return_value = json.dumps({'success': True}).encode()
         mock_response.__enter__.return_value = mock_response
         mock_urlopen.return_value = mock_response
-        result = webhook_router.route_runner_request(123, [config['runner_label_fargate_spot']], 'test/repo')
+        result = webhook_router.route_runner_request(123, [config['runner_label_fargate']], 'test/repo')
     assert result['success'] is True
 
 
@@ -289,7 +289,7 @@ def test_handle_workflow_job_enqueues_fargate_job(webhook_router, mock_sqs, conf
         'workflow_job': {
             'id': 456,
             'name': 'test',
-            'labels': [config['runner_label_fargate_spot']],
+            'labels': [config['runner_label_fargate']],
             'status': 'queued'
         },
         'repository': {'full_name': 'test/repo'}

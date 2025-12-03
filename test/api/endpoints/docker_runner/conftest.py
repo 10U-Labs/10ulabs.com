@@ -98,10 +98,13 @@ def config_fixture() -> Dict[str, Any]:
     result['ecr_repository_name'] = shared.get('ecr_repository_name', '10ulabs')
     resource_prefix = shared.get('resource_prefix', 'TenULabs')
     result['workflow_runners_table_name'] = f"{resource_prefix}-workflow-runners"
+    result['cluster_name'] = 'test-cluster'
+    result['container_name'] = 'test-container'
+    result['task_family'] = 'test-task'
     shared_config = parse_shared_config()
     runner_labels = shared_config.get('runner_labels', {})
-    result['runner_label_fargate_spot'] = runner_labels.get('fargate_spot', '')
-    result['runner_label_fargate_spot_e2e_test'] = runner_labels.get('fargate_spot_e2e_test', '')
+    result['runner_label_fargate'] = runner_labels.get('fargate', '')
+    result['runner_label_fargate_e2e_test'] = runner_labels.get('fargate_e2e_test', '')
     return result
 
 

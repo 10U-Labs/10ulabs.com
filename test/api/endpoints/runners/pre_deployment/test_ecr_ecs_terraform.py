@@ -24,11 +24,11 @@ def test_ecs_cluster_capacity_providers_resource_exists(runners_src_path):
     assert 'resource "aws_ecs_cluster_capacity_providers" "runner"' in content
 
 
-def test_ecs_cluster_uses_fargate_spot_capacity_provider(runners_src_path):
+def test_ecs_cluster_uses_fargate_capacity_provider(runners_src_path):
     ecs_file = runners_src_path / "ecs.tf"
     with open(ecs_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'capacity_providers = ["FARGATE_SPOT"]' in content
+    assert 'capacity_providers = ["FARGATE"]' in content
 
 
 def test_ecs_task_definition_resource_exists(runners_src_path):

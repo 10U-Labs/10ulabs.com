@@ -281,7 +281,7 @@ def test_launch_fargate_runner_ecs_run_task_success(mock_boto_client, docker_run
 
 
 @patch('boto3.client')
-def test_launch_fargate_runner_uses_fargate_spot(mock_boto_client, docker_runner_handler):
+def test_launch_fargate_runner_uses_fargate(mock_boto_client, docker_runner_handler):
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster', 'TASK_DEFINITION': 'test-task', 'SUBNETS': 'subnet-1', 'SECURITY_GROUPS': 'sg-1', 'CONTAINER_NAME': 'test-container', 'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
         mock_ecs = MagicMock()
         mock_ssm = MagicMock()
@@ -297,7 +297,7 @@ def test_launch_fargate_runner_uses_fargate_spot(mock_boto_client, docker_runner
         with patch.object(docker_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'):
             docker_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
             call_args = mock_ecs.run_task.call_args
-            assert call_args[1]['capacityProviderStrategy'][0]['capacityProvider'] == 'FARGATE_SPOT'
+            assert call_args[1]['capacityProviderStrategy'][0]['capacityProvider'] == 'FARGATE'
 
 
 def test_is_capacity_error_with_capacity_string(docker_runner_handler):

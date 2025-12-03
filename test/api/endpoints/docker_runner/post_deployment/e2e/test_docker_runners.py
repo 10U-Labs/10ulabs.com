@@ -51,7 +51,7 @@ def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config
         print("Skipping docker runner test: ecr_image_count is 0")
         yield None
         return
-    runner_label = config['runner_label_fargate_spot_e2e_test']
+    runner_label = config['runner_label_fargate_e2e_test']
     job_id, payload = create_runner_job_payload(
         test_context["github_repo"], [runner_label], test_context["github_run_id"]
     )

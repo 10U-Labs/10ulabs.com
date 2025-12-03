@@ -98,9 +98,9 @@ def config_fixture() -> Dict[str, str]:
     shared_config = parse_shared_config()
     runner_labels = shared_config.get('runner_labels', {})
     result['runner_label_ec2_spot'] = runner_labels.get('ec2_spot', '')
-    result['runner_label_fargate_spot'] = runner_labels.get('fargate_spot', '')
+    result['runner_label_fargate'] = runner_labels.get('fargate', '')
     result['runner_label_ec2_spot_e2e_test'] = runner_labels.get('ec2_spot_e2e_test', '')
-    result['runner_label_fargate_spot_e2e_test'] = runner_labels.get('fargate_spot_e2e_test', '')
+    result['runner_label_fargate_e2e_test'] = runner_labels.get('fargate_e2e_test', '')
     result['api_version'] = 'v1'
     return result
 
