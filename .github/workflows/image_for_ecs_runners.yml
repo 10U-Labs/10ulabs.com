@@ -19,7 +19,7 @@ jobs:
     runs-on: >-
       ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
-      || fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+      || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -161,7 +161,7 @@ jobs:
     runs-on: >-
       ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
-      || fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+      || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -251,7 +251,7 @@ jobs:
     runs-on: >-
       ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
-      || fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+      || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -282,7 +282,7 @@ jobs:
     runs-on: >-
       ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
-      || fromJSON(format('["ecs-fargate-spot", "runner-{0}"]', github.run_id)) }}
+      || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -12,7 +12,7 @@ jobs:
       contents: read
       id-token: write
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -49,7 +49,7 @@ jobs:
       - declaring-common-variables
       - unit-testing
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -122,7 +122,7 @@ jobs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -139,7 +139,7 @@ jobs:
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -188,7 +188,7 @@ jobs:
       - declaring-common-variables
       - performing-static-analysis
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code

@@ -9,7 +9,7 @@ jobs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.shared.outputs.github_actions_role_arn }}
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -33,7 +33,7 @@ jobs:
       contents: read
       id-token: write
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -56,7 +56,7 @@ jobs:
       contents: read
       id-token: write
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -75,7 +75,7 @@ jobs:
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -128,7 +128,7 @@ jobs:
       - declaring-common-variables
       - performing-static-analysis
     runs-on:
-      - ecs-fargate-spot
+      - ecs-fargate
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
