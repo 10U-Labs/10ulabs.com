@@ -1,0 +1,231 @@
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  declaring-common-variables:
+    name: Declaring common variables
+    outputs:
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+      terraform_version: ${{ steps.config.outputs.terraform_version }}
+    permissions:
+      contents: read
+      id-token: write
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Extract configuration values
+        run: |
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/simulation_soc/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - id: bootstrap
+        name: Get bootstrap outputs
+        run: |
+          terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
+          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+  ensuring-infrastructure-in-desired-state:
+    defaults:
+      run:
+        working-directory: src/api/endpoints/simulation_soc
+    name: Ensuring infrastructure is in desired state
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+      - name: Get website bucket name
+        run: |
+          terraform -chdir=../../../www/home_page init -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=../../../www/home_page output -raw bucket_name)
+          echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
+      - name: Sync frontend to S3
+        run: |
+          aws s3 sync ../../../www/simulations/soc/ s3://${{ env.BUCKET_NAME }}/simulations/soc/ \
+            --delete \
+            --cache-control no-cache \
+            --storage-class ONEZONE_IA \
+            --exclude ".gitkeep"
+      - id: check_files
+        name: Check if frontend files changed
+        run: |
+          set -e
+          set -o pipefail
+          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
+            BASE_COMMIT="${{ github.event.before }}"
+          else
+            BASE_COMMIT="HEAD^"
+          fi
+          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
+            if grep -qE 'src/www/simulations/soc/'; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
+        name: Invalidate CloudFront cache
+        run: |
+          WEBSITE_FQDN=$(terraform -chdir=../../../www/home_page output -raw website_domain_name)
+          python3 ../../../../scripts/invalidate_cloudfront.py \
+            --fqdn "$WEBSITE_FQDN" \
+            --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
+            --paths "/simulations/soc/*"
+        working-directory: src/api/endpoints/simulation_soc
+  integration-testing:
+    name: Integration testing
+    needs:
+      - declaring-common-variables
+      - ensuring-infrastructure-in-desired-state
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Run integration tests
+        run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/integration/ -v
+  e2e-testing:
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Run E2E tests
+        run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/e2e/ -v
+  performing-static-analysis:
+    if: github.ref == 'refs/heads/main'
+    name: Performing static analysis
+    needs: declaring-common-variables
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - name: Linting YAML files
+        run: |
+          DOCUMENT_START='document-start: disable'
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: {max: 300, level: warning}'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/simulation_soc.yml
+      - name: Run pylint on source
+        run: |
+          python3 -m pylint src/api/endpoints/simulation_soc/lambda/handler.py \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run pylint on tests
+        run: |
+          python3 -m pylint test/api/endpoints/simulation_soc/ \
+            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run mypy on source
+        run: python3 -m mypy src/api/endpoints/simulation_soc/lambda/handler.py
+      - name: Run mypy on tests
+        run: python3 -m mypy test/api/endpoints/simulation_soc/
+      - name: Terraform Format Check
+        run: cd src/api/endpoints/simulation_soc && terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/api/endpoints/simulation_soc && terraform init
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: |
+          cd src/api/endpoints/simulation_soc && \
+            tflint --init && \
+            tflint
+      - name: Terraform Plan
+        run: cd src/api/endpoints/simulation_soc && terraform plan
+  unit-testing:
+    name: Unit testing
+    needs:
+      - declaring-common-variables
+      - performing-static-analysis
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run unit tests
+        run: python3 -m pytest test/api/endpoints/simulation_soc/pre_deployment/ -v
+name: Ensuring simulation_soc endpoint exists and is properly configured
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/simulation_soc.yml'
+      - 'src/api/endpoints/simulation_soc/**'
+      - 'src/www/simulations/soc/**'
+      - 'test/api/endpoints/simulation_soc/**'
+  workflow_dispatch:
+    inputs:
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
+        type: boolean
+permissions:
+  contents: read
+  id-token: write

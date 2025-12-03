@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8YJFQC2EGV"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-8YJFQC2EGV');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="10U Labs SoC Simulator - Compare performance across ISAs">
+    <title>10U Labs SoC Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>SoC Simulator</h1>
+        <p>Compare performance across ISAs</p>
+    </div>
+
+    <div class="container">
+        <div class="config-panel">
+            <h2>SoC Configuration</h2>
+            <div class="config-grid" id="socConfig">
+                <div class="config-item">
+                    <span class="config-label">Issue Width</span>
+                    <span class="config-value" id="issueWidth">-</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">ROB Entries</span>
+                    <span class="config-value" id="robEntries">-</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">L1 Cache</span>
+                    <span class="config-value" id="l1Size">-</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">L2 Cache</span>
+                    <span class="config-value" id="l2Size">-</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Clock Speed</span>
+                    <span class="config-value" id="clockGhz">-</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Instructions</span>
+                    <span class="config-value" id="instructionCount">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="simulation-panel">
+            <h2>Run Simulation</h2>
+            <div class="persona-selector">
+                <label class="persona-option">
+                    <input type="radio" name="persona" value="riscv" checked>
+                    <span class="persona-label">RISC-V</span>
+                </label>
+                <label class="persona-option">
+                    <input type="radio" name="persona" value="x86_64">
+                    <span class="persona-label">x86-64</span>
+                </label>
+                <label class="persona-option">
+                    <input type="radio" name="persona" value="arm64">
+                    <span class="persona-label">ARM64</span>
+                </label>
+            </div>
+            <button class="simulate-btn" id="simulateBtn" onclick="runSimulation()">Run Simulation</button>
+        </div>
+
+        <div class="results-panel" id="resultsPanel" style="display: none;">
+            <h2>Results: <span id="resultPersona"></span></h2>
+
+            <div class="metrics-grid">
+                <div class="metric-card native">
+                    <h3>Native Core</h3>
+                    <div class="metric-value" id="nativeIpc">-</div>
+                    <div class="metric-label">IPC</div>
+                    <div class="metric-secondary">
+                        <span id="nativeRuntime">-</span> seconds
+                    </div>
+                </div>
+                <div class="metric-card alternate">
+                    <h3>Multi-ISA Core</h3>
+                    <div class="metric-value" id="multiIsaIpc">-</div>
+                    <div class="metric-label">IPC</div>
+                    <div class="metric-secondary">
+                        <span id="multiIsaRuntime">-</span> seconds
+                    </div>
+                </div>
+            </div>
+
+            <div class="slowdown-panel">
+                <div class="slowdown-label">Relative Slowdown</div>
+                <div class="slowdown-value" id="slowdownValue">-</div>
+            </div>
+
+            <div class="chart-container">
+                <h3>IPC Comparison</h3>
+                <div class="bar-chart">
+                    <div class="bar-row">
+                        <span class="bar-label">Native</span>
+                        <div class="bar-track">
+                            <div class="bar native-bar" id="nativeBar"></div>
+                        </div>
+                        <span class="bar-value" id="nativeBarValue"></span>
+                    </div>
+                    <div class="bar-row">
+                        <span class="bar-label">Multi-ISA</span>
+                        <div class="bar-track">
+                            <div class="bar alternate-bar" id="multiIsaBar"></div>
+                        </div>
+                        <span class="bar-value" id="multiIsaBarValue"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="error-panel" id="errorPanel" style="display: none;">
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+    </div>
+
+    <div class="privacy-notice">
+        <a href="/privacy.html">Privacy Notice</a>
+    </div>
+
+    <div class="footer">
+        Copyright &copy; 10U Labs, LLC 2025. All rights reserved.
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -853,6 +853,143 @@ paths:
               method.response.header.Access-Control-Allow-Origin: "'*'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+  /v1/simultation-soc:
+    post:
+      summary: Simulate Tri-mode SoC
+      description: Simulates a tri-mode SoC running a workload in the specified persona (RISC-V, x86-64, or ARM64)
+      operationId: simulateTriModeSoc
+      tags:
+        - Simulation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - persona
+              properties:
+                persona:
+                  type: string
+                  enum:
+                    - riscv
+                    - x86_64
+                    - arm64
+                  description: The ISA persona to simulate
+            examples:
+              riscv:
+                summary: RISC-V persona
+                value:
+                  persona: riscv
+              x86_64:
+                summary: x86-64 persona
+                value:
+                  persona: x86_64
+              arm64:
+                summary: ARM64 persona
+                value:
+                  persona: arm64
+      responses:
+        '200':
+          description: Simulation completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - persona
+                  - soc_config
+                  - instruction_count
+                  - native_core
+                  - tri_mode_core
+                  - relative_slowdown
+                properties:
+                  success:
+                    type: boolean
+                  persona:
+                    type: string
+                  soc_config:
+                    type: object
+                    properties:
+                      issue_width:
+                        type: integer
+                      rob_entries:
+                        type: integer
+                      l1_size_kb:
+                        type: integer
+                      l2_size_kb:
+                        type: integer
+                      clock_ghz:
+                        type: number
+                  instruction_count:
+                    type: integer
+                  native_core:
+                    type: object
+                    properties:
+                      ipc:
+                        type: number
+                      runtime_seconds:
+                        type: number
+                  tri_mode_core:
+                    type: object
+                    properties:
+                      ipc:
+                        type: number
+                      runtime_seconds:
+                        type: number
+                  relative_slowdown:
+                    type: number
+        '400':
+          description: Invalid persona or malformed request
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - error
+                properties:
+                  success:
+                    type: boolean
+                  error:
+                    type: string
+                  details:
+                    type: string
+      x-amazon-apigateway-integration:
+        uri: ${SimulationSocHandlerArn}
+        httpMethod: POST
+        type: aws_proxy
+    options:
+      summary: CORS preflight for simulation soc endpoint
+      description: Handles CORS preflight requests
+      operationId: simulationSocOptions
+      tags:
+        - Simulation
+      responses:
+        '200':
+          description: CORS headers
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: '200'
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
   /v1/rack-designer/events:
     post:
       summary: Save Rack Designer Analytics Events
@@ -997,17 +1134,19 @@ components:
       in: header
   schemas: {}
 tags:
+  - name: Contact
+    description: Contact form endpoints
   - name: Health
     description: Health check endpoints
-  - name: Utilities
-    description: Utility endpoints
-  - name: Runners
-    description: GitHub runner management endpoints
   - name: Image for EC2 runners
     description: EC2 runner AMI management endpoints
   - name: Image for ECS runners
     description: ECS runner image management endpoints
-  - name: Contact
-    description: Contact form endpoints
   - name: Rack Designer
     description: Rack designer configuration endpoints
+  - name: Runners
+    description: GitHub runner management endpoints
+  - name: Simulation
+    description: SoC simulation endpoints
+  - name: Utilities
+    description: Utility endpoints

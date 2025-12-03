@@ -10,6 +10,7 @@ locals {
     ImageForEC2RunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
     RackDesignerHandlerArn       = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
     RunnersHandlerArn            = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations"
+    SimulationSocHandlerArn      = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.simulation_soc.outputs.lambda_function_arn}/invocations"
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }
@@ -184,6 +185,14 @@ resource "aws_lambda_permission" "ec2_runner_handler" {
   function_name = data.terraform_remote_state.ec2_runner.outputs.lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/ec2-runner*"
+}
+
+resource "aws_lambda_permission" "simulation_soc_handler" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = data.terraform_remote_state.simulation_soc.outputs.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/simultation-soc*"
 }
 
 resource "random_password" "api_key" {

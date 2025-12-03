@@ -117,3 +117,13 @@ data "terraform_remote_state" "ec2_runner" {
     lambda_function_name         = ""
   }
 }
+
+data "terraform_remote_state" "simulation_soc" {
+  backend = "s3"
+
+  config = {
+    bucket = "10ulabs-terraform-state"
+    key    = "simulation_soc/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
