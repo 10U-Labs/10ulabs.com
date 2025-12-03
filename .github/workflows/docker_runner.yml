@@ -232,7 +232,7 @@ jobs:
           python3 -m pytest test/api/endpoints/docker_runner/pre_deployment/ \
             --confcutdir=test/api/endpoints/docker_runner \
             -v
-name: Ensuring the docker-runner endpoint exists and is properly configured
+name: Ensuring the /v1/docker-runner API endpoint exists and is properly configured
 on:
   push:
     branches:
