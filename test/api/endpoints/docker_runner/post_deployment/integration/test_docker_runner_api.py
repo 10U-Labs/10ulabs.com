@@ -40,7 +40,7 @@ def test_docker_runner_status_has_cluster_field(api_url, api_key):
 
 def test_v1_docker_runner_post_missing_job_id_returns_400(api_url, api_key):
     payload = {
-        "job_labels": ["ephemeral-ecs-fargate-spot"],
+        "job_labels": ["ephemeral-ecs-fargate"],
         "github_repo": "any/repo"
     }
     response = make_authenticated_post(
@@ -52,7 +52,7 @@ def test_v1_docker_runner_post_missing_job_id_returns_400(api_url, api_key):
 def test_v1_docker_runner_post_missing_github_repo_returns_400(api_url, api_key):
     payload = {
         "job_id": 666666,
-        "job_labels": ["ephemeral-ecs-fargate-spot"]
+        "job_labels": ["ephemeral-ecs-fargate"]
     }
     response = make_authenticated_post(
         f"{api_url}/v1/docker-runner", api_key, json=payload

@@ -1,5 +1,5 @@
 runner_labels:
   ec2_spot: ec2-spot
-  fargate_spot: ecs-fargate-spot
+  fargate: ecs-fargate
   ec2_spot_e2e_test: e2e-test-ec2-spot
-  fargate_spot_e2e_test: e2e-test-ecs-fargate-spot
+  fargate_e2e_test: e2e-test-ecs-fargate
