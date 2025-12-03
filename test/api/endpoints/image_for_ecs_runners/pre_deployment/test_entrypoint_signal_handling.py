@@ -67,7 +67,8 @@ def test_signal_handler_calls_config_sh_remove(mock_run, mock_signal):
     initial_call_count = mock_run.call_count
     with pytest.raises(SystemExit):
         signal_handler(None, None)
-    assert mock_run.call_args_list[initial_call_count][0][0][1] == 'remove'
+    config_remove_calls = [c for c in mock_run.call_args_list[initial_call_count:] if './config.sh' in c[0][0] and 'remove' in c[0][0]]
+    assert len(config_remove_calls) == 1
 
 
 @patch('entrypoint.cleanup_runner')

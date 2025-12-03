@@ -47,7 +47,9 @@ def test_error_message_prints_when_config_fails(mock_run, mock_print):
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
 def test_runner_exit_code_is_printed(mock_run, mock_print):
-    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=3)]
+    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=0), Mock(returncode=3), Mock(returncode=0)]
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_print.call_args_list[5][0][0] == 'Runner exited with code 3'
+    exit_code_prints = [c for c in mock_print.call_args_list if 'Runner exited with code' in str(c)]
+    assert len(exit_code_prints) == 1
+    assert 'Runner exited with code 3' in str(exit_code_prints[0])

@@ -18,13 +18,14 @@ def test_run_sh_called_after_successful_configuration(mock_run):
     mock_run.return_value = Mock(returncode=0)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[1][0][0][0] == './run.sh'
+    run_sh_calls = [c for c in mock_run.call_args_list if c[0][0] == ['./run.sh']]
+    assert len(run_sh_calls) == 1
 
 
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
 def test_main_exits_with_run_sh_return_code(mock_run):
-    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=42)]
+    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=0), Mock(returncode=42), Mock(returncode=0)]
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
     assert exc_info.value.code == 42
