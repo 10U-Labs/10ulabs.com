@@ -224,7 +224,7 @@ jobs:
           terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
           terraform_wrapper: false
       - name: Terraform Format Check
-        run: cd src/api/endpoints/image_for_ecs_runners && terraform fmt -check -recursive
+        run: cd src/api/endpoints/image_for_ecs_runners && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/image_for_ecs_runners && terraform init
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')

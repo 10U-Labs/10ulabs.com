@@ -169,7 +169,7 @@ jobs:
           done
           python3 -m mypy test/api/endpoints/rack_designer/
       - name: Terraform Format Check
-        run: cd src/api/endpoints/rack_designer && terraform fmt -check -recursive
+        run: cd src/api/endpoints/rack_designer && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/rack_designer && terraform init
       - env:

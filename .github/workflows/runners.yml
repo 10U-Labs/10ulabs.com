@@ -164,7 +164,7 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Terraform Format Check
-        run: cd src/api/endpoints/runners && terraform fmt -check -recursive
+        run: cd src/api/endpoints/runners && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/runners && terraform init
       - env:

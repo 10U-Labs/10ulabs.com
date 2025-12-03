@@ -215,7 +215,7 @@ jobs:
         name: Install linting dependencies
         run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs dnspython python-hcl2
       - name: Terraform Format Check
-        run: cd src/bootstrap && terraform fmt -check -recursive
+        run: cd src/bootstrap && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/bootstrap && terraform init
       - env:
