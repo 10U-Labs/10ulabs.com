@@ -1,10 +1,11 @@
 import re
 from pathlib import Path
 from typing import Any, Dict, List
-import boto3
-import pytest
 
 from test.api.conftest import get_runner_labels, parse_shared_module_outputs
+
+import boto3
+import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
