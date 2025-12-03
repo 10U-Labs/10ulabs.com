@@ -271,7 +271,7 @@ jobs:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
         name: Run unit tests
         run: python3 -m pytest test/api/backend/pre_deployment/ -v
-name: Ensuring API exists and is properly configured
+name: Ensuring API backend exists and is properly configured
 on:
   push:
     branches:
