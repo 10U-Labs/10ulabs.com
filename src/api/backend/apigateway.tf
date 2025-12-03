@@ -1,15 +1,15 @@
 locals {
   openapi_spec = templatefile("${path.module}/../../www/api/openapi.yml", {
-    CatchAllHandlerArn              = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
-    ContactHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.contact.outputs.lambda_function_arn}/invocations"
-    EcsRunnerHandlerArn             = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ecs_runner.outputs.lambda_function_arn}/invocations"
-    EC2RunnerHandlerArn             = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ec2_runner.outputs.lambda_function_arn}/invocations"
-    EchoHandlerArn                  = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations"
-    HealthHandlerArn                = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations"
-    ImageForEcsRunnersHandlerArn    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_arn}/invocations"
-    ImageForEC2RunnersHandlerArn    = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
-    RackDesignerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
-    RunnersHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations"
+    CatchAllHandlerArn           = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
+    ContactHandlerArn            = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.contact.outputs.lambda_function_arn}/invocations"
+    EcsRunnerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ecs_runner.outputs.lambda_function_arn}/invocations"
+    EC2RunnerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ec2_runner.outputs.lambda_function_arn}/invocations"
+    EchoHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations"
+    HealthHandlerArn             = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations"
+    ImageForEcsRunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_arn}/invocations"
+    ImageForEC2RunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
+    RackDesignerHandlerArn       = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
+    RunnersHandlerArn            = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations"
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }
