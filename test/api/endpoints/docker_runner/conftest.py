@@ -10,6 +10,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 DOCKER_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "docker_runner"
+RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 
 def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
@@ -80,9 +81,10 @@ def config_fixture() -> Dict[str, Any]:
     result['ecr_repository_name'] = shared.get('ecr_repository_name', '10ulabs')
     resource_prefix = shared.get('resource_prefix', 'TenULabs')
     result['workflow_runners_table_name'] = f"{resource_prefix}-workflow-runners"
-    result['cluster_name'] = 'test-cluster'
-    result['container_name'] = 'test-container'
-    result['task_family'] = 'test-task'
+    runners_tfvars = parse_tfvars(RUNNERS_SRC / "terraform.tfvars")
+    result['cluster_name'] = runners_tfvars.get('cluster_name', '')
+    result['container_name'] = runners_tfvars.get('container_name', '')
+    result['task_family'] = runners_tfvars.get('task_family', '')
     runner_labels = get_runner_labels()
     result.update(runner_labels)
     return result
