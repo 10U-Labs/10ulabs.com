@@ -16,7 +16,7 @@ paths:
       description: Returns the health status of the API
       operationId: healthCheck
       tags:
-        - Health
+        - /health
       responses:
         '200':
           description: Service is healthy
@@ -47,7 +47,7 @@ paths:
       description: Handles CORS preflight requests
       operationId: healthOptions
       tags:
-        - Health
+        - /health
       responses:
         '200':
           description: CORS headers
@@ -78,7 +78,7 @@ paths:
       description: Echoes back the request body
       operationId: echo
       tags:
-        - Utilities
+        - /v1/echo
       requestBody:
         required: true
         content:
@@ -139,7 +139,7 @@ paths:
       description: Validates that all infrastructure dependencies (security groups, subnets, VPC) exist and are accessible
       operationId: dependenciesHealth
       tags:
-        - Health
+        - /health
       security:
         - api_key: []
       responses:
@@ -213,7 +213,7 @@ paths:
       description: Receives GitHub workflow_job webhook events and creates runners (secured via GitHub webhook signature validation)
       operationId: createRunner
       tags:
-        - Runners
+        - /v1/runners
       responses:
         '200':
           description: Runner created successfully
@@ -227,7 +227,7 @@ paths:
       description: Returns the health status of the runners service
       operationId: runnersHealth
       tags:
-        - Runners
+        - /v1/runners
       security:
         - api_key: []
       responses:
@@ -243,7 +243,7 @@ paths:
       description: Triggers a build of a new EC2 runner AMI
       operationId: buildEC2RunnerAMI
       tags:
-        - Image for EC2 runners
+        - /v1/image-for-ec2-runners
       security:
         - api_key: []
       responses:
@@ -258,7 +258,7 @@ paths:
       description: Lists all available EC2 runner AMIs
       operationId: listEC2RunnerAMIs
       tags:
-        - Image for EC2 runners
+        - /v1/image-for-ec2-runners
       security:
         - api_key: []
       responses:
@@ -274,7 +274,7 @@ paths:
       description: Returns the latest EC2 runner AMI
       operationId: getLatestEC2RunnerAMI
       tags:
-        - Image for EC2 runners
+        - /v1/image-for-ec2-runners
       security:
         - api_key: []
       responses:
@@ -290,7 +290,7 @@ paths:
       description: Deletes a specific EC2 runner AMI
       operationId: deleteEC2RunnerAMI
       tags:
-        - Image for EC2 runners
+        - /v1/image-for-ec2-runners
       security:
         - api_key: []
       parameters:
@@ -312,7 +312,7 @@ paths:
       description: Triggers a build of a new ECS runner image
       operationId: buildEcsRunnerImage
       tags:
-        - Image for ECS runners
+        - /v1/image-for-ecs-runners
       security:
         - api_key: []
       responses:
@@ -327,7 +327,7 @@ paths:
       description: Lists all available ECS runner images
       operationId: listEcsRunnerImages
       tags:
-        - Image for ECS runners
+        - /v1/image-for-ecs-runners
       security:
         - api_key: []
       responses:
@@ -343,7 +343,7 @@ paths:
       description: Returns the latest ECS runner image
       operationId: getLatestEcsRunnerImage
       tags:
-        - Image for ECS runners
+        - /v1/image-for-ecs-runners
       security:
         - api_key: []
       responses:
@@ -359,7 +359,7 @@ paths:
       description: Returns a specific ECS runner image by digest
       operationId: getEcsRunnerImageByDigest
       tags:
-        - Image for ECS runners
+        - /v1/image-for-ecs-runners
       security:
         - api_key: []
       parameters:
@@ -380,7 +380,7 @@ paths:
       description: Deletes a specific ECS runner image by digest
       operationId: deleteEcsRunnerImage
       tags:
-        - Image for ECS runners
+        - /v1/image-for-ecs-runners
       security:
         - api_key: []
       parameters:
@@ -402,7 +402,7 @@ paths:
       description: Creates a new ECS runner instance
       operationId: createEcsRunner
       tags:
-        - Runners
+        - /v1/ecs-runner
       security:
         - api_key: []
       responses:
@@ -417,7 +417,7 @@ paths:
       description: Returns the status of currently running ECS (Fargate) runner instances
       operationId: getEcsRunnerStatus
       tags:
-        - Runners
+        - /v1/ecs-runner
       security:
         - api_key: []
       responses:
@@ -477,7 +477,7 @@ paths:
       description: Creates a new EC2 runner instance
       operationId: createEC2Runner
       tags:
-        - Runners
+        - /v1/ec2-runner
       security:
         - api_key: []
       responses:
@@ -492,7 +492,7 @@ paths:
       description: Returns the status of currently running EC2 runner instances
       operationId: getEC2RunnerStatus
       tags:
-        - Runners
+        - /v1/ec2-runner
       security:
         - api_key: []
       responses:
@@ -547,7 +547,7 @@ paths:
       description: Submits a contact form request with reCAPTCHA verification
       operationId: submitContact
       tags:
-        - Contact
+        - /v1/contact
       requestBody:
         required: true
         content:
@@ -627,7 +627,7 @@ paths:
       description: Handles CORS preflight requests
       operationId: contactOptions
       tags:
-        - Contact
+        - /v1/contact
       responses:
         '200':
           description: CORS headers
@@ -658,7 +658,7 @@ paths:
       description: Saves a rack designer configuration and returns a unique 8-character hash
       operationId: saveRackConfiguration
       tags:
-        - Rack Designer
+        - /v1/rack-designer
       requestBody:
         required: true
         content:
@@ -742,7 +742,7 @@ paths:
       description: Handles CORS preflight requests
       operationId: rackDesignerConfigurationsOptions
       tags:
-        - Rack Designer
+        - /v1/rack-designer
       responses:
         '200':
           description: CORS headers
@@ -773,7 +773,7 @@ paths:
       description: Loads a rack designer configuration by its unique hash
       operationId: loadRackConfiguration
       tags:
-        - Rack Designer
+        - /v1/rack-designer
       parameters:
         - name: config_hash
           in: path
@@ -822,7 +822,7 @@ paths:
       description: Handles CORS preflight requests
       operationId: rackDesignerConfigurationOptions
       tags:
-        - Rack Designer
+        - /v1/rack-designer
       parameters:
         - name: config_hash
           in: path
@@ -859,7 +859,7 @@ paths:
       description: Simulates a tri-mode SoC running a workload in the specified persona (RISC-V, x86-64, or ARM64)
       operationId: simulateTriModeSoc
       tags:
-        - Simulation
+        - /v1/simulation-soc
       requestBody:
         required: true
         content:
@@ -965,7 +965,7 @@ paths:
       description: Handles CORS preflight requests
       operationId: simulationSocOptions
       tags:
-        - Simulation
+        - /v1/simulation-soc
       responses:
         '200':
           description: CORS headers
@@ -996,7 +996,7 @@ paths:
       description: Saves analytics events for rack designer usage tracking
       operationId: saveRackAnalyticsEvents
       tags:
-        - Rack Designer
+        - /v1/rack-designer
       requestBody:
         required: true
         content:
@@ -1065,7 +1065,7 @@ paths:
       description: Handles CORS preflight requests
       operationId: rackDesignerEventsOptions
       tags:
-        - Rack Designer
+        - /v1/rack-designer
       responses:
         '200':
           description: CORS headers
@@ -1134,19 +1134,23 @@ components:
       in: header
   schemas: {}
 tags:
-  - name: Contact
-    description: Contact form endpoints
-  - name: Health
+  - name: /health
     description: Health check endpoints
-  - name: Image for EC2 runners
+  - name: /v1/contact
+    description: Contact form endpoints
+  - name: /v1/ec2-runner
+    description: EC2 runner management endpoints
+  - name: /v1/echo
+    description: Echo utility endpoint
+  - name: /v1/ecs-runner
+    description: ECS runner management endpoints
+  - name: /v1/image-for-ec2-runners
     description: EC2 runner AMI management endpoints
-  - name: Image for ECS runners
+  - name: /v1/image-for-ecs-runners
     description: ECS runner image management endpoints
-  - name: Rack Designer
+  - name: /v1/rack-designer
     description: Rack designer configuration endpoints
-  - name: Runners
-    description: GitHub runner management endpoints
-  - name: Simulation
+  - name: /v1/runners
+    description: GitHub runner webhook endpoints
+  - name: /v1/simulation-soc
     description: SoC simulation endpoints
-  - name: Utilities
-    description: Utility endpoints

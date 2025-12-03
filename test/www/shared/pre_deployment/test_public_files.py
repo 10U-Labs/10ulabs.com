@@ -1,7 +1,7 @@
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
-PUBLIC_DIR = REPO_ROOT / "src" / "www" / "home_page" / "react" / "public"
+PUBLIC_DIR = REPO_ROOT / "src" / "www" / "paths" / "index" / "public"
 GOOGLE_ANALYTICS_ID = "G-8YJFQC2EGV"
 ADS_TXT_CONTENT = "google.com, pub-7173129895205323, DIRECT, f08c47fec0942fa0"
 

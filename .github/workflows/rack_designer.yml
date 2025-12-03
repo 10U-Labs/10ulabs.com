@@ -67,12 +67,12 @@ jobs:
         run: terraform apply -auto-approve
       - name: Get website bucket name
         run: |
-          terraform -chdir=../../../www/home_page init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform -chdir=../../../www/home_page output -raw bucket_name)
+          terraform -chdir=../../../www/shared init -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=../../../www/shared output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Sync frontend to S3
         run: |
-          aws s3 sync ../../../www/rack_designer/ s3://${{ env.BUCKET_NAME }}/rack-designer/ \
+          aws s3 sync ../../../www/paths/rack_designer/ s3://${{ env.BUCKET_NAME }}/rack-designer/ \
             --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA \
@@ -88,7 +88,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/rack_designer/'; then
+            if grep -qE 'src/www/paths/rack_designer/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -99,7 +99,7 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          WEBSITE_FQDN=$(terraform -chdir=../../../www/home_page output -raw website_domain_name)
+          WEBSITE_FQDN=$(terraform -chdir=../../../www/shared output -raw website_domain_name)
           python3 ../../../../scripts/invalidate_cloudfront.py \
             --fqdn "$WEBSITE_FQDN" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
@@ -202,7 +202,7 @@ on:
     paths:
       - '.github/workflows/rack_designer.yml'
       - 'src/api/endpoints/rack_designer/**'
-      - 'src/www/rack_designer/**'
+      - 'src/www/paths/rack_designer/**'
       - 'test/api/endpoints/rack_designer/**'
   workflow_dispatch:
     inputs:

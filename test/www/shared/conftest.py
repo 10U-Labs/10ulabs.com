@@ -19,7 +19,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 
 def parse_website_locals() -> Dict[str, str]:
-    locals_path = REPO_ROOT / "src" / "www" / "home_page" / "locals.tf"
+    locals_path = REPO_ROOT / "src" / "www" / "shared" / "locals.tf"
     shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
@@ -59,7 +59,7 @@ def config_fixture() -> Dict[str, str]:
 
 @pytest.fixture(name="website_src_path")
 def fixture_website_src_path():
-    return REPO_ROOT / "src" / "www" / "home_page"
+    return REPO_ROOT / "src" / "www" / "shared"
 
 
 @pytest.fixture(name="cloudfront_s3_tf_content")
