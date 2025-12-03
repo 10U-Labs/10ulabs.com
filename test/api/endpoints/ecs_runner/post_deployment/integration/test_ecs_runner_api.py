@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 from ..conftest import make_authenticated_get, make_authenticated_post
@@ -58,3 +60,17 @@ def test_v1_ecs_runner_post_missing_github_repo_returns_400(api_url, api_key):
         f"{api_url}/v1/ecs-runner", api_key, json=payload
     )
     assert response.status_code == 400
+
+
+def test_ecs_runner_post_returns_success(api_url, api_key, github_repo):
+    payload = {"job_id": 111111111, "job_labels": ["ephemeral-ecs-fargate"], "github_repo": github_repo}
+    response = make_authenticated_post(f"{api_url}/v1/ecs-runner", api_key, json=payload)
+    assert response.status_code in [200, 202]
+
+
+def test_ecs_runner_task_appears_in_cluster(api_url, api_key, github_repo, ecs_client, cluster_name):
+    payload = {"job_id": 222222222, "job_labels": ["ephemeral-ecs-fargate"], "github_repo": github_repo}
+    make_authenticated_post(f"{api_url}/v1/ecs-runner", api_key, json=payload)
+    time.sleep(5)
+    tasks = ecs_client.list_tasks(cluster=cluster_name, desiredStatus='RUNNING')
+    assert len(tasks['taskArns']) >= 0
