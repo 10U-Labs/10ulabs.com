@@ -3,7 +3,7 @@ import pytest
 import yaml
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "post"
 
 
