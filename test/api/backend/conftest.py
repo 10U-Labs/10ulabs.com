@@ -3,25 +3,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 import boto3
 import pytest
-import yaml
 
-
-def parse_shared_config() -> Dict[str, Any]:
-    config_path = Path(__file__).parent.parent.parent.parent / "etc" / "runners.yml"
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-
-def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent.parent.parent / "lib" / "terraform" / "outputs.tf"
-    config = {}
-    with open(outputs_path, encoding="utf-8") as f:
-        content = f.read()
-    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
-    matches = re.findall(pattern, content)
-    for key, value in matches:
-        config[key] = value
-    return config
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
@@ -112,12 +95,8 @@ def config_fixture() -> Dict[str, str]:
     result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
     result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
     result['ecr_repository_name'] = shared.get('ecr_repository_name', '')
-    shared_config = parse_shared_config()
-    runner_labels = shared_config.get('runner_labels', {})
-    result['runner_label_ec2_spot'] = runner_labels.get('ec2_spot', '')
-    result['runner_label_fargate'] = runner_labels.get('fargate', '')
-    result['runner_label_ec2_spot_e2e_test'] = runner_labels.get('ec2_spot_e2e_test', '')
-    result['runner_label_fargate_e2e_test'] = runner_labels.get('fargate_e2e_test', '')
+    runner_labels = get_runner_labels()
+    result.update(runner_labels)
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
     result['health_handler_log_group_name'] = health_config.get('health_handler_log_group_name', '')

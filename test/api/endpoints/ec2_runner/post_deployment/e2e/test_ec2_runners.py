@@ -79,7 +79,7 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
     if not latest_ami_exists:
         yield None
         return
-    runner_label = config['runner_label_ec2_spot_e2e_test']
+    runner_label = config['ec2_spot_e2e_test']
     job_id, payload = create_runner_job_payload(
         test_context["github_repo"], [runner_label], test_context["github_run_id"]
     )

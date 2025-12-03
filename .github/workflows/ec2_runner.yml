@@ -171,7 +171,9 @@ on:
       - main
     paths:
       - '.github/workflows/ec2_runner.yml'
+      - 'etc/runners.yml'
       - 'src/api/endpoints/ec2_runner/**'
+      - 'test/api/conftest.py'
       - 'test/api/endpoints/ec2_runner/**'
   workflow_dispatch:
 permissions:

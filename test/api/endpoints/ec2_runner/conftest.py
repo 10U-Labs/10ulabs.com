@@ -4,23 +4,11 @@ from pathlib import Path
 from typing import Any, Dict
 import boto3
 import pytest
-import yaml
 
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
-
-
-def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
-    config = {}
-    with open(outputs_path, encoding="utf-8") as f:
-        content = f.read()
-    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
-    matches = re.findall(pattern, content)
-    for key, value in matches:
-        config[key] = value
-    return config
 
 
 def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
@@ -51,12 +39,6 @@ def parse_api_locals() -> Dict[str, str]:
     config['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
     config['github_repo_full'] = f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}"
     return config
-
-
-def parse_shared_config() -> Dict[str, Any]:
-    config_path = REPO_ROOT / "etc" / "runners.yml"
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
 
 
 def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
@@ -99,10 +81,8 @@ def config_fixture() -> Dict[str, Any]:
         'SSM_PARAMETER_NAME_FOR_GITHUB_PAT', '/test/github/pat'
     )
     result['ssm_parameter_name_for_api_key'] = result.get('ssm_parameter_name_for_api_key', '/api/key')
-    shared_config = parse_shared_config()
-    runner_labels = shared_config.get('runner_labels', {})
-    result['runner_label_ec2_spot'] = runner_labels.get('ec2_spot', '')
-    result['runner_label_ec2_spot_e2e_test'] = runner_labels.get('ec2_spot_e2e_test', '')
+    runner_labels = get_runner_labels()
+    result.update(runner_labels)
     return result
 
 

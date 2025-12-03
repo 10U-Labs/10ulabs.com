@@ -2,27 +2,24 @@ import os
 
 import pytest
 
-from ...conftest import (
-    parse_api_locals,
-    parse_shared_config,
-    parse_shared_module_outputs,
-)
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
+from ...conftest import parse_api_locals
 
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture():
     shared = parse_shared_module_outputs()
     api_locals = parse_api_locals()
-    shared_config = parse_shared_config()
-    runner_labels = shared_config.get('runner_labels', {})
-    return {
+    runner_labels = get_runner_labels()
+    result = {
         'github_repo': f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}",
-        'runner_label_ec2_spot_e2e_test': runner_labels.get('ec2_spot_e2e_test', ''),
         'ec2_runner_ami_purpose_tag': api_locals.get('ec2_runner_ami_purpose_tag', 'Purpose'),
         'ec2_runner_ami_purpose_value': api_locals.get('ec2_runner_ami_purpose_value', 'GitHub self-hosted EC2 runner'),
         'ec2_runner_ami_stable_tag': api_locals.get('ec2_runner_ami_stable_tag', 'Stable'),
         'resource_prefix': shared.get('resource_prefix', ''),
     }
+    result.update(runner_labels)
+    return result
 
 
 @pytest.fixture(name="workflow_runners_table_name", scope="module")

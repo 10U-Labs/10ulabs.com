@@ -278,8 +278,10 @@ on:
       - main
     paths:
       - '.github/workflows/api.yml'
+      - 'etc/runners.yml'
       - 'src/api/backend/**'
       - 'test/api/backend/**'
+      - 'test/api/conftest.py'
   workflow_dispatch:
     inputs:
       github_hosted:

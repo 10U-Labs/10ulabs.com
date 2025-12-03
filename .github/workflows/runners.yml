@@ -209,7 +209,9 @@ on:
       - main
     paths:
       - '.github/workflows/runners.yml'
+      - 'etc/runners.yml'
       - 'src/api/endpoints/runners/**'
+      - 'test/api/conftest.py'
       - 'test/api/endpoints/runners/**'
   workflow_dispatch:
     inputs:

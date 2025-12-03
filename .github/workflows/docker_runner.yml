@@ -239,7 +239,9 @@ on:
       - main
     paths:
       - '.github/workflows/docker_runner.yml'
+      - 'etc/runners.yml'
       - 'src/api/endpoints/docker_runner/**'
+      - 'test/api/conftest.py'
       - 'test/api/endpoints/docker_runner/**'
   workflow_dispatch:
     inputs:
