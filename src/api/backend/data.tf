@@ -18,10 +18,11 @@ data "terraform_remote_state" "runners" {
   }
 
   defaults = {
-    lambda_function_arn      = ""
-    lambda_function_name     = ""
-    runner_security_group_id = ""
-    vpc_public_subnet_ids    = ""
+    lambda_function_arn               = ""
+    lambda_function_name              = ""
+    runner_security_group_id          = ""
+    ssm_parameter_name_for_latest_ami = ""
+    vpc_public_subnet_ids             = ""
   }
 }
 

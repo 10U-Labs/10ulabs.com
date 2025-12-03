@@ -50,6 +50,10 @@ output "runner_security_group_id" {
   value = data.terraform_remote_state.runners.outputs.runner_security_group_id
 }
 
+output "ssm_parameter_name_for_latest_ami" {
+  value = data.terraform_remote_state.runners.outputs.ssm_parameter_name_for_latest_ami
+}
+
 output "vpc_public_subnet_ids" {
   value = data.terraform_remote_state.runners.outputs.vpc_public_subnet_ids
 }
