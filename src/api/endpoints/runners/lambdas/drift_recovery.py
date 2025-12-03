@@ -50,7 +50,13 @@ def is_resource_in_managed_vpc(resource_id, resource_type):
             elif resource_type == 'AWS::EC2::SecurityGroup':
                 response = ec2.describe_security_groups(GroupIds=[resource_id])
                 groups = response.get('SecurityGroups', [])
-                result = groups[0].get('VpcId') == managed_vpc_id if groups else False
+                if groups:
+                    group = groups[0]
+                    is_default = group.get('GroupName') == 'default'
+                    is_in_vpc = group.get('VpcId') == managed_vpc_id
+                    result = is_in_vpc and not is_default
+                else:
+                    result = False
         except ClientError as e:
             logger.warning("Failed to check resource VPC: %s", e)
             result = False

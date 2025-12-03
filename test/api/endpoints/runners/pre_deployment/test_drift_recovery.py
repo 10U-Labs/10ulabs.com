@@ -466,7 +466,7 @@ class TestIsResourceInManagedVpc:
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_ec2.describe_security_groups.return_value = {
-                'SecurityGroups': [{'VpcId': 'vpc-managed123'}]
+                'SecurityGroups': [{'VpcId': 'vpc-managed123', 'GroupName': 'custom-sg'}]
             }
             mock_boto_client.return_value = mock_ec2
             drift_recovery.clear_clients()
@@ -477,7 +477,18 @@ class TestIsResourceInManagedVpc:
         with patch('boto3.client') as mock_boto_client:
             mock_ec2 = MagicMock()
             mock_ec2.describe_security_groups.return_value = {
-                'SecurityGroups': [{'VpcId': 'vpc-other456'}]
+                'SecurityGroups': [{'VpcId': 'vpc-other456', 'GroupName': 'custom-sg'}]
+            }
+            mock_boto_client.return_value = mock_ec2
+            drift_recovery.clear_clients()
+            result = drift_recovery.is_resource_in_managed_vpc('sg-123', 'AWS::EC2::SecurityGroup')
+        assert result is False
+
+    def test_returns_false_for_default_security_group_in_managed_vpc(self, drift_recovery):
+        with patch('boto3.client') as mock_boto_client:
+            mock_ec2 = MagicMock()
+            mock_ec2.describe_security_groups.return_value = {
+                'SecurityGroups': [{'VpcId': 'vpc-managed123', 'GroupName': 'default'}]
             }
             mock_boto_client.return_value = mock_ec2
             drift_recovery.clear_clients()
