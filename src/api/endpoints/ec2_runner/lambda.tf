@@ -25,7 +25,6 @@ resource "aws_lambda_function" "handler" {
       EC2_IAM_INSTANCE_PROFILE = aws_iam_instance_profile.ec2_runner.name
       EC2_INSTANCE_TYPES       = join(",", var.ec2_instance_types)
       EC2_MANAGED_BY_TAG       = local.ec2_runner_managed_by_tag
-      EC2_MAX_PRICE            = var.ec2_max_spot_price
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
       SECURITY_GROUPS          = data.terraform_remote_state.runners.outputs.runner_security_group_id

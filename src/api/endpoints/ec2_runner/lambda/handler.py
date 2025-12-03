@@ -495,8 +495,7 @@ def get_ec2_config() -> Dict[str, Any]:
         'subnet_ids': os.environ['SUBNETS'].split(','),
         'security_group_id': os.environ['SECURITY_GROUPS'],
         'instance_types': os.environ['EC2_INSTANCE_TYPES'].split(','),
-        'iam_instance_profile': os.environ['EC2_IAM_INSTANCE_PROFILE'],
-        'max_price': os.environ['EC2_MAX_PRICE']
+        'iam_instance_profile': os.environ['EC2_IAM_INSTANCE_PROFILE']
     }
 
 
@@ -573,7 +572,7 @@ def delete_launch_template(template_id: str):
         logger.warning("Failed to delete launch template %s: %s", template_id, e)
 
 
-def launch_ec2_spot_runner(
+def launch_ec2_runner(
     job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None, runner_type: str = 'ec2'
 ) -> Dict[str, Any]:
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
@@ -629,7 +628,7 @@ def launch_ec2_spot_runner(
 
 
 def _build_ec2_template_config(cfg: Dict[str, Any], ec2_config: Dict[str, Any]) -> Dict[str, Any]:
-    runner_name = f"ec2-spot-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-spot-runner-{cfg['job_id']}"
+    runner_name = f"ec2-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-runner-{cfg['job_id']}"
     user_data = create_ec2_user_data(cfg['registration_token'], cfg['job_labels'], cfg['github_repo'], runner_name)
     return {
         'ami_id': cfg['ami_id'],
@@ -642,9 +641,9 @@ def _build_ec2_template_config(cfg: Dict[str, Any], ec2_config: Dict[str, Any]) 
 
 
 def _handle_ec2_fleet_success(cfg: Dict[str, Any], instance: Dict[str, Any], instance_id: str) -> Dict[str, Any]:
-    runner_name = cfg.get('runner_name') or (f"ec2-spot-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-spot-runner-{cfg['job_id']}")
+    runner_name = cfg.get('runner_name') or (f"ec2-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-runner-{cfg['job_id']}")
     logger.info(
-        "Launched EC2 spot runner for job %s: %s (%s in %s)",
+        "Launched EC2 runner for job %s: %s (%s in %s)",
         cfg['job_id'], instance_id, instance['InstanceType'], instance['Placement']['AvailabilityZone']
     )
     if cfg['run_id']:
@@ -665,12 +664,12 @@ def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
         launch_template_id = create_fleet_launch_template(template_config)
         fleet_response = get_ec2_client().create_fleet(
             Type='instant',
-            TargetCapacitySpecification={'TotalTargetCapacity': 1, 'DefaultTargetCapacityType': 'spot'},
-            SpotOptions={'AllocationStrategy': 'capacity-optimized', 'InstanceInterruptionBehavior': 'terminate'},
+            TargetCapacitySpecification={'TotalTargetCapacity': 1, 'DefaultTargetCapacityType': 'on-demand'},
+            OnDemandOptions={'AllocationStrategy': 'lowest-price'},
             LaunchTemplateConfigs=[{
                 'LaunchTemplateSpecification': {'LaunchTemplateId': launch_template_id, 'Version': '$Latest'},
                 'Overrides': [
-                    {'InstanceType': itype, 'SubnetId': subnet, 'MaxPrice': ec2_config['max_price']}
+                    {'InstanceType': itype, 'SubnetId': subnet}
                     for subnet in ec2_config['subnet_ids'] for itype in ec2_config['instance_types']
                 ]
             }]
@@ -757,7 +756,7 @@ def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
         elif is_test_mode():
             response = success_response(TEST_MODE_MOCK_PATHS['/v1/ec2-runner'])
         else:
-            result = launch_ec2_spot_runner(job_id, job_labels, github_repo, run_id, runner_type)
+            result = launch_ec2_runner(job_id, job_labels, github_repo, run_id, runner_type)
             response_body = result.copy()
             capacity_error = not result.get('success') and is_capacity_error(result)
             status_code = 503 if capacity_error else (200 if result.get('success') else 500)

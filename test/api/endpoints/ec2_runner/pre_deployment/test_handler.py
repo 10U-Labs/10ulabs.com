@@ -162,16 +162,15 @@ def test_get_ec2_config_parsing(ec2_runner_handler):
         'SUBNETS': 'subnet-1,subnet-2',
         'SECURITY_GROUPS': 'sg-1',
         'EC2_INSTANCE_TYPES': 't3.small,t3.medium',
-        'EC2_IAM_INSTANCE_PROFILE': 'test-profile',
-        'EC2_MAX_PRICE': '0.05'
+        'EC2_IAM_INSTANCE_PROFILE': 'test-profile'
     }):
         result = getattr(ec2_runner_handler, "get_ec2_config")()
-        has_correct_price = result['max_price'] == '0.05'
-        assert has_correct_price
+        has_correct_profile = result['iam_instance_profile'] == 'test-profile'
+        assert has_correct_profile
 
 
 @patch('boto3.client')
-def test_launch_ec2_spot_runner_no_ami(mock_boto_client, ec2_runner_handler):
+def test_launch_ec2_runner_no_ami(mock_boto_client, ec2_runner_handler):
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {'Images': []}
     mock_boto_client.return_value = mock_ec2
@@ -180,17 +179,16 @@ def test_launch_ec2_spot_runner_no_ami(mock_boto_client, ec2_runner_handler):
         'SECURITY_GROUPS': 'sg-1',
         'EC2_INSTANCE_TYPES': 't3.small',
         'EC2_IAM_INSTANCE_PROFILE': 'profile',
-        'EC2_MAX_PRICE': '0.05',
         'API_DOMAIN': 'api.test.com'
     }):
         with patch.object(ec2_runner_handler, 'trigger_ami_creation', return_value={'success': True}):
-            result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
             is_failure = not result['success']
             assert is_failure
 
 
 @patch('boto3.client')
-def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, ec2_runner_handler):
+def test_launch_ec2_runner_insufficient_capacity_all_azs(mock_boto_client, ec2_runner_handler):
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
@@ -210,7 +208,6 @@ def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, 
         'SECURITY_GROUPS': 'sg-1',
         'EC2_INSTANCE_TYPES': 't3.small',
         'EC2_IAM_INSTANCE_PROFILE': 'profile',
-        'EC2_MAX_PRICE': '0.05',
         'GITHUB_TOKEN_SECRET_NAME': '/token'
     }):
         with patch('urllib.request.urlopen') as mock_urlopen:
@@ -219,13 +216,13 @@ def test_launch_ec2_spot_runner_insufficient_capacity_all_azs(mock_boto_client, 
             mock_response.__enter__ = Mock(return_value=mock_response)
             mock_response.__exit__ = Mock(return_value=False)
             mock_urlopen.return_value = mock_response
-            result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
             is_failure = not result['success']
             assert is_failure
 
 
 @patch('boto3.client')
-def test_launch_ec2_spot_runner_no_github_token(mock_boto_client, ec2_runner_handler):
+def test_launch_ec2_runner_no_github_token(mock_boto_client, ec2_runner_handler):
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
@@ -235,17 +232,16 @@ def test_launch_ec2_spot_runner_no_github_token(mock_boto_client, ec2_runner_han
         'SUBNETS': 'subnet-1',
         'SECURITY_GROUPS': 'sg-1',
         'EC2_INSTANCE_TYPES': 't3.small',
-        'EC2_IAM_INSTANCE_PROFILE': 'profile',
-        'EC2_MAX_PRICE': '0.05'
+        'EC2_IAM_INSTANCE_PROFILE': 'profile'
     }):
         with patch.object(ec2_runner_handler, 'get_github_token', return_value=''):
-            result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+            result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
             is_failure = not result['success']
             assert is_failure
 
 
 @patch('boto3.client')
-def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, ec2_runner_handler):
+def test_launch_ec2_runner_failed_registration(mock_boto_client, ec2_runner_handler):
     mock_ec2 = MagicMock()
     mock_ec2.describe_images.return_value = {
         'Images': [{'ImageId': 'ami-test', 'CreationDate': '2024-01-01T00:00:00'}]
@@ -255,12 +251,11 @@ def test_launch_ec2_spot_runner_failed_registration(mock_boto_client, ec2_runner
         'SUBNETS': 'subnet-1',
         'SECURITY_GROUPS': 'sg-1',
         'EC2_INSTANCE_TYPES': 't3.small',
-        'EC2_IAM_INSTANCE_PROFILE': 'profile',
-        'EC2_MAX_PRICE': '0.05'
+        'EC2_IAM_INSTANCE_PROFILE': 'profile'
     }):
         with patch.object(ec2_runner_handler, 'get_github_token', return_value='token'):
             with patch.object(ec2_runner_handler, 'get_runner_registration_token', return_value=''):
-                result = ec2_runner_handler.launch_ec2_spot_runner(123, ['test'], 'test/repo')
+                result = ec2_runner_handler.launch_ec2_runner(123, ['test'], 'test/repo')
                 is_failure = not result['success']
                 assert is_failure
 

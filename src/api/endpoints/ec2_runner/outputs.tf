@@ -2,10 +2,6 @@ output "ec2_instance_profile_name" {
   value = aws_iam_instance_profile.ec2_runner.name
 }
 
-output "ec2_max_spot_price" {
-  value = var.ec2_max_spot_price
-}
-
 output "ec2_runner_ami_purpose_tag" {
   value = local.ec2_runner_ami_purpose_tag
 }

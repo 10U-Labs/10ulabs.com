@@ -74,10 +74,6 @@ output "ec2_instance_types" {
   value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_types
 }
 
-output "ec2_max_spot_price" {
-  value = data.terraform_remote_state.ec2_runner.outputs.ec2_max_spot_price
-}
-
 output "ec2_runner_managed_by_tag" {
   value = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
 }
