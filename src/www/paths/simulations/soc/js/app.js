@@ -2,6 +2,13 @@ var API_BASE_URL = 'https://api.10ulabs.com';
 
 var socConfigLoaded = false;
 
+var PERSONAS = ['riscv', 'x86_64', 'arm64'];
+var PERSONA_LABELS = {
+    'riscv': 'RISC-V',
+    'x86_64': 'x86-64',
+    'arm64': 'ARM64'
+};
+
 function getApiBaseUrl() {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return 'http://localhost:3000';
@@ -32,32 +39,63 @@ function updateSocConfig(config, instructionCount) {
     socConfigLoaded = true;
 }
 
-function showResults(data) {
-    var personaLabels = {
-        'riscv': 'RISC-V',
-        'x86_64': 'x86-64',
-        'arm64': 'ARM64'
-    };
+function formatPerformance(slowdown) {
+    var percentChange = (1 - slowdown) * 100;
+    return percentChange.toFixed(1) + '%';
+}
 
-    document.getElementById('resultPersona').textContent = personaLabels[data.persona] || data.persona;
+function showResults(results) {
+    var tbody = document.getElementById('resultsBody');
+    var barChart = document.getElementById('barChart');
+    tbody.innerHTML = '';
+    barChart.innerHTML = '';
 
-    document.getElementById('nativeIpc').textContent = data.native_core.ipc.toFixed(3);
-    document.getElementById('nativeRuntime').textContent = data.native_core.runtime_seconds.toFixed(4);
+    var maxIpc = 0;
+    results.forEach(function(data) {
+        if (data.native_core.ipc > maxIpc) {
+            maxIpc = data.native_core.ipc;
+        }
+        if (data.tri_mode_core.ipc > maxIpc) {
+            maxIpc = data.tri_mode_core.ipc;
+        }
+    });
 
-    document.getElementById('multiIsaIpc').textContent = data.tri_mode_core.ipc.toFixed(3);
-    document.getElementById('multiIsaRuntime').textContent = data.tri_mode_core.runtime_seconds.toFixed(4);
+    results.forEach(function(data) {
+        var row = document.createElement('tr');
 
-    document.getElementById('slowdownValue').textContent = data.relative_slowdown.toFixed(3) + 'x';
+        var isaCell = document.createElement('td');
+        isaCell.textContent = PERSONA_LABELS[data.persona] || data.persona;
+        row.appendChild(isaCell);
 
-    var maxIpc = Math.max(data.native_core.ipc, data.tri_mode_core.ipc);
-    var nativePercent = (data.native_core.ipc / maxIpc) * 100;
-    var multiIsaPercent = (data.tri_mode_core.ipc / maxIpc) * 100;
+        var nativeCell = document.createElement('td');
+        nativeCell.textContent = data.native_core.ipc.toFixed(3);
+        row.appendChild(nativeCell);
 
-    document.getElementById('nativeBar').style.width = nativePercent + '%';
-    document.getElementById('nativeBarValue').textContent = data.native_core.ipc.toFixed(3);
+        var multiIsaCell = document.createElement('td');
+        multiIsaCell.textContent = data.tri_mode_core.ipc.toFixed(3);
+        row.appendChild(multiIsaCell);
 
-    document.getElementById('multiIsaBar').style.width = multiIsaPercent + '%';
-    document.getElementById('multiIsaBarValue').textContent = data.tri_mode_core.ipc.toFixed(3);
+        var perfCell = document.createElement('td');
+        perfCell.className = 'perf-negative';
+        perfCell.textContent = formatPerformance(data.relative_slowdown);
+        row.appendChild(perfCell);
+
+        tbody.appendChild(row);
+
+        var nativeBarRow = document.createElement('div');
+        nativeBarRow.className = 'bar-row';
+        nativeBarRow.innerHTML = '<span class="bar-label">' + (PERSONA_LABELS[data.persona] || data.persona) + ' Native</span>' +
+            '<div class="bar-track"><div class="bar native-bar" style="width: ' + ((data.native_core.ipc / maxIpc) * 100) + '%"></div></div>' +
+            '<span class="bar-value">' + data.native_core.ipc.toFixed(3) + '</span>';
+        barChart.appendChild(nativeBarRow);
+
+        var multiIsaBarRow = document.createElement('div');
+        multiIsaBarRow.className = 'bar-row';
+        multiIsaBarRow.innerHTML = '<span class="bar-label">' + (PERSONA_LABELS[data.persona] || data.persona) + ' Multi-ISA</span>' +
+            '<div class="bar-track"><div class="bar alternate-bar" style="width: ' + ((data.tri_mode_core.ipc / maxIpc) * 100) + '%"></div></div>' +
+            '<span class="bar-value">' + data.tri_mode_core.ipc.toFixed(3) + '</span>';
+        barChart.appendChild(multiIsaBarRow);
+    });
 
     document.getElementById('resultsPanel').style.display = 'block';
     document.getElementById('errorPanel').style.display = 'none';
@@ -69,21 +107,9 @@ function showError(message) {
     document.getElementById('resultsPanel').style.display = 'none';
 }
 
-function runSimulation() {
-    var selectedPersona = document.querySelector('input[name="persona"]:checked');
-    if (!selectedPersona) {
-        showError('Please select a persona');
-        return;
-    }
-
-    var persona = selectedPersona.value;
-    var btn = document.getElementById('simulateBtn');
-    btn.disabled = true;
-    btn.textContent = 'Running...';
-
+function fetchSimulation(persona) {
     var baseUrl = getApiBaseUrl();
-
-    fetch(baseUrl + '/v1/simulation-soc', {
+    return fetch(baseUrl + '/v1/simulation-soc', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -92,49 +118,36 @@ function runSimulation() {
     })
     .then(function(response) {
         return response.json();
-    })
-    .then(function(data) {
-        btn.disabled = false;
-        btn.textContent = 'Run Simulation';
-
-        if (data.success) {
-            if (!socConfigLoaded) {
-                updateSocConfig(data.soc_config, data.instruction_count);
-            }
-            showResults(data);
-        } else {
-            showError(data.error || 'Simulation failed');
-        }
-    })
-    .catch(function(error) {
-        btn.disabled = false;
-        btn.textContent = 'Run Simulation';
-        showError('Network error: ' + error.message);
     });
 }
 
-function loadInitialConfig() {
-    var baseUrl = getApiBaseUrl();
-
-    fetch(baseUrl + '/v1/simulation-soc', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ persona: 'riscv' })
-    })
-    .then(function(response) {
-        return response.json();
-    })
-    .then(function(data) {
-        if (data.success) {
-            updateSocConfig(data.soc_config, data.instruction_count);
-        }
-    })
-    .catch(function() {
+function loadAllSimulations() {
+    var promises = PERSONAS.map(function(persona) {
+        return fetchSimulation(persona);
     });
+
+    Promise.all(promises)
+        .then(function(results) {
+            var successfulResults = results.filter(function(data) {
+                return data.success;
+            });
+
+            if (successfulResults.length === 0) {
+                showError('Failed to load simulations');
+                return;
+            }
+
+            if (!socConfigLoaded && successfulResults.length > 0) {
+                updateSocConfig(successfulResults[0].soc_config, successfulResults[0].instruction_count);
+            }
+
+            showResults(successfulResults);
+        })
+        .catch(function(error) {
+            showError('Network error: ' + error.message);
+        });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadInitialConfig();
+    loadAllSimulations();
 });

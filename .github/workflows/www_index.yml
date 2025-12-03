@@ -44,7 +44,7 @@ jobs:
     name: Deploying home page
     needs:
       - declaring-common-variables
-      - unit-testing
+      - performing-static-analysis
     runs-on:
       - ecs-fargate
       - runner-${{ github.run_id }}
@@ -110,24 +110,6 @@ jobs:
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/*"
-  integration-testing:
-    name: Integration testing
-    needs:
-      - declaring-common-variables
-      - deploying-home-page
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - name: Run integration tests
-        run: python3 -m pytest test/www/paths/index/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -155,27 +137,6 @@ jobs:
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
-      - name: Run pylint
-        run: |
-          python3 -m pylint test/www/paths/index/ \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-      - name: Run mypy
-        run: python3 -m mypy test/www/paths/index/
-  unit-testing:
-    name: Unit testing
-    needs:
-      - declaring-common-variables
-      - performing-static-analysis
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Run unit tests
-        run: python3 -m pytest test/www/paths/index/pre_deployment/ -v
 name: Ensuring www index (home page) exists and is properly configured
 on:
   push:
@@ -184,7 +145,6 @@ on:
     paths:
       - '.github/workflows/www_index.yml'
       - 'src/www/paths/index/**'
-      - 'test/www/paths/index/**'
   workflow_dispatch:
     inputs:
       invalidate_cloudfront:

@@ -54,69 +54,25 @@
             </div>
         </div>
 
-        <div class="simulation-panel">
-            <h2>Run Simulation</h2>
-            <div class="persona-selector">
-                <label class="persona-option">
-                    <input type="radio" name="persona" value="riscv" checked>
-                    <span class="persona-label">RISC-V</span>
-                </label>
-                <label class="persona-option">
-                    <input type="radio" name="persona" value="x86_64">
-                    <span class="persona-label">x86-64</span>
-                </label>
-                <label class="persona-option">
-                    <input type="radio" name="persona" value="arm64">
-                    <span class="persona-label">ARM64</span>
-                </label>
-            </div>
-            <button class="simulate-btn" id="simulateBtn" onclick="runSimulation()">Run Simulation</button>
-        </div>
-
         <div class="results-panel" id="resultsPanel" style="display: none;">
-            <h2>Results: <span id="resultPersona"></span></h2>
+            <h2>Performance Comparison</h2>
 
-            <div class="metrics-grid">
-                <div class="metric-card native">
-                    <h3>Native Core</h3>
-                    <div class="metric-value" id="nativeIpc">-</div>
-                    <div class="metric-label">IPC</div>
-                    <div class="metric-secondary">
-                        <span id="nativeRuntime">-</span> seconds
-                    </div>
-                </div>
-                <div class="metric-card alternate">
-                    <h3>Multi-ISA Core</h3>
-                    <div class="metric-value" id="multiIsaIpc">-</div>
-                    <div class="metric-label">IPC</div>
-                    <div class="metric-secondary">
-                        <span id="multiIsaRuntime">-</span> seconds
-                    </div>
-                </div>
-            </div>
-
-            <div class="slowdown-panel">
-                <div class="slowdown-label">Relative Slowdown</div>
-                <div class="slowdown-value" id="slowdownValue">-</div>
-            </div>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>ISA</th>
+                        <th>Native IPC</th>
+                        <th>Multi-ISA IPC</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                </tbody>
+            </table>
 
             <div class="chart-container">
                 <h3>IPC Comparison</h3>
-                <div class="bar-chart">
-                    <div class="bar-row">
-                        <span class="bar-label">Native</span>
-                        <div class="bar-track">
-                            <div class="bar native-bar" id="nativeBar"></div>
-                        </div>
-                        <span class="bar-value" id="nativeBarValue"></span>
-                    </div>
-                    <div class="bar-row">
-                        <span class="bar-label">Multi-ISA</span>
-                        <div class="bar-track">
-                            <div class="bar alternate-bar" id="multiIsaBar"></div>
-                        </div>
-                        <span class="bar-value" id="multiIsaBarValue"></span>
-                    </div>
+                <div class="bar-chart" id="barChart">
                 </div>
             </div>
         </div>
