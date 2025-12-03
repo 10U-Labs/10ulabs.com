@@ -45,3 +45,11 @@ output "ec2_runner_ami_stable_tag" {
 output "ec2_instance_types" {
   value = data.terraform_remote_state.ec2_runner.outputs.ec2_instance_types
 }
+
+output "runner_security_group_id" {
+  value = data.terraform_remote_state.runners.outputs.runner_security_group_id
+}
+
+output "vpc_public_subnet_ids" {
+  value = data.terraform_remote_state.runners.outputs.vpc_public_subnet_ids
+}

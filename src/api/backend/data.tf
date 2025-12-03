@@ -18,8 +18,10 @@ data "terraform_remote_state" "runners" {
   }
 
   defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
+    lambda_function_arn      = ""
+    lambda_function_name     = ""
+    runner_security_group_id = ""
+    vpc_public_subnet_ids    = ""
   }
 }
 
