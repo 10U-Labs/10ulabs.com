@@ -27,7 +27,7 @@ def test_simulation_soc_endpoint_consistent_persona_results(api_url):
     responses = [
         requests.post(
             f"{api_url}/v1/simulation-soc",
-            json={"persona": "arm64"},
+            json={"persona": "mobile64"},
             headers=TEST_HEADERS,
             timeout=10
         )
@@ -76,7 +76,7 @@ def test_simulation_soc_endpoint_no_cold_start_degradation(api_url):
 
 def test_simulation_soc_all_personas_return_valid_json(api_url):
     """Verify all personas return valid JSON with expected fields."""
-    personas = ["riscv", "x86_64", "arm64"]
+    personas = ["riscv", "desktop64", "mobile64"]
     results = []
     for persona in personas:
         response = requests.post(
@@ -101,7 +101,7 @@ def test_simulation_soc_relative_slowdown_consistent_per_persona(api_url):
     responses = [
         requests.post(
             f"{api_url}/v1/simulation-soc",
-            json={"persona": "x86_64"},
+            json={"persona": "desktop64"},
             headers=TEST_HEADERS,
             timeout=10
         )
@@ -114,7 +114,7 @@ def test_simulation_soc_relative_slowdown_consistent_per_persona(api_url):
 
 def test_simulation_soc_riscv_has_highest_native_ipc(api_url):
     """Verify RISC-V has highest native IPC due to simpler ISA."""
-    personas = ["riscv", "x86_64", "arm64"]
+    personas = ["riscv", "desktop64", "mobile64"]
     ipcs = {}
     for persona in personas:
         response = requests.post(
@@ -124,13 +124,13 @@ def test_simulation_soc_riscv_has_highest_native_ipc(api_url):
             timeout=10
         )
         ipcs[persona] = response.json()["native_core"]["ipc"]
-    riscv_has_highest = ipcs["riscv"] >= ipcs["arm64"] >= ipcs["x86_64"]
+    riscv_has_highest = ipcs["riscv"] >= ipcs["mobile64"] >= ipcs["desktop64"]
     assert riscv_has_highest
 
 
 def test_simulation_soc_soc_config_consistent_across_personas(api_url):
     """Verify SoC configuration is identical across all personas."""
-    personas = ["riscv", "x86_64", "arm64"]
+    personas = ["riscv", "desktop64", "mobile64"]
     soc_configs = []
     for persona in personas:
         response = requests.post(
@@ -146,7 +146,7 @@ def test_simulation_soc_soc_config_consistent_across_personas(api_url):
 
 def test_simulation_soc_instruction_count_consistent_across_personas(api_url):
     """Verify instruction count is identical across all personas."""
-    personas = ["riscv", "x86_64", "arm64"]
+    personas = ["riscv", "desktop64", "mobile64"]
     counts = []
     for persona in personas:
         response = requests.post(
