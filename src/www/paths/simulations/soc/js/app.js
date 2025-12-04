@@ -2,7 +2,7 @@ var API_BASE_URL = 'https://api.10ulabs.com';
 
 var socConfigLoaded = false;
 
-var PERSONAS = ['mobile64', 'riscv', 'desktop64'];
+var PERSONAS = ['desktop64', 'mobile64', 'riscv'];
 var PERSONA_LABELS = {
     'riscv': 'RISC-V',
     'desktop64': 'Desktop64',
