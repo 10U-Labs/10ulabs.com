@@ -133,7 +133,13 @@ h2 {
     font-size: 0.875rem;
     font-weight: 600;
     color: #0f172a;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.soc-card-subtitle {
+    font-size: 0.625rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
 }
 
 .soc-card-ipc {
@@ -181,6 +187,10 @@ h2 {
 
 .soc-card-perf.negative {
     color: #dc2626;
+}
+
+.soc-card-perf.positive {
+    color: #059669;
 }
 
 .error-panel {

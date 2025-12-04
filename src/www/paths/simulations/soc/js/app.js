@@ -44,7 +44,7 @@ function formatPerformance(slowdown) {
     return percentChange.toFixed(1) + '%';
 }
 
-function createSocCard(label, ipc, maxIpc, cardType, perfText) {
+function createSocCard(label, ipc, maxIpc, cardType, perfText, subtitle) {
     var card = document.createElement('div');
     card.className = 'soc-card ' + cardType;
 
@@ -52,6 +52,13 @@ function createSocCard(label, ipc, maxIpc, cardType, perfText) {
     title.className = 'soc-card-title';
     title.textContent = label;
     card.appendChild(title);
+
+    if (subtitle) {
+        var subtitleEl = document.createElement('div');
+        subtitleEl.className = 'soc-card-subtitle';
+        subtitleEl.textContent = subtitle;
+        card.appendChild(subtitleEl);
+    }
 
     var ipcValue = document.createElement('div');
     ipcValue.className = 'soc-card-ipc';
@@ -73,7 +80,8 @@ function createSocCard(label, ipc, maxIpc, cardType, perfText) {
 
     if (perfText) {
         var perf = document.createElement('div');
-        perf.className = 'soc-card-perf negative';
+        var isPositive = perfText.charAt(0) !== '-';
+        perf.className = 'soc-card-perf ' + (isPositive ? 'positive' : 'negative');
         perf.textContent = perfText;
         card.appendChild(perf);
     }
@@ -109,7 +117,7 @@ function showResults(results) {
         var data = resultsByPersona[persona];
         if (data) {
             var label = PERSONA_LABELS[persona] || persona;
-            var card = createSocCard(label, data.native_core.ipc, maxIpc, 'native', null);
+            var card = createSocCard(label, data.native_core.ipc, maxIpc, 'native', null, null);
             socGrid.appendChild(card);
         }
     });
@@ -124,13 +132,68 @@ function showResults(results) {
         if (data) {
             var label = PERSONA_LABELS[persona] || persona;
             var perfText = formatPerformance(data.relative_slowdown);
-            var card = createSocCard(label, data.tri_mode_core.ipc, maxIpc, 'tri-mode', perfText);
+            var card = createSocCard(label, data.tri_mode_core.ipc, maxIpc, 'tri-mode', perfText, null);
             socGrid.appendChild(card);
         }
     });
 
     document.getElementById('resultsPanel').style.display = 'block';
     document.getElementById('errorPanel').style.display = 'none';
+
+    showRealWorldResults(results, resultsByPersona);
+}
+
+function showRealWorldResults(results, resultsByPersona) {
+    var realWorldGrid = document.getElementById('realWorldGrid');
+    realWorldGrid.innerHTML = '';
+
+    var maxIpc = 0;
+    results.forEach(function(data) {
+        var rw = data.real_world_comparison;
+        if (rw) {
+            if (rw.native_core.ipc > maxIpc) {
+                maxIpc = rw.native_core.ipc;
+            }
+            if (rw.tri_mode_core.ipc > maxIpc) {
+                maxIpc = rw.tri_mode_core.ipc;
+            }
+        }
+    });
+
+    var nativeLabel = document.createElement('div');
+    nativeLabel.className = 'soc-row-label';
+    nativeLabel.textContent = 'Native Core';
+    realWorldGrid.appendChild(nativeLabel);
+
+    PERSONAS.forEach(function(persona) {
+        var data = resultsByPersona[persona];
+        if (data && data.real_world_comparison) {
+            var rw = data.real_world_comparison;
+            var label = PERSONA_LABELS[persona] || persona;
+            var subtitle = rw.native_core.name + ' @ ' + rw.clock_ghz + ' GHz';
+            var card = createSocCard(label, rw.native_core.ipc, maxIpc, 'native', null, subtitle);
+            realWorldGrid.appendChild(card);
+        }
+    });
+
+    var triModeLabel = document.createElement('div');
+    triModeLabel.className = 'soc-row-label';
+    triModeLabel.textContent = 'Tri-Mode Core';
+    realWorldGrid.appendChild(triModeLabel);
+
+    PERSONAS.forEach(function(persona) {
+        var data = resultsByPersona[persona];
+        if (data && data.real_world_comparison) {
+            var rw = data.real_world_comparison;
+            var label = PERSONA_LABELS[persona] || persona;
+            var perfText = formatPerformance(rw.relative_slowdown);
+            var subtitle = 'Same clock as native';
+            var card = createSocCard(label, rw.tri_mode_core.ipc, maxIpc, 'tri-mode', perfText, subtitle);
+            realWorldGrid.appendChild(card);
+        }
+    });
+
+    document.getElementById('realWorldPanel').style.display = 'block';
 }
 
 function showError(message) {

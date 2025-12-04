@@ -325,3 +325,75 @@ def test_tri_mode_core_runtime_is_positive(simulation_soc_handler, simulation_so
     body = parse_response_body(response)
     runtime_positive = body['tri_mode_core']['runtime_seconds'] > 0
     assert runtime_positive
+
+
+def test_response_contains_real_world_comparison(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory()
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    has_real_world = 'real_world_comparison' in body
+    assert has_real_world
+
+
+def test_real_world_comparison_has_native_core(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory()
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    has_native_core = 'native_core' in body['real_world_comparison']
+    assert has_native_core
+
+
+def test_real_world_comparison_native_core_has_name(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory()
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    has_name = 'name' in body['real_world_comparison']['native_core']
+    assert has_name
+
+
+def test_real_world_comparison_native_core_has_ipc(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory()
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    has_ipc = 'ipc' in body['real_world_comparison']['native_core']
+    assert has_ipc
+
+
+def test_real_world_comparison_has_tri_mode_core(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory()
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    has_tri_mode = 'tri_mode_core' in body['real_world_comparison']
+    assert has_tri_mode
+
+
+def test_real_world_comparison_has_relative_slowdown(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory()
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    has_slowdown = 'relative_slowdown' in body['real_world_comparison']
+    assert has_slowdown
+
+
+def test_real_world_x86_64_core_name_is_pentium4(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'x86_64'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    is_pentium4 = 'Pentium' in body['real_world_comparison']['native_core']['name']
+    assert is_pentium4
+
+
+def test_real_world_arm64_core_name_is_cortex(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'arm64'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    is_cortex = 'Cortex' in body['real_world_comparison']['native_core']['name']
+    assert is_cortex
+
+
+def test_real_world_riscv_core_name_is_sifive(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    is_sifive = 'SiFive' in body['real_world_comparison']['native_core']['name']
+    assert is_sifive

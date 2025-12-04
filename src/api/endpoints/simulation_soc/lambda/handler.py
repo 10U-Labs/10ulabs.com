@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 SOC_CONFIG = {
     'issue_width': 3,
@@ -15,6 +15,45 @@ SOC_CONFIG = {
     'l2_size_kb': 512,
     'clock_ghz': 3.0,
     'pipeline_depth_estimate': 18
+}
+
+REAL_WORLD_CORES = {
+    'x86_64': {
+        'name': 'Pentium 4 Prescott',
+        'issue_width': 3,
+        'rob_entries': 126,
+        'l1d_size_kb': 16,
+        'l2_size_kb': 1024,
+        'clock_ghz': 3.4,
+        'int_alus': 3,
+        'load_units': 2,
+        'store_units': 1,
+        'fp_vec_units': 2
+    },
+    'arm64': {
+        'name': 'Cortex-A57',
+        'issue_width': 3,
+        'rob_entries': 128,
+        'l1d_size_kb': 32,
+        'l2_size_kb': 2048,
+        'clock_ghz': 2.0,
+        'int_alus': 2,
+        'load_units': 1,
+        'store_units': 1,
+        'fp_vec_units': 2
+    },
+    'riscv': {
+        'name': 'SiFive U74',
+        'issue_width': 2,
+        'rob_entries': 64,
+        'l1d_size_kb': 32,
+        'l2_size_kb': 2048,
+        'clock_ghz': 1.5,
+        'int_alus': 2,
+        'load_units': 1,
+        'store_units': 1,
+        'fp_vec_units': 1
+    }
 }
 
 EXECUTION_UNITS = {
@@ -172,6 +211,26 @@ def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any], trimode: bool 
     return result
 
 
+def compute_frontend_ipc_with_config(persona: str, uop_stats: Dict[str, Any],
+                                     core_config: Dict[str, Any]) -> Dict[str, Any]:
+    workload = WORKLOADS[persona]
+    fetch_bytes_per_cycle = 16.0
+    issue_width = float(core_config['issue_width'])
+    avg_bytes = workload['avg_bytes_per_instr']
+    avg_uops = uop_stats['avg_uops_per_instr']
+    fetch_limited = fetch_bytes_per_cycle / avg_bytes
+    decode_limited = issue_width
+    uop_limited = issue_width / avg_uops
+    ipc_frontend = min(fetch_limited, decode_limited, uop_limited)
+    result = {
+        'ipc_frontend': ipc_frontend,
+        'fetch_limited_ipc': fetch_limited,
+        'decode_limited_ipc': decode_limited,
+        'uop_emission_limited_ipc': uop_limited
+    }
+    return result
+
+
 def compute_resource_limited_upc(uop_stats: Dict[str, Any]) -> float:
     total = uop_stats['total_uops']
     alu_frac = (uop_stats['alu_uops'] + uop_stats['branch_uops'] + uop_stats['complex_uops'] * 0.5) / total
@@ -184,6 +243,23 @@ def compute_resource_limited_upc(uop_stats: Dict[str, Any]) -> float:
         EXECUTION_UNITS['store_units'] / store_frac if store_frac > 0 else float('inf'),
         EXECUTION_UNITS['fp_vec_units'] / fp_frac if fp_frac > 0 else float('inf'),
         SOC_CONFIG['issue_width']
+    ]
+    result = min(limits)
+    return result
+
+
+def compute_resource_limited_upc_with_config(uop_stats: Dict[str, Any], core_config: Dict[str, Any]) -> float:
+    total = uop_stats['total_uops']
+    alu_frac = (uop_stats['alu_uops'] + uop_stats['branch_uops'] + uop_stats['complex_uops'] * 0.5) / total
+    load_frac = uop_stats['load_uops'] / total
+    store_frac = uop_stats['store_uops'] / total
+    fp_frac = (uop_stats['fp_vec_uops'] + uop_stats['complex_uops'] * 0.5) / total
+    limits = [
+        core_config['int_alus'] / alu_frac if alu_frac > 0 else float('inf'),
+        core_config['load_units'] / load_frac if load_frac > 0 else float('inf'),
+        core_config['store_units'] / store_frac if store_frac > 0 else float('inf'),
+        core_config['fp_vec_units'] / fp_frac if fp_frac > 0 else float('inf'),
+        core_config['issue_width']
     ]
     result = min(limits)
     return result
@@ -202,6 +278,26 @@ def compute_memory_stall_cpi(workload: Dict[str, Any], load_uops: float, instr_c
 def compute_backend_ipc(persona: str, uop_stats: Dict[str, Any], instr_count: int) -> Dict[str, Any]:
     workload = WORKLOADS[persona]
     resource_upc = compute_resource_limited_upc(uop_stats)
+    mem_stall = compute_memory_stall_cpi(workload, uop_stats['load_uops'], instr_count)
+    mispredicts = instr_count * workload['branch_fraction'] * workload['branch_mispredict_rate']
+    branch_stall = mispredicts * LATENCIES['branch_mispredict'] / instr_count
+    total_cpi = uop_stats['avg_uops_per_instr'] / resource_upc + mem_stall + branch_stall
+    result = {
+        'ipc_backend': 1.0 / total_cpi,
+        'resource_limited_upc': resource_upc,
+        'memory_stall_cpi': mem_stall,
+        'branch_stall_cpi': branch_stall,
+        'l1_miss_rate': 1 - workload['l1d_hit_rate'],
+        'l2_miss_rate': 1 - workload['l2_hit_rate'],
+        'branch_mispredicts': mispredicts
+    }
+    return result
+
+
+def compute_backend_ipc_with_config(persona: str, uop_stats: Dict[str, Any], instr_count: int,
+                                    core_config: Dict[str, Any]) -> Dict[str, Any]:
+    workload = WORKLOADS[persona]
+    resource_upc = compute_resource_limited_upc_with_config(uop_stats, core_config)
     mem_stall = compute_memory_stall_cpi(workload, uop_stats['load_uops'], instr_count)
     mispredicts = instr_count * workload['branch_fraction'] * workload['branch_mispredict_rate']
     branch_stall = mispredicts * LATENCIES['branch_mispredict'] / instr_count
@@ -278,6 +374,35 @@ def compute_trimode_simulation(persona: str) -> Dict[str, Any]:
     return result
 
 
+def compute_real_world_simulation(persona: str) -> Dict[str, Any]:
+    core_config = REAL_WORLD_CORES[persona]
+    uop_stats = compute_uop_counts(persona, INSTRUCTION_COUNT)
+    frontend = compute_frontend_ipc_with_config(persona, uop_stats, core_config)
+    backend = compute_backend_ipc_with_config(persona, uop_stats, INSTRUCTION_COUNT, core_config)
+
+    ipc_frontend = frontend['ipc_frontend']
+    ipc_backend = backend['ipc_backend']
+    ipc_effective = min(ipc_frontend, ipc_backend)
+
+    cycles = INSTRUCTION_COUNT / ipc_effective
+    clock_ghz = cast(float, core_config['clock_ghz'])
+    runtime_seconds = cycles / (clock_ghz * 1e9)
+
+    result = {
+        'core_name': core_config['name'],
+        'ipc': ipc_effective,
+        'ipc_frontend': ipc_frontend,
+        'ipc_backend': ipc_backend,
+        'runtime_seconds': runtime_seconds,
+        'clock_ghz': core_config['clock_ghz'],
+        'total_uops': uop_stats['total_uops'],
+        'avg_uops_per_instr': uop_stats['avg_uops_per_instr'],
+        'memory_stall_cpi': backend['memory_stall_cpi'],
+        'branch_stall_cpi': backend['branch_stall_cpi']
+    }
+    return result
+
+
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     result = {
         'statusCode': status_code,
@@ -306,44 +431,76 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def compute_simulation(persona: str) -> Dict[str, Any]:
-    native_result = compute_native_simulation(persona)
-    trimode_result = compute_trimode_simulation(persona)
-
-    native_ipc = native_result['ipc']
-    trimode_ipc = trimode_result['ipc']
-
-    native_runtime = native_result['runtime_seconds']
-    trimode_runtime = trimode_result['runtime_seconds']
-
-    relative_slowdown = trimode_runtime / native_runtime if native_runtime > 0 else 1.0
-
-    soc_config_output = {
+def build_soc_config_output() -> Dict[str, Any]:
+    result = {
         'issue_width': SOC_CONFIG['issue_width'],
         'rob_entries': SOC_CONFIG['rob_entries'],
         'l1_size_kb': SOC_CONFIG['l1d_size_kb'],
         'l2_size_kb': SOC_CONFIG['l2_size_kb'],
         'clock_ghz': SOC_CONFIG['clock_ghz']
     }
+    return result
+
+
+def build_real_world_config(persona: str) -> Dict[str, Any]:
+    core = REAL_WORLD_CORES[persona]
+    result = {
+        'name': core['name'],
+        'issue_width': core['issue_width'],
+        'rob_entries': core['rob_entries'],
+        'l1_size_kb': core['l1d_size_kb'],
+        'l2_size_kb': core['l2_size_kb'],
+        'clock_ghz': core['clock_ghz']
+    }
+    return result
+
+
+def compute_simulation(persona: str) -> Dict[str, Any]:
+    native_result = compute_native_simulation(persona)
+    trimode_result = compute_trimode_simulation(persona)
+    real_world_result = compute_real_world_simulation(persona)
+    real_world_clock = cast(float, REAL_WORLD_CORES[persona]['clock_ghz'])
+
+    trimode_runtime_at_real_clock = (INSTRUCTION_COUNT / trimode_result['ipc']) / (real_world_clock * 1e9)
 
     result = {
         'success': True,
         'persona': persona,
-        'soc_config': soc_config_output,
+        'soc_config': build_soc_config_output(),
         'instruction_count': INSTRUCTION_COUNT,
         'native_core': {
-            'ipc': native_ipc,
-            'runtime_seconds': native_runtime,
+            'description': 'Hypothetical P4-class core with equivalent microarchitecture for this ISA',
+            'ipc': native_result['ipc'],
+            'runtime_seconds': native_result['runtime_seconds'],
             'cache_stats': native_result['cache_stats'],
             'rob_ilp': math.sqrt(SOC_CONFIG['rob_entries']) * 0.6,
             'memory_stall_cpi': native_result['memory_stall_cpi'],
             'branch_stall_cpi': native_result['branch_stall_cpi']
         },
         'tri_mode_core': {
-            'ipc': trimode_ipc,
-            'runtime_seconds': trimode_runtime
+            'description': 'Tri-mode RISC-V core running this ISA via hardware translation',
+            'ipc': trimode_result['ipc'],
+            'runtime_seconds': trimode_result['runtime_seconds']
         },
-        'relative_slowdown': relative_slowdown
+        'relative_slowdown': trimode_result['runtime_seconds'] / native_result['runtime_seconds'],
+        'real_world_comparison': {
+            'description': 'Comparison at same clock speed against actual commercial processors',
+            'clock_ghz': real_world_clock,
+            'native_core': {
+                'name': real_world_result['core_name'],
+                'config': build_real_world_config(persona),
+                'ipc': real_world_result['ipc'],
+                'runtime_seconds': real_world_result['runtime_seconds'],
+                'memory_stall_cpi': real_world_result['memory_stall_cpi'],
+                'branch_stall_cpi': real_world_result['branch_stall_cpi']
+            },
+            'tri_mode_core': {
+                'description': 'Tri-mode core at same clock as native',
+                'ipc': trimode_result['ipc'],
+                'runtime_seconds': trimode_runtime_at_real_clock
+            },
+            'relative_slowdown': trimode_runtime_at_real_clock / real_world_result['runtime_seconds']
+        }
     }
     return result
 

@@ -55,10 +55,18 @@
         </div>
 
         <div class="results-panel" id="resultsPanel" style="display: none;">
-            <h2>Performance Comparison</h2>
-            <p class="results-description">Instructions Per Cycle (IPC) for native and tri-mode core</p>
+            <h2>Equivalent Microarchitecture Comparison</h2>
+            <p class="results-description">Hypothetical P4-class core for each ISA vs tri-mode core (isolates ISA translation overhead)</p>
 
             <div class="soc-grid" id="socGrid">
+            </div>
+        </div>
+
+        <div class="results-panel" id="realWorldPanel" style="display: none;">
+            <h2>Real-World Processor Comparison</h2>
+            <p class="results-description">Actual commercial processors vs tri-mode core at same clock speed</p>
+
+            <div class="soc-grid" id="realWorldGrid">
             </div>
         </div>
 
