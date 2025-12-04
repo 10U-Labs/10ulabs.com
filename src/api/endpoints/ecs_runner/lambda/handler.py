@@ -438,7 +438,7 @@ def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
     return base_labels
 
 
-def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str) -> bool:
+def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str, state: str = 'requested') -> bool:
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if not table_name:
         logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
@@ -456,11 +456,12 @@ def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runne
                 'resource_id': {'S': resource_id},
                 'runner_name': {'S': runner_name},
                 'github_repo': {'S': github_repo},
+                'state': {'S': state},
                 'ttl': {'N': str(ttl)},
                 'created_at': {'N': str(int(time.time()))}
             }
         )
-        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s", run_id, runner_type, resource_id)
+        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s, state=%s", run_id, runner_type, resource_id, state)
         return True
     except ClientError as e:
         logger.error("Failed to store workflow runner: %s", e)
@@ -567,14 +568,14 @@ def _try_launch_in_subnet(cfg: Dict[str, Any], subnet: str, cluster: str) -> Dic
             return result
         task_arn = response['tasks'][0]['taskArn']
         logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
+        if cfg['run_id']:
+            store_workflow_runner(cfg['run_id'], cfg['runner_type'], task_arn, runner_name, cfg['github_repo'], state='requested')
         provision_result = wait_for_fargate_task_provisioned(cluster, task_arn)
         if provision_result['spot_interrupted']:
             logger.warning("Task %s spot interrupted before running, will retry in different AZ", task_arn)
             result['spot_interrupted'] = True
             result['retry'] = True
             return result
-        if cfg['run_id']:
-            store_workflow_runner(cfg['run_id'], cfg['runner_type'], task_arn, runner_name, cfg['github_repo'])
         result = {
             'success': True, 'task_arn': task_arn, 'job_id': cfg['job_id'],
             'runner_type': cfg['runner_type'], 'run_id': cfg['run_id'], 'runner_name': runner_name
