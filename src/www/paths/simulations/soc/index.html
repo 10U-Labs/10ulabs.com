@@ -24,15 +24,17 @@
     </div>
 
     <div class="container">
-        <div class="config-panel">
-            <h2>SoC Configuration</h2>
+        <div class="results-panel" id="resultsPanel" style="display: none;">
+            <h2>Equivalent Microarchitecture Comparison</h2>
+            <p class="results-description">Hypothetical single-core for each ISA vs tri-mode core (isolates ISA translation overhead)</p>
+
             <div class="config-grid" id="socConfig">
                 <div class="config-item">
                     <span class="config-label">Issue Width</span>
                     <span class="config-value" id="issueWidth">-</span>
                 </div>
                 <div class="config-item">
-                    <span class="config-label">Reorder Buffer (ROB) Entries</span>
+                    <span class="config-label">ROB Entries</span>
                     <span class="config-value" id="robEntries">-</span>
                 </div>
                 <div class="config-item">
@@ -44,19 +46,10 @@
                     <span class="config-value" id="l2Size">-</span>
                 </div>
                 <div class="config-item">
-                    <span class="config-label">Clock Speed</span>
-                    <span class="config-value" id="clockGhz">-</span>
-                </div>
-                <div class="config-item">
                     <span class="config-label">Instructions</span>
                     <span class="config-value" id="instructionCount">-</span>
                 </div>
             </div>
-        </div>
-
-        <div class="results-panel" id="resultsPanel" style="display: none;">
-            <h2>Equivalent Microarchitecture Comparison</h2>
-            <p class="results-description">Hypothetical P4-class core for each ISA vs tri-mode core (isolates ISA translation overhead)</p>
 
             <div class="soc-grid" id="socGrid">
             </div>

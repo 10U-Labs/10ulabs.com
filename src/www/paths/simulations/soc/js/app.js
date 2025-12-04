@@ -34,10 +34,11 @@ function updateSocConfig(config, instructionCount) {
     document.getElementById('robEntries').textContent = config.rob_entries;
     document.getElementById('l1Size').textContent = config.l1_size_kb + ' KB';
     document.getElementById('l2Size').textContent = config.l2_size_kb + ' KB';
-    document.getElementById('clockGhz').textContent = config.clock_ghz + ' GHz';
     document.getElementById('instructionCount').textContent = formatNumber(instructionCount);
     socConfigLoaded = true;
 }
+
+var socClockGhz = null;
 
 function formatPerformance(slowdown) {
     var percentChange = (1 - slowdown) * 100;
@@ -98,6 +99,10 @@ function showResults(results) {
         resultsByPersona[data.persona] = data;
     });
 
+    if (results.length > 0) {
+        socClockGhz = results[0].soc_config.clock_ghz;
+    }
+
     var maxIpc = 0;
     results.forEach(function(data) {
         if (data.native_core.ipc > maxIpc) {
@@ -110,14 +115,15 @@ function showResults(results) {
 
     var nativeLabel = document.createElement('div');
     nativeLabel.className = 'soc-row-label';
-    nativeLabel.textContent = 'Native Core';
+    nativeLabel.textContent = 'Non-Tri-Mode Core';
     socGrid.appendChild(nativeLabel);
 
     PERSONAS.forEach(function(persona) {
         var data = resultsByPersona[persona];
         if (data) {
             var label = PERSONA_LABELS[persona] || persona;
-            var card = createSocCard(label, data.native_core.ipc, maxIpc, 'native', null, null);
+            var subtitle = socClockGhz + ' GHz';
+            var card = createSocCard(label, data.native_core.ipc, maxIpc, 'native', null, subtitle);
             socGrid.appendChild(card);
         }
     });
@@ -132,7 +138,8 @@ function showResults(results) {
         if (data) {
             var label = PERSONA_LABELS[persona] || persona;
             var perfText = formatPerformance(data.relative_slowdown);
-            var card = createSocCard(label, data.tri_mode_core.ipc, maxIpc, 'tri-mode', perfText, null);
+            var subtitle = socClockGhz + ' GHz';
+            var card = createSocCard(label, data.tri_mode_core.ipc, maxIpc, 'tri-mode', perfText, subtitle);
             socGrid.appendChild(card);
         }
     });
