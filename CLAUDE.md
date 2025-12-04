@@ -34,9 +34,8 @@
 
 - Ensure full test coverage.
 - Follow the testing pyramid: unit tests > integration tests > e2e tests.
-- Align with the typical 5:2:1 ratio (unit:integration:e2e).
 - Most problems must be caught by unit tests.
 - Use unit tests for everything except functionality that explicitly requires integration or e2e flows.
 - Unit tests must be atomic and follow the single-responsibility principle.
 - Tests must have only one assert.
-- Asserts in tests must have a single variable only (e.g., `assert such_thing_is_true` or `assert such_thing_is_false`).
+- Asserts in tests must have a single variable in the format `{noun}_{verb}` or `{noun}_{verb}_{adjective|adverb}` (e.g., `assert file_exists` or `assert response_returned_successfully`).
