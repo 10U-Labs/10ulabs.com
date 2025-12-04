@@ -38,4 +38,4 @@
 - Use unit tests for everything except functionality that explicitly requires integration or e2e flows.
 - Unit tests must be atomic and follow the single-responsibility principle.
 - Tests must have only one assert.
-- Asserts in tests must have a single variable in the format `{noun}_{verb}` or `{noun}_{verb}_{adjective|adverb}` (e.g., `assert file_exists` or `assert response_returned_successfully`).
+- Asserts in tests must have a single variable in the format `{noun_phrase}_{verb}` or `{noun_phrase}_{verb}_{adjective|adverb}`. The noun phrase must be descriptive enough to make the assertion intuitive (e.g., `assert python_script_to_invalidate_cloudfront_exists`, not `assert file_exists`).
