@@ -496,10 +496,11 @@ def test_compute_frontend_ipc_returns_ipc(simulation_soc_handler):
     assert has_ipc
 
 
-def test_compute_frontend_ipc_trimode_lower_than_native(simulation_soc_handler):
-    uop_stats = simulation_soc_handler.compute_uop_counts('riscv', 1000)
-    native = simulation_soc_handler.compute_frontend_ipc('riscv', uop_stats, trimode=False)
-    trimode = simulation_soc_handler.compute_frontend_ipc('riscv', uop_stats, trimode=True)
+def test_compute_frontend_ipc_trimode_lower_for_x86(simulation_soc_handler):
+    uop_stats = simulation_soc_handler.compute_uop_counts('x86_64', 1000)
+    adjusted_uop_stats = simulation_soc_handler.compute_adjusted_uop_stats('x86_64', 1000)
+    native = simulation_soc_handler.compute_frontend_ipc('x86_64', uop_stats)
+    trimode = simulation_soc_handler.compute_frontend_ipc('x86_64', adjusted_uop_stats)
     trimode_lower = trimode['ipc_frontend'] < native['ipc_frontend']
     assert trimode_lower
 
@@ -543,9 +544,9 @@ def test_compute_trimode_simulation_returns_ipc(simulation_soc_handler):
     assert has_ipc
 
 
-def test_compute_trimode_simulation_ipc_less_than_native(simulation_soc_handler):
-    native = simulation_soc_handler.compute_native_simulation('riscv')
-    trimode = simulation_soc_handler.compute_trimode_simulation('riscv')
+def test_compute_trimode_simulation_ipc_less_than_native_for_x86(simulation_soc_handler):
+    native = simulation_soc_handler.compute_native_simulation('x86_64')
+    trimode = simulation_soc_handler.compute_trimode_simulation('x86_64')
     trimode_lower = trimode['ipc'] < native['ipc']
     assert trimode_lower
 
@@ -581,3 +582,78 @@ def test_riscv_native_ipc_higher_than_x86(simulation_soc_handler):
     x86 = simulation_soc_handler.compute_native_simulation('x86_64')
     riscv_higher = riscv['ipc'] > x86['ipc']
     assert riscv_higher
+
+
+def test_compute_flags_overhead_uops_zero_for_riscv(simulation_soc_handler):
+    result = simulation_soc_handler.compute_flags_overhead_uops('riscv', 1000)
+    is_zero = result == 0.0
+    assert is_zero
+
+
+def test_compute_flags_overhead_uops_positive_for_x86(simulation_soc_handler):
+    result = simulation_soc_handler.compute_flags_overhead_uops('x86_64', 1000)
+    is_positive = result > 0
+    assert is_positive
+
+
+def test_compute_fence_stall_cycles_zero_for_riscv(simulation_soc_handler):
+    result = simulation_soc_handler.compute_fence_stall_cycles('riscv', 1000)
+    is_zero = result == 0.0
+    assert is_zero
+
+
+def test_compute_fence_stall_cycles_positive_for_x86(simulation_soc_handler):
+    result = simulation_soc_handler.compute_fence_stall_cycles('x86_64', 1000)
+    is_positive = result > 0
+    assert is_positive
+
+
+def test_compute_trimode_mispredict_penalty_riscv_greater_than_base(simulation_soc_handler):
+    result = simulation_soc_handler.compute_trimode_mispredict_penalty('riscv')
+    base_penalty = simulation_soc_handler.LATENCIES['branch_mispredict']
+    is_greater = result > base_penalty
+    assert is_greater
+
+
+def test_compute_trimode_mispredict_penalty_x86_greater_than_riscv(simulation_soc_handler):
+    riscv_penalty = simulation_soc_handler.compute_trimode_mispredict_penalty('riscv')
+    x86_penalty = simulation_soc_handler.compute_trimode_mispredict_penalty('x86_64')
+    x86_higher = x86_penalty > riscv_penalty
+    assert x86_higher
+
+
+def test_compute_adjusted_uop_stats_returns_dict(simulation_soc_handler):
+    result = simulation_soc_handler.compute_adjusted_uop_stats('x86_64', 1000)
+    is_dict = isinstance(result, dict)
+    assert is_dict
+
+
+def test_compute_adjusted_uop_stats_has_total_uops(simulation_soc_handler):
+    result = simulation_soc_handler.compute_adjusted_uop_stats('x86_64', 1000)
+    has_total = 'total_uops' in result
+    assert has_total
+
+
+def test_compute_adjusted_uop_stats_x86_higher_than_base(simulation_soc_handler):
+    base = simulation_soc_handler.compute_uop_counts('x86_64', 1000)
+    adjusted = simulation_soc_handler.compute_adjusted_uop_stats('x86_64', 1000)
+    adjusted_higher = adjusted['total_uops'] > base['total_uops']
+    assert adjusted_higher
+
+
+def test_compute_trimode_effective_ipc_less_than_raw(simulation_soc_handler):
+    raw_ipc = 2.0
+    fence_cycles = 1000
+    instr_count = 10000
+    result = simulation_soc_handler.compute_trimode_effective_ipc(raw_ipc, fence_cycles, instr_count)
+    is_less = result < raw_ipc
+    assert is_less
+
+
+def test_compute_trimode_effective_ipc_equals_raw_when_no_fence(simulation_soc_handler):
+    raw_ipc = 2.0
+    fence_cycles = 0
+    instr_count = 10000
+    result = simulation_soc_handler.compute_trimode_effective_ipc(raw_ipc, fence_cycles, instr_count)
+    equals_raw = abs(result - raw_ipc) < 0.0001
+    assert equals_raw

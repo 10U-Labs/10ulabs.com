@@ -79,11 +79,30 @@ LATENCIES = {
 
 INSTRUCTION_COUNT = 1_000_000_000
 
-TRIMODE_DECODE_OVERHEAD = {
-    'riscv': 0.02,
-    'x86_64': 0.05,
-    'arm64': 0.03,
+TRIMODE_OVERHEAD_PARAMS = {
+    'riscv': {
+        'flags_live_rate': 0.0,
+        'flags_uops_per_live': 0,
+        'fence_per_store': False,
+        'extra_decode_stages': 1
+    },
+    'x86_64': {
+        'flags_live_rate': 0.25,
+        'flags_uops_per_live': 3,
+        'fence_per_store': True,
+        'extra_decode_stages': 2
+    },
+    'arm64': {
+        'flags_live_rate': 0.16,
+        'flags_uops_per_live': 2,
+        'fence_per_store': False,
+        'extra_decode_stages': 1
+    }
 }
+
+FENCE_LATENCY_CYCLES = 6
+
+STORE_BUFFER_ENTRIES = 32
 
 SPEC_TRANSLATION_RANGES = {
     'riscv': {
@@ -124,6 +143,52 @@ TRANSLATION_UOPS = {
     persona: derive_translation_uops(ranges)
     for persona, ranges in SPEC_TRANSLATION_RANGES.items()
 }
+
+
+def compute_flags_overhead_uops(persona: str, instr_count: int) -> float:
+    params = TRIMODE_OVERHEAD_PARAMS[persona]
+    live_rate = params['flags_live_rate']
+    uops_per_live = params['flags_uops_per_live']
+    result = instr_count * live_rate * uops_per_live
+    return result
+
+
+def compute_fence_stall_cycles(persona: str, store_count: float) -> float:
+    params = TRIMODE_OVERHEAD_PARAMS[persona]
+    stall_cycles = 0.0
+    if params['fence_per_store']:
+        stores_between_fences = STORE_BUFFER_ENTRIES
+        fence_count = store_count / stores_between_fences
+        stall_cycles = fence_count * FENCE_LATENCY_CYCLES
+    result = stall_cycles
+    return result
+
+
+def compute_trimode_mispredict_penalty(persona: str) -> float:
+    params = TRIMODE_OVERHEAD_PARAMS[persona]
+    base_penalty = LATENCIES['branch_mispredict']
+    extra_stages = params['extra_decode_stages']
+    result = float(base_penalty + extra_stages)
+    return result
+
+
+def compute_adjusted_uop_stats(persona: str, instr_count: int) -> Dict[str, Any]:
+    uop_stats = compute_uop_counts(persona, instr_count)
+    flags_uops = compute_flags_overhead_uops(persona, instr_count)
+    total_uops_with_flags = uop_stats['total_uops'] + flags_uops
+    avg_uops_with_flags = total_uops_with_flags / instr_count
+    adjusted = dict(uop_stats)
+    adjusted['total_uops'] = total_uops_with_flags
+    adjusted['avg_uops_per_instr'] = avg_uops_with_flags
+    result = adjusted
+    return result
+
+
+def compute_trimode_effective_ipc(ipc_raw: float, fence_stall_cycles: float, instr_count: int) -> float:
+    base_cycles = instr_count / ipc_raw
+    total_cycles = base_cycles + fence_stall_cycles
+    result = instr_count / total_cycles
+    return result
 
 WORKLOADS = {
     'riscv': {
@@ -190,16 +255,14 @@ def compute_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
     return result
 
 
-def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any], trimode: bool = False) -> Dict[str, Any]:
+def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any]) -> Dict[str, Any]:
     workload = WORKLOADS[persona]
     fetch_bytes_per_cycle = 16.0
     issue_width = float(SOC_CONFIG['issue_width'])
     avg_bytes = workload['avg_bytes_per_instr']
     avg_uops = uop_stats['avg_uops_per_instr']
     fetch_limited = fetch_bytes_per_cycle / avg_bytes
-    decode_overhead = TRIMODE_DECODE_OVERHEAD[persona] if trimode else 0.0
-    decode_efficiency = 1.0 - decode_overhead
-    decode_limited = issue_width * decode_efficiency
+    decode_limited = issue_width
     uop_limited = issue_width / avg_uops
     ipc_frontend = min(fetch_limited, decode_limited, uop_limited)
     result = {
@@ -294,6 +357,24 @@ def compute_backend_ipc(persona: str, uop_stats: Dict[str, Any], instr_count: in
     return result
 
 
+def compute_trimode_backend_ipc(persona: str, uop_stats: Dict[str, Any], instr_count: int) -> Dict[str, Any]:
+    workload = WORKLOADS[persona]
+    resource_upc = compute_resource_limited_upc(uop_stats)
+    mem_stall = compute_memory_stall_cpi(workload, uop_stats['load_uops'], instr_count)
+    mispredicts = instr_count * workload['branch_fraction'] * workload['branch_mispredict_rate']
+    mispredict_penalty = compute_trimode_mispredict_penalty(persona)
+    branch_stall = mispredicts * mispredict_penalty / instr_count
+    total_cpi = uop_stats['avg_uops_per_instr'] / resource_upc + mem_stall + branch_stall
+    result = {
+        'ipc_backend': 1.0 / total_cpi,
+        'resource_limited_upc': resource_upc,
+        'memory_stall_cpi': mem_stall,
+        'branch_stall_cpi': branch_stall,
+        'mispredict_penalty': mispredict_penalty
+    }
+    return result
+
+
 def compute_backend_ipc_with_config(persona: str, uop_stats: Dict[str, Any], instr_count: int,
                                     core_config: Dict[str, Any]) -> Dict[str, Any]:
     workload = WORKLOADS[persona]
@@ -314,6 +395,25 @@ def compute_backend_ipc_with_config(persona: str, uop_stats: Dict[str, Any], ins
     return result
 
 
+def compute_trimode_backend_ipc_with_config(persona: str, uop_stats: Dict[str, Any], instr_count: int,
+                                            core_config: Dict[str, Any]) -> Dict[str, Any]:
+    workload = WORKLOADS[persona]
+    resource_upc = compute_resource_limited_upc_with_config(uop_stats, core_config)
+    mem_stall = compute_memory_stall_cpi(workload, uop_stats['load_uops'], instr_count)
+    mispredicts = instr_count * workload['branch_fraction'] * workload['branch_mispredict_rate']
+    mispredict_penalty = compute_trimode_mispredict_penalty(persona)
+    branch_stall = mispredicts * mispredict_penalty / instr_count
+    total_cpi = uop_stats['avg_uops_per_instr'] / resource_upc + mem_stall + branch_stall
+    result = {
+        'ipc_backend': 1.0 / total_cpi,
+        'resource_limited_upc': resource_upc,
+        'memory_stall_cpi': mem_stall,
+        'branch_stall_cpi': branch_stall,
+        'mispredict_penalty': mispredict_penalty
+    }
+    return result
+
+
 def compute_native_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
     result = compute_uop_counts_with_translation(WORKLOADS[persona], TRANSLATION_UOPS[persona], instr_count)
     return result
@@ -321,7 +421,7 @@ def compute_native_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
 
 def compute_native_simulation(persona: str) -> Dict[str, Any]:
     uop_stats = compute_native_uop_counts(persona, INSTRUCTION_COUNT)
-    frontend = compute_frontend_ipc(persona, uop_stats, trimode=False)
+    frontend = compute_frontend_ipc(persona, uop_stats)
     backend = compute_backend_ipc(persona, uop_stats, INSTRUCTION_COUNT)
 
     ipc_frontend = frontend['ipc_frontend']
@@ -349,27 +449,26 @@ def compute_native_simulation(persona: str) -> Dict[str, Any]:
 
 
 def compute_trimode_simulation(persona: str) -> Dict[str, Any]:
-    uop_stats = compute_uop_counts(persona, INSTRUCTION_COUNT)
-    frontend = compute_frontend_ipc(persona, uop_stats, trimode=True)
-    backend = compute_backend_ipc(persona, uop_stats, INSTRUCTION_COUNT)
+    workload = WORKLOADS[persona]
+    adjusted_uop_stats = compute_adjusted_uop_stats(persona, INSTRUCTION_COUNT)
+    frontend = compute_frontend_ipc(persona, adjusted_uop_stats)
+    backend = compute_trimode_backend_ipc(persona, adjusted_uop_stats, INSTRUCTION_COUNT)
 
-    ipc_frontend = frontend['ipc_frontend']
-    ipc_backend = backend['ipc_backend']
-    ipc_raw = min(ipc_frontend, ipc_backend)
-
-    decode_overhead = TRIMODE_DECODE_OVERHEAD[persona]
-    ipc_effective = ipc_raw * (1.0 - decode_overhead)
+    ipc_raw = min(frontend['ipc_frontend'], backend['ipc_backend'])
+    store_count = INSTRUCTION_COUNT * workload['store_fraction']
+    fence_stall_cycles = compute_fence_stall_cycles(persona, store_count)
+    ipc_effective = compute_trimode_effective_ipc(ipc_raw, fence_stall_cycles, INSTRUCTION_COUNT)
 
     cycles = INSTRUCTION_COUNT / ipc_effective
     runtime_seconds = cycles / (SOC_CONFIG['clock_ghz'] * 1e9)
 
     result = {
         'ipc': ipc_effective,
-        'ipc_frontend': ipc_frontend,
-        'ipc_backend': ipc_backend,
+        'ipc_frontend': frontend['ipc_frontend'],
+        'ipc_backend': backend['ipc_backend'],
         'runtime_seconds': runtime_seconds,
-        'total_uops': uop_stats['total_uops'],
-        'avg_uops_per_instr': uop_stats['avg_uops_per_instr']
+        'total_uops': adjusted_uop_stats['total_uops'],
+        'avg_uops_per_instr': adjusted_uop_stats['avg_uops_per_instr']
     }
     return result
 
@@ -404,17 +503,16 @@ def compute_real_world_simulation(persona: str) -> Dict[str, Any]:
 
 
 def compute_trimode_with_real_world_config(persona: str) -> Dict[str, Any]:
+    workload = WORKLOADS[persona]
     core_config = REAL_WORLD_CORES[persona]
-    uop_stats = compute_uop_counts(persona, INSTRUCTION_COUNT)
-    frontend = compute_frontend_ipc_with_config(persona, uop_stats, core_config)
-    backend = compute_backend_ipc_with_config(persona, uop_stats, INSTRUCTION_COUNT, core_config)
+    adjusted_uop_stats = compute_adjusted_uop_stats(persona, INSTRUCTION_COUNT)
+    frontend = compute_frontend_ipc_with_config(persona, adjusted_uop_stats, core_config)
+    backend = compute_trimode_backend_ipc_with_config(persona, adjusted_uop_stats, INSTRUCTION_COUNT, core_config)
 
-    ipc_frontend = frontend['ipc_frontend']
-    ipc_backend = backend['ipc_backend']
-    ipc_raw = min(ipc_frontend, ipc_backend)
-
-    decode_overhead = TRIMODE_DECODE_OVERHEAD[persona]
-    ipc_effective = ipc_raw * (1.0 - decode_overhead)
+    ipc_raw = min(frontend['ipc_frontend'], backend['ipc_backend'])
+    store_count = INSTRUCTION_COUNT * workload['store_fraction']
+    fence_stall_cycles = compute_fence_stall_cycles(persona, store_count)
+    ipc_effective = compute_trimode_effective_ipc(ipc_raw, fence_stall_cycles, INSTRUCTION_COUNT)
 
     cycles = INSTRUCTION_COUNT / ipc_effective
     clock_ghz = cast(float, core_config['clock_ghz'])
