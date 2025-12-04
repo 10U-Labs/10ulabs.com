@@ -1,3 +1,4 @@
+---
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
@@ -5,10 +6,12 @@ jobs:
   declaring-common-variables:
     name: Declaring common variables
     outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
-      github_pat_parameter_name: ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
-      terraform_version: ${{ steps.config.outputs.terraform_version }}
+      pat_param: >-
+        ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
+      region: ${{ steps.config.outputs.aws_region }}
+      role_arn: >-
+        ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+      tf_version: ${{ steps.config.outputs.terraform_version }}
     permissions:
       contents: read
       id-token: write
@@ -23,16 +26,27 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/backend/backend.tf | cut -d'"' -f2 | sed 's/>= //')
-          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
+            src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/api/backend/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -46,11 +60,16 @@ jobs:
       - id: bootstrap
         name: Get bootstrap outputs
         run: |
-          terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
-          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
-          GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap output -raw ssm_parameter_name_for_github_pat)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
+          terraform -chdir=src/bootstrap init \
+            -backend=true -input=false > /dev/null
+          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
+            output -raw arn_for_github_actions_role)
+          GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap \
+            output -raw ssm_parameter_name_for_github_pat)
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
+          echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" \
+            >> $GITHUB_OUTPUT
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -72,13 +91,18 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
       - name: Terraform Init
         run: terraform init
       - env:
@@ -117,7 +141,8 @@ jobs:
         run: python3 -m pip install boto3
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          contains(github.event.head_commit.message,
+            '[invalidate cloudfront]') ||
           steps.check_files.outputs.changed == 'true'
         name: Get API domain from Terraform output
         run: |
@@ -125,13 +150,15 @@ jobs:
           echo "API_FQDN=$API_FQDN" >> $GITHUB_ENV
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          contains(github.event.head_commit.message,
+            '[invalidate cloudfront]') ||
           steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
+          REGION=${{ needs.declaring-common-variables.outputs.region }}
           python3 ../../../scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.API_FQDN }}" \
-            --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
+            --region "$REGION" \
             --paths "/,/index.html,/openapi.yml,/404.html"
   integration-testing:
     name: Integration testing
@@ -149,27 +176,39 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
-      - name: Fetch GitHub PAT from Parameter Store
+      - env:
+          PAT_PARAM: >-
+            ${{ needs.declaring-common-variables.outputs.pat_param }}
+          REGION: >-
+            ${{ needs.declaring-common-variables.outputs.region }}
+        name: Fetch GitHub PAT from Parameter Store
         run: |
           GITHUB_PAT=$(aws ssm get-parameter \
-            --name ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }} \
+            --name "$PAT_PARAM" \
             --with-decryption \
             --query 'Parameter.Value' \
             --output text \
-            --region ${{ needs.declaring-common-variables.outputs.aws_region }})
+            --region "$REGION")
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - env:
-          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
+          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
+            ${{ needs.declaring-common-variables.outputs.pat_param }}
         name: Run integration tests
         run: python3 -m pytest test/api/backend/post_deployment/integration/ -v
   performing-static-analysis:
@@ -184,29 +223,43 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs PyYAML types-PyYAML requests types-requests
+        run: |
+          python3 -m pip install \
+            pylint mypy yamllint pytest boto3 boto3-stubs \
+            PyYAML types-PyYAML requests types-requests
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -261,16 +314,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
       - env:
-          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: ${{ needs.declaring-common-variables.outputs.github_pat_parameter_name }}
+          SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
+            ${{ needs.declaring-common-variables.outputs.pat_param }}
         name: Run unit tests
         run: python3 -m pytest test/api/backend/pre_deployment/ -v
 name: Ensuring API backend exists and is properly configured
