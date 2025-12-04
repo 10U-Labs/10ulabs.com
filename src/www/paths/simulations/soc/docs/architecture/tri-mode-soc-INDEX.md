@@ -30,4 +30,8 @@ This index lists the component files that together define the tri-mode SoC archi
    File: `tri-mode-soc-section7-references.md`
    Content: Lists academic papers, technical reports, and industry sources used to derive workload parameters (instruction mix, cache behavior, branch prediction, instruction encoding) and validate the simulation model.
 
+8. Appendix A: Parameter Derivation Methodology
+   File: `tri-mode-soc-appendix-a-parameter-derivation.md`
+   Content: Explains why simulation parameters are hardcoded constants, how each value was derived from research, the weighted average calculations for µop translation ratios, and validation approach.
+
 You can give these files to a code model individually (for focused tasks) or together (for full-context implementation of the tri-mode SoC simulator and its API).
