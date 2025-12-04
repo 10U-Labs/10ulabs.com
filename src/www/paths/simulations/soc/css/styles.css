@@ -56,6 +56,12 @@ h2 {
     color: #0f172a;
 }
 
+.results-description {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+}
+
 .config-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
