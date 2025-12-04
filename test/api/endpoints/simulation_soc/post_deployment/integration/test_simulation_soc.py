@@ -29,11 +29,11 @@ def test_simulation_soc_endpoint_returns_200_for_riscv(api_url):
     assert is_successful
 
 
-def test_simulation_soc_endpoint_returns_200_for_x86_64(api_url):
-    """Verify endpoint returns 200 for x86_64 persona."""
+def test_simulation_soc_endpoint_returns_200_for_desktop64(api_url):
+    """Verify endpoint returns 200 for Desktop64 persona."""
     response = requests.post(
         f"{api_url}/v1/simulation-soc",
-        json={"persona": "x86_64"},
+        json={"persona": "desktop64"},
         headers=TEST_HEADERS,
         timeout=10
     )
@@ -41,11 +41,11 @@ def test_simulation_soc_endpoint_returns_200_for_x86_64(api_url):
     assert is_successful
 
 
-def test_simulation_soc_endpoint_returns_200_for_arm64(api_url):
-    """Verify endpoint returns 200 for ARM64 persona."""
+def test_simulation_soc_endpoint_returns_200_for_mobile64(api_url):
+    """Verify endpoint returns 200 for Mobile64 persona."""
     response = requests.post(
         f"{api_url}/v1/simulation-soc",
-        json={"persona": "arm64"},
+        json={"persona": "mobile64"},
         headers=TEST_HEADERS,
         timeout=10
     )
@@ -94,12 +94,12 @@ def test_simulation_soc_endpoint_response_contains_persona_field(api_url):
     """Verify response contains matching persona field."""
     response = requests.post(
         f"{api_url}/v1/simulation-soc",
-        json={"persona": "arm64"},
+        json={"persona": "mobile64"},
         headers=TEST_HEADERS,
         timeout=10
     )
     data = response.json()
-    persona_matches = data.get('persona') == 'arm64'
+    persona_matches = data.get('persona') == 'mobile64'
     assert persona_matches
 
 
