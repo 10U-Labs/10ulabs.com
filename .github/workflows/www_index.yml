@@ -111,6 +111,9 @@ jobs:
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/*"
   e2e-testing:
+    defaults:
+      run:
+        working-directory: src/www/paths/index
     name: E2E testing
     needs:
       - declaring-common-variables
@@ -121,9 +124,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Run E2E tests
-        run: python3 -m pytest test/www/paths/index/post_deployment/e2e/ -v
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run E2E tests
+        run: npm run test:e2e
   integration-testing:
+    defaults:
+      run:
+        working-directory: src/www/paths/index
     name: Integration testing
     needs:
       - declaring-common-variables
@@ -134,8 +146,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Run integration tests
-        run: python3 -m pytest test/www/paths/index/post_deployment/integration/ -v
+      - name: Install dependencies
+        run: npm ci
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run integration tests
+        run: npm run test:integration
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -189,6 +205,7 @@ on:
     paths:
       - '.github/workflows/www_index.yml'
       - 'src/www/paths/index/**'
+      - 'test/www/paths/index/**'
   workflow_dispatch:
     inputs:
       invalidate_cloudfront:

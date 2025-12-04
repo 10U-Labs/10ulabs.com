@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@/__tests__/unit/utils";
+import { render, screen } from "./utils";
 import Index from "@/pages/Index";
 
 vi.mock("@/hooks/use-toast", () => ({

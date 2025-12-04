@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@/__tests__/unit/utils";
+import { render, screen } from "./utils";
 import userEvent from "@testing-library/user-event";
 import { ContactForm } from "@/components/ContactForm";
 
