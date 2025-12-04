@@ -124,7 +124,19 @@ function createCoreDiagramSvg(activeIsa) {
     // Instruction Fetch
     svg.appendChild(rect(10, 10, 200, 25, 'block active'));
     svg.appendChild(text(110, 27, 'Instruction Fetch (16B/cyc)', 'block-text small'));
-    svg.appendChild(path('M110 35 L110 48', 'arrow active'));
+
+    if (isTriMode) {
+        // Arrow from Instruction Fetch to active decoder (diagonal for ARM64/x86, vertical for RISC-V)
+        if (arm64Active) {
+            svg.appendChild(path('M110 35 L40 48', 'arrow active'));
+        } else if (x86Active) {
+            svg.appendChild(path('M110 35 L180 48', 'arrow active'));
+        } else {
+            svg.appendChild(path('M110 35 L110 48', 'arrow active'));
+        }
+    } else {
+        svg.appendChild(path('M110 35 L110 48', 'arrow active'));
+    }
 
     if (isTriMode) {
         // Three parallel decode lanes (0 extra stages)
@@ -240,9 +252,9 @@ function createNonTriModeDiagram() {
 function createTriModeDiagrams() {
     var container = document.createElement('div');
     container.className = 'diagram-row diagram-row-triple';
-    container.appendChild(createDiagramCard('', 'arm64', 'ARM64', 'arm64'));
-    container.appendChild(createDiagramCard('', 'riscv', 'RISC-V', 'riscv'));
-    container.appendChild(createDiagramCard('', 'x86', 'x86-64', 'x86_64'));
+    container.appendChild(createDiagramCard('', '', '', 'arm64'));
+    container.appendChild(createDiagramCard('', '', '', 'riscv'));
+    container.appendChild(createDiagramCard('', '', '', 'x86_64'));
     return container;
 }
 
