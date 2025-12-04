@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Any, Dict, List, Union, cast
+from typing import Any, Dict, List, cast
 
 SOC_CONFIG = {
     'issue_width': 3,
