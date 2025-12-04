@@ -240,9 +240,9 @@ function createNonTriModeDiagram() {
 function createTriModeDiagrams() {
     var container = document.createElement('div');
     container.className = 'diagram-row diagram-row-triple';
-    container.appendChild(createDiagramCard('Tri-Mode Core', 'arm64', 'ARM64', 'arm64'));
-    container.appendChild(createDiagramCard('Tri-Mode Core', 'riscv', 'RISC-V', 'riscv'));
-    container.appendChild(createDiagramCard('Tri-Mode Core', 'x86', 'x86-64', 'x86_64'));
+    container.appendChild(createDiagramCard('', 'arm64', 'ARM64', 'arm64'));
+    container.appendChild(createDiagramCard('', 'riscv', 'RISC-V', 'riscv'));
+    container.appendChild(createDiagramCard('', 'x86', 'x86-64', 'x86_64'));
     return container;
 }
 
