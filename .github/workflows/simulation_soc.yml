@@ -218,9 +218,8 @@ on:
     paths:
       - '.github/workflows/simulation_soc.yml'
       - 'src/api/endpoints/simulation_soc/**'
-      - 'src/www/paths/simulations/soc/*.html'
-      - 'src/www/paths/simulations/soc/css/**'
-      - 'src/www/paths/simulations/soc/js/**'
+      - 'src/www/paths/simulations/soc/**'
+      - '!src/www/paths/simulations/soc/docs/**'
       - 'test/api/endpoints/simulation_soc/**'
   workflow_dispatch:
     inputs:
