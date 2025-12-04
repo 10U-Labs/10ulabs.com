@@ -222,27 +222,23 @@ def test_clean_script_removes_comment_lines(pre_git_checks):
 
 
 def test_extract_commands_from_jobs_with_filter(pre_git_checks, sample_workflow):
-    filter_fn = lambda name: 'static' in name.lower()
-    result = pre_git_checks.extract_commands_from_jobs(sample_workflow, filter_fn)
+    result = pre_git_checks.extract_commands_from_jobs(sample_workflow, pre_git_checks.is_static_analysis_job)
     assert len(result) > 0
 
 
 def test_extract_commands_from_jobs_includes_job_name(pre_git_checks, sample_workflow):
-    filter_fn = lambda name: 'static' in name.lower()
-    result = pre_git_checks.extract_commands_from_jobs(sample_workflow, filter_fn)
+    result = pre_git_checks.extract_commands_from_jobs(sample_workflow, pre_git_checks.is_static_analysis_job)
     assert all('job' in cmd for cmd in result)
 
 
 def test_extract_commands_from_jobs_includes_conditional_field(pre_git_checks, sample_workflow):
-    filter_fn = lambda name: 'static' in name.lower()
-    result = pre_git_checks.extract_commands_from_jobs(sample_workflow, filter_fn)
+    result = pre_git_checks.extract_commands_from_jobs(sample_workflow, pre_git_checks.is_static_analysis_job)
     assert all('conditional' in cmd for cmd in result)
 
 
 def test_extract_commands_from_jobs_empty_workflow(pre_git_checks):
     workflow = {'jobs': {}}
-    filter_fn = lambda name: True
-    result = pre_git_checks.extract_commands_from_jobs(workflow, filter_fn)
+    result = pre_git_checks.extract_commands_from_jobs(workflow, pre_git_checks.is_static_analysis_job)
     assert result == []
 
 
