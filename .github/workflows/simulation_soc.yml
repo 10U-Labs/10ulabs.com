@@ -220,6 +220,8 @@ on:
       - 'src/api/endpoints/simulation_soc/**'
       - 'src/www/paths/simulations/soc/**'
       - 'test/api/endpoints/simulation_soc/**'
+    paths-ignore:
+      - 'src/www/paths/simulations/soc/docs/**'
   workflow_dispatch:
     inputs:
       invalidate_cloudfront:
