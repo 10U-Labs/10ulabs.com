@@ -15,7 +15,19 @@ SOC_CONFIG = {
     'l2_size_kb': 512,
     'clock_ghz': 1.5,
     'pipeline_depth_estimate': 14,
-    'process_node_nm': 130
+    'process_node_nm': 130,
+    'ddr_channels': 2,
+    'ddr_generation': 'DDR4'
+}
+
+PACKAGE_CONFIG = {
+    'size_mm': 40,
+    'pitch_mm': 0.8,
+    'total_balls': 2500,
+    'signal_to_ground_ratio': '1:1',
+    'exit_rows': 3,
+    'available_signals': 282,
+    'gpio_count': 8
 }
 
 EXECUTION_UNITS = {
@@ -389,11 +401,13 @@ def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
 
 def build_soc_config_output() -> Dict[str, Any]:
     result = {
+        'clock_ghz': SOC_CONFIG['clock_ghz'],
+        'ddr': f"{SOC_CONFIG['ddr_channels']}x {SOC_CONFIG['ddr_generation']}",
         'issue_width': SOC_CONFIG['issue_width'],
-        'rob_entries': SOC_CONFIG['rob_entries'],
         'l1_size_kb': SOC_CONFIG['l1d_size_kb'],
         'l2_size_kb': SOC_CONFIG['l2_size_kb'],
-        'clock_ghz': SOC_CONFIG['clock_ghz']
+        'process_nm': SOC_CONFIG['process_node_nm'],
+        'rob_entries': SOC_CONFIG['rob_entries']
     }
     return result
 

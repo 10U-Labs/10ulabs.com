@@ -29,13 +29,14 @@ function formatNumber(num) {
     return num.toString();
 }
 
-function updateSocConfig(config, instructionCount) {
+function updateSocConfig(config) {
+    document.getElementById('clockSpeed').textContent = config.clock_ghz + ' GHz';
+    document.getElementById('ddr').textContent = config.ddr;
     document.getElementById('issueWidth').textContent = config.issue_width;
-    document.getElementById('robEntries').textContent = config.rob_entries;
     document.getElementById('l1Size').textContent = config.l1_size_kb + ' KB';
     document.getElementById('l2Size').textContent = config.l2_size_kb + ' KB';
-    document.getElementById('clockSpeed').textContent = config.clock_ghz + ' GHz';
-    document.getElementById('instructionCount').textContent = formatNumber(instructionCount);
+    document.getElementById('processNode').textContent = config.process_nm + ' nm';
+    document.getElementById('robEntries').textContent = config.rob_entries;
     socConfigLoaded = true;
 }
 
@@ -171,7 +172,7 @@ function loadAllSimulations() {
             }
 
             if (!socConfigLoaded && successfulResults.length > 0) {
-                updateSocConfig(successfulResults[0].soc_config, successfulResults[0].instruction_count);
+                updateSocConfig(successfulResults[0].soc_config);
             }
 
             showResults(successfulResults);
