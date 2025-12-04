@@ -83,6 +83,142 @@ function createSocCard(label, ipc, maxIpc, cardType, perfText) {
     return card;
 }
 
+function createCoreDiagramSvg(activeIsa) {
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 200 240');
+    svg.setAttribute('class', 'core-diagram');
+
+    function rect(x, y, w, h, classes) {
+        var r = document.createElementNS(svgNS, 'rect');
+        r.setAttribute('x', x);
+        r.setAttribute('y', y);
+        r.setAttribute('width', w);
+        r.setAttribute('height', h);
+        r.setAttribute('rx', '4');
+        r.setAttribute('class', classes);
+        return r;
+    }
+
+    function text(x, y, content, classes) {
+        var t = document.createElementNS(svgNS, 'text');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y);
+        t.setAttribute('class', classes);
+        t.textContent = content;
+        return t;
+    }
+
+    function path(d, classes) {
+        var p = document.createElementNS(svgNS, 'path');
+        p.setAttribute('d', d);
+        p.setAttribute('class', classes);
+        return p;
+    }
+
+    // Instruction Fetch
+    svg.appendChild(rect(10, 10, 180, 30, 'block active'));
+    svg.appendChild(text(100, 30, 'Instruction Fetch', 'block-text'));
+
+    if (activeIsa === 'native') {
+        // Single decoder for native
+        svg.appendChild(rect(60, 55, 80, 25, 'block active'));
+        svg.appendChild(text(100, 72, 'Decoder', 'block-text small'));
+        svg.appendChild(path('M100 40 L100 55', 'arrow active'));
+        svg.appendChild(path('M100 80 L100 95', 'arrow active'));
+    } else {
+        // Three decoders for tri-mode
+        var arm64Active = activeIsa === 'arm64';
+        var riscvActive = activeIsa === 'riscv';
+        var x86Active = activeIsa === 'x86_64';
+
+        svg.appendChild(rect(10, 55, 55, 25, 'block ' + (arm64Active ? 'active arm64' : 'inactive')));
+        svg.appendChild(text(37, 72, 'ARM64', 'block-text small' + (arm64Active ? '' : ' inactive')));
+
+        svg.appendChild(rect(72, 55, 55, 25, 'block ' + (riscvActive ? 'active riscv' : 'inactive')));
+        svg.appendChild(text(100, 72, 'RISC-V', 'block-text small' + (riscvActive ? '' : ' inactive')));
+
+        svg.appendChild(rect(135, 55, 55, 25, 'block ' + (x86Active ? 'active x86' : 'inactive')));
+        svg.appendChild(text(162, 72, 'x86-64', 'block-text small' + (x86Active ? '' : ' inactive')));
+
+        // Arrows from fetch to decoders
+        svg.appendChild(path('M100 40 L37 55', 'arrow ' + (arm64Active ? 'active' : 'inactive')));
+        svg.appendChild(path('M100 40 L100 55', 'arrow ' + (riscvActive ? 'active' : 'inactive')));
+        svg.appendChild(path('M100 40 L162 55', 'arrow ' + (x86Active ? 'active' : 'inactive')));
+
+        // Arrow from active decoder to rename
+        if (arm64Active) {
+            svg.appendChild(path('M37 80 L100 95', 'arrow active'));
+        } else if (riscvActive) {
+            svg.appendChild(path('M100 80 L100 95', 'arrow active'));
+        } else if (x86Active) {
+            svg.appendChild(path('M162 80 L100 95', 'arrow active'));
+        }
+    }
+
+    // Rename/Dispatch
+    svg.appendChild(rect(10, 95, 180, 25, 'block active'));
+    svg.appendChild(text(100, 112, 'Rename / Dispatch', 'block-text small'));
+    svg.appendChild(path('M100 120 L100 135', 'arrow active'));
+
+    // ROB
+    svg.appendChild(rect(10, 135, 85, 25, 'block active'));
+    svg.appendChild(text(52, 152, 'ROB', 'block-text small'));
+
+    // Register File
+    svg.appendChild(rect(105, 135, 85, 25, 'block active'));
+    svg.appendChild(text(147, 152, 'Register File', 'block-text small'));
+    svg.appendChild(path('M100 160 L100 175', 'arrow active'));
+
+    // Execution Units
+    svg.appendChild(rect(10, 175, 180, 25, 'block active'));
+    svg.appendChild(text(100, 192, 'Execution Units', 'block-text small'));
+    svg.appendChild(path('M100 200 L100 215', 'arrow active'));
+
+    // L1 Cache
+    svg.appendChild(rect(10, 215, 180, 20, 'block active'));
+    svg.appendChild(text(100, 229, 'L1 Cache', 'block-text small'));
+
+    return svg;
+}
+
+function createDiagramCard(title, badgeClass, badgeText, activeIsa) {
+    var card = document.createElement('div');
+    card.className = 'diagram-card';
+
+    var titleDiv = document.createElement('div');
+    titleDiv.className = 'diagram-title';
+    titleDiv.textContent = title + ' ';
+
+    if (badgeText) {
+        var badge = document.createElement('span');
+        badge.className = 'isa-badge ' + badgeClass;
+        badge.textContent = badgeText;
+        titleDiv.appendChild(badge);
+    }
+
+    card.appendChild(titleDiv);
+    card.appendChild(createCoreDiagramSvg(activeIsa));
+
+    return card;
+}
+
+function createNonTriModeDiagram() {
+    var container = document.createElement('div');
+    container.className = 'diagram-row diagram-row-single';
+    container.appendChild(createDiagramCard('Non-Tri-Mode Core', '', '', 'native'));
+    return container;
+}
+
+function createTriModeDiagrams() {
+    var container = document.createElement('div');
+    container.className = 'diagram-row diagram-row-triple';
+    container.appendChild(createDiagramCard('Tri-Mode Core', 'arm64', 'ARM64', 'arm64'));
+    container.appendChild(createDiagramCard('Tri-Mode Core', 'riscv', 'RISC-V', 'riscv'));
+    container.appendChild(createDiagramCard('Tri-Mode Core', 'x86', 'x86-64', 'x86_64'));
+    return container;
+}
+
 function showResults(results) {
     var socGrid = document.getElementById('socGrid');
     socGrid.innerHTML = '';
@@ -102,6 +238,7 @@ function showResults(results) {
         }
     });
 
+    // Non-Tri-Mode section
     var nativeLabel = document.createElement('div');
     nativeLabel.className = 'soc-row-label';
     nativeLabel.textContent = 'Non-Tri-Mode Core';
@@ -116,6 +253,10 @@ function showResults(results) {
         }
     });
 
+    // Non-Tri-Mode diagram
+    socGrid.appendChild(createNonTriModeDiagram());
+
+    // Tri-Mode section
     var triModeLabel = document.createElement('div');
     triModeLabel.className = 'soc-row-label';
     triModeLabel.textContent = 'Tri-Mode Core';
@@ -130,6 +271,9 @@ function showResults(results) {
             socGrid.appendChild(card);
         }
     });
+
+    // Tri-Mode diagrams
+    socGrid.appendChild(createTriModeDiagrams());
 
     document.getElementById('resultsPanel').style.display = 'block';
     document.getElementById('errorPanel').style.display = 'none';

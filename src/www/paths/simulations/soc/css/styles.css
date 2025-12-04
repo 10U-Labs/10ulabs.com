@@ -333,6 +333,165 @@ h2 {
     color: #059669;
 }
 
+/* Architecture Diagrams */
+.diagram-row {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.diagram-row-single {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.diagram-row-single .diagram-card {
+    max-width: 250px;
+}
+
+.diagram-row-triple {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.diagram-card {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.diagram-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.isa-badge {
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.isa-badge.arm64 {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.isa-badge.riscv {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.isa-badge.x86 {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.core-diagram {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+.core-diagram .block {
+    fill: #e2e8f0;
+    stroke: #cbd5e1;
+    stroke-width: 1;
+}
+
+.core-diagram .block.active {
+    fill: #dbeafe;
+    stroke: #3b82f6;
+}
+
+.core-diagram .block.inactive {
+    fill: #f1f5f9;
+    stroke: #e2e8f0;
+}
+
+.core-diagram .block.active.arm64 {
+    fill: #dbeafe;
+    stroke: #1d4ed8;
+    stroke-width: 2;
+}
+
+.core-diagram .block.active.riscv {
+    fill: #dcfce7;
+    stroke: #15803d;
+    stroke-width: 2;
+}
+
+.core-diagram .block.active.x86 {
+    fill: #fef3c7;
+    stroke: #b45309;
+    stroke-width: 2;
+}
+
+.core-diagram .block-text {
+    font-size: 9px;
+    font-weight: 600;
+    fill: #0f172a;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+.core-diagram .block-text.small {
+    font-size: 7px;
+}
+
+.core-diagram .block-text.inactive {
+    fill: #94a3b8;
+}
+
+.core-diagram .arrow {
+    fill: none;
+    stroke: #3b82f6;
+    stroke-width: 2;
+}
+
+.core-diagram .arrow.active {
+    stroke: #3b82f6;
+}
+
+.core-diagram .arrow.inactive {
+    stroke: #e2e8f0;
+    stroke-width: 1;
+}
+
+@media (max-width: 768px) {
+    .diagram-row-triple {
+        grid-template-columns: 1fr;
+        max-width: 250px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+@media (max-width: 500px) {
+    .diagram-row-single .diagram-card {
+        max-width: 200px;
+    }
+
+    .core-diagram {
+        max-width: 180px;
+    }
+}
+
 .error-panel {
     background: #fef2f2;
     border: 1px solid #fecaca;
