@@ -1,17 +1,5 @@
 # Development Guidelines
 
-## Behavior
-
-- When the user asks a question, answer the question. Do not make changes unless explicitly asked.
-
-## Project Structure
-
-- GitHub Actions workflows are in `.github/workflows`.
-- Primary functionalities are in `src`.
-- Tests are in `test` and consist solely of unit, integration, and e2e tests.
-- Any new tests must be either unit, integration, or e2e tests.
-- Useful scripts any functionality can use are in `scripts`.
-
 ## Architecture Standards
 
 - Prefer serverless architecture.

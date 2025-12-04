@@ -506,3 +506,257 @@ def test_lambda_handler_returns_cleanup_counts(stale_runner_cleanup, lambda_cont
         response = stale_runner_cleanup.lambda_handler({}, lambda_context)
         body = parse_response_body(response)
     assert 'dynamodb_cleaned' in body
+
+
+def test_extract_run_id_from_fargate_runner_name(stale_runner_cleanup):
+    result = stale_runner_cleanup._extract_run_id_from_runner_name('fargate-runner-12345')
+    assert result == '12345'
+
+
+def test_extract_run_id_from_ec2_runner_name(stale_runner_cleanup):
+    result = stale_runner_cleanup._extract_run_id_from_runner_name('ec2-runner-67890')
+    assert result == '67890'
+
+
+def test_extract_run_id_returns_empty_for_unknown_prefix(stale_runner_cleanup):
+    result = stale_runner_cleanup._extract_run_id_from_runner_name('unknown-runner-123')
+    assert result == ''
+
+
+def test_extract_run_id_returns_empty_for_empty_string(stale_runner_cleanup):
+    result = stale_runner_cleanup._extract_run_id_from_runner_name('')
+    assert result == ''
+
+
+def test_get_ecs_task_arns_returns_running_tasks(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [{'taskArns': ['arn:aws:ecs:us-east-1:123:task/running']}]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    result = stale_runner_cleanup._get_ecs_task_arns('test-cluster')
+    assert len(result) == 2
+
+
+def test_get_ecs_task_arns_returns_pending_tasks(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.side_effect = [[{'taskArns': ['arn1']}], [{'taskArns': ['arn2']}]]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    result = stale_runner_cleanup._get_ecs_task_arns('test-cluster')
+    assert 'arn1' in result
+
+
+def test_check_tasks_for_run_id_returns_true_when_found(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '12345'}]}]
+    }
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    result = stale_runner_cleanup._check_tasks_for_run_id('cluster', ['arn1'], '12345')
+    assert result is True
+
+
+def test_check_tasks_for_run_id_returns_false_when_not_found(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '99999'}]}]
+    }
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    result = stale_runner_cleanup._check_tasks_for_run_id('cluster', ['arn1'], '12345')
+    assert result is False
+
+
+def test_check_tasks_for_run_id_returns_false_for_empty_task_list(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    result = stale_runner_cleanup._check_tasks_for_run_id('cluster', [], '12345')
+    assert result is False
+
+
+def test_has_running_ecs_task_by_name_returns_true_when_found(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [{'taskArns': ['arn1']}]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '12345'}]}]
+    }
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+    assert result is True
+
+
+def test_has_running_ecs_task_by_name_returns_false_when_not_found(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [{'taskArns': ['arn1']}]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '99999'}]}]
+    }
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+    assert result is False
+
+
+def test_has_running_ecs_task_by_name_returns_false_without_cluster(stale_runner_cleanup):
+    stale_runner_cleanup._clients = {}
+    with patch.dict('os.environ', {}, clear=True):
+        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+    assert result is False
+
+
+def test_has_running_ecs_task_by_name_returns_false_on_client_error(stale_runner_cleanup):
+    mock_ecs = MagicMock()
+    mock_ecs.get_paginator.side_effect = ClientError({'Error': {'Code': 'ClusterNotFoundException'}}, 'GetPaginator')
+    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
+        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+    assert result is False
+
+
+def test_has_running_ec2_by_name_returns_true_when_found(stale_runner_cleanup):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {
+        'Reservations': [{'Instances': [{'InstanceId': 'i-12345'}]}]
+    }
+    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
+        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+    assert result is True
+
+
+def test_has_running_ec2_by_name_returns_false_when_not_found(stale_runner_cleanup):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {'Reservations': []}
+    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
+        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+    assert result is False
+
+
+def test_has_running_ec2_by_name_returns_false_without_tag(stale_runner_cleanup):
+    stale_runner_cleanup._clients = {}
+    with patch.dict('os.environ', {}, clear=True):
+        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+    assert result is False
+
+
+def test_has_running_ec2_by_name_returns_false_on_client_error(stale_runner_cleanup):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'DescribeInstances')
+    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
+        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+    assert result is False
+
+
+def test_runner_has_infrastructure_returns_true_for_ec2(stale_runner_cleanup):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {
+        'Reservations': [{'Instances': [{'InstanceId': 'i-12345'}]}]
+    }
+    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api', 'ECS_CLUSTER': 'cluster'}):
+        result = stale_runner_cleanup._runner_has_infrastructure('ec2-runner-12345')
+    assert result is True
+
+
+def test_runner_has_infrastructure_returns_true_for_ecs(stale_runner_cleanup):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {'Reservations': []}
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [{'taskArns': ['arn1']}]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    mock_ecs.describe_tasks.return_value = {
+        'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '12345'}]}]
+    }
+    stale_runner_cleanup._clients = {'ec2': mock_ec2, 'ecs': mock_ecs}
+    with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api', 'ECS_CLUSTER': 'cluster'}):
+        result = stale_runner_cleanup._runner_has_infrastructure('fargate-runner-12345')
+    assert result is True
+
+
+def test_runner_has_infrastructure_returns_false_when_none(stale_runner_cleanup):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {'Reservations': []}
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [{'taskArns': []}]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    stale_runner_cleanup._clients = {'ec2': mock_ec2, 'ecs': mock_ecs}
+    with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api', 'ECS_CLUSTER': 'cluster'}):
+        result = stale_runner_cleanup._runner_has_infrastructure('fargate-runner-99999')
+    assert result is False
+
+
+def test_cleanup_orphaned_github_runners_returns_error_without_repo(stale_runner_cleanup):
+    stale_runner_cleanup._clients = {}
+    with patch.dict('os.environ', {}, clear=True):
+        result = stale_runner_cleanup.cleanup_orphaned_github_runners('token')
+    assert result['errors'] == 1
+
+
+def test_cleanup_orphaned_github_runners_returns_error_without_token(stale_runner_cleanup):
+    with patch.dict('os.environ', {'GITHUB_REPO': 'owner/repo'}):
+        result = stale_runner_cleanup.cleanup_orphaned_github_runners('')
+    assert result['errors'] == 1
+
+
+def test_cleanup_orphaned_github_runners_returns_error_when_api_fails(stale_runner_cleanup, mock_urllib_response_factory):
+    error = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
+    with patch.dict('os.environ', {'GITHUB_REPO': 'owner/repo'}):
+        with patch('urllib.request.urlopen', side_effect=error):
+            result = stale_runner_cleanup.cleanup_orphaned_github_runners('token')
+    assert result['errors'] == 1
+
+
+def test_cleanup_orphaned_github_runners_skips_online_runners(stale_runner_cleanup, mock_urllib_response_factory):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {'Reservations': []}
+    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    mock_response = mock_urllib_response_factory(json_data={
+        'runners': [{'id': 123, 'name': 'runner-1', 'status': 'online'}]
+    })
+    with patch.dict('os.environ', {'GITHUB_REPO': 'owner/repo', 'EC2_MANAGED_BY_TAG': 'tag', 'ECS_CLUSTER': 'cluster'}):
+        with patch('urllib.request.urlopen', return_value=mock_response):
+            result = stale_runner_cleanup.cleanup_orphaned_github_runners('token')
+    assert result['github_cleaned'] == 0
+
+
+def test_cleanup_orphaned_github_runners_skips_runners_with_infrastructure(stale_runner_cleanup, mock_urllib_response_factory):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {
+        'Reservations': [{'Instances': [{'InstanceId': 'i-123'}]}]
+    }
+    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    mock_response = mock_urllib_response_factory(json_data={
+        'runners': [{'id': 123, 'name': 'ec2-runner-12345', 'status': 'offline'}]
+    })
+    with patch.dict('os.environ', {'GITHUB_REPO': 'owner/repo', 'EC2_MANAGED_BY_TAG': 'tag', 'ECS_CLUSTER': 'cluster'}):
+        with patch('urllib.request.urlopen', return_value=mock_response):
+            result = stale_runner_cleanup.cleanup_orphaned_github_runners('token')
+    assert result['github_cleaned'] == 0
+
+
+def test_cleanup_orphaned_github_runners_deletes_orphaned_offline_runner(stale_runner_cleanup, mock_urllib_response_factory):
+    mock_ec2 = MagicMock()
+    mock_ec2.describe_instances.return_value = {'Reservations': []}
+    mock_ecs = MagicMock()
+    mock_paginator = MagicMock()
+    mock_paginator.paginate.return_value = [{'taskArns': []}]
+    mock_ecs.get_paginator.return_value = mock_paginator
+    stale_runner_cleanup._clients = {'ec2': mock_ec2, 'ecs': mock_ecs}
+    list_response = mock_urllib_response_factory(json_data={
+        'runners': [{'id': 123, 'name': 'fargate-runner-12345', 'status': 'offline'}]
+    })
+    delete_response = mock_urllib_response_factory(json_data={})
+    with patch.dict('os.environ', {'GITHUB_REPO': 'owner/repo', 'EC2_MANAGED_BY_TAG': 'tag', 'ECS_CLUSTER': 'cluster'}):
+        with patch('urllib.request.urlopen', side_effect=[list_response, delete_response]):
+            result = stale_runner_cleanup.cleanup_orphaned_github_runners('token')
+    assert result['github_cleaned'] == 1
