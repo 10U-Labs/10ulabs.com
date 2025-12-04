@@ -8,8 +8,8 @@ All personas use the same backend. The backend’s semantics and micro-operation
 
 These parameters define the SoC’s single core and must be identical for all personas. Together they form the `soc_config` object.
 
-- `issue_width`: 4  (maximum number of µops that can be issued per cycle)
-- `backend_dispatch_width`: 4  (maximum number of µops that can be dispatched into the scheduling window per cycle)
+- `issue_width`: 3  (maximum number of µops that can be issued per cycle)
+- `backend_dispatch_width`: 3  (maximum number of µops that can be dispatched into the scheduling window per cycle)
 - `rob_entries`: 128  (maximum in-flight µops in the reorder buffer)
 - `int_phys_regs`: 192  (physical integer registers)
 - `fp_vec_phys_regs`: 160  (physical FP/vector registers)

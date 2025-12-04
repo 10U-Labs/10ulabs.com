@@ -3,8 +3,8 @@ import math
 from typing import Any, Dict
 
 SOC_CONFIG = {
-    'issue_width': 4,
-    'backend_dispatch_width': 4,
+    'issue_width': 3,
+    'backend_dispatch_width': 3,
     'rob_entries': 128,
     'int_phys_regs': 192,
     'fp_vec_phys_regs': 160,
@@ -148,23 +148,18 @@ def compute_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
 def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any]) -> Dict[str, Any]:
     workload = WORKLOADS[persona]
     fetch_bytes_per_cycle = 16.0
-    max_decode_per_cycle = 4.0
-    max_uops_per_cycle = 4.0
-
+    issue_width = float(SOC_CONFIG['issue_width'])
     avg_bytes = workload['avg_bytes_per_instr']
     avg_uops = uop_stats['avg_uops_per_instr']
-
-    fetch_limited_ipc = fetch_bytes_per_cycle / avg_bytes
-    decode_limited_ipc = max_decode_per_cycle
-    uop_emission_limited_ipc = max_uops_per_cycle / avg_uops
-
-    ipc_frontend = min(fetch_limited_ipc, decode_limited_ipc, uop_emission_limited_ipc)
-
+    fetch_limited = fetch_bytes_per_cycle / avg_bytes
+    decode_limited = issue_width
+    uop_limited = issue_width / avg_uops
+    ipc_frontend = min(fetch_limited, decode_limited, uop_limited)
     result = {
         'ipc_frontend': ipc_frontend,
-        'fetch_limited_ipc': fetch_limited_ipc,
-        'decode_limited_ipc': decode_limited_ipc,
-        'uop_emission_limited_ipc': uop_emission_limited_ipc
+        'fetch_limited_ipc': fetch_limited,
+        'decode_limited_ipc': decode_limited,
+        'uop_emission_limited_ipc': uop_limited
     }
     return result
 
