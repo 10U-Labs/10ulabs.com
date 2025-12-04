@@ -165,14 +165,23 @@ Given the parameters above, the simulation produces:
 | Persona | Native IPC | Tri-mode IPC | Slowdown |
 |---------|------------|--------------|----------|
 | RISC-V | 0.596 | 0.584 | 1.02x |
-| ARM64 | 0.596 | 0.573 | 1.04x |
-| x86-64 | 0.596 | 0.380 | 1.57x |
+| ARM64 | 0.590 | 0.573 | 1.03x |
+| x86-64 | 0.400 | 0.380 | 1.05x |
+
+**Native IPC** represents performance on a dedicated core for that ISA:
+- RISC-V native: highest IPC (1.01 µops/instruction)
+- ARM64 native: slightly lower (1.055 µops/instruction)
+- x86-64 native: lowest (1.55 µops/instruction due to CISC complexity)
+
+**Slowdown** represents the overhead of running on a tri-mode core vs a dedicated native core:
+- The slowdown is primarily the decode overhead (2-5%)
+- x86-64 and ARM64 do not show large slowdowns because they already account for their µop translation in native IPC
 
 These results emerge from the interaction of:
 1. Frontend limits (fetch bandwidth, decode width, µop emission rate)
 2. Backend limits (execution units, memory stalls, branch stalls)
-3. Translation overhead (µop expansion per ISA)
-4. Decode overhead (tri-mode pipeline complexity)
+3. Translation overhead (µop expansion per ISA, reflected in native IPC)
+4. Decode overhead (tri-mode pipeline complexity, reflected in slowdown)
 
 ---
 

@@ -219,7 +219,7 @@ def compute_backend_ipc(persona: str, uop_stats: Dict[str, Any], instr_count: in
 
 
 def compute_native_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
-    result = compute_uop_counts_with_translation(WORKLOADS[persona], TRANSLATION_UOPS['riscv'], instr_count)
+    result = compute_uop_counts_with_translation(WORKLOADS[persona], TRANSLATION_UOPS[persona], instr_count)
     return result
 
 
@@ -253,9 +253,6 @@ def compute_native_simulation(persona: str) -> Dict[str, Any]:
 
 
 def compute_trimode_simulation(persona: str) -> Dict[str, Any]:
-    native_riscv = compute_native_simulation('riscv')
-    riscv_ipc = native_riscv['ipc']
-
     uop_stats = compute_uop_counts(persona, INSTRUCTION_COUNT)
     frontend = compute_frontend_ipc(persona, uop_stats, trimode=True)
     backend = compute_backend_ipc(persona, uop_stats, INSTRUCTION_COUNT)
@@ -270,14 +267,11 @@ def compute_trimode_simulation(persona: str) -> Dict[str, Any]:
     cycles = INSTRUCTION_COUNT / ipc_effective
     runtime_seconds = cycles / (SOC_CONFIG['clock_ghz'] * 1e9)
 
-    overhead_factor = ipc_effective / riscv_ipc if riscv_ipc > 0 else 0
-
     result = {
         'ipc': ipc_effective,
         'ipc_frontend': ipc_frontend,
         'ipc_backend': ipc_backend,
         'runtime_seconds': runtime_seconds,
-        'overhead_factor': overhead_factor,
         'total_uops': uop_stats['total_uops'],
         'avg_uops_per_instr': uop_stats['avg_uops_per_instr']
     }
@@ -347,8 +341,7 @@ def compute_simulation(persona: str) -> Dict[str, Any]:
         },
         'tri_mode_core': {
             'ipc': trimode_ipc,
-            'runtime_seconds': trimode_runtime,
-            'overhead_factor': trimode_result['overhead_factor']
+            'runtime_seconds': trimode_runtime
         },
         'relative_slowdown': relative_slowdown
     }
