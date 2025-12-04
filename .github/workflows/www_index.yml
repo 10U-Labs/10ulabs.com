@@ -38,9 +38,6 @@ jobs:
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
   deploying-home-page:
-    defaults:
-      run:
-        working-directory: src/www/paths/index
     name: Deploying home page
     needs:
       - declaring-common-variables
@@ -60,17 +57,17 @@ jobs:
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Get bucket name from shared Terraform
         run: |
-          terraform -chdir=../../shared init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform -chdir=../../shared output -raw bucket_name)
+          terraform -chdir=src/www/shared init -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=src/www/shared output -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - env:
           VITE_API_URL: https://api.10ulabs.com
           VITE_RECAPTCHA_SITE_KEY: ${{ secrets.RECAPTCHA_SITE_KEY }}
         name: Build website
-        run: npm ci && npm run build
+        run: npm ci --prefix src/www/paths/index && npm run build --prefix src/www/paths/index
       - name: Sync website to S3
         run: |
-          aws s3 sync dist/ s3://${{ env.BUCKET_NAME }}/ \
+          aws s3 sync src/www/paths/index/dist/ s3://${{ env.BUCKET_NAME }}/ \
             --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA \
@@ -98,7 +95,7 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Get website domain from Terraform output
         run: |
-          WEBSITE_FQDN=$(terraform -chdir=../../shared output -raw website_domain_name)
+          WEBSITE_FQDN=$(terraform -chdir=src/www/shared output -raw website_domain_name)
           echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
@@ -106,14 +103,11 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          python3 ../../../../scripts/invalidate_cloudfront.py \
+          python3 scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/*"
   e2e-testing:
-    defaults:
-      run:
-        working-directory: src/www/paths/index
     name: E2E testing
     needs:
       - declaring-common-variables
@@ -125,17 +119,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefix src/www/paths/index
       - name: Install Playwright browsers
-        run: npx playwright install chromium
+        run: npx --prefix src/www/paths/index playwright install chromium
       - env:
           BASE_URL: https://10ulabs.com
         name: Run E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e --prefix src/www/paths/index
   integration-testing:
-    defaults:
-      run:
-        working-directory: src/www/paths/index
     name: Integration testing
     needs:
       - declaring-common-variables
@@ -147,11 +138,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefix src/www/paths/index
       - env:
           BASE_URL: https://10ulabs.com
         name: Run integration tests
-        run: npm run test:integration
+        run: npm run test:integration --prefix src/www/paths/index
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -180,9 +171,6 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
   unit-testing:
-    defaults:
-      run:
-        working-directory: src/www/paths/index
     name: Unit testing
     needs:
       - declaring-common-variables
@@ -194,9 +182,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefix src/www/paths/index
       - name: Run unit tests
-        run: npm test
+        run: npm test --prefix src/www/paths/index
 name: Ensuring www index (home page) exists and is properly configured
 on:
   push:
