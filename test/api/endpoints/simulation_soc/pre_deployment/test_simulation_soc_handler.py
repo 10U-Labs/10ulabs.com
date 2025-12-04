@@ -397,3 +397,187 @@ def test_real_world_riscv_core_name_is_sifive(simulation_soc_handler, simulation
     body = parse_response_body(response)
     is_sifive = 'SiFive' in body['real_world_comparison']['native_core']['name']
     assert is_sifive
+
+
+def test_derive_translation_uops_averages_ranges(simulation_soc_handler):
+    ranges = {'alu': (1, 3), 'load': (2, 4)}
+    result = simulation_soc_handler.derive_translation_uops(ranges)
+    correct_average = result['alu'] == 2.0 and result['load'] == 3.0
+    assert correct_average
+
+
+def test_json_response_has_status_code(simulation_soc_handler):
+    response = simulation_soc_handler.json_response(200, {'test': 'data'})
+    has_status = response['statusCode'] == 200
+    assert has_status
+
+
+def test_json_response_has_json_body(simulation_soc_handler):
+    response = simulation_soc_handler.json_response(200, {'test': 'data'})
+    body = json.loads(response['body'])
+    body_correct = body['test'] == 'data'
+    assert body_correct
+
+
+def test_json_response_has_cors_headers(simulation_soc_handler):
+    response = simulation_soc_handler.json_response(200, {})
+    has_cors = 'Access-Control-Allow-Origin' in response['headers']
+    assert has_cors
+
+
+def test_error_response_without_details(simulation_soc_handler):
+    response = simulation_soc_handler.error_response(400, 'Test error')
+    body = json.loads(response['body'])
+    no_details = 'details' not in body
+    assert no_details
+
+
+def test_error_response_with_details(simulation_soc_handler):
+    response = simulation_soc_handler.error_response(400, 'Test error', 'Test details')
+    body = json.loads(response['body'])
+    has_details = body['details'] == 'Test details'
+    assert has_details
+
+
+def test_parse_body_with_string(simulation_soc_handler):
+    event = {'body': '{"key": "value"}'}
+    result = simulation_soc_handler.parse_body(event)
+    parsed_correctly = result['key'] == 'value'
+    assert parsed_correctly
+
+
+def test_parse_body_with_dict(simulation_soc_handler):
+    event = {'body': {'key': 'value'}}
+    result = simulation_soc_handler.parse_body(event)
+    parsed_correctly = result['key'] == 'value'
+    assert parsed_correctly
+
+
+def test_build_soc_config_output_has_issue_width(simulation_soc_handler):
+    config = simulation_soc_handler.build_soc_config_output()
+    has_issue_width = 'issue_width' in config
+    assert has_issue_width
+
+
+def test_build_soc_config_output_has_clock_ghz(simulation_soc_handler):
+    config = simulation_soc_handler.build_soc_config_output()
+    has_clock = 'clock_ghz' in config
+    assert has_clock
+
+
+def test_build_real_world_config_riscv_has_name(simulation_soc_handler):
+    config = simulation_soc_handler.build_real_world_config('riscv')
+    has_name = 'name' in config
+    assert has_name
+
+
+def test_build_real_world_config_x86_has_clock(simulation_soc_handler):
+    config = simulation_soc_handler.build_real_world_config('x86_64')
+    has_clock = 'clock_ghz' in config
+    assert has_clock
+
+
+def test_compute_uop_counts_returns_total_uops(simulation_soc_handler):
+    result = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    has_total = 'total_uops' in result
+    assert has_total
+
+
+def test_compute_uop_counts_total_is_positive(simulation_soc_handler):
+    result = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    total_positive = result['total_uops'] > 0
+    assert total_positive
+
+
+def test_compute_frontend_ipc_returns_ipc(simulation_soc_handler):
+    uop_stats = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    result = simulation_soc_handler.compute_frontend_ipc('riscv', uop_stats)
+    has_ipc = 'ipc_frontend' in result
+    assert has_ipc
+
+
+def test_compute_frontend_ipc_trimode_lower_than_native(simulation_soc_handler):
+    uop_stats = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    native = simulation_soc_handler.compute_frontend_ipc('riscv', uop_stats, trimode=False)
+    trimode = simulation_soc_handler.compute_frontend_ipc('riscv', uop_stats, trimode=True)
+    trimode_lower = trimode['ipc_frontend'] < native['ipc_frontend']
+    assert trimode_lower
+
+
+def test_compute_backend_ipc_returns_ipc(simulation_soc_handler):
+    uop_stats = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    result = simulation_soc_handler.compute_backend_ipc('riscv', uop_stats, 1000)
+    has_ipc = 'ipc_backend' in result
+    assert has_ipc
+
+
+def test_compute_backend_ipc_is_positive(simulation_soc_handler):
+    uop_stats = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    result = simulation_soc_handler.compute_backend_ipc('riscv', uop_stats, 1000)
+    ipc_positive = result['ipc_backend'] > 0
+    assert ipc_positive
+
+
+def test_compute_memory_stall_cpi_is_positive(simulation_soc_handler):
+    workload = simulation_soc_handler.WORKLOADS['riscv']
+    result = simulation_soc_handler.compute_memory_stall_cpi(workload, 1000, 1000)
+    cpi_positive = result > 0
+    assert cpi_positive
+
+
+def test_compute_native_simulation_returns_ipc(simulation_soc_handler):
+    result = simulation_soc_handler.compute_native_simulation('riscv')
+    has_ipc = 'ipc' in result
+    assert has_ipc
+
+
+def test_compute_native_simulation_returns_runtime(simulation_soc_handler):
+    result = simulation_soc_handler.compute_native_simulation('riscv')
+    has_runtime = 'runtime_seconds' in result
+    assert has_runtime
+
+
+def test_compute_trimode_simulation_returns_ipc(simulation_soc_handler):
+    result = simulation_soc_handler.compute_trimode_simulation('riscv')
+    has_ipc = 'ipc' in result
+    assert has_ipc
+
+
+def test_compute_trimode_simulation_ipc_less_than_native(simulation_soc_handler):
+    native = simulation_soc_handler.compute_native_simulation('riscv')
+    trimode = simulation_soc_handler.compute_trimode_simulation('riscv')
+    trimode_lower = trimode['ipc'] < native['ipc']
+    assert trimode_lower
+
+
+def test_compute_real_world_simulation_returns_core_name(simulation_soc_handler):
+    result = simulation_soc_handler.compute_real_world_simulation('riscv')
+    has_name = 'core_name' in result
+    assert has_name
+
+
+def test_compute_real_world_simulation_returns_ipc(simulation_soc_handler):
+    result = simulation_soc_handler.compute_real_world_simulation('x86_64')
+    has_ipc = 'ipc' in result
+    assert has_ipc
+
+
+def test_compute_resource_limited_upc_is_positive(simulation_soc_handler):
+    uop_stats = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    result = simulation_soc_handler.compute_resource_limited_upc(uop_stats)
+    upc_positive = result > 0
+    assert upc_positive
+
+
+def test_x86_has_more_uops_than_riscv(simulation_soc_handler):
+    riscv_uops = simulation_soc_handler.compute_uop_counts('riscv', 1000)
+    x86_uops = simulation_soc_handler.compute_uop_counts('x86_64', 1000)
+    x86_more = x86_uops['total_uops'] > riscv_uops['total_uops']
+    assert x86_more
+
+
+def test_riscv_native_ipc_higher_than_x86(simulation_soc_handler):
+    riscv = simulation_soc_handler.compute_native_simulation('riscv')
+    x86 = simulation_soc_handler.compute_native_simulation('x86_64')
+    riscv_higher = riscv['ipc'] > x86['ipc']
+    assert riscv_higher
