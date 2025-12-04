@@ -1,6 +1,6 @@
 import json
 import math
-from typing import Any, Dict
+from typing import Any, Dict, List, Union, cast
 
 SOC_CONFIG = {
     'issue_width': 3,
@@ -232,9 +232,9 @@ def compute_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
 def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any]) -> Dict[str, Any]:
     workload = WORKLOADS[persona]
     fetch_bytes_per_cycle = 16.0
-    issue_width = float(SOC_CONFIG['issue_width'])
-    avg_bytes = workload['avg_bytes_per_instr']
-    avg_uops = uop_stats['avg_uops_per_instr']
+    issue_width = float(cast(int, SOC_CONFIG['issue_width']))
+    avg_bytes = float(workload['avg_bytes_per_instr'])
+    avg_uops = float(uop_stats['avg_uops_per_instr'])
     fetch_limited = fetch_bytes_per_cycle / avg_bytes
     decode_limited = issue_width
     uop_limited = issue_width / avg_uops
@@ -249,17 +249,17 @@ def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any]) -> Dict[str, A
 
 
 def compute_resource_limited_upc(uop_stats: Dict[str, Any]) -> float:
-    total = uop_stats['total_uops']
-    alu_frac = (uop_stats['alu_uops'] + uop_stats['branch_uops'] + uop_stats['complex_uops'] * 0.5) / total
-    load_frac = uop_stats['load_uops'] / total
-    store_frac = uop_stats['store_uops'] / total
-    fp_frac = (uop_stats['fp_vec_uops'] + uop_stats['complex_uops'] * 0.5) / total
-    limits = [
-        EXECUTION_UNITS['int_alus'] / alu_frac if alu_frac > 0 else float('inf'),
-        EXECUTION_UNITS['load_units'] / load_frac if load_frac > 0 else float('inf'),
-        EXECUTION_UNITS['store_units'] / store_frac if store_frac > 0 else float('inf'),
-        EXECUTION_UNITS['fp_vec_units'] / fp_frac if fp_frac > 0 else float('inf'),
-        SOC_CONFIG['issue_width']
+    total = float(uop_stats['total_uops'])
+    alu_frac = (float(uop_stats['alu_uops']) + float(uop_stats['branch_uops']) + float(uop_stats['complex_uops']) * 0.5) / total
+    load_frac = float(uop_stats['load_uops']) / total
+    store_frac = float(uop_stats['store_uops']) / total
+    fp_frac = (float(uop_stats['fp_vec_uops']) + float(uop_stats['complex_uops']) * 0.5) / total
+    limits: List[float] = [
+        float(EXECUTION_UNITS['int_alus']) / alu_frac if alu_frac > 0 else float('inf'),
+        float(EXECUTION_UNITS['load_units']) / load_frac if load_frac > 0 else float('inf'),
+        float(EXECUTION_UNITS['store_units']) / store_frac if store_frac > 0 else float('inf'),
+        float(EXECUTION_UNITS['fp_vec_units']) / fp_frac if fp_frac > 0 else float('inf'),
+        float(cast(int, SOC_CONFIG['issue_width']))
     ]
     result = min(limits)
     return result
@@ -327,7 +327,7 @@ def compute_native_simulation(persona: str) -> Dict[str, Any]:
     ipc_effective = min(ipc_frontend, ipc_backend)
 
     cycles = INSTRUCTION_COUNT / ipc_effective
-    runtime_seconds = cycles / (SOC_CONFIG['clock_ghz'] * 1e9)
+    runtime_seconds = cycles / (cast(float, SOC_CONFIG['clock_ghz']) * 1e9)
 
     result = {
         'ipc': ipc_effective,
@@ -352,13 +352,13 @@ def compute_trimode_simulation(persona: str) -> Dict[str, Any]:
     frontend = compute_frontend_ipc(persona, adjusted_uop_stats)
     backend = compute_trimode_backend_ipc(persona, adjusted_uop_stats, INSTRUCTION_COUNT)
 
-    ipc_raw = min(frontend['ipc_frontend'], backend['ipc_backend'])
-    store_count = INSTRUCTION_COUNT * workload['store_fraction']
+    ipc_raw = min(float(frontend['ipc_frontend']), float(backend['ipc_backend']))
+    store_count = INSTRUCTION_COUNT * float(workload['store_fraction'])
     fence_stall_cycles = compute_fence_stall_cycles(persona, store_count)
     ipc_effective = compute_trimode_effective_ipc(ipc_raw, fence_stall_cycles, INSTRUCTION_COUNT)
 
     cycles = INSTRUCTION_COUNT / ipc_effective
-    runtime_seconds = cycles / (SOC_CONFIG['clock_ghz'] * 1e9)
+    runtime_seconds = cycles / (cast(float, SOC_CONFIG['clock_ghz']) * 1e9)
 
     result = {
         'ipc': ipc_effective,
@@ -426,7 +426,7 @@ def compute_simulation(persona: str) -> Dict[str, Any]:
             'ipc': native_result['ipc'],
             'runtime_seconds': native_result['runtime_seconds'],
             'cache_stats': native_result['cache_stats'],
-            'rob_ilp': math.sqrt(SOC_CONFIG['rob_entries']) * 0.6,
+            'rob_ilp': math.sqrt(cast(int, SOC_CONFIG['rob_entries'])) * 0.6,
             'memory_stall_cpi': native_result['memory_stall_cpi'],
             'branch_stall_cpi': native_result['branch_stall_cpi']
         },
