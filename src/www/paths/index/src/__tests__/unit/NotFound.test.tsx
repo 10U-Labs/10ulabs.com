@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import NotFound from "./NotFound";
+import NotFound from "@/pages/NotFound";
+
+const futureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+};
 
 describe("NotFound", () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
@@ -13,7 +18,7 @@ describe("NotFound", () => {
   describe("rendering", () => {
     it("renders 404 heading", () => {
       render(
-        <MemoryRouter initialEntries={["/invalid-path"]}>
+        <MemoryRouter initialEntries={["/invalid-path"]} future={futureFlags}>
           <NotFound />
         </MemoryRouter>
       );
@@ -23,7 +28,7 @@ describe("NotFound", () => {
 
     it("renders error message", () => {
       render(
-        <MemoryRouter initialEntries={["/invalid-path"]}>
+        <MemoryRouter initialEntries={["/invalid-path"]} future={futureFlags}>
           <NotFound />
         </MemoryRouter>
       );
@@ -33,7 +38,7 @@ describe("NotFound", () => {
 
     it("renders return home link", () => {
       render(
-        <MemoryRouter initialEntries={["/invalid-path"]}>
+        <MemoryRouter initialEntries={["/invalid-path"]} future={futureFlags}>
           <NotFound />
         </MemoryRouter>
       );
@@ -43,7 +48,7 @@ describe("NotFound", () => {
 
     it("home link points to root", () => {
       render(
-        <MemoryRouter initialEntries={["/invalid-path"]}>
+        <MemoryRouter initialEntries={["/invalid-path"]} future={futureFlags}>
           <NotFound />
         </MemoryRouter>
       );
@@ -56,7 +61,7 @@ describe("NotFound", () => {
   describe("logging", () => {
     it("logs error on mount", () => {
       render(
-        <MemoryRouter initialEntries={["/invalid-path"]}>
+        <MemoryRouter initialEntries={["/invalid-path"]} future={futureFlags}>
           <NotFound />
         </MemoryRouter>
       );
@@ -66,7 +71,7 @@ describe("NotFound", () => {
 
     it("logs the attempted path", () => {
       render(
-        <MemoryRouter initialEntries={["/some-invalid-route"]}>
+        <MemoryRouter initialEntries={["/some-invalid-route"]} future={futureFlags}>
           <NotFound />
         </MemoryRouter>
       );

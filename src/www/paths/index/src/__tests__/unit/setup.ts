@@ -1,6 +1,21 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeAll, vi } from "vitest";
+
+beforeAll(() => {
+  const originalWarn = console.warn;
+  const originalError = console.error;
+
+  console.warn = (...args: unknown[]) => {
+    originalWarn(...args);
+    throw new Error(`Console warning: ${args.join(" ")}`);
+  };
+
+  console.error = (...args: unknown[]) => {
+    originalError(...args);
+    throw new Error(`Console error: ${args.join(" ")}`);
+  };
+});
 
 afterEach(() => {
   cleanup();

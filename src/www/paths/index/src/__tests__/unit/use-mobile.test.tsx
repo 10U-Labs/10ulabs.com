@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useIsMobile } from "./use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 describe("useIsMobile", () => {
   let addEventListenerSpy: ReturnType<typeof vi.fn>;

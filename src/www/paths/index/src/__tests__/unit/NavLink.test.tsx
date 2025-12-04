@@ -1,11 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import { NavLink } from "./NavLink";
+import { NavLink } from "@/components/NavLink";
+
+const futureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+};
 
 const renderNavLink = (initialPath: string, linkTo: string, props: Record<string, string> = {}) => {
   render(
-    <MemoryRouter initialEntries={[initialPath]}>
+    <MemoryRouter initialEntries={[initialPath]} future={futureFlags}>
       <Routes>
         <Route
           path="*"

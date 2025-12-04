@@ -4,6 +4,11 @@ import { BrowserRouter, MemoryRouter } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ReactElement, ReactNode } from "react";
 
+const futureFlags = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+};
+
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
@@ -22,7 +27,7 @@ const AllProviders = ({ children }: WrapperProps) => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <BrowserRouter>{children}</BrowserRouter>
+        <BrowserRouter future={futureFlags}>{children}</BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   );
@@ -34,7 +39,7 @@ export const createMemoryRouterWrapper = (initialEntries: string[] = ["/"]) => {
     return (
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+          <MemoryRouter initialEntries={initialEntries} future={futureFlags}>{children}</MemoryRouter>
         </TooltipProvider>
       </QueryClientProvider>
     );

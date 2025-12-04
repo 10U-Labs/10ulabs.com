@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@/test/utils";
+import { render, screen } from "@/__tests__/unit/utils";
 import userEvent from "@testing-library/user-event";
-import { ContactForm } from "./ContactForm";
+import { ContactForm } from "@/components/ContactForm";
 
 vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({
