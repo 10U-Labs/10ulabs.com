@@ -67,13 +67,13 @@ TRIMODE_OVERHEAD_PARAMS = {
         'fence_per_store': False,
         'extra_decode_stages': 0
     },
-    'x86_64': {
+    'desktop64': {
         'flags_live_rate': 0.25,
         'flags_uops_per_live': 0.15,
         'fence_per_store': False,
         'extra_decode_stages': 0
     },
-    'arm64': {
+    'mobile64': {
         'flags_live_rate': 0.16,
         'flags_uops_per_live': 0.1,
         'fence_per_store': False,
@@ -94,7 +94,7 @@ SPEC_TRANSLATION_RANGES = {
         'fp_vec': (1, 1),
         'complex': (1, 2),
     },
-    'x86_64': {
+    'desktop64': {
         'alu': (1, 2),
         'load': (1, 2),
         'store': (1, 2),
@@ -102,7 +102,7 @@ SPEC_TRANSLATION_RANGES = {
         'fp_vec': (2, 3),
         'complex': (4, 8),
     },
-    'arm64': {
+    'mobile64': {
         'alu': (1, 1),
         'load': (1, 1),
         'store': (1, 1),
@@ -191,7 +191,7 @@ WORKLOADS = {
         'l1d_hit_rate': 0.92,
         'l2_hit_rate': 0.88
     },
-    'x86_64': {
+    'desktop64': {
         'alu_fraction': 0.43,
         'load_fraction': 0.22,
         'store_fraction': 0.10,
@@ -203,7 +203,7 @@ WORKLOADS = {
         'l1d_hit_rate': 0.92,
         'l2_hit_rate': 0.88
     },
-    'arm64': {
+    'mobile64': {
         'alu_fraction': 0.43,
         'load_fraction': 0.22,
         'store_fraction': 0.10,

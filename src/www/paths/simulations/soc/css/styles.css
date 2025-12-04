@@ -387,7 +387,7 @@ h2 {
     text-transform: uppercase;
 }
 
-.isa-badge.arm64 {
+.isa-badge.mobile64 {
     background: #dbeafe;
     color: #1d4ed8;
 }
@@ -397,7 +397,7 @@ h2 {
     color: #15803d;
 }
 
-.isa-badge.x86 {
+.isa-badge.desktop64 {
     background: #fef3c7;
     color: #b45309;
 }
@@ -424,7 +424,7 @@ h2 {
     stroke: #e2e8f0;
 }
 
-.core-diagram .block.active.arm64 {
+.core-diagram .block.active.mobile64 {
     fill: #dbeafe;
     stroke: #1d4ed8;
     stroke-width: 2;
@@ -436,7 +436,7 @@ h2 {
     stroke-width: 2;
 }
 
-.core-diagram .block.active.x86 {
+.core-diagram .block.active.desktop64 {
     fill: #fef3c7;
     stroke: #b45309;
     stroke-width: 2;
@@ -523,6 +523,12 @@ h2 {
     text-align: center;
     padding: 1.5rem;
     font-size: 0.875rem;
+}
+
+.footer .disclaimer {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-bottom: 0.75rem;
 }
 
 .footer .privacy-link {

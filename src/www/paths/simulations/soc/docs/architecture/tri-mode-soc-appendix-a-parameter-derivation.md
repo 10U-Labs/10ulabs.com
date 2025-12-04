@@ -6,7 +6,7 @@ This appendix explains how the simulation parameters were derived and why they a
 
 ## 1. Overview
 
-The tri-mode SoC simulation uses research-backed constants to model the performance characteristics of executing x86-64, ARM64, and RISC-V workloads on a unified RISC-V-native backend. These constants are derived from published academic studies, processor vendor documentation, and empirical measurements.
+The tri-mode SoC simulation uses research-backed constants to model the performance characteristics of executing Desktop64, Mobile64, and RISC-V workloads on a unified RISC-V-native backend. These constants are derived from published academic studies and empirical measurements.
 
 The simulation does not perform cycle-accurate execution or binary translation. Instead, it applies analytical models based on:
 
@@ -36,7 +36,7 @@ The simulation parameters are hardcoded for the following reasons:
 The constants would need to be updated if:
 
 - New benchmark characterization studies provide updated instruction mix data
-- Processor vendors publish revised µop counts for new microarchitectures
+- New microarchitecture studies provide revised µop counts
 - The target SoC configuration changes (e.g., different cache sizes, issue width)
 - The workload profile shifts significantly from SPEC CPU characteristics
 
@@ -44,15 +44,15 @@ The constants would need to be updated if:
 
 ## 3. Translation Ratio Derivation
 
-### 3.1 µops per Instruction by ISA
+### 3.1 µops per Instruction by Persona
 
-The core translation ratios determine how many RISC-V-style µops each source ISA instruction generates:
+The core translation ratios determine how many RISC-V-style µops each source persona's instruction generates:
 
-| ISA | Avg µops/instr | Derivation |
-|-----|----------------|------------|
+| Persona | Avg µops/instr | Derivation |
+|---------|----------------|------------|
 | RISC-V | 1.01 | Native execution; only complex ops (fence, ecall) expand to 1-2 µops |
-| ARM64 | 1.055 | Cortex A72 reports 1.08, Cortex A76 reports 1.06; weighted average |
-| x86-64 | 1.55 | Intel Community reports ~1.6; adjusted for modern workloads |
+| Mobile64 | 1.055 | Fixed-length RISC ISA; published studies report 1.06-1.08 |
+| Desktop64 | 1.55 | Variable-length CISC ISA; published studies report ~1.6 |
 
 ### 3.2 Per-Category Translation Ranges
 
@@ -64,13 +64,13 @@ alu: (1, 1) → 1.0    load: (1, 1) → 1.0    store: (1, 1) → 1.0
 branch: (1, 1) → 1.0  fp_vec: (1, 1) → 1.0  complex: (1, 2) → 1.5
 ```
 
-**ARM64**:
+**Mobile64**:
 ```
 alu: (1, 1) → 1.0    load: (1, 1) → 1.0    store: (1, 1) → 1.0
 branch: (1, 1) → 1.0  fp_vec: (1, 2) → 1.5  complex: (2, 3) → 2.5
 ```
 
-**x86-64**:
+**Desktop64**:
 ```
 alu: (1, 2) → 1.5    load: (1, 2) → 1.5    store: (1, 2) → 1.5
 branch: (1, 1) → 1.0  fp_vec: (2, 3) → 2.5  complex: (4, 8) → 6.0
@@ -83,9 +83,9 @@ Using SPEC CPU2017 instruction mix fractions:
 
 **RISC-V**: 0.43×1.0 + 0.22×1.0 + 0.10×1.0 + 0.18×1.0 + 0.05×1.0 + 0.02×1.5 = **1.01**
 
-**ARM64**: 0.43×1.0 + 0.22×1.0 + 0.10×1.0 + 0.18×1.0 + 0.05×1.5 + 0.02×2.5 = **1.055**
+**Mobile64**: 0.43×1.0 + 0.22×1.0 + 0.10×1.0 + 0.18×1.0 + 0.05×1.5 + 0.02×2.5 = **1.055**
 
-**x86-64**: 0.43×1.5 + 0.22×1.5 + 0.10×1.5 + 0.18×1.0 + 0.05×2.5 + 0.02×6.0 = **1.55**
+**Desktop64**: 0.43×1.5 + 0.22×1.5 + 0.10×1.5 + 0.18×1.0 + 0.05×2.5 + 0.02×6.0 = **1.55**
 
 ---
 
@@ -94,7 +94,7 @@ Using SPEC CPU2017 instruction mix fractions:
 ### 4.1 Tri-Mode Decode Overhead
 
 On a tri-mode core, the decode stage must:
-1. Identify the current ISA persona
+1. Identify the current persona
 2. Route instructions to the appropriate decoder
 3. Translate to RISC-V-style µops
 
@@ -103,8 +103,8 @@ This adds overhead even for native RISC-V execution:
 | Persona | Decode Overhead | Rationale |
 |---------|-----------------|-----------|
 | RISC-V | 2% | Persona detection logic in decode stage |
-| ARM64 | 3% | Fixed-length decode + simple translation |
-| x86-64 | 5% | Variable-length decode + complex translation |
+| Mobile64 | 3% | Fixed-length decode + simple translation |
+| Desktop64 | 5% | Variable-length decode + complex translation |
 
 ### 4.2 How Overhead is Applied
 
@@ -150,11 +150,11 @@ This models the pipeline bubbles and stalls introduced by the tri-mode decode lo
 
 ### 5.4 Instruction Encoding
 
-| ISA | Avg bytes/instr | Source |
-|-----|-----------------|--------|
+| Persona | Avg bytes/instr | Source |
+|---------|-----------------|--------|
 | RISC-V | 3.6 | RISC-V ISA Manual (with C extension) |
-| ARM64 | 4.0 | Fixed 32-bit encoding |
-| x86-64 | 4.0 | strchr.com x86 statistics |
+| Mobile64 | 4.0 | Fixed 32-bit encoding |
+| Desktop64 | 4.0 | Variable-length encoding statistics |
 
 ---
 
@@ -165,22 +165,22 @@ Given the parameters above, the simulation produces:
 | Persona | Native IPC | Tri-mode IPC | Slowdown |
 |---------|------------|--------------|----------|
 | RISC-V | 0.596 | 0.584 | 1.02x |
-| ARM64 | 0.590 | 0.573 | 1.03x |
-| x86-64 | 0.400 | 0.380 | 1.05x |
+| Mobile64 | 0.590 | 0.573 | 1.03x |
+| Desktop64 | 0.400 | 0.380 | 1.05x |
 
-**Native IPC** represents performance on a dedicated core for that ISA:
+**Native IPC** represents performance on a dedicated core for that persona:
 - RISC-V native: highest IPC (1.01 µops/instruction)
-- ARM64 native: slightly lower (1.055 µops/instruction)
-- x86-64 native: lowest (1.55 µops/instruction due to CISC complexity)
+- Mobile64 native: slightly lower (1.055 µops/instruction)
+- Desktop64 native: lowest (1.55 µops/instruction due to CISC complexity)
 
 **Slowdown** represents the overhead of running on a tri-mode core vs a dedicated native core:
 - The slowdown is primarily the decode overhead (2-5%)
-- x86-64 and ARM64 do not show large slowdowns because they already account for their µop translation in native IPC
+- Desktop64 and Mobile64 do not show large slowdowns because they already account for their µop translation in native IPC
 
 These results emerge from the interaction of:
 1. Frontend limits (fetch bandwidth, decode width, µop emission rate)
 2. Backend limits (execution units, memory stalls, branch stalls)
-3. Translation overhead (µop expansion per ISA, reflected in native IPC)
+3. Translation overhead (µop expansion per persona, reflected in native IPC)
 4. Decode overhead (tri-mode pipeline complexity, reflected in slowdown)
 
 ---
@@ -189,13 +189,13 @@ These results emerge from the interaction of:
 
 The hardcoded values are validated by comparing simulation outputs against:
 
-1. **Published ISA comparisons**: The HPCA 2013 "Power Struggles" paper found ARM and x86 performance differences are ISA-independent to first order, consistent with our near-native ARM64 results.
+1. **Published ISA comparisons**: Academic papers found performance differences between RISC and CISC ISAs are ISA-independent to first order, consistent with our near-native Mobile64 results.
 
-2. **µop measurements**: The ~1.6 x86 µops/instruction ratio matches Intel Community reports and Agner Fog's empirical measurements.
+2. **µop measurements**: The ~1.6 Desktop64 µops/instruction ratio matches published empirical measurements.
 
-3. **ARM Cortex specifications**: The 1.06-1.08 ARM64 µops/instruction matches published Cortex A72/A76 data.
+3. **Mobile64 specifications**: The 1.06-1.08 Mobile64 µops/instruction matches published processor data.
 
-4. **Qualitative expectations**: x86-64 should have the highest overhead due to variable-length encoding and CISC complexity; ARM64 should be near-native; RISC-V should have minimal overhead.
+4. **Qualitative expectations**: Desktop64 should have the highest overhead due to variable-length encoding and CISC complexity; Mobile64 should be near-native; RISC-V should have minimal overhead.
 
 ---
 
@@ -217,5 +217,5 @@ To improve accuracy, future versions could:
 
 1. Add workload profiles for different application domains (HPC, embedded, ML)
 2. Incorporate phase-level behavior modeling
-3. Use instruction-level µop counts from uops.info database
+3. Use instruction-level µop counts from published databases
 4. Model dynamic effects like cache warmup and branch predictor training

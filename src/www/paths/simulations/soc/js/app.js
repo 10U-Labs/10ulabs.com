@@ -2,11 +2,11 @@ var API_BASE_URL = 'https://api.10ulabs.com';
 
 var socConfigLoaded = false;
 
-var PERSONAS = ['arm64', 'riscv', 'x86_64'];
+var PERSONAS = ['mobile64', 'riscv', 'desktop64'];
 var PERSONA_LABELS = {
     'riscv': 'RISC-V',
-    'x86_64': 'x86-64',
-    'arm64': 'ARM64'
+    'desktop64': 'Desktop64',
+    'mobile64': 'Mobile64'
 };
 
 function getApiBaseUrl() {
@@ -117,19 +117,19 @@ function createCoreDiagramSvg(activeIsa) {
     }
 
     var isTriMode = activeIsa !== 'native';
-    var arm64Active = activeIsa === 'arm64';
+    var mobile64Active = activeIsa === 'mobile64';
     var riscvActive = activeIsa === 'riscv';
-    var x86Active = activeIsa === 'x86_64';
+    var desktop64Active = activeIsa === 'desktop64';
 
     // Instruction Fetch
     svg.appendChild(rect(10, 10, 200, 25, 'block active'));
     svg.appendChild(text(110, 27, 'Instruction Fetch (16B/cyc)', 'block-text small'));
 
     if (isTriMode) {
-        // Arrow from Instruction Fetch to active decoder (diagonal for ARM64/x86, vertical for RISC-V)
-        if (arm64Active) {
+        // Arrow from Instruction Fetch to active decoder (diagonal for Mobile64/Desktop64, vertical for RISC-V)
+        if (mobile64Active) {
             svg.appendChild(path('M110 35 L40 48', 'arrow active'));
-        } else if (x86Active) {
+        } else if (desktop64Active) {
             svg.appendChild(path('M110 35 L180 48', 'arrow active'));
         } else {
             svg.appendChild(path('M110 35 L110 48', 'arrow active'));
@@ -140,24 +140,24 @@ function createCoreDiagramSvg(activeIsa) {
 
     if (isTriMode) {
         // Three parallel decode lanes (0 extra stages)
-        svg.appendChild(rect(10, 48, 60, 28, 'block ' + (arm64Active ? 'active arm64' : 'inactive')));
-        svg.appendChild(text(40, 60, 'ARM64', 'block-text small' + (arm64Active ? '' : ' inactive')));
-        svg.appendChild(text(40, 70, 'Decode', 'block-text tiny' + (arm64Active ? '' : ' inactive')));
+        svg.appendChild(rect(10, 48, 60, 28, 'block ' + (mobile64Active ? 'active mobile64' : 'inactive')));
+        svg.appendChild(text(40, 60, 'Mobile64', 'block-text small' + (mobile64Active ? '' : ' inactive')));
+        svg.appendChild(text(40, 70, 'Decode', 'block-text tiny' + (mobile64Active ? '' : ' inactive')));
 
         svg.appendChild(rect(80, 48, 60, 28, 'block ' + (riscvActive ? 'active riscv' : 'inactive')));
         svg.appendChild(text(110, 60, 'RISC-V', 'block-text small' + (riscvActive ? '' : ' inactive')));
         svg.appendChild(text(110, 70, 'Decode', 'block-text tiny' + (riscvActive ? '' : ' inactive')));
 
-        svg.appendChild(rect(150, 48, 60, 28, 'block ' + (x86Active ? 'active x86' : 'inactive')));
-        svg.appendChild(text(180, 60, 'x86-64', 'block-text small' + (x86Active ? '' : ' inactive')));
-        svg.appendChild(text(180, 70, 'Decode', 'block-text tiny' + (x86Active ? '' : ' inactive')));
+        svg.appendChild(rect(150, 48, 60, 28, 'block ' + (desktop64Active ? 'active desktop64' : 'inactive')));
+        svg.appendChild(text(180, 60, 'Desktop64', 'block-text small' + (desktop64Active ? '' : ' inactive')));
+        svg.appendChild(text(180, 70, 'Decode', 'block-text tiny' + (desktop64Active ? '' : ' inactive')));
 
         // Arrows from active decoder to µop queue
-        if (arm64Active) {
+        if (mobile64Active) {
             svg.appendChild(path('M40 76 L110 90', 'arrow active'));
         } else if (riscvActive) {
             svg.appendChild(path('M110 76 L110 90', 'arrow active'));
-        } else if (x86Active) {
+        } else if (desktop64Active) {
             svg.appendChild(path('M180 76 L110 90', 'arrow active'));
         }
 
@@ -165,13 +165,13 @@ function createCoreDiagramSvg(activeIsa) {
         svg.appendChild(rect(10, 90, 200, 22, 'block active'));
         svg.appendChild(text(110, 105, 'RISC-V Micro-op Queue', 'block-text small'));
 
-        // Flags predictor annotation for x86/ARM (reduces overhead)
-        if (x86Active) {
+        // Flags predictor annotation for Desktop64/Mobile64 (reduces overhead)
+        if (desktop64Active) {
             svg.appendChild(rect(10, 118, 200, 16, 'block active optimization'));
             svg.appendChild(text(110, 129, 'Flags Predictor (0.15 µops/use vs 3)', 'block-text tiny'));
             svg.appendChild(path('M110 112 L110 118', 'arrow active'));
             svg.appendChild(path('M110 134 L110 145', 'arrow active'));
-        } else if (arm64Active) {
+        } else if (mobile64Active) {
             svg.appendChild(rect(10, 118, 200, 16, 'block active optimization'));
             svg.appendChild(text(110, 129, 'Flags Predictor (0.1 µops/use)', 'block-text tiny'));
             svg.appendChild(path('M110 112 L110 118', 'arrow active'));
@@ -209,8 +209,8 @@ function createCoreDiagramSvg(activeIsa) {
     svg.appendChild(text(110, 230, 'Execution Units (3 ALU, 2 LD, 1 ST)', 'block-text tiny'));
     svg.appendChild(path('M110 237 L110 250', 'arrow active'));
 
-    // Load-Store Unit with TSO mode for x86
-    if (isTriMode && x86Active) {
+    // Load-Store Unit with TSO mode for Desktop64
+    if (isTriMode && desktop64Active) {
         svg.appendChild(rect(10, 250, 200, 22, 'block active optimization'));
         svg.appendChild(text(110, 265, 'Load-Store [HW TSO: 0 fence overhead]', 'block-text tiny'));
     } else {
@@ -252,9 +252,9 @@ function createNonTriModeDiagram() {
 function createTriModeDiagrams() {
     var container = document.createElement('div');
     container.className = 'diagram-row diagram-row-triple';
-    container.appendChild(createDiagramCard('', '', '', 'arm64'));
+    container.appendChild(createDiagramCard('', '', '', 'mobile64'));
     container.appendChild(createDiagramCard('', '', '', 'riscv'));
-    container.appendChild(createDiagramCard('', '', '', 'x86_64'));
+    container.appendChild(createDiagramCard('', '', '', 'desktop64'));
     return container;
 }
 

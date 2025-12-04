@@ -2,25 +2,36 @@
 
 This index lists the component files that together define the tri-mode SoC architecture and simulation model. Each file is self-contained and can be given to a code model (e.g., Claude Code) as needed.
 
-1. Core Concept and Personas  
-   File: `tri-mode-soc-section1-core-personas.md`  
-   Content: Defines the overall tri-mode SoC idea, explains that the single core is RISC-V-native, and describes the three personas (`riscv`, `x86_64`, `arm64`) and how they present different ISAs on top of the same RISC-V core.
+## Disclaimer
 
-2. Shared RISC-V-Native Backend  
-   File: `tri-mode-soc-section2-backend.md`  
+This simulator is an independent research project by 10U Labs. It is not affiliated with, endorsed by, or sponsored by any processor vendor.
+
+This simulator does not implement, emulate, or translate any instruction set. It does not decode, execute, or process actual instructions. It provides analytical performance modeling using publicly known architectural characteristics (instruction lengths, µop ratios, cache behavior) derived from published academic studies and independent measurements.
+
+The tri-mode SoC supports three application personas:
+- **RISC-V**: Native open-standard 64-bit applications
+- **Desktop64**: Conventional 64-bit desktop applications
+- **Mobile64**: Mainstream 64-bit mobile applications
+
+1. Core Concept and Personas
+   File: `tri-mode-soc-section1-core-personas.md`
+   Content: Defines the overall tri-mode SoC idea, explains that the single core is RISC-V-native, and describes the three personas and how they present different application compatibility layers on top of the same RISC-V core.
+
+2. Shared RISC-V-Native Backend
+   File: `tri-mode-soc-section2-backend.md`
    Content: Specifies the fixed backend microarchitecture used by all personas, including issue width, ROB size, execution units, cache hierarchy, memory latencies, and branch prediction configuration.
 
-3. RISC-V Persona (Native ISA)  
-   File: `tri-mode-soc-section3-riscv-persona.md`  
-   Content: Describes the RISC-V (`riscv`) persona as the native ISA path, including ISA characteristics, front-end behavior, and simple 1:1 (or near 1:1) mapping from RISC-V instructions to backend µops.
+3. RISC-V Persona (Native)
+   File: `tri-mode-soc-section3-riscv-persona.md`
+   Content: Describes the RISC-V persona as the native path, including characteristics, front-end behavior, and simple 1:1 (or near 1:1) mapping from RISC-V instructions to backend µops.
 
-4. x86-64 Persona (Hardware-Translated)  
-   File: `tri-mode-soc-section4-x86-persona.md`  
-   Content: Describes the x86-64 (`x86_64`) persona, including variable-length instruction encodings, x86-specific front-end behavior, and hardware translation rules from x86-64 instructions to RISC-V-style µops.
+4. Desktop64 Persona (Hardware-Translated)
+   File: `tri-mode-soc-section4-desktop64-persona.md`
+   Content: Describes the Desktop64 persona for conventional 64-bit desktop applications, including variable-length instruction encodings, front-end behavior, and hardware translation rules.
 
-5. ARM64 Persona (Hardware-Translated)  
-   File: `tri-mode-soc-section5-arm64-persona.md`  
-   Content: Describes the ARM64 (`arm64`) persona, including fixed 32-bit encodings, richer addressing modes, and hardware translation rules from ARM64 instructions to RISC-V-style µops.
+5. Mobile64 Persona (Hardware-Translated)
+   File: `tri-mode-soc-section5-mobile64-persona.md`
+   Content: Describes the Mobile64 persona for mainstream 64-bit mobile applications, including fixed 32-bit encodings, richer addressing modes, and hardware translation rules.
 
 6. Workload Modeling, Throughput, and API Shape
    File: `tri-mode-soc-section6-workload-and-api.md`

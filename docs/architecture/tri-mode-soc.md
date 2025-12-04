@@ -1,6 +1,8 @@
 # Tri-Mode SoC Architecture
 
-A RISC-V core with hardware translation for x86-64 and ARM64, targeting <1% overhead.
+A RISC-V core with hardware translation for conventional desktop and mainstream mobile 64-bit applications, targeting <1% overhead.
+
+> **Disclaimer**: This is an independent research project by 10U Labs. This document describes a hypothetical architecture; the accompanying simulator does not implement, decode, or execute any instruction set. Performance estimates use publicly known architectural characteristics from academic research.
 
 ## Prototype Specifications
 
@@ -51,12 +53,12 @@ A RISC-V core with hardware translation for x86-64 and ARM64, targeting <1% over
 
 ### Overhead Sources
 
-The tri-mode core translates x86-64 and ARM64 instructions to RISC-V micro-ops. Overhead comes from:
+The tri-mode core translates Desktop64 and Mobile64 instructions to RISC-V micro-ops. Overhead comes from:
 
-1. **Flags emulation** - x86/ARM condition flags don't exist in RISC-V
-2. **Memory ordering** - x86 TSO is stricter than RISC-V RVWMO
-3. **Decode complexity** - Variable-length x86 requires more decode logic
-4. **Instruction expansion** - Some x86 instructions become multiple RISC-V ops
+1. **Flags emulation** - Desktop/Mobile condition flags don't exist in RISC-V
+2. **Memory ordering** - Desktop64 TSO is stricter than RISC-V RVWMO
+3. **Decode complexity** - Variable-length Desktop64 requires more decode logic
+4. **Instruction expansion** - Some Desktop64 instructions become multiple RISC-V ops
 
 ### Hardware Optimizations
 
@@ -64,19 +66,19 @@ The tri-mode core translates x86-64 and ARM64 instructions to RISC-V micro-ops. 
 
 Instead of serial translation stages, use parallel decode paths:
 - RISC-V decoder lane
-- ARM64 decoder lane
-- x86-64 decoder lane
+- Mobile64 decoder lane
+- Desktop64 decoder lane
 
 All emit to the same internal micro-op format. Instruction steering happens at fetch based on mode bits. No pipeline depth penalty.
 
 #### 2. Hardware TSO Mode (0 fence overhead)
 
-Apple M1/M2 implements this for Rosetta 2. The load-store unit has a mode bit:
+Modern mobile processors implement similar TSO modes. The load-store unit has a mode bit:
 - When set, enforces TSO ordering in hardware
 - Prevents load-store reordering without explicit fences
 - Zero cycle overhead vs. RVWMO mode
 
-x86 code runs with TSO bit set. RISC-V/ARM64 code runs with it cleared.
+Desktop64 code runs with TSO bit set. RISC-V/Mobile64 code runs with it cleared.
 
 #### 3. Flags Speculation/Caching (~85-90% hit rate)
 
@@ -85,7 +87,7 @@ Instead of computing flags for every instruction:
 - Predicts flag values speculatively
 - Only computes flags on predictor miss or when flags are consumed
 
-Reduces flags overhead from 3 uops/flag-use to 0.15 uops/flag-use for x86.
+Reduces flags overhead from 3 uops/flag-use to 0.15 uops/flag-use for Desktop64.
 
 #### 4. Macro-op Fusion
 
@@ -98,11 +100,11 @@ Reduces instruction expansion ratio.
 
 ### Achieved Overhead
 
-| ISA | Overhead | Primary Source |
-|-----|----------|----------------|
+| Persona | Overhead | Primary Source |
+|---------|----------|----------------|
 | RISC-V | 0.00% | Native execution |
-| ARM64 | 0.31% | Minimal flags emulation (16% × 0.1 uops) |
-| x86-64 | 0.50% | Flags emulation (25% × 0.15 uops) |
+| Mobile64 | 0.31% | Minimal flags emulation (16% × 0.1 uops) |
+| Desktop64 | 0.50% | Flags emulation (25% × 0.15 uops) |
 
 #### Why RISC-V Has 0% IPC Overhead
 
@@ -184,12 +186,12 @@ But these do not affect IPC when comparing equivalent microarchitectures at the 
 
 At 1.5 GHz with IPC ~0.4-0.6 (backend limited by memory):
 - ~600-900 MIPS effective
-- Comparable to Pentium 4 2.0 GHz
+- Comparable to early 2000s desktop processors
 
 ### Relative Performance (vs native)
 
-| Workload | x86-64 | ARM64 | RISC-V |
-|----------|--------|-------|--------|
+| Workload | Desktop64 | Mobile64 | RISC-V |
+|----------|-----------|----------|--------|
 | Integer | 99.5% | 99.7% | 100% |
 | FP | 99.3% | 99.6% | 100% |
 | Memory-bound | 99.8% | 99.9% | 100% |
@@ -199,16 +201,15 @@ Memory-bound workloads see less overhead because translation overhead is hidden 
 ## References
 
 ### Flags Emulation
-- BINSEC TACAS 2015: x86 flags liveness analysis (25% live rate)
-- ARM64 explicit flag-setting: CMP/SUBS patterns (~16% of instructions)
+- BINSEC TACAS 2015: Desktop64 flags liveness analysis (25% live rate)
+- Mobile64 explicit flag-setting: CMP/SUBS patterns (~16% of instructions)
 
 ### Hardware TSO
-- Apple M1 TSO mode for Rosetta 2
-- Intel x86 native TSO implementation
+- Mobile processor TSO modes for compatibility layers
+- Desktop64 native TSO implementation
 
 ### Macro-op Fusion
-- Intel Nehalem (2008): cmp+jcc fusion
-- AMD Zen: similar patterns
+- Modern desktop processors (2008+): cmp+jcc fusion
 - Agner Fog microarchitecture documentation
 
 ### Process Technology

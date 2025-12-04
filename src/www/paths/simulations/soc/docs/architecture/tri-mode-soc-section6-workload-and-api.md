@@ -8,7 +8,7 @@ This document describes how workloads are modeled across personas, how throughpu
 
 Workloads are modeled at the level of aggregated instruction mixes, not full instruction traces. Each persona has its own instruction-level view and translation rules into RISC-V-style µops, but all workloads share the same basic structure.
 
-For any persona `p` ∈ {`riscv`, `x86_64`, `arm64`}, a workload definition includes:
+For any persona `p` ∈ {`riscv`, `desktop64`, `mobile64`}, a workload definition includes:
 
 - `instr_count_p`:
   - Total number of architectural instructions for persona `p` to retire in the simulation.
@@ -20,7 +20,7 @@ For any persona `p` ∈ {`riscv`, `x86_64`, `arm64`}, a workload definition incl
   - `fp_vec_fraction_p`
   - `complex_fraction_p` (e.g., atomics, microcoded, barriers, system instructions)
 - Per-category translation parameters for persona `p`:
-  - `avg_bytes_per_instr_category_p` (only required for x86-64; fixed 4 bytes for ARM64 and 2–4 bytes for RISC-V depending on compressed usage if modeled)
+  - `avg_bytes_per_instr_category_p` (only required for Desktop64; fixed 4 bytes for Mobile64 and 2–4 bytes for RISC-V depending on compressed usage if modeled)
   - `avg_uops_per_instr_category_p` (RISC-V-style µops post-translation)
 - Branch behavior for persona `p`:
   - `branch_mispredict_rate_p`
@@ -67,7 +67,7 @@ For each persona `p`, the simulator must estimate a front-end limited IPC `ipc_f
 - Instruction fetch bandwidth:
   - `fetch_bytes_per_cycle = 16`.
 - Instruction length characteristics:
-  - `avg_bytes_per_instr_p` (fixed 4 bytes for ARM64, 2–4 bytes for RISC-V including compressed if modeled, persona- and category-specific averages for x86-64).
+  - `avg_bytes_per_instr_p` (fixed 4 bytes for Mobile64, 2–4 bytes for RISC-V including compressed if modeled, persona- and category-specific averages for Desktop64).
 - Decode limits:
   - Max instructions decoded per cycle: 4.
   - Max µops emitted per cycle: 4.
@@ -171,7 +171,7 @@ Request body:
 
 Where:
 
-- `persona` ∈ { `"riscv"`, `"x86_64"`, `"arm64"` }.
+- `persona` ∈ { `"riscv"`, `"desktop64"`, `"mobile64"` }.
 
 If needed, a later extension could allow an additional optional field for a workload profile identifier, but that is not required in this minimal spec.
 
@@ -211,7 +211,7 @@ Example response structure (values illustrative only):
 
 ```json
 {
-  "persona": "x86_64",
+  "persona": "desktop64",
   "soc_config": {
     "issue_width": 4,
     "backend_dispatch_width": 4,
