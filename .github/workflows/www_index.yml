@@ -111,10 +111,20 @@ jobs:
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/*"
   e2e-testing:
-    defaults:
-      run:
-        working-directory: src/www/paths/index
     name: E2E testing
+    needs:
+      - declaring-common-variables
+      - integration-testing
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run E2E tests
+        run: python3 -m pytest test/www/paths/index/post_deployment/e2e/ -v
+  integration-testing:
+    name: Integration testing
     needs:
       - declaring-common-variables
       - deploying-home-page
@@ -124,14 +134,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install dependencies
-        run: npm ci
-      - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
-      - env:
-          BASE_URL: https://10ulabs.com
-        name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run integration tests
+        run: python3 -m pytest test/www/paths/index/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
