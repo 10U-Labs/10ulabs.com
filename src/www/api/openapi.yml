@@ -1154,3 +1154,18 @@ tags:
     description: GitHub runner webhook endpoints
   - name: /v1/simulation-soc
     description: SoC simulation endpoints
+x-tagGroups:
+  - name: root
+    tags:
+      - /health
+  - name: v1
+    tags:
+      - /v1/contact
+      - /v1/ec2-runner
+      - /v1/echo
+      - /v1/ecs-runner
+      - /v1/image-for-ec2-runners
+      - /v1/image-for-ecs-runners
+      - /v1/rack-designer
+      - /v1/runners
+      - /v1/simulation-soc
