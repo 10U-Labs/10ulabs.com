@@ -13,8 +13,9 @@ SOC_CONFIG = {
     'l1i_size_kb': 32,
     'l1d_size_kb': 32,
     'l2_size_kb': 512,
-    'clock_ghz': 3.0,
-    'pipeline_depth_estimate': 18
+    'clock_ghz': 1.5,
+    'pipeline_depth_estimate': 14,
+    'process_node_nm': 130
 }
 
 EXECUTION_UNITS = {
@@ -45,19 +46,19 @@ TRIMODE_OVERHEAD_PARAMS = {
         'flags_live_rate': 0.0,
         'flags_uops_per_live': 0,
         'fence_per_store': False,
-        'extra_decode_stages': 1
+        'extra_decode_stages': 0
     },
     'x86_64': {
         'flags_live_rate': 0.25,
-        'flags_uops_per_live': 3,
-        'fence_per_store': True,
-        'extra_decode_stages': 2
+        'flags_uops_per_live': 0.5,
+        'fence_per_store': False,
+        'extra_decode_stages': 0
     },
     'arm64': {
         'flags_live_rate': 0.16,
-        'flags_uops_per_live': 2,
+        'flags_uops_per_live': 0.3,
         'fence_per_store': False,
-        'extra_decode_stages': 1
+        'extra_decode_stages': 0
     }
 }
 

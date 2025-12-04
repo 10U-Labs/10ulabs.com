@@ -252,23 +252,23 @@ def test_relative_slowdown_is_greater_than_one_for_arm64(simulation_soc_handler,
     assert slowdown_greater_than_one
 
 
-def test_riscv_trimode_has_small_overhead(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+def test_riscv_trimode_has_zero_overhead(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
     event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
     response = simulation_soc_handler.handler(event, lambda_context)
     body = parse_response_body(response)
     native_ipc = body['native_core']['ipc']
     trimode_ipc = body['tri_mode_core']['ipc']
-    trimode_slightly_slower = trimode_ipc < native_ipc
-    assert trimode_slightly_slower
+    ipc_equal = abs(trimode_ipc - native_ipc) < 0.0001
+    assert ipc_equal
 
 
-def test_riscv_relative_slowdown_is_small(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+def test_riscv_relative_slowdown_is_one(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
     event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
     response = simulation_soc_handler.handler(event, lambda_context)
     body = parse_response_body(response)
     slowdown = body['relative_slowdown']
-    slowdown_is_small = 1.0 < slowdown < 1.05
-    assert slowdown_is_small
+    slowdown_is_one = abs(slowdown - 1.0) < 0.0001
+    assert slowdown_is_one
 
 
 def test_error_response_contains_success_false(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
@@ -506,24 +506,25 @@ def test_compute_fence_stall_cycles_zero_for_riscv(simulation_soc_handler):
     assert is_zero
 
 
-def test_compute_fence_stall_cycles_positive_for_x86(simulation_soc_handler):
+def test_compute_fence_stall_cycles_zero_for_x86_with_hardware_tso(simulation_soc_handler):
     result = simulation_soc_handler.compute_fence_stall_cycles('x86_64', 1000)
-    is_positive = result > 0
-    assert is_positive
+    is_zero = result == 0.0
+    assert is_zero
 
 
-def test_compute_trimode_mispredict_penalty_riscv_greater_than_base(simulation_soc_handler):
+def test_compute_trimode_mispredict_penalty_equals_base_with_unified_decode(simulation_soc_handler):
     result = simulation_soc_handler.compute_trimode_mispredict_penalty('riscv')
     base_penalty = simulation_soc_handler.LATENCIES['branch_mispredict']
-    is_greater = result > base_penalty
-    assert is_greater
+    equals_base = result == base_penalty
+    assert equals_base
 
 
-def test_compute_trimode_mispredict_penalty_x86_greater_than_riscv(simulation_soc_handler):
+def test_compute_trimode_mispredict_penalty_same_for_all_isas(simulation_soc_handler):
     riscv_penalty = simulation_soc_handler.compute_trimode_mispredict_penalty('riscv')
     x86_penalty = simulation_soc_handler.compute_trimode_mispredict_penalty('x86_64')
-    x86_higher = x86_penalty > riscv_penalty
-    assert x86_higher
+    arm64_penalty = simulation_soc_handler.compute_trimode_mispredict_penalty('arm64')
+    all_equal = riscv_penalty == x86_penalty == arm64_penalty
+    assert all_equal
 
 
 def test_compute_adjusted_uop_stats_returns_dict(simulation_soc_handler):
