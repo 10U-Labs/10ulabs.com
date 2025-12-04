@@ -403,6 +403,30 @@ def compute_real_world_simulation(persona: str) -> Dict[str, Any]:
     return result
 
 
+def compute_trimode_with_real_world_config(persona: str) -> Dict[str, Any]:
+    core_config = REAL_WORLD_CORES[persona]
+    uop_stats = compute_uop_counts(persona, INSTRUCTION_COUNT)
+    frontend = compute_frontend_ipc_with_config(persona, uop_stats, core_config)
+    backend = compute_backend_ipc_with_config(persona, uop_stats, INSTRUCTION_COUNT, core_config)
+
+    ipc_frontend = frontend['ipc_frontend']
+    ipc_backend = backend['ipc_backend']
+    ipc_raw = min(ipc_frontend, ipc_backend)
+
+    decode_overhead = TRIMODE_DECODE_OVERHEAD[persona]
+    ipc_effective = ipc_raw * (1.0 - decode_overhead)
+
+    cycles = INSTRUCTION_COUNT / ipc_effective
+    clock_ghz = cast(float, core_config['clock_ghz'])
+    runtime_seconds = cycles / (clock_ghz * 1e9)
+
+    result = {
+        'ipc': ipc_effective,
+        'runtime_seconds': runtime_seconds
+    }
+    return result
+
+
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     result = {
         'statusCode': status_code,
@@ -459,9 +483,7 @@ def compute_simulation(persona: str) -> Dict[str, Any]:
     native_result = compute_native_simulation(persona)
     trimode_result = compute_trimode_simulation(persona)
     real_world_result = compute_real_world_simulation(persona)
-    real_world_clock = cast(float, REAL_WORLD_CORES[persona]['clock_ghz'])
-
-    trimode_runtime_at_real_clock = (INSTRUCTION_COUNT / trimode_result['ipc']) / (real_world_clock * 1e9)
+    trimode_real_world = compute_trimode_with_real_world_config(persona)
 
     result = {
         'success': True,
@@ -484,8 +506,8 @@ def compute_simulation(persona: str) -> Dict[str, Any]:
         },
         'relative_slowdown': trimode_result['runtime_seconds'] / native_result['runtime_seconds'],
         'real_world_comparison': {
-            'description': 'Comparison at same clock speed against actual commercial processors',
-            'clock_ghz': real_world_clock,
+            'description': 'Same microarchitecture comparison against actual commercial processors',
+            'clock_ghz': real_world_result['clock_ghz'],
             'native_core': {
                 'name': real_world_result['core_name'],
                 'config': build_real_world_config(persona),
@@ -495,11 +517,11 @@ def compute_simulation(persona: str) -> Dict[str, Any]:
                 'branch_stall_cpi': real_world_result['branch_stall_cpi']
             },
             'tri_mode_core': {
-                'description': 'Tri-mode core at same clock as native',
-                'ipc': trimode_result['ipc'],
-                'runtime_seconds': trimode_runtime_at_real_clock
+                'description': 'Tri-mode core with same microarchitecture as native',
+                'ipc': trimode_real_world['ipc'],
+                'runtime_seconds': trimode_real_world['runtime_seconds']
             },
-            'relative_slowdown': trimode_runtime_at_real_clock / real_world_result['runtime_seconds']
+            'relative_slowdown': trimode_real_world['runtime_seconds'] / real_world_result['runtime_seconds']
         }
     }
     return result
