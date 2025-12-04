@@ -138,7 +138,58 @@ This document lists the academic papers, technical reports, and official specifi
 
 ---
 
-## 6. SPEC CPU Benchmark Suite
+## 6. Micro-Op Translation and Decoder Characteristics
+
+### ARM Cortex Microarchitecture
+
+- ARM's Cortex A72: aarch64 for the Masses
+  Chips and Cheese, 2023
+  https://chipsandcheese.com/p/arms-cortex-a72-aarch64-for-the-masses
+  Key finding: ARM quotes 1.08 micro-ops per instruction ratio on average
+
+- Cortex-A76 Microarchitecture
+  WikiChip
+  https://en.wikichip.org/wiki/arm_holdings/microarchitectures/cortex-a76
+  Key finding: 6% more MOPs than instructions (~1.06 avg)
+
+### x86 Micro-Op Characterization
+
+- uops.info: Characterizing Latency, Throughput, and Port Usage of Instructions on Intel Microarchitectures
+  Abel, A. and Reineke, J.
+  ASPLOS 2019
+  https://arxiv.org/abs/1810.04610
+  https://www.uops.info/
+
+- The Microarchitecture of Intel, AMD, and VIA CPUs
+  Agner Fog
+  https://www.agner.org/optimize/microarchitecture.pdf
+
+- Instruction Tables: Lists of Instruction Latencies, Throughputs and Micro-Operation Breakdowns
+  Agner Fog
+  https://www.agner.org/optimize/instruction_tables.pdf
+
+- Intel Community Discussion: Average Number of µops per Instruction
+  Reported ratio: ~1.6 uops_retired/instruction_retired
+  https://community.intel.com/t5/Software-Tuning-Performance/Average-number-of-uops-per-instruction/td-p/958919
+
+### ISA Comparison Studies
+
+- Power Struggles: Revisiting the RISC vs. CISC Debate on Contemporary ARM and x86 Architectures
+  Blem, E., Menon, J., and Sankaralingam, K.
+  HPCA 2013
+  https://research.cs.wisc.edu/vertical/papers/2013/hpca13-isa-power-struggles.pdf
+  Key finding: ISA differences have implementation implications but modern microarchitecture techniques render them moot
+
+### x86 Instruction and Addressing Mode Statistics
+
+- x86 Instruction Frequency Analysis
+  University of Alaska Fairbanks, CS 641 Lecture
+  https://www.cs.uaf.edu/2011/spring/cs641/lecture/01_25_instruction_frequency.html
+  Key findings: 42.4% MOV, 48.1% memory accesses, only 1.2% scaled displacement
+
+---
+
+## 7. SPEC CPU Benchmark Suite
 
 - SPEC CPU 2017 Results
   Standard Performance Evaluation Corporation
@@ -150,7 +201,7 @@ This document lists the academic papers, technical reports, and official specifi
 
 ---
 
-## 7. Parameter Derivation Summary
+## 8. Parameter Derivation Summary
 
 The following table summarizes how each simulation parameter was derived from the references above:
 
@@ -168,6 +219,10 @@ The following table summarizes how each simulation parameter was derived from th
 | x86-64 avg instruction length | 4.0 bytes | strchr.com x86 statistics, Intel SDM |
 | ARM64 avg instruction length | 4.0 bytes | ARM Architecture Reference Manual (DDI0487) |
 | RISC-V avg instruction length | 3.6 bytes | RISC-V ISA Manual, arXiv:1607.02318 |
-| x86 µops/instruction | 1.5-20x | Architecture spec section 4.3 |
-| ARM64 µops/instruction | 1.5-2.5x | Architecture spec section 5.3 |
-| RISC-V µops/instruction | 1.0-2.0x | Architecture spec section 3.3 |
+| x86 avg µops/instruction | ~1.55 | Intel Community (~1.6), Agner Fog tables |
+| ARM64 avg µops/instruction | ~1.06 | Cortex A72 (1.08), Cortex A76 (1.06) |
+| RISC-V avg µops/instruction | ~1.01 | Native RISC architecture, minimal translation |
+| x86 complex addressing usage | 1.2% | CS 641 instruction frequency analysis |
+| Tri-mode decode overhead (RISC-V) | 2% | Modeled persona detection in decode stage |
+| Tri-mode decode overhead (ARM64) | 3% | Modeled translation complexity |
+| Tri-mode decode overhead (x86) | 5% | Modeled variable-length decode + translation |
