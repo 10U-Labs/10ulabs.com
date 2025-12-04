@@ -315,15 +315,17 @@ def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
         return False
 
 
-def cleanup_offline_runners(github_token: str, github_repo: str, job_labels: List[str]) -> Dict[str, Any]:
+def cleanup_offline_runners(github_token: str, github_repo: str, run_id: int | None) -> Dict[str, Any]:
     runners = list_repo_runners(github_token, github_repo)
-    job_labels_set = set(job_labels)
+    run_id_label = f'runner-{run_id}' if run_id else None
     offline_runners = []
     for runner in runners:
         if runner.get('status') != 'offline':
             continue
+        if not run_id_label:
+            continue
         runner_labels = {label.get('name') for label in runner.get('labels', [])}
-        if not job_labels_set.intersection(runner_labels):
+        if run_id_label not in runner_labels:
             continue
         offline_runners.append(runner)
     deleted_count = 0
@@ -344,7 +346,7 @@ def cleanup_offline_runners(github_token: str, github_repo: str, job_labels: Lis
         'failed': failed_count
     }
     if deleted_count > 0:
-        logger.info("Cleaned up %d offline runners matching labels %s", deleted_count, job_labels)
+        logger.info("Cleaned up %d offline runners for run_id %s", deleted_count, run_id)
     return result
 
 
@@ -611,7 +613,7 @@ def launch_ec2_runner(
             result['error'] = f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
         return result
 
-    cleanup_offline_runners(github_token, github_repo, job_labels)
+    cleanup_offline_runners(github_token, github_repo, run_id)
 
     registration_token = get_runner_registration_token(github_token, github_repo)
     if not registration_token:
