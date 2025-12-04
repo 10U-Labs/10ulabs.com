@@ -50,13 +50,13 @@ TRIMODE_OVERHEAD_PARAMS = {
     },
     'x86_64': {
         'flags_live_rate': 0.25,
-        'flags_uops_per_live': 0.5,
+        'flags_uops_per_live': 0.15,
         'fence_per_store': False,
         'extra_decode_stages': 0
     },
     'arm64': {
         'flags_live_rate': 0.16,
-        'flags_uops_per_live': 0.3,
+        'flags_uops_per_live': 0.1,
         'fence_per_store': False,
         'extra_decode_stages': 0
     }
