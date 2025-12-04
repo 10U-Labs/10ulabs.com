@@ -16,63 +16,83 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer onload="onGoogleLibraryLoad()"></script>
 </head>
 <body>
-    <div class="header">
-        <h1>System on a Chip (SoC) Simulator</h1>
-        <p>Compare performance across Instruction Set Architectures (ISAs)</p>
-    </div>
-
-    <div class="container">
-        <div class="results-panel" id="resultsPanel" style="display: none;">
-            <h2>Equivalent Microarchitecture Comparison</h2>
-            <p class="results-description">Hypothetical single-core for each ISA vs tri-mode core (isolates ISA translation overhead)</p>
-
-            <div class="config-grid" id="socConfig">
-                <div class="config-item">
-                    <span class="config-label">Clock Speed</span>
-                    <span class="config-value" id="clockSpeed">-</span>
-                </div>
-                <div class="config-item">
-                    <span class="config-label">DDR</span>
-                    <span class="config-value" id="ddr">-</span>
-                </div>
-                <div class="config-item">
-                    <span class="config-label">Issue Width</span>
-                    <span class="config-value" id="issueWidth">-</span>
-                </div>
-                <div class="config-item">
-                    <span class="config-label">L1 Cache</span>
-                    <span class="config-value" id="l1Size">-</span>
-                </div>
-                <div class="config-item">
-                    <span class="config-label">L2 Cache</span>
-                    <span class="config-value" id="l2Size">-</span>
-                </div>
-                <div class="config-item">
-                    <span class="config-label">Process</span>
-                    <span class="config-value" id="processNode">-</span>
-                </div>
-                <div class="config-item">
-                    <span class="config-label">ROB Entries</span>
-                    <span class="config-value" id="robEntries">-</span>
-                </div>
-            </div>
-
-            <div class="soc-grid" id="socGrid">
-            </div>
-        </div>
-
-        <div class="error-panel" id="errorPanel" style="display: none;">
-            <div class="error-message" id="errorMessage"></div>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <h1>System on a Chip (SoC) Simulator</h1>
+            <p>Sign in with your Google account to access this tool</p>
+            <div id="googleSignInButton"></div>
         </div>
     </div>
 
-    <div class="footer">
-        <a href="/privacy.html" class="privacy-link">Privacy Notice</a>
-        <div>Copyright &copy; 10U Labs, LLC 2025. All rights reserved.</div>
+    <!-- App Content (hidden until authenticated) -->
+    <div id="appContent" style="display: none;">
+        <div class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>System on a Chip (SoC) Simulator</h1>
+                    <p>Compare performance across Instruction Set Architectures (ISAs)</p>
+                </div>
+                <div id="userInfo" class="user-info" style="display: none;"></div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="results-panel" id="resultsPanel" style="display: none;">
+                <h2>Equivalent Microarchitecture Comparison</h2>
+                <p class="results-description">Hypothetical single-core for each ISA vs tri-mode core (isolates ISA translation overhead)</p>
+
+                <div class="config-grid" id="socConfig">
+                    <div class="config-item">
+                        <span class="config-label">Clock Speed</span>
+                        <span class="config-value" id="clockSpeed">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">DDR</span>
+                        <span class="config-value" id="ddr">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">Issue Width</span>
+                        <span class="config-value" id="issueWidth">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">L1 Cache</span>
+                        <span class="config-value" id="l1Size">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">L2 Cache</span>
+                        <span class="config-value" id="l2Size">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">Process</span>
+                        <span class="config-value" id="processNode">-</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">ROB Entries</span>
+                        <span class="config-value" id="robEntries">-</span>
+                    </div>
+                </div>
+
+                <div class="soc-grid" id="socGrid">
+                </div>
+            </div>
+
+            <div class="error-panel" id="errorPanel" style="display: none;">
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="/privacy.html" class="privacy-link">Privacy Notice</a>
+            <div>Copyright &copy; 10U Labs, LLC 2025. All rights reserved.</div>
+        </div>
     </div>
 
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

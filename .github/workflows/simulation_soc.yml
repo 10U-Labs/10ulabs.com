@@ -81,7 +81,9 @@ jobs:
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
       - name: Terraform Init
         run: terraform init
-      - name: Terraform Apply
+      - env:
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+        name: Terraform Apply
         run: terraform apply -auto-approve
       - name: Get website bucket name
         run: |
@@ -191,7 +193,9 @@ jobs:
           cd src/api/endpoints/simulation_soc && \
             tflint --init && \
             tflint
-      - name: Terraform Plan
+      - env:
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+        name: Terraform Plan
         run: cd src/api/endpoints/simulation_soc && terraform plan
   unit-testing:
     name: Unit testing

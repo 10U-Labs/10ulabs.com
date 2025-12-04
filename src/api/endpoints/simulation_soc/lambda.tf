@@ -14,6 +14,12 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   timeout          = 10
   description      = "Tri-mode SoC simulation endpoint for API"
 
+  environment {
+    variables = {
+      GOOGLE_CLIENT_ID = var.google_client_id
+    }
+  }
+
   logging_config {
     log_format = "Text"
     log_group  = aws_cloudwatch_log_group.simulation_soc_handler.name
@@ -22,6 +28,12 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   tags = merge(local.common_tags, {
     Name = var.simulation_soc_handler_function_name
   })
+}
+
+# Generate frontend auth config
+resource "local_file" "auth_config" {
+  content  = "var GOOGLE_CLIENT_ID = '${var.google_client_id}';\n"
+  filename = "${path.module}/../../../www/paths/simulations/soc/js/config.js"
 }
 
 resource "aws_cloudwatch_log_group" "simulation_soc_handler" {

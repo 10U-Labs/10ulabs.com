@@ -1,6 +1,12 @@
 import json
 import math
-from typing import Any, Dict, List, cast
+import os
+import urllib.request
+import urllib.error
+from typing import Any, Dict, List, Optional, cast
+
+# Google OAuth Client ID - set via environment variable
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 
 SOC_CONFIG = {
     'issue_width': 3,
@@ -393,6 +399,47 @@ def error_response(status_code: int, error: str, details: str | None = None) -> 
     return result
 
 
+def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify a Google ID token using Google's tokeninfo endpoint.
+
+    Returns the token payload if valid, None if invalid.
+    """
+    if not GOOGLE_CLIENT_ID:
+        return None
+
+    try:
+        url = f'https://oauth2.googleapis.com/tokeninfo?id_token={token}'
+        req = urllib.request.Request(url, method='GET')
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+
+        # Verify the token was issued for our client
+        if data.get('aud') != GOOGLE_CLIENT_ID:
+            return None
+
+        return data
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError):
+        return None
+
+
+def get_auth_token(event: Dict[str, Any]) -> Optional[str]:
+    """Extract the Authorization token from the request headers."""
+    headers = event.get('headers', {})
+    if not headers:
+        return None
+
+    # Headers can be case-insensitive
+    auth_header = headers.get('Authorization') or headers.get('authorization')
+    if not auth_header:
+        return None
+
+    # Handle "Bearer <token>" format
+    if auth_header.startswith('Bearer '):
+        return auth_header[7:]
+
+    return auth_header
+
+
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
     body = event.get('body', {})
     result = json.loads(body) if isinstance(body, str) else body
@@ -441,6 +488,15 @@ def compute_simulation(persona: str) -> Dict[str, Any]:
 
 
 def handle_simulation_soc_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    # Verify Google authentication
+    token = get_auth_token(event)
+    if not token:
+        return error_response(401, 'Authentication required')
+
+    user_info = verify_google_token(token)
+    if not user_info:
+        return error_response(401, 'Invalid or expired token')
+
     try:
         body = parse_body(event)
         persona = body.get('persona')
@@ -477,7 +533,7 @@ def handler(event, _context):
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-test-mode'
+                'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-api-key,x-test-mode'
             },
             'body': ''
         }

@@ -143,14 +143,30 @@ function showError(message) {
 
 function fetchSimulation(persona) {
     var baseUrl = getApiBaseUrl();
+    var headers = {
+        'Content-Type': 'application/json'
+    };
+
+    // Add Authorization header if authenticated
+    var token = typeof getAccessToken === 'function' ? getAccessToken() : null;
+    if (token) {
+        headers['Authorization'] = token;
+    }
+
     return fetch(baseUrl + '/v1/simulation-soc', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({ persona: persona })
     })
     .then(function(response) {
+        if (response.status === 401) {
+            // Token expired or invalid, clear auth and reload
+            if (typeof clearStoredAuth === 'function') {
+                clearStoredAuth();
+            }
+            window.location.reload();
+            throw new Error('Authentication required');
+        }
         return response.json();
     });
 }
@@ -182,6 +198,4 @@ function loadAllSimulations() {
         });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadAllSimulations();
-});
+// Note: loadAllSimulations is called by auth.js after successful authentication
