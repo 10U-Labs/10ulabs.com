@@ -16,13 +16,10 @@
             margin: 0;
             padding: 0;
         }
-        [data-role="sidebar-item-group-label"] {
-            text-transform: none !important;
-        }
     </style>
 </head>
 <body>
-    <redoc spec-url="openapi.yml"></redoc>
+    <redoc spec-url="openapi.yml" options='{"theme":{"sidebar":{"groupItems":{"textTransform":"none"}}}}'></redoc>
     <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
 </body>
 </html>
