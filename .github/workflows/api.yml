@@ -286,6 +286,7 @@ on:
       - '.github/workflows/api.yml'
       - 'etc/runners.yml'
       - 'src/api/backend/**'
+      - 'src/www/api/**'
       - 'test/api/backend/**'
       - 'test/api/conftest.py'
   workflow_dispatch:
