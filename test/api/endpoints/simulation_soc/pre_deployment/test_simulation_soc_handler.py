@@ -252,7 +252,7 @@ def test_relative_slowdown_is_greater_than_one_for_arm64(simulation_soc_handler,
     assert slowdown_greater_than_one
 
 
-def test_riscv_trimode_has_zero_overhead(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+def test_riscv_trimode_has_zero_ipc_overhead(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
     event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
     response = simulation_soc_handler.handler(event, lambda_context)
     body = parse_response_body(response)

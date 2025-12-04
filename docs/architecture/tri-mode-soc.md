@@ -104,6 +104,15 @@ Reduces instruction expansion ratio.
 | ARM64 | 0.31% | Minimal flags emulation (16% × 0.1 uops) |
 | x86-64 | 0.50% | Flags emulation (25% × 0.15 uops) |
 
+#### Why RISC-V Has 0% IPC Overhead
+
+RISC-V is the native ISA - no translation occurs. The tri-mode infrastructure (wider datapaths, mode detection logic) affects:
+- **Die area** - larger structures, more transistors
+- **Power consumption** - more switching activity
+- **Maximum clock frequency** - longer critical paths
+
+But these do not affect IPC when comparing equivalent microarchitectures at the same clock. The model compares IPC, not absolute performance. Real-world frequency impact from tri-mode complexity would be ~2-5% lower clock, not modeled here.
+
 ## Design Tradeoffs
 
 ### GPIO: 32 → 8 pins
