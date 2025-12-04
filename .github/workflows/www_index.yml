@@ -44,7 +44,7 @@ jobs:
     name: Deploying home page
     needs:
       - declaring-common-variables
-      - performing-static-analysis
+      - unit-testing
     runs-on:
       - ecs-fargate
       - runner-${{ github.run_id }}
@@ -110,6 +110,28 @@ jobs:
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
             --paths "/*"
+  e2e-testing:
+    defaults:
+      run:
+        working-directory: src/www/paths/index
+    name: E2E testing
+    needs:
+      - declaring-common-variables
+      - deploying-home-page
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run E2E tests
+        run: npm run test:e2e
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -137,6 +159,24 @@ jobs:
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
+  unit-testing:
+    defaults:
+      run:
+        working-directory: src/www/paths/index
+    name: Unit testing
+    needs:
+      - declaring-common-variables
+      - performing-static-analysis
+    runs-on:
+      - ecs-fargate
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit tests
+        run: npm test
 name: Ensuring www index (home page) exists and is properly configured
 on:
   push:
