@@ -126,38 +126,38 @@ function createCoreDiagramSvg(activeIsa) {
     svg.appendChild(text(110, 27, 'Instruction Fetch (16B/cyc)', 'block-text small'));
 
     if (isTriMode) {
-        // Arrow from Instruction Fetch to active decoder (diagonal for Mobile64/Desktop64, vertical for RISC-V)
-        if (mobile64Active) {
+        // Arrow from Instruction Fetch to active decoder (diagonal for Desktop64/RISC-V, vertical for Mobile64)
+        if (desktop64Active) {
             svg.appendChild(path('M110 35 L40 48', 'arrow active'));
-        } else if (desktop64Active) {
-            svg.appendChild(path('M110 35 L180 48', 'arrow active'));
-        } else {
+        } else if (mobile64Active) {
             svg.appendChild(path('M110 35 L110 48', 'arrow active'));
+        } else {
+            svg.appendChild(path('M110 35 L180 48', 'arrow active'));
         }
     } else {
         svg.appendChild(path('M110 35 L110 48', 'arrow active'));
     }
 
     if (isTriMode) {
-        // Three parallel decode lanes (0 extra stages)
-        svg.appendChild(rect(10, 48, 60, 28, 'block ' + (mobile64Active ? 'active mobile64' : 'inactive')));
-        svg.appendChild(text(40, 60, 'Mobile64', 'block-text small' + (mobile64Active ? '' : ' inactive')));
-        svg.appendChild(text(40, 70, 'Decode', 'block-text tiny' + (mobile64Active ? '' : ' inactive')));
+        // Three parallel decode lanes in alphabetical order: Desktop64, Mobile64, RISC-V
+        svg.appendChild(rect(10, 48, 60, 28, 'block ' + (desktop64Active ? 'active desktop64' : 'inactive')));
+        svg.appendChild(text(40, 60, 'Desktop64', 'block-text small' + (desktop64Active ? '' : ' inactive')));
+        svg.appendChild(text(40, 70, 'Decode', 'block-text tiny' + (desktop64Active ? '' : ' inactive')));
 
-        svg.appendChild(rect(80, 48, 60, 28, 'block ' + (riscvActive ? 'active riscv' : 'inactive')));
-        svg.appendChild(text(110, 60, 'RISC-V', 'block-text small' + (riscvActive ? '' : ' inactive')));
-        svg.appendChild(text(110, 70, 'Decode', 'block-text tiny' + (riscvActive ? '' : ' inactive')));
+        svg.appendChild(rect(80, 48, 60, 28, 'block ' + (mobile64Active ? 'active mobile64' : 'inactive')));
+        svg.appendChild(text(110, 60, 'Mobile64', 'block-text small' + (mobile64Active ? '' : ' inactive')));
+        svg.appendChild(text(110, 70, 'Decode', 'block-text tiny' + (mobile64Active ? '' : ' inactive')));
 
-        svg.appendChild(rect(150, 48, 60, 28, 'block ' + (desktop64Active ? 'active desktop64' : 'inactive')));
-        svg.appendChild(text(180, 60, 'Desktop64', 'block-text small' + (desktop64Active ? '' : ' inactive')));
-        svg.appendChild(text(180, 70, 'Decode', 'block-text tiny' + (desktop64Active ? '' : ' inactive')));
+        svg.appendChild(rect(150, 48, 60, 28, 'block ' + (riscvActive ? 'active riscv' : 'inactive')));
+        svg.appendChild(text(180, 60, 'RISC-V', 'block-text small' + (riscvActive ? '' : ' inactive')));
+        svg.appendChild(text(180, 70, 'Decode', 'block-text tiny' + (riscvActive ? '' : ' inactive')));
 
         // Arrows from active decoder to µop queue
-        if (mobile64Active) {
+        if (desktop64Active) {
             svg.appendChild(path('M40 76 L110 90', 'arrow active'));
-        } else if (riscvActive) {
+        } else if (mobile64Active) {
             svg.appendChild(path('M110 76 L110 90', 'arrow active'));
-        } else if (desktop64Active) {
+        } else if (riscvActive) {
             svg.appendChild(path('M180 76 L110 90', 'arrow active'));
         }
 
