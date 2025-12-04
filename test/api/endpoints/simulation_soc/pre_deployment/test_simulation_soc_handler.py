@@ -267,7 +267,7 @@ def test_riscv_relative_slowdown_is_small(simulation_soc_handler, simulation_soc
     response = simulation_soc_handler.handler(event, lambda_context)
     body = parse_response_body(response)
     slowdown = body['relative_slowdown']
-    slowdown_is_small = slowdown > 1.0 and slowdown < 1.05
+    slowdown_is_small = 1.0 < slowdown < 1.05
     assert slowdown_is_small
 
 
