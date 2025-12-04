@@ -102,7 +102,7 @@ function showResults(results) {
 
     var nativeLabel = document.createElement('div');
     nativeLabel.className = 'soc-row-label';
-    nativeLabel.textContent = 'Native Cores';
+    nativeLabel.textContent = 'Native Core';
     socGrid.appendChild(nativeLabel);
 
     PERSONAS.forEach(function(persona) {
@@ -116,7 +116,7 @@ function showResults(results) {
 
     var triModeLabel = document.createElement('div');
     triModeLabel.className = 'soc-row-label';
-    triModeLabel.textContent = 'Tri-Mode Cores';
+    triModeLabel.textContent = 'Tri-Mode Core';
     socGrid.appendChild(triModeLabel);
 
     PERSONAS.forEach(function(persona) {
