@@ -2,7 +2,7 @@ var API_BASE_URL = 'https://api.10ulabs.com';
 
 var socConfigLoaded = false;
 
-var PERSONAS = ['riscv', 'x86_64', 'arm64'];
+var PERSONAS = ['arm64', 'riscv', 'x86_64'];
 var PERSONA_LABELS = {
     'riscv': 'RISC-V',
     'x86_64': 'x86-64',
@@ -44,11 +44,51 @@ function formatPerformance(slowdown) {
     return percentChange.toFixed(1) + '%';
 }
 
+function createSocCard(label, ipc, maxIpc, cardType, perfText) {
+    var card = document.createElement('div');
+    card.className = 'soc-card ' + cardType;
+
+    var title = document.createElement('div');
+    title.className = 'soc-card-title';
+    title.textContent = label;
+    card.appendChild(title);
+
+    var ipcValue = document.createElement('div');
+    ipcValue.className = 'soc-card-ipc';
+    ipcValue.textContent = ipc.toFixed(3);
+    card.appendChild(ipcValue);
+
+    var ipcLabel = document.createElement('div');
+    ipcLabel.className = 'soc-card-ipc-label';
+    ipcLabel.textContent = 'IPC';
+    card.appendChild(ipcLabel);
+
+    var bar = document.createElement('div');
+    bar.className = 'soc-card-bar';
+    var barFill = document.createElement('div');
+    barFill.className = 'soc-card-bar-fill';
+    barFill.style.width = ((ipc / maxIpc) * 100) + '%';
+    bar.appendChild(barFill);
+    card.appendChild(bar);
+
+    if (perfText) {
+        var perf = document.createElement('div');
+        perf.className = 'soc-card-perf negative';
+        perf.textContent = perfText;
+        card.appendChild(perf);
+    }
+
+    return card;
+}
+
 function showResults(results) {
-    var tbody = document.getElementById('resultsBody');
-    var barChart = document.getElementById('barChart');
-    tbody.innerHTML = '';
-    barChart.innerHTML = '';
+    var socGrid = document.getElementById('socGrid');
+    socGrid.innerHTML = '';
+
+    var resultsByPersona = {};
+    results.forEach(function(data) {
+        resultsByPersona[data.persona] = data;
+    });
 
     var maxIpc = 0;
     results.forEach(function(data) {
@@ -60,41 +100,33 @@ function showResults(results) {
         }
     });
 
-    results.forEach(function(data) {
-        var row = document.createElement('tr');
+    var nativeLabel = document.createElement('div');
+    nativeLabel.className = 'soc-row-label';
+    nativeLabel.textContent = 'Native Cores';
+    socGrid.appendChild(nativeLabel);
 
-        var isaCell = document.createElement('td');
-        isaCell.textContent = PERSONA_LABELS[data.persona] || data.persona;
-        row.appendChild(isaCell);
+    PERSONAS.forEach(function(persona) {
+        var data = resultsByPersona[persona];
+        if (data) {
+            var label = PERSONA_LABELS[persona] || persona;
+            var card = createSocCard(label, data.native_core.ipc, maxIpc, 'native', null);
+            socGrid.appendChild(card);
+        }
+    });
 
-        var nativeCell = document.createElement('td');
-        nativeCell.textContent = data.native_core.ipc.toFixed(3);
-        row.appendChild(nativeCell);
+    var triModeLabel = document.createElement('div');
+    triModeLabel.className = 'soc-row-label';
+    triModeLabel.textContent = 'Tri-Mode Cores';
+    socGrid.appendChild(triModeLabel);
 
-        var multiIsaCell = document.createElement('td');
-        multiIsaCell.textContent = data.tri_mode_core.ipc.toFixed(3);
-        row.appendChild(multiIsaCell);
-
-        var perfCell = document.createElement('td');
-        perfCell.className = 'perf-negative';
-        perfCell.textContent = formatPerformance(data.relative_slowdown);
-        row.appendChild(perfCell);
-
-        tbody.appendChild(row);
-
-        var nativeBarRow = document.createElement('div');
-        nativeBarRow.className = 'bar-row';
-        nativeBarRow.innerHTML = '<span class="bar-label">' + (PERSONA_LABELS[data.persona] || data.persona) + ' Native</span>' +
-            '<div class="bar-track"><div class="bar native-bar" style="width: ' + ((data.native_core.ipc / maxIpc) * 100) + '%"></div></div>' +
-            '<span class="bar-value">' + data.native_core.ipc.toFixed(3) + '</span>';
-        barChart.appendChild(nativeBarRow);
-
-        var multiIsaBarRow = document.createElement('div');
-        multiIsaBarRow.className = 'bar-row';
-        multiIsaBarRow.innerHTML = '<span class="bar-label">' + (PERSONA_LABELS[data.persona] || data.persona) + ' Multi-ISA</span>' +
-            '<div class="bar-track"><div class="bar alternate-bar" style="width: ' + ((data.tri_mode_core.ipc / maxIpc) * 100) + '%"></div></div>' +
-            '<span class="bar-value">' + data.tri_mode_core.ipc.toFixed(3) + '</span>';
-        barChart.appendChild(multiIsaBarRow);
+    PERSONAS.forEach(function(persona) {
+        var data = resultsByPersona[persona];
+        if (data) {
+            var label = PERSONA_LABELS[persona] || persona;
+            var perfText = formatPerformance(data.relative_slowdown);
+            var card = createSocCard(label, data.tri_mode_core.ipc, maxIpc, 'tri-mode', perfText);
+            socGrid.appendChild(card);
+        }
     });
 
     document.getElementById('resultsPanel').style.display = 'block';

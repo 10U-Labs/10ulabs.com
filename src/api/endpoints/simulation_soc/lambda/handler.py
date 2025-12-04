@@ -2,11 +2,11 @@ import json
 from typing import Any, Dict
 
 SOC_CONFIG = {
-    'issue_width': 4,
-    'rob_entries': 128,
-    'l1_size_kb': 64,
+    'issue_width': 3,
+    'rob_entries': 126,
+    'l1_size_kb': 8,
     'l2_size_kb': 512,
-    'clock_ghz': 3.2
+    'clock_ghz': 3.0
 }
 
 INSTRUCTION_COUNT = 1_000_000_000
