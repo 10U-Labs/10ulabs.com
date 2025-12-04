@@ -1,3 +1,4 @@
+"""Pytest fixtures for simulation-soc API tests."""
 import re
 from pathlib import Path
 from typing import Dict
@@ -8,6 +9,7 @@ SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
+    """Parse shared Terraform outputs for test configuration."""
     outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
@@ -21,6 +23,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
+    """Load test configuration from terraform.tfvars and shared outputs."""
     tfvars_path = SIMULATION_SOC_SRC / "terraform.tfvars"
     result = {}
     with open(tfvars_path, encoding="utf-8") as f:

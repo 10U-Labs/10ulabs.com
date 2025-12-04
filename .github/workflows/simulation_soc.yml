@@ -1,3 +1,4 @@
+---
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
@@ -6,7 +7,8 @@ jobs:
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+      github_actions_role_arn: >-
+        ${{ steps.bootstrap.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     permissions:
       contents: read
@@ -20,14 +22,22 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/simulation_soc/backend.tf | cut -d'"' -f2 | sed 's/>= //')
-          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
+            src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/api/endpoints/simulation_soc/backend.tf | \
+            cut -d'"' -f2 | sed 's/>= //')
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_ARN="${ROLE_ARN}/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,9 +47,11 @@ jobs:
       - id: bootstrap
         name: Get bootstrap outputs
         run: |
-          terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
-          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          terraform -chdir=src/bootstrap init \
+            -backend=true -input=false > /dev/null
+          ROLE_ARN=$(terraform -chdir=src/bootstrap output \
+            -raw arn_for_github_actions_role)
+          echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
@@ -54,10 +66,16 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{
+            needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Run E2E tests
-        run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/e2e/ -v
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/simulation_soc/post_deployment/e2e/ -v
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -77,20 +95,27 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{
+            needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Terraform Init
         run: terraform init
       - name: Terraform Apply
         run: terraform apply -auto-approve
       - name: Get website bucket name
         run: |
-          terraform -chdir=../../../www/shared init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform -chdir=../../../www/shared output -raw bucket_name)
+          terraform -chdir=../../../www/shared init \
+            -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform -chdir=../../../www/shared output \
+            -raw bucket_name)
           echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
       - name: Sync frontend to S3
         run: |
-          aws s3 sync ../../../www/paths/simulations/soc/ s3://${{ env.BUCKET_NAME }}/simulations/soc/ \
+          aws s3 sync ../../../www/paths/simulations/soc/ \
+            s3://${{ env.BUCKET_NAME }}/simulations/soc/ \
             --delete \
             --cache-control no-cache \
             --storage-class ONEZONE_IA \
@@ -113,14 +138,17 @@ jobs:
             fi
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          contains(github.event.head_commit.message,
+          '[invalidate cloudfront]') ||
           steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
-          WEBSITE_FQDN=$(terraform -chdir=../../../www/shared output -raw website_domain_name)
+          WEBSITE_FQDN=$(terraform -chdir=../../../www/shared output \
+            -raw website_domain_name)
+          REGION=${{ needs.declaring-common-variables.outputs.aws_region }}
           python3 ../../../../scripts/invalidate_cloudfront.py \
             --fqdn "$WEBSITE_FQDN" \
-            --region ${{ needs.declaring-common-variables.outputs.aws_region }} \
+            --region "$REGION" \
             --paths "/simulations/soc/*"
         working-directory: src/api/endpoints/simulation_soc
   integration-testing:
@@ -137,10 +165,16 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{
+            needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Run integration tests
-        run: python3 -m pytest test/api/endpoints/simulation_soc/post_deployment/integration/ -v
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/simulation_soc/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -154,8 +188,12 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{
+            needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -168,7 +206,8 @@ jobs:
             .github/workflows/simulation_soc.yml
       - name: Run pylint on source
         run: |
-          python3 -m pylint src/api/endpoints/simulation_soc/lambda/handler.py \
+          python3 -m pylint \
+            src/api/endpoints/simulation_soc/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run pylint on tests
@@ -177,11 +216,15 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy on source
-        run: python3 -m mypy src/api/endpoints/simulation_soc/lambda/handler.py
+        run: |
+          python3 -m mypy \
+            src/api/endpoints/simulation_soc/lambda/handler.py
       - name: Run mypy on tests
         run: python3 -m mypy test/api/endpoints/simulation_soc/
       - name: Terraform Format Check
-        run: cd src/api/endpoints/simulation_soc && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/endpoints/simulation_soc && \
+            terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/simulation_soc && terraform init
       - env:
@@ -205,8 +248,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Run unit tests
-        run: python3 -m pytest test/api/endpoints/simulation_soc/pre_deployment/ -v
-name: Ensuring the /v1/simulation-soc API endpoint exists and is properly configured
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/simulation_soc/pre_deployment/ -v
+name: >-
+  Ensuring the /v1/simulation-soc API endpoint exists and is properly configured
 on:
   push:
     branches:
