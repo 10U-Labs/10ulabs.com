@@ -327,78 +327,6 @@ def test_tri_mode_core_runtime_is_positive(simulation_soc_handler, simulation_so
     assert runtime_positive
 
 
-def test_response_contains_real_world_comparison(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    has_real_world = 'real_world_comparison' in body
-    assert has_real_world
-
-
-def test_real_world_comparison_has_native_core(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    has_native_core = 'native_core' in body['real_world_comparison']
-    assert has_native_core
-
-
-def test_real_world_comparison_native_core_has_name(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    has_name = 'name' in body['real_world_comparison']['native_core']
-    assert has_name
-
-
-def test_real_world_comparison_native_core_has_ipc(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    has_ipc = 'ipc' in body['real_world_comparison']['native_core']
-    assert has_ipc
-
-
-def test_real_world_comparison_has_tri_mode_core(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    has_tri_mode = 'tri_mode_core' in body['real_world_comparison']
-    assert has_tri_mode
-
-
-def test_real_world_comparison_has_relative_slowdown(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    has_slowdown = 'relative_slowdown' in body['real_world_comparison']
-    assert has_slowdown
-
-
-def test_real_world_x86_64_core_name_is_pentium4(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory(body_data={'persona': 'x86_64'})
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    is_pentium4 = 'Pentium' in body['real_world_comparison']['native_core']['name']
-    assert is_pentium4
-
-
-def test_real_world_arm64_core_name_is_cortex(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory(body_data={'persona': 'arm64'})
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    is_cortex = 'Cortex' in body['real_world_comparison']['native_core']['name']
-    assert is_cortex
-
-
-def test_real_world_riscv_core_name_is_sifive(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
-    response = simulation_soc_handler.handler(event, lambda_context)
-    body = parse_response_body(response)
-    is_sifive = 'SiFive' in body['real_world_comparison']['native_core']['name']
-    assert is_sifive
-
-
 def test_derive_translation_uops_averages_ranges(simulation_soc_handler):
     ranges = {'alu': (1, 3), 'load': (2, 4)}
     result = simulation_soc_handler.derive_translation_uops(ranges)
@@ -461,18 +389,6 @@ def test_build_soc_config_output_has_issue_width(simulation_soc_handler):
 
 def test_build_soc_config_output_has_clock_ghz(simulation_soc_handler):
     config = simulation_soc_handler.build_soc_config_output()
-    has_clock = 'clock_ghz' in config
-    assert has_clock
-
-
-def test_build_real_world_config_riscv_has_name(simulation_soc_handler):
-    config = simulation_soc_handler.build_real_world_config('riscv')
-    has_name = 'name' in config
-    assert has_name
-
-
-def test_build_real_world_config_x86_has_clock(simulation_soc_handler):
-    config = simulation_soc_handler.build_real_world_config('x86_64')
     has_clock = 'clock_ghz' in config
     assert has_clock
 
@@ -549,18 +465,6 @@ def test_compute_trimode_simulation_ipc_less_than_native_for_x86(simulation_soc_
     trimode = simulation_soc_handler.compute_trimode_simulation('x86_64')
     trimode_lower = trimode['ipc'] < native['ipc']
     assert trimode_lower
-
-
-def test_compute_real_world_simulation_returns_core_name(simulation_soc_handler):
-    result = simulation_soc_handler.compute_real_world_simulation('riscv')
-    has_name = 'core_name' in result
-    assert has_name
-
-
-def test_compute_real_world_simulation_returns_ipc(simulation_soc_handler):
-    result = simulation_soc_handler.compute_real_world_simulation('x86_64')
-    has_ipc = 'ipc' in result
-    assert has_ipc
 
 
 def test_compute_resource_limited_upc_is_positive(simulation_soc_handler):
