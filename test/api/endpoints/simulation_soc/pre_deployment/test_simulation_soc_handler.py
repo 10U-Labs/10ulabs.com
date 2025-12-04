@@ -220,20 +220,55 @@ def test_response_contains_relative_slowdown(simulation_soc_handler, simulation_
     assert has_slowdown
 
 
-def test_tri_mode_ipc_is_less_than_native_ipc(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
+def test_tri_mode_ipc_is_less_than_native_ipc_for_x86(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'x86_64'})
     response = simulation_soc_handler.handler(event, lambda_context)
     body = parse_response_body(response)
     tri_mode_slower = body['tri_mode_core']['ipc'] < body['native_core']['ipc']
     assert tri_mode_slower
 
 
-def test_relative_slowdown_is_greater_than_one(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
-    event = simulation_soc_post_event_factory()
+def test_relative_slowdown_is_greater_than_one_for_x86(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'x86_64'})
     response = simulation_soc_handler.handler(event, lambda_context)
     body = parse_response_body(response)
     slowdown_greater_than_one = body['relative_slowdown'] > 1.0
     assert slowdown_greater_than_one
+
+
+def test_tri_mode_ipc_is_less_than_native_ipc_for_arm64(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'arm64'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    tri_mode_slower = body['tri_mode_core']['ipc'] < body['native_core']['ipc']
+    assert tri_mode_slower
+
+
+def test_relative_slowdown_is_greater_than_one_for_arm64(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'arm64'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    slowdown_greater_than_one = body['relative_slowdown'] > 1.0
+    assert slowdown_greater_than_one
+
+
+def test_riscv_native_equals_trimode_ipc(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    native_ipc = body['native_core']['ipc']
+    trimode_ipc = body['tri_mode_core']['ipc']
+    ipc_equal = abs(native_ipc - trimode_ipc) < 0.001
+    assert ipc_equal
+
+
+def test_riscv_relative_slowdown_equals_one(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):
+    event = simulation_soc_post_event_factory(body_data={'persona': 'riscv'})
+    response = simulation_soc_handler.handler(event, lambda_context)
+    body = parse_response_body(response)
+    slowdown = body['relative_slowdown']
+    slowdown_is_one = abs(slowdown - 1.0) < 0.001
+    assert slowdown_is_one
 
 
 def test_error_response_contains_success_false(simulation_soc_handler, simulation_soc_post_event_factory, lambda_context):

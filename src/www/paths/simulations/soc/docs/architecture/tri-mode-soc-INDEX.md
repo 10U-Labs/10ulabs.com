@@ -22,8 +22,12 @@ This index lists the component files that together define the tri-mode SoC archi
    File: `tri-mode-soc-section5-arm64-persona.md`  
    Content: Describes the ARM64 (`arm64`) persona, including fixed 32-bit encodings, richer addressing modes, and hardware translation rules from ARM64 instructions to RISC-V-style µops.
 
-6. Workload Modeling, Throughput, and API Shape  
-   File: `tri-mode-soc-section6-workload-and-api.md`  
+6. Workload Modeling, Throughput, and API Shape
+   File: `tri-mode-soc-section6-workload-and-api.md`
    Content: Defines how workloads are represented (instruction mix and translation parameters per persona), how front-end and backend limited IPC are computed, how runtime is derived, and the JSON input/output shape for a simulation API.
+
+7. References
+   File: `tri-mode-soc-section7-references.md`
+   Content: Lists academic papers, technical reports, and industry sources used to derive workload parameters (instruction mix, cache behavior, branch prediction, instruction encoding) and validate the simulation model.
 
 You can give these files to a code model individually (for focused tasks) or together (for full-context implementation of the tri-mode SoC simulator and its API).
