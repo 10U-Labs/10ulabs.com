@@ -35,6 +35,7 @@ RUN apt-get update && \
         libglx0 \
         libharfbuzz0b \
         libicu76 \
+        libasound2t64 \
         liblttng-ust1 \
         libnss3 \
         libpango-1.0-0 \
@@ -42,10 +43,13 @@ RUN apt-get update && \
         libssl3t64 \
         libthai0 \
         libxaw7 \
+        libxcomposite1 \
+        libxdamage1 \
         libxext6 \
         libxfixes3 \
         libxfont2 \
         libxi6 \
+        libxkbcommon0 \
         libxmu6 \
         libxrandr2 \
         libxt6t64 \
