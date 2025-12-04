@@ -12,14 +12,10 @@
 
 - Functions must have single exit point.
 - Functions must have a single return statement.
-- If comments already exist in the original code, remove them.
 - If linters fail, fix the actual code.
-- Never add any form of comment to source code.
-- Never add docstrings (`"""..."""`).
-- Never add inline comments (`#` comments).
 - Never create linter configuration files.
 - Never disable lint checks.
-- Never use `break` statements.
+- Never use `break` nor `continue` statements.
 
 ## Credentials and Environment
 
