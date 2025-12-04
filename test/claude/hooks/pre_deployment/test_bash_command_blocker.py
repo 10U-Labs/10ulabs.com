@@ -37,42 +37,42 @@ def test_blocked_patterns_contains_sleep(bash_command_blocker):
     assert sleep_pattern_exists
 
 
-def test_cdk_deploy_command_matches_pattern(bash_command_blocker):
+def test_cdk_deploy_command_matches_pattern():
     command = 'cdk deploy --all'
     pattern = r'\bcdk\s+deploy\b'
     cdk_deploy_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
     assert cdk_deploy_command_matches
 
 
-def test_cdk_destroy_command_matches_pattern(bash_command_blocker):
+def test_cdk_destroy_command_matches_pattern():
     command = 'cdk destroy MyStack'
     pattern = r'\bcdk\s+destroy\b'
     cdk_destroy_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
     assert cdk_destroy_command_matches
 
 
-def test_terraform_apply_command_matches_pattern(bash_command_blocker):
+def test_terraform_apply_command_matches_pattern():
     command = 'terraform apply -auto-approve'
     pattern = r'\bterraform\s+apply\b'
     terraform_apply_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
     assert terraform_apply_command_matches
 
 
-def test_terraform_destroy_command_matches_pattern(bash_command_blocker):
+def test_terraform_destroy_command_matches_pattern():
     command = 'terraform destroy -auto-approve'
     pattern = r'\bterraform\s+destroy\b'
     terraform_destroy_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
     assert terraform_destroy_command_matches
 
 
-def test_gh_run_watch_command_matches_pattern(bash_command_blocker):
+def test_gh_run_watch_command_matches_pattern():
     command = 'gh run watch 12345'
     pattern = r'\bgh\s+run\s+watch\b'
     gh_run_watch_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
     assert gh_run_watch_command_matches
 
 
-def test_sleep_command_matches_pattern(bash_command_blocker):
+def test_sleep_command_matches_pattern():
     command = 'sleep 10'
     pattern = r'\bsleep\s+'
     sleep_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
