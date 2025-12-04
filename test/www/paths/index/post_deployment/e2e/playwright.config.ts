@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig } from "../../../../../../src/www/paths/index/node_modules/@playwright/test";
 
 export default defineConfig({
   forbidOnly: !!process.env.CI,

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../../../../../../src/www/paths/index/node_modules/@playwright/test";
 
 test.describe("SPA routing", () => {
   test.describe("nonexistent routes", () => {

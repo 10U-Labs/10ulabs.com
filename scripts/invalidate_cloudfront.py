@@ -20,16 +20,16 @@ def wait_for_invalidation(cloudfront, distribution_id, invalidation_id, max_atte
     attempt = 0
     while not completed and attempt < max_attempts:
         attempt = attempt + 1
-        print(f"Checking invalidation status (attempt {attempt}/{max_attempts})...")
+        print(f"Checking invalidation status (attempt {attempt}/{max_attempts})...", flush=True)
         status_response = cloudfront.get_invalidation(
             DistributionId=distribution_id, Id=invalidation_id
         )
         status = status_response["Invalidation"]["Status"]
-        print(f"  Status: {status}")
+        print(f"  Status: {status}", flush=True)
         if status == "Completed":
             completed = True
         elif attempt < max_attempts:
-            print(f"  Waiting {poll_interval}s before next check...")
+            print(f"  Waiting {poll_interval}s before next check...", flush=True)
             time.sleep(poll_interval)
     if not completed:
         raise RuntimeError(f"Invalidation did not complete after {max_attempts} attempts")
@@ -49,7 +49,7 @@ def main():
 
     exit_code = 0
     if not distribution_id:
-        print(f"Error: No CloudFront distribution found for {args.fqdn}")
+        print(f"Error: No CloudFront distribution found for {args.fqdn}", flush=True)
         exit_code = 1
     else:
         try:
@@ -61,10 +61,10 @@ def main():
                 },
             )
             invalidation_id = invalidation_response["Invalidation"]["Id"]
-            print(f"Invalidation created: {invalidation_id}")
+            print(f"Invalidation created: {invalidation_id}", flush=True)
             wait_for_invalidation(cloudfront, distribution_id, invalidation_id)
         except RuntimeError as e:
-            print(f"Error: {e}")
+            print(f"Error: {e}", flush=True)
             exit_code = 1
 
     return exit_code
