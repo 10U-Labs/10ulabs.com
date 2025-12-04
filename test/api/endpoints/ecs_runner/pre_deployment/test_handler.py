@@ -409,7 +409,8 @@ def test_store_workflow_runner_stores_state_field(ecs_runner_handler):
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            ecs_runner_handler.store_workflow_runner(123, 'fargate', 'arn:task', 'runner-123', 'test/repo', state='requested')
+            runner = ecs_runner_handler.WorkflowRunner(run_id=123, runner_type='fargate', resource_id='arn:task', runner_name='runner-123', github_repo='test/repo', state='requested')
+            ecs_runner_handler.store_workflow_runner(runner)
             call_args = mock_dynamodb.put_item.call_args[1]
             item = call_args['Item']
             assert item['state']['S'] == 'requested'
@@ -419,7 +420,8 @@ def test_store_workflow_runner_defaults_state_to_requested(ecs_runner_handler):
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            ecs_runner_handler.store_workflow_runner(123, 'fargate', 'arn:task', 'runner-123', 'test/repo')
+            runner = ecs_runner_handler.WorkflowRunner(run_id=123, runner_type='fargate', resource_id='arn:task', runner_name='runner-123', github_repo='test/repo')
+            ecs_runner_handler.store_workflow_runner(runner)
             call_args = mock_dynamodb.put_item.call_args[1]
             item = call_args['Item']
             assert item['state']['S'] == 'requested'
@@ -427,13 +429,15 @@ def test_store_workflow_runner_defaults_state_to_requested(ecs_runner_handler):
 
 def test_store_workflow_runner_returns_false_when_table_not_set(ecs_runner_handler):
     with patch.dict('os.environ', {}, clear=True):
-        result = ecs_runner_handler.store_workflow_runner(123, 'fargate', 'arn:task', 'runner-123', 'test/repo')
+        runner = ecs_runner_handler.WorkflowRunner(run_id=123, runner_type='fargate', resource_id='arn:task', runner_name='runner-123', github_repo='test/repo')
+        result = ecs_runner_handler.store_workflow_runner(runner)
         assert result is False
 
 
 def test_store_workflow_runner_returns_false_when_run_id_not_provided(ecs_runner_handler):
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
-        result = ecs_runner_handler.store_workflow_runner(None, 'fargate', 'arn:task', 'runner-123', 'test/repo')
+        runner = ecs_runner_handler.WorkflowRunner(run_id=None, runner_type='fargate', resource_id='arn:task', runner_name='runner-123', github_repo='test/repo')
+        result = ecs_runner_handler.store_workflow_runner(runner)
         assert result is False
 
 
@@ -441,7 +445,8 @@ def test_store_workflow_runner_returns_true_on_success(ecs_runner_handler):
     mock_dynamodb = MagicMock()
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            result = ecs_runner_handler.store_workflow_runner(123, 'fargate', 'arn:task', 'runner-123', 'test/repo')
+            runner = ecs_runner_handler.WorkflowRunner(run_id=123, runner_type='fargate', resource_id='arn:task', runner_name='runner-123', github_repo='test/repo')
+            result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is True
 
 
@@ -453,5 +458,6 @@ def test_store_workflow_runner_returns_false_on_client_error(ecs_runner_handler)
     )
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         with patch.object(ecs_runner_handler, 'get_dynamodb_client', return_value=mock_dynamodb):
-            result = ecs_runner_handler.store_workflow_runner(123, 'fargate', 'arn:task', 'runner-123', 'test/repo')
+            runner = ecs_runner_handler.WorkflowRunner(run_id=123, runner_type='fargate', resource_id='arn:task', runner_name='runner-123', github_repo='test/repo')
+            result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is False

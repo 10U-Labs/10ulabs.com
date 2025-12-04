@@ -4,9 +4,20 @@ import os
 import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from typing import Any, Dict, List
 import boto3
 from botocore.exceptions import ClientError
+
+
+@dataclass
+class WorkflowRunner:
+    run_id: int
+    runner_type: str
+    resource_id: str
+    runner_name: str
+    github_repo: str
+    state: str = 'requested'
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -438,12 +449,12 @@ def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
     return base_labels
 
 
-def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str, state: str = 'requested') -> bool:
+def store_workflow_runner(runner: WorkflowRunner) -> bool:
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if not table_name:
         logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
         return False
-    if not run_id:
+    if not runner.run_id:
         logger.warning("run_id not provided, skipping runner storage")
         return False
     try:
@@ -451,17 +462,17 @@ def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runne
         get_dynamodb_client().put_item(
             TableName=table_name,
             Item={
-                'run_id': {'S': str(run_id)},
-                'runner_type': {'S': runner_type},
-                'resource_id': {'S': resource_id},
-                'runner_name': {'S': runner_name},
-                'github_repo': {'S': github_repo},
-                'state': {'S': state},
+                'run_id': {'S': str(runner.run_id)},
+                'runner_type': {'S': runner.runner_type},
+                'resource_id': {'S': runner.resource_id},
+                'runner_name': {'S': runner.runner_name},
+                'github_repo': {'S': runner.github_repo},
+                'state': {'S': runner.state},
                 'ttl': {'N': str(ttl)},
                 'created_at': {'N': str(int(time.time()))}
             }
         )
-        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s, state=%s", run_id, runner_type, resource_id, state)
+        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s, state=%s", runner.run_id, runner.runner_type, runner.resource_id, runner.state)
         return True
     except ClientError as e:
         logger.error("Failed to store workflow runner: %s", e)
@@ -569,7 +580,8 @@ def _try_launch_in_subnet(cfg: Dict[str, Any], subnet: str, cluster: str) -> Dic
         task_arn = response['tasks'][0]['taskArn']
         logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
         if cfg['run_id']:
-            store_workflow_runner(cfg['run_id'], cfg['runner_type'], task_arn, runner_name, cfg['github_repo'], state='requested')
+            runner = WorkflowRunner(run_id=cfg['run_id'], runner_type=cfg['runner_type'], resource_id=task_arn, runner_name=runner_name, github_repo=cfg['github_repo'])
+            store_workflow_runner(runner)
         provision_result = wait_for_fargate_task_provisioned(cluster, task_arn)
         if provision_result['spot_interrupted']:
             logger.warning("Task %s spot interrupted before running, will retry in different AZ", task_arn)
