@@ -7,8 +7,8 @@ locals {
   github_repo               = module.shared.name_for_github_repo
   github_repo_full          = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
   resource_prefix           = module.shared.resource_prefix
-  runner_label_ec2_spot     = local.shared_config.runner_labels.ec2_spot
-  runner_label_ec2_spot_e2e = local.shared_config.runner_labels.ec2_spot_e2e_test
+  runner_label_ec2     = local.shared_config.runner_labels.ec2
+  runner_label_ec2_e2e = local.shared_config.runner_labels.ec2_e2e_test
   runner_label_fargate      = local.shared_config.runner_labels.fargate
   runner_label_fargate_e2e  = local.shared_config.runner_labels.fargate_e2e_test
 

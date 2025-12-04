@@ -79,7 +79,7 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
     if not latest_ami_exists:
         yield None
         return
-    runner_label = config['ec2_spot_e2e_test']
+    runner_label = config['ec2_e2e_test']
     job_id, payload = create_runner_job_payload(
         test_context["github_repo"], [runner_label], test_context["github_run_id"]
     )
@@ -160,7 +160,7 @@ def test_ec2_runner_instance_has_managed_by_tag(
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     tags = response['Reservations'][0]['Instances'][0].get('Tags', [])
     tag_dict = {tag['Key']: tag['Value'] for tag in tags}
-    has_correct_managed_by = tag_dict.get("ManagedBy") == "api-ec2-spot-runner"
+    has_correct_managed_by = tag_dict.get("ManagedBy") == "api-ec2-runner"
     assert has_correct_managed_by
 
 

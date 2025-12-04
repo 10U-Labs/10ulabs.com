@@ -412,7 +412,7 @@ def test_terminate_runner_calls_ec2_for_ec2_type(stale_runner_cleanup):
     mock_ec2 = MagicMock()
     mock_ec2.terminate_instances.return_value = {}
     stale_runner_cleanup._clients = {'ec2': mock_ec2}
-    result = stale_runner_cleanup._terminate_runner('ec2-spot', 'i-12345')
+    result = stale_runner_cleanup._terminate_runner('ec2', 'i-12345')
     assert result is True
 
 

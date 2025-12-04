@@ -46,7 +46,7 @@ jobs:
       - declaring-common-variables
       - integration-testing
     runs-on:
-      - ec2-spot
+      - ec2
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -84,7 +84,7 @@ jobs:
       contents: read
       id-token: write
     runs-on:
-      - ec2-spot
+      - ec2
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -140,7 +140,7 @@ jobs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
     runs-on:
-      - ec2-spot
+      - ec2
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code

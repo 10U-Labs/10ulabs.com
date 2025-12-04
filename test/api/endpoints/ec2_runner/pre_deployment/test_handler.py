@@ -96,7 +96,7 @@ def test_get_ec2_runner_status_filters_by_managed_by_tag_from_env(ec2_runner_han
         call_args = mock_ec2.describe_instances.call_args
         filters = call_args[1]['Filters']
         managed_by_filter = next(f for f in filters if f['Name'] == 'tag:ManagedBy')
-        has_correct_tag = managed_by_filter['Values'] == ['api-ec2-spot-runner']
+        has_correct_tag = managed_by_filter['Values'] == ['api-ec2-runner']
         assert has_correct_tag
 
 

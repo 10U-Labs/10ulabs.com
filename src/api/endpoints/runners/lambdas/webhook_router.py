@@ -457,8 +457,8 @@ def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | N
 
 
 def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
-    runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2_SPOT')
-    runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_SPOT_E2E')
+    runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2')
+    runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_E2E')
     runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE')
     runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_E2E')
     is_ec2 = runner_label_ec2 in job_labels or runner_label_ec2_e2e in job_labels

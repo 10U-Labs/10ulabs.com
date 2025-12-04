@@ -27,7 +27,7 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
         'EC2_AMI_PURPOSE_TAG': 'Purpose',
         'EC2_AMI_PURPOSE_VALUE': 'GitHub self-hosted EC2 runner',
         'EC2_AMI_STABLE_TAG': 'Stable',
-        'EC2_MANAGED_BY_TAG': 'api-ec2-spot-runner',
+        'EC2_MANAGED_BY_TAG': 'api-ec2-runner',
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
         'EC2_INSTANCE_TYPES': ','.join(config['ec2_instance_types']),
