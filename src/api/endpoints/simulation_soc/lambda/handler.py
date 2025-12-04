@@ -122,37 +122,26 @@ WORKLOADS = {
 VALID_PERSONAS = frozenset(WORKLOADS.keys())
 
 
-def compute_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
-    workload = WORKLOADS[persona]
-    translation = TRANSLATION_UOPS[persona]
-
-    alu_instrs = instr_count * workload['alu_fraction']
-    load_instrs = instr_count * workload['load_fraction']
-    store_instrs = instr_count * workload['store_fraction']
-    branch_instrs = instr_count * workload['branch_fraction']
-    fp_vec_instrs = instr_count * workload['fp_vec_fraction']
-    complex_instrs = instr_count * workload['complex_fraction']
-
-    alu_uops = alu_instrs * translation['alu']
-    load_uops = load_instrs * translation['load']
-    store_uops = store_instrs * translation['store']
-    branch_uops = branch_instrs * translation['branch']
-    fp_vec_uops = fp_vec_instrs * translation['fp_vec']
-    complex_uops = complex_instrs * translation['complex']
-
-    total_uops = alu_uops + load_uops + store_uops + branch_uops + fp_vec_uops + complex_uops
-    avg_uops_per_instr = total_uops / instr_count
-
+def compute_uop_counts_with_translation(workload: Dict[str, Any], translation: Dict[str, float],
+                                        instr_count: int) -> Dict[str, Any]:
+    categories = ['alu', 'load', 'store', 'branch', 'fp_vec', 'complex']
+    uops = {cat: instr_count * workload[f'{cat}_fraction'] * translation[cat] for cat in categories}
+    total = sum(uops.values())
     result = {
-        'alu_uops': alu_uops,
-        'load_uops': load_uops,
-        'store_uops': store_uops,
-        'branch_uops': branch_uops,
-        'fp_vec_uops': fp_vec_uops,
-        'complex_uops': complex_uops,
-        'total_uops': total_uops,
-        'avg_uops_per_instr': avg_uops_per_instr
+        'alu_uops': uops['alu'],
+        'load_uops': uops['load'],
+        'store_uops': uops['store'],
+        'branch_uops': uops['branch'],
+        'fp_vec_uops': uops['fp_vec'],
+        'complex_uops': uops['complex'],
+        'total_uops': total,
+        'avg_uops_per_instr': total / instr_count
     }
+    return result
+
+
+def compute_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
+    result = compute_uop_counts_with_translation(WORKLOADS[persona], TRANSLATION_UOPS[persona], instr_count)
     return result
 
 
@@ -180,92 +169,54 @@ def compute_frontend_ipc(persona: str, uop_stats: Dict[str, Any]) -> Dict[str, A
     return result
 
 
+def compute_resource_limited_upc(uop_stats: Dict[str, Any]) -> float:
+    total = uop_stats['total_uops']
+    alu_frac = (uop_stats['alu_uops'] + uop_stats['branch_uops'] + uop_stats['complex_uops'] * 0.5) / total
+    load_frac = uop_stats['load_uops'] / total
+    store_frac = uop_stats['store_uops'] / total
+    fp_frac = (uop_stats['fp_vec_uops'] + uop_stats['complex_uops'] * 0.5) / total
+    limits = [
+        EXECUTION_UNITS['int_alus'] / alu_frac if alu_frac > 0 else float('inf'),
+        EXECUTION_UNITS['load_units'] / load_frac if load_frac > 0 else float('inf'),
+        EXECUTION_UNITS['store_units'] / store_frac if store_frac > 0 else float('inf'),
+        EXECUTION_UNITS['fp_vec_units'] / fp_frac if fp_frac > 0 else float('inf'),
+        SOC_CONFIG['issue_width']
+    ]
+    result = min(limits)
+    return result
+
+
+def compute_memory_stall_cpi(workload: Dict[str, Any], load_uops: float, instr_count: int) -> float:
+    l1_miss = 1 - workload['l1d_hit_rate']
+    l2_miss = 1 - workload['l2_hit_rate']
+    l1_cycles = load_uops * workload['l1d_hit_rate'] * LATENCIES['l1d_hit']
+    l2_cycles = load_uops * l1_miss * workload['l2_hit_rate'] * LATENCIES['l2_hit']
+    mem_cycles = load_uops * l1_miss * l2_miss * LATENCIES['memory']
+    result = (l1_cycles + l2_cycles + mem_cycles) / instr_count
+    return result
+
+
 def compute_backend_ipc(persona: str, uop_stats: Dict[str, Any], instr_count: int) -> Dict[str, Any]:
     workload = WORKLOADS[persona]
-    total_uops = uop_stats['total_uops']
-
-    alu_fraction = (uop_stats['alu_uops'] + uop_stats['branch_uops'] + uop_stats['complex_uops'] * 0.5) / total_uops
-    load_fraction = uop_stats['load_uops'] / total_uops
-    store_fraction = uop_stats['store_uops'] / total_uops
-    fp_vec_fraction = (uop_stats['fp_vec_uops'] + uop_stats['complex_uops'] * 0.5) / total_uops
-
-    alu_limited_upc = EXECUTION_UNITS['int_alus'] / alu_fraction if alu_fraction > 0 else float('inf')
-    load_limited_upc = EXECUTION_UNITS['load_units'] / load_fraction if load_fraction > 0 else float('inf')
-    store_limited_upc = EXECUTION_UNITS['store_units'] / store_fraction if store_fraction > 0 else float('inf')
-    fp_vec_limited_upc = EXECUTION_UNITS['fp_vec_units'] / fp_vec_fraction if fp_vec_fraction > 0 else float('inf')
-
-    issue_limited_upc = SOC_CONFIG['issue_width']
-    resource_limited_upc = min(alu_limited_upc, load_limited_upc, store_limited_upc, fp_vec_limited_upc, issue_limited_upc)
-
-    l1d_hit_rate = workload['l1d_hit_rate']
-    l2_hit_rate = workload['l2_hit_rate']
-    load_uops = uop_stats['load_uops']
-
-    l1_hits = load_uops * l1d_hit_rate
-    l1_misses = load_uops * (1 - l1d_hit_rate)
-    l2_hits = l1_misses * l2_hit_rate
-    memory_hits = l1_misses * (1 - l2_hit_rate)
-
-    l1_latency_cycles = l1_hits * LATENCIES['l1d_hit']
-    l2_latency_cycles = l2_hits * LATENCIES['l2_hit']
-    memory_latency_cycles = memory_hits * LATENCIES['memory']
-
-    total_memory_cycles = l1_latency_cycles + l2_latency_cycles + memory_latency_cycles
-    memory_stall_cpi = total_memory_cycles / instr_count
-
-    branch_count = instr_count * workload['branch_fraction']
-    mispredicts = branch_count * workload['branch_mispredict_rate']
-    branch_stall_cycles = mispredicts * LATENCIES['branch_mispredict']
-    branch_stall_cpi = branch_stall_cycles / instr_count
-
-    avg_uops = uop_stats['avg_uops_per_instr']
-    base_cpi = avg_uops / resource_limited_upc
-    total_cpi = base_cpi + memory_stall_cpi + branch_stall_cpi
-    ipc_backend = 1.0 / total_cpi
-
+    resource_upc = compute_resource_limited_upc(uop_stats)
+    mem_stall = compute_memory_stall_cpi(workload, uop_stats['load_uops'], instr_count)
+    mispredicts = instr_count * workload['branch_fraction'] * workload['branch_mispredict_rate']
+    branch_stall = mispredicts * LATENCIES['branch_mispredict'] / instr_count
+    total_cpi = uop_stats['avg_uops_per_instr'] / resource_upc + mem_stall + branch_stall
     result = {
-        'ipc_backend': ipc_backend,
-        'resource_limited_upc': resource_limited_upc,
-        'memory_stall_cpi': memory_stall_cpi,
-        'branch_stall_cpi': branch_stall_cpi,
-        'l1_miss_rate': 1 - l1d_hit_rate,
-        'l2_miss_rate': 1 - l2_hit_rate,
+        'ipc_backend': 1.0 / total_cpi,
+        'resource_limited_upc': resource_upc,
+        'memory_stall_cpi': mem_stall,
+        'branch_stall_cpi': branch_stall,
+        'l1_miss_rate': 1 - workload['l1d_hit_rate'],
+        'l2_miss_rate': 1 - workload['l2_hit_rate'],
         'branch_mispredicts': mispredicts
     }
     return result
 
 
 def compute_native_uop_counts(persona: str, instr_count: int) -> Dict[str, Any]:
-    workload = WORKLOADS[persona]
-    native_translation = TRANSLATION_UOPS['riscv']
-
-    alu_instrs = instr_count * workload['alu_fraction']
-    load_instrs = instr_count * workload['load_fraction']
-    store_instrs = instr_count * workload['store_fraction']
-    branch_instrs = instr_count * workload['branch_fraction']
-    fp_vec_instrs = instr_count * workload['fp_vec_fraction']
-    complex_instrs = instr_count * workload['complex_fraction']
-
-    alu_uops = alu_instrs * native_translation['alu']
-    load_uops = load_instrs * native_translation['load']
-    store_uops = store_instrs * native_translation['store']
-    branch_uops = branch_instrs * native_translation['branch']
-    fp_vec_uops = fp_vec_instrs * native_translation['fp_vec']
-    complex_uops = complex_instrs * native_translation['complex']
-
-    total_uops = alu_uops + load_uops + store_uops + branch_uops + fp_vec_uops + complex_uops
-    avg_uops_per_instr = total_uops / instr_count
-
-    result = {
-        'alu_uops': alu_uops,
-        'load_uops': load_uops,
-        'store_uops': store_uops,
-        'branch_uops': branch_uops,
-        'fp_vec_uops': fp_vec_uops,
-        'complex_uops': complex_uops,
-        'total_uops': total_uops,
-        'avg_uops_per_instr': avg_uops_per_instr
-    }
+    result = compute_uop_counts_with_translation(WORKLOADS[persona], TRANSLATION_UOPS['riscv'], instr_count)
     return result
 
 
