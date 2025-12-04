@@ -203,13 +203,9 @@ h2 {
 
 .footer .privacy-link {
     color: #94a3b8;
-    text-decoration: none;
+    text-decoration: underline;
     display: block;
     margin-bottom: 0.5rem;
-}
-
-.footer .privacy-link:hover {
-    text-decoration: underline;
 }
 
 @media (max-width: 768px) {
