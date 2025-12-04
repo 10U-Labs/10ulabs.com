@@ -362,13 +362,11 @@ jobs:
         run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
-          DOCUMENT_START='document-start: disable'
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: {max: 300, level: warning}'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$DOCUMENT_START, $EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners_post.yml \
@@ -384,7 +382,6 @@ jobs:
             lib/ec2_fleet/*.py \
             src/api/endpoints/image_for_ec2_runners/post/*.py \
             test/api/endpoints/image_for_ec2_runners/post/ \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
