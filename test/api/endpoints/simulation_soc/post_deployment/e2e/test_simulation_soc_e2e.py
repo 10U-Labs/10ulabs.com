@@ -56,14 +56,14 @@ def test_simulation_soc_relative_slowdown_consistent_per_persona(api_url):
     assert all_same_slowdown
 
 
-def test_simulation_soc_x86_64_has_highest_native_ipc(api_url):
+def test_simulation_soc_riscv_has_highest_native_ipc(api_url):
     personas = ["riscv", "x86_64", "arm64"]
     ipcs = {}
     for persona in personas:
         response = requests.post(f"{api_url}/v1/simulation-soc", json={"persona": persona}, headers=TEST_HEADERS, timeout=10)
         ipcs[persona] = response.json()["native_core"]["ipc"]
-    x86_has_highest = ipcs["x86_64"] >= ipcs["riscv"] and ipcs["x86_64"] >= ipcs["arm64"]
-    assert x86_has_highest
+    riscv_has_highest = ipcs["riscv"] >= ipcs["arm64"] >= ipcs["x86_64"]
+    assert riscv_has_highest
 
 
 def test_simulation_soc_soc_config_consistent_across_personas(api_url):
