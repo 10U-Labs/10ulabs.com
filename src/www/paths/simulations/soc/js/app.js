@@ -252,9 +252,9 @@ function createNonTriModeDiagram() {
 function createTriModeDiagrams() {
     var container = document.createElement('div');
     container.className = 'diagram-row diagram-row-triple';
+    container.appendChild(createDiagramCard('', '', '', 'desktop64'));
     container.appendChild(createDiagramCard('', '', '', 'mobile64'));
     container.appendChild(createDiagramCard('', '', '', 'riscv'));
-    container.appendChild(createDiagramCard('', '', '', 'desktop64'));
     return container;
 }
 
