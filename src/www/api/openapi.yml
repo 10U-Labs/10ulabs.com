@@ -1155,10 +1155,10 @@ tags:
   - name: /v1/simulation-soc
     description: SoC simulation endpoints
 x-tagGroups:
-  - name: root
+  - name: /
     tags:
       - /health
-  - name: v1
+  - name: /v1/
     tags:
       - /v1/contact
       - /v1/ec2-runner
