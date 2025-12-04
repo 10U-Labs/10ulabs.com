@@ -337,32 +337,38 @@ def _extract_run_id_from_runner_name(runner_name: str) -> str:
     return ''
 
 
+def _get_ecs_task_arns(cluster: str) -> list:
+    task_arns = []
+    ecs = get_ecs_client()
+    paginator = ecs.get_paginator('list_tasks')
+    for status in ['RUNNING', 'PENDING']:
+        for page in paginator.paginate(cluster=cluster, desiredStatus=status):
+            task_arns.extend(page.get('taskArns', []))
+    return task_arns
+
+
+def _check_tasks_for_run_id(cluster: str, task_arns: list, run_id: str) -> bool:
+    ecs = get_ecs_client()
+    for i in range(0, len(task_arns), 100):
+        batch = task_arns[i:i + 100]
+        response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=['TAGS'])
+        for task in response.get('tasks', []):
+            tags = {t['key']: t['value'] for t in task.get('tags', [])}
+            if tags.get('RunId') == run_id:
+                return True
+    return False
+
+
 def _has_running_ecs_task_by_name(runner_name: str) -> bool:
     result = False
     cluster = os.environ.get('ECS_CLUSTER', '')
-    if not cluster:
-        result = False
-    else:
-        run_id = _extract_run_id_from_runner_name(runner_name)
-        if not run_id:
-            result = False
-        else:
-            try:
-                ecs = get_ecs_client()
-                paginator = ecs.get_paginator('list_tasks')
-                task_arns = []
-                for status in ['RUNNING', 'PENDING']:
-                    for page in paginator.paginate(cluster=cluster, desiredStatus=status):
-                        task_arns.extend(page.get('taskArns', []))
-                for i in range(0, len(task_arns), 100):
-                    batch = task_arns[i:i + 100]
-                    response = ecs.describe_tasks(cluster=cluster, tasks=batch, include=['TAGS'])
-                    for task in response.get('tasks', []):
-                        tags = {t['key']: t['value'] for t in task.get('tags', [])}
-                        if tags.get('RunId') == run_id:
-                            result = True
-            except ClientError as e:
-                logger.error("Failed to check ECS task by name %s: %s", runner_name, e)
+    run_id = _extract_run_id_from_runner_name(runner_name)
+    if cluster and run_id:
+        try:
+            task_arns = _get_ecs_task_arns(cluster)
+            result = _check_tasks_for_run_id(cluster, task_arns, run_id)
+        except ClientError as e:
+            logger.error("Failed to check ECS task by name %s: %s", runner_name, e)
     return result
 
 
