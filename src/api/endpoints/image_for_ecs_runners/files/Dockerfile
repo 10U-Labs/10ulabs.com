@@ -11,12 +11,46 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
+        fontconfig \
+        fonts-wqy-zenhei \
         git \
         gnupg \
         jq \
+        libatk-bridge2.0-0t64 \
+        libatk1.0-0t64 \
+        libatspi2.0-0t64 \
+        libavahi-client3 \
+        libavahi-common3 \
+        libcairo2 \
+        libcups2t64 \
+        libdrm-amdgpu1 \
+        libdrm2 \
+        libfontconfig1 \
+        libfreetype6 \
+        libgbm1 \
+        libgl1 \
+        libgl1-mesa-dri \
+        libglib2.0-0t64 \
+        libglx-mesa0 \
+        libglx0 \
+        libharfbuzz0b \
         libicu76 \
         liblttng-ust1 \
+        libnss3 \
+        libpango-1.0-0 \
+        libsm6 \
         libssl3t64 \
+        libthai0 \
+        libxaw7 \
+        libxext6 \
+        libxfixes3 \
+        libxfont2 \
+        libxi6 \
+        libxmu6 \
+        libxrandr2 \
+        libxt6t64 \
+        libxxf86vm1 \
+        mesa-libgallium \
         procps \
         python3 \
         python3-pip \
@@ -25,6 +59,11 @@ RUN apt-get update && \
         tar \
         unzip \
         wget \
+        x11-xkb-utils \
+        xfonts-scalable \
+        xfonts-utils \
+        xserver-common \
+        xvfb \
         xz-utils \
         zlib1g && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
