@@ -20,7 +20,37 @@ def load_hook_module(hook_name: str, module_name: str) -> ModuleType:
 
 @pytest.fixture
 def pre_git_checks():
-    return load_hook_module("pre-git-checks.py", "pre_git_checks")
+    return load_hook_module("pre_git_checks.py", "pre_git_checks")
+
+
+@pytest.fixture
+def bash_command_blocker():
+    return load_hook_module("bash-command-blocker.py", "bash_command_blocker")
+
+
+@pytest.fixture
+def file_creation_blocker():
+    return load_hook_module("file-creation-blocker.py", "file_creation_blocker")
+
+
+@pytest.fixture
+def lint_disable_blocker():
+    return load_hook_module("lint-disable-blocker.py", "lint_disable_blocker")
+
+
+@pytest.fixture
+def s3_versioning_checker():
+    return load_hook_module("s3-versioning-checker.py", "s3_versioning_checker")
+
+
+@pytest.fixture
+def code_quality_checker():
+    return load_hook_module("code-quality-checker.py", "code_quality_checker")
+
+
+@pytest.fixture
+def test_standards_checker():
+    return load_hook_module("test-standards-checker.py", "test_standards_checker")
 
 
 @pytest.fixture

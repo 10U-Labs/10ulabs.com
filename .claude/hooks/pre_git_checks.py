@@ -12,14 +12,14 @@ import yaml
 
 def get_changed_files():
     result = subprocess.run(
-        ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACM'],
-        capture_output=True, text=True
+        ['git', 'diff', '--cached', '--name-only', '--no-ext-diff'],
+        capture_output=True, text=True, check=False
     )
     files = result.stdout.strip().split('\n') if result.stdout.strip() else []
     if not files:
         result = subprocess.run(
-            ['git', 'diff', 'HEAD~1', '--name-only'],
-            capture_output=True, text=True
+            ['git', 'diff', 'HEAD~1', '--name-only', '--no-ext-diff'],
+            capture_output=True, text=True, check=False
         )
         files = result.stdout.strip().split('\n') if result.stdout.strip() else []
     return [f for f in files if f]
@@ -120,7 +120,7 @@ def find_matching_workflows(changed_files, workflows_dir):
     matching = []
     workflow_files = list(Path(workflows_dir).glob('*.yml'))
     for wf_path in workflow_files:
-        with open(wf_path) as f:
+        with open(wf_path, encoding='utf-8') as f:
             try:
                 workflow = yaml.safe_load(f)
             except yaml.YAMLError:
@@ -170,7 +170,7 @@ def clean_script(raw_cmd):
 
 def run_command(cmd_info, workflow_name):
     if cmd_info.get('conditional'):
-        print(f"  [SKIP] Conditional on github-hosted")
+        print("  [SKIP] Conditional on github-hosted")
         return True
 
     name = cmd_info['name']
@@ -182,15 +182,17 @@ def run_command(cmd_info, workflow_name):
 
     print(f"\n[{workflow_name}] {name}")
 
-    first_line = script.split('\n')[0].strip()
+    first_line = script.split('\n', maxsplit=1)[0].strip()
     print(f"  $ {first_line[:70]}{'...' if len(first_line) > 70 else ''}")
 
+    full_script = f"set -e\n{script}"
     result = subprocess.run(
-        script,
+        full_script,
         shell=True,
         cwd=os.environ.get('CLAUDE_PROJECT_DIR', '.'),
         capture_output=True,
         text=True,
+        check=False,
         executable='/bin/bash'
     )
 
@@ -204,7 +206,7 @@ def run_command(cmd_info, workflow_name):
                 print(f"    {err_line}")
         return False
 
-    print(f"  PASSED")
+    print("  PASSED")
     return True
 
 
@@ -216,22 +218,35 @@ def run_commands(commands, workflow_name):
     return all_passed
 
 
-def main():
+def parse_command_from_stdin():
     input_data = sys.stdin.read()
     try:
         data = json.loads(input_data)
-        command = data.get('tool_input', {}).get('command', '')
+        return data.get('tool_input', {}).get('command', '')
     except json.JSONDecodeError:
-        command = ''
+        return ''
 
-    if not command:
-        sys.exit(0)
 
-    if not re.match(r'^git\s+(commit|push)', command):
+def run_phase(matching_workflows, phase_name, extract_fn):
+    print("\n" + "="*60)
+    print(f"PHASE: {phase_name}")
+    print("="*60)
+    passed = True
+    for wf in matching_workflows:
+        commands = extract_fn(wf['workflow'])
+        if commands:
+            print(f"\n[{wf['name']}]")
+            if not run_commands(commands, wf['name']):
+                passed = False
+    return passed
+
+
+def main():
+    command = parse_command_from_stdin()
+    if not command or not re.match(r'^git\s+(commit|push)', command):
         sys.exit(0)
 
     print("Running static analysis before git operation...")
-
     project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '.')
     os.chdir(project_dir)
 
@@ -240,49 +255,26 @@ def main():
         print("No changed files.")
         sys.exit(0)
 
-    print(f"Changed files: {changed_files}")
+    print(f"Staged files ({len(changed_files)}):")
+    for f in changed_files:
+        print(f"  - {f}")
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
     matching_workflows = find_matching_workflows(changed_files, workflows_dir)
-
     if not matching_workflows:
         print("No matching workflows found.")
         sys.exit(0)
 
-    print(f"Matching workflows: {[w['name'] for w in matching_workflows]}")
+    print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
 
-    print("\n" + "="*60)
-    print("PHASE 1: STATIC ANALYSIS")
-    print("="*60)
-
-    static_passed = True
-    for wf in matching_workflows:
-        commands = extract_static_analysis_commands(wf['workflow'])
-        if commands:
-            print(f"\n[{wf['name']}]")
-            if not run_commands(commands, wf['name']):
-                static_passed = False
-
-    if not static_passed:
+    if not run_phase(matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands):
         print("\n" + "="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing")
         print("="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing", file=sys.stderr)
         sys.exit(2)
 
-    print("\n" + "="*60)
-    print("PHASE 2: PRE-DEPLOYMENT TESTS")
-    print("="*60)
-
-    tests_passed = True
-    for wf in matching_workflows:
-        commands = extract_pre_deployment_test_commands(wf['workflow'])
-        if commands:
-            print(f"\n[{wf['name']}]")
-            if not run_commands(commands, wf['name']):
-                tests_passed = False
-
-    if not tests_passed:
+    if not run_phase(matching_workflows, "PRE-DEPLOYMENT TESTS", extract_pre_deployment_test_commands):
         print("\n" + "="*60)
         print("PRE-DEPLOYMENT TESTS FAILED - Fix issues before committing")
         print("="*60)

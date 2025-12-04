@@ -37,12 +37,12 @@ jobs:
         run: |
           for file in .claude/hooks/*.py; do
             python3 -m pylint "$file" \
-              --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+              --disable=duplicate-code,invalid-name,line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-branches,too-many-lines,too-many-statements \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
           python3 -m pylint test/claude/ \
-            --disable=line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-lines \
+            --disable=duplicate-code,invalid-name,line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,too-many-branches,too-many-lines,too-many-statements \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy

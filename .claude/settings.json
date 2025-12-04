@@ -1,0 +1,76 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/bash-command-blocker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/pre_git_checks.py",
+            "timeout": 300
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/file-creation-blocker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/lint-disable-blocker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/s3-versioning-checker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/code-quality-checker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/test-standards-checker.py",
+            "timeout": 300
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/lint-disable-blocker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/s3-versioning-checker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/code-quality-checker.py",
+            "timeout": 300
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/test-standards-checker.py",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
