@@ -115,12 +115,18 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Install Python dependencies
         run: python3 -m pip install boto3
-      - if: steps.check_files.outputs.changed == 'true'
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
         name: Get API domain from Terraform output
         run: |
           API_FQDN=$(terraform output -raw api_domain_name)
           echo "API_FQDN=$API_FQDN" >> $GITHUB_ENV
-      - if: steps.check_files.outputs.changed == 'true'
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message, '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
         name: Invalidate CloudFront cache
         run: |
           python3 ../../../scripts/invalidate_cloudfront.py \
@@ -287,6 +293,10 @@ on:
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      invalidate_cloudfront:
+        default: false
+        description: Force CloudFront cache invalidation
         type: boolean
 permissions:
   contents: read
