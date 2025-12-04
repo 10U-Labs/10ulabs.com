@@ -19,19 +19,19 @@ resource "aws_lambda_function" "runners_handler" {
 
   environment {
     variables = {
-      WEBHOOK_SECRET_NAME       = aws_ssm_parameter.webhook_secret.name
-      API_KEY_PARAMETER_NAME    = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      API_BASE_URL              = "https://${local.api_fqdn}"
-      IDEMPOTENCY_TABLE_NAME    = aws_dynamodb_table.idempotency.name
-      JOB_QUEUE_URL             = aws_sqs_queue.job_queue.url
-      RUNNER_LABEL_EC2     = local.runner_label_ec2
-      RUNNER_LABEL_EC2_E2E = local.runner_label_ec2_e2e
-      RUNNER_LABEL_FARGATE      = local.runner_label_fargate
-      RUNNER_LABEL_FARGATE_E2E  = local.runner_label_fargate_e2e
-      WORKFLOW_RUNNERS_TABLE    = aws_dynamodb_table.workflow_runners.name
-      GITHUB_TOKEN_SECRET_NAME  = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
-      ECS_CLUSTER               = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
-      GITHUB_REPO               = local.github_repo_full
+      WEBHOOK_SECRET_NAME      = aws_ssm_parameter.webhook_secret.name
+      API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
+      API_BASE_URL             = "https://${local.api_fqdn}"
+      IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
+      JOB_QUEUE_URL            = aws_sqs_queue.job_queue.url
+      RUNNER_LABEL_EC2         = local.runner_label_ec2
+      RUNNER_LABEL_EC2_E2E     = local.runner_label_ec2_e2e
+      RUNNER_LABEL_FARGATE     = local.runner_label_fargate
+      RUNNER_LABEL_FARGATE_E2E = local.runner_label_fargate_e2e
+      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
+      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+      GITHUB_REPO              = local.github_repo_full
     }
   }
 
