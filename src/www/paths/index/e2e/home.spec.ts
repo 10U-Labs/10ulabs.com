@@ -40,14 +40,16 @@ test.describe("Home Page", () => {
     test("get in touch button scrolls to contact section", async ({ page }) => {
       await page.getByRole("button", { name: "Get in Touch" }).click();
       const contactSection = page.locator("#contact");
-      const isInViewport = await contactSection.isIntersectingViewport();
+      const boundingBox = await contactSection.boundingBox();
+      const isInViewport = boundingBox !== null && boundingBox.y >= 0 && boundingBox.y < 768;
       expect(isInViewport).toBe(true);
     });
 
     test("our products button scrolls to products section", async ({ page }) => {
       await page.getByRole("button", { name: "Our Products" }).click();
       const productsSection = page.locator("#products");
-      const isInViewport = await productsSection.isIntersectingViewport();
+      const boundingBox = await productsSection.boundingBox();
+      const isInViewport = boundingBox !== null && boundingBox.y >= 0 && boundingBox.y < 768;
       expect(isInViewport).toBe(true);
     });
   });
