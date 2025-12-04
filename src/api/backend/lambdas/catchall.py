@@ -1,7 +1,9 @@
+"""Lambda handler for unmatched API Gateway routes."""
 import json
 
 
 def handler(event, _context):
+    """Return a 404 response for requests that don't match any defined route."""
     return {
         'statusCode': 404,
         'headers': {
