@@ -1,4 +1,8 @@
+"""Tests for ECS task definition runtime platform configuration."""
+
+
 def test_ecs_task_definition_has_runtime_platform(ecs_client):
+    """Verify ECS task definition includes runtime platform."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -6,6 +10,7 @@ def test_ecs_task_definition_has_runtime_platform(ecs_client):
 
 
 def test_ecs_task_definition_runtime_platform_not_none(ecs_client):
+    """Verify runtime platform is not None."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -13,6 +18,7 @@ def test_ecs_task_definition_runtime_platform_not_none(ecs_client):
 
 
 def test_ecs_task_definition_runtime_platform_has_cpu_architecture(ecs_client):
+    """Verify runtime platform specifies CPU architecture."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -20,6 +26,7 @@ def test_ecs_task_definition_runtime_platform_has_cpu_architecture(ecs_client):
 
 
 def test_ecs_task_definition_runtime_platform_has_operating_system_family(ecs_client):
+    """Verify runtime platform specifies operating system family."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -27,6 +34,7 @@ def test_ecs_task_definition_runtime_platform_has_operating_system_family(ecs_cl
 
 
 def test_ecs_task_definition_cpu_architecture_is_arm64(ecs_client):
+    """Verify CPU architecture is ARM64."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -34,6 +42,7 @@ def test_ecs_task_definition_cpu_architecture_is_arm64(ecs_client):
 
 
 def test_ecs_task_definition_operating_system_family_is_linux(ecs_client):
+    """Verify operating system family is LINUX."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -41,6 +50,7 @@ def test_ecs_task_definition_operating_system_family_is_linux(ecs_client):
 
 
 def test_ecs_task_definition_has_cpu_value(ecs_client):
+    """Verify task definition specifies CPU value."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -48,6 +58,7 @@ def test_ecs_task_definition_has_cpu_value(ecs_client):
 
 
 def test_ecs_task_definition_cpu_is_valid_fargate_value(ecs_client):
+    """Verify CPU value is valid for Fargate."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -56,6 +67,7 @@ def test_ecs_task_definition_cpu_is_valid_fargate_value(ecs_client):
 
 
 def test_ecs_task_definition_has_memory_value(ecs_client):
+    """Verify task definition specifies memory value."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)
@@ -63,6 +75,7 @@ def test_ecs_task_definition_has_memory_value(ecs_client):
 
 
 def test_ecs_task_definition_memory_is_valid_for_cpu(ecs_client):
+    """Verify memory value is valid for the configured CPU."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     task_def_arn = response['taskDefinitionArns'][-1]
     task_def = ecs_client.describe_task_definition(taskDefinition=task_def_arn)

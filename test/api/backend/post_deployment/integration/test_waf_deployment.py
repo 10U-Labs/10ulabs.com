@@ -1,7 +1,9 @@
+"""Tests for WAF deployment configuration."""
 import boto3
 
 
 def test_waf_web_acl_exists():
+    """Verify WAF Web ACL exists."""
     waf_client = boto3.client('wafv2', region_name='us-east-1')
     response = waf_client.list_web_acls(Scope='CLOUDFRONT')
     acl_names = [acl['Name'] for acl in response['WebACLs']]
@@ -9,12 +11,14 @@ def test_waf_web_acl_exists():
 
 
 def test_waf_web_acl_list_not_empty():
+    """Verify WAF Web ACL list is not empty."""
     waf_client = boto3.client('wafv2', region_name='us-east-1')
     response = waf_client.list_web_acls(Scope='CLOUDFRONT')
     assert len(response['WebACLs']) > 0
 
 
 def test_waf_web_acl_has_cloudwatch_metrics_enabled():
+    """Verify WAF Web ACL has CloudWatch metrics enabled."""
     waf_client = boto3.client('wafv2', region_name='us-east-1')
     response = waf_client.list_web_acls(Scope='CLOUDFRONT')
     acl = response['WebACLs'][0]
@@ -24,6 +28,7 @@ def test_waf_web_acl_has_cloudwatch_metrics_enabled():
 
 
 def test_waf_log_group_exists():
+    """Verify WAF log group exists."""
     logs_client = boto3.client('logs', region_name='us-east-1')
     response = logs_client.describe_log_groups(logGroupNamePrefix='aws-waf-logs-api')
     log_groups = [lg['logGroupName'] for lg in response['logGroups']]
@@ -31,6 +36,7 @@ def test_waf_log_group_exists():
 
 
 def test_waf_log_group_retention_is_30_days():
+    """Verify WAF log group has 30 day retention."""
     logs_client = boto3.client('logs', region_name='us-east-1')
     response = logs_client.describe_log_groups(logGroupNamePrefix='aws-waf-logs-api')
     retention_correct = False
@@ -40,6 +46,7 @@ def test_waf_log_group_retention_is_30_days():
 
 
 def test_waf_logging_configuration_exists():
+    """Verify WAF logging configuration exists."""
     waf_client = boto3.client('wafv2', region_name='us-east-1')
     response = waf_client.list_web_acls(Scope='CLOUDFRONT')
     logging_configured = False
@@ -52,6 +59,7 @@ def test_waf_logging_configuration_exists():
 
 
 def test_waf_logging_destinations_cloudwatch_logs():
+    """Verify WAF logs to CloudWatch Logs."""
     waf_client = boto3.client('wafv2', region_name='us-east-1')
     response = waf_client.list_web_acls(Scope='CLOUDFRONT')
     destination_correct = False

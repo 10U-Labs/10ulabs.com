@@ -1,153 +1,145 @@
+"""Tests for API Gateway Terraform configuration."""
 from pathlib import Path
 
 
+def _get_apigateway_tf_path() -> Path:
+    """Get the path to apigateway.tf file."""
+    base = Path(__file__).parent.parent.parent.parent.parent
+    return base / "src" / "api" / "backend" / "apigateway.tf"
+
+
+def _read_apigateway_tf() -> str:
+    """Read and return the apigateway.tf content."""
+    with open(_get_apigateway_tf_path(), encoding="utf-8") as f:
+        return f.read()
+
+
 def test_apigateway_terraform_file_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    assert apigateway_file.exists()
+    """Verify apigateway.tf file exists."""
+    assert _get_apigateway_tf_path().exists()
 
 
 def test_api_gateway_cloudwatch_log_group_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify CloudWatch log group resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_cloudwatch_log_group" "api_gateway"' in content
 
 
 def test_api_gateway_rest_api_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify REST API resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_api_gateway_rest_api" "main"' in content
 
 
 def test_api_gateway_rest_api_name_uses_variable():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify REST API name uses variable."""
+    content = _read_apigateway_tf()
     assert 'var.api_gateway_name' in content
 
 
 def test_api_gateway_deployment_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify deployment resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_api_gateway_deployment" "main"' in content
 
 
 def test_api_gateway_stage_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify stage resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_api_gateway_stage" "prod"' in content
 
 
 def test_api_gateway_stage_has_access_logging():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify stage has access logging configured."""
+    content = _read_apigateway_tf()
     assert 'access_log_settings' in content
 
 
 def test_api_gateway_stage_has_xray_tracing():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify stage has X-Ray tracing enabled."""
+    content = _read_apigateway_tf()
     assert 'xray_tracing_enabled' in content
 
 
 def test_lambda_permission_health_handler_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify Lambda permission for health handler exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_lambda_permission" "health_handler"' in content
 
 
 def test_lambda_permission_runners_handler_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify Lambda permission for runners handler exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_lambda_permission" "runners_handler"' in content
 
 
 def test_lambda_permission_catchall_handler_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify Lambda permission for catchall handler exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_lambda_permission" "catchall_handler"' in content
 
 
 def test_api_key_random_password_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify random password resource for API key exists."""
+    content = _read_apigateway_tf()
     assert 'resource "random_password" "api_key"' in content
 
 
 def test_api_gateway_api_key_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify API key resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_api_gateway_api_key" "main"' in content
 
 
 def test_api_gateway_usage_plan_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify usage plan resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_api_gateway_usage_plan" "main"' in content
 
 
 def test_api_gateway_usage_plan_key_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify usage plan key resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_api_gateway_usage_plan_key" "main"' in content
 
 
 def test_api_gateway_propagation_wait_resource_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify propagation wait null resource exists."""
+    content = _read_apigateway_tf()
     assert 'resource "null_resource" "api_gateway_propagation_wait"' in content
 
 
 def test_api_gateway_propagation_wait_depends_on_stage():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify propagation wait depends on stage."""
+    content = _read_apigateway_tf()
     assert "aws_api_gateway_stage.prod" in content
 
 
 def test_api_gateway_propagation_wait_depends_on_echo_permission():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify propagation wait depends on echo permission."""
+    content = _read_apigateway_tf()
     assert "aws_lambda_permission.echo_handler" in content
 
 
 def test_api_gateway_propagation_wait_triggers_on_deployment():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify propagation wait triggers on deployment."""
+    content = _read_apigateway_tf()
     assert "aws_api_gateway_deployment.main.id" in content
 
 
 def test_api_gateway_propagation_wait_uses_exponential_backoff():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify propagation wait uses exponential backoff."""
+    content = _read_apigateway_tf()
     assert "1 << N" in content
 
 
 def test_api_gateway_propagation_wait_polls_echo_endpoint():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify propagation wait polls echo endpoint."""
+    content = _read_apigateway_tf()
     assert "/v1/echo" in content
 
 
 def test_lambda_permission_simulation_soc_handler_exists():
-    apigateway_file = Path(__file__).parent.parent.parent.parent.parent / "src" / "api" / "backend" / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
-        content = f.read()
+    """Verify Lambda permission for simulation SOC handler exists."""
+    content = _read_apigateway_tf()
     assert 'resource "aws_lambda_permission" "simulation_soc_handler"' in content
