@@ -218,10 +218,10 @@ on:
     paths:
       - '.github/workflows/simulation_soc.yml'
       - 'src/api/endpoints/simulation_soc/**'
-      - 'src/www/paths/simulations/soc/**'
+      - 'src/www/paths/simulations/soc/*.html'
+      - 'src/www/paths/simulations/soc/css/**'
+      - 'src/www/paths/simulations/soc/js/**'
       - 'test/api/endpoints/simulation_soc/**'
-    paths-ignore:
-      - 'src/www/paths/simulations/soc/docs/**'
   workflow_dispatch:
     inputs:
       invalidate_cloudfront:
