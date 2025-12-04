@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Pre-git checks hook that runs static analysis before git commit/push operations."""
 import fnmatch
 import json
 import os
@@ -11,6 +12,7 @@ import yaml
 
 
 def get_changed_files():
+    """Get list of changed files from git staging area or last commit."""
     result = subprocess.run(
         ['git', 'diff', '--cached', '--name-only', '--no-ext-diff'],
         capture_output=True, text=True, check=False
@@ -26,6 +28,7 @@ def get_changed_files():
 
 
 def path_matches_pattern(file_path, pattern):
+    """Check if a file path matches a glob pattern."""
     if pattern.endswith('/**'):
         prefix = pattern[:-3]
         return file_path.startswith(prefix)
@@ -36,6 +39,7 @@ def path_matches_pattern(file_path, pattern):
 
 
 def file_matches_workflow_paths(file_path, paths):
+    """Check if a file matches any of the workflow path patterns."""
     for pattern in paths:
         if path_matches_pattern(file_path, pattern):
             return True
@@ -43,6 +47,7 @@ def file_matches_workflow_paths(file_path, paths):
 
 
 def get_workflow_paths(workflow):
+    """Extract path patterns from a workflow's on.push.paths configuration."""
     paths = []
     on_section = workflow.get('on') or workflow.get(True) or {}
     if isinstance(on_section, dict):
@@ -53,6 +58,7 @@ def get_workflow_paths(workflow):
 
 
 def is_pre_push_check_step(step_name, run_cmd):
+    """Determine if a workflow step is a pre-push check (linting, testing, etc.)."""
     step_lower = step_name.lower()
     static_keywords = [
         'lint', 'pylint', 'mypy', 'type check', 'static',
@@ -69,22 +75,26 @@ def is_pre_push_check_step(step_name, run_cmd):
 
 
 def is_conditional_on_github_hosted(condition):
+    """Check if a step condition depends on github-hosted runner."""
     if not condition:
         return False
     return 'github_hosted' in condition or 'github-hosted' in condition
 
 
 def is_static_analysis_job(job_name):
+    """Check if a job name indicates a static analysis job."""
     job_lower = job_name.lower().replace('-', '_').replace(' ', '_')
     return 'static' in job_lower or 'analysis' in job_lower or 'lint' in job_lower
 
 
 def is_test_job(job_name):
+    """Check if a job name indicates a test job."""
     job_lower = job_name.lower().replace('-', '_').replace(' ', '_')
     return 'test' in job_lower or 'unit' in job_lower or 'integration' in job_lower
 
 
 def extract_commands_from_jobs(workflow, job_filter):
+    """Extract run commands from workflow jobs that match the filter."""
     commands = []
     jobs = workflow.get('jobs', {})
     for job_name, job in jobs.items():
@@ -109,14 +119,17 @@ def extract_commands_from_jobs(workflow, job_filter):
 
 
 def extract_static_analysis_commands(workflow):
+    """Extract static analysis commands from a workflow."""
     return extract_commands_from_jobs(workflow, is_static_analysis_job)
 
 
 def extract_pre_deployment_test_commands(workflow):
+    """Extract pre-deployment test commands from a workflow."""
     return extract_commands_from_jobs(workflow, is_test_job)
 
 
 def find_matching_workflows(changed_files, workflows_dir):
+    """Find workflows whose path patterns match any of the changed files."""
     matching = []
     workflow_files = list(Path(workflows_dir).glob('*.yml'))
     for wf_path in workflow_files:
@@ -147,6 +160,7 @@ def find_matching_workflows(changed_files, workflows_dir):
 
 
 def clean_command(cmd):
+    """Clean a command by removing GitHub Actions template variables."""
     cmd = re.sub(r'\$\{\{[^}]+\}\}', '', cmd)
     lines = []
     for line in cmd.split('\n'):
@@ -160,6 +174,7 @@ def clean_command(cmd):
 
 
 def clean_script(raw_cmd):
+    """Clean a script by removing GitHub Actions variables and comments."""
     cleaned = re.sub(r'\$\{\{[^}]+\}\}', '', raw_cmd)
     lines = []
     for line in cleaned.split('\n'):
@@ -169,6 +184,7 @@ def clean_script(raw_cmd):
 
 
 def run_command(cmd_info, workflow_name):
+    """Run a single command and return True if it passes."""
     if cmd_info.get('conditional'):
         print("  [SKIP] Conditional on github-hosted")
         return True
@@ -211,6 +227,7 @@ def run_command(cmd_info, workflow_name):
 
 
 def run_commands(commands, workflow_name):
+    """Run all commands and return True if all pass."""
     all_passed = True
     for cmd_info in commands:
         if not run_command(cmd_info, workflow_name):
@@ -219,6 +236,7 @@ def run_commands(commands, workflow_name):
 
 
 def parse_command_from_stdin():
+    """Parse the bash command from Claude Code hook stdin JSON."""
     input_data = sys.stdin.read()
     try:
         data = json.loads(input_data)
@@ -228,6 +246,7 @@ def parse_command_from_stdin():
 
 
 def run_phase(matching_workflows, phase_name, extract_fn):
+    """Run a phase of checks (static analysis or tests) on matching workflows."""
     print("\n" + "="*60)
     print(f"PHASE: {phase_name}")
     print("="*60)
@@ -242,8 +261,9 @@ def run_phase(matching_workflows, phase_name, extract_fn):
 
 
 def main():
+    """Main entry point for the pre-git checks hook."""
     command = parse_command_from_stdin()
-    if not command or not re.match(r'^git\s+(commit|push)', command):
+    if not command or not re.search(r'\bgit\s+(commit|push)\b', command):
         sys.exit(0)
 
     print("Running static analysis before git operation...")
@@ -267,14 +287,18 @@ def main():
 
     print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
 
-    if not run_phase(matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands):
+    static_ok = run_phase(
+        matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands)
+    if not static_ok:
         print("\n" + "="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing")
         print("="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing", file=sys.stderr)
         sys.exit(2)
 
-    if not run_phase(matching_workflows, "PRE-DEPLOYMENT TESTS", extract_pre_deployment_test_commands):
+    tests_ok = run_phase(
+        matching_workflows, "PRE-DEPLOYMENT TESTS", extract_pre_deployment_test_commands)
+    if not tests_ok:
         print("\n" + "="*60)
         print("PRE-DEPLOYMENT TESTS FAILED - Fix issues before committing")
         print("="*60)

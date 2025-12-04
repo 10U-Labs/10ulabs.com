@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/bash-command-blocker.py",
+            "command": "python3 .claude/hooks/bash_command_blocker.py",
             "timeout": 300
           },
           {
@@ -21,27 +21,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/file-creation-blocker.py",
+            "command": "python3 .claude/hooks/file_creation_blocker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/lint-disable-blocker.py",
+            "command": "python3 .claude/hooks/lint_disable_blocker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/s3-versioning-checker.py",
+            "command": "python3 .claude/hooks/s3_versioning_checker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/code-quality-checker.py",
+            "command": "python3 .claude/hooks/code_quality_checker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/test-standards-checker.py",
+            "command": "python3 .claude/hooks/test_standards_checker.py",
             "timeout": 300
           }
         ]
@@ -51,22 +51,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 .claude/hooks/lint-disable-blocker.py",
+            "command": "python3 .claude/hooks/lint_disable_blocker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/s3-versioning-checker.py",
+            "command": "python3 .claude/hooks/s3_versioning_checker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/code-quality-checker.py",
+            "command": "python3 .claude/hooks/code_quality_checker.py",
             "timeout": 300
           },
           {
             "type": "command",
-            "command": "python3 .claude/hooks/test-standards-checker.py",
+            "command": "python3 .claude/hooks/test_standards_checker.py",
             "timeout": 300
           }
         ]

@@ -1,39 +1,50 @@
+"""Tests for code_quality_checker hook."""
+
+
 def test_is_code_file_returns_true_for_py(code_quality_checker):
+    """Test that Is code file returns true for py."""
     py_file_is_code = code_quality_checker.is_code_file('main.py')
     assert py_file_is_code
 
 
 def test_is_code_file_returns_true_for_ts(code_quality_checker):
+    """Test that Is code file returns true for ts."""
     ts_file_is_code = code_quality_checker.is_code_file('index.ts')
     assert ts_file_is_code
 
 
 def test_is_code_file_returns_true_for_tsx(code_quality_checker):
+    """Test that Is code file returns true for tsx."""
     tsx_file_is_code = code_quality_checker.is_code_file('App.tsx')
     assert tsx_file_is_code
 
 
 def test_is_code_file_returns_true_for_js(code_quality_checker):
+    """Test that Is code file returns true for js."""
     js_file_is_code = code_quality_checker.is_code_file('index.js')
     assert js_file_is_code
 
 
 def test_is_code_file_returns_true_for_jsx(code_quality_checker):
+    """Test that Is code file returns true for jsx."""
     jsx_file_is_code = code_quality_checker.is_code_file('App.jsx')
     assert jsx_file_is_code
 
 
 def test_is_code_file_returns_false_for_md(code_quality_checker):
+    """Test that Is code file returns false for md."""
     md_file_is_not_code = not code_quality_checker.is_code_file('README.md')
     assert md_file_is_not_code
 
 
 def test_is_code_file_returns_false_for_yaml(code_quality_checker):
+    """Test that Is code file returns false for yaml."""
     yaml_file_is_not_code = not code_quality_checker.is_code_file('config.yaml')
     assert yaml_file_is_not_code
 
 
 def test_check_python_detects_multiple_returns(code_quality_checker):
+    """Test that Check python detects multiple returns."""
     content = '''
 def foo(x):
     if x > 0:
@@ -46,6 +57,7 @@ def foo(x):
 
 
 def test_check_python_allows_single_return(code_quality_checker):
+    """Test that Check python allows single return."""
     content = '''
 def foo(x):
     result = 0
@@ -59,6 +71,7 @@ def foo(x):
 
 
 def test_check_python_detects_break_statement(code_quality_checker):
+    """Test that Check python detects break statement."""
     content = '''
 def foo(items):
     for item in items:
@@ -72,6 +85,7 @@ def foo(items):
 
 
 def test_check_python_detects_continue_statement(code_quality_checker):
+    """Test that Check python detects continue statement."""
     content = '''
 def foo(items):
     result = []
@@ -87,6 +101,7 @@ def foo(items):
 
 
 def test_check_python_allows_function_without_break_continue(code_quality_checker):
+    """Test that Check python allows function without break continue."""
     content = '''
 def foo(items):
     result = [item for item in items if item != 'skip']
@@ -98,6 +113,7 @@ def foo(items):
 
 
 def test_check_javascript_typescript_detects_break(code_quality_checker):
+    """Test that Check javascript typescript detects break."""
     content = '''
 function foo(items) {
   for (const item of items) {
@@ -113,6 +129,7 @@ function foo(items) {
 
 
 def test_check_javascript_typescript_detects_continue(code_quality_checker):
+    """Test that Check javascript typescript detects continue."""
     content = '''
 function foo(items) {
   for (const item of items) {
@@ -129,6 +146,7 @@ function foo(items) {
 
 
 def test_check_javascript_typescript_allows_code_without_break_continue(code_quality_checker):
+    """Test that Check javascript typescript allows code without break continue."""
     content = '''
 function foo(items) {
   const result = items.filter(item => item !== 'skip');
@@ -141,6 +159,7 @@ function foo(items) {
 
 
 def test_check_content_skips_non_code_files(code_quality_checker):
+    """Test that Check content skips non code files."""
     content = 'break; continue;'
     violations = code_quality_checker.check_content(content, 'README.md')
     non_code_file_is_skipped = len(violations) == 0
@@ -148,6 +167,7 @@ def test_check_content_skips_non_code_files(code_quality_checker):
 
 
 def test_check_content_processes_python_file(code_quality_checker):
+    """Test that Check content processes python file."""
     content = '''
 def foo(x):
     if x > 0:
@@ -160,6 +180,7 @@ def foo(x):
 
 
 def test_check_content_processes_typescript_file(code_quality_checker):
+    """Test that Check content processes typescript file."""
     content = '''
 function foo() {
   for (let i = 0; i < 10; i++) {

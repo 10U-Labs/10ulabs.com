@@ -1,39 +1,50 @@
+"""Tests for test_standards_checker hook."""
+
+
 def test_is_test_file_returns_true_for_test_prefix(test_standards_checker):
+    """Test that Is file returns true for prefix."""
     test_prefix_file_is_test = test_standards_checker.is_test_file('test_main.py')
     assert test_prefix_file_is_test
 
 
 def test_is_test_file_returns_true_for_test_suffix(test_standards_checker):
+    """Test that Is file returns true for suffix."""
     test_suffix_file_is_test = test_standards_checker.is_test_file('main_test.py')
     assert test_suffix_file_is_test
 
 
 def test_is_test_file_returns_true_for_spec_ts(test_standards_checker):
+    """Test that Is file returns true for spec ts."""
     spec_ts_file_is_test = test_standards_checker.is_test_file('main.spec.ts')
     assert spec_ts_file_is_test
 
 
 def test_is_test_file_returns_true_for_test_ts(test_standards_checker):
+    """Test that Is file returns true for ts."""
     test_ts_file_is_test = test_standards_checker.is_test_file('main.test.ts')
     assert test_ts_file_is_test
 
 
 def test_is_test_file_returns_true_for_spec_js(test_standards_checker):
+    """Test that Is file returns true for spec js."""
     spec_js_file_is_test = test_standards_checker.is_test_file('main.spec.js')
     assert spec_js_file_is_test
 
 
 def test_is_test_file_returns_false_for_regular_py(test_standards_checker):
+    """Test that Is file returns false for regular py."""
     regular_py_file_is_not_test = not test_standards_checker.is_test_file('main.py')
     assert regular_py_file_is_not_test
 
 
 def test_is_test_file_returns_false_for_regular_ts(test_standards_checker):
+    """Test that Is file returns false for regular ts."""
     regular_ts_file_is_not_test = not test_standards_checker.is_test_file('main.ts')
     assert regular_ts_file_is_not_test
 
 
 def test_check_python_tests_detects_multiple_asserts(test_standards_checker):
+    """Test that Check python tests detects multiple asserts."""
     content = '''
 def test_example():
     assert 1 == 1
@@ -45,6 +56,7 @@ def test_example():
 
 
 def test_check_python_tests_allows_single_assert(test_standards_checker):
+    """Test that Check python tests allows single assert."""
     content = '''
 def test_example():
     result_is_valid = True
@@ -56,6 +68,7 @@ def test_example():
 
 
 def test_check_python_tests_detects_invalid_variable_name(test_standards_checker):
+    """Test that Check python tests detects invalid variable name."""
     content = '''
 def test_example():
     x = True
@@ -67,6 +80,7 @@ def test_example():
 
 
 def test_check_python_tests_allows_valid_variable_name_with_verb(test_standards_checker):
+    """Test that Check python tests allows valid variable name with verb."""
     content = '''
 def test_example():
     result_is_valid = True
@@ -78,6 +92,7 @@ def test_example():
 
 
 def test_check_python_tests_allows_variable_name_with_exists(test_standards_checker):
+    """Test that Check python tests allows variable name with exists."""
     content = '''
 def test_example():
     file_exists = True
@@ -89,6 +104,7 @@ def test_example():
 
 
 def test_check_python_tests_allows_variable_name_with_contains(test_standards_checker):
+    """Test that Check python tests allows variable name with contains."""
     content = '''
 def test_example():
     list_contains_item = True
@@ -100,6 +116,7 @@ def test_example():
 
 
 def test_check_python_tests_skips_non_test_functions(test_standards_checker):
+    """Test that Check python tests skips non functions."""
     content = '''
 def helper():
     assert 1 == 1
@@ -111,6 +128,7 @@ def helper():
 
 
 def test_check_javascript_typescript_tests_detects_multiple_expects(test_standards_checker):
+    """Test that Check javascript typescript tests detects multiple expects."""
     content = '''
 it('should work', () => {
   expect(1).toBe(1);
@@ -123,6 +141,7 @@ it('should work', () => {
 
 
 def test_check_javascript_typescript_tests_allows_single_expect(test_standards_checker):
+    """Test that Check javascript typescript tests allows single expect."""
     content = '''
 it('should work', () => {
   expect(result).toBe(true);
@@ -134,6 +153,7 @@ it('should work', () => {
 
 
 def test_check_content_skips_non_test_files(test_standards_checker):
+    """Test that Check content skips non files."""
     content = '''
 def test_example():
     assert 1 == 1
@@ -145,6 +165,7 @@ def test_example():
 
 
 def test_check_content_processes_test_file(test_standards_checker):
+    """Test that Check content processes file."""
     content = '''
 def test_example():
     assert 1 == 1
@@ -156,6 +177,7 @@ def test_example():
 
 
 def test_check_content_processes_spec_file(test_standards_checker):
+    """Test that Check content processes spec file."""
     content = '''
 it('should work', () => {
   expect(1).toBe(1);
