@@ -25,7 +25,7 @@ test.describe("SPA routing", () => {
 
     test("contains privacy content", async ({ page }) => {
       await page.goto("/privacy.html");
-      const privacyHeading = page.getByRole("heading", { name: /privacy/i });
+      const privacyHeading = page.getByRole("heading", { name: "Privacy Notice", exact: true });
       const isVisible = await privacyHeading.isVisible();
       expect(isVisible).toBe(true);
     });
@@ -39,7 +39,7 @@ test.describe("home page content", () => {
 
   test.describe("hero section", () => {
     test("displays company name", async ({ page }) => {
-      const companyName = page.getByText("10U Labs, LLC");
+      const companyName = page.getByRole("heading", { name: "10U Labs, LLC" });
       const isVisible = await companyName.isVisible();
       expect(isVisible).toBe(true);
     });
@@ -65,8 +65,8 @@ test.describe("home page content", () => {
     });
 
     test("has about section", async ({ page }) => {
-      const aboutSection = page.locator("#about");
-      const isVisible = await aboutSection.isVisible();
+      const aboutHeading = page.getByRole("heading", { name: "About 10U Labs" });
+      const isVisible = await aboutHeading.isVisible();
       expect(isVisible).toBe(true);
     });
   });
