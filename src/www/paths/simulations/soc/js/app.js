@@ -86,7 +86,7 @@ function createSocCard(label, ipc, maxIpc, cardType, perfText) {
 function createCoreDiagramSvg(activeIsa) {
     var svgNS = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(svgNS, 'svg');
-    svg.setAttribute('viewBox', '0 0 220 320');
+    svg.setAttribute('viewBox', '0 0 220 280');
     svg.setAttribute('class', 'core-diagram');
 
     function rect(x, y, w, h, classes) {
@@ -118,96 +118,93 @@ function createCoreDiagramSvg(activeIsa) {
 
     var isTriMode = activeIsa !== 'native';
     var arm64Active = activeIsa === 'arm64';
-    var riscvActive = activeIsa === 'riscv' || activeIsa === 'native';
+    var riscvActive = activeIsa === 'riscv';
     var x86Active = activeIsa === 'x86_64';
 
-    // Instruction Fetch + Mode Steering
+    // Instruction Fetch
     svg.appendChild(rect(10, 10, 200, 25, 'block active'));
-    svg.appendChild(text(110, 27, 'Instruction Fetch', 'block-text'));
+    svg.appendChild(text(110, 27, 'Instruction Fetch (16B/cyc)', 'block-text small'));
+    svg.appendChild(path('M110 35 L110 48', 'arrow active'));
 
     if (isTriMode) {
-        // Mode steering
-        svg.appendChild(rect(10, 45, 200, 18, 'block active mode-steer'));
-        svg.appendChild(text(110, 57, 'Mode Steering (ISA bits)', 'block-text tiny'));
-        svg.appendChild(path('M110 35 L110 45', 'arrow active'));
+        // Three parallel decode lanes (0 extra stages)
+        svg.appendChild(rect(10, 48, 60, 28, 'block ' + (arm64Active ? 'active arm64' : 'inactive')));
+        svg.appendChild(text(40, 60, 'ARM64', 'block-text small' + (arm64Active ? '' : ' inactive')));
+        svg.appendChild(text(40, 70, 'Decode', 'block-text tiny' + (arm64Active ? '' : ' inactive')));
 
-        // Three parallel decode lanes
-        svg.appendChild(rect(10, 73, 60, 22, 'block ' + (arm64Active ? 'active arm64' : 'inactive')));
-        svg.appendChild(text(40, 88, 'ARM64', 'block-text small' + (arm64Active ? '' : ' inactive')));
+        svg.appendChild(rect(80, 48, 60, 28, 'block ' + (riscvActive ? 'active riscv' : 'inactive')));
+        svg.appendChild(text(110, 60, 'RISC-V', 'block-text small' + (riscvActive ? '' : ' inactive')));
+        svg.appendChild(text(110, 70, 'Decode', 'block-text tiny' + (riscvActive ? '' : ' inactive')));
 
-        svg.appendChild(rect(80, 73, 60, 22, 'block ' + (riscvActive ? 'active riscv' : 'inactive')));
-        svg.appendChild(text(110, 88, 'RISC-V', 'block-text small' + (riscvActive ? '' : ' inactive')));
+        svg.appendChild(rect(150, 48, 60, 28, 'block ' + (x86Active ? 'active x86' : 'inactive')));
+        svg.appendChild(text(180, 60, 'x86-64', 'block-text small' + (x86Active ? '' : ' inactive')));
+        svg.appendChild(text(180, 70, 'Decode', 'block-text tiny' + (x86Active ? '' : ' inactive')));
 
-        svg.appendChild(rect(150, 73, 60, 22, 'block ' + (x86Active ? 'active x86' : 'inactive')));
-        svg.appendChild(text(180, 88, 'x86-64', 'block-text small' + (x86Active ? '' : ' inactive')));
-
-        // Arrows to decode lanes
-        svg.appendChild(path('M40 63 L40 73', 'arrow ' + (arm64Active ? 'active' : 'inactive')));
-        svg.appendChild(path('M110 63 L110 73', 'arrow ' + (riscvActive ? 'active' : 'inactive')));
-        svg.appendChild(path('M180 63 L180 73', 'arrow ' + (x86Active ? 'active' : 'inactive')));
-
-        // Micro-op queue (all lanes emit here)
-        svg.appendChild(rect(10, 105, 200, 22, 'block active'));
-        svg.appendChild(text(110, 120, 'Micro-op Queue (RISC-V ops)', 'block-text tiny'));
-
-        // Arrows from decoders to micro-op queue
-        svg.appendChild(path('M40 95 L40 105', 'arrow ' + (arm64Active ? 'active' : 'inactive')));
-        svg.appendChild(path('M110 95 L110 105', 'arrow ' + (riscvActive ? 'active' : 'inactive')));
-        svg.appendChild(path('M180 95 L180 105', 'arrow ' + (x86Active ? 'active' : 'inactive')));
-
-        // Flags predictor (side component for x86/ARM)
-        if (x86Active || arm64Active) {
-            svg.appendChild(rect(165, 137, 45, 35, 'block active optimization'));
-            svg.appendChild(text(187, 152, 'Flags', 'block-text tiny'));
-            svg.appendChild(text(187, 163, 'Predictor', 'block-text tiny'));
+        // Arrows from active decoder to µop queue
+        if (arm64Active) {
+            svg.appendChild(path('M40 76 L110 90', 'arrow active'));
+        } else if (riscvActive) {
+            svg.appendChild(path('M110 76 L110 90', 'arrow active'));
+        } else if (x86Active) {
+            svg.appendChild(path('M180 76 L110 90', 'arrow active'));
         }
 
-        svg.appendChild(path('M110 127 L110 137', 'arrow active'));
+        // Micro-op queue - all decoders emit RISC-V µops
+        svg.appendChild(rect(10, 90, 200, 22, 'block active'));
+        svg.appendChild(text(110, 105, 'RISC-V Micro-op Queue', 'block-text small'));
+
+        // Flags predictor annotation for x86/ARM (reduces overhead)
+        if (x86Active) {
+            svg.appendChild(rect(10, 118, 200, 16, 'block active optimization'));
+            svg.appendChild(text(110, 129, 'Flags Predictor (0.15 µops/use vs 3)', 'block-text tiny'));
+            svg.appendChild(path('M110 112 L110 118', 'arrow active'));
+            svg.appendChild(path('M110 134 L110 145', 'arrow active'));
+        } else if (arm64Active) {
+            svg.appendChild(rect(10, 118, 200, 16, 'block active optimization'));
+            svg.appendChild(text(110, 129, 'Flags Predictor (0.1 µops/use)', 'block-text tiny'));
+            svg.appendChild(path('M110 112 L110 118', 'arrow active'));
+            svg.appendChild(path('M110 134 L110 145', 'arrow active'));
+        } else {
+            svg.appendChild(path('M110 112 L110 145', 'arrow active'));
+        }
     } else {
-        // Non-tri-mode: single RISC-V decoder
-        svg.appendChild(path('M110 35 L110 73', 'arrow active'));
-        svg.appendChild(rect(50, 73, 120, 22, 'block active'));
-        svg.appendChild(text(110, 88, 'RISC-V Decoder', 'block-text small'));
-        svg.appendChild(path('M110 95 L110 137', 'arrow active'));
+        // Native core: single optimized decoder for that ISA (hypothetical reference)
+        svg.appendChild(rect(40, 48, 140, 28, 'block active'));
+        svg.appendChild(text(110, 60, 'Native ISA Decoder', 'block-text small'));
+        svg.appendChild(text(110, 70, '(hypothetical reference)', 'block-text tiny'));
+        svg.appendChild(path('M110 76 L110 90', 'arrow active'));
+
+        // Direct to backend µops
+        svg.appendChild(rect(10, 90, 200, 22, 'block active'));
+        svg.appendChild(text(110, 105, 'Native Micro-ops', 'block-text small'));
+        svg.appendChild(path('M110 112 L110 145', 'arrow active'));
     }
 
-    // Rename/Dispatch
-    svg.appendChild(rect(10, 137, 145, 22, 'block active'));
-    svg.appendChild(text(82, 152, 'Rename / Dispatch', 'block-text small'));
-    svg.appendChild(path('M110 159 L110 172', 'arrow active'));
+    // Rename/Dispatch - shared backend starts here
+    svg.appendChild(rect(10, 145, 200, 22, 'block active'));
+    svg.appendChild(text(110, 160, 'Rename / Dispatch (3-wide)', 'block-text small'));
+    svg.appendChild(path('M110 167 L110 180', 'arrow active'));
 
     // ROB + Register File
-    svg.appendChild(rect(10, 172, 95, 22, 'block active'));
-    svg.appendChild(text(57, 187, 'ROB (128)', 'block-text small'));
-    svg.appendChild(rect(115, 172, 95, 22, 'block active'));
-    svg.appendChild(text(162, 187, 'Registers', 'block-text small'));
-    svg.appendChild(path('M110 194 L110 207', 'arrow active'));
+    svg.appendChild(rect(10, 180, 95, 22, 'block active'));
+    svg.appendChild(text(57, 195, 'ROB (128)', 'block-text small'));
+    svg.appendChild(rect(115, 180, 95, 22, 'block active'));
+    svg.appendChild(text(162, 195, 'Registers', 'block-text small'));
+    svg.appendChild(path('M110 202 L110 215', 'arrow active'));
 
     // Execution Units
-    svg.appendChild(rect(10, 207, 200, 22, 'block active'));
-    svg.appendChild(text(110, 222, 'Execution Units (3-wide)', 'block-text small'));
-    svg.appendChild(path('M110 229 L110 242', 'arrow active'));
+    svg.appendChild(rect(10, 215, 200, 22, 'block active'));
+    svg.appendChild(text(110, 230, 'Execution Units (3 ALU, 2 LD, 1 ST)', 'block-text tiny'));
+    svg.appendChild(path('M110 237 L110 250', 'arrow active'));
 
-    // Load-Store Unit with TSO mode
+    // Load-Store Unit with TSO mode for x86
     if (isTriMode && x86Active) {
-        svg.appendChild(rect(10, 242, 200, 22, 'block active optimization'));
-        svg.appendChild(text(110, 257, 'Load-Store Unit [TSO mode]', 'block-text small'));
+        svg.appendChild(rect(10, 250, 200, 22, 'block active optimization'));
+        svg.appendChild(text(110, 265, 'Load-Store [HW TSO: 0 fence overhead]', 'block-text tiny'));
     } else {
-        svg.appendChild(rect(10, 242, 200, 22, 'block active'));
-        svg.appendChild(text(110, 257, 'Load-Store Unit', 'block-text small'));
+        svg.appendChild(rect(10, 250, 200, 22, 'block active'));
+        svg.appendChild(text(110, 265, 'Load-Store Unit', 'block-text small'));
     }
-    svg.appendChild(path('M110 264 L110 277', 'arrow active'));
-
-    // L1 Cache
-    svg.appendChild(rect(10, 277, 95, 18, 'block active'));
-    svg.appendChild(text(57, 290, 'L1I 32KB', 'block-text tiny'));
-    svg.appendChild(rect(115, 277, 95, 18, 'block active'));
-    svg.appendChild(text(162, 290, 'L1D 32KB', 'block-text tiny'));
-    svg.appendChild(path('M110 295 L110 305', 'arrow active'));
-
-    // L2 Cache
-    svg.appendChild(rect(10, 305, 200, 15, 'block active'));
-    svg.appendChild(text(110, 316, 'L2 512KB', 'block-text tiny'));
 
     return svg;
 }
