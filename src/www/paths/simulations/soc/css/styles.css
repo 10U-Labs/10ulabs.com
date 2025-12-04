@@ -350,7 +350,7 @@ h2 {
 }
 
 .diagram-row-single .diagram-card {
-    max-width: 250px;
+    max-width: 280px;
 }
 
 .diagram-row-triple {
@@ -454,8 +454,23 @@ h2 {
     font-size: 7px;
 }
 
+.core-diagram .block-text.tiny {
+    font-size: 6px;
+}
+
 .core-diagram .block-text.inactive {
     fill: #94a3b8;
+}
+
+.core-diagram .block.optimization {
+    fill: #fef3c7;
+    stroke: #f59e0b;
+    stroke-width: 1.5;
+}
+
+.core-diagram .block.mode-steer {
+    fill: #e0e7ff;
+    stroke: #6366f1;
 }
 
 .core-diagram .arrow {
