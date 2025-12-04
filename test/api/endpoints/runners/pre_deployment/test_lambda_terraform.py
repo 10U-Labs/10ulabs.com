@@ -1,3 +1,6 @@
+import re
+
+
 def test_lambda_terraform_file_exists(runners_src_path):
     lambda_file = runners_src_path / "lambda.tf"
     assert lambda_file.exists()
@@ -103,7 +106,6 @@ def test_spot_interruption_handler_lambda_exists(runners_src_path):
 
 
 def test_all_lambdas_use_python313_runtime(runners_src_path):
-    import re
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()

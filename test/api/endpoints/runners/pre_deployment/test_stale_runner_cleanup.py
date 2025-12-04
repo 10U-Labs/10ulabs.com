@@ -708,7 +708,7 @@ def test_cleanup_orphaned_github_runners_returns_error_without_token(stale_runne
     assert result['errors'] == 1
 
 
-def test_cleanup_orphaned_github_runners_returns_error_when_api_fails(stale_runner_cleanup, mock_urllib_response_factory):
+def test_cleanup_orphaned_github_runners_returns_error_when_api_fails(stale_runner_cleanup):
     error = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
     with patch.dict('os.environ', {'GITHUB_REPO': 'owner/repo'}):
         with patch('urllib.request.urlopen', side_effect=error):
