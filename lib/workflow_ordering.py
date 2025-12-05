@@ -19,7 +19,7 @@ import fnmatch
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Set, Union
 
 import yaml
 
@@ -30,16 +30,16 @@ class WorkflowConfig:
 
     name: str
     level: int
-    paths: list[str] = field(default_factory=list)
-    depends_on: list[str] = field(default_factory=list)
+    paths: List[str] = field(default_factory=list)
+    depends_on: List[str] = field(default_factory=list)
 
 
 @dataclass
 class WorkflowOrder:
     """Parsed workflow ordering configuration."""
 
-    workflows: dict[str, WorkflowConfig] = field(default_factory=dict)
-    levels: dict[int, list[str]] = field(default_factory=lambda: defaultdict(list))
+    workflows: Dict[str, WorkflowConfig] = field(default_factory=dict)
+    levels: Dict[int, List[str]] = field(default_factory=lambda: defaultdict(list))
 
 
 class WorkflowOrderError(Exception):
@@ -50,7 +50,7 @@ class CircularDependencyError(WorkflowOrderError):
     """Raised when circular dependencies are detected."""
 
 
-def parse_workflow_order(yaml_path: str | Path) -> WorkflowOrder:
+def parse_workflow_order(yaml_path: Union[str, Path]) -> WorkflowOrder:
     """
     Parse a workflow order YAML file into a WorkflowOrder object.
 
@@ -145,10 +145,10 @@ def _check_circular_dependencies(order: WorkflowOrder) -> None:
     Raises:
         CircularDependencyError: If circular dependencies are detected.
     """
-    visited: set[str] = set()
-    rec_stack: set[str] = set()
+    visited: Set[str] = set()
+    rec_stack: Set[str] = set()
 
-    def visit(name: str, path: list[str]) -> None:
+    def visit(name: str, path: List[str]) -> None:
         if name in rec_stack:
             cycle = path[path.index(name) :] + [name]
             raise CircularDependencyError(
@@ -172,8 +172,8 @@ def _check_circular_dependencies(order: WorkflowOrder) -> None:
 
 
 def get_affected_workflows(
-    changed_files: list[str], order: WorkflowOrder
-) -> set[str]:
+    changed_files: List[str], order: WorkflowOrder
+) -> Set[str]:
     """
     Determine which workflows are affected by a set of changed files.
 
@@ -184,7 +184,7 @@ def get_affected_workflows(
     Returns:
         Set of affected workflow names.
     """
-    affected: set[str] = set()
+    affected: Set[str] = set()
 
     for file_path in changed_files:
         for name, workflow in order.workflows.items():
@@ -239,8 +239,8 @@ def _matches_pattern(file_path: str, pattern: str) -> bool:
 
 
 def get_deployment_order(
-    affected: set[str], order: WorkflowOrder
-) -> list[list[str]]:
+    affected: Set[str], order: WorkflowOrder
+) -> List[List[str]]:
     """
     Get the deployment order for affected workflows.
 
@@ -259,7 +259,7 @@ def get_deployment_order(
         return []
 
     # Group affected workflows by level
-    levels_with_affected: dict[int, list[str]] = defaultdict(list)
+    levels_with_affected: Dict[int, List[str]] = defaultdict(list)
 
     for name in affected:
         if name in order.workflows:
@@ -267,7 +267,7 @@ def get_deployment_order(
             levels_with_affected[level].append(name)
 
     # Sort by level and return
-    result: list[list[str]] = []
+    result: List[List[str]] = []
     for level in sorted(levels_with_affected.keys()):
         result.append(sorted(levels_with_affected[level]))
 
@@ -275,7 +275,7 @@ def get_deployment_order(
 
 
 def should_wait_for(
-    workflow: str, completed: set[str], order: WorkflowOrder
+    workflow: str, completed: Set[str], order: WorkflowOrder
 ) -> Optional[str]:
     """
     Check if a workflow should wait for dependencies.
@@ -307,7 +307,7 @@ def should_wait_for(
     return None
 
 
-def get_all_dependencies(workflow: str, order: WorkflowOrder) -> set[str]:
+def get_all_dependencies(workflow: str, order: WorkflowOrder) -> Set[str]:
     """
     Get all transitive dependencies for a workflow.
 
@@ -321,7 +321,7 @@ def get_all_dependencies(workflow: str, order: WorkflowOrder) -> set[str]:
     if workflow not in order.workflows:
         return set()
 
-    deps: set[str] = set()
+    deps: Set[str] = set()
     config = order.workflows[workflow]
 
     # Add explicit dependencies and their transitive deps

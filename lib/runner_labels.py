@@ -16,7 +16,7 @@ Example label combinations:
 
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, List, Optional
 
 
 # Valid label values
@@ -65,7 +65,7 @@ class LabelValidationError(Exception):
     """Raised when label validation fails."""
 
 
-def parse_labels(label_list: list[str]) -> ParsedLabels:
+def parse_labels(label_list: List[str]) -> ParsedLabels:
     """
     Parse a list of runner labels into structured components.
 
@@ -181,7 +181,7 @@ def get_instance_type(parsed: ParsedLabels) -> Optional[str]:
     return INSTANCE_TYPES.get(parsed.compute)
 
 
-def get_ecs_config(parsed: ParsedLabels) -> Optional[dict[str, str]]:
+def get_ecs_config(parsed: ParsedLabels) -> Optional[Dict[str, str]]:
     """
     Get the ECS task configuration for a parsed label set.
 
