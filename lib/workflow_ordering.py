@@ -50,20 +50,8 @@ class CircularDependencyError(WorkflowOrderError):
     """Raised when circular dependencies are detected."""
 
 
-def parse_workflow_order(yaml_path: Union[str, Path]) -> WorkflowOrder:
-    """
-    Parse a workflow order YAML file into a WorkflowOrder object.
-
-    Args:
-        yaml_path: Path to the workflow-order.yml file.
-
-    Returns:
-        WorkflowOrder with workflows and levels populated.
-
-    Raises:
-        WorkflowOrderError: If the YAML is invalid or malformed.
-        CircularDependencyError: If circular dependencies are detected.
-    """
+def _load_yaml_file(yaml_path: Union[str, Path]) -> dict:
+    """Load and validate a YAML file exists and contains a mapping."""
     path = Path(yaml_path)
 
     if not path.exists():
@@ -80,6 +68,59 @@ def parse_workflow_order(yaml_path: Union[str, Path]) -> WorkflowOrder:
             f"Workflow order file must contain a YAML mapping, got: {type(data).__name__}"
         )
 
+    return data
+
+
+def _parse_workflow_config(name: str, config: dict) -> WorkflowConfig:
+    """Parse and validate a single workflow configuration."""
+    if not isinstance(config, dict):
+        raise WorkflowOrderError(f"Workflow '{name}' configuration must be a mapping")
+
+    level = config.get("level")
+    if level is None:
+        raise WorkflowOrderError(f"Workflow '{name}' must have a 'level'")
+    if not isinstance(level, int) or level < 0:
+        raise WorkflowOrderError(
+            f"Workflow '{name}' level must be a non-negative integer"
+        )
+
+    paths = config.get("paths", [])
+    if not isinstance(paths, list):
+        raise WorkflowOrderError(f"Workflow '{name}' paths must be a list")
+
+    depends_on = config.get("depends_on", [])
+    if not isinstance(depends_on, list):
+        raise WorkflowOrderError(f"Workflow '{name}' depends_on must be a list")
+
+    return WorkflowConfig(name=name, level=level, paths=paths, depends_on=depends_on)
+
+
+def _validate_dependencies(order: WorkflowOrder) -> None:
+    """Validate that all workflow dependencies reference existing workflows."""
+    for name, workflow in order.workflows.items():
+        for dep in workflow.depends_on:
+            if dep not in order.workflows:
+                raise WorkflowOrderError(
+                    f"Workflow '{name}' depends on unknown workflow '{dep}'"
+                )
+
+
+def parse_workflow_order(yaml_path: Union[str, Path]) -> WorkflowOrder:
+    """
+    Parse a workflow order YAML file into a WorkflowOrder object.
+
+    Args:
+        yaml_path: Path to the workflow-order.yml file.
+
+    Returns:
+        WorkflowOrder with workflows and levels populated.
+
+    Raises:
+        WorkflowOrderError: If the YAML is invalid or malformed.
+        CircularDependencyError: If circular dependencies are detected.
+    """
+    data = _load_yaml_file(yaml_path)
+
     if "workflows" not in data:
         raise WorkflowOrderError("Workflow order file must contain 'workflows' key")
 
@@ -90,46 +131,11 @@ def parse_workflow_order(yaml_path: Union[str, Path]) -> WorkflowOrder:
     order = WorkflowOrder()
 
     for name, config in workflows_data.items():
-        if not isinstance(config, dict):
-            raise WorkflowOrderError(
-                f"Workflow '{name}' configuration must be a mapping"
-            )
-
-        level = config.get("level")
-        if level is None:
-            raise WorkflowOrderError(f"Workflow '{name}' must have a 'level'")
-        if not isinstance(level, int) or level < 0:
-            raise WorkflowOrderError(
-                f"Workflow '{name}' level must be a non-negative integer"
-            )
-
-        paths = config.get("paths", [])
-        if not isinstance(paths, list):
-            raise WorkflowOrderError(f"Workflow '{name}' paths must be a list")
-
-        depends_on = config.get("depends_on", [])
-        if not isinstance(depends_on, list):
-            raise WorkflowOrderError(f"Workflow '{name}' depends_on must be a list")
-
-        workflow = WorkflowConfig(
-            name=name,
-            level=level,
-            paths=paths,
-            depends_on=depends_on,
-        )
-
+        workflow = _parse_workflow_config(name, config)
         order.workflows[name] = workflow
-        order.levels[level].append(name)
+        order.levels[workflow.level].append(name)
 
-    # Validate dependencies exist
-    for name, workflow in order.workflows.items():
-        for dep in workflow.depends_on:
-            if dep not in order.workflows:
-                raise WorkflowOrderError(
-                    f"Workflow '{name}' depends on unknown workflow '{dep}'"
-                )
-
-    # Check for circular dependencies
+    _validate_dependencies(order)
     _check_circular_dependencies(order)
 
     return order

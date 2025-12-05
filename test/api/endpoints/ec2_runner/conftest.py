@@ -1,3 +1,4 @@
+"""Pytest fixtures for EC2 runner tests."""
 import os
 import re
 from pathlib import Path
@@ -12,6 +13,7 @@ EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 
 
 def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
+    """Parse a Terraform locals file and resolve shared module references."""
     config: Dict[str, str] = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
@@ -30,18 +32,22 @@ def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, st
 
 
 def parse_api_locals() -> Dict[str, str]:
+    """Parse API and EC2 runner locals files into a config dict."""
     shared = parse_shared_module_outputs()
     api_locals_path = REPO_ROOT / "src" / "api" / "backend" / "locals.tf"
-    ec2_runner_locals_path = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "locals.tf"
+    ec2_locals_path = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "locals.tf"
     config = parse_locals_file(api_locals_path, shared)
-    ec2_runner_locals = parse_locals_file(ec2_runner_locals_path, shared)
+    ec2_runner_locals = parse_locals_file(ec2_locals_path, shared)
     config.update(ec2_runner_locals)
     config['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
-    config['github_repo_full'] = f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}"
+    github_org = shared.get('github_org', '')
+    repo_name = shared.get('name_for_github_repo', '')
+    config['github_repo_full'] = f"{github_org}/{repo_name}"
     return config
 
 
 def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
+    """Parse a Terraform tfvars file into a dict."""
     result: Dict[str, Any] = {}
     with open(tfvars_path, encoding="utf-8") as f:
         content = f.read()
@@ -64,10 +70,13 @@ def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, Any]:
+    """Provide configuration for EC2 runner tests."""
     api_tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
-    ec2_runner_tfvars_path = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "terraform.tfvars"
+    ec2_tfvars_path = (
+        REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "terraform.tfvars"
+    )
     result = parse_tfvars(api_tfvars_path)
-    ec2_runner_vars = parse_tfvars(ec2_runner_tfvars_path)
+    ec2_runner_vars = parse_tfvars(ec2_tfvars_path)
     result.update(ec2_runner_vars)
     api_locals = parse_api_locals()
     result['aws_region'] = api_locals.get('aws_region', '')
@@ -75,12 +84,16 @@ def config_fixture() -> Dict[str, Any]:
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
     result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
-    result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
+    result['ec2_runner_ami_purpose_value'] = api_locals.get(
+        'ec2_runner_ami_purpose_value', ''
+    )
     result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
     result['ssm_parameter_name_for_github_pat'] = os.environ.get(
         'SSM_PARAMETER_NAME_FOR_GITHUB_PAT', '/test/github/pat'
     )
-    result['ssm_parameter_name_for_api_key'] = result.get('ssm_parameter_name_for_api_key', '/api/key')
+    result['ssm_parameter_name_for_api_key'] = result.get(
+        'ssm_parameter_name_for_api_key', '/api/key'
+    )
     runner_labels = get_runner_labels()
     result.update(runner_labels)
     return result
@@ -88,9 +101,11 @@ def config_fixture() -> Dict[str, Any]:
 
 @pytest.fixture
 def ec2_client():
+    """Provide an EC2 client."""
     return boto3.client('ec2', region_name='us-east-1')
 
 
 @pytest.fixture
 def dynamodb_client():
+    """Provide a DynamoDB client."""
     return boto3.client('dynamodb', region_name='us-east-1')

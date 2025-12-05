@@ -1,3 +1,4 @@
+"""Pytest fixtures for EC2 runner integration tests."""
 from ..conftest import (
     api_key_fixture,
     api_url_fixture,

@@ -1,3 +1,4 @@
+"""Lambda handler for EC2 runner API endpoint."""
 import base64
 import json
 import logging
@@ -20,14 +21,17 @@ _dependencies_validated: Dict[str, Any] = {'checked': False, 'valid': False, 'er
 
 
 def is_test_mode() -> bool:
+    """Check if test mode is enabled."""
     return _test_mode['enabled']
 
 
 def set_test_mode(enabled: bool):
+    """Enable or disable test mode."""
     _test_mode['enabled'] = enabled
 
 
 def get_header_case_insensitive(headers: dict, header_name: str) -> str:
+    """Get a header value by name, case-insensitively."""
     if not headers:
         return ''
     for key, value in headers.items():
@@ -37,28 +41,33 @@ def get_header_case_insensitive(headers: dict, header_name: str) -> str:
 
 
 def get_ec2_client():
+    """Get or create a cached EC2 client."""
     if 'ec2' not in _clients:
         _clients['ec2'] = boto3.client('ec2')
     return _clients['ec2']
 
 
 def get_ssm_client():
+    """Get or create a cached SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_dynamodb_client():
+    """Get or create a cached DynamoDB client."""
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
 
 
 def set_client(name: str, client: Any):
+    """Set a client in the cache for testing purposes."""
     _clients[name] = client
 
 
 def get_api_key() -> str:
+    """Get the API key from SSM Parameter Store, with caching."""
     api_key = _api_key_cache['value']
     if api_key:
         return api_key
@@ -71,6 +80,7 @@ def get_api_key() -> str:
 
 
 def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
+    """Validate that security groups exist in AWS."""
     if not security_group_ids:
         return {'valid': True, 'missing': []}
     try:
@@ -86,6 +96,7 @@ def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
 
 
 def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
+    """Validate that subnets exist in AWS."""
     if not subnet_ids:
         return {'valid': True, 'missing': []}
     try:
@@ -101,6 +112,7 @@ def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
 
 
 def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
+    """Validate that a VPC exists in AWS."""
     if not vpc_id:
         return {'valid': False, 'error': 'VPC ID not configured'}
     try:
@@ -115,6 +127,7 @@ def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
 
 
 def validate_all_dependencies() -> Dict[str, Any]:
+    """Validate all infrastructure dependencies (SGs, subnets, VPC)."""
     errors = []
     security_groups_env = os.environ.get('SECURITY_GROUPS')
     security_group_ids = security_groups_env.split(',') if security_groups_env else []
@@ -148,9 +161,11 @@ def validate_all_dependencies() -> Dict[str, Any]:
 
 
 def ensure_dependencies_valid():
+    """Ensure infrastructure dependencies are valid, raising if not."""
     if _dependencies_validated['checked']:
         if not _dependencies_validated['valid']:
-            raise RuntimeError(f"Infrastructure dependencies are invalid: {_dependencies_validated['errors']}")
+            errors = _dependencies_validated['errors']
+            raise RuntimeError(f"Infrastructure dependencies are invalid: {errors}")
         return
 
     result = validate_all_dependencies()
@@ -166,12 +181,14 @@ def ensure_dependencies_valid():
 
 
 def reset_dependency_validation():
+    """Reset the dependency validation cache."""
     _dependencies_validated['checked'] = False
     _dependencies_validated['valid'] = False
     _dependencies_validated['errors'] = []
 
 
 def get_dependencies_status():
+    """Get the current dependency validation status."""
     return {
         'checked': _dependencies_validated['checked'],
         'valid': _dependencies_validated['valid'],
@@ -180,12 +197,14 @@ def get_dependencies_status():
 
 
 def set_dependencies_status(checked, valid, errors):
+    """Set the dependency validation status for testing."""
     _dependencies_validated['checked'] = checked
     _dependencies_validated['valid'] = valid
     _dependencies_validated['errors'] = errors
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a JSON HTTP response with standard headers."""
     return {
         'statusCode': status_code,
         'headers': {
@@ -199,11 +218,13 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def success_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a success HTTP response."""
     status_code = 200 if data.get('success', True) else 500
     return json_response(status_code, data)
 
 
 def error_response(status_code: int, error: str, details: str | None = None) -> Dict[str, Any]:
+    """Create an error HTTP response."""
     body: Dict[str, Any] = {'success': False, 'error': error}
     if details:
         body['details'] = details
@@ -211,12 +232,14 @@ def error_response(status_code: int, error: str, details: str | None = None) -> 
 
 
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse the request body from an API Gateway event."""
     body = event.get('body', {})
     result = json.loads(body) if isinstance(body, str) else body
     return result
 
 
 def is_capacity_error(result: Dict[str, Any]) -> bool:
+    """Check if a result indicates an EC2 capacity error."""
     error = result.get('error', [])
     if isinstance(error, str):
         return 'capacity' in error.lower() or 'availability zone' in error.lower()
@@ -226,6 +249,7 @@ def is_capacity_error(result: Dict[str, Any]) -> bool:
 
 
 def get_github_token() -> str:
+    """Get the GitHub token from SSM Parameter Store, with caching."""
     if _github_token_cache['value']:
         return _github_token_cache['value']
 
@@ -241,6 +265,7 @@ def get_github_token() -> str:
 
 
 def get_runner_registration_token(github_token: str, github_repo: str) -> str:
+    """Get a new runner registration token from the GitHub API."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -261,6 +286,7 @@ def get_runner_registration_token(github_token: str, github_repo: str) -> str:
 
 
 def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any]]:
+    """List all runners registered for a GitHub repository."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -288,6 +314,7 @@ def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any
 
 
 def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
+    """Delete a runner from a GitHub repository."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -315,7 +342,9 @@ def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
         return False
 
 
-def cleanup_offline_runners(github_token: str, github_repo: str, run_id: int | None) -> Dict[str, Any]:
+def cleanup_offline_runners(
+        github_token: str, github_repo: str, run_id: int | None) -> Dict[str, Any]:
+    """Clean up offline runners for a specific workflow run."""
     runners = list_repo_runners(github_token, github_repo)
     run_id_label = f'runner-{run_id}' if run_id else None
     offline_runners = []
@@ -350,7 +379,10 @@ def cleanup_offline_runners(github_token: str, github_repo: str, run_id: int | N
     return result
 
 
-def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int, job_labels: list) -> Dict[str, Any] | None:
+def get_existing_runner_for_workflow(
+        github_token: str, github_repo: str,
+        run_id: int, job_labels: list) -> Dict[str, Any] | None:
+    """Find an existing runner that can handle a workflow job."""
     result = None
     runners = list_repo_runners(github_token, github_repo)
     runner_label = f'runner-{run_id}'
@@ -366,6 +398,7 @@ def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id
 
 
 def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
+    """Build the complete list of labels for a GitHub runner."""
     base_labels = ['self-hosted', 'linux', 'x64']
     for label in job_labels:
         if label not in base_labels:
@@ -375,7 +408,10 @@ def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
     return base_labels
 
 
-def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runner_name: str, github_repo: str) -> bool:
+def store_workflow_runner(
+        run_id: int, runner_type: str, resource_id: str,
+        runner_name: str, github_repo: str) -> bool:
+    """Store workflow runner information in DynamoDB."""
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if not table_name:
         logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
@@ -397,14 +433,19 @@ def store_workflow_runner(run_id: int, runner_type: str, resource_id: str, runne
                 'created_at': {'N': str(int(time.time()))}
             }
         )
-        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s", run_id, runner_type, resource_id)
+        logger.info(
+            "Stored workflow runner: run_id=%s, type=%s, resource=%s",
+            run_id, runner_type, resource_id)
         return True
     except ClientError as e:
         logger.error("Failed to store workflow runner: %s", e)
         return False
 
 
-def create_ec2_user_data(registration_token: str, job_labels: List[str], github_repo: str, runner_name: str) -> str:
+def create_ec2_user_data(
+        registration_token: str, job_labels: List[str],
+        github_repo: str, runner_name: str) -> str:
+    """Generate EC2 user data script for GitHub runner configuration."""
     aws_region = os.environ['AWS_REGION']
     runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
@@ -444,6 +485,7 @@ aws ec2 terminate-instances \
 
 
 def get_latest_ami() -> str:
+    """Get the latest available AMI for EC2 runners."""
     ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
     ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
@@ -471,6 +513,7 @@ def get_latest_ami() -> str:
 
 
 def trigger_ami_creation() -> Dict[str, Any]:
+    """Trigger AMI creation via the image-for-ec2-runners endpoint."""
     api_domain = os.environ['API_DOMAIN']
     ami_creation_url = f"https://{api_domain}/v1/image-for-ec2-runners"
 
@@ -493,6 +536,7 @@ def trigger_ami_creation() -> Dict[str, Any]:
 
 
 def get_ec2_config() -> Dict[str, Any]:
+    """Get EC2 configuration from environment variables."""
     return {
         'subnet_ids': os.environ['SUBNETS'].split(','),
         'security_group_id': os.environ['SECURITY_GROUPS'],
@@ -502,6 +546,7 @@ def get_ec2_config() -> Dict[str, Any]:
 
 
 def wait_for_instance_describable(instance_id: str, max_attempts: int = 3) -> Dict[str, Any]:
+    """Wait for an EC2 instance to become describable after launch."""
     ec2 = get_ec2_client()
     attempt = 0
     while attempt < max_attempts:
@@ -515,13 +560,15 @@ def wait_for_instance_describable(instance_id: str, max_attempts: int = 3) -> Di
         wait_time = 2 ** (attempt + 3)
         time.sleep(wait_time)
         attempt = attempt + 1
+    msg = f'Instance {instance_id} not found after {max_attempts} attempts'
     raise ClientError(
-        {'Error': {'Code': 'InvalidInstanceID.NotFound', 'Message': f'Instance {instance_id} not found after {max_attempts} attempts'}},
+        {'Error': {'Code': 'InvalidInstanceID.NotFound', 'Message': msg}},
         'DescribeInstances'
     )
 
 
 def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
+    """Create a launch template for EC2 Fleet."""
     ec2 = get_ec2_client()
     template_name = f"github-runner-fleet-{template_config['job_id']}"
     run_id = template_config.get('run_id')
@@ -568,15 +615,17 @@ def create_fleet_launch_template(template_config: Dict[str, Any]) -> str:
 
 
 def delete_launch_template(template_id: str):
+    """Delete a launch template after fleet creation."""
     try:
         get_ec2_client().delete_launch_template(LaunchTemplateId=template_id)
     except ClientError as e:
         logger.warning("Failed to delete launch template %s: %s", template_id, e)
 
 
-def launch_ec2_runner(
-    job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None, runner_type: str = 'ec2'
-) -> Dict[str, Any]:
+def launch_ec2_runner(  # pylint: disable=too-many-locals
+        job_id: int, job_labels: List[str], github_repo: str,
+        run_id: int | None = None, runner_type: str = 'ec2') -> Dict[str, Any]:
+    """Launch an EC2 instance as a GitHub Actions self-hosted runner."""
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
 
     try:
@@ -593,12 +642,19 @@ def launch_ec2_runner(
         return result
 
     if run_id:
-        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id, job_labels)
+        existing_runner = get_existing_runner_for_workflow(
+            github_token, github_repo, run_id, job_labels)
         if existing_runner:
-            logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
+            runner_name = existing_runner.get('name')
+            logger.info(
+                "Reusing existing runner %s for workflow run %s", runner_name, run_id)
             result = {
-                'success': True, 'job_id': job_id, 'runner_type': runner_type, 'run_id': run_id,
-                'runner_name': existing_runner.get('name'), 'reused': True
+                'success': True,
+                'job_id': job_id,
+                'runner_type': runner_type,
+                'run_id': run_id,
+                'runner_name': runner_name,
+                'reused': True
             }
             return result
 
@@ -608,9 +664,11 @@ def launch_ec2_runner(
         ami_trigger = trigger_ami_creation()
         result['ami_creation_triggered'] = ami_trigger['success']
         if ami_trigger['success']:
-            result['error'] = 'No AMI available - AMI creation has been triggered. Please retry in a few minutes.'
+            result['error'] = ('No AMI available - AMI creation has been triggered. '
+                               'Please retry in a few minutes.')
         else:
-            result['error'] = f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
+            err = ami_trigger.get('error')
+            result['error'] = f"No AMI available and failed to trigger creation: {err}"
         return result
 
     cleanup_offline_runners(github_token, github_repo, run_id)
@@ -623,57 +681,95 @@ def launch_ec2_runner(
 
     runner_labels = build_runner_labels(job_labels, run_id)
     runner_config = {
-        'job_id': job_id, 'job_labels': runner_labels, 'github_repo': github_repo,
-        'ami_id': ami_id, 'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type
+        'job_id': job_id,
+        'job_labels': runner_labels,
+        'github_repo': github_repo,
+        'ami_id': ami_id,
+        'registration_token': registration_token,
+        'run_id': run_id,
+        'runner_type': runner_type
     }
     return _try_launch_ec2_fleet(runner_config)
 
 
 def _build_ec2_template_config(cfg: Dict[str, Any], ec2_config: Dict[str, Any]) -> Dict[str, Any]:
-    runner_name = f"ec2-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-runner-{cfg['job_id']}"
-    user_data = create_ec2_user_data(cfg['registration_token'], cfg['job_labels'], cfg['github_repo'], runner_name)
+    """Build the configuration dictionary for an EC2 launch template."""
+    run_id = cfg['run_id']
+    job_id = cfg['job_id']
+    runner_name = f"ec2-runner-{run_id}" if run_id else f"ec2-runner-{job_id}"
+    user_data = create_ec2_user_data(
+        cfg['registration_token'], cfg['job_labels'], cfg['github_repo'], runner_name)
+    user_data_b64 = base64.b64encode(user_data.encode('utf-8')).decode('utf-8')
     return {
         'ami_id': cfg['ami_id'],
         'security_group_id': ec2_config['security_group_id'],
         'iam_instance_profile': ec2_config['iam_instance_profile'],
-        'user_data_base64': base64.b64encode(user_data.encode('utf-8')).decode('utf-8'),
-        'job_id': cfg['job_id'], 'job_labels': cfg['job_labels'], 'github_repo': cfg['github_repo'],
-        'run_id': cfg['run_id'], 'runner_type': cfg['runner_type'], 'runner_name': runner_name
+        'user_data_base64': user_data_b64,
+        'job_id': job_id,
+        'job_labels': cfg['job_labels'],
+        'github_repo': cfg['github_repo'],
+        'run_id': run_id,
+        'runner_type': cfg['runner_type'],
+        'runner_name': runner_name
     }
 
 
-def _handle_ec2_fleet_success(cfg: Dict[str, Any], instance: Dict[str, Any], instance_id: str) -> Dict[str, Any]:
-    runner_name = cfg.get('runner_name') or (f"ec2-runner-{cfg['run_id']}" if cfg['run_id'] else f"ec2-runner-{cfg['job_id']}")
+def _handle_ec2_fleet_success(
+        cfg: Dict[str, Any], instance: Dict[str, Any], instance_id: str) -> Dict[str, Any]:
+    """Handle successful EC2 fleet instance launch."""
+    run_id = cfg['run_id']
+    job_id = cfg['job_id']
+    runner_name = cfg.get('runner_name')
+    if not runner_name:
+        runner_name = f"ec2-runner-{run_id}" if run_id else f"ec2-runner-{job_id}"
+    az = instance['Placement']['AvailabilityZone']
     logger.info(
         "Launched EC2 runner for job %s: %s (%s in %s)",
-        cfg['job_id'], instance_id, instance['InstanceType'], instance['Placement']['AvailabilityZone']
+        job_id, instance_id, instance['InstanceType'], az
     )
-    if cfg['run_id']:
-        store_workflow_runner(cfg['run_id'], cfg['runner_type'], instance_id, runner_name, cfg['github_repo'])
+    if run_id:
+        store_workflow_runner(
+            run_id, cfg['runner_type'], instance_id, runner_name, cfg['github_repo'])
     return {
-        'success': True, 'instance_id': instance_id, 'instance_type': instance['InstanceType'],
-        'availability_zone': instance['Placement']['AvailabilityZone'], 'job_id': cfg['job_id'],
-        'runner_type': cfg['runner_type'], 'run_id': cfg['run_id'], 'runner_name': runner_name
+        'success': True,
+        'instance_id': instance_id,
+        'instance_type': instance['InstanceType'],
+        'availability_zone': az,
+        'job_id': job_id,
+        'runner_type': cfg['runner_type'],
+        'run_id': run_id,
+        'runner_name': runner_name
     }
 
 
 def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Attempt to launch an EC2 runner using the EC2 Fleet API."""
     ec2_config = get_ec2_config()
     template_config = _build_ec2_template_config(cfg, ec2_config)
     result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
     launch_template_id = None
     try:
         launch_template_id = create_fleet_launch_template(template_config)
+        target_spec = {
+            'TotalTargetCapacity': 1,
+            'DefaultTargetCapacityType': 'on-demand'
+        }
+        template_spec = {
+            'LaunchTemplateId': launch_template_id,
+            'Version': '$Latest'
+        }
+        overrides = [
+            {'InstanceType': itype, 'SubnetId': subnet}
+            for subnet in ec2_config['subnet_ids']
+            for itype in ec2_config['instance_types']
+        ]
         fleet_response = get_ec2_client().create_fleet(
             Type='instant',
-            TargetCapacitySpecification={'TotalTargetCapacity': 1, 'DefaultTargetCapacityType': 'on-demand'},
+            TargetCapacitySpecification=target_spec,
             OnDemandOptions={'AllocationStrategy': 'lowest-price'},
             LaunchTemplateConfigs=[{
-                'LaunchTemplateSpecification': {'LaunchTemplateId': launch_template_id, 'Version': '$Latest'},
-                'Overrides': [
-                    {'InstanceType': itype, 'SubnetId': subnet}
-                    for subnet in ec2_config['subnet_ids'] for itype in ec2_config['instance_types']
-                ]
+                'LaunchTemplateSpecification': template_spec,
+                'Overrides': overrides
             }]
         )
         if fleet_response.get('Instances'):
@@ -683,8 +779,13 @@ def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
                 result = _handle_ec2_fleet_success(cfg, instance, instance_ids[0])
                 return result
         errors = fleet_response.get('Errors', [])
-        result['error'] = '; '.join([e.get('ErrorMessage', str(e)) for e in errors]) if errors else 'No instances launched'
-        logger.error("Failed to launch EC2 runner for job %s: %s", cfg['job_id'], result['error'])
+        if errors:
+            error_msgs = [e.get('ErrorMessage', str(e)) for e in errors]
+            result['error'] = '; '.join(error_msgs)
+        else:
+            result['error'] = 'No instances launched'
+        logger.error(
+            "Failed to launch EC2 runner for job %s: %s", cfg['job_id'], result['error'])
     except ClientError as e:
         logger.error("Error launching EC2 runner for job %s: %s", cfg['job_id'], e)
         result['error'] = str(e)
@@ -695,6 +796,7 @@ def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_ec2_runner_status() -> Dict[str, Any]:
+    """Get the status of all running EC2 workflow runners."""
     try:
         ec2 = get_ec2_client()
         response = ec2.describe_instances(
@@ -737,12 +839,14 @@ def get_ec2_runner_status() -> Dict[str, Any]:
 
 
 def handle_ec2_runner_get(_event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle GET requests for EC2 runner status."""
     result = get_ec2_runner_status()
     response = success_response(result)
     return response
 
 
 def handle_ec2_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle POST requests to launch a new EC2 runner."""
     try:
         body = parse_body(event)
         job_id = body.get('job_id')
@@ -781,6 +885,7 @@ TEST_MODE_MOCK_PATHS = {
 
 
 def lambda_handler(event, _context):
+    """AWS Lambda handler for EC2 runner API requests."""
     logger.info("Received API request: %s", json.dumps(event))
 
     headers = event.get('headers', {})

@@ -1,0 +1,190 @@
+---
+name: Workflow Orchestrator
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Show what would be triggered without actually triggering
+        type: boolean
+      force_all:
+        default: false
+        description: Force trigger all workflows regardless of file changes
+        type: boolean
+concurrency:
+  cancel-in-progress: false
+  group: orchestrator-main
+jobs:
+  analyze:
+    name: Analyze changes and determine workflow order
+    outputs:
+      affected_workflows: ${{ steps.analyze.outputs.affected_workflows }}
+      deployment_order: ${{ steps.analyze.outputs.deployment_order }}
+      has_affected: ${{ steps.analyze.outputs.has_affected }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: pip install PyYAML
+      - env:
+          FORCE_ALL: ${{ github.event.inputs.force_all }}
+        id: analyze
+        name: Analyze affected workflows
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+          import sys
+          sys.path.insert(0, "lib")
+          
+          from workflow_ordering import (
+              parse_workflow_order,
+              get_affected_workflows,
+              get_deployment_order
+          )
+          
+          order = parse_workflow_order(".github/workflow-order.yml")
+          force_all = os.environ.get("FORCE_ALL", "false") == "true"
+          
+          if force_all:
+              affected = set(order.workflows.keys())
+          else:
+              result = subprocess.run(
+                  ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
+                  capture_output=True,
+                  text=True
+              )
+              changed_files = result.stdout.strip().split("
+") if result.stdout.strip() else []
+              affected = get_affected_workflows(changed_files, order)
+          
+          deployment_order = get_deployment_order(affected, order)
+          
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              print(f"affected_workflows={json.dumps(list(affected))}", file=f)
+              print(f"deployment_order={json.dumps(deployment_order)}", file=f)
+              print(f"has_affected={"true" if affected else "false"}", file=f)
+          
+          print(f"Affected workflows: {sorted(affected)}")
+          print(f"Deployment order: {deployment_order}")
+  report:
+    if: needs.analyze.outputs.has_affected == "true"
+    name: Report deployment plan
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          AFFECTED: ${{ needs.analyze.outputs.affected_workflows }}
+          DEPLOYMENT_ORDER: ${{ needs.analyze.outputs.deployment_order }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        name: Display deployment plan
+        shell: python
+        run: |
+          import json
+          import os
+          
+          affected = json.loads(os.environ["AFFECTED"])
+          deployment_order = json.loads(os.environ["DEPLOYMENT_ORDER"])
+          dry_run = os.environ.get("DRY_RUN", "false") == "true"
+          
+          summary = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/null")
+          with open(summary, "a") as f:
+              f.write("## Deployment Plan
+
+")
+              if dry_run:
+                  f.write("**Mode: DRY RUN** - No workflows will be triggered
+
+")
+              f.write("### Affected Workflows
+")
+              for w in sorted(affected):
+                  f.write(f"- {w}
+")
+              f.write("
+### Deployment Order
+")
+              for i, level in enumerate(deployment_order):
+                  f.write(f"**Level {i}:** {", ".join(sorted(level))}
+")
+  trigger:
+    if: needs.analyze.outputs.has_affected == "true" && github.event.inputs.dry_run != "true"
+    name: Trigger workflows in order
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - env:
+          DEPLOYMENT_ORDER: ${{ needs.analyze.outputs.deployment_order }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GITHUB_REF: ${{ github.ref }}
+        name: Trigger workflows by level
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+          import time
+          
+          deployment_order = json.loads(os.environ["DEPLOYMENT_ORDER"])
+          ref = os.environ.get("GITHUB_REF", "main")
+          
+          def wait_for_workflow(workflow_name, max_wait_minutes=60):
+              print(f"  Waiting for {workflow_name}...")
+              for _ in range(max_wait_minutes * 2):
+                  result = subprocess.run(
+                      ["gh", "run", "list", f"--workflow={workflow_name}.yml", 
+                       "--limit=1", "--json", "status,conclusion"],
+                      capture_output=True, text=True
+                  )
+                  if result.returncode == 0:
+                      runs = json.loads(result.stdout)
+                      if runs and runs[0]["status"] == "completed":
+                          return runs[0]["conclusion"] == "success"
+                  time.sleep(30)
+              return False
+          
+          def trigger_workflow(workflow_name):
+              print(f"  Triggering {workflow_name}...")
+              result = subprocess.run(
+                  ["gh", "workflow", "run", f"{workflow_name}.yml", "--ref", ref],
+                  capture_output=True, text=True
+              )
+              return result.returncode == 0
+          
+          for level_idx, level in enumerate(deployment_order):
+              print(f"
+=== Level {level_idx} ===")
+              
+              for workflow in level:
+                  trigger_workflow(workflow)
+              
+              if level_idx < len(deployment_order) - 1:
+                  print(f"
+Waiting for level {level_idx} to complete...")
+                  time.sleep(10)
+                  for workflow in level:
+                      if not wait_for_workflow(workflow):
+                          print(f"WARNING: {workflow} did not complete successfully")
+          
+          print("
+=== All workflows triggered ===")
+permissions:
+  actions: write
+  contents: read

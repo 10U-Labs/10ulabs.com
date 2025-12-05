@@ -1,3 +1,4 @@
+"""Pytest fixtures for EC2 runner pre-deployment tests."""
 import importlib.util
 import json
 from typing import Any, Callable, Dict
@@ -11,6 +12,7 @@ from ..conftest import EC2_RUNNER_SRC
 
 
 def load_handler_module() -> ModuleType:
+    """Load the EC2 runner handler module dynamically."""
     handler_path = EC2_RUNNER_SRC / "lambda" / "handler.py"
     spec = importlib.util.spec_from_file_location("ec2_runner_handler", handler_path)
     assert spec is not None
@@ -22,6 +24,7 @@ def load_handler_module() -> ModuleType:
 
 @pytest.fixture
 def ec2_runner_handler(config: Dict[str, str]) -> Any:
+    """Provide an EC2 runner handler module with mocked environment."""
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'EC2_AMI_PURPOSE_TAG': 'Purpose',
@@ -48,18 +51,24 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
         if hasattr(module, '_api_key_cache'):
             setattr(module, '_api_key_cache', {'value': None})
         if hasattr(module, '_dependencies_validated'):
-            setattr(module, '_dependencies_validated', {'checked': True, 'valid': True, 'errors': []})
+            setattr(module, '_dependencies_validated', {
+                'checked': True, 'valid': True, 'errors': []
+            })
         yield module
 
 
 @pytest.fixture
 def lambda_context():
+    """Provide a mock Lambda context."""
     return Mock()
 
 
 @pytest.fixture
 def ec2_runner_post_event_factory():
-    def _create_event(job_id=456, job_labels=None, github_repo='test/repo', run_id=None, runner_type='ec2'):
+    """Provide a factory for creating EC2 runner POST events."""
+    def _create_event(
+        job_id=456, job_labels=None, github_repo='test/repo', run_id=None, runner_type='ec2'
+    ):
         if job_labels is None:
             job_labels = ['ec2', 'self-hosted']
         body = {
@@ -81,6 +90,7 @@ def ec2_runner_post_event_factory():
 
 @pytest.fixture
 def ec2_runner_get_event():
+    """Provide a GET event for EC2 runner endpoint."""
     return {
         'path': '/v1/ec2-runner',
         'httpMethod': 'GET',
@@ -89,6 +99,7 @@ def ec2_runner_get_event():
 
 
 def create_client_error(error_code: str, operation_name: str = 'TestOperation') -> ClientError:
+    """Create a ClientError for testing error handling."""
     return ClientError(
         {
             'Error': {
@@ -108,18 +119,24 @@ def create_client_error(error_code: str, operation_name: str = 'TestOperation') 
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
+    """Parse the JSON body from a Lambda response."""
     return json.loads(response['body'])
 
 
 def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
+    """Assert that a response has the expected status code."""
     assert response['statusCode'] == expected_code
 
 
 def assert_json_content_type(response: Dict[str, Any]) -> None:
+    """Assert that a response has JSON content type."""
     assert response['headers']['Content-Type'].startswith('application/json')
 
 
-def create_multi_client_mock(ec2_mock: Any, ssm_mock: Any, dynamodb_mock: Any = None) -> Callable:
+def create_multi_client_mock(
+    ec2_mock: Any, ssm_mock: Any, dynamodb_mock: Any = None
+) -> Callable:
+    """Create a mock boto3.client function that returns service-specific mocks."""
     def mock_client(service_name: str) -> Any:
         if service_name == 'ec2':
             return ec2_mock
@@ -133,6 +150,7 @@ def create_multi_client_mock(ec2_mock: Any, ssm_mock: Any, dynamodb_mock: Any = 
 
 @pytest.fixture
 def mock_boto_client():
+    """Provide mocked boto3 clients for EC2, SSM, and DynamoDB."""
     mock_ec2 = MagicMock()
     mock_ssm = MagicMock()
     mock_dynamodb = MagicMock()
@@ -170,5 +188,8 @@ def mock_boto_client():
         'Instances': [{'InstanceIds': ['i-test123']}]
     }
 
-    with patch('boto3.client', side_effect=create_multi_client_mock(mock_ec2, mock_ssm, mock_dynamodb)):
+    with patch(
+        'boto3.client',
+        side_effect=create_multi_client_mock(mock_ec2, mock_ssm, mock_dynamodb)
+    ):
         yield {'ec2': mock_ec2, 'ssm': mock_ssm, 'dynamodb': mock_dynamodb}

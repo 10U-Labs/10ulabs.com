@@ -1,5 +1,26 @@
 # Infrastructure Modernization and RTL Simulation Platform
 
+## Table of Contents
+
+- [Goal](#goal)
+- [Testing Standards](#testing-standards)
+- [Architecture Decisions](#architecture-decisions)
+- [Task List](#task-list)
+  - [Phase 1: Region Migration](#phase-1-region-migration-us-east-1--us-east-2)
+  - [Phase 2: Workflow Ordering System](#phase-2-workflow-ordering-system)
+  - [Phase 3: Runner Label System Refactor](#phase-3-runner-label-system-refactor)
+  - [Phase 4: RTL Runner Images](#phase-4-rtl-runner-images)
+  - [Phase 5: EC2 Runner Infrastructure for RTL](#phase-5-ec2-runner-infrastructure-for-rtl)
+  - [Phase 6: RTL Simulation Endpoint](#phase-6-rtl-simulation-endpoint)
+  - [Phase 7: Tri-Mode Core Development](#phase-7-tri-mode-core-development)
+  - [Phase 8: RTL Synthesis Pipeline](#phase-8-rtl-synthesis-pipeline)
+  - [Phase 9: Frontend Updates](#phase-9-frontend-updates)
+  - [Phase 10: Fabrication Preparation](#phase-10-fabrication-preparation)
+- [File Changes Summary](#file-changes-summary)
+- [References](#references)
+
+---
+
 ## Goal
 
 Build a real, cycle-accurate RTL simulation platform for a tri-mode RISC-V SoC that can eventually be fabricated via ChipFoundry.io. This requires modernizing the runner infrastructure to support compute-intensive workloads (Verilator simulation, OpenLane synthesis) alongside existing CI/CD workflows.
@@ -131,7 +152,7 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 ### Phase 1: Region Migration (us-east-1 → us-east-2)
 
 #### 1.1 Infrastructure Changes
-- [ ] 1.1.1. Update `lib/terraform/outputs.tf` to change `aws_region` from `us-east-1` to `us-east-2`
+- [x] 1.1.1. Update `lib/terraform/outputs.tf` to change `aws_region` from `us-east-1` to `us-east-2`
 - [ ] 1.1.2. Create new S3 bucket for Terraform state in us-east-2
 - [ ] 1.1.3. Create new S3 bucket for central logs in us-east-2
 - [ ] 1.1.4. Migrate Route53 hosted zone (global, no region change needed)
@@ -163,30 +184,30 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 ### Phase 2: Workflow Ordering System
 
 #### 2.1 Design and Implementation
-- [ ] 2.1.1. Create `.github/workflow-order.yml` defining workflow dependency graph
-- [ ] 2.1.2. Create `lib/workflow_ordering.py` module with:
+- [x] 2.1.1. Create `.github/workflow-order.yml` defining workflow dependency graph
+- [x] 2.1.2. Create `lib/workflow_ordering.py` module with:
   - `parse_workflow_order(yaml_path)` - parse dependency graph
   - `get_affected_workflows(changed_files)` - determine affected workflows
   - `get_deployment_order(affected)` - topological sort for order
   - `should_wait_for(workflow, completed)` - check if dependencies met
-- [ ] 2.1.3. Create reusable workflow `.github/workflows/check-dependencies.yml`
+- [x] 2.1.3. Create reusable workflow `.github/workflows/check-dependencies.yml`
 - [ ] 2.1.4. Add `workflow_call` triggers to all workflows for orchestration
-- [ ] 2.1.5. Create orchestrator workflow that triggers workflows in correct order
+- [x] 2.1.5. Create orchestrator workflow that triggers workflows in correct order
 - [ ] 2.1.6. Update each workflow to check dependencies before running
 
 #### 2.2 Unit Tests for Workflow Ordering
-- [ ] 2.2.1. Test `parse_workflow_order` with valid YAML
-- [ ] 2.2.2. Test `parse_workflow_order` with invalid YAML (error handling)
-- [ ] 2.2.3. Test `parse_workflow_order` with circular dependencies (error)
-- [ ] 2.2.4. Test `get_affected_workflows` with single file change
-- [ ] 2.2.5. Test `get_affected_workflows` with multiple file changes
-- [ ] 2.2.6. Test `get_affected_workflows` with no matching workflows
-- [ ] 2.2.7. Test `get_deployment_order` returns correct topological order
-- [ ] 2.2.8. Test `get_deployment_order` with single workflow (no deps)
-- [ ] 2.2.9. Test `get_deployment_order` with diamond dependency
-- [ ] 2.2.10. Test `should_wait_for` with all deps complete
-- [ ] 2.2.11. Test `should_wait_for` with missing deps
-- [ ] 2.2.12. Test `should_wait_for` with no deps
+- [x] 2.2.1. Test `parse_workflow_order` with valid YAML
+- [x] 2.2.2. Test `parse_workflow_order` with invalid YAML (error handling)
+- [x] 2.2.3. Test `parse_workflow_order` with circular dependencies (error)
+- [x] 2.2.4. Test `get_affected_workflows` with single file change
+- [x] 2.2.5. Test `get_affected_workflows` with multiple file changes
+- [x] 2.2.6. Test `get_affected_workflows` with no matching workflows
+- [x] 2.2.7. Test `get_deployment_order` returns correct topological order
+- [x] 2.2.8. Test `get_deployment_order` with single workflow (no deps)
+- [x] 2.2.9. Test `get_deployment_order` with diamond dependency
+- [x] 2.2.10. Test `should_wait_for` with all deps complete
+- [x] 2.2.11. Test `should_wait_for` with missing deps
+- [x] 2.2.12. Test `should_wait_for` with no deps
 
 #### 2.3 Integration Tests for Workflow Ordering
 - [ ] 2.3.1. Test workflow trigger via GitHub API
@@ -198,7 +219,7 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 ### Phase 3: Runner Label System Refactor
 
 #### 3.1 Label Schema Design
-- [ ] 3.1.1. Update `etc/runners.yml` with new label schema:
+- [x] 3.1.1. Update `etc/runners.yml` with new label schema:
   ```yaml
   labels:
     platform:
@@ -219,14 +240,14 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
   ```
 
 #### 3.2 Label Parsing Implementation
-- [ ] 3.2.1. Create `lib/runner_labels.py` module with:
+- [x] 3.2.1. Create `lib/runner_labels.py` module with:
   - `parse_labels(label_list)` - extract platform, compute, pricing, runner_id
   - `validate_labels(parsed)` - check valid combinations
   - `get_instance_type(parsed)` - return EC2 instance type
   - `get_ecs_config(parsed)` - return ECS task config
   - `is_spot(parsed)` - check if spot pricing
-- [ ] 3.2.2. Update runner Lambda to use new label parsing
-- [ ] 3.2.3. Create label-to-instance-type mapping in `src/api/endpoints/runners/locals.tf`
+- [x] 3.2.2. Update runner Lambda to use new label parsing
+- [x] 3.2.3. Create label-to-instance-type mapping in `src/api/endpoints/runners/locals.tf`
 - [ ] 3.2.4. Update ECS task definitions to support label-based selection
 - [ ] 3.2.5. Update EC2 launch logic to select instance type based on labels
 - [ ] 3.2.6. Update all workflows to use new label format
@@ -234,26 +255,26 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 - [ ] 3.2.8. Add validation to reject invalid label combinations
 
 #### 3.3 Unit Tests for Label System
-- [ ] 3.3.1. Test `parse_labels` with valid ECS labels
-- [ ] 3.3.2. Test `parse_labels` with valid EC2 labels
-- [ ] 3.3.3. Test `parse_labels` with missing platform (error)
-- [ ] 3.3.4. Test `parse_labels` with missing compute (error)
-- [ ] 3.3.5. Test `parse_labels` extracts runner_id correctly
-- [ ] 3.3.6. Test `parse_labels` with no runner_id (error)
-- [ ] 3.3.7. Test `validate_labels` accepts ecs+fargate+spot
-- [ ] 3.3.8. Test `validate_labels` accepts ecs+fargate+on-demand
-- [ ] 3.3.9. Test `validate_labels` accepts ec2+c8i+on-demand
-- [ ] 3.3.10. Test `validate_labels` accepts ec2+r8i+on-demand
-- [ ] 3.3.11. Test `validate_labels` accepts ec2+g6e+on-demand
-- [ ] 3.3.12. Test `validate_labels` rejects ecs+c8i (invalid combo)
-- [ ] 3.3.13. Test `validate_labels` rejects ec2+fargate (invalid combo)
-- [ ] 3.3.14. Test `get_instance_type` returns c8i.4xlarge for c8i
-- [ ] 3.3.15. Test `get_instance_type` returns r8i.4xlarge for r8i
-- [ ] 3.3.16. Test `get_instance_type` returns g6e.xlarge for g6e
-- [ ] 3.3.17. Test `get_instance_type` returns None for fargate
-- [ ] 3.3.18. Test `get_ecs_config` returns correct CPU/memory for fargate
-- [ ] 3.3.19. Test `is_spot` returns True for spot label
-- [ ] 3.3.20. Test `is_spot` returns False for on-demand label
+- [x] 3.3.1. Test `parse_labels` with valid ECS labels
+- [x] 3.3.2. Test `parse_labels` with valid EC2 labels
+- [x] 3.3.3. Test `parse_labels` with missing platform (error)
+- [x] 3.3.4. Test `parse_labels` with missing compute (error)
+- [x] 3.3.5. Test `parse_labels` extracts runner_id correctly
+- [x] 3.3.6. Test `parse_labels` with no runner_id (error)
+- [x] 3.3.7. Test `validate_labels` accepts ecs+fargate+spot
+- [x] 3.3.8. Test `validate_labels` accepts ecs+fargate+on-demand
+- [x] 3.3.9. Test `validate_labels` accepts ec2+c8i+on-demand
+- [x] 3.3.10. Test `validate_labels` accepts ec2+r8i+on-demand
+- [x] 3.3.11. Test `validate_labels` accepts ec2+g6e+on-demand
+- [x] 3.3.12. Test `validate_labels` rejects ecs+c8i (invalid combo)
+- [x] 3.3.13. Test `validate_labels` rejects ec2+fargate (invalid combo)
+- [x] 3.3.14. Test `get_instance_type` returns c8i.4xlarge for c8i
+- [x] 3.3.15. Test `get_instance_type` returns r8i.4xlarge for r8i
+- [x] 3.3.16. Test `get_instance_type` returns g6e.xlarge for g6e
+- [x] 3.3.17. Test `get_instance_type` returns None for fargate
+- [x] 3.3.18. Test `get_ecs_config` returns correct CPU/memory for fargate
+- [x] 3.3.19. Test `is_spot` returns True for spot label
+- [x] 3.3.20. Test `is_spot` returns False for on-demand label
 
 #### 3.4 Integration Tests for Label System
 - [ ] 3.4.1. Test runner API accepts new label format
@@ -270,12 +291,12 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 ### Phase 4: RTL Runner Images
 
 #### 4.1 Directory Structure
-- [ ] 4.1.1. Create `src/api/endpoints/image_for_rtl_runners/` directory
-- [ ] 4.1.2. Create `src/api/endpoints/image_for_rtl_runners/config/` directory
-- [ ] 4.1.3. Create `src/api/endpoints/image_for_rtl_runners/dockerfiles/` directory
+- [x] 4.1.1. Create `src/api/endpoints/image_for_rtl_runners/` directory
+- [x] 4.1.2. Create `src/api/endpoints/image_for_rtl_runners/config/` directory
+- [x] 4.1.3. Create `src/api/endpoints/image_for_rtl_runners/dockerfiles/` directory
 
 #### 4.2 Configuration Files
-- [ ] 4.2.1. Create `config/rtl-sim.yml`:
+- [x] 4.2.1. Create `config/rtl-sim.yml`:
   ```yaml
   runner_user: "github-runner"
   runner_version: "2.330.0"
@@ -285,7 +306,7 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
   chipyard_version: "1.11.0"
   verilator_version: "5.024"
   ```
-- [ ] 4.2.2. Create `config/rtl-synth.yml`:
+- [x] 4.2.2. Create `config/rtl-synth.yml`:
   ```yaml
   runner_user: "github-runner"
   runner_version: "2.330.0"
@@ -295,7 +316,7 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
   openlane_version: "2.1.0"
   sky130_pdk_version: "1.0.457"
   ```
-- [ ] 4.2.3. Create `config/rtl-gpu.yml`:
+- [x] 4.2.3. Create `config/rtl-gpu.yml`:
   ```yaml
   runner_user: "github-runner"
   runner_version: "2.330.0"
@@ -306,9 +327,9 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
   ```
 
 #### 4.3 Dockerfiles
-- [ ] 4.3.1. Create `dockerfiles/Dockerfile.sim` for RTL simulation
-- [ ] 4.3.2. Create `dockerfiles/Dockerfile.synth` for RTL synthesis
-- [ ] 4.3.3. Create `dockerfiles/Dockerfile.gpu` for GPU acceleration
+- [x] 4.3.1. Create `dockerfiles/Dockerfile.sim` for RTL simulation
+- [x] 4.3.2. Create `dockerfiles/Dockerfile.synth` for RTL synthesis
+- [x] 4.3.3. Create `dockerfiles/Dockerfile.gpu` for GPU acceleration
 
 #### 4.4 Build Infrastructure
 - [ ] 4.4.1. Create ECR repositories for each RTL image
@@ -317,11 +338,11 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 - [ ] 4.4.4. Add health checks for RTL runners
 
 #### 4.5 Unit Tests for RTL Images
-- [ ] 4.5.1. Test config YAML parsing for rtl-sim
-- [ ] 4.5.2. Test config YAML parsing for rtl-synth
-- [ ] 4.5.3. Test config YAML parsing for rtl-gpu
-- [ ] 4.5.4. Test Dockerfile syntax validation
-- [ ] 4.5.5. Test version extraction from configs
+- [x] 4.5.1. Test config YAML parsing for rtl-sim
+- [x] 4.5.2. Test config YAML parsing for rtl-synth
+- [x] 4.5.3. Test config YAML parsing for rtl-gpu
+- [x] 4.5.4. Test Dockerfile syntax validation
+- [x] 4.5.5. Test version extraction from configs
 
 #### 4.6 Integration Tests for RTL Images
 - [ ] 4.6.1. Test Docker image builds successfully
@@ -521,6 +542,7 @@ When a commit affects multiple levels, workflows must deploy in order. When a co
 TODO.md (this file)
 .github/workflow-order.yml
 .github/workflows/check-dependencies.yml
+.github/workflows/orchestrator.yml
 .github/workflows/rtl_simulation.yml
 .github/workflows/rtl_synthesis.yml
 .github/workflows/image_for_rtl_runners.yml

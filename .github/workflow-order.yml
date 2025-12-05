@@ -1,0 +1,140 @@
+---
+workflows:
+  api:
+    depends_on:
+      - bootstrap
+    level: 2
+    paths:
+      - .github/workflows/api.yml
+      - src/api/gateway/**
+  bootstrap:
+    depends_on: []
+    level: 0
+    paths:
+      - .github/workflows/bootstrap.yml
+      - src/bootstrap/**
+  contact:
+    depends_on:
+      - api
+      - runners
+    level: 5
+    paths:
+      - .github/workflows/contact.yml
+      - src/api/endpoints/contact/**
+      - test/api/endpoints/contact/**
+  ec2_runner:
+    depends_on:
+      - image_for_ec2_runners_endpoint
+      - image_for_ec2_runners_post
+      - runners
+    level: 4
+    paths:
+      - .github/workflows/ec2_runner.yml
+      - src/api/endpoints/ec2_runner/**
+      - test/api/endpoints/ec2_runner/**
+  echo:
+    depends_on:
+      - api
+      - runners
+    level: 5
+    paths:
+      - .github/workflows/echo.yml
+      - src/api/endpoints/echo/**
+      - test/api/endpoints/echo/**
+  ecr:
+    depends_on:
+      - bootstrap
+    level: 1
+    paths:
+      - .github/workflows/ecr.yml
+      - src/ecr/**
+  ecs_runner:
+    depends_on:
+      - image_for_ecs_runners
+      - runners
+    level: 4
+    paths:
+      - .github/workflows/ecs_runner.yml
+      - src/api/endpoints/ecs_runner/**
+      - test/api/endpoints/ecs_runner/**
+  health:
+    depends_on:
+      - api
+      - runners
+    level: 5
+    paths:
+      - .github/workflows/health.yml
+      - src/api/endpoints/health/**
+      - test/api/endpoints/health/**
+  image_for_ec2_runners_endpoint:
+    depends_on:
+      - ecr
+      - runners
+    level: 3
+    paths:
+      - .github/workflows/image_for_ec2_runners_endpoint.yml
+      - src/api/endpoints/image_for_ec2_runners/endpoint/**
+      - test/api/endpoints/image_for_ec2_runners/endpoint/**
+  image_for_ec2_runners_post:
+    depends_on:
+      - ecr
+      - runners
+    level: 3
+    paths:
+      - .github/workflows/image_for_ec2_runners_post.yml
+      - src/api/endpoints/image_for_ec2_runners/post/**
+      - test/api/endpoints/image_for_ec2_runners/post/**
+  image_for_ecs_runners:
+    depends_on:
+      - ecr
+      - runners
+    level: 3
+    paths:
+      - .github/workflows/image_for_ecs_runners.yml
+      - src/api/endpoints/image_for_ecs_runners/**
+      - test/api/endpoints/image_for_ecs_runners/**
+  rack_designer:
+    depends_on:
+      - api
+      - runners
+      - www_shared
+    level: 5
+    paths:
+      - .github/workflows/rack_designer.yml
+      - src/api/endpoints/rack_designer/**
+      - src/www/paths/rack-designer/**
+      - test/api/endpoints/rack_designer/**
+  runners:
+    depends_on:
+      - ecr
+    level: 2
+    paths:
+      - .github/workflows/runners.yml
+      - etc/runners.yml
+      - src/api/endpoints/runners/**
+      - test/api/endpoints/runners/**
+  simulation_soc:
+    depends_on:
+      - api
+      - runners
+      - www_shared
+    level: 5
+    paths:
+      - .github/workflows/simulation_soc.yml
+      - src/api/endpoints/simulation_soc/**
+      - src/www/paths/simulations/soc/**
+      - test/api/endpoints/simulation_soc/**
+  www_index:
+    depends_on:
+      - www_shared
+    level: 5
+    paths:
+      - .github/workflows/www_index.yml
+      - src/www/paths/index/**
+  www_shared:
+    depends_on:
+      - bootstrap
+    level: 1
+    paths:
+      - .github/workflows/www_shared.yml
+      - src/www/shared/**

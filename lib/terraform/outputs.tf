@@ -7,7 +7,7 @@ output "aws_account_id" {
 }
 
 output "aws_region" {
-  value = "us-east-1"
+  value = "us-east-2"
 }
 
 output "domain_name" {
