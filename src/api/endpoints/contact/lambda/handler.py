@@ -1,3 +1,8 @@
+"""Contact form Lambda handler for 10U Labs API.
+
+Provides endpoints for processing contact form submissions with reCAPTCHA
+verification and email notification via SES.
+"""
 import json
 import logging
 import os
@@ -17,14 +22,17 @@ _test_mode = {'enabled': False}
 
 
 def is_test_mode() -> bool:
+    """Check if test mode is enabled."""
     return _test_mode['enabled']
 
 
 def set_test_mode(enabled: bool):
+    """Set test mode enabled state."""
     _test_mode['enabled'] = enabled
 
 
 def get_header_case_insensitive(headers: dict, header_name: str) -> str:
+    """Get a header value case-insensitively."""
     if not headers:
         return ''
     for key, value in headers.items():
@@ -34,22 +42,26 @@ def get_header_case_insensitive(headers: dict, header_name: str) -> str:
 
 
 def get_ssm_client():
+    """Get or create a cached SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_ses_client():
+    """Get or create a cached SES client."""
     if 'ses' not in _clients:
         _clients['ses'] = boto3.client('ses')
     return _clients['ses']
 
 
 def set_client(name: str, client: Any):
+    """Set a client for testing purposes."""
     _clients[name] = client
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a JSON API Gateway response with CORS headers."""
     return {
         'statusCode': status_code,
         'headers': {
@@ -62,7 +74,10 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def error_response(status_code: int, error: str, details: str | None = None) -> Dict[str, Any]:
+def error_response(
+    status_code: int, error: str, details: str | None = None
+) -> Dict[str, Any]:
+    """Create an error response with optional details."""
     body: Dict[str, Any] = {'success': False, 'error': error}
     if details:
         body['details'] = details
@@ -70,17 +85,21 @@ def error_response(status_code: int, error: str, details: str | None = None) -> 
 
 
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse the request body from JSON."""
     body = event.get('body', {})
     result = json.loads(body) if isinstance(body, str) else body
     return result
 
 
 def get_recaptcha_secret() -> str:
+    """Retrieve reCAPTCHA secret from SSM Parameter Store."""
     parameter_name = os.environ.get('RECAPTCHA_SECRET_PARAMETER_NAME')
     if not parameter_name:
         return ''
     try:
-        response = get_ssm_client().get_parameter(Name=parameter_name, WithDecryption=True)
+        response = get_ssm_client().get_parameter(
+            Name=parameter_name, WithDecryption=True
+        )
         secret = response['Parameter']['Value']
         return secret
     except (ClientError, ValueError, KeyError) as e:
@@ -89,6 +108,7 @@ def get_recaptcha_secret() -> str:
 
 
 def verify_recaptcha(token: str, secret: str) -> bool:
+    """Verify a reCAPTCHA token with Google's API."""
     if not token or not secret:
         return False
     try:
@@ -107,7 +127,10 @@ def verify_recaptcha(token: str, secret: str) -> bool:
             score = result.get('score', 0)
             is_valid = success and score >= 0.5
             if not is_valid:
-                logger.warning("reCAPTCHA verification failed: success=%s, score=%s", success, score)
+                logger.warning(
+                    "reCAPTCHA verification failed: success=%s, score=%s",
+                    success, score
+                )
             return is_valid
     except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as e:
         logger.error("reCAPTCHA verification error: %s", e)
@@ -115,12 +138,16 @@ def verify_recaptcha(token: str, secret: str) -> bool:
 
 
 def validate_contact_email(email: str) -> bool:
+    """Validate email address format."""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     result = bool(re.match(pattern, email))
     return result
 
 
-def send_contact_email(recipient: str, sender_name: str, sender_email: str, message: str) -> bool:
+def send_contact_email(
+    recipient: str, sender_name: str, sender_email: str, message: str
+) -> bool:
+    """Send contact form email via SES."""
     subject = f'Contact Form: Message from {sender_name}'
     body_text = f'Name: {sender_name}\nEmail: {sender_email}\n\nMessage:\n{message}'
     body_html = f'''<html>
@@ -152,13 +179,17 @@ def send_contact_email(recipient: str, sender_name: str, sender_email: str, mess
 
 
 def _validate_contact_fields(fields: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    """Validate contact form fields and return error response if invalid."""
     validations = [
         (not fields['recaptcha_token'], 'Missing required field: recaptcha_token'),
         (not fields['name'], 'Missing required field: name'),
         (len(fields['name']) > 100, 'Name must be less than 100 characters'),
         (not fields['email'], 'Missing required field: email'),
         (len(fields['email']) > 255, 'Email must be less than 255 characters'),
-        (fields['email'] and not validate_contact_email(fields['email']), 'Invalid email address'),
+        (
+            fields['email'] and not validate_contact_email(fields['email']),
+            'Invalid email address'
+        ),
         (not fields['message'], 'Missing required field: message'),
         (len(fields['message']) > 1000, 'Message must be less than 1000 characters'),
     ]
@@ -170,6 +201,7 @@ def _validate_contact_fields(fields: Dict[str, str]) -> Optional[Dict[str, Any]]
 
 
 def _process_contact_submission(fields: Dict[str, str]) -> Dict[str, Any]:
+    """Process a validated contact form submission."""
     recaptcha_secret = get_recaptcha_secret()
     contact_email = os.environ.get('CONTACT_EMAIL')
     response: Dict[str, Any]
@@ -180,18 +212,30 @@ def _process_contact_submission(fields: Dict[str, str]) -> Dict[str, Any]:
         response = error_response(400, 'reCAPTCHA verification failed')
     elif not contact_email:
         response = error_response(500, 'Server configuration error')
-    elif send_contact_email(contact_email, fields['name'], fields['email'], fields['message']):
-        logger.info("Contact form submitted: name=%s, email=%s", fields['name'], fields['email'])
-        response = json_response(200, {'success': True, 'message': 'Message sent successfully'})
+    elif send_contact_email(
+        contact_email, fields['name'], fields['email'], fields['message']
+    ):
+        logger.info(
+            "Contact form submitted: name=%s, email=%s",
+            fields['name'], fields['email']
+        )
+        response = json_response(
+            200, {'success': True, 'message': 'Message sent successfully'}
+        )
     else:
         response = error_response(500, 'Failed to send message')
     return response
 
 
-TEST_MODE_MOCK_RESPONSE = {'success': True, 'message': 'Test mode - contact form not submitted', 'test_mode': True}
+TEST_MODE_MOCK_RESPONSE = {
+    'success': True,
+    'message': 'Test mode - contact form not submitted',
+    'test_mode': True
+}
 
 
 def handle_contact_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle POST /v1/contact request."""
     try:
         body = parse_body(event)
         fields = {
@@ -219,6 +263,7 @@ ROUTE_MAP = {
 
 
 def handler(event, _context):
+    """Lambda handler entry point."""
     logger.info("Received contact request: %s", json.dumps(event))
 
     headers = event.get('headers', {})

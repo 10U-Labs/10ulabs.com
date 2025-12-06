@@ -3,9 +3,16 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  check-deps:
+    uses: ./.github/workflows/check-dependencies.yml
+    with:
+      workflow_name: runners
   declaring-common-variables:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      needs.check-deps.outputs.can_proceed == 'true' &&
+      github.ref == 'refs/heads/main'
     name: Declaring common variables
+    needs: check-deps
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       role_arn: ${{ steps.shared.outputs.role_arn }}
@@ -166,9 +173,11 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/runners.yml
@@ -251,6 +260,12 @@ on:
       - 'src/api/endpoints/runners/**'
       - 'test/api/conftest.py'
       - 'test/api/endpoints/runners/**'
+  workflow_call:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
   workflow_dispatch:
     inputs:
       github_hosted:

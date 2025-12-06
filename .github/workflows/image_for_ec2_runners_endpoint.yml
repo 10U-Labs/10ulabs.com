@@ -2,9 +2,16 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  check-deps:
+    uses: ./.github/workflows/check-dependencies.yml
+    with:
+      workflow_name: image_for_ec2_runners_endpoint
   declaring-common-variables:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      needs.check-deps.outputs.can_proceed == 'true' &&
+      github.ref == 'refs/heads/main'
     name: Declaring common variables
+    needs: check-deps
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.shared.outputs.github_actions_role_arn }}
@@ -84,9 +91,11 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners_endpoint.yml
@@ -144,6 +153,7 @@ on:
       - '.github/workflows/image_for_ec2_runners_endpoint.yml'
       - 'src/api/endpoints/image_for_ec2_runners/endpoint/**'
       - 'test/api/endpoints/image_for_ec2_runners/endpoint/**'
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read

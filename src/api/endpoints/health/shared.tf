@@ -1,5 +1,5 @@
 module "shared" {
-  source = "../../lib/terraform"
+  source = "../../../../lib/terraform"
 }
 
 data "terraform_remote_state" "api" {

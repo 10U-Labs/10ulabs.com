@@ -1,4 +1,8 @@
+"""Integration tests for Gmail DNS configuration."""
+
+
 def test_google_verification_txt_record_exists(route53_client, hosted_zone, config):
+    """Test that Google verification TXT record exists."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -17,6 +21,7 @@ def test_google_verification_txt_record_exists(route53_client, hosted_zone, conf
 
 
 def test_google_verification_txt_record_has_correct_value(route53_client, hosted_zone, config):
+    """Test that Google verification TXT record has correct value."""
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -38,6 +43,7 @@ def test_google_verification_txt_record_has_correct_value(route53_client, hosted
 
 
 def test_google_verification_txt_record_has_ttl(route53_client, hosted_zone, config):
+    """Test that Google verification TXT record has TTL."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -56,6 +62,7 @@ def test_google_verification_txt_record_has_ttl(route53_client, hosted_zone, con
 
 
 def test_gmail_mx_record_exists(route53_client, hosted_zone, config):
+    """Test that Gmail MX record exists."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -74,6 +81,7 @@ def test_gmail_mx_record_exists(route53_client, hosted_zone, config):
 
 
 def test_gmail_mx_record_has_correct_priority(route53_client, hosted_zone, config):
+    """Test that Gmail MX record has correct priority."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -93,6 +101,7 @@ def test_gmail_mx_record_has_correct_priority(route53_client, hosted_zone, confi
 
 
 def test_gmail_mx_record_has_ttl(route53_client, hosted_zone, config):
+    """Test that Gmail MX record has TTL."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -111,6 +120,7 @@ def test_gmail_mx_record_has_ttl(route53_client, hosted_zone, config):
 
 
 def test_txt_record_ttl_equals_300(route53_client, hosted_zone, config):
+    """Test that TXT record TTL equals 300."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -129,6 +139,7 @@ def test_txt_record_ttl_equals_300(route53_client, hosted_zone, config):
 
 
 def test_mx_record_ttl_equals_300(route53_client, hosted_zone, config):
+    """Test that MX record TTL equals 300."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -147,6 +158,7 @@ def test_mx_record_ttl_equals_300(route53_client, hosted_zone, config):
 
 
 def test_mx_record_hostname_has_trailing_dot(route53_client, hosted_zone, config):
+    """Test that MX record hostname has trailing dot."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(
@@ -166,6 +178,7 @@ def test_mx_record_hostname_has_trailing_dot(route53_client, hosted_zone, config
 
 
 def test_mx_record_priority_equals_one(route53_client, hosted_zone, config):
+    """Test that MX record priority equals one."""
     domain_name = config['domain_name']
 
     records = route53_client.list_resource_record_sets(

@@ -1,4 +1,8 @@
+"""Integration tests for OIDC provider configuration."""
+
+
 def test_oidc_provider_exists_in_aws(iam_client, config):
+    """Test that OIDC provider exists in AWS."""
     account_id = config['aws_account_id']
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
@@ -6,6 +10,7 @@ def test_oidc_provider_exists_in_aws(iam_client, config):
 
 
 def test_oidc_provider_has_correct_thumbprint(iam_client, config):
+    """Test that OIDC provider has correct thumbprint."""
     account_id = config['aws_account_id']
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)
@@ -14,6 +19,7 @@ def test_oidc_provider_has_correct_thumbprint(iam_client, config):
 
 
 def test_oidc_provider_has_correct_client_id(iam_client, config):
+    """Test that OIDC provider has correct client ID."""
     account_id = config['aws_account_id']
     provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
     response = iam_client.get_open_id_connect_provider(OpenIDConnectProviderArn=provider_arn)

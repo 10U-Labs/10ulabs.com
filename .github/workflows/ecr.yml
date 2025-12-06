@@ -3,8 +3,14 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  check-deps:
+    uses: ./.github/workflows/check-dependencies.yml
+    with:
+      workflow_name: ecr
   declaring-common-variables:
+    if: needs.check-deps.outputs.can_proceed == 'true'
     name: Declaring common variables
+    needs: check-deps
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
@@ -206,6 +212,12 @@ on:
       - 'src/api/shared/ecr/**'
       - 'lib/terraform/**'
       - 'test/api/shared/ecr/**'
+  workflow_call:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
   workflow_dispatch:
     inputs:
       github_hosted:

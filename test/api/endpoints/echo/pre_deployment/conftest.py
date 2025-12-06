@@ -1,3 +1,4 @@
+"""Pytest fixtures for echo handler pre-deployment tests."""
 import importlib.util
 import json
 from pathlib import Path
@@ -12,22 +13,27 @@ ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
+    """Parse JSON response body from Lambda response."""
     return json.loads(response['body'])
 
 
 def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
+    """Assert that response has expected HTTP status code."""
     assert response['statusCode'] == expected_code
 
 
 def assert_json_content_type(response: Dict[str, Any]) -> None:
+    """Assert that response has JSON content type header."""
     assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def assert_cors_headers(response: Dict[str, Any]) -> None:
+    """Assert that response includes CORS headers."""
     assert 'Access-Control-Allow-Origin' in response['headers']
 
 
 def load_echo_handler_module() -> ModuleType:
+    """Load the echo handler module dynamically."""
     handler_path = ECHO_SRC / "lambda" / "handler.py"
     spec = importlib.util.spec_from_file_location("echo_handler", handler_path)
     assert spec is not None
@@ -39,16 +45,19 @@ def load_echo_handler_module() -> ModuleType:
 
 @pytest.fixture
 def echo_handler() -> ModuleType:
+    """Load and return the echo handler module."""
     return load_echo_handler_module()
 
 
 @pytest.fixture
 def lambda_context():
+    """Create a mock Lambda context object."""
     return Mock()
 
 
 @pytest.fixture
 def echo_post_event_factory():
+    """Factory fixture for creating echo POST event payloads."""
     def _create_event(body_data=None, is_base64_encoded=False, content_type='application/json'):
         if body_data is None:
             body_data = {'test': 'data'}

@@ -1,3 +1,4 @@
+"""Pytest fixtures for bootstrap tests."""
 from pathlib import Path
 import re
 import pytest
@@ -20,6 +21,7 @@ SHARED_MODULE_VALUES = {
 
 
 def _extract_role_suffix(local_name: str) -> str:
+    """Extract role name suffix from locals.tf file."""
     with open(LOCALS_TF_PATH, encoding='utf-8') as f:
         content = f.read()
     pattern = rf'{local_name}\s*=\s*"\${{local\.resource_prefix}}([^"]+)"'
@@ -27,22 +29,29 @@ def _extract_role_suffix(local_name: str) -> str:
     return match.group(1) if match else ''
 
 
+_prefix = SHARED_MODULE_VALUES['resource_prefix']
+_logs = SHARED_MODULE_VALUES['name_for_central_logs_bucket']
+_ct_suffix = _extract_role_suffix('name_for_cloudtrail_iam_role')
+_gh_suffix = _extract_role_suffix('name_for_github_actions_role')
+
 LOCALS_DERIVED_VALUES = {
-    'name_for_cloudtrail': f"{SHARED_MODULE_VALUES['resource_prefix']}-cloudtrail",
-    'name_for_cloudtrail_bucket': SHARED_MODULE_VALUES['name_for_central_logs_bucket'],
-    'name_for_cloudtrail_iam_role': f"{SHARED_MODULE_VALUES['resource_prefix']}{_extract_role_suffix('name_for_cloudtrail_iam_role')}",
-    'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{SHARED_MODULE_VALUES['resource_prefix']}",
-    'name_for_github_actions_role': f"{SHARED_MODULE_VALUES['resource_prefix']}{_extract_role_suffix('name_for_github_actions_role')}",
+    'name_for_cloudtrail': f"{_prefix}-cloudtrail",
+    'name_for_cloudtrail_bucket': _logs,
+    'name_for_cloudtrail_iam_role': f"{_prefix}{_ct_suffix}",
+    'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{_prefix}",
+    'name_for_github_actions_role': f"{_prefix}{_gh_suffix}",
 }
 
 
 @pytest.fixture(name='bootstrap_dir')
 def bootstrap_dir_fixture():
+    """Provide path to bootstrap directory."""
     return BOOTSTRAP_DIR
 
 
 @pytest.fixture
 def config(request):
+    """Provide combined configuration from shared module and tfvars."""
     tfvars_path = request.getfixturevalue('bootstrap_dir') / "terraform.tfvars"
     config_dict = dict(SHARED_MODULE_VALUES)
     config_dict.update(LOCALS_DERIVED_VALUES)

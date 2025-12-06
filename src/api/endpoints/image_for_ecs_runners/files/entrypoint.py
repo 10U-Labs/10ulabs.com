@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Entrypoint script for GitHub Actions self-hosted runner on Fargate."""
 import argparse
 import signal
 import subprocess
@@ -6,6 +7,7 @@ import sys
 
 
 def cleanup_runner(registration_token):
+    """Remove the GitHub Actions runner registration."""
     print("Removing runner...")
     subprocess.run(
         ['./config.sh', 'remove', '--token', registration_token],
@@ -14,6 +16,7 @@ def cleanup_runner(registration_token):
 
 
 def start_cloudwatch_agent():
+    """Start the CloudWatch agent for log collection."""
     print("Starting CloudWatch agent...")
     result = subprocess.run(
         ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
@@ -30,6 +33,7 @@ def start_cloudwatch_agent():
 
 
 def stop_cloudwatch_agent():
+    """Stop the CloudWatch agent."""
     subprocess.run(
         ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
          '-a', 'stop'],
@@ -39,6 +43,7 @@ def stop_cloudwatch_agent():
 
 
 def main():
+    """Main entry point for the runner script."""
     parser = argparse.ArgumentParser(description='GitHub Actions self-hosted runner for Fargate')
     parser.add_argument('--repo', required=True, help='GitHub repository (org/repo)')
     parser.add_argument('--name', required=True, help='Runner name')

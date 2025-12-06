@@ -1,3 +1,7 @@
+"""Health check Lambda handler for 10U Labs API.
+
+Provides endpoints for checking API health and infrastructure dependencies.
+"""
 import json
 import os
 from typing import Any, Dict, List
@@ -8,16 +12,19 @@ _clients: Dict[str, Any] = {}
 
 
 def get_ec2_client():
+    """Get or create a cached EC2 client."""
     if 'ec2' not in _clients:
         _clients['ec2'] = boto3.client('ec2')
     return _clients['ec2']
 
 
 def set_client(name: str, client: Any):
+    """Set a client for testing purposes."""
     _clients[name] = client
 
 
 def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
+    """Validate that the given security groups exist."""
     if not security_group_ids:
         return {'valid': True, 'missing': []}
     try:
@@ -33,6 +40,7 @@ def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
 
 
 def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
+    """Validate that the given subnets exist."""
     if not subnet_ids:
         return {'valid': True, 'missing': []}
     try:
@@ -48,6 +56,7 @@ def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
 
 
 def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
+    """Validate that the given VPC exists."""
     if not vpc_id:
         return {'valid': False, 'error': 'VPC ID not configured'}
     try:
@@ -62,6 +71,7 @@ def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
 
 
 def validate_all_dependencies() -> Dict[str, Any]:
+    """Validate all infrastructure dependencies from environment variables."""
     errors = []
     security_groups_env = os.environ.get('SECURITY_GROUPS')
     security_group_ids = security_groups_env.split(',') if security_groups_env else []
@@ -95,6 +105,7 @@ def validate_all_dependencies() -> Dict[str, Any]:
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a JSON API Gateway response."""
     return {
         'statusCode': status_code,
         'headers': {
@@ -106,6 +117,7 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_health(_event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle GET /health request."""
     status_data = {
         'status': 'healthy',
         'service': '10U Labs API',
@@ -115,6 +127,7 @@ def handle_health(_event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_dependencies_health(_event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle GET /health/dependencies request."""
     result = validate_all_dependencies()
     if result['valid']:
         response = json_response(200, {
@@ -139,6 +152,7 @@ ROUTE_MAP = {
 
 
 def handler(event, _context):
+    """Lambda handler entry point."""
     path = event.get('path', '')
     method = event.get('httpMethod', '')
     route_key = (path, method)

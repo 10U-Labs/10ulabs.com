@@ -1,12 +1,17 @@
+"""End-to-end tests for DNS resolution."""
 import time
 from botocore.exceptions import ClientError
 import dns.resolver
 import pytest
 
 
-def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, hosted_zone, config):
+def test_can_create_and_resolve_record_via_route53_nameserver(
+    route53_client, hosted_zone, config
+):
+    """Test creating and resolving DNS record via Route53 nameserver."""
     domain_name = config['domain_name']
-    name_servers = route53_client.get_hosted_zone(Id=hosted_zone['Id'])['DelegationSet']['NameServers']
+    zone_info = route53_client.get_hosted_zone(Id=hosted_zone['Id'])
+    name_servers = zone_info['DelegationSet']['NameServers']
     test_record_name = f"e2e-test.{domain_name}"
     test_value = "e2e-test-value-12345"
     try:
@@ -55,6 +60,7 @@ def test_can_create_and_resolve_record_via_route53_nameserver(route53_client, ho
 
 
 def test_google_verification_record_resolves_via_public_dns(zone_nameservers, config):
+    """Test that Google verification record resolves via public DNS."""
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -76,6 +82,7 @@ def test_google_verification_record_resolves_via_public_dns(zone_nameservers, co
 
 
 def test_google_verification_record_has_correct_content(zone_nameservers, config):
+    """Test that Google verification record has correct content."""
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 
@@ -92,6 +99,7 @@ def test_google_verification_record_has_correct_content(zone_nameservers, config
 
 
 def test_mx_record_resolves_via_public_dns(zone_nameservers, config):
+    """Test that MX record resolves via public DNS."""
     domain_name = config['domain_name']
 
     ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
@@ -109,6 +117,7 @@ def test_mx_record_resolves_via_public_dns(zone_nameservers, config):
 
 
 def test_mx_record_returns_correct_priority_via_dns(zone_nameservers, config):
+    """Test that MX record returns correct priority via DNS."""
     domain_name = config['domain_name']
 
     ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
@@ -122,6 +131,7 @@ def test_mx_record_returns_correct_priority_via_dns(zone_nameservers, config):
 
 
 def test_mx_record_returns_smtp_hostname_via_dns(zone_nameservers, config):
+    """Test that MX record returns SMTP hostname via DNS."""
     domain_name = config['domain_name']
 
     ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
@@ -135,6 +145,7 @@ def test_mx_record_returns_smtp_hostname_via_dns(zone_nameservers, config):
 
 
 def test_mx_record_has_correct_ttl_in_dns_response(zone_nameservers, config):
+    """Test that MX record has correct TTL in DNS response."""
     domain_name = config['domain_name']
 
     ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()
@@ -147,6 +158,7 @@ def test_mx_record_has_correct_ttl_in_dns_response(zone_nameservers, config):
 
 
 def test_txt_record_has_correct_ttl_in_dns_response(zone_nameservers, config):
+    """Test that TXT record has correct TTL in DNS response."""
     domain_name = config['domain_name']
 
     ns_ip = dns.resolver.resolve(zone_nameservers[0], 'A')[0].to_text()

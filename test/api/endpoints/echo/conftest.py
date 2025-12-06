@@ -1,3 +1,4 @@
+"""Pytest fixtures for echo endpoint tests."""
 import re
 from pathlib import Path
 from typing import Dict
@@ -8,6 +9,7 @@ ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
+    """Parse shared Terraform outputs for configuration values."""
     outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
@@ -21,6 +23,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
+    """Load configuration from terraform.tfvars and shared outputs."""
     tfvars_path = ECHO_SRC / "terraform.tfvars"
     result = {}
     with open(tfvars_path, encoding="utf-8") as f:

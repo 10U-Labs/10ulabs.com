@@ -83,12 +83,14 @@ def get_subnet_ids():
 
 
 def get_instance_types():
+    """Get instance types from environment variable."""
     env_value = os.environ.get("INSTANCE_TYPES", "")
     result = env_value.split(",") if env_value else []
     return result
 
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
+    """Build configuration dict for E2E test instance."""
     result = {
         "ami_id": test_ami_id,
         "subnet_ids": get_subnet_ids(),
@@ -107,6 +109,7 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
 
 @pytest.fixture(scope="session")
 def e2e_test_instance(ec2_client, test_ami_id, config, github_token, github_repo):
+    """Create and manage E2E test EC2 instance for the session."""
     validate_e2e_inputs(test_ami_id, github_token)
 
     try:

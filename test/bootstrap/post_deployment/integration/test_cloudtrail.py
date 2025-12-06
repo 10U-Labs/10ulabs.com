@@ -1,21 +1,28 @@
+"""Integration tests for CloudTrail configuration."""
+
+
 def test_cloudtrail_trail_exists(cloudtrail_client):
+    """Test that CloudTrail trail exists."""
     trails = cloudtrail_client.describe_trails()
     assert len(trails['trailList']) > 0
 
 
 def test_cloudtrail_trail_is_multi_region(cloudtrail_client):
+    """Test that CloudTrail trail is multi-region."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     assert trail['IsMultiRegionTrail'] is True
 
 
 def test_cloudtrail_includes_global_service_events(cloudtrail_client):
+    """Test that CloudTrail includes global service events."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     assert trail['IncludeGlobalServiceEvents'] is True
 
 
 def test_cloudtrail_is_actively_logging(cloudtrail_client):
+    """Test that CloudTrail is actively logging."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     status = cloudtrail_client.get_trail_status(Name=trail['TrailARN'])
@@ -23,6 +30,7 @@ def test_cloudtrail_is_actively_logging(cloudtrail_client):
 
 
 def test_cloudtrail_s3_bucket_exists(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket exists."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -31,6 +39,7 @@ def test_cloudtrail_s3_bucket_exists(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_s3_bucket_has_encryption(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket has encryption."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -39,6 +48,7 @@ def test_cloudtrail_s3_bucket_has_encryption(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_s3_bucket_blocks_public_acls(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket blocks public ACLs."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -48,6 +58,7 @@ def test_cloudtrail_s3_bucket_blocks_public_acls(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_s3_bucket_blocks_public_policy(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket blocks public policy."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -57,6 +68,7 @@ def test_cloudtrail_s3_bucket_blocks_public_policy(s3_client, cloudtrail_client)
 
 
 def test_cloudtrail_s3_bucket_ignores_public_acls(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket ignores public ACLs."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -66,6 +78,7 @@ def test_cloudtrail_s3_bucket_ignores_public_acls(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_s3_bucket_restricts_public_buckets(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket restricts public buckets."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -75,6 +88,7 @@ def test_cloudtrail_s3_bucket_restricts_public_buckets(s3_client, cloudtrail_cli
 
 
 def test_cloudtrail_s3_bucket_versioning_disabled(s3_client, cloudtrail_client):
+    """Test that CloudTrail S3 bucket versioning is disabled."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -86,12 +100,14 @@ def test_cloudtrail_s3_bucket_versioning_disabled(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_has_cloudwatch_logs_configured(cloudtrail_client):
+    """Test that CloudTrail has CloudWatch logs configured."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     assert 'CloudWatchLogsLogGroupArn' in trail
 
 
 def test_cloudtrail_log_group_exists(logs_client, cloudtrail_client):
+    """Test that CloudTrail log group exists."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
@@ -101,6 +117,7 @@ def test_cloudtrail_log_group_exists(logs_client, cloudtrail_client):
 
 
 def test_cloudtrail_log_group_has_one_year_retention(logs_client, cloudtrail_client):
+    """Test that CloudTrail log group has one year retention."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
@@ -111,6 +128,7 @@ def test_cloudtrail_log_group_has_one_year_retention(logs_client, cloudtrail_cli
 
 
 def test_cloudtrail_captures_read_and_write_events(cloudtrail_client):
+    """Test that CloudTrail captures both read and write events."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
@@ -119,6 +137,7 @@ def test_cloudtrail_captures_read_and_write_events(cloudtrail_client):
 
 
 def test_cloudtrail_includes_management_events(cloudtrail_client):
+    """Test that CloudTrail includes management events."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     selectors = cloudtrail_client.get_event_selectors(TrailName=trail['Name'])
@@ -127,6 +146,7 @@ def test_cloudtrail_includes_management_events(cloudtrail_client):
 
 
 def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
+    """Test that CloudTrail writes logs to S3."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -136,6 +156,7 @@ def test_cloudtrail_writes_logs_to_s3(s3_client, cloudtrail_client):
 
 
 def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
+    """Test that CloudTrail writes logs to CloudWatch."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     log_group_arn = trail['CloudWatchLogsLogGroupArn']
@@ -150,6 +171,7 @@ def test_cloudtrail_writes_logs_to_cloudwatch(logs_client, cloudtrail_client):
 
 
 def test_access_log_bucket_exists(s3_client, cloudtrail_client):
+    """Test that access log bucket exists."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     cloudtrail_bucket_name = trail['S3BucketName']
@@ -161,6 +183,7 @@ def test_access_log_bucket_exists(s3_client, cloudtrail_client):
 
 
 def test_access_log_bucket_has_encryption(s3_client, cloudtrail_client):
+    """Test that access log bucket has encryption enabled."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     cloudtrail_bucket_name = trail['S3BucketName']
@@ -172,6 +195,7 @@ def test_access_log_bucket_has_encryption(s3_client, cloudtrail_client):
 
 
 def test_access_log_bucket_versioning_disabled(s3_client, cloudtrail_client):
+    """Test that access log bucket versioning is disabled."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     cloudtrail_bucket_name = trail['S3BucketName']
@@ -186,6 +210,7 @@ def test_access_log_bucket_versioning_disabled(s3_client, cloudtrail_client):
 
 
 def test_access_log_bucket_has_standard_ia_transition_at_30_days(s3_client, cloudtrail_client):
+    """Test that access log bucket has STANDARD_IA transition at 30 days."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     cloudtrail_bucket_name = trail['S3BucketName']
@@ -193,11 +218,13 @@ def test_access_log_bucket_has_standard_ia_transition_at_30_days(s3_client, clou
     access_log_bucket = response['LoggingEnabled']['TargetBucket']
     lifecycle = s3_client.get_bucket_lifecycle_configuration(Bucket=access_log_bucket)
     rule = lifecycle['Rules'][0]
-    standard_ia_transition = next(t for t in rule['Transitions'] if t['StorageClass'] == 'STANDARD_IA')
+    transitions = rule['Transitions']
+    standard_ia_transition = next(t for t in transitions if t['StorageClass'] == 'STANDARD_IA')
     assert standard_ia_transition['Days'] == 30
 
 
 def test_access_log_bucket_has_glacier_transition_at_90_days(s3_client, cloudtrail_client):
+    """Test that access log bucket has GLACIER transition at 90 days."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     cloudtrail_bucket_name = trail['S3BucketName']
@@ -210,6 +237,7 @@ def test_access_log_bucket_has_glacier_transition_at_90_days(s3_client, cloudtra
 
 
 def test_cloudtrail_bucket_enforces_ssl(s3_client, cloudtrail_client):
+    """Test that CloudTrail bucket enforces SSL."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     bucket_name = trail['S3BucketName']
@@ -222,6 +250,7 @@ def test_cloudtrail_bucket_enforces_ssl(s3_client, cloudtrail_client):
 
 
 def test_cloudwatch_logs_iam_role_exists(cloudtrail_client, iam_client):
+    """Test that CloudWatch Logs IAM role exists for CloudTrail."""
     trails = cloudtrail_client.describe_trails()
     trail = trails['trailList'][0]
     if 'CloudWatchLogsRoleArn' in trail:

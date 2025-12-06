@@ -8,4 +8,5 @@ def amis_endpoint_fixture(api_url) -> str:
 
 @pytest.fixture(name="latest_ami_endpoint", scope="module")
 def latest_ami_endpoint_fixture(api_url) -> str:
+    """Return the endpoint URL for getting the latest AMI."""
     return f"{api_url}/v1/image-for-ec2-runners/latest"

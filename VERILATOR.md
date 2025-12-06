@@ -2,17 +2,18 @@
 
 ## Executive Summary
 
-After deep analysis of Verilator's source code (v5.x, December 2025), I identified 5 concrete optimization opportunities. **Recommendation: Start with #1 (Thread Pool Lock Contention)** - it's self-contained, low-risk, and provides immediate value.
+Remaining optimization opportunities for Verilator (v5.x).
 
 ---
 
 ## Table of Contents
 
-1. [Thread Pool Lock Contention](#1-thread-pool-lock-contention) - **NOT IMPLEMENTED**
-2. [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) - **NOT IMPLEMENTED**
-3. [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) - **PARTIALLY IMPLEMENTED**
-4. [CPU Affinity Auto-Tuning](#4-cpu-affinity-auto-tuning) - **ALREADY IMPLEMENTED**
-5. [AST Object Pooling](#5-ast-object-pooling) - **NOT IMPLEMENTED**
+| Issue | Status | PR |
+|-------|--------|-----|
+| [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) |
+| [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | NOT IMPLEMENTED | - |
+| [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIALLY IMPLEMENTED | - |
+| [AST Object Pooling](#4-ast-object-pooling) | NOT IMPLEMENTED | - |
 
 ---
 
@@ -20,7 +21,7 @@ After deep analysis of Verilator's source code (v5.x, December 2025), I identifi
 
 **File:** `src/V3ThreadPool.cpp`
 
-**Status:** NOT IMPLEMENTED
+**Status:** PR SUBMITTED - [PR #6761](https://github.com/verilator/verilator/pull/6761)
 
 **Problem:** The `wait()` function uses busy-wait loop that wastes CPU cycles.
 
@@ -174,32 +175,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 ---
 
-## 4. CPU Affinity Auto-Tuning
-
-**File:** `include/verilated_threads.cpp`
-
-**Status:** ALREADY IMPLEMENTED
-
-**Implementation:** The `numaAssign()` function (lines 148-274) provides sophisticated CPU affinity auto-tuning:
-
-- Reads CPU topology from `/proc/cpuinfo`
-- Spreads threads across physical cores
-- Avoids placing threads on same hyperthreaded core
-- Detects when user already set affinity (via numactl)
-- Handles more threads than cores gracefully
-
-**Commits:**
-- `6d1e82b90` (Apr 2025): "Add numactl-like automatic assignment of processor affinity (#5911)"
-- `ffbb3229a` (Oct 2025): "Change default thread pool sizes to respect processor affinity (#6604)"
-- `9513edfdd`: "Fix processor parsing static position (#6598)"
-
-**Note:** macOS support is not possible due to platform limitations (no `sched_getcpu()` or thread-to-CPU pinning APIs).
-
-**NO FURTHER ACTION NEEDED**
-
----
-
-## 5. AST Object Pooling
+## 4. AST Object Pooling
 
 **Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
 
@@ -246,15 +222,14 @@ public:
 
 ---
 
-## Implementation Priority (Updated December 2025)
+## Implementation Priority
 
-| # | Optimization | Effort | Impact | Risk | Status | Recommendation |
-|---|--------------|--------|--------|------|--------|----------------|
-| 4 | CPU Affinity | - | - | - | DONE | No action needed |
-| 1 | Thread Pool | 1 day | High | Low | NOT DONE | **DO FIRST** |
-| 2 | Self-Diagnostic | 3 days | Medium | Low | NOT DONE | Do second |
-| 3 | Parallel Verilation | 1 week | High | Medium | PARTIAL | Extend existing |
-| 5 | Object Pooling | 2 weeks | Medium | Medium | NOT DONE | Do fourth |
+| # | Optimization | Effort | Impact | Risk | Status |
+|---|--------------|--------|--------|------|--------|
+| 1 | Thread Pool | 1 day | High | Low | PR SUBMITTED |
+| 2 | Self-Diagnostic | 3 days | Medium | Low | NOT DONE |
+| 3 | Parallel Verilation | 1 week | High | Medium | PARTIAL |
+| 4 | Object Pooling | 2 weeks | Medium | Medium | NOT DONE |
 
 ---
 
@@ -263,6 +238,7 @@ public:
 - [Verilator GitHub Repository](https://github.com/verilator/verilator)
 - [Antmicro: Improving Verilator's Hierarchical Mode (2025)](https://antmicro.com/blog/2025/05/improving-verilator-hierarchical-mode/)
 - [Antmicro: Accelerating Model Generation (2023)](https://antmicro.com/blog/2023/09/accelerating-model-generation-in-verilator/)
-- [Issue #2590: Threads 2 gives 2X slower performance](https://github.com/verilator/verilator/issues/2590) - RESOLVED
-- [PR #5911: Add numactl-like automatic assignment of processor affinity](https://github.com/verilator/verilator/pull/5911)
-- [PR #6604: Change default thread pool sizes to respect processor affinity](https://github.com/verilator/verilator/pull/6604)
+
+## Our Contributions
+
+- [PR #6761: Optimize V3ThreadPool::wait() to use condition variable](https://github.com/verilator/verilator/pull/6761)

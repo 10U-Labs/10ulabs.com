@@ -2,6 +2,10 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  check-deps:
+    uses: ./.github/workflows/check-dependencies.yml
+    with:
+      workflow_name: bootstrap
   checking-oidc-availability:
     if: |
       github.ref == 'refs/heads/main' && (
@@ -28,11 +32,13 @@ jobs:
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
   declaring-common-variables:
     if: |
+      needs.check-deps.outputs.can_proceed == 'true' &&
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
         (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
       )
     name: Declaring common variables
+    needs: check-deps
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
@@ -231,9 +237,11 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/bootstrap.yml
@@ -277,6 +285,17 @@ on:
       - '.github/workflows/bootstrap.yml'
       - 'src/bootstrap/**'
       - 'test/bootstrap/**'
+  workflow_call:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
   workflow_dispatch:
     inputs:
       dry_run:

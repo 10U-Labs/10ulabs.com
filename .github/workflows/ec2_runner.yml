@@ -3,9 +3,16 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  check-deps:
+    uses: ./.github/workflows/check-dependencies.yml
+    with:
+      workflow_name: ec2_runner
   declaring-common-variables:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      needs.check-deps.outputs.can_proceed == 'true' &&
+      github.ref == 'refs/heads/main'
     name: Declaring common variables
+    needs: check-deps
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       role_arn: ${{ steps.shared.outputs.role_arn }}
@@ -269,6 +276,12 @@ on:
       - 'src/api/endpoints/ec2_runner/**'
       - 'test/api/conftest.py'
       - 'test/api/endpoints/ec2_runner/**'
+  workflow_call:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
   workflow_dispatch:
     inputs:
       github_hosted:

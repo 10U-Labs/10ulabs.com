@@ -1,13 +1,19 @@
+"""Integration tests for IAM role configuration."""
+
+
 def test_iam_role_exists_in_aws(iam_client, config):
+    """Test that GitHub Actions IAM role exists in AWS."""
     role_name = config['name_for_github_actions_role']
     response = iam_client.get_role(RoleName=role_name)
     assert response['Role']['RoleName'] == role_name
 
 
 def test_iam_role_trust_policy_has_federated_principal(iam_client, config):
+    """Test that IAM role trust policy has federated principal."""
     role_name = config['name_for_github_actions_role']
     account_id = config['aws_account_id']
-    expected_provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/token.actions.githubusercontent.com"
+    oidc_provider = "token.actions.githubusercontent.com"
+    expected_provider_arn = f"arn:aws:iam::{account_id}:oidc-provider/{oidc_provider}"
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
     federated_principal = trust_policy['Statement'][0]['Principal']['Federated']
@@ -15,6 +21,7 @@ def test_iam_role_trust_policy_has_federated_principal(iam_client, config):
 
 
 def test_iam_role_trust_policy_has_correct_audience_condition(iam_client, config):
+    """Test that IAM role trust policy has correct audience condition."""
     role_name = config['name_for_github_actions_role']
     response = iam_client.get_role(RoleName=role_name)
     trust_policy = response['Role']['AssumeRolePolicyDocument']
@@ -25,6 +32,7 @@ def test_iam_role_trust_policy_has_correct_audience_condition(iam_client, config
 
 
 def test_iam_role_trust_policy_has_correct_subject_condition(iam_client, config):
+    """Test that IAM role trust policy has correct subject condition."""
     role_name = config['name_for_github_actions_role']
     github_org = config['github_org']
     github_repo = config['name_for_github_repo']
@@ -38,6 +46,7 @@ def test_iam_role_trust_policy_has_correct_subject_condition(iam_client, config)
 
 
 def test_iam_role_has_administrator_access_policy(iam_client, config):
+    """Test that IAM role has AdministratorAccess policy."""
     role_name = config['name_for_github_actions_role']
     response = iam_client.list_attached_role_policies(RoleName=role_name)
     policy_arn = response['AttachedPolicies'][0]['PolicyArn']

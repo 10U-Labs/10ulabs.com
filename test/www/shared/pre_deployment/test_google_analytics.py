@@ -1,3 +1,4 @@
+"""Tests for Google Analytics integration."""
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
@@ -8,20 +9,24 @@ GTAG_CONFIG = f"gtag('config', '{GOOGLE_ANALYTICS_ID}')"
 
 
 def test_index_html_has_gtag_script():
+    """Test that index.html includes gtag script."""
     content = (HOME_PAGE_SRC / "index.html").read_text()
     assert GTAG_SCRIPT_URL in content
 
 
 def test_index_html_has_gtag_config():
+    """Test that index.html includes gtag config."""
     content = (HOME_PAGE_SRC / "index.html").read_text()
     assert GTAG_CONFIG in content
 
 
 def test_privacy_html_has_gtag_script():
+    """Test that privacy.html includes gtag script."""
     content = (HOME_PAGE_SRC / "public" / "privacy.html").read_text()
     assert GTAG_SCRIPT_URL in content
 
 
 def test_privacy_html_has_gtag_config():
+    """Test that privacy.html includes gtag config."""
     content = (HOME_PAGE_SRC / "public" / "privacy.html").read_text()
     assert GTAG_CONFIG in content

@@ -1,7 +1,9 @@
+"""Integration tests for AMI promotion functionality."""
 import pytest
 
 
 def _find_tag_value(tags, key):
+    """Find a tag value by key from a list of AWS tags."""
     for tag in tags:
         if tag["Key"] == key:
             return tag["Value"]
@@ -9,6 +11,7 @@ def _find_tag_value(tags, key):
 
 
 def test_promote_ami_can_tag_ami(ec2_client, test_ami_id):
+    """Test that AMI can be tagged for promotion."""
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
 
@@ -28,6 +31,7 @@ def test_promote_ami_can_tag_ami(ec2_client, test_ami_id):
 
 
 def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
+    """Test that SSM parameter can be updated with AMI ID."""
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
 

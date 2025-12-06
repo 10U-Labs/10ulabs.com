@@ -203,9 +203,9 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
   - `get_deployment_order(affected)` - topological sort for order
   - `should_wait_for(workflow, completed)` - check if dependencies met
 - [x] 2.1.3. Create reusable workflow `.github/workflows/check-dependencies.yml`
-- [ ] 2.1.4. Add `workflow_call` triggers to all workflows for orchestration
+- [x] 2.1.4. Add `workflow_call` triggers to all workflows for orchestration
 - [x] 2.1.5. Create orchestrator workflow that triggers workflows in correct order
-- [ ] 2.1.6. Update each workflow to check dependencies before running
+- [x] 2.1.6. Update each workflow to check dependencies before running
 
 #### 2.2 Unit Tests for Workflow Ordering
 - [x] 2.2.1. Test `parse_workflow_order` with valid YAML

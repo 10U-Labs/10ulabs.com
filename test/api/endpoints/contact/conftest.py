@@ -1,15 +1,17 @@
+"""Pytest fixtures for contact endpoint tests."""
 import re
 from pathlib import Path
 from typing import Dict
 import pytest
 
-REPO_ROOT = Path(__file__).parent.parent.parent
-CONTACT_SRC = REPO_ROOT / "src" / "contact"
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
+CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
+    """Parse shared Terraform outputs for configuration values."""
     outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
-    config = {}
+    config: Dict[str, str] = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
     pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
@@ -21,8 +23,9 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
+    """Create configuration fixture from terraform.tfvars and shared outputs."""
     tfvars_path = CONTACT_SRC / "terraform.tfvars"
-    result = {}
+    result: Dict[str, str] = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()

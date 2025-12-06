@@ -1,3 +1,4 @@
+"""End-to-end tests for contact endpoint."""
 import time
 
 import requests
@@ -7,6 +8,7 @@ TEST_HEADERS = {"x-test-mode": "true", "Content-Type": "application/json"}
 
 
 def create_contact_payload():
+    """Create a contact form payload for testing."""
     return {
         "name": "Test User",
         "email": "test@example.com",
@@ -16,6 +18,7 @@ def create_contact_payload():
 
 
 def test_contact_endpoint_stable_over_sequential_requests(api_url):
+    """Test that contact endpoint is stable over sequential requests."""
     payload = create_contact_payload()
     responses = [
         requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
@@ -27,6 +30,7 @@ def test_contact_endpoint_stable_over_sequential_requests(api_url):
 
 
 def test_contact_endpoint_consistent_response_body(api_url):
+    """Test that contact endpoint returns consistent response body."""
     payload = create_contact_payload()
     responses = [
         requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
@@ -38,6 +42,7 @@ def test_contact_endpoint_consistent_response_body(api_url):
 
 
 def test_contact_endpoint_average_response_time_acceptable(api_url):
+    """Test that contact endpoint average response time is acceptable."""
     payload = create_contact_payload()
     times = []
     for _ in range(5):
@@ -50,17 +55,25 @@ def test_contact_endpoint_average_response_time_acceptable(api_url):
 
 
 def test_contact_endpoint_no_cold_start_degradation(api_url):
+    """Test that contact endpoint has no cold start degradation."""
     payload = create_contact_payload()
-    first_response = requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
+    first_response = requests.post(
+        f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10
+    )
     time.sleep(1)
-    second_response = requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
+    second_response = requests.post(
+        f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10
+    )
     statuses_match = first_response.status_code == second_response.status_code
     assert statuses_match
 
 
 def test_contact_endpoint_returns_valid_json_structure(api_url):
+    """Test that contact endpoint returns valid JSON structure."""
     payload = create_contact_payload()
-    response = requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
+    response = requests.post(
+        f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10
+    )
     body = response.json()
     required_fields = ["success", "message", "test_mode"]
     has_all_required_fields = all(field in body for field in required_fields)
@@ -68,6 +81,7 @@ def test_contact_endpoint_returns_valid_json_structure(api_url):
 
 
 def test_contact_endpoint_handles_concurrent_requests(api_url):
+    """Test that contact endpoint handles concurrent requests."""
     payload = create_contact_payload()
     responses = [
         requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
@@ -79,21 +93,38 @@ def test_contact_endpoint_handles_concurrent_requests(api_url):
 
 
 def test_contact_endpoint_rejects_empty_name(api_url):
-    payload = {"name": "", "email": "test@example.com", "message": "test", "recaptcha_token": "token"}
-    response = requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
+    """Test that contact endpoint rejects empty name."""
+    payload = {
+        "name": "", "email": "test@example.com", "message": "test",
+        "recaptcha_token": "token"
+    }
+    response = requests.post(
+        f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10
+    )
     status_is_400 = response.status_code == 400
     assert status_is_400
 
 
 def test_contact_endpoint_rejects_empty_email(api_url):
-    payload = {"name": "Test", "email": "", "message": "test", "recaptcha_token": "token"}
-    response = requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
+    """Test that contact endpoint rejects empty email."""
+    payload = {
+        "name": "Test", "email": "", "message": "test", "recaptcha_token": "token"
+    }
+    response = requests.post(
+        f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10
+    )
     status_is_400 = response.status_code == 400
     assert status_is_400
 
 
 def test_contact_endpoint_rejects_empty_message(api_url):
-    payload = {"name": "Test", "email": "test@example.com", "message": "", "recaptcha_token": "token"}
-    response = requests.post(f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10)
+    """Test that contact endpoint rejects empty message."""
+    payload = {
+        "name": "Test", "email": "test@example.com", "message": "",
+        "recaptcha_token": "token"
+    }
+    response = requests.post(
+        f"{api_url}/v1/contact", headers=TEST_HEADERS, json=payload, timeout=10
+    )
     status_is_400 = response.status_code == 400
     assert status_is_400

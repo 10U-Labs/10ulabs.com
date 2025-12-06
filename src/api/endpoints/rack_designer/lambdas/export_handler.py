@@ -1,9 +1,11 @@
+"""Lambda handler for exporting DynamoDB table to S3."""
 import os
 from datetime import datetime, timezone
 import boto3
 
 
 def lambda_handler(_event, _context):
+    """Export DynamoDB table to S3 at point in time."""
     dynamodb = boto3.client('dynamodb')
     table_arn = os.environ['DYNAMODB_TABLE_ARN']
     s3_bucket = os.environ['S3_BUCKET']

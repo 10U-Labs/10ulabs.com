@@ -1,3 +1,4 @@
+"""Pytest fixtures for www shared tests."""
 import re
 from pathlib import Path
 from typing import Dict
@@ -7,6 +8,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
+    """Parse shared module outputs from Terraform."""
     outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
@@ -19,6 +21,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 
 def parse_website_locals() -> Dict[str, str]:
+    """Parse website locals from Terraform."""
     locals_path = REPO_ROOT / "src" / "www" / "shared" / "locals.tf"
     shared = parse_shared_module_outputs()
     config = {}
@@ -37,12 +40,15 @@ def parse_website_locals() -> Dict[str, str]:
                         config[key] = shared.get(ref, '')
     config['www_fqdn'] = f"www.{shared.get('domain_name', '')}"
     config['apex_fqdn'] = shared.get('domain_name', '')
-    config['github_repo_full'] = f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}"
+    github_org = shared.get('github_org', '')
+    github_repo = shared.get('name_for_github_repo', '')
+    config['github_repo_full'] = f"{github_org}/{github_repo}"
     return config
 
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
+    """Provide website configuration for tests."""
     shared = parse_shared_module_outputs()
     website_locals = parse_website_locals()
     result = {}
@@ -59,28 +65,33 @@ def config_fixture() -> Dict[str, str]:
 
 @pytest.fixture(name="website_src_path")
 def fixture_website_src_path():
+    """Provide path to website source directory."""
     return REPO_ROOT / "src" / "www" / "shared"
 
 
 @pytest.fixture(name="cloudfront_s3_tf_content")
 def fixture_cloudfront_s3_tf_content(website_src_path):
+    """Provide CloudFront S3 Terraform file content."""
     with open(website_src_path / "cloudfront_s3.tf", encoding="utf-8") as f:
         return f.read()
 
 
 @pytest.fixture(name="certificate_dns_tf_content")
 def fixture_certificate_dns_tf_content(website_src_path):
+    """Provide certificate DNS Terraform file content."""
     with open(website_src_path / "certificate_dns.tf", encoding="utf-8") as f:
         return f.read()
 
 
 @pytest.fixture(name="contact_form_tf_content")
 def fixture_contact_form_tf_content(website_src_path):
+    """Provide contact form Terraform file content."""
     with open(website_src_path / "contact_form.tf", encoding="utf-8") as f:
         return f.read()
 
 
 @pytest.fixture(name="contact_lambda_content")
 def fixture_contact_lambda_content(website_src_path):
+    """Provide contact Lambda file content."""
     with open(website_src_path / "lambdas" / "contact.py", encoding="utf-8") as f:
         return f.read()

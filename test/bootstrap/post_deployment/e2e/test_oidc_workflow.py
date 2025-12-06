@@ -1,3 +1,4 @@
+"""End-to-end tests for OIDC workflow."""
 import json
 import os
 import subprocess
@@ -5,6 +6,7 @@ import pytest
 
 
 def get_github_oidc_token():
+    """Get GitHub OIDC token from environment."""
     token_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL')
     token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
     if not token_url or not token_request_token:
@@ -24,6 +26,7 @@ def get_github_oidc_token():
 
 
 def assume_role_with_oidc(account_id, region, role_name, oidc_token):
+    """Assume IAM role using OIDC token."""
     role_arn = f"arn:aws:iam::{account_id}:role/{role_name}"
     result = subprocess.run(
         ['aws', 'sts', 'assume-role-with-web-identity',
@@ -46,13 +49,16 @@ def assume_role_with_oidc(account_id, region, role_name, oidc_token):
 
 
 class TestCompleteOIDCWorkflow:
+    """Test class for complete OIDC workflow."""
 
     @pytest.fixture
     def oidc_token(self):
+        """Get OIDC token fixture."""
         return get_github_oidc_token()
 
     @pytest.fixture
     def aws_creds(self, config, oidc_token):
+        """Get AWS credentials fixture."""
         return assume_role_with_oidc(
             config['aws_account_id'],
             config['aws_region'],
@@ -61,6 +67,7 @@ class TestCompleteOIDCWorkflow:
         )
 
     def test_complete_oidc_workflow(self, oidc_token, aws_creds):
+        """Test complete OIDC workflow from token to credentials."""
         assert oidc_token is not None
         assert len(oidc_token) > 0
         assert aws_creds['access_key_id'] is not None
@@ -68,6 +75,7 @@ class TestCompleteOIDCWorkflow:
         assert aws_creds['session_token'] is not None
 
     def test_assumed_role_has_correct_identity(self, config, aws_creds):
+        """Test that assumed role has correct identity."""
         env = os.environ.copy()
         env['AWS_ACCESS_KEY_ID'] = aws_creds['access_key_id']
         env['AWS_SECRET_ACCESS_KEY'] = aws_creds['secret_access_key']

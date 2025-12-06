@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Script to promote Docker images by updating ECR tags."""
 import argparse
 import sys
 import boto3
@@ -6,6 +7,7 @@ from botocore.exceptions import ClientError
 
 
 def remove_tag_from_image(ecr_client, repository_name, tag_to_remove):
+    """Remove a tag from an ECR image."""
     try:
         response = ecr_client.describe_images(
             repositoryName=repository_name,
@@ -29,6 +31,7 @@ def remove_tag_from_image(ecr_client, repository_name, tag_to_remove):
 
 
 def get_image_manifest(ecr_client, repository_name, source_tag):
+    """Get the manifest of an ECR image by tag."""
     try:
         response = ecr_client.describe_images(
             repositoryName=repository_name,
@@ -56,6 +59,7 @@ def get_image_manifest(ecr_client, repository_name, source_tag):
 
 
 def add_tag_to_image(ecr_client, repository_name, manifest, new_tag):
+    """Add a new tag to an ECR image using its manifest."""
     try:
         ecr_client.put_image(
             repositoryName=repository_name,
@@ -70,6 +74,7 @@ def add_tag_to_image(ecr_client, repository_name, manifest, new_tag):
 
 
 def promote_image(repository_name: str, image_tag: str, region: str) -> int:
+    """Promote an image to latest and stable tags."""
     ecr_client = boto3.client("ecr", region_name=region)
 
     exit_code = 0
@@ -128,11 +133,14 @@ def promote_image(repository_name: str, image_tag: str, region: str) -> int:
 
 
 def main():
+    """Main entry point for the promote script."""
     parser = argparse.ArgumentParser(
         description="Promote Docker image to latest and stable"
     )
     parser.add_argument("--repository", required=True, help="ECR repository name")
-    parser.add_argument("--image-tag", required=True, help="Image tag to promote (e.g., build number)")
+    parser.add_argument(
+        "--image-tag", required=True, help="Image tag to promote (e.g., build number)"
+    )
     parser.add_argument("--region", required=True, help="AWS region")
     args = parser.parse_args()
 
