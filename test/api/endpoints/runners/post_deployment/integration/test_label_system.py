@@ -1,4 +1,5 @@
 """Integration tests for runner label system."""
+# pylint: disable=import-error
 from runner_labels import (
     parse_labels,
     validate_labels,

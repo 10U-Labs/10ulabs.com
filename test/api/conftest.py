@@ -1,3 +1,4 @@
+"""Shared pytest fixtures and utilities for API tests."""
 import re
 import sys
 from pathlib import Path
@@ -14,17 +15,20 @@ if str(LIB_DIR) not in sys.path:
 
 
 def parse_shared_config() -> Dict[str, Any]:
+    """Parse the shared runners configuration from etc/runners.yml."""
     config_path = REPO_ROOT / "etc" / "runners.yml"
     with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def get_runner_labels() -> Dict[str, str]:
+    """Get runner labels from the shared configuration."""
     shared_config = parse_shared_config()
     return shared_config.get('runner_labels', {})
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
+    """Parse Terraform outputs from the shared module."""
     outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:

@@ -2,7 +2,6 @@
 # pylint: disable=duplicate-code
 import importlib.util
 import json
-from pathlib import Path
 from typing import Any, Callable, Dict
 from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch

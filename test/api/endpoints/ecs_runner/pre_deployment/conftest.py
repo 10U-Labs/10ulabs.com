@@ -1,7 +1,6 @@
 """Shared fixtures and utilities for ECS runner pre-deployment tests."""
 import importlib.util
 import json
-from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import Mock, patch
