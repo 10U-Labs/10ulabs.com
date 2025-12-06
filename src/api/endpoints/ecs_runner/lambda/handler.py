@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -9,6 +10,20 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 import boto3
 from botocore.exceptions import ClientError
+
+# Add lib directory to path for runner_labels import
+lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
+if lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(lib_path))
+
+# pylint: disable=wrong-import-position,import-error
+from runner_labels import (  # noqa: E402
+    parse_labels,
+    validate_labels,
+    is_spot,
+    LabelParseError,
+    LabelValidationError,
+)
 
 
 @dataclass
@@ -573,10 +588,26 @@ def wait_for_fargate_task_provisioned(cluster: str, task_arn: str) -> Dict[str, 
     return result
 
 
+def _get_capacity_provider(job_labels: List[str]) -> str:
+    """Determine the capacity provider based on job labels."""
+    try:
+        parsed = parse_labels(job_labels)
+        validate_labels(parsed)
+        if is_spot(parsed):
+            return 'FARGATE_SPOT'
+        return 'FARGATE'
+    except (LabelParseError, LabelValidationError) as e:
+        # If labels can't be parsed (legacy format), default to FARGATE
+        logger.warning("Could not parse labels for capacity provider: %s", e)
+        return 'FARGATE'
+
+
 def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:
     run_id = cfg['run_id']
     job_id = cfg['job_id']
     runner_name = f"fargate-runner-{run_id}" if run_id else f"fargate-runner-{job_id}"
+    capacity_provider = _get_capacity_provider(cfg['job_labels'])
+    logger.info("Using capacity provider %s for job %s", capacity_provider, job_id)
     response = get_ecs_client().run_task(
         cluster=os.environ['ECS_CLUSTER'],
         taskDefinition=os.environ['TASK_DEFINITION'],
@@ -588,7 +619,9 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
                 'assignPublicIp': 'ENABLED'
             }
         },
-        capacityProviderStrategy=[{'capacityProvider': 'FARGATE', 'weight': 100, 'base': 0}],
+        capacityProviderStrategy=[{
+            'capacityProvider': capacity_provider, 'weight': 100, 'base': 0
+        }],
         overrides={
             'containerOverrides': [{
                 'name': os.environ['CONTAINER_NAME'],
@@ -605,7 +638,8 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
             {'key': 'JobLabels', 'value': ' '.join(cfg['job_labels'])},
             {'key': 'GitHubRepo', 'value': cfg['github_repo']},
             {'key': 'RunId', 'value': str(cfg['run_id']) if cfg['run_id'] else ''},
-            {'key': 'RunnerType', 'value': cfg['runner_type']}
+            {'key': 'RunnerType', 'value': cfg['runner_type']},
+            {'key': 'CapacityProvider', 'value': capacity_provider}
         ]
     )
     return {'response': response, 'runner_name': runner_name}

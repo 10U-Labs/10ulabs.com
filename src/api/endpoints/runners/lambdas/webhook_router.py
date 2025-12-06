@@ -6,13 +6,27 @@ import hmac
 import json
 import logging
 import os
+import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 import boto3
 from botocore.exceptions import ClientError
+
+# Add lib directory to path for runner_labels import
+lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
+if lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(lib_path))
+
+# pylint: disable=wrong-import-position,import-error
+from runner_labels import (  # noqa: E402
+    parse_labels,
+    validate_labels,
+    LabelParseError,
+    LabelValidationError,
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -492,8 +506,31 @@ def make_http_request_with_retry(
     return (False, None, 'Max retries exceeded', last_status_code)
 
 
-def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
-    """Determine runner type and endpoint from job labels."""
+def get_runner_type_from_labels(  # pylint: disable=too-many-return-statements
+    job_labels: List[str]
+) -> Tuple[str | None, str | None]:
+    """Determine runner type and endpoint from job labels.
+
+    Supports both new composable label format (ecs/ec2 + compute + pricing)
+    and legacy labels from environment variables for backwards compatibility.
+    """
+    # Try new label format first
+    try:
+        parsed = parse_labels(job_labels)
+        validate_labels(parsed)
+        platform = parsed.platform
+        is_e2e = 'e2e' in job_labels
+        if platform == 'ec2':
+            runner_type = 'ec2-e2e' if is_e2e else 'ec2'
+            return (runner_type, 'ec2-runner')
+        if platform == 'ecs':
+            runner_type = 'fargate-e2e' if is_e2e else 'fargate'
+            return (runner_type, 'ecs-runner')
+    except (LabelParseError, LabelValidationError):
+        # Fall through to legacy label check
+        pass
+
+    # Legacy label format for backwards compatibility
     runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2')
     runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_E2E')
     runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE')
@@ -556,7 +593,7 @@ def route_runner_request(
         logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
         return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
     runner_type, endpoint_suffix = get_runner_type_from_labels(job_labels)
-    if not runner_type:
+    if not runner_type or not endpoint_suffix:
         logger.error("No matching runner type for labels: %s", job_labels)
         return {'success': False, 'error': f'No matching runner type for labels: {job_labels}'}
     try:

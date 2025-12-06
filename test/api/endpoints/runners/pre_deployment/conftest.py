@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, Callable
@@ -13,6 +14,11 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+
+# Add lib directory to sys.path for runner_labels import
+LIB_DIR = REPO_ROOT / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
 
 @pytest.fixture

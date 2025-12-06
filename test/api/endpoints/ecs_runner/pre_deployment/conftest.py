@@ -1,6 +1,8 @@
 """Shared fixtures and utilities for ECS runner pre-deployment tests."""
 import importlib.util
 import json
+import sys
+from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict
 from unittest.mock import Mock, patch
@@ -8,6 +10,11 @@ from unittest.mock import Mock, patch
 import pytest
 
 from ..conftest import ECS_RUNNER_SRC
+
+# Add lib directory to sys.path for runner_labels import
+LIB_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
 
 def load_handler_module() -> ModuleType:

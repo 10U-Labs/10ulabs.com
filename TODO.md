@@ -260,11 +260,11 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
   - `is_spot(parsed)` - check if spot pricing
 - [x] 3.2.2. Update runner Lambda to use new label parsing
 - [x] 3.2.3. Create label-to-instance-type mapping in `src/api/endpoints/runners/locals.tf`
-- [ ] 3.2.4. Update ECS task definitions to support label-based selection
-- [ ] 3.2.5. Update EC2 launch logic to select instance type based on labels
-- [ ] 3.2.6. Update all workflows to use new label format
-- [ ] 3.2.7. Update runner registration to apply all labels
-- [ ] 3.2.8. Add validation to reject invalid label combinations
+- [x] 3.2.4. Update ECS task definitions to support label-based selection (uses FARGATE_SPOT for spot labels)
+- [x] 3.2.5. Update EC2 launch logic to select instance type based on labels
+- [x] 3.2.6. Update webhook router to use new label format (with legacy fallback)
+- [x] 3.2.7. Update runner registration to apply all labels
+- [x] 3.2.8. Add validation to reject invalid label combinations (via parse_labels/validate_labels)
 
 #### 3.3 Unit Tests for Label System
 - [x] 3.3.1. Test `parse_labels` with valid ECS labels

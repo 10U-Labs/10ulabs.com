@@ -194,9 +194,9 @@ jobs:
       - name: Static type checking Python files with mypy
         run: |
           for file in src/api/endpoints/runners/lambdas/*.py; do
-            python3 -m mypy "$file"
+            MYPYPATH=lib python3 -m mypy "$file"
           done
-          python3 -m mypy test/api/endpoints/runners/
+          MYPYPATH=lib python3 -m mypy test/api/endpoints/runners/
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

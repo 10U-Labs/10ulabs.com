@@ -3,12 +3,28 @@ import base64
 import json
 import logging
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
 from typing import Any, Dict, List
 import boto3
 from botocore.exceptions import ClientError
+
+# Add lib directory to path for runner_labels import
+lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
+if lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(lib_path))
+
+# pylint: disable=wrong-import-position,import-error
+from runner_labels import (  # noqa: E402
+    parse_labels,
+    validate_labels,
+    get_instance_type,
+    is_spot,
+    LabelParseError,
+    LabelValidationError,
+)
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -545,6 +561,28 @@ def get_ec2_config() -> Dict[str, Any]:
     }
 
 
+def _get_instance_type_from_labels(job_labels: List[str]) -> str | None:
+    """Determine the EC2 instance type from job labels."""
+    try:
+        parsed = parse_labels(job_labels)
+        validate_labels(parsed)
+        return get_instance_type(parsed)
+    except (LabelParseError, LabelValidationError) as e:
+        logger.warning("Could not parse labels for instance type: %s", e)
+        return None
+
+
+def _is_spot_from_labels(job_labels: List[str]) -> bool:
+    """Determine if spot pricing should be used from job labels."""
+    try:
+        parsed = parse_labels(job_labels)
+        validate_labels(parsed)
+        return is_spot(parsed)
+    except (LabelParseError, LabelValidationError) as e:
+        logger.warning("Could not parse labels for pricing: %s", e)
+        return False
+
+
 def wait_for_instance_describable(instance_id: str, max_attempts: int = 3) -> Dict[str, Any]:
     """Wait for an EC2 instance to become describable after launch."""
     ec2 = get_ec2_client()
@@ -742,17 +780,33 @@ def _handle_ec2_fleet_success(
     }
 
 
-def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
+def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:  # pylint: disable=too-many-locals
     """Attempt to launch an EC2 runner using the EC2 Fleet API."""
     ec2_config = get_ec2_config()
     template_config = _build_ec2_template_config(cfg, ec2_config)
     result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
     launch_template_id = None
+
+    # Determine instance type from labels, fallback to env config
+    job_labels = cfg.get('job_labels', [])
+    label_instance_type = _get_instance_type_from_labels(job_labels)
+    if label_instance_type:
+        instance_types = [label_instance_type]
+        logger.info("Using instance type from labels: %s", label_instance_type)
+    else:
+        instance_types = ec2_config['instance_types']
+        logger.info("Using instance types from config: %s", instance_types)
+
+    # Determine pricing from labels
+    use_spot = _is_spot_from_labels(job_labels)
+    capacity_type = 'spot' if use_spot else 'on-demand'
+    logger.info("Using capacity type: %s", capacity_type)
+
     try:
         launch_template_id = create_fleet_launch_template(template_config)
         target_spec = {
             'TotalTargetCapacity': 1,
-            'DefaultTargetCapacityType': 'on-demand'
+            'DefaultTargetCapacityType': capacity_type
         }
         template_spec = {
             'LaunchTemplateId': launch_template_id,
@@ -761,17 +815,30 @@ def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
         overrides = [
             {'InstanceType': itype, 'SubnetId': subnet}
             for subnet in ec2_config['subnet_ids']
-            for itype in ec2_config['instance_types']
+            for itype in instance_types
         ]
-        fleet_response = get_ec2_client().create_fleet(
-            Type='instant',
-            TargetCapacitySpecification=target_spec,
-            OnDemandOptions={'AllocationStrategy': 'lowest-price'},
-            LaunchTemplateConfigs=[{
-                'LaunchTemplateSpecification': template_spec,
-                'Overrides': overrides
-            }]
-        )
+
+        # Use appropriate allocation strategy based on pricing
+        if use_spot:
+            fleet_response = get_ec2_client().create_fleet(
+                Type='instant',
+                TargetCapacitySpecification=target_spec,
+                SpotOptions={'AllocationStrategy': 'price-capacity-optimized'},
+                LaunchTemplateConfigs=[{
+                    'LaunchTemplateSpecification': template_spec,
+                    'Overrides': overrides
+                }]
+            )
+        else:
+            fleet_response = get_ec2_client().create_fleet(
+                Type='instant',
+                TargetCapacitySpecification=target_spec,
+                OnDemandOptions={'AllocationStrategy': 'lowest-price'},
+                LaunchTemplateConfigs=[{
+                    'LaunchTemplateSpecification': template_spec,
+                    'Overrides': overrides
+                }]
+            )
         if fleet_response.get('Instances'):
             instance_ids = fleet_response['Instances'][0].get('InstanceIds', [])
             if instance_ids:
