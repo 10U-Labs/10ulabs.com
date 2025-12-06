@@ -101,6 +101,17 @@ jobs:
           role-to-assume: >-
             ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
             }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Terraform Init
         run: terraform init
       - name: Terraform Apply
