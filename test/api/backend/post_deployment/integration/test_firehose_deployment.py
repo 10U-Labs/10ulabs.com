@@ -98,13 +98,18 @@ def test_cloudwatch_logs_firehose_role_exists(iam_client, config):
 
 
 def test_cloudwatch_logs_firehose_role_trusts_logs_service(iam_client, config):
-    """Verify CloudWatch Logs Firehose role trusts the CloudWatch Logs service."""
+    """Verify CloudWatch Logs Firehose role trusts the CloudWatch Logs service.
+
+    The main Firehose role trusts logs from the API region (us-east-2).
+    WAF logs use a separate Firehose role that trusts us-east-1.
+    """
     role_name = config['cloudwatch_logs_firehose_role_name']
     response = iam_client.get_role(RoleName=role_name)
     assume_role_policy = response['Role']['AssumeRolePolicyDocument']
     statements = assume_role_policy['Statement']
     service_principal = statements[0]['Principal']['Service']
-    assert 'logs.us-east-1.amazonaws.com' == service_principal
+    # Main Firehose role trusts logs from the API region (us-east-2)
+    assert f"logs.{config['aws_region']}.amazonaws.com" == service_principal
 
 
 def test_firehose_role_has_s3_access_policy(iam_client, config):
