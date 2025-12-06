@@ -11,7 +11,7 @@ Remaining optimization opportunities for Verilator (v5.x).
 | Issue | Status | PR |
 |-------|--------|-----|
 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) |
-| [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | NOT IMPLEMENTED | - |
+| [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) |
 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIALLY IMPLEMENTED | - |
 | [AST Object Pooling](#4-ast-object-pooling) | NOT IMPLEMENTED | - |
 
@@ -73,9 +73,9 @@ void V3ThreadPool::workerJobLoop() {
 
 ## 2. Threading Self-Diagnostic System
 
-**Files:** `include/verilated_profiler.h`, `include/verilated.cpp`
+**Files:** `include/verilated_threading_advisor.h`, `include/verilated.cpp`
 
-**Status:** NOT IMPLEMENTED (as runtime advisory)
+**Status:** PR SUBMITTED - [PR #6762](https://github.com/verilator/verilator/pull/6762)
 
 **Current state:**
 - `VlExecutionProfiler` exists for collecting profiling data (verilated_profiler.h)
@@ -242,3 +242,4 @@ public:
 ## Our Contributions
 
 - [PR #6761: Optimize V3ThreadPool::wait() to use condition variable](https://github.com/verilator/verilator/pull/6761)
+- [PR #6762: Add runtime threading advisor for configuration warnings](https://github.com/verilator/verilator/pull/6762)
