@@ -1,3 +1,4 @@
+"""Lambda handler for infrastructure drift detection and recovery."""
 import json
 import logging
 import os
@@ -14,28 +15,33 @@ _clients: dict[str, Any] = {}
 
 
 def clear_clients():
+    """Clear cached AWS clients."""
     _clients.clear()
 
 
 def get_ssm_client():
+    """Get or create cached SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_sns_client():
+    """Get or create cached SNS client."""
     if 'sns' not in _clients:
         _clients['sns'] = boto3.client('sns')
     return _clients['sns']
 
 
 def get_ec2_client():
+    """Get or create cached EC2 client."""
     if 'ec2' not in _clients:
         _clients['ec2'] = boto3.client('ec2')
     return _clients['ec2']
 
 
 def is_resource_in_managed_vpc(resource_id, resource_type):
+    """Check if a resource is in the managed VPC."""
     managed_vpc_id = os.environ.get('MANAGED_VPC_ID', '')
     result = True
     if managed_vpc_id:
@@ -64,6 +70,7 @@ def is_resource_in_managed_vpc(resource_id, resource_type):
 
 
 def get_github_token():
+    """Retrieve GitHub token from SSM Parameter Store."""
     parameter_name = os.environ['GITHUB_TOKEN_PARAMETER_NAME']
     result = ''
     try:
@@ -75,6 +82,7 @@ def get_github_token():
 
 
 def trigger_api_workflow(github_token):
+    """Trigger the api.yml workflow to recover infrastructure."""
     github_repo = os.environ['GITHUB_REPO']
     workflow_file = 'api.yml'
     url = f'https://api.github.com/repos/{github_repo}/actions/workflows/{workflow_file}/dispatches'
@@ -106,6 +114,7 @@ def trigger_api_workflow(github_token):
 
 
 def send_notification(subject, message):
+    """Send an SNS notification."""
     sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
     if not sns_topic_arn:
         logger.warning("SNS_TOPIC_ARN not configured, skipping notification")
@@ -118,6 +127,7 @@ def send_notification(subject, message):
 
 
 def extract_event_from_sqs(event):
+    """Extract the underlying event from an SQS record."""
     records = event.get('Records', [])
     result = event
     if records:
@@ -127,6 +137,7 @@ def extract_event_from_sqs(event):
 
 
 def format_drift_details(trigger_event):
+    """Extract and format drift details from the trigger event."""
     rule_name = trigger_event.get('configRuleName', 'Unknown')
     resource_type = trigger_event.get('resourceType', 'Unknown')
     resource_id = trigger_event.get('resourceId', 'Unknown')
@@ -142,6 +153,7 @@ def format_drift_details(trigger_event):
 
 
 def lambda_handler(event, _context):
+    """Main Lambda handler for drift recovery."""
     logger.info("Received SQS event: %s", json.dumps(event))
     trigger_event = extract_event_from_sqs(event)
     drift = format_drift_details(trigger_event)

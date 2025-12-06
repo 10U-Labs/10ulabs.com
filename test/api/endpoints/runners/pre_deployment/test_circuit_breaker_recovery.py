@@ -1,3 +1,4 @@
+"""Unit tests for test circuit breaker recovery."""
 import json
 import os
 import time
@@ -16,6 +17,7 @@ from .conftest import (
 
 
 def test_get_circuit_breaker_state_returns_default_when_not_exists(circuit_breaker_recovery):
+    """Test get circuit breaker state returns default when not exists."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb = MagicMock()
         mock_dynamodb.get_item.return_value = {}
@@ -25,6 +27,7 @@ def test_get_circuit_breaker_state_returns_default_when_not_exists(circuit_break
 
 
 def test_get_circuit_breaker_state_returns_stored_state(circuit_breaker_recovery):
+    """Test get circuit breaker state returns stored state."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb = MagicMock()
         mock_dynamodb.get_item.return_value = {
@@ -41,6 +44,7 @@ def test_get_circuit_breaker_state_returns_stored_state(circuit_breaker_recovery
 
 
 def test_get_circuit_breaker_state_handles_dynamodb_error(circuit_breaker_recovery):
+    """Test get circuit breaker state handles dynamodb error."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb = MagicMock()
         mock_dynamodb.get_item.side_effect = ClientError(
@@ -53,6 +57,7 @@ def test_get_circuit_breaker_state_handles_dynamodb_error(circuit_breaker_recove
 
 
 def test_update_circuit_breaker_state_writes_to_dynamodb(circuit_breaker_recovery):
+    """Test update circuit breaker state writes to dynamodb."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb = MagicMock()
         mock_boto_client.return_value = mock_dynamodb
@@ -61,6 +66,7 @@ def test_update_circuit_breaker_state_writes_to_dynamodb(circuit_breaker_recover
 
 
 def test_update_circuit_breaker_state_sets_correct_state(circuit_breaker_recovery):
+    """Test update circuit breaker state sets correct state."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb = MagicMock()
         mock_boto_client.return_value = mock_dynamodb
@@ -70,6 +76,7 @@ def test_update_circuit_breaker_state_sets_correct_state(circuit_breaker_recover
 
 
 def test_update_circuit_breaker_state_sets_recovery_attempts(circuit_breaker_recovery):
+    """Test update circuit breaker state sets recovery attempts."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb = MagicMock()
         mock_boto_client.return_value = mock_dynamodb
@@ -79,31 +86,37 @@ def test_update_circuit_breaker_state_sets_recovery_attempts(circuit_breaker_rec
 
 
 def test_calculate_backoff_seconds_starts_at_60(circuit_breaker_recovery):
+    """Test calculate backoff seconds starts at 60."""
     result = circuit_breaker_recovery.calculate_backoff_seconds(0)
     assert result == 60
 
 
 def test_calculate_backoff_seconds_doubles_each_attempt(circuit_breaker_recovery):
+    """Test calculate backoff seconds doubles each attempt."""
     result = circuit_breaker_recovery.calculate_backoff_seconds(2)
     assert result == 240
 
 
 def test_calculate_backoff_seconds_caps_at_3600(circuit_breaker_recovery):
+    """Test calculate backoff seconds caps at 3600."""
     result = circuit_breaker_recovery.calculate_backoff_seconds(10)
     assert result == 3600
 
 
 def test_calculate_backoff_seconds_handles_first_attempt(circuit_breaker_recovery):
+    """Test calculate backoff seconds handles first attempt."""
     result = circuit_breaker_recovery.calculate_backoff_seconds(1)
     assert result == 120
 
 
 def test_calculate_backoff_seconds_handles_max_attempts(circuit_breaker_recovery):
+    """Test calculate backoff seconds handles max attempts."""
     result = circuit_breaker_recovery.calculate_backoff_seconds(5)
     assert result == 1920
 
 
 def test_check_health_invokes_health_endpoint(circuit_breaker_recovery):
+    """Test check health invokes health endpoint."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.invoke.return_value = {
@@ -118,6 +131,7 @@ def test_check_health_invokes_health_endpoint(circuit_breaker_recovery):
 
 
 def test_check_health_returns_healthy_when_200(circuit_breaker_recovery):
+    """Test check health returns healthy when 200."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.invoke.return_value = {
@@ -132,6 +146,7 @@ def test_check_health_returns_healthy_when_200(circuit_breaker_recovery):
 
 
 def test_check_health_returns_unhealthy_when_non_200(circuit_breaker_recovery):
+    """Test check health returns unhealthy when non 200."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.invoke.return_value = {
@@ -146,6 +161,7 @@ def test_check_health_returns_unhealthy_when_non_200(circuit_breaker_recovery):
 
 
 def test_check_health_extracts_circuit_state_from_response(circuit_breaker_recovery):
+    """Test check health extracts circuit state from response."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.invoke.return_value = {
@@ -160,6 +176,7 @@ def test_check_health_extracts_circuit_state_from_response(circuit_breaker_recov
 
 
 def test_check_health_handles_lambda_invoke_error(circuit_breaker_recovery):
+    """Test check health handles lambda invoke error."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.invoke.side_effect = ClientError(
@@ -172,6 +189,7 @@ def test_check_health_handles_lambda_invoke_error(circuit_breaker_recovery):
 
 
 def test_check_health_handles_malformed_response(circuit_breaker_recovery):
+    """Test check health handles malformed response."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.invoke.return_value = {
@@ -183,6 +201,7 @@ def test_check_health_handles_malformed_response(circuit_breaker_recovery):
 
 
 def test_enable_event_source_mappings_enables_disabled_sources(circuit_breaker_recovery):
+    """Test enable event source mappings enables disabled sources."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {
@@ -194,6 +213,7 @@ def test_enable_event_source_mappings_enables_disabled_sources(circuit_breaker_r
 
 
 def test_enable_event_source_mappings_skips_already_enabled(circuit_breaker_recovery):
+    """Test enable event source mappings skips already enabled."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = create_mock_lambda_with_mappings()
         mock_boto_client.return_value = mock_lambda
@@ -202,6 +222,7 @@ def test_enable_event_source_mappings_skips_already_enabled(circuit_breaker_reco
 
 
 def test_enable_event_source_mappings_counts_enabled_sources(circuit_breaker_recovery):
+    """Test enable event source mappings counts enabled sources."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {
@@ -216,6 +237,7 @@ def test_enable_event_source_mappings_counts_enabled_sources(circuit_breaker_rec
 
 
 def test_enable_event_source_mappings_handles_no_mappings(circuit_breaker_recovery):
+    """Test enable event source mappings handles no mappings."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_lambda.list_event_source_mappings.return_value = {'EventSourceMappings': []}
@@ -225,6 +247,7 @@ def test_enable_event_source_mappings_handles_no_mappings(circuit_breaker_recove
 
 
 def test_enable_event_source_mappings_handles_api_error(circuit_breaker_recovery):
+    """Test enable event source mappings handles api error."""
     with patch('boto3.client') as mock_boto_client:
         mock_boto_client.return_value = create_mock_lambda_list_mappings_error()
         result = circuit_breaker_recovery.enable_event_source_mappings('test-function')
@@ -232,6 +255,7 @@ def test_enable_event_source_mappings_handles_api_error(circuit_breaker_recovery
 
 
 def test_set_lambda_reserved_concurrency_sets_limit(circuit_breaker_recovery):
+    """Test set lambda reserved concurrency sets limit."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_boto_client.return_value = mock_lambda
@@ -240,6 +264,7 @@ def test_set_lambda_reserved_concurrency_sets_limit(circuit_breaker_recovery):
 
 
 def test_set_lambda_reserved_concurrency_removes_limit_when_zero(circuit_breaker_recovery):
+    """Test set lambda reserved concurrency removes limit when zero."""
     with patch('boto3.client') as mock_boto_client:
         mock_lambda = MagicMock()
         mock_boto_client.return_value = mock_lambda
@@ -248,6 +273,7 @@ def test_set_lambda_reserved_concurrency_removes_limit_when_zero(circuit_breaker
 
 
 def test_set_lambda_reserved_concurrency_handles_api_error(circuit_breaker_recovery):
+    """Test set lambda reserved concurrency handles api error."""
     with patch('boto3.client') as mock_boto_client:
         mock_boto_client.return_value = create_mock_lambda_put_concurrency_error()
         result = circuit_breaker_recovery.set_lambda_reserved_concurrency('test-function', 5)
@@ -255,7 +281,9 @@ def test_set_lambda_reserved_concurrency_handles_api_error(circuit_breaker_recov
 
 
 def test_attempt_recovery_skips_when_not_in_open_state(circuit_breaker_recovery):
-    with patch.dict(os.environ, {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+    """Test attempt recovery skips when not in open state."""
+    env = {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}
+    with patch.dict(os.environ, env):
         with patch('boto3.client') as mock_boto_client:
             mock_dynamodb = MagicMock()
             mock_dynamodb.get_item.return_value = {
@@ -272,8 +300,10 @@ def test_attempt_recovery_skips_when_not_in_open_state(circuit_breaker_recovery)
 
 
 def test_attempt_recovery_waits_for_backoff_period(circuit_breaker_recovery):
+    """Test attempt recovery waits for backoff period."""
     current_time = int(time.time())
-    with patch.dict(os.environ, {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}):
+    env = {'STATE_TABLE_NAME': 'test-table', 'WEBHOOK_FUNCTION_NAME': 'test-function'}
+    with patch.dict(os.environ, env):
         with patch('boto3.client') as mock_boto_client:
             mock_dynamodb = MagicMock()
             mock_dynamodb.get_item.return_value = {
@@ -290,6 +320,7 @@ def test_attempt_recovery_waits_for_backoff_period(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_checks_max_attempts(circuit_breaker_recovery):
+    """Test attempt recovery checks max attempts."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function',
@@ -311,6 +342,7 @@ def test_attempt_recovery_checks_max_attempts(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_performs_health_check(circuit_breaker_recovery):
+    """Test attempt recovery performs health check."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -338,6 +370,7 @@ def test_attempt_recovery_performs_health_check(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_fails_when_health_check_fails(circuit_breaker_recovery):
+    """Test attempt recovery fails when health check fails."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -364,6 +397,7 @@ def test_attempt_recovery_fails_when_health_check_fails(circuit_breaker_recovery
 
 
 def test_attempt_recovery_increments_recovery_attempts(circuit_breaker_recovery):
+    """Test attempt recovery increments recovery attempts."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -390,6 +424,7 @@ def test_attempt_recovery_increments_recovery_attempts(circuit_breaker_recovery)
 
 
 def test_attempt_recovery_sets_gradual_concurrency(circuit_breaker_recovery):
+    """Test attempt recovery sets gradual concurrency."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -417,6 +452,7 @@ def test_attempt_recovery_sets_gradual_concurrency(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_enables_event_sources(circuit_breaker_recovery):
+    """Test attempt recovery enables event sources."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -447,6 +483,7 @@ def test_attempt_recovery_enables_event_sources(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_updates_state_to_half_open(circuit_breaker_recovery):
+    """Test attempt recovery updates state to half open."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -474,6 +511,7 @@ def test_attempt_recovery_updates_state_to_half_open(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_calculates_correct_concurrency_level(circuit_breaker_recovery):
+    """Test attempt recovery calculates correct concurrency level."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -501,6 +539,7 @@ def test_attempt_recovery_calculates_correct_concurrency_level(circuit_breaker_r
 
 
 def test_lambda_handler_processes_scheduled_event(circuit_breaker_recovery, lambda_context):
+    """Test lambda handler processes scheduled event."""
     event = {}
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
@@ -522,6 +561,7 @@ def test_lambda_handler_processes_scheduled_event(circuit_breaker_recovery, lamb
 
 
 def test_lambda_handler_returns_recovery_result(circuit_breaker_recovery, lambda_context):
+    """Test lambda handler returns recovery result."""
     event = {}
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
@@ -544,32 +584,42 @@ def test_lambda_handler_returns_recovery_result(circuit_breaker_recovery, lambda
 
 
 def test_send_recovery_notification_publishes_to_sns(circuit_breaker_recovery):
+    """Test send recovery notification publishes to sns."""
     with patch('boto3.client') as mock_boto_client:
         mock_sns = MagicMock()
         mock_sns.publish.return_value = {'MessageId': 'test-id'}
         mock_boto_client.return_value = mock_sns
-        circuit_breaker_recovery.send_recovery_notification('arn:aws:sns:test', 'half-open', 2, ['action1'])
+        circuit_breaker_recovery.send_recovery_notification(
+            'arn:aws:sns:test', 'half-open', 2, ['action1']
+        )
     assert mock_sns.publish.called
 
 
 def test_send_recovery_notification_includes_recovery_attempts(circuit_breaker_recovery):
+    """Test send recovery notification includes recovery attempts."""
     with patch('boto3.client') as mock_boto_client:
         mock_sns = MagicMock()
         mock_sns.publish.return_value = {'MessageId': 'test-id'}
         mock_boto_client.return_value = mock_sns
-        circuit_breaker_recovery.send_recovery_notification('arn:aws:sns:test', 'half-open', 3, ['action1'])
+        circuit_breaker_recovery.send_recovery_notification(
+            'arn:aws:sns:test', 'half-open', 3, ['action1']
+        )
         call_args = mock_sns.publish.call_args
     assert '3' in call_args[1]['Message']
 
 
 def test_send_recovery_notification_handles_api_error(circuit_breaker_recovery):
+    """Test send recovery notification handles api error."""
     with patch('boto3.client') as mock_boto_client:
         mock_boto_client.return_value = create_mock_sns_publish_error()
-        result = circuit_breaker_recovery.send_recovery_notification('arn:aws:sns:test', 'half-open', 2, [])
+        result = circuit_breaker_recovery.send_recovery_notification(
+            'arn:aws:sns:test', 'half-open', 2, []
+        )
     assert result['success'] is False
 
 
 def test_attempt_recovery_handles_half_open_state(circuit_breaker_recovery):
+    """Test attempt recovery handles half open state."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -596,6 +646,7 @@ def test_attempt_recovery_handles_half_open_state(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_removes_concurrency_when_closing(circuit_breaker_recovery):
+    """Test attempt recovery removes concurrency when closing."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -622,6 +673,7 @@ def test_attempt_recovery_removes_concurrency_when_closing(circuit_breaker_recov
 
 
 def test_attempt_recovery_half_open_reopens_on_health_failure(circuit_breaker_recovery):
+    """Test attempt recovery half open reopens on health failure."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -648,6 +700,7 @@ def test_attempt_recovery_half_open_reopens_on_health_failure(circuit_breaker_re
 
 
 def test_attempt_recovery_half_open_updates_state_to_closed(circuit_breaker_recovery):
+    """Test attempt recovery half open updates state to closed."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -676,6 +729,7 @@ def test_attempt_recovery_half_open_updates_state_to_closed(circuit_breaker_reco
 
 
 def test_attempt_recovery_half_open_resets_recovery_attempts(circuit_breaker_recovery):
+    """Test attempt recovery half open resets recovery attempts."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -704,6 +758,7 @@ def test_attempt_recovery_half_open_resets_recovery_attempts(circuit_breaker_rec
 
 
 def test_attempt_recovery_half_open_logs_actions(circuit_breaker_recovery):
+    """Test attempt recovery half open logs actions."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function'
@@ -731,6 +786,7 @@ def test_attempt_recovery_half_open_logs_actions(circuit_breaker_recovery):
 
 
 def test_attempt_recovery_half_open_sends_notification_on_close(circuit_breaker_recovery):
+    """Test attempt recovery half open sends notification on close."""
     with patch.dict(os.environ, {
         'STATE_TABLE_NAME': 'test-table',
         'WEBHOOK_FUNCTION_NAME': 'test-function',

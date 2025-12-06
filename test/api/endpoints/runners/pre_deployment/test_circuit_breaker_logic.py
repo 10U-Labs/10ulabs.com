@@ -1,13 +1,20 @@
+"""Unit tests for test circuit breaker logic."""
 import json
 import time
 from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
 
-from .conftest import parse_response_body, assert_response_status, assert_no_hardcoded_env_defaults, get_lambda_path
+from .conftest import (
+    parse_response_body,
+    assert_response_status,
+    assert_no_hardcoded_env_defaults,
+    get_lambda_path,
+)
 
 
 def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
+    """Test check circuit breaker closed state returns true."""
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     with patch('boto3.client'):
@@ -17,6 +24,7 @@ def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
 
 
 def test_check_circuit_breaker_open_state_returns_false(webhook_router):
+    """Test check circuit breaker open state returns false."""
     webhook_router.circuit_breaker_state['state'] = 'open'
     webhook_router.circuit_breaker_state['last_failure_time'] = time.time()
     with patch('boto3.client'):
@@ -26,6 +34,7 @@ def test_check_circuit_breaker_open_state_returns_false(webhook_router):
 
 
 def test_check_circuit_breaker_transitions_to_half_open_after_timeout(webhook_router):
+    """Test check circuit breaker transitions to half open after timeout."""
     webhook_router.circuit_breaker_state['state'] = 'open'
     webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
     with patch('boto3.client'):
@@ -35,6 +44,7 @@ def test_check_circuit_breaker_transitions_to_half_open_after_timeout(webhook_ro
 
 
 def test_check_circuit_breaker_opens_after_threshold_failures(webhook_router):
+    """Test check circuit breaker opens after threshold failures."""
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 5
     with patch('boto3.client'):
@@ -44,6 +54,7 @@ def test_check_circuit_breaker_opens_after_threshold_failures(webhook_router):
 
 
 def test_record_circuit_breaker_success_resets_failures(webhook_router):
+    """Test record circuit breaker success resets failures."""
     webhook_router.circuit_breaker_state['failures'] = 3
     webhook_router.record_circuit_breaker_success()
     assert webhook_router.circuit_breaker_state['failures'] == 0
@@ -51,6 +62,7 @@ def test_record_circuit_breaker_success_resets_failures(webhook_router):
 
 
 def test_record_circuit_breaker_success_closes_half_open_circuit(webhook_router):
+    """Test record circuit breaker success closes half open circuit."""
     webhook_router.circuit_breaker_state['state'] = 'half-open'
     webhook_router.record_circuit_breaker_success()
     assert webhook_router.circuit_breaker_state['state'] == 'closed'
@@ -58,6 +70,7 @@ def test_record_circuit_breaker_success_closes_half_open_circuit(webhook_router)
 
 
 def test_record_circuit_breaker_failure_increments_count(webhook_router):
+    """Test record circuit breaker failure increments count."""
     webhook_router.circuit_breaker_state['failures'] = 0
     webhook_router.record_circuit_breaker_failure()
     assert webhook_router.circuit_breaker_state['failures'] == 1
@@ -65,6 +78,7 @@ def test_record_circuit_breaker_failure_increments_count(webhook_router):
 
 
 def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router):
+    """Test record circuit breaker failure reopens half open circuit."""
     webhook_router.circuit_breaker_state['state'] = 'half-open'
     webhook_router.record_circuit_breaker_failure()
     assert webhook_router.circuit_breaker_state['state'] == 'open'
@@ -72,6 +86,7 @@ def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router
 
 
 def test_circuit_breaker_concurrent_failures_increment_count(webhook_router):
+    """Test circuit breaker concurrent failures increment count."""
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     webhook_router.record_circuit_breaker_failure()
@@ -81,6 +96,7 @@ def test_circuit_breaker_concurrent_failures_increment_count(webhook_router):
 
 
 def test_circuit_breaker_concurrent_success_resets_failures(webhook_router):
+    """Test circuit breaker concurrent success resets failures."""
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 4
     webhook_router.record_circuit_breaker_success()
@@ -89,6 +105,7 @@ def test_circuit_breaker_concurrent_success_resets_failures(webhook_router):
 
 
 def test_circuit_breaker_half_open_allows_one_request(webhook_router):
+    """Test circuit breaker half open allows one request."""
     webhook_router.circuit_breaker_state['state'] = 'open'
     webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
     with patch('boto3.client'):
@@ -98,6 +115,7 @@ def test_circuit_breaker_half_open_allows_one_request(webhook_router):
 
 
 def test_circuit_breaker_state_remains_open_before_timeout(webhook_router):
+    """Test circuit breaker state remains open before timeout."""
     webhook_router.circuit_breaker_state['state'] = 'open'
     webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 30
     with patch('boto3.client'):
@@ -107,6 +125,7 @@ def test_circuit_breaker_state_remains_open_before_timeout(webhook_router):
 
 
 def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
+    """Test handler processes job dlq."""
     event = {}
     mock_sqs.receive_message.return_value = {
         'Messages': [dlq_message_factory(body={'job_id': 123})]
@@ -120,7 +139,13 @@ def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sq
 
 
 
-def test_handler_returns_reprocessed_count(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
+def test_handler_returns_reprocessed_count(
+    dlq_reprocessor,
+    dlq_message_factory,
+    mock_sqs,
+    lambda_context
+):
+    """Test handler returns reprocessed count."""
     event = {}
     mock_sqs.receive_message.return_value = {
         'Messages': [dlq_message_factory(body={'job_id': 123})]
@@ -136,6 +161,7 @@ def test_handler_returns_reprocessed_count(dlq_reprocessor, dlq_message_factory,
 
 
 def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
+    """Test handler handles webhook dlq with note."""
     event = {}
     with patch.dict('os.environ', {
         'WEBHOOK_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/webhook-dlq'
@@ -147,6 +173,7 @@ def test_handler_handles_webhook_dlq_with_note(dlq_reprocessor, lambda_context):
 
 
 def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor, lambda_context):
+    """Test handler skips job dlq when not configured."""
     event = {}
     with patch.dict('os.environ', {}, clear=True):
         response = dlq_reprocessor.handler(event, lambda_context)
@@ -156,6 +183,7 @@ def test_handler_skips_job_dlq_when_not_configured(dlq_reprocessor, lambda_conte
 
 
 def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor, lambda_context):
+    """Test handler skips webhook dlq when not configured."""
     event = {}
     with patch.dict('os.environ', {}, clear=True):
         response = dlq_reprocessor.handler(event, lambda_context)
@@ -165,6 +193,7 @@ def test_handler_skips_webhook_dlq_when_not_configured(dlq_reprocessor, lambda_c
 
 
 def test_reprocess_dlq_messages_receives_messages(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages receives messages."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -183,6 +212,7 @@ def test_reprocess_dlq_messages_receives_messages(dlq_reprocessor, mock_sqs):
 
 
 def test_reprocess_dlq_messages_sends_to_target_queue(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages sends to target queue."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -201,6 +231,7 @@ def test_reprocess_dlq_messages_sends_to_target_queue(dlq_reprocessor, mock_sqs)
 
 
 def test_reprocess_dlq_messages_deletes_from_dlq(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages deletes from dlq."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -219,6 +250,7 @@ def test_reprocess_dlq_messages_deletes_from_dlq(dlq_reprocessor, mock_sqs):
 
 
 def test_reprocess_dlq_messages_handles_empty_queue(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages handles empty queue."""
     mock_sqs.receive_message.return_value = {}
     result = dlq_reprocessor.reprocess_dlq_messages(
         'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
@@ -229,6 +261,7 @@ def test_reprocess_dlq_messages_handles_empty_queue(dlq_reprocessor, mock_sqs):
 
 
 def test_reprocess_dlq_messages_processes_multiple_messages(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages processes multiple messages."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -257,6 +290,7 @@ def test_reprocess_dlq_messages_processes_multiple_messages(dlq_reprocessor, moc
 
 
 def test_reprocess_dlq_messages_counts_failures(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages counts failures."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -279,6 +313,7 @@ def test_reprocess_dlq_messages_counts_failures(dlq_reprocessor, mock_sqs):
 
 
 def test_reprocess_dlq_messages_respects_max_messages_limit(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages respects max messages limit."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -300,6 +335,7 @@ def test_reprocess_dlq_messages_respects_max_messages_limit(dlq_reprocessor, moc
 
 
 def test_reprocess_dlq_messages_preserves_message_attributes(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages preserves message attributes."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -319,6 +355,7 @@ def test_reprocess_dlq_messages_preserves_message_attributes(dlq_reprocessor, mo
 
 
 def test_reprocess_dlq_messages_handles_receive_error(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages handles receive error."""
     mock_sqs.receive_message.side_effect = ClientError(
         {'Error': {'Code': 'QueueDoesNotExist'}},
         'ReceiveMessage'
@@ -332,6 +369,7 @@ def test_reprocess_dlq_messages_handles_receive_error(dlq_reprocessor, mock_sqs)
 
 
 def test_reprocess_dlq_messages_continues_on_individual_failure(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages continues on individual failure."""
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {
@@ -359,6 +397,7 @@ def test_reprocess_dlq_messages_continues_on_individual_failure(dlq_reprocessor,
 
 
 def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
+    """Test reprocess dlq messages uses long polling."""
     mock_sqs.receive_message.return_value = {}
     dlq_reprocessor.reprocess_dlq_messages(
         'https://sqs.us-east-1.amazonaws.com/123456789012/dlq',
@@ -370,11 +409,13 @@ def test_reprocess_dlq_messages_uses_long_polling(dlq_reprocessor, mock_sqs):
 
 
 def test_no_hardcoded_defaults_in_dlq_reprocessor():
+    """Test no hardcoded defaults in dlq reprocessor."""
     assert_no_hardcoded_env_defaults(get_lambda_path("dlq_reprocessor.py"))
 
 
 
 def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
+    """Test no hardcoded defaults in circuit breaker remediation."""
     assert_no_hardcoded_env_defaults(get_lambda_path("circuit_breaker_remediation.py"))
 
 
@@ -387,6 +428,7 @@ def test_no_hardcoded_defaults_in_circuit_breaker_remediation():
 })
 
 def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, lambda_context):
+    """Test dlq reprocessor with all env vars."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
     mock_boto_client.return_value = mock_sqs
@@ -401,7 +443,12 @@ def test_dlq_reprocessor_with_all_env_vars(mock_boto_client, dlq_reprocessor, la
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_processes_job_dlq_messages(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor processes job dlq messages."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -423,7 +470,12 @@ def test_dlq_reprocessor_processes_job_dlq_messages(mock_boto_client, dlq_reproc
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_deletes_messages_after_reprocessing(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor deletes messages after reprocessing."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -444,14 +496,22 @@ def test_dlq_reprocessor_deletes_messages_after_reprocessing(mock_boto_client, d
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_handles_send_message_failure(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor handles send message failure."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
             {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {}}
         ]
     }
-    mock_sqs.send_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'SendMessage')
+    err = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'SendMessage'
+    )
+    mock_sqs.send_message.side_effect = err
     mock_boto_client.return_value = mock_sqs
     response = dlq_reprocessor.handler({}, lambda_context)
     body = json.loads(response['body'])
@@ -465,9 +525,17 @@ def test_dlq_reprocessor_handles_send_message_failure(mock_boto_client, dlq_repr
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_handles_receive_message_failure(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor handles receive message failure."""
     mock_sqs = MagicMock()
-    mock_sqs.receive_message.side_effect = ClientError({'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage')
+    err = ClientError(
+        {'Error': {'Code': 'ServiceUnavailable', 'Message': 'Test error'}}, 'ReceiveMessage'
+    )
+    mock_sqs.receive_message.side_effect = err
     mock_boto_client.return_value = mock_sqs
     response = dlq_reprocessor.handler({}, lambda_context)
     body = json.loads(response['body'])
@@ -481,7 +549,12 @@ def test_dlq_reprocessor_handles_receive_message_failure(mock_boto_client, dlq_r
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor webhook dlq returns manual intervention note."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
     mock_boto_client.return_value = mock_sqs
@@ -497,7 +570,12 @@ def test_dlq_reprocessor_webhook_dlq_returns_manual_intervention_note(mock_boto_
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_reprocesses_multiple_messages(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor reprocesses multiple messages."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
@@ -520,11 +598,20 @@ def test_dlq_reprocessor_reprocesses_multiple_messages(mock_boto_client, dlq_rep
     'JOB_DLQ_URL': 'https://sqs.us-east-1.amazonaws.com/123456789/job-dlq'
 })
 
-def test_dlq_reprocessor_preserves_message_attributes(mock_boto_client, dlq_reprocessor, lambda_context):
+def test_dlq_reprocessor_preserves_message_attributes(
+    mock_boto_client,
+    dlq_reprocessor,
+    lambda_context
+):
+    """Test dlq reprocessor preserves message attributes."""
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
         'Messages': [
-            {'Body': '{"test": "data"}', 'ReceiptHandle': 'handle1', 'MessageAttributes': {'attr1': {'StringValue': 'value1'}}}
+            {
+                'Body': '{"test": "data"}',
+                'ReceiptHandle': 'handle1',
+                'MessageAttributes': {'attr1': {'StringValue': 'value1'}}
+            }
         ]
     }
     mock_sqs.send_message.return_value = {'MessageId': 'msg1'}

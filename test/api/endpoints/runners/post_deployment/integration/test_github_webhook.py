@@ -1,18 +1,23 @@
+"""Unit tests for test github webhook."""
 import json
 import urllib.request
 
 
 def test_repository_has_at_least_one_webhook(github_pat, config):
+    """Test repository has at least one webhook."""
     url = f"https://api.github.com/repos/{config['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
+    headers = {"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"}
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     assert len(hooks) > 0
 
 
 def test_github_webhook_for_runners_endpoint_exists(github_pat, config):
+    """Test github webhook for runners endpoint exists."""
     url = f"https://api.github.com/repos/{config['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
+    headers = {"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"}
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     webhook_url = f"https://{config['api_fqdn']}/v1/runners"
@@ -21,8 +26,10 @@ def test_github_webhook_for_runners_endpoint_exists(github_pat, config):
 
 
 def test_github_webhook_for_runners_endpoint_listens_for_workflow_job_events(github_pat, config):
+    """Test github webhook for runners endpoint listens for workflow job events."""
     url = f"https://api.github.com/repos/{config['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
+    headers = {"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"}
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     webhook_url = f"https://{config['api_fqdn']}/v1/runners"
@@ -31,8 +38,10 @@ def test_github_webhook_for_runners_endpoint_listens_for_workflow_job_events(git
 
 
 def test_github_webhook_for_runners_endpoint_is_active(github_pat, config):
+    """Test github webhook for runners endpoint is active."""
     url = f"https://api.github.com/repos/{config['github_repo']}/hooks"
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"})
+    headers = {"Authorization": f"Bearer {github_pat}", "Accept": "application/vnd.github+json"}
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req) as response:
         hooks = json.loads(response.read())
     webhook_url = f"https://{config['api_fqdn']}/v1/runners"

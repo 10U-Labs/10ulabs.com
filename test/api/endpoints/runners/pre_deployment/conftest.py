@@ -1,3 +1,5 @@
+"""Shared fixtures for runners pre-deployment unit tests."""
+# pylint: disable=duplicate-code
 import importlib.util
 import json
 import re
@@ -15,26 +17,35 @@ RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 @pytest.fixture
 def runners_src_path() -> Path:
+    """Provide path to runners source directory."""
     return RUNNERS_SRC_PATH
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
+    """Parse JSON body from Lambda response."""
     return json.loads(response['body'])
 
 
 def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
+    """Assert response has expected status code."""
     assert response['statusCode'] == expected_code
 
 
 def assert_json_content_type(response: Dict[str, Any]) -> None:
+    """Assert response has JSON content type."""
     assert response['headers']['Content-Type'].startswith('application/json')
 
 
 def assert_cors_headers(response: Dict[str, Any]) -> None:
+    """Assert response has CORS headers."""
     assert 'Access-Control-Allow-Origin' in response['headers']
 
 
-def create_client_error(error_code: str, operation_name: str = 'TestOperation') -> ClientError:
+def create_client_error(
+    error_code: str,
+    operation_name: str = 'TestOperation'
+) -> ClientError:
+    """Create a ClientError for testing error handling."""
     return ClientError(
         {
             'Error': {
@@ -54,10 +65,13 @@ def create_client_error(error_code: str, operation_name: str = 'TestOperation') 
 
 
 def get_lambda_path(filename: str) -> Path:
-    return Path(__file__).parent.parent.parent.parent.parent.parent / "src" / "api" / "endpoints" / "runners" / "lambdas" / filename
+    """Get path to a lambda file in the runners endpoint."""
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
+    return base / "src" / "api" / "endpoints" / "runners" / "lambdas" / filename
 
 
 def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
+    """Load a handler module dynamically from relative path."""
     base_path = Path(__file__).parent.parent.parent.parent.parent / "src" / "api"
     handler_path = base_path / relative_path
     spec = importlib.util.spec_from_file_location(module_name, handler_path)
@@ -69,6 +83,7 @@ def load_handler_module(relative_path: str, module_name: str) -> ModuleType:
 
 
 def load_lambda_module(filename: str, module_name: str) -> ModuleType:
+    """Load a lambda module dynamically for testing."""
     handler_path = get_lambda_path(filename)
     spec = importlib.util.spec_from_file_location(module_name, handler_path)
     assert spec is not None
@@ -79,11 +94,13 @@ def load_lambda_module(filename: str, module_name: str) -> ModuleType:
 
 
 def parse_lambda_response_payload(response: Any) -> Any:
+    """Parse Lambda invocation response payload."""
     return json.loads(response['Payload'].read())
 
 
 @pytest.fixture
 def webhook_router(config):
+    """Provide webhook router module with mocked environment."""
     env_vars = {
         'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
         'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
@@ -96,18 +113,21 @@ def webhook_router(config):
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("webhook_router.py", "webhook_router")
         if hasattr(module, '_clients'):
-            setattr(module, '_clients', {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None})
+            clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
+            setattr(module, '_clients', clients)
         if hasattr(module, '_webhook_secret_cache'):
             setattr(module, '_webhook_secret_cache', {'value': None})
         if hasattr(module, '_api_key_cache'):
             setattr(module, '_api_key_cache', {'value': None})
         if hasattr(module, '_circuit_breaker_state'):
-            setattr(module, '_circuit_breaker_state', {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'})
+            state = {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'}
+            setattr(module, '_circuit_breaker_state', state)
         yield module
 
 
 @pytest.fixture
 def circuit_breaker_remediation(config):
+    """Provide circuit breaker remediation module."""
     env_vars = {
         'AWS_REGION': config['aws_region']
     }
@@ -118,6 +138,7 @@ def circuit_breaker_remediation(config):
 
 @pytest.fixture
 def dlq_reprocessor(config):
+    """Provide DLQ reprocessor module."""
     env_vars = {
         'AWS_REGION': config['aws_region']
     }
@@ -128,6 +149,7 @@ def dlq_reprocessor(config):
 
 @pytest.fixture
 def circuit_breaker_recovery(config):
+    """Provide circuit breaker recovery module."""
     env_vars = {
         'AWS_REGION': config['aws_region']
     }
@@ -138,6 +160,7 @@ def circuit_breaker_recovery(config):
 
 @pytest.fixture
 def drift_recovery(config):
+    """Provide drift recovery module."""
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'GITHUB_REPO': config['github_repo'],
@@ -154,6 +177,7 @@ def drift_recovery(config):
 
 @pytest.fixture
 def spot_interruption_handler(config):
+    """Provide spot interruption handler module."""
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'ECS_CLUSTER': config['cluster_name'],
@@ -172,6 +196,7 @@ def spot_interruption_handler(config):
 
 @pytest.fixture
 def stale_runner_cleanup(config):
+    """Provide stale runner cleanup module."""
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'ECS_CLUSTER': config['cluster_name'],
@@ -189,6 +214,7 @@ def stale_runner_cleanup(config):
 
 @pytest.fixture
 def mock_sqs():
+    """Provide mocked SQS client."""
     with patch('boto3.client') as mock_boto_client:
         mock_sqs_client = MagicMock()
         mock_boto_client.return_value = mock_sqs_client
@@ -197,6 +223,7 @@ def mock_sqs():
 
 @pytest.fixture
 def mock_dynamodb():
+    """Provide mocked DynamoDB client."""
     with patch('boto3.client') as mock_boto_client:
         mock_dynamodb_client = MagicMock()
         mock_boto_client.return_value = mock_dynamodb_client
@@ -205,6 +232,7 @@ def mock_dynamodb():
 
 @pytest.fixture
 def mock_ssm():
+    """Provide mocked SSM client."""
     with patch('boto3.client') as mock_boto_client:
         mock_ssm_client = MagicMock()
         mock_ssm_client.get_parameter.return_value = {
@@ -216,6 +244,7 @@ def mock_ssm():
 
 @pytest.fixture
 def mock_cloudwatch():
+    """Provide mocked CloudWatch client."""
     with patch('boto3.client') as mock_boto_client:
         mock_cw_client = MagicMock()
         mock_boto_client.return_value = mock_cw_client
@@ -224,11 +253,13 @@ def mock_cloudwatch():
 
 @pytest.fixture
 def lambda_context():
+    """Provide mock Lambda context."""
     return Mock()
 
 
 @pytest.fixture
 def workflow_job_event_factory():
+    """Factory for creating workflow_job webhook events."""
     def _create_event(action='queued', job_id=123, labels=None, repo='test/repo', run_id=456):
         if labels is None:
             labels = ['self-hosted', 'linux']
@@ -257,6 +288,7 @@ def workflow_job_event_factory():
 
 @pytest.fixture
 def sqs_event_factory():
+    """Factory for creating SQS trigger events."""
     def _create_event(records=None):
         if records is None:
             records = [{
@@ -273,6 +305,7 @@ def sqs_event_factory():
 
 @pytest.fixture
 def dlq_message_factory():
+    """Factory for creating DLQ message events."""
     def _create_event(body=None, receipt_handle='test-receipt', attributes=None):
         if body is None:
             body = {'job_id': 123, 'action': 'test'}
@@ -290,6 +323,7 @@ def dlq_message_factory():
 
 @pytest.fixture
 def circuit_breaker_closed_state():
+    """Provide closed circuit breaker state."""
     return {
         'state': 'closed',
         'failure_count': 0,
@@ -299,6 +333,7 @@ def circuit_breaker_closed_state():
 
 @pytest.fixture
 def circuit_breaker_open_state():
+    """Provide open circuit breaker state."""
     return {
         'state': 'open',
         'failure_count': 5,
@@ -308,6 +343,7 @@ def circuit_breaker_open_state():
 
 @pytest.fixture
 def mock_urllib_response_factory():
+    """Factory for creating mock urllib responses."""
     def _create_response(read_value=b'', status=200, json_data=None):
         mock_response = Mock()
         if json_data is not None:
@@ -322,6 +358,7 @@ def mock_urllib_response_factory():
 
 
 def create_multi_client_mock(ec2_mock: Any, ssm_mock: Any) -> Callable:
+    """Create a boto3 client mock that returns different mocks per service."""
     def mock_client(service_name: str) -> Any:
         if service_name == 'ec2':
             return ec2_mock
@@ -332,6 +369,7 @@ def create_multi_client_mock(ec2_mock: Any, ssm_mock: Any) -> Callable:
 
 
 def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
+    """Assert that lambda file has no hardcoded environment defaults."""
     with open(lambda_path, 'r', encoding='utf-8') as f:
         content = f.read()
     os_environ_get_pattern_with_default = r"os\.environ\.get\(['\"][^'\"]+['\"],\s*['\"]"
@@ -374,18 +412,21 @@ ENV_VAR_PRESETS = {
 
 
 def create_boto_client_mock(**service_mocks: Any) -> Callable:
+    """Create boto3 client mock with specified service mocks."""
     def mock_client(service_name: str) -> Any:
         return service_mocks.get(service_name, MagicMock())
     return mock_client
 
 
 def reset_module_state(module: ModuleType, **state_vars: Any) -> None:
+    """Reset module state variables to default values."""
     for var_name, default_value in state_vars.items():
         if hasattr(module, var_name):
             setattr(module, var_name, default_value)
 
 
 def create_mock_lambda_list_mappings_error():
+    """Create Lambda mock that errors on list_event_source_mappings."""
     mock_lambda = MagicMock()
     mock_lambda.list_event_source_mappings.side_effect = ClientError(
         {'Error': {'Code': 'ServiceUnavailable'}},
@@ -395,6 +436,7 @@ def create_mock_lambda_list_mappings_error():
 
 
 def create_mock_lambda_put_concurrency_error():
+    """Create Lambda mock that errors on put_function_concurrency."""
     mock_lambda = MagicMock()
     mock_lambda.put_function_concurrency.side_effect = ClientError(
         {'Error': {'Code': 'ServiceUnavailable'}},
@@ -404,6 +446,7 @@ def create_mock_lambda_put_concurrency_error():
 
 
 def create_mock_sns_publish_error():
+    """Create SNS mock that errors on publish."""
     mock_sns = MagicMock()
     mock_sns.publish.side_effect = ClientError(
         {'Error': {'Code': 'ServiceUnavailable'}},
@@ -413,6 +456,7 @@ def create_mock_sns_publish_error():
 
 
 def create_mock_lambda_with_mappings():
+    """Create Lambda mock with enabled event source mappings."""
     mock_lambda = MagicMock()
     mock_lambda.list_event_source_mappings.return_value = {
         'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Enabled'}]
@@ -421,6 +465,7 @@ def create_mock_lambda_with_mappings():
 
 
 def create_mock_lambda_with_disabled_mappings():
+    """Create Lambda mock with disabled event source mappings."""
     mock_lambda = MagicMock()
     mock_lambda.list_event_source_mappings.return_value = {
         'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Disabled'}]
@@ -429,6 +474,7 @@ def create_mock_lambda_with_disabled_mappings():
 
 
 def create_mock_lambda_delete_concurrency_error():
+    """Create Lambda mock that errors on delete_function_concurrency."""
     mock_lambda = MagicMock()
     mock_lambda.delete_function_concurrency.side_effect = ClientError(
         {'Error': {'Code': 'ServiceUnavailable'}},

@@ -1,3 +1,4 @@
+"""Lambda for automatic circuit breaker recovery and health monitoring."""
 import json
 import logging
 import os
@@ -11,8 +12,14 @@ logger.setLevel(logging.INFO)
 
 
 def get_circuit_breaker_state(table_name: str) -> dict:
+    """Get current circuit breaker state from DynamoDB."""
     dynamodb = boto3.client('dynamodb')
-    result = {'state': 'unknown', 'recovery_attempts': 0, 'last_recovery_attempt': 0, 'last_failure_time': 0}
+    result = {
+        'state': 'unknown',
+        'recovery_attempts': 0,
+        'last_recovery_attempt': 0,
+        'last_failure_time': 0
+    }
     try:
         response = dynamodb.get_item(
             TableName=table_name,
@@ -38,7 +45,10 @@ def get_circuit_breaker_state(table_name: str) -> dict:
     return result
 
 
-def update_circuit_breaker_state(table_name: str, state: str, recovery_attempts: int) -> dict:
+def update_circuit_breaker_state(
+    table_name: str, state: str, recovery_attempts: int
+) -> dict:
+    """Update circuit breaker state in DynamoDB."""
     dynamodb = boto3.client('dynamodb')
     current_time = int(time.time())
     result: dict[str, Any] = {'success': False}
@@ -65,6 +75,7 @@ def update_circuit_breaker_state(table_name: str, state: str, recovery_attempts:
 
 
 def calculate_backoff_seconds(recovery_attempts: int) -> int:
+    """Calculate exponential backoff delay for recovery attempts."""
     base_delay = 60
     max_delay = 3600
     backoff = min(base_delay * (2 ** recovery_attempts), max_delay)
@@ -72,6 +83,7 @@ def calculate_backoff_seconds(recovery_attempts: int) -> int:
 
 
 def check_health(function_name: str) -> dict:
+    """Check health of the webhook router function."""
     lambda_client = boto3.client('lambda')
     result: dict = {'healthy': False, 'reason': 'Unknown error'}
     try:
@@ -101,6 +113,7 @@ def check_health(function_name: str) -> dict:
 
 
 def enable_event_source_mappings(function_name: str) -> dict:
+    """Enable disabled SQS event source mappings for the function."""
     lambda_client = boto3.client('lambda')
     result: dict = {'success': False, 'error': 'Unknown error'}
     try:
@@ -126,6 +139,7 @@ def enable_event_source_mappings(function_name: str) -> dict:
 
 
 def set_lambda_reserved_concurrency(function_name: str, concurrency: int) -> dict:
+    """Set or remove reserved concurrency limit for a Lambda function."""
     lambda_client = boto3.client('lambda')
     result: dict = {'success': False, 'error': 'Unknown error'}
     try:
@@ -145,7 +159,10 @@ def set_lambda_reserved_concurrency(function_name: str, concurrency: int) -> dic
     return result
 
 
-def send_recovery_notification(topic_arn: str, state: str, recovery_attempts: int, actions: list) -> dict:
+def send_recovery_notification(
+    topic_arn: str, state: str, recovery_attempts: int, actions: list
+) -> dict:
+    """Send recovery status notification via SNS."""
     sns_client = boto3.client('sns')
     result: dict = {'success': False, 'error': 'Unknown error'}
     try:
@@ -181,14 +198,20 @@ def _perform_successful_recovery(state_table: str, webhook_function: str, sns_to
         result['actions_taken'].append(f'Set reserved concurrency to {concurrency_level}')
     enable_result = enable_event_source_mappings(webhook_function)
     if enable_result['success']:
-        result['actions_taken'].append(f"Enabled {enable_result['enabled_count']} event source mappings")
+        count = enable_result['enabled_count']
+        result['actions_taken'].append(f"Enabled {count} event source mappings")
     update_circuit_breaker_state(state_table, 'half-open', recovery_attempts + 1)
     result['new_state'] = 'half-open'
     result['recovery_attempts'] = recovery_attempts + 1
     result['concurrency_level'] = concurrency_level
     if sns_topic:
-        send_recovery_notification(sns_topic, 'HALF-OPEN', recovery_attempts + 1, result['actions_taken'])
-    logger.info("Recovery attempt successful - moved to half-open state with concurrency %d", concurrency_level)
+        send_recovery_notification(
+            sns_topic, 'HALF-OPEN', recovery_attempts + 1, result['actions_taken']
+        )
+    logger.info(
+        "Recovery attempt successful - moved to half-open state with concurrency %d",
+        concurrency_level
+    )
 
 
 def _handle_half_open_circuit(config: dict, result: dict):
@@ -207,8 +230,8 @@ def _handle_half_open_circuit(config: dict, result: dict):
         result['new_state'] = 'open'
         result['message'] = f"Health check failed: {health_check.get('reason')} - reopening circuit"
         if sns_topic:
-            send_recovery_notification(sns_topic, 'OPEN', 0,
-                                       ['Health check failed in half-open state', 'Circuit reopened'])
+            actions = ['Health check failed in half-open state', 'Circuit reopened']
+            send_recovery_notification(sns_topic, 'OPEN', 0, actions)
     else:
         result['actions_taken'].append('Health check passed in half-open state')
         concurrency_result = set_lambda_reserved_concurrency(webhook_function, 0)
@@ -233,17 +256,24 @@ def _handle_open_circuit(config: dict, state: dict, result: dict):
     required_backoff = calculate_backoff_seconds(recovery_attempts)
     time_since_last_attempt = current_time - last_recovery
     if time_since_last_attempt < required_backoff:
-        logger.info("Backoff period not elapsed (%ds remaining)", required_backoff - time_since_last_attempt)
-        result['message'] = f'Waiting for backoff period ({required_backoff - time_since_last_attempt}s remaining)'
+        remaining = required_backoff - time_since_last_attempt
+        logger.info("Backoff period not elapsed (%ds remaining)", remaining)
+        result['message'] = f'Waiting for backoff period ({remaining}s remaining)'
     elif recovery_attempts >= max_recovery_attempts:
-        logger.error("Max recovery attempts reached (%d), manual intervention required", max_recovery_attempts)
+        logger.error(
+            "Max recovery attempts reached (%d), manual intervention required",
+            max_recovery_attempts
+        )
         result['message'] = 'Max recovery attempts reached - manual intervention required'
         result['manual_intervention_required'] = True
         if sns_topic:
-            send_recovery_notification(sns_topic, 'FAILED', recovery_attempts,
-                                       ['Max recovery attempts exceeded', 'Manual intervention required'])
+            actions = ['Max recovery attempts exceeded', 'Manual intervention required']
+            send_recovery_notification(sns_topic, 'FAILED', recovery_attempts, actions)
     else:
-        logger.info("Attempting recovery (attempt %d/%d)", recovery_attempts + 1, max_recovery_attempts)
+        logger.info(
+            "Attempting recovery (attempt %d/%d)",
+            recovery_attempts + 1, max_recovery_attempts
+        )
         health_check = check_health(webhook_function)
         if not health_check.get('healthy'):
             logger.warning("Health check failed: %s", health_check.get('reason'))
@@ -251,15 +281,21 @@ def _handle_open_circuit(config: dict, state: dict, result: dict):
             result['message'] = f"Health check failed: {health_check.get('reason')}"
             result['recovery_attempts'] = recovery_attempts + 1
         else:
-            _perform_successful_recovery(state_table, webhook_function, sns_topic, recovery_attempts, result)
+            _perform_successful_recovery(
+                state_table, webhook_function, sns_topic, recovery_attempts, result
+            )
 
 
 def attempt_recovery() -> dict:
+    """Attempt to recover the circuit breaker based on current state."""
     state_table = os.environ.get('STATE_TABLE_NAME')
     webhook_function = os.environ.get('WEBHOOK_FUNCTION_NAME')
     sns_topic = os.environ.get('SNS_TOPIC_ARN')
     max_recovery_attempts = int(os.environ.get('MAX_RECOVERY_ATTEMPTS', '5'))
-    result: dict[str, Any] = {'error': 'Configuration error', 'message': 'Missing STATE_TABLE_NAME or WEBHOOK_FUNCTION_NAME'}
+    result: dict[str, Any] = {
+        'error': 'Configuration error',
+        'message': 'Missing STATE_TABLE_NAME or WEBHOOK_FUNCTION_NAME'
+    }
     if not state_table or not webhook_function:
         logger.error("Missing required environment variables")
     else:
@@ -289,6 +325,7 @@ def attempt_recovery() -> dict:
 
 
 def lambda_handler(_event, _context):
+    """Main Lambda entry point for scheduled recovery checks."""
     logger.info("Starting circuit breaker recovery check")
 
     result = attempt_recovery()

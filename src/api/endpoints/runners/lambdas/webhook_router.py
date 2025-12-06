@@ -1,3 +1,4 @@
+"""Lambda handler for GitHub webhook routing to runner endpoints."""
 import base64
 import datetime
 import hashlib
@@ -27,36 +28,42 @@ circuit_breaker_state: Dict[str, Any] = {
 
 
 def get_ssm_client():
+    """Get or create cached SSM client."""
     if clients['ssm'] is None:
         clients['ssm'] = boto3.client('ssm')
     return clients['ssm']
 
 
 def get_dynamodb_client():
+    """Get or create cached DynamoDB client."""
     if clients['dynamodb'] is None:
         clients['dynamodb'] = boto3.client('dynamodb')
     return clients['dynamodb']
 
 
 def get_sqs_client():
+    """Get or create cached SQS client."""
     if clients['sqs'] is None:
         clients['sqs'] = boto3.client('sqs')
     return clients['sqs']
 
 
 def get_cloudwatch_client():
+    """Get or create cached CloudWatch client."""
     if clients['cloudwatch'] is None:
         clients['cloudwatch'] = boto3.client('cloudwatch')
     return clients['cloudwatch']
 
 
 def get_ecs_client():
+    """Get or create cached ECS client."""
     if clients['ecs'] is None:
         clients['ecs'] = boto3.client('ecs')
     return clients['ecs']
 
 
 def get_ec2_client():
+    """Get or create cached EC2 client."""
     if clients['ec2'] is None:
         clients['ec2'] = boto3.client('ec2')
     return clients['ec2']
@@ -66,6 +73,7 @@ github_token_cache = {'value': None}
 
 
 def get_github_token() -> str:
+    """Get GitHub token from SSM Parameter Store with caching."""
     if github_token_cache['value']:
         return github_token_cache['value']
     parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME')
@@ -85,10 +93,12 @@ test_mode_enabled = {'value': False}
 
 
 def set_test_mode(enabled: bool):
+    """Enable or disable test mode."""
     test_mode_enabled['value'] = enabled
 
 
 def publish_metric(metric_name: str, value: float, unit: str = 'None'):
+    """Publish a metric to CloudWatch."""
     if not test_mode_enabled['value']:
         try:
             cloudwatch = get_cloudwatch_client()
@@ -108,6 +118,7 @@ def publish_metric(metric_name: str, value: float, unit: str = 'None'):
 
 
 def check_and_record_idempotency(request_id: str) -> bool:
+    """Check if request is duplicate and record for idempotency."""
     table_name = os.environ.get('IDEMPOTENCY_TABLE_NAME')
     if not table_name:
         logger.warning("IDEMPOTENCY_TABLE_NAME not set, skipping idempotency check")
@@ -136,6 +147,7 @@ def check_and_record_idempotency(request_id: str) -> bool:
 
 
 def check_circuit_breaker() -> bool:
+    """Check if circuit breaker allows request processing."""
     current_time = time.time()
     failure_threshold = 5
     timeout_seconds = 60
@@ -151,7 +163,8 @@ def check_circuit_breaker() -> bool:
         return False
 
     if circuit_breaker_state['failures'] >= failure_threshold:
-        logger.warning("Circuit breaker opening due to %d failures", circuit_breaker_state['failures'])
+        failure_count = circuit_breaker_state['failures']
+        logger.warning("Circuit breaker opening due to %d failures", failure_count)
         circuit_breaker_state['state'] = 'open'
         circuit_breaker_state['last_failure_time'] = current_time
         publish_metric('CircuitBreakerState', 2.0, 'Count')
@@ -162,6 +175,7 @@ def check_circuit_breaker() -> bool:
 
 
 def record_circuit_breaker_success():
+    """Record successful request for circuit breaker."""
     if circuit_breaker_state['state'] == 'half-open':
         logger.info("Circuit breaker closing after successful request")
         circuit_breaker_state['state'] = 'closed'
@@ -169,6 +183,7 @@ def record_circuit_breaker_success():
 
 
 def record_circuit_breaker_failure():
+    """Record failed request for circuit breaker tracking."""
     circuit_breaker_state['failures'] += 1
     circuit_breaker_state['last_failure_time'] = time.time()
     if circuit_breaker_state['state'] == 'half-open':
@@ -177,6 +192,7 @@ def record_circuit_breaker_failure():
 
 
 def should_record_circuit_breaker_failure(status_code: int | None) -> bool:
+    """Determine if status code should be recorded as circuit breaker failure."""
     if status_code is None:
         return True
     if status_code == 503:
@@ -187,6 +203,7 @@ def should_record_circuit_breaker_failure(status_code: int | None) -> bool:
 
 
 def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Enqueue job to SQS for async processing."""
     queue_url = os.environ.get('JOB_QUEUE_URL')
     if not queue_url:
         logger.error("JOB_QUEUE_URL not set, cannot enqueue job")
@@ -214,6 +231,7 @@ def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_workflow_runners(run_id: str) -> List[Dict[str, Any]]:
+    """Get all runners associated with a workflow run from DynamoDB."""
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if not table_name:
         return []
@@ -240,6 +258,7 @@ def get_workflow_runners(run_id: str) -> List[Dict[str, Any]]:
 
 
 def delete_workflow_runner(run_id: str, runner_type: str) -> bool:
+    """Delete workflow runner record from DynamoDB."""
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if not table_name:
         return False
@@ -259,6 +278,7 @@ def delete_workflow_runner(run_id: str, runner_type: str) -> bool:
 
 
 def delete_github_runner(github_token: str, github_repo: str, runner_name: str) -> bool:
+    """Delete runner from GitHub Actions via API."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -299,6 +319,7 @@ def delete_github_runner(github_token: str, github_repo: str, runner_name: str) 
 
 
 def terminate_ecs_task(task_arn: str) -> bool:
+    """Stop an ECS task by ARN."""
     cluster = os.environ.get('ECS_CLUSTER')
     if not cluster:
         return False
@@ -312,6 +333,7 @@ def terminate_ecs_task(task_arn: str) -> bool:
 
 
 def terminate_ec2_instance(instance_id: str) -> bool:
+    """Terminate an EC2 instance by ID."""
     try:
         get_ec2_client().terminate_instances(InstanceIds=[instance_id])
         logger.info("Terminated EC2 instance: %s", instance_id)
@@ -322,6 +344,7 @@ def terminate_ec2_instance(instance_id: str) -> bool:
 
 
 def terminate_runners_for_workflow(run_id: str) -> Dict[str, Any]:
+    """Terminate all runners for a completed workflow run."""
     runners = get_workflow_runners(run_id)
     if not runners:
         logger.info("No runners found for workflow run %s", run_id)
@@ -352,6 +375,7 @@ def terminate_runners_for_workflow(run_id: str) -> Dict[str, Any]:
 
 
 def handle_workflow_run(event_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle workflow_run webhook events and cleanup runners."""
     action = event_data.get('action')
     workflow_run = event_data.get('workflow_run', {})
     run_id = workflow_run.get('id')
@@ -378,6 +402,7 @@ def handle_workflow_run(event_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_webhook_secret(force_refresh: bool = False) -> str:
+    """Get GitHub webhook secret from SSM with caching."""
     if force_refresh:
         webhook_secret_cache['value'] = None
 
@@ -396,6 +421,7 @@ def get_webhook_secret(force_refresh: bool = False) -> str:
 
 
 def get_api_key(force_refresh: bool = False) -> str:
+    """Get API key from SSM with caching."""
     if force_refresh:
         api_key_cache['value'] = None
 
@@ -417,6 +443,7 @@ def get_api_key(force_refresh: bool = False) -> str:
 
 
 def verify_signature(payload_body: str, signature_header: str, secret: str) -> bool:
+    """Verify GitHub webhook HMAC-SHA256 signature."""
     if not signature_header:
         return False
     parts = signature_header.split('=', 1)
@@ -431,7 +458,13 @@ def verify_signature(payload_body: str, signature_header: str, secret: str) -> b
     return hmac.compare_digest(computed_signature, github_signature)
 
 
-def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | None = None, max_retries: int = 3) -> tuple:
+def make_http_request_with_retry(
+    endpoint: str,
+    payload: dict,
+    headers: dict | None = None,
+    max_retries: int = 3
+) -> tuple:
+    """Make HTTP POST request with exponential backoff retry."""
     base_delay = 1.0
     last_status_code = None
     if headers is None:
@@ -439,7 +472,10 @@ def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | N
     headers['Content-Type'] = 'application/json'
     for attempt in range(max_retries + 1):
         try:
-            req = urllib.request.Request(endpoint, data=json.dumps(payload).encode('utf-8'), headers=headers, method='POST')
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                endpoint, data=data, headers=headers, method='POST'
+            )
             with urllib.request.urlopen(req, timeout=30) as response:
                 return (True, json.loads(response.read()), None, response.status)
         except urllib.error.HTTPError as e:
@@ -457,6 +493,7 @@ def make_http_request_with_retry(endpoint: str, payload: dict, headers: dict | N
 
 
 def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
+    """Determine runner type and endpoint from job labels."""
     runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2')
     runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_E2E')
     runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE')
@@ -476,25 +513,45 @@ def get_runner_type_from_labels(job_labels: List[str]) -> tuple:
 
 
 def _build_runner_endpoint(endpoint_suffix: str) -> str:
+    """Build full runner API endpoint URL."""
     return f"{os.environ['API_BASE_URL']}/v1/{endpoint_suffix}"
 
 
-def _handle_route_success(job_id: int, runner_type: str, response_data: Any) -> Dict[str, Any]:
+def _handle_route_success(
+    job_id: int,
+    runner_type: str,
+    response_data: Any
+) -> Dict[str, Any]:
+    """Handle successful runner request routing."""
     logger.info("Successfully routed job %s to %s runner", job_id, runner_type)
     record_circuit_breaker_success()
     return {'success': True, 'runner_type': runner_type, 'response': response_data}
 
 
-def _handle_route_failure(job_id: int, error: str, status_code: int | None) -> Dict[str, Any]:
+def _handle_route_failure(
+    job_id: int,
+    error: str,
+    status_code: int | None
+) -> Dict[str, Any]:
+    """Handle failed runner request routing."""
     logger.error("Failed to route job %s: %s", job_id, error)
     if should_record_circuit_breaker_failure(status_code):
         record_circuit_breaker_failure()
     else:
-        logger.warning("Status %s for job %s - not counting as circuit breaker failure", status_code, job_id)
+        logger.warning(
+            "Status %s for job %s - not counting as circuit breaker failure",
+            status_code, job_id
+        )
     return {'success': False, 'error': error}
 
 
-def route_runner_request(job_id: int, job_labels: List[str], github_repo: str, run_id: int | None = None) -> Dict[str, Any]:
+def route_runner_request(
+    job_id: int,
+    job_labels: List[str],
+    github_repo: str,
+    run_id: int | None = None
+) -> Dict[str, Any]:
+    """Route runner request to appropriate EC2 or ECS endpoint."""
     if not check_circuit_breaker():
         logger.error("Circuit breaker is open, rejecting request for job %s", job_id)
         return {'success': False, 'error': 'Service temporarily unavailable (circuit breaker open)'}
@@ -508,15 +565,27 @@ def route_runner_request(job_id: int, job_labels: List[str], github_repo: str, r
         logger.error("Cannot route job %s: %s", job_id, e)
         return {'success': False, 'error': str(e)}
     endpoint = _build_runner_endpoint(endpoint_suffix)
-    payload = {'job_id': job_id, 'job_labels': job_labels, 'github_repo': github_repo, 'run_id': run_id, 'runner_type': runner_type}
-    logger.info("Routing job %s to %s runner: %s (run_id=%s)", job_id, runner_type, endpoint, run_id)
-    success, response_data, error, status_code = make_http_request_with_retry(endpoint, payload, {'x-api-key': api_key})
+    payload = {
+        'job_id': job_id,
+        'job_labels': job_labels,
+        'github_repo': github_repo,
+        'run_id': run_id,
+        'runner_type': runner_type
+    }
+    logger.info(
+        "Routing job %s to %s runner: %s (run_id=%s)",
+        job_id, runner_type, endpoint, run_id
+    )
+    success, response_data, error, status_code = make_http_request_with_retry(
+        endpoint, payload, {'x-api-key': api_key}
+    )
     if success:
         return _handle_route_success(job_id, runner_type, response_data)
     return _handle_route_failure(job_id, error, status_code)
 
 
 def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle workflow_job webhook events and enqueue runner requests."""
     action = event_data.get('action')
     job = event_data.get('workflow_job', {})
     job_id = job.get('id')
@@ -526,8 +595,11 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
     run_id = job.get('run_id')
     repo_full_name = event_data.get('repository', {}).get('full_name')
 
-    logger.info("Received workflow_job event: action=%s, job=%s, status=%s, labels=%s, repo=%s, run_id=%s",
-               action, job_name, job_status, job_labels, repo_full_name, run_id)
+    logger.info(
+        "Received workflow_job event: action=%s, job=%s, status=%s, labels=%s",
+        action, job_name, job_status, job_labels
+    )
+    logger.info("workflow_job context: repo=%s, run_id=%s", repo_full_name, run_id)
 
     if action != 'queued':
         logger.info("Ignoring action '%s' (only handle 'queued')", action)
@@ -544,7 +616,10 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'body': json.dumps({'message': 'No matching runner type, ignoring'})
         }
 
-    logger.info("Enqueueing runner request for job %s (%s), runner_type=%s", job_id, job_name, runner_type)
+    logger.info(
+        "Enqueueing runner request for job %s (%s), runner_type=%s",
+        job_id, job_name, runner_type
+    )
 
     job_data = {
         'job_id': job_id,
@@ -579,6 +654,7 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
+    """Process a single SQS message containing a job request."""
     try:
         body = json.loads(message['body'])
         job_id = body.get('job_id')
@@ -586,7 +662,10 @@ def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
         github_repo = body.get('github_repo')
         run_id = body.get('run_id')
 
-        logger.info("Processing job from SQS: job_id=%s, labels=%s, repo=%s, run_id=%s", job_id, job_labels, github_repo, run_id)
+        logger.info(
+            "Processing job from SQS: job_id=%s, labels=%s, repo=%s, run_id=%s",
+            job_id, job_labels, github_repo, run_id
+        )
 
         result = route_runner_request(job_id, job_labels, github_repo, run_id)
 
@@ -602,6 +681,7 @@ def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_health_check() -> Dict[str, Any]:
+    """Return health check status including circuit breaker state."""
     health_status = {
         'status': 'healthy',
         'circuit_breaker': circuit_breaker_state['state'],
@@ -615,6 +695,7 @@ def handle_health_check() -> Dict[str, Any]:
 
 
 def parse_event_body(event: dict) -> tuple:
+    """Parse webhook event body handling base64 and form encoding."""
     body_str = event.get('body', '')
     if event.get('isBase64Encoded'):
         body_str = base64.b64decode(body_str).decode('utf-8')
@@ -627,6 +708,7 @@ def parse_event_body(event: dict) -> tuple:
 
 
 def verify_webhook_signature(body_str: str, signature_header: str) -> dict:
+    """Verify webhook signature and return error response if invalid."""
     try:
         webhook_secret = get_webhook_secret()
         if not verify_signature(body_str, signature_header, webhook_secret):
@@ -635,10 +717,12 @@ def verify_webhook_signature(body_str: str, signature_header: str) -> dict:
         return {}
     except RuntimeError as e:
         logger.error("Cannot verify signature, secret unavailable: %s", e)
-        return {'statusCode': 500, 'body': json.dumps({'error': 'Authentication system unavailable'})}
+        error_body = json.dumps({'error': 'Authentication system unavailable'})
+        return {'statusCode': 500, 'body': error_body}
 
 
 def get_header_case_insensitive(headers: dict, key: str) -> str | None:
+    """Get header value with case-insensitive key matching."""
     lower_key = key.lower()
     for header_name, header_value in headers.items():
         if header_name.lower() == lower_key:
@@ -647,17 +731,22 @@ def get_header_case_insensitive(headers: dict, key: str) -> str | None:
 
 
 def handle_api_gateway_event(event: dict, start_time: float) -> dict:
+    """Handle API Gateway HTTP events from webhooks."""
     headers = event.get('headers', {})
     set_test_mode(get_header_case_insensitive(headers, 'x-test-mode') == 'true')
 
-    http_method = event.get('httpMethod', event.get('requestContext', {}).get('http', {}).get('method', ''))
+    http_context = event.get('requestContext', {}).get('http', {})
+    http_method = event.get('httpMethod', http_context.get('method', ''))
     if http_method == 'OPTIONS':
         result = {
             'statusCode': 200,
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,x-api-key,x-github-event,x-hub-signature-256,x-github-delivery'
+                'Access-Control-Allow-Headers': (
+                    'Content-Type,x-api-key,x-github-event,'
+                    'x-hub-signature-256,x-github-delivery'
+                )
             },
             'body': ''
         }
@@ -673,6 +762,7 @@ def handle_api_gateway_event(event: dict, start_time: float) -> dict:
 
 
 def _process_webhook_event(event: dict, headers: dict, start_time: float) -> dict:
+    """Process and route GitHub webhook event to appropriate handler."""
     try:
         body_str, payload = parse_event_body(event)
     except (ValueError, KeyError) as e:
@@ -706,17 +796,23 @@ def _process_webhook_event(event: dict, headers: dict, start_time: float) -> dic
         result = handle_workflow_run(payload)
         return result
 
-    logger.info("Received ping event" if event_type == 'ping' else f"Ignoring event type: {event_type}")
+    if event_type == 'ping':
+        logger.info("Received ping event")
+    else:
+        logger.info("Ignoring event type: %s", event_type)
     message = 'pong' if event_type == 'ping' else f'Event type {event_type} ignored'
     result = {'statusCode': 200, 'body': json.dumps({'message': message})}
     return result
 
 
 def lambda_handler(event, _context):
+    """Main Lambda entry point for webhook and SQS events."""
     start_time = time.time()
     logger.info("Received event: %s", json.dumps(event))
 
-    if 'Records' in event and len(event['Records']) > 0 and event['Records'][0].get('eventSource') == 'aws:sqs':
+    records = event.get('Records', [])
+    is_sqs = records and records[0].get('eventSource') == 'aws:sqs'
+    if is_sqs:
         logger.info("Processing SQS event")
         results = [handle_sqs_message(record) for record in event['Records']]
         if not all(r['success'] for r in results):

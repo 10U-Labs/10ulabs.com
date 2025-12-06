@@ -1,3 +1,4 @@
+"""Lambda handler for circuit breaker remediation actions."""
 import json
 import logging
 import os
@@ -10,6 +11,7 @@ logger.setLevel(logging.INFO)
 
 
 def disable_sqs_event_source(lambda_function_name: str) -> dict:
+    """Disable SQS event source mappings for a Lambda function."""
     lambda_client = boto3.client('lambda')
 
     try:
@@ -38,6 +40,7 @@ def disable_sqs_event_source(lambda_function_name: str) -> dict:
 
 
 def set_lambda_reserved_concurrency(function_name: str, concurrency: int) -> dict:
+    """Set reserved concurrency for a Lambda function."""
     lambda_client = boto3.client('lambda')
 
     try:
@@ -56,6 +59,7 @@ def set_lambda_reserved_concurrency(function_name: str, concurrency: int) -> dic
 
 
 def enable_sqs_event_source(lambda_function_name: str) -> dict:
+    """Enable SQS event source mappings for a Lambda function."""
     lambda_client = boto3.client('lambda')
 
     try:
@@ -84,6 +88,7 @@ def enable_sqs_event_source(lambda_function_name: str) -> dict:
 
 
 def remove_lambda_reserved_concurrency(function_name: str) -> dict:
+    """Remove reserved concurrency limit from a Lambda function."""
     lambda_client = boto3.client('lambda')
 
     try:
@@ -99,6 +104,7 @@ def remove_lambda_reserved_concurrency(function_name: str) -> dict:
 
 
 def send_sns_notification(topic_arn: str, subject: str, message: str) -> dict:
+    """Send an SNS notification."""
     sns_client = boto3.client('sns')
 
     try:
@@ -115,6 +121,7 @@ def send_sns_notification(topic_arn: str, subject: str, message: str) -> dict:
 
 
 def record_incident(table_name: str, alarm_name: str, alarm_reason: str) -> dict:
+    """Record an incident in DynamoDB."""
     dynamodb = boto3.client('dynamodb')
 
     try:
@@ -137,6 +144,7 @@ def record_incident(table_name: str, alarm_name: str, alarm_reason: str) -> dict
 
 
 def update_circuit_breaker_state(table_name: str, state: str) -> dict:
+    """Update the circuit breaker state in DynamoDB."""
     dynamodb = boto3.client('dynamodb')
 
     try:
@@ -165,11 +173,13 @@ def handle_alarm_ok_state(
     sns_topic_arn: str | None,
     alarm_name: str
 ) -> dict:
+    """Handle CloudWatch alarm returning to OK state."""
     logger.info("Alarm returned to OK state, resetting circuit breaker")
 
     enable_result = enable_sqs_event_source(webhook_function_name)
     if enable_result['success']:
-        result['actions_taken'].append(f"Enabled SQS event sources: {enable_result['enabled_count']}")
+        count = enable_result['enabled_count']
+        result['actions_taken'].append(f"Enabled SQS event sources: {count}")
 
     concurrency_result = remove_lambda_reserved_concurrency(webhook_function_name)
     if concurrency_result['success']:
@@ -205,6 +215,7 @@ The system has automatically recovered.
 
 
 def handle_cloudwatch_alarm_event(event: dict) -> dict:
+    """Handle a CloudWatch alarm state change event."""
     detail = event.get('detail', {})
     alarm_name = detail.get('alarmName', 'Unknown')
     new_state_value = detail.get('state', {}).get('value', 'UNKNOWN')
@@ -234,13 +245,17 @@ def handle_cloudwatch_alarm_event(event: dict) -> dict:
     return result
 
 
-def _execute_remediation_actions(result: dict, webhook_function_name: str, alarm_name: str, detail: dict):
+def _execute_remediation_actions(
+    result: dict, webhook_function_name: str, alarm_name: str, detail: dict
+):
+    """Execute remediation actions when circuit breaker triggers."""
     alarm_reason = detail.get('state', {}).get('reason', 'No reason provided')
     new_state_value = detail.get('state', {}).get('value', 'UNKNOWN')
 
     disable_result = disable_sqs_event_source(webhook_function_name)
     if disable_result['success']:
-        result['actions_taken'].append(f"Disabled SQS event sources: {disable_result['disabled_count']}")
+        count = disable_result['disabled_count']
+        result['actions_taken'].append(f"Disabled SQS event sources: {count}")
 
     if set_lambda_reserved_concurrency(webhook_function_name, 0)['success']:
         result['actions_taken'].append('Set Lambda reserved concurrency to 0')
@@ -258,7 +273,9 @@ Actions Taken:
 
 Manual intervention may be required to restore service.
 """
-        if send_sns_notification(sns_topic_arn, f"Circuit Breaker Alert: {alarm_name}", notification_message)['success']:
+        subject = f"Circuit Breaker Alert: {alarm_name}"
+        sns_result = send_sns_notification(sns_topic_arn, subject, notification_message)
+        if sns_result['success']:
             result['actions_taken'].append('Sent SNS notification')
 
     incident_table_name = os.environ.get('INCIDENT_TABLE_NAME')
@@ -275,9 +292,12 @@ Manual intervention may be required to restore service.
 
 
 def lambda_handler(event, _context):
+    """Main Lambda handler for circuit breaker remediation."""
     logger.info("Received event: %s", json.dumps(event))
 
-    if event.get('source') == 'aws.cloudwatch' and event.get('detail-type') == 'CloudWatch Alarm State Change':
+    is_cloudwatch = event.get('source') == 'aws.cloudwatch'
+    is_alarm_change = event.get('detail-type') == 'CloudWatch Alarm State Change'
+    if is_cloudwatch and is_alarm_change:
         result = handle_cloudwatch_alarm_event(event)
         return {
             'statusCode': 200,

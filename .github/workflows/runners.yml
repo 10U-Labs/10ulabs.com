@@ -1,3 +1,4 @@
+---
 concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
@@ -7,8 +8,8 @@ jobs:
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
-      github_actions_role_arn: ${{ steps.shared.outputs.github_actions_role_arn }}
-      terraform_version: ${{ steps.shared.outputs.terraform_version }}
+      role_arn: ${{ steps.shared.outputs.role_arn }}
+      tf_version: ${{ steps.shared.outputs.tf_version }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
@@ -20,20 +21,31 @@ jobs:
       - id: shared
         name: Extract shared configuration values
         run: |
-          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/runners/backend.tf | cut -d'"' -f2 | sed 's/>= //')
+          OUTPUTS=lib/terraform/outputs.tf
+          LOCALS=src/bootstrap/locals.tf
+          BACKEND=src/api/endpoints/runners/backend.tf
+          AWS_REGION=$(grep -A1 'output "aws_region"' $OUTPUTS \
+            | grep 'value' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $OUTPUTS \
+            | grep 'value' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' $OUTPUTS \
+            | grep 'value' | cut -d'"' -f2)
+          ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
+            | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/"
+          ROLE_ARN="${ROLE_ARN}${RESOURCE_PREFIX}${ROLE_SUFFIX}"
+          TERRAFORM_VERSION=$(grep 'required_version' $BACKEND \
+            | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "tf_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ steps.shared.outputs.terraform_version }}
+          terraform_version: ${{ steps.shared.outputs.tf_version }}
           terraform_wrapper: false
   ensuring-endpoint-infrastructure-in-desired-state:
     name: Ensuring endpoint infrastructure is in desired state
@@ -54,13 +66,18 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
       - name: Terraform Init
         run: cd src/api/endpoints/runners && terraform init
       - name: Terraform Apply
@@ -84,21 +101,27 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run integration tests
         run: |
-          python3 -m pytest test/api/endpoints/runners/post_deployment/integration/ \
-            --confcutdir=test/api/endpoints/runners \
-            -v
+          TEST_DIR=test/api/endpoints/runners
+          python3 -m pytest $TEST_DIR/post_deployment/integration/ \
+            --confcutdir=$TEST_DIR -v
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -110,24 +133,35 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs PyYAML types-PyYAML requests types-requests
+        run: |
+          python3 -m pip install pylint mypy yamllint pytest boto3 \
+            boto3-stubs PyYAML types-PyYAML requests types-requests
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -157,10 +191,14 @@ jobs:
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
       - name: Terraform Format Check
-        run: cd src/api/endpoints/runners && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/endpoints/runners
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/runners && terraform init
       - env:
@@ -185,19 +223,23 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/endpoints/runners/pre_deployment/ \
-            --confcutdir=test/api/endpoints/runners \
-            -v
+          TEST_DIR=test/api/endpoints/runners
+          python3 -m pytest $TEST_DIR/pre_deployment/ \
+            --confcutdir=$TEST_DIR -v
 name: Ensuring the /v1/runners API endpoint exists and is properly configured
 on:
   push:

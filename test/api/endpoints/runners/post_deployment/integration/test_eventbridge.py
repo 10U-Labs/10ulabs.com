@@ -1,19 +1,23 @@
+"""Unit tests for test eventbridge."""
 import json
 
 
 def test_eventbridge_circuit_breaker_remediation_rule_exists(events_client, config):
+    """Test eventbridge circuit breaker remediation rule exists."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
     response = events_client.describe_rule(Name=rule_name)
     assert response['Name'] == rule_name
 
 
 def test_eventbridge_circuit_breaker_remediation_rule_has_target(events_client, config):
+    """Test eventbridge circuit breaker remediation rule has target."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
     targets = events_client.list_targets_by_rule(Rule=rule_name)
     assert len(targets['Targets']) == 1
 
 
 def test_eventbridge_circuit_breaker_remediation_event_pattern(events_client, config):
+    """Test eventbridge circuit breaker remediation event pattern."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
     response = events_client.describe_rule(Name=rule_name)
     event_pattern = json.loads(response['EventPattern'])
@@ -21,6 +25,7 @@ def test_eventbridge_circuit_breaker_remediation_event_pattern(events_client, co
 
 
 def test_eventbridge_circuit_breaker_remediation_alarm_filter(events_client, config):
+    """Test eventbridge circuit breaker remediation alarm filter."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-remediation"
     response = events_client.describe_rule(Name=rule_name)
     event_pattern = json.loads(response['EventPattern'])
@@ -28,48 +33,56 @@ def test_eventbridge_circuit_breaker_remediation_alarm_filter(events_client, con
 
 
 def test_eventbridge_circuit_breaker_recovery_rule_exists(events_client, config):
+    """Test eventbridge circuit breaker recovery rule exists."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
     response = events_client.describe_rule(Name=rule_name)
     assert response['Name'] == rule_name
 
 
 def test_eventbridge_circuit_breaker_recovery_schedule(events_client, config):
+    """Test eventbridge circuit breaker recovery schedule."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
     response = events_client.describe_rule(Name=rule_name)
     assert response['ScheduleExpression'] == 'rate(5 minutes)'
 
 
 def test_eventbridge_circuit_breaker_recovery_rule_has_target(events_client, config):
+    """Test eventbridge circuit breaker recovery rule has target."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
     targets = events_client.list_targets_by_rule(Rule=rule_name)
     assert len(targets['Targets']) == 1
 
 
 def test_eventbridge_circuit_breaker_recovery_state_enabled(events_client, config):
+    """Test eventbridge circuit breaker recovery state enabled."""
     rule_name = f"{config['resource_prefix']}-circuit-breaker-recovery"
     response = events_client.describe_rule(Name=rule_name)
     assert response['State'] == 'ENABLED'
 
 
 def test_eventbridge_dlq_reprocessor_rule_exists(events_client, config):
+    """Test eventbridge dlq reprocessor rule exists."""
     rule_name = f"{config['resource_prefix']}-dlq-reprocessor"
     response = events_client.describe_rule(Name=rule_name)
     assert response['Name'] == rule_name
 
 
 def test_eventbridge_dlq_reprocessor_rule_schedule(events_client, config):
+    """Test eventbridge dlq reprocessor rule schedule."""
     rule_name = f"{config['resource_prefix']}-dlq-reprocessor"
     response = events_client.describe_rule(Name=rule_name)
     assert response['ScheduleExpression'] == 'rate(15 minutes)'
 
 
 def test_eventbridge_dlq_reprocessor_rule_has_target(events_client, config):
+    """Test eventbridge dlq reprocessor rule has target."""
     rule_name = f"{config['resource_prefix']}-dlq-reprocessor"
     targets = events_client.list_targets_by_rule(Rule=rule_name)
     assert len(targets['Targets']) == 1
 
 
 def test_eventbridge_dlq_reprocessor_state_enabled(events_client, config):
+    """Test eventbridge dlq reprocessor state enabled."""
     rule_name = f"{config['resource_prefix']}-dlq-reprocessor"
     response = events_client.describe_rule(Name=rule_name)
     assert response['State'] == 'ENABLED'

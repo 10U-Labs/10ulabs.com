@@ -1,3 +1,4 @@
+"""Unit tests for test dlq reprocessor."""
 import json
 import urllib.error
 from unittest.mock import patch, MagicMock, Mock
@@ -6,6 +7,7 @@ from botocore.exceptions import ClientError
 
 
 def test_get_sqs_client_returns_client(dlq_reprocessor):
+    """Test get sqs client returns client."""
     dlq_reprocessor.reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_boto.return_value = MagicMock()
@@ -14,6 +16,7 @@ def test_get_sqs_client_returns_client(dlq_reprocessor):
 
 
 def test_get_sqs_client_caches_client(dlq_reprocessor):
+    """Test get sqs client caches client."""
     dlq_reprocessor.reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_boto.return_value = MagicMock()
@@ -23,6 +26,7 @@ def test_get_sqs_client_caches_client(dlq_reprocessor):
 
 
 def test_get_sns_client_returns_client(dlq_reprocessor):
+    """Test get sns client returns client."""
     dlq_reprocessor.reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_boto.return_value = MagicMock()
@@ -31,6 +35,7 @@ def test_get_sns_client_returns_client(dlq_reprocessor):
 
 
 def test_get_sns_client_caches_client(dlq_reprocessor):
+    """Test get sns client caches client."""
     dlq_reprocessor.reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_boto.return_value = MagicMock()
@@ -40,6 +45,7 @@ def test_get_sns_client_caches_client(dlq_reprocessor):
 
 
 def test_get_ssm_client_returns_client(dlq_reprocessor):
+    """Test get ssm client returns client."""
     dlq_reprocessor.reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_boto.return_value = MagicMock()
@@ -48,6 +54,7 @@ def test_get_ssm_client_returns_client(dlq_reprocessor):
 
 
 def test_get_ssm_client_caches_client(dlq_reprocessor):
+    """Test get ssm client caches client."""
     dlq_reprocessor.reset_clients()
     with patch('boto3.client') as mock_boto:
         mock_boto.return_value = MagicMock()
@@ -57,6 +64,7 @@ def test_get_ssm_client_caches_client(dlq_reprocessor):
 
 
 def test_get_github_token_returns_empty_when_no_parameter_name(dlq_reprocessor):
+    """Test get github token returns empty when no parameter name."""
     dlq_reprocessor.reset_clients()
     with patch.dict('os.environ', {}, clear=True):
         result = dlq_reprocessor.get_github_token()
@@ -64,6 +72,7 @@ def test_get_github_token_returns_empty_when_no_parameter_name(dlq_reprocessor):
 
 
 def test_get_github_token_returns_token_from_ssm(dlq_reprocessor):
+    """Test get github token returns token from ssm."""
     dlq_reprocessor.reset_clients()
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-github-token'}}
@@ -74,6 +83,7 @@ def test_get_github_token_returns_token_from_ssm(dlq_reprocessor):
 
 
 def test_get_github_token_calls_ssm_with_decryption(dlq_reprocessor):
+    """Test get github token calls ssm with decryption."""
     dlq_reprocessor.reset_clients()
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
@@ -84,6 +94,7 @@ def test_get_github_token_calls_ssm_with_decryption(dlq_reprocessor):
 
 
 def test_get_github_token_returns_empty_on_client_error(dlq_reprocessor):
+    """Test get github token returns empty on client error."""
     dlq_reprocessor.reset_clients()
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.side_effect = ClientError(
@@ -97,11 +108,13 @@ def test_get_github_token_returns_empty_on_client_error(dlq_reprocessor):
 
 
 def test_check_github_job_status_returns_unknown_when_no_token(dlq_reprocessor):
+    """Test check github job status returns unknown when no token."""
     result = dlq_reprocessor.check_github_job_status('owner/repo', 123, '')
     assert result == 'unknown'
 
 
 def test_check_github_job_status_returns_status_from_api(dlq_reprocessor):
+    """Test check github job status returns status from api."""
     mock_response = Mock()
     mock_response.read.return_value = json.dumps({'status': 'completed'}).encode()
     mock_response.__enter__ = Mock(return_value=mock_response)
@@ -112,6 +125,7 @@ def test_check_github_job_status_returns_status_from_api(dlq_reprocessor):
 
 
 def test_check_github_job_status_returns_unknown_when_status_missing(dlq_reprocessor):
+    """Test check github job status returns unknown when status missing."""
     mock_response = Mock()
     mock_response.read.return_value = json.dumps({}).encode()
     mock_response.__enter__ = Mock(return_value=mock_response)
@@ -122,6 +136,7 @@ def test_check_github_job_status_returns_unknown_when_status_missing(dlq_reproce
 
 
 def test_check_github_job_status_returns_not_found_on_404(dlq_reprocessor):
+    """Test check github job status returns not found on 404."""
     http_error = urllib.error.HTTPError(
         'https://api.github.com/repos/owner/repo/actions/jobs/123',
         404, 'Not Found', {}, None
@@ -132,6 +147,7 @@ def test_check_github_job_status_returns_not_found_on_404(dlq_reprocessor):
 
 
 def test_check_github_job_status_returns_error_on_other_http_error(dlq_reprocessor):
+    """Test check github job status returns error on other http error."""
     http_error = urllib.error.HTTPError(
         'https://api.github.com/repos/owner/repo/actions/jobs/123',
         500, 'Server Error', {}, None
@@ -142,6 +158,7 @@ def test_check_github_job_status_returns_error_on_other_http_error(dlq_reprocess
 
 
 def test_check_github_job_status_returns_error_on_url_error(dlq_reprocessor):
+    """Test check github job status returns error on url error."""
     url_error = urllib.error.URLError('Connection refused')
     with patch('urllib.request.urlopen', side_effect=url_error):
         result = dlq_reprocessor.check_github_job_status('owner/repo', 123, 'test-token')
@@ -149,6 +166,7 @@ def test_check_github_job_status_returns_error_on_url_error(dlq_reprocessor):
 
 
 def test_check_github_job_status_returns_error_on_value_error(dlq_reprocessor):
+    """Test check github job status returns error on value error."""
     mock_response = Mock()
     mock_response.read.return_value = b'not json'
     mock_response.__enter__ = Mock(return_value=mock_response)
@@ -159,6 +177,7 @@ def test_check_github_job_status_returns_error_on_value_error(dlq_reprocessor):
 
 
 def test_send_poison_pill_alert_does_nothing_when_no_sns_topic_arn(dlq_reprocessor):
+    """Test send poison pill alert does nothing when no sns topic arn."""
     dlq_reprocessor.reset_clients()
     mock_sns = MagicMock()
     with patch.dict('os.environ', {}, clear=True):
@@ -168,15 +187,19 @@ def test_send_poison_pill_alert_does_nothing_when_no_sns_topic_arn(dlq_reprocess
 
 
 def test_send_poison_pill_alert_publishes_to_sns(dlq_reprocessor):
+    """Test send poison pill alert publishes to sns."""
     dlq_reprocessor.reset_clients()
     mock_sns = MagicMock()
-    with patch.dict('os.environ', {'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123456789012:test-topic'}):
+    sns_arn = 'arn:aws:sns:us-east-1:123456789012:test-topic'
+    with patch.dict('os.environ', {'SNS_TOPIC_ARN': sns_arn}):
         with patch.object(dlq_reprocessor, 'get_sns_client', return_value=mock_sns):
-            dlq_reprocessor.send_poison_pill_alert({'job_id': 456, 'github_repo': 'owner/repo'}, 4, 'max retries')
+            message = {'job_id': 456, 'github_repo': 'owner/repo'}
+            dlq_reprocessor.send_poison_pill_alert(message, 4, 'max retries')
             assert mock_sns.publish.called
 
 
 def test_send_poison_pill_alert_uses_correct_topic_arn(dlq_reprocessor):
+    """Test send poison pill alert uses correct topic arn."""
     dlq_reprocessor.reset_clients()
     mock_sns = MagicMock()
     expected_arn = 'arn:aws:sns:us-east-1:123456789012:alert-topic'
@@ -188,6 +211,7 @@ def test_send_poison_pill_alert_uses_correct_topic_arn(dlq_reprocessor):
 
 
 def test_send_poison_pill_alert_includes_job_id_in_subject(dlq_reprocessor):
+    """Test send poison pill alert includes job id in subject."""
     dlq_reprocessor.reset_clients()
     mock_sns = MagicMock()
     with patch.dict('os.environ', {'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123456789012:topic'}):
@@ -198,6 +222,7 @@ def test_send_poison_pill_alert_includes_job_id_in_subject(dlq_reprocessor):
 
 
 def test_send_poison_pill_alert_handles_client_error(dlq_reprocessor):
+    """Test send poison pill alert handles client error."""
     dlq_reprocessor.reset_clients()
     mock_sns = MagicMock()
     mock_sns.publish.side_effect = ClientError(
@@ -211,23 +236,27 @@ def test_send_poison_pill_alert_handles_client_error(dlq_reprocessor):
 
 
 def test_get_reprocess_attempt_count_returns_zero_for_empty_message(dlq_reprocessor):
+    """Test get reprocess attempt count returns zero for empty message."""
     result = dlq_reprocessor.get_reprocess_attempt_count({})
     assert result == 0
 
 
 def test_get_reprocess_attempt_count_returns_zero_when_no_attributes(dlq_reprocessor):
+    """Test get reprocess attempt count returns zero when no attributes."""
     message = {'MessageAttributes': {}}
     result = dlq_reprocessor.get_reprocess_attempt_count(message)
     assert result == 0
 
 
 def test_get_reprocess_attempt_count_returns_zero_when_no_reprocess_attempts(dlq_reprocessor):
+    """Test get reprocess attempt count returns zero when no reprocess attempts."""
     message = {'MessageAttributes': {'OtherAttr': {'StringValue': '5'}}}
     result = dlq_reprocessor.get_reprocess_attempt_count(message)
     assert result == 0
 
 
 def test_get_reprocess_attempt_count_returns_value_from_attribute(dlq_reprocessor):
+    """Test get reprocess attempt count returns value from attribute."""
     message = {
         'MessageAttributes': {
             'ReprocessAttempts': {'DataType': 'Number', 'StringValue': '3'}
@@ -238,6 +267,7 @@ def test_get_reprocess_attempt_count_returns_value_from_attribute(dlq_reprocesso
 
 
 def test_get_reprocess_attempt_count_returns_zero_for_invalid_value(dlq_reprocessor):
+    """Test get reprocess attempt count returns zero for invalid value."""
     message = {
         'MessageAttributes': {
             'ReprocessAttempts': {'DataType': 'Number', 'StringValue': 'invalid'}
@@ -248,6 +278,7 @@ def test_get_reprocess_attempt_count_returns_zero_for_invalid_value(dlq_reproces
 
 
 def test_reprocess_dlq_messages_returns_dict_with_reprocessed_key(dlq_reprocessor):
+    """Test reprocess dlq messages returns dict with reprocessed key."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
@@ -258,6 +289,7 @@ def test_reprocess_dlq_messages_returns_dict_with_reprocessed_key(dlq_reprocesso
 
 
 def test_reprocess_dlq_messages_returns_dict_with_skipped_completed_key(dlq_reprocessor):
+    """Test reprocess dlq messages returns dict with skipped completed key."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
@@ -268,6 +300,7 @@ def test_reprocess_dlq_messages_returns_dict_with_skipped_completed_key(dlq_repr
 
 
 def test_reprocess_dlq_messages_returns_dict_with_skipped_max_retries_key(dlq_reprocessor):
+    """Test reprocess dlq messages returns dict with skipped max retries key."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
@@ -278,6 +311,7 @@ def test_reprocess_dlq_messages_returns_dict_with_skipped_max_retries_key(dlq_re
 
 
 def test_reprocess_dlq_messages_returns_dict_with_failed_key(dlq_reprocessor):
+    """Test reprocess dlq messages returns dict with failed key."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
@@ -288,6 +322,7 @@ def test_reprocess_dlq_messages_returns_dict_with_failed_key(dlq_reprocessor):
 
 
 def test_reprocess_dlq_messages_increments_failed_for_invalid_json(dlq_reprocessor):
+    """Test reprocess dlq messages increments failed for invalid json."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -305,6 +340,7 @@ def test_reprocess_dlq_messages_increments_failed_for_invalid_json(dlq_reprocess
 
 
 def test_reprocess_dlq_messages_skips_message_exceeding_max_attempts(dlq_reprocessor):
+    """Test reprocess dlq messages skips message exceeding max attempts."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -325,6 +361,7 @@ def test_reprocess_dlq_messages_skips_message_exceeding_max_attempts(dlq_reproce
 
 
 def test_reprocess_dlq_messages_sends_alert_for_max_retries(dlq_reprocessor):
+    """Test reprocess dlq messages sends alert for max retries."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -345,6 +382,7 @@ def test_reprocess_dlq_messages_sends_alert_for_max_retries(dlq_reprocessor):
 
 
 def test_reprocess_dlq_messages_deletes_completed_jobs(dlq_reprocessor):
+    """Test reprocess dlq messages deletes completed jobs."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -363,6 +401,7 @@ def test_reprocess_dlq_messages_deletes_completed_jobs(dlq_reprocessor):
 
 
 def test_reprocess_dlq_messages_deletes_not_found_jobs(dlq_reprocessor):
+    """Test reprocess dlq messages deletes not found jobs."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -381,6 +420,7 @@ def test_reprocess_dlq_messages_deletes_not_found_jobs(dlq_reprocessor):
 
 
 def test_reprocess_dlq_messages_reprocesses_queued_jobs(dlq_reprocessor):
+    """Test reprocess dlq messages reprocesses queued jobs."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -399,6 +439,7 @@ def test_reprocess_dlq_messages_reprocesses_queued_jobs(dlq_reprocessor):
 
 
 def test_reprocess_dlq_messages_adds_reprocess_attempts_attribute(dlq_reprocessor):
+    """Test reprocess dlq messages adds reprocess attempts attribute."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -418,6 +459,7 @@ def test_reprocess_dlq_messages_adds_reprocess_attempts_attribute(dlq_reprocesso
 
 
 def test_reprocess_dlq_messages_increments_existing_reprocess_attempts(dlq_reprocessor):
+    """Test reprocess dlq messages increments existing reprocess attempts."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -439,6 +481,7 @@ def test_reprocess_dlq_messages_increments_existing_reprocess_attempts(dlq_repro
 
 
 def test_reprocess_dlq_messages_returns_error_on_receive_failure(dlq_reprocessor):
+    """Test reprocess dlq messages returns error on receive failure."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.side_effect = ClientError(
@@ -452,6 +495,7 @@ def test_reprocess_dlq_messages_returns_error_on_receive_failure(dlq_reprocessor
 
 
 def test_reprocess_dlq_messages_handles_send_message_failure(dlq_reprocessor):
+    """Test reprocess dlq messages handles send message failure."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {
@@ -474,6 +518,7 @@ def test_reprocess_dlq_messages_handles_send_message_failure(dlq_reprocessor):
 
 
 def test_handler_returns_200_status_code(dlq_reprocessor, lambda_context):
+    """Test handler returns 200 status code."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
@@ -485,6 +530,7 @@ def test_handler_returns_200_status_code(dlq_reprocessor, lambda_context):
 
 
 def test_handler_returns_json_body(dlq_reprocessor, lambda_context):
+    """Test handler returns json body."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
@@ -497,10 +543,12 @@ def test_handler_returns_json_body(dlq_reprocessor, lambda_context):
 
 
 def test_handler_includes_webhook_dlq_note_when_configured(dlq_reprocessor, lambda_context):
+    """Test handler includes webhook dlq note when configured."""
     dlq_reprocessor.reset_clients()
     mock_sqs = MagicMock()
     mock_sqs.receive_message.return_value = {'Messages': []}
-    with patch.dict('os.environ', {'WEBHOOK_DLQ_URL': 'webhook-dlq', 'JOB_DLQ_URL': 'job-dlq', 'JOB_QUEUE_URL': 'job-queue'}):
+    env = {'WEBHOOK_DLQ_URL': 'webhook-dlq', 'JOB_DLQ_URL': 'job-dlq', 'JOB_QUEUE_URL': 'job-queue'}
+    with patch.dict('os.environ', env):
         with patch.object(dlq_reprocessor, 'get_sqs_client', return_value=mock_sqs):
             with patch.object(dlq_reprocessor, 'get_github_token', return_value=''):
                 result = dlq_reprocessor.handler({}, lambda_context)

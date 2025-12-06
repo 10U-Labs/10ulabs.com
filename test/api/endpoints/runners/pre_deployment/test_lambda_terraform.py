@@ -1,12 +1,15 @@
+"""Unit tests for test lambda terraform."""
 import re
 
 
 def test_lambda_terraform_file_exists(runners_src_path):
+    """Test lambda terraform file exists."""
     lambda_file = runners_src_path / "lambda.tf"
     assert lambda_file.exists()
 
 
 def test_stale_runner_cleanup_lambda_exists(runners_src_path):
+    """Test stale runner cleanup lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -14,6 +17,7 @@ def test_stale_runner_cleanup_lambda_exists(runners_src_path):
 
 
 def test_stale_runner_cleanup_has_ec2_managed_by_tag_env_var(runners_src_path):
+    """Test stale runner cleanup has ec2 managed by tag env var."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -24,6 +28,7 @@ def test_stale_runner_cleanup_has_ec2_managed_by_tag_env_var(runners_src_path):
 
 
 def test_stale_runner_cleanup_has_ecs_cluster_env_var(runners_src_path):
+    """Test stale runner cleanup has ecs cluster env var."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -34,6 +39,7 @@ def test_stale_runner_cleanup_has_ecs_cluster_env_var(runners_src_path):
 
 
 def test_stale_runner_cleanup_has_github_repo_env_var(runners_src_path):
+    """Test stale runner cleanup has github repo env var."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -44,6 +50,7 @@ def test_stale_runner_cleanup_has_github_repo_env_var(runners_src_path):
 
 
 def test_stale_runner_cleanup_has_github_token_env_var(runners_src_path):
+    """Test stale runner cleanup has github token env var."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -54,6 +61,7 @@ def test_stale_runner_cleanup_has_github_token_env_var(runners_src_path):
 
 
 def test_stale_runner_cleanup_has_workflow_runners_table_env_var(runners_src_path):
+    """Test stale runner cleanup has workflow runners table env var."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -64,6 +72,7 @@ def test_stale_runner_cleanup_has_workflow_runners_table_env_var(runners_src_pat
 
 
 def test_runners_handler_lambda_exists(runners_src_path):
+    """Test runners handler lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -71,6 +80,7 @@ def test_runners_handler_lambda_exists(runners_src_path):
 
 
 def test_circuit_breaker_remediation_lambda_exists(runners_src_path):
+    """Test circuit breaker remediation lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -78,6 +88,7 @@ def test_circuit_breaker_remediation_lambda_exists(runners_src_path):
 
 
 def test_dlq_reprocessor_lambda_exists(runners_src_path):
+    """Test dlq reprocessor lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -85,6 +96,7 @@ def test_dlq_reprocessor_lambda_exists(runners_src_path):
 
 
 def test_circuit_breaker_recovery_lambda_exists(runners_src_path):
+    """Test circuit breaker recovery lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -92,6 +104,7 @@ def test_circuit_breaker_recovery_lambda_exists(runners_src_path):
 
 
 def test_drift_recovery_lambda_exists(runners_src_path):
+    """Test drift recovery lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -99,6 +112,7 @@ def test_drift_recovery_lambda_exists(runners_src_path):
 
 
 def test_spot_interruption_handler_lambda_exists(runners_src_path):
+    """Test spot interruption handler lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -106,6 +120,7 @@ def test_spot_interruption_handler_lambda_exists(runners_src_path):
 
 
 def test_all_lambdas_use_python313_runtime(runners_src_path):
+    """Test all lambdas use python313 runtime."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
@@ -115,10 +130,12 @@ def test_all_lambdas_use_python313_runtime(runners_src_path):
 
 
 def test_stale_runner_cleanup_ec2_tag_references_ec2_runner_output(runners_src_path):
+    """Test stale runner cleanup ec2 tag references ec2 runner output."""
     lambda_file = runners_src_path / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
     stale_start = content.find('resource "aws_lambda_function" "stale_runner_cleanup"')
     stale_end = content.find('resource "aws_cloudwatch_log_group" "stale_runner_cleanup"')
     stale_section = content[stale_start:stale_end]
-    assert 'data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag' in stale_section
+    ec2_managed_by_tag = 'data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag'
+    assert ec2_managed_by_tag in stale_section

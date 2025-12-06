@@ -1,4 +1,5 @@
 """Pytest fixtures for EC2 runner tests."""
+# pylint: disable=duplicate-code
 import os
 import re
 from pathlib import Path

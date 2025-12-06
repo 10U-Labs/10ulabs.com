@@ -1,3 +1,4 @@
+"""End-to-end tests for ECS runner functionality."""
 import time
 
 import pytest
@@ -15,15 +16,18 @@ from ..conftest import (
 
 @pytest.fixture(name="stable_ecr_image_exists", scope="module")
 def stable_ecr_image_exists_fixture(ecr_image_count):
+    """Return whether a stable ECR image exists for testing."""
     return ecr_image_count > 0
 
 
 @pytest.fixture(name="ecs_context", scope="module")
 def ecs_context_fixture(ecs_client, cluster_name):
+    """Provide ECS client and cluster name context."""
     return {"client": ecs_client, "cluster_name": cluster_name}
 
 
 def wait_for_task_running(ecs_client, cluster_name, task_arn, timeout=120):
+    """Wait for an ECS task to reach RUNNING state."""
     start_time = time.time()
     while time.time() - start_time < timeout:
         response = ecs_client.describe_tasks(cluster=cluster_name, tasks=[task_arn])
@@ -39,6 +43,7 @@ def wait_for_task_running(ecs_client, cluster_name, task_arn, timeout=120):
 
 
 def stop_task_safely(ecs_client, cluster_name, task_arn):
+    """Stop an ECS task, ignoring errors."""
     try:
         ecs_client.stop_task(cluster=cluster_name, task=task_arn)
     except ClientError:
@@ -47,6 +52,7 @@ def stop_task_safely(ecs_client, cluster_name, task_arn):
 
 @pytest.fixture(name="test_fargate_task", scope="module")
 def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config):
+    """Create a test Fargate task and clean it up after tests."""
     if ecr_image_count == 0:
         print("Skipping ECS runner test: ecr_image_count is 0")
         yield None
@@ -57,7 +63,9 @@ def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config
     )
     response = make_e2e_post(
         f"{test_context['api_credentials']['url']}/v1/ecs-runner",
-        test_context["api_credentials"]["key"], json=payload, timeout=ECS_RUNNER_REQUEST_TIMEOUT
+        test_context["api_credentials"]["key"],
+        json=payload,
+        timeout=ECS_RUNNER_REQUEST_TIMEOUT
     )
     if response.status_code not in [200, 202]:
         print(f"ECS runner POST failed: status={response.status_code}, body={response.text}")
@@ -71,70 +79,92 @@ def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config
         return
     wait_for_task_running(ecs_context["client"], ecs_context["cluster_name"], task_arn)
     yield {
-        "task_arn": task_arn, "job_id": job_id, "github_repo": test_context["github_repo"],
-        "cluster_name": ecs_context["cluster_name"], "run_id": test_context["github_run_id"]
+        "task_arn": task_arn,
+        "job_id": job_id,
+        "github_repo": test_context["github_repo"],
+        "cluster_name": ecs_context["cluster_name"],
+        "run_id": test_context["github_run_id"]
     }
     stop_task_safely(ecs_context["client"], ecs_context["cluster_name"], task_arn)
 
 
 def test_ecs_runner_post_returns_task_arn(test_fargate_task, stable_ecr_image_exists):
+    """Test that ECS runner POST returns a task ARN."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     assert test_fargate_task is not None
     assert test_fargate_task.get("task_arn") is not None
 
 
-def test_ecs_runner_task_reaches_running_state(test_fargate_task, ecs_context, stable_ecr_image_exists):
+def test_ecs_runner_task_reaches_running_state(
+    test_fargate_task, ecs_context, stable_ecr_image_exists
+):
+    """Test that ECS runner task reaches RUNNING state."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     response = ecs_context["client"].describe_tasks(
-        cluster=test_fargate_task.get("cluster_name"), tasks=[test_fargate_task.get("task_arn")]
+        cluster=test_fargate_task.get("cluster_name"),
+        tasks=[test_fargate_task.get("task_arn")]
     )
     assert response['tasks'][0]['lastStatus'] == 'RUNNING'
 
 
 def test_ecs_runner_task_has_type_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
+    """Test that ECS runner task has Type tag."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     tag_dict = get_ecs_task_tags(
-        ecs_context["client"], test_fargate_task.get("cluster_name"), test_fargate_task.get("task_arn")
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn")
     )
     assert tag_dict.get("Type") == "workflow-runner"
 
 
-def test_ecs_runner_task_has_managed_by_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
+def test_ecs_runner_task_has_managed_by_tag(
+    test_fargate_task, ecs_context, stable_ecr_image_exists
+):
+    """Test that ECS runner task has ManagedBy tag."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     tag_dict = get_ecs_task_tags(
-        ecs_context["client"], test_fargate_task.get("cluster_name"), test_fargate_task.get("task_arn")
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn")
     )
     assert tag_dict.get("ManagedBy") == "ecs-runner-api"
 
 
 def test_ecs_runner_task_has_job_id_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
+    """Test that ECS runner task has GitHubJobId tag."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     tag_dict = get_ecs_task_tags(
-        ecs_context["client"], test_fargate_task.get("cluster_name"), test_fargate_task.get("task_arn")
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn")
     )
     assert tag_dict.get("GitHubJobId") == str(test_fargate_task.get("job_id"))
 
 
 def test_ecs_runner_task_has_repo_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
+    """Test that ECS runner task has GitHubRepo tag."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     tag_dict = get_ecs_task_tags(
-        ecs_context["client"], test_fargate_task.get("cluster_name"), test_fargate_task.get("task_arn")
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn")
     )
     assert tag_dict.get("GitHubRepo") == test_fargate_task.get("github_repo")
 
@@ -142,6 +172,7 @@ def test_ecs_runner_task_has_repo_tag(test_fargate_task, ecs_context, stable_ecr
 def test_ecs_runner_appears_in_status_endpoint(
     test_fargate_task, api_url, api_key, stable_ecr_image_exists
 ):
+    """Test that ECS runner task appears in status endpoint."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
@@ -154,13 +185,16 @@ def test_ecs_runner_appears_in_status_endpoint(
 
 
 def test_ecs_runner_task_has_run_id_tag(test_fargate_task, ecs_context, stable_ecr_image_exists):
+    """Test that ECS runner task has RunId tag."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:
         pytest.fail("Test task not created")
     run_id = test_fargate_task.get("run_id")
     tag_dict = get_ecs_task_tags(
-        ecs_context["client"], test_fargate_task.get("cluster_name"), test_fargate_task.get("task_arn")
+        ecs_context["client"],
+        test_fargate_task.get("cluster_name"),
+        test_fargate_task.get("task_arn")
     )
     assert tag_dict.get("RunId") == str(run_id)
 
@@ -168,6 +202,7 @@ def test_ecs_runner_task_has_run_id_tag(test_fargate_task, ecs_context, stable_e
 def test_ecs_runner_stored_in_dynamodb(
     test_fargate_task, dynamodb_client, workflow_runners_table_name, stable_ecr_image_exists
 ):
+    """Test that ECS runner is stored in DynamoDB."""
     if not stable_ecr_image_exists:
         pytest.skip("No stable ECR image available")
     if test_fargate_task is None:

@@ -1,3 +1,4 @@
+"""Lambda handler for cleaning up stale and orphaned workflow runners."""
 import json
 import logging
 import os
@@ -19,30 +20,35 @@ WORKFLOW_RUNNER_TYPE_TAG = 'workflow-runner'
 
 
 def get_dynamodb_client():
+    """Get or create cached DynamoDB client."""
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
 
 
 def get_ecs_client():
+    """Get or create cached ECS client."""
     if 'ecs' not in _clients:
         _clients['ecs'] = boto3.client('ecs')
     return _clients['ecs']
 
 
 def get_ec2_client():
+    """Get or create cached EC2 client."""
     if 'ec2' not in _clients:
         _clients['ec2'] = boto3.client('ec2')
     return _clients['ec2']
 
 
 def get_ssm_client():
+    """Get or create cached SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_github_token() -> str:
+    """Retrieve GitHub token from SSM Parameter Store."""
     result = ''
     parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '')
     if parameter_name:
@@ -55,6 +61,7 @@ def get_github_token() -> str:
 
 
 def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) -> str:
+    """Get the status of a GitHub Actions workflow run."""
     result = 'unknown'
     headers = {
         'Authorization': f'Bearer {github_token}',
@@ -80,6 +87,7 @@ def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) ->
 
 
 def get_all_github_runners(github_token: str, github_repo: str) -> list | None:
+    """Get all self-hosted runners for a GitHub repository."""
     result: list | None = None
     runners: list = []
     headers = {
@@ -91,10 +99,9 @@ def get_all_github_runners(github_token: str, github_repo: str) -> list | None:
         page = 1
         has_more = True
         while has_more:
-            req = urllib.request.Request(
-                f'https://api.github.com/repos/{github_repo}/actions/runners?per_page=100&page={page}',
-                headers=headers
-            )
+            base = f'https://api.github.com/repos/{github_repo}/actions/runners'
+            url = f'{base}?per_page=100&page={page}'
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=10) as response:
                 data = json.loads(response.read())
                 page_runners = data.get('runners', [])
@@ -111,7 +118,10 @@ def get_all_github_runners(github_token: str, github_repo: str) -> list | None:
     return result
 
 
-def delete_github_runner_by_id(github_token: str, github_repo: str, runner_id: int, runner_name: str) -> bool:
+def delete_github_runner_by_id(
+    github_token: str, github_repo: str, runner_id: int, runner_name: str
+) -> bool:
+    """Delete a GitHub runner by its ID."""
     result = False
     headers = {
         'Authorization': f'Bearer {github_token}',
@@ -138,6 +148,7 @@ def delete_github_runner_by_id(github_token: str, github_repo: str, runner_id: i
 
 
 def delete_github_runner(github_token: str, github_repo: str, runner_name: str) -> bool:
+    """Delete a GitHub runner by its name."""
     result = False
     runners = get_all_github_runners(github_token, github_repo)
     if runners is None:
@@ -155,6 +166,7 @@ def delete_github_runner(github_token: str, github_repo: str, runner_name: str) 
 
 
 def get_all_workflow_runners() -> list:
+    """Get all workflow runners from DynamoDB."""
     runners: list = []
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if table_name:
@@ -175,6 +187,7 @@ def get_all_workflow_runners() -> list:
 
 
 def delete_workflow_runner(run_id: str, runner_type: str) -> bool:
+    """Delete a workflow runner from DynamoDB."""
     result = False
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if table_name:
@@ -193,11 +206,14 @@ def delete_workflow_runner(run_id: str, runner_type: str) -> bool:
 
 
 def terminate_ecs_task(task_arn: str) -> bool:
+    """Terminate an ECS task."""
     result = False
     cluster = os.environ.get('ECS_CLUSTER', '')
     if cluster:
         try:
-            get_ecs_client().stop_task(cluster=cluster, task=task_arn, reason='Stale runner cleanup')
+            get_ecs_client().stop_task(
+                cluster=cluster, task=task_arn, reason='Stale runner cleanup'
+            )
             logger.info("Stopped ECS task: %s", task_arn)
             result = True
         except ClientError as e:
@@ -210,6 +226,7 @@ def terminate_ecs_task(task_arn: str) -> bool:
 
 
 def terminate_ec2_instance(instance_id: str) -> bool:
+    """Terminate an EC2 instance."""
     result = False
     try:
         get_ec2_client().terminate_instances(InstanceIds=[instance_id])
@@ -249,6 +266,7 @@ def _is_orphaned_ecs_task(task: dict, current_time: datetime) -> dict | None:
 
 
 def get_orphaned_ecs_tasks() -> list:
+    """Get ECS tasks that are running past the stale threshold."""
     tasks: list[dict] = []
     cluster = os.environ.get('ECS_CLUSTER', '')
     if not cluster:
@@ -275,6 +293,7 @@ def get_orphaned_ecs_tasks() -> list:
 
 
 def get_orphaned_ec2_instances() -> list:
+    """Get EC2 instances that are running past the stale threshold."""
     instances: list[dict] = []
     ec2_managed_by_tag = os.environ.get('EC2_MANAGED_BY_TAG', '')
     if not ec2_managed_by_tag:
@@ -379,6 +398,7 @@ def _runner_has_infrastructure(runner_name: str) -> bool:
 
 
 def cleanup_orphaned_github_runners(github_token: str) -> dict:
+    """Clean up GitHub runners without backing infrastructure."""
     counts = {'github_cleaned': 0, 'errors': 0}
     github_repo = os.environ.get('GITHUB_REPO', '')
     if not github_repo or not github_token:
@@ -410,11 +430,15 @@ def cleanup_orphaned_github_runners(github_token: str) -> dict:
 
 
 def cleanup_orphaned_resources(github_token: str) -> dict:
+    """Clean up orphaned ECS tasks and EC2 instances."""
     counts = {'ecs_cleaned': 0, 'ec2_cleaned': 0, 'errors': 0}
     github_repo = os.environ.get('GITHUB_REPO', '')
     orphaned_tasks = get_orphaned_ecs_tasks()
     for task in orphaned_tasks:
-        logger.info("Cleaning up orphaned ECS task: %s (age=%ds)", task['task_arn'], task['age_seconds'])
+        logger.info(
+            "Cleaning orphaned ECS task: %s (age=%ds)",
+            task['task_arn'], task['age_seconds']
+        )
         if terminate_ecs_task(task['task_arn']):
             counts['ecs_cleaned'] += 1
             runner_name = task.get('runner_name', '')
@@ -425,7 +449,10 @@ def cleanup_orphaned_resources(github_token: str) -> dict:
             counts['errors'] += 1
     orphaned_instances = get_orphaned_ec2_instances()
     for instance in orphaned_instances:
-        logger.info("Cleaning up orphaned EC2 instance: %s (age=%ds)", instance['instance_id'], instance['age_seconds'])
+        logger.info(
+            "Cleaning orphaned EC2 instance: %s (age=%ds)",
+            instance['instance_id'], instance['age_seconds']
+        )
         if terminate_ec2_instance(instance['instance_id']):
             counts['ec2_cleaned'] += 1
             runner_name = instance.get('runner_name', '')
@@ -467,6 +494,7 @@ def _cleanup_single_runner(github_token: str, runner: dict, counts: dict):
 
 
 def cleanup_stale_runners() -> dict:
+    """Clean up stale runners from DynamoDB."""
     counts = {'cleaned': 0, 'errors': 0}
     github_token = get_github_token()
     if not github_token:
@@ -478,11 +506,15 @@ def cleanup_stale_runners() -> dict:
         for runner in runners:
             if _is_runner_stale(runner['created_at'], current_time):
                 _cleanup_single_runner(github_token, runner, counts)
-        logger.info("Stale runner cleanup complete: cleaned=%d, errors=%d", counts['cleaned'], counts['errors'])
+        logger.info(
+            "Stale runner cleanup: cleaned=%d, errors=%d",
+            counts['cleaned'], counts['errors']
+        )
     return counts
 
 
 def lambda_handler(_event, _context):
+    """Main Lambda handler for stale runner cleanup."""
     logger.info("Starting stale runner cleanup")
     github_token = get_github_token()
     dynamo_result = cleanup_stale_runners()

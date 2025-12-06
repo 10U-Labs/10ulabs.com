@@ -1,3 +1,5 @@
+"""Shared pytest fixtures and utilities for ECS runner tests."""
+# pylint: disable=duplicate-code
 import json
 import os
 import re
@@ -14,6 +16,7 @@ RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 
 def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
+    """Parse Terraform locals file and extract configuration values."""
     config: Dict[str, str] = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
@@ -32,6 +35,7 @@ def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, st
 
 
 def parse_api_locals() -> Dict[str, str]:
+    """Parse API and ECS runner locals files to build configuration."""
     shared = parse_shared_module_outputs()
     api_locals_path = REPO_ROOT / "src" / "api" / "backend" / "locals.tf"
     ecs_runner_locals_path = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner" / "locals.tf"
@@ -39,11 +43,14 @@ def parse_api_locals() -> Dict[str, str]:
     ecs_runner_locals = parse_locals_file(ecs_runner_locals_path, shared)
     config.update(ecs_runner_locals)
     config['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
-    config['github_repo_full'] = f"{shared.get('github_org', '')}/{shared.get('name_for_github_repo', '')}"
+    github_org = shared.get('github_org', '')
+    github_repo_name = shared.get('name_for_github_repo', '')
+    config['github_repo_full'] = f"{github_org}/{github_repo_name}"
     return config
 
 
 def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
+    """Parse Terraform tfvars file and extract variable values."""
     result: Dict[str, Any] = {}
     with open(tfvars_path, encoding="utf-8") as f:
         content = f.read()
@@ -66,6 +73,7 @@ def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, Any]:
+    """Provide configuration dictionary from Terraform files."""
     api_tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
     result = parse_tfvars(api_tfvars_path)
     api_locals = parse_api_locals()
@@ -76,7 +84,8 @@ def config_fixture() -> Dict[str, Any]:
     result['ssm_parameter_name_for_github_pat'] = os.environ.get(
         'SSM_PARAMETER_NAME_FOR_GITHUB_PAT', '/test/github/pat'
     )
-    result['ssm_parameter_name_for_api_key'] = result.get('ssm_parameter_name_for_api_key', '/api/key')
+    api_key_param = result.get('ssm_parameter_name_for_api_key', '/api/key')
+    result['ssm_parameter_name_for_api_key'] = api_key_param
     shared = parse_shared_module_outputs()
     result['ecr_repository_name'] = shared.get('ecr_repository_name', '10ulabs')
     resource_prefix = shared.get('resource_prefix', 'TenULabs')
@@ -92,26 +101,32 @@ def config_fixture() -> Dict[str, Any]:
 
 @pytest.fixture
 def ecs_client():
+    """Provide ECS client for tests."""
     return boto3.client('ecs', region_name='us-east-1')
 
 
 @pytest.fixture
 def ecr_client():
+    """Provide ECR client for tests."""
     return boto3.client('ecr', region_name='us-east-1')
 
 
 @pytest.fixture
 def dynamodb_client():
+    """Provide DynamoDB client for tests."""
     return boto3.client('dynamodb', region_name='us-east-1')
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
+    """Parse JSON body from Lambda response."""
     return json.loads(response['body'])
 
 
 def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
+    """Assert that response has expected status code."""
     assert response['statusCode'] == expected_code
 
 
 def assert_json_content_type(response: Dict[str, Any]) -> None:
+    """Assert that response has JSON content type."""
     assert response['headers']['Content-Type'].startswith('application/json')

@@ -1,3 +1,4 @@
+"""Lambda handler for EC2 and ECS spot instance interruption events."""
 import json
 import logging
 import os
@@ -13,18 +14,21 @@ _clients = {}
 
 
 def get_ssm_client():
+    """Get or create cached SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_ecs_client():
+    """Get or create cached ECS client."""
     if 'ecs' not in _clients:
         _clients['ecs'] = boto3.client('ecs')
     return _clients['ecs']
 
 
 def get_github_token() -> str:
+    """Retrieve GitHub token from SSM Parameter Store."""
     result = ''
     parameter_name = os.environ.get('GITHUB_TOKEN_SECRET_NAME', '')
     if parameter_name:
@@ -36,7 +40,10 @@ def get_github_token() -> str:
     return result
 
 
-def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) -> str:
+def get_workflow_run_status(
+    github_token: str, github_repo: str, run_id: str
+) -> str:
+    """Get the status of a GitHub Actions workflow run."""
     result = 'unknown'
     headers = {
         'Authorization': f'Bearer {github_token}',
@@ -57,6 +64,7 @@ def get_workflow_run_status(github_token: str, github_repo: str, run_id: str) ->
 
 
 def rerun_github_job(github_token: str, github_repo: str, job_id: str) -> bool:
+    """Trigger a re-run for a GitHub Actions job."""
     result = False
     if not job_id:
         logger.error("No job_id provided for re-run")
@@ -82,7 +90,8 @@ def rerun_github_job(github_token: str, github_repo: str, job_id: str) -> bool:
     return result
 
 
-def handle_ecs_task_stopped(event: dict) -> dict:
+def handle_ecs_task_stopped(event: dict) -> dict:  # pylint: disable=too-many-locals
+    """Handle ECS task stopped event for spot interruption."""
     detail = event.get('detail', {})
     stop_code = detail.get('stopCode', '')
     stopped_reason = detail.get('stoppedReason', '')
@@ -99,7 +108,9 @@ def handle_ecs_task_stopped(event: dict) -> dict:
     if not run_id or not job_id:
         logger.info("No run_id or job_id in task tags, skipping")
     else:
-        is_spot_interruption = 'SpotInterruption' in stop_code or 'capacity' in stopped_reason.lower()
+        is_spot = 'SpotInterruption' in stop_code
+        is_capacity = 'capacity' in stopped_reason.lower()
+        is_spot_interruption = is_spot or is_capacity
         if not is_spot_interruption:
             logger.info("Not a spot interruption, skipping job re-run")
             result = {'statusCode': 200, 'body': 'Not a spot interruption'}
@@ -111,16 +122,26 @@ def handle_ecs_task_stopped(event: dict) -> dict:
             else:
                 workflow_status = get_workflow_run_status(github_token, github_repo, run_id)
                 if workflow_status not in ['queued', 'in_progress', 'waiting']:
-                    logger.info("Workflow run %s is not active (status=%s), skipping job re-run", run_id, workflow_status)
-                    result = {'statusCode': 200, 'body': f'Workflow not active: {workflow_status}'}
+                    logger.info(
+                        "Workflow %s not active (status=%s), skipping",
+                        run_id, workflow_status
+                    )
+                    body = f'Workflow not active: {workflow_status}'
+                    result = {'statusCode': 200, 'body': body}
                 else:
-                    logger.info("Triggering job re-run for job_id=%s, run_id=%s", job_id, run_id)
+                    logger.info(
+                        "Triggering job re-run for job_id=%s", job_id
+                    )
                     success = rerun_github_job(github_token, github_repo, job_id)
-                    result = {'statusCode': 200, 'body': 'Job re-run triggered'} if success else {'statusCode': 500, 'body': 'Failed to trigger job re-run'}
+                    if success:
+                        result = {'statusCode': 200, 'body': 'Job re-run triggered'}
+                    else:
+                        result = {'statusCode': 500, 'body': 'Failed to re-run'}
     return result
 
 
 def _get_ecs_task_tags(task_arn: str) -> dict:
+    """Get tags from an ECS task."""
     tag_dict: dict = {}
     try:
         cluster = os.environ.get('ECS_CLUSTER', '')
@@ -139,6 +160,7 @@ def _get_ecs_task_tags(task_arn: str) -> dict:
 
 
 def _get_ec2_instance_tags(instance_id: str) -> dict:
+    """Get tags from an EC2 instance."""
     tag_dict: dict = {}
     try:
         response = boto3.client('ec2').describe_instances(InstanceIds=[instance_id])
@@ -150,6 +172,7 @@ def _get_ec2_instance_tags(instance_id: str) -> dict:
 
 
 def handle_ec2_spot_interruption(event: dict) -> dict:
+    """Handle EC2 spot interruption warning event."""
     instance_id = event.get('detail', {}).get('instance-id', '')
     logger.info("EC2 spot interruption warning for instance: %s", instance_id)
     result: dict = {'statusCode': 500, 'body': 'Failed to get instance tags'}
@@ -169,16 +192,26 @@ def handle_ec2_spot_interruption(event: dict) -> dict:
             else:
                 workflow_status = get_workflow_run_status(github_token, github_repo, run_id)
                 if workflow_status not in ['queued', 'in_progress', 'waiting']:
-                    logger.info("Workflow run %s is not active (status=%s), skipping job re-run", run_id, workflow_status)
-                    result = {'statusCode': 200, 'body': f'Workflow not active: {workflow_status}'}
+                    logger.info(
+                        "Workflow %s not active (status=%s), skipping",
+                        run_id, workflow_status
+                    )
+                    body = f'Workflow not active: {workflow_status}'
+                    result = {'statusCode': 200, 'body': body}
                 else:
-                    logger.info("Triggering job re-run for job_id=%s, run_id=%s", job_id, run_id)
+                    logger.info(
+                        "Triggering job re-run for job_id=%s", job_id
+                    )
                     success = rerun_github_job(github_token, github_repo, job_id)
-                    result = {'statusCode': 200, 'body': 'Job re-run triggered'} if success else {'statusCode': 500, 'body': 'Failed to trigger job re-run'}
+                    if success:
+                        result = {'statusCode': 200, 'body': 'Job re-run triggered'}
+                    else:
+                        result = {'statusCode': 500, 'body': 'Failed to re-run'}
     return result
 
 
 def lambda_handler(event, _context):
+    """Main Lambda handler for spot interruption events."""
     logger.info("Received event: %s", json.dumps(event))
     source = event.get('source', '')
     detail_type = event.get('detail-type', '')

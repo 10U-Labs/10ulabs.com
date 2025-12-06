@@ -1,3 +1,4 @@
+"""Shared fixtures and utilities for ECS runner pre-deployment tests."""
 import importlib.util
 import json
 from types import ModuleType
@@ -10,6 +11,7 @@ from ..conftest import ECS_RUNNER_SRC
 
 
 def load_handler_module() -> ModuleType:
+    """Load the ECS runner handler module dynamically."""
     handler_path = ECS_RUNNER_SRC / "lambda" / "handler.py"
     spec = importlib.util.spec_from_file_location("ecs_runner_handler", handler_path)
     assert spec is not None
@@ -21,6 +23,7 @@ def load_handler_module() -> ModuleType:
 
 @pytest.fixture
 def ecs_runner_handler(config: Dict[str, str]) -> Any:
+    """Provide the ECS runner handler module with mocked environment."""
     env_vars = {
         'AWS_REGION': config['aws_region'],
         'ECR_REPOSITORY': config['ecr_repository_name'],
@@ -42,17 +45,20 @@ def ecs_runner_handler(config: Dict[str, str]) -> Any:
         if hasattr(module, '_github_token_cache'):
             setattr(module, '_github_token_cache', {'value': None})
         if hasattr(module, '_dependencies_validated'):
-            setattr(module, '_dependencies_validated', {'checked': True, 'valid': True, 'errors': []})
+            deps = {'checked': True, 'valid': True, 'errors': []}
+            setattr(module, '_dependencies_validated', deps)
         yield module
 
 
 @pytest.fixture
 def lambda_context():
+    """Provide a mock Lambda context object."""
     return Mock()
 
 
 @pytest.fixture
 def ecs_runner_post_event_factory():
+    """Factory to create ECS runner POST event payloads."""
     def _create_event(job_id=123, job_labels=None, github_repo='test/repo'):
         if job_labels is None:
             job_labels = ['fargate', 'self-hosted']
@@ -70,6 +76,7 @@ def ecs_runner_post_event_factory():
 
 @pytest.fixture
 def mock_urllib_response_factory():
+    """Factory to create mock urllib response objects."""
     def _create_response(read_value=b'', status=200, json_data=None):
         mock_response = Mock()
         if json_data is not None:
@@ -84,12 +91,15 @@ def mock_urllib_response_factory():
 
 
 def parse_response_body(response: Dict[str, Any]) -> Any:
+    """Parse the body of an API response as JSON."""
     return json.loads(response['body'])
 
 
 def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
+    """Assert that a response has the expected status code."""
     assert response['statusCode'] == expected_code
 
 
 def assert_json_content_type(response: Dict[str, Any]) -> None:
+    """Assert that a response has JSON content type."""
     assert response['headers']['Content-Type'].startswith('application/json')

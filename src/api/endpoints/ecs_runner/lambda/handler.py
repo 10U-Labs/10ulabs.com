@@ -1,3 +1,4 @@
+"""Lambda handler for ECS runner endpoint."""
 import json
 import logging
 import os
@@ -12,6 +13,7 @@ from botocore.exceptions import ClientError
 
 @dataclass
 class WorkflowRunner:
+    """Data class representing a workflow runner instance."""
     run_id: int
     runner_type: str
     resource_id: str
@@ -29,14 +31,17 @@ _dependencies_validated: Dict[str, Any] = {'checked': False, 'valid': False, 'er
 
 
 def is_test_mode() -> bool:
+    """Check if test mode is enabled."""
     return _test_mode['enabled']
 
 
 def set_test_mode(enabled: bool):
+    """Enable or disable test mode."""
     _test_mode['enabled'] = enabled
 
 
 def get_header_case_insensitive(headers: dict, header_name: str) -> str:
+    """Get a header value case-insensitively."""
     if not headers:
         return ''
     for key, value in headers.items():
@@ -46,40 +51,47 @@ def get_header_case_insensitive(headers: dict, header_name: str) -> str:
 
 
 def get_ec2_client():
+    """Get or create an EC2 client."""
     if 'ec2' not in _clients:
         _clients['ec2'] = boto3.client('ec2')
     return _clients['ec2']
 
 
 def get_ecs_client():
+    """Get or create an ECS client."""
     if 'ecs' not in _clients:
         _clients['ecs'] = boto3.client('ecs')
     return _clients['ecs']
 
 
 def get_ecr_client():
+    """Get or create an ECR client."""
     if 'ecr' not in _clients:
         _clients['ecr'] = boto3.client('ecr')
     return _clients['ecr']
 
 
 def get_ssm_client():
+    """Get or create an SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def get_dynamodb_client():
+    """Get or create a DynamoDB client."""
     if 'dynamodb' not in _clients:
         _clients['dynamodb'] = boto3.client('dynamodb')
     return _clients['dynamodb']
 
 
 def set_client(name: str, client: Any):
+    """Set a client for testing purposes."""
     _clients[name] = client
 
 
 def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
+    """Validate that security groups exist."""
     if not security_group_ids:
         return {'valid': True, 'missing': []}
     try:
@@ -95,6 +107,7 @@ def validate_security_groups(security_group_ids: List[str]) -> Dict[str, Any]:
 
 
 def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
+    """Validate that subnets exist."""
     if not subnet_ids:
         return {'valid': True, 'missing': []}
     try:
@@ -110,6 +123,7 @@ def validate_subnets(subnet_ids: List[str]) -> Dict[str, Any]:
 
 
 def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
+    """Validate that a VPC exists."""
     if not vpc_id:
         return {'valid': False, 'error': 'VPC ID not configured'}
     try:
@@ -124,6 +138,7 @@ def validate_vpc(vpc_id: str | None) -> Dict[str, Any]:
 
 
 def validate_all_dependencies() -> Dict[str, Any]:
+    """Validate all infrastructure dependencies."""
     errors = []
     security_groups_env = os.environ.get('SECURITY_GROUPS')
     security_group_ids = security_groups_env.split(',') if security_groups_env else []
@@ -157,9 +172,11 @@ def validate_all_dependencies() -> Dict[str, Any]:
 
 
 def ensure_dependencies_valid():
+    """Ensure infrastructure dependencies are valid, raising if not."""
     if _dependencies_validated['checked']:
         if not _dependencies_validated['valid']:
-            raise RuntimeError(f"Infrastructure dependencies are invalid: {_dependencies_validated['errors']}")
+            errors = _dependencies_validated['errors']
+            raise RuntimeError(f"Infrastructure dependencies are invalid: {errors}")
         return
 
     result = validate_all_dependencies()
@@ -175,12 +192,14 @@ def ensure_dependencies_valid():
 
 
 def reset_dependency_validation():
+    """Reset the dependency validation cache."""
     _dependencies_validated['checked'] = False
     _dependencies_validated['valid'] = False
     _dependencies_validated['errors'] = []
 
 
 def get_dependencies_status():
+    """Get the current dependency validation status."""
     return {
         'checked': _dependencies_validated['checked'],
         'valid': _dependencies_validated['valid'],
@@ -189,12 +208,14 @@ def get_dependencies_status():
 
 
 def set_dependencies_status(checked, valid, errors):
+    """Set the dependency validation status for testing."""
     _dependencies_validated['checked'] = checked
     _dependencies_validated['valid'] = valid
     _dependencies_validated['errors'] = errors
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a JSON API response."""
     return {
         'statusCode': status_code,
         'headers': {
@@ -208,11 +229,13 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def success_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a success response."""
     status_code = 200 if data.get('success', True) else 500
     return json_response(status_code, data)
 
 
 def error_response(status_code: int, error: str, details: str | None = None) -> Dict[str, Any]:
+    """Create an error response."""
     body: Dict[str, Any] = {'success': False, 'error': error}
     if details:
         body['details'] = details
@@ -220,12 +243,14 @@ def error_response(status_code: int, error: str, details: str | None = None) -> 
 
 
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse the request body from an event."""
     body = event.get('body', {})
     result = json.loads(body) if isinstance(body, str) else body
     return result
 
 
 def is_capacity_error(result: Dict[str, Any]) -> bool:
+    """Check if an error is a capacity-related error."""
     error = result.get('error', [])
     if isinstance(error, str):
         return 'capacity' in error.lower() or 'availability zone' in error.lower()
@@ -235,6 +260,7 @@ def is_capacity_error(result: Dict[str, Any]) -> bool:
 
 
 def get_latest_ecr_image() -> Dict[str, Any]:
+    """Get the latest stable ECR image."""
     ecr_repo = os.environ['ECR_REPOSITORY']
     try:
         response = get_ecr_client().describe_images(
@@ -280,6 +306,7 @@ def get_latest_ecr_image() -> Dict[str, Any]:
 
 
 def get_github_token() -> str:
+    """Get the GitHub token from SSM Parameter Store."""
     if _github_token_cache['value']:
         return _github_token_cache['value']
 
@@ -295,6 +322,7 @@ def get_github_token() -> str:
 
 
 def trigger_image_creation() -> Dict[str, Any]:
+    """Trigger ECR image creation via the image API."""
     api_endpoint = os.environ['IMAGE_API_ENDPOINT']
     image_endpoint = f'{api_endpoint}/v1/image-for-ecs-runners'
 
@@ -317,6 +345,7 @@ def trigger_image_creation() -> Dict[str, Any]:
 
 
 def get_runner_registration_token(github_token: str, github_repo: str) -> str:
+    """Get a runner registration token from GitHub."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -337,6 +366,7 @@ def get_runner_registration_token(github_token: str, github_repo: str) -> str:
 
 
 def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any]]:
+    """List all runners for a repository."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -364,6 +394,7 @@ def list_repo_runners(github_token: str, github_repo: str) -> List[Dict[str, Any
 
 
 def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
+    """Delete a runner from the repository."""
     headers = {
         'Authorization': f'Bearer {github_token}',
         'Accept': 'application/vnd.github+json',
@@ -391,7 +422,10 @@ def delete_runner(github_token: str, github_repo: str, runner_id: int) -> bool:
         return False
 
 
-def cleanup_offline_runners(github_token: str, github_repo: str, run_id: int | None) -> Dict[str, Any]:
+def cleanup_offline_runners(
+    github_token: str, github_repo: str, run_id: int | None
+) -> Dict[str, Any]:
+    """Clean up offline runners for a specific workflow run."""
     runners = list_repo_runners(github_token, github_repo)
     run_id_label = f'runner-{run_id}' if run_id else None
     offline_runners = []
@@ -426,7 +460,10 @@ def cleanup_offline_runners(github_token: str, github_repo: str, run_id: int | N
     return result
 
 
-def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id: int, job_labels: list) -> Dict[str, Any] | None:
+def get_existing_runner_for_workflow(
+    github_token: str, github_repo: str, run_id: int, job_labels: list
+) -> Dict[str, Any] | None:
+    """Find an existing runner that matches the workflow run and labels."""
     result = None
     runners = list_repo_runners(github_token, github_repo)
     runner_label = f'runner-{run_id}'
@@ -442,6 +479,7 @@ def get_existing_runner_for_workflow(github_token: str, github_repo: str, run_id
 
 
 def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
+    """Build the complete list of labels for a runner."""
     base_labels = ['self-hosted', 'linux', 'x64']
     for label in job_labels:
         if label not in base_labels:
@@ -452,6 +490,7 @@ def build_runner_labels(job_labels: List[str], run_id: int | None) -> List[str]:
 
 
 def store_workflow_runner(runner: WorkflowRunner) -> bool:
+    """Store workflow runner metadata in DynamoDB."""
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
     if not table_name:
         logger.warning("WORKFLOW_RUNNERS_TABLE not set, skipping runner storage")
@@ -474,7 +513,8 @@ def store_workflow_runner(runner: WorkflowRunner) -> bool:
                 'created_at': {'N': str(int(time.time()))}
             }
         )
-        logger.info("Stored workflow runner: run_id=%s, type=%s, resource=%s, state=%s", runner.run_id, runner.runner_type, runner.resource_id, runner.state)
+        log_msg = "Stored workflow runner: run_id=%s, type=%s, resource=%s"
+        logger.info(log_msg, runner.run_id, runner.runner_type, runner.resource_id)
         return True
     except ClientError as e:
         logger.error("Failed to store workflow runner: %s", e)
@@ -487,6 +527,7 @@ FARGATE_SPOT_MAX_POLL_ATTEMPTS = 10
 
 
 def get_fargate_task_status(cluster: str, task_arn: str) -> Dict[str, Any]:
+    """Get the current status of a Fargate task."""
     try:
         response = get_ecs_client().describe_tasks(cluster=cluster, tasks=[task_arn])
         if response.get('tasks'):
@@ -502,10 +543,13 @@ def get_fargate_task_status(cluster: str, task_arn: str) -> Dict[str, Any]:
 
 
 def is_fargate_spot_interruption(task_status: Dict[str, Any]) -> bool:
-    return 'Spot' in task_status.get('stopped_reason', '') and 'interrupt' in task_status.get('stopped_reason', '').lower()
+    """Check if task was stopped due to Spot interruption."""
+    reason = task_status.get('stopped_reason', '')
+    return 'Spot' in reason and 'interrupt' in reason.lower()
 
 
 def wait_for_fargate_task_provisioned(cluster: str, task_arn: str) -> Dict[str, Any]:
+    """Wait for a Fargate task to reach running state or fail."""
     result = {'success': False, 'spot_interrupted': False, 'status': ''}
     for attempt in range(FARGATE_SPOT_MAX_POLL_ATTEMPTS):
         task_status = get_fargate_task_status(cluster, task_arn)
@@ -516,7 +560,8 @@ def wait_for_fargate_task_provisioned(cluster: str, task_arn: str) -> Dict[str, 
             return result
         if status == 'STOPPED':
             if is_fargate_spot_interruption(task_status):
-                logger.warning("Task %s was interrupted by Spot reclamation: %s", task_arn, task_status['stopped_reason'])
+                reason = task_status['stopped_reason']
+                logger.warning("Task %s interrupted by Spot: %s", task_arn, reason)
                 result['spot_interrupted'] = True
             return result
         if status in ('PENDING', 'PROVISIONING', 'ACTIVATING'):
@@ -529,7 +574,9 @@ def wait_for_fargate_task_provisioned(cluster: str, task_arn: str) -> Dict[str, 
 
 
 def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:
-    runner_name = f"fargate-runner-{cfg['run_id']}" if cfg['run_id'] else f"fargate-runner-{cfg['job_id']}"
+    run_id = cfg['run_id']
+    job_id = cfg['job_id']
+    runner_name = f"fargate-runner-{run_id}" if run_id else f"fargate-runner-{job_id}"
     response = get_ecs_client().run_task(
         cluster=os.environ['ECS_CLUSTER'],
         taskDefinition=os.environ['TASK_DEFINITION'],
@@ -582,11 +629,17 @@ def _try_launch_in_subnet(cfg: Dict[str, Any], subnet: str, cluster: str) -> Dic
         task_arn = response['tasks'][0]['taskArn']
         logger.info("Launched Fargate runner for job %s: %s", cfg['job_id'], task_arn)
         if cfg['run_id']:
-            runner = WorkflowRunner(run_id=cfg['run_id'], runner_type=cfg['runner_type'], resource_id=task_arn, runner_name=runner_name, github_repo=cfg['github_repo'])
+            runner = WorkflowRunner(
+                run_id=cfg['run_id'],
+                runner_type=cfg['runner_type'],
+                resource_id=task_arn,
+                runner_name=runner_name,
+                github_repo=cfg['github_repo']
+            )
             store_workflow_runner(runner)
         provision_result = wait_for_fargate_task_provisioned(cluster, task_arn)
         if provision_result['spot_interrupted']:
-            logger.warning("Task %s spot interrupted before running, will retry in different AZ", task_arn)
+            logger.warning("Task %s spot interrupted, will retry in different AZ", task_arn)
             result['spot_interrupted'] = True
             result['retry'] = True
             return result
@@ -625,15 +678,21 @@ def _try_launch_fargate_task(cfg: Dict[str, Any]) -> Dict[str, Any]:
             result['error'] = launch_result.get('error', 'Unknown error')
             return result
         if launch_result.get('spot_interrupted'):
-            logger.info("Retrying after spot interruption (attempt %d/%d)", attempt + 1, FARGATE_SPOT_MAX_RETRIES)
+            retry_msg = "Retrying after spot interruption (attempt %d/%d)"
+            logger.info(retry_msg, attempt + 1, FARGATE_SPOT_MAX_RETRIES)
             continue
         break
-    logger.error("Failed to launch Fargate runner for job %s after %d attempts: %s", cfg['job_id'], FARGATE_SPOT_MAX_RETRIES, last_error)
+    err_msg = "Failed to launch Fargate runner for job %s after %d attempts: %s"
+    logger.error(err_msg, cfg['job_id'], FARGATE_SPOT_MAX_RETRIES, last_error)
     result['error'] = last_error if last_error else 'No capacity in any availability zone'
     return result
 
 
-def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_id: int | None = None, runner_type: str = 'fargate') -> Dict[str, Any]:
+def launch_fargate_runner(
+    job_id: int, job_labels: list, github_repo: str,
+    run_id: int | None = None, runner_type: str = 'fargate'
+) -> Dict[str, Any]:
+    """Launch a Fargate runner for a GitHub Actions job."""
     result: Dict[str, Any] = {'success': False, 'job_id': job_id}
 
     try:
@@ -650,12 +709,18 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
         return result
 
     if run_id:
-        existing_runner = get_existing_runner_for_workflow(github_token, github_repo, run_id, job_labels)
+        existing_runner = get_existing_runner_for_workflow(
+            github_token, github_repo, run_id, job_labels)
         if existing_runner:
-            logger.info("Reusing existing runner %s for workflow run %s", existing_runner.get('name'), run_id)
+            runner_name = existing_runner.get('name')
+            logger.info("Reusing existing runner %s for run %s", runner_name, run_id)
             result = {
-                'success': True, 'job_id': job_id, 'runner_type': runner_type, 'run_id': run_id,
-                'runner_name': existing_runner.get('name'), 'reused': True
+                'success': True,
+                'job_id': job_id,
+                'runner_type': runner_type,
+                'run_id': run_id,
+                'runner_name': runner_name,
+                'reused': True
             }
             return result
 
@@ -676,6 +741,7 @@ def launch_fargate_runner(job_id: int, job_labels: list, github_repo: str, run_i
 
 
 def handle_ecs_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle POST requests to the ECS runner endpoint."""
     try:
         body = parse_body(event)
         job_id = body.get('job_id')
@@ -714,6 +780,7 @@ def handle_ecs_runner_post(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_ecs_runner_status() -> Dict[str, Any]:
+    """Get the status of running ECS tasks."""
     cluster = os.environ['ECS_CLUSTER']
     try:
         ecs = get_ecs_client()
@@ -740,12 +807,14 @@ def get_ecs_runner_status() -> Dict[str, Any]:
             tasks = []
             for task in task_details.get('tasks', []):
                 task_tags = {tag['key']: tag['value'] for tag in task.get('tags', [])}
+                started = task.get('startedAt')
+                started_at = started.isoformat() if started else None
                 tasks.append({
                     'task_arn': task['taskArn'],
                     'task_id': task['taskArn'].split('/')[-1],
                     'status': task['lastStatus'],
                     'desired_status': task['desiredStatus'],
-                    'started_at': task.get('startedAt').isoformat() if task.get('startedAt') else None,
+                    'started_at': started_at,
                     'cpu': task.get('cpu'),
                     'memory': task.get('memory'),
                     'job_id': task_tags.get('GitHubJobId'),
@@ -771,6 +840,7 @@ def get_ecs_runner_status() -> Dict[str, Any]:
 
 
 def handle_ecs_runner_get(_event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle GET requests to the ECS runner endpoint."""
     result = get_ecs_runner_status()
     response = success_response(result)
     return response
@@ -788,6 +858,7 @@ TEST_MODE_MOCK_PATHS = {
 
 
 def lambda_handler(event, _context):
+    """Main Lambda handler for ECS runner API requests."""
     logger.info("Received API request: %s", json.dumps(event))
 
     headers = event.get('headers', {})
