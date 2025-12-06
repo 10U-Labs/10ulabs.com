@@ -184,11 +184,11 @@ jobs:
       - name: Linting Python files
         run: |
           for file in src/api/endpoints/runners/lambdas/*.py; do
-            python3 -m pylint "$file" \
+            PYTHONPATH=lib python3 -m pylint "$file" \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
-          python3 -m pylint test/api/endpoints/runners/ \
+          PYTHONPATH=lib python3 -m pylint test/api/endpoints/runners/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy

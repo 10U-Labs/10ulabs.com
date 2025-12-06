@@ -1,23 +1,24 @@
 """Lambda handler for ECS runner endpoint."""
-import json
-import logging
+# pylint: disable=wrong-import-position
 import os
 import sys
+
+# Add lib directory to path for runner_labels import (needed at Lambda runtime)
+_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
+if _lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(_lib_path))
+
+import json
+import logging
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, Dict, List
+
 import boto3
 from botocore.exceptions import ClientError
-
-# Add lib directory to path for runner_labels import
-lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
-if lib_path not in sys.path:
-    sys.path.insert(0, os.path.abspath(lib_path))
-
-# pylint: disable=wrong-import-position,import-error
-from runner_labels import (  # noqa: E402
+from runner_labels import (
     parse_labels,
     validate_labels,
     is_spot,

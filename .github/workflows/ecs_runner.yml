@@ -222,7 +222,7 @@ jobs:
             .github/workflows/ecs_runner.yml
       - name: Linting Python files
         run: |
-          python3 -m pylint \
+          PYTHONPATH=lib python3 -m pylint \
             src/api/endpoints/ecs_runner/lambda/handler.py \
             test/api/endpoints/ecs_runner/ \
             --fail-on=C,R,W \

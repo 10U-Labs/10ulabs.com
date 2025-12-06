@@ -1,27 +1,28 @@
 """Lambda handler for GitHub webhook routing to runner endpoints."""
+# pylint: disable=wrong-import-position
+import os
+import sys
+
+# Add lib directory to path for runner_labels import (needed at Lambda runtime)
+_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
+if _lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(_lib_path))
+
 import base64
 import datetime
 import hashlib
 import hmac
 import json
 import logging
-import os
-import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, Any, List, Tuple
+from typing import Any, Dict, List, Tuple
+
 import boto3
 from botocore.exceptions import ClientError
-
-# Add lib directory to path for runner_labels import
-lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
-if lib_path not in sys.path:
-    sys.path.insert(0, os.path.abspath(lib_path))
-
-# pylint: disable=wrong-import-position,import-error
-from runner_labels import (  # noqa: E402
+from runner_labels import (
     parse_labels,
     validate_labels,
     LabelParseError,
