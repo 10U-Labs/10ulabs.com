@@ -87,7 +87,7 @@ def sample_workflow():
             },
             'unit-tests': {
                 'steps': [
-                    {'name': 'Run pre_deployment tests', 'run': 'pytest test/pre_deployment/'},
+                    {'name': 'Run unit tests', 'run': 'pytest test/pre_deployment/unit/'},
                     {'name': 'Coverage', 'run': 'coverage report'}
                 ]
             }

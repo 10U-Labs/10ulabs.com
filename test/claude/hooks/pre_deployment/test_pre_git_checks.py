@@ -82,10 +82,17 @@ def test_is_pre_push_check_step_detects_mypy(pre_git_checks):
     assert result is True
 
 
-def test_is_pre_push_check_step_detects_pre_deployment(pre_git_checks):
-    """Test that Is pre push check step detects pre deployment."""
-    result = pre_git_checks.is_pre_push_check_step('Test', 'pytest test/pre_deployment/')
+def test_is_pre_push_check_step_detects_pre_deployment_unit(pre_git_checks):
+    """Test that Is pre push check step detects pre deployment unit tests."""
+    result = pre_git_checks.is_pre_push_check_step('Test', 'pytest test/pre_deployment/unit/')
     assert result is True
+
+
+def test_is_pre_push_check_step_skips_pre_deployment_integration(pre_git_checks):
+    """Test that Is pre push check step skips pre deployment integration tests."""
+    cmd = 'pytest test/pre_deployment/integration/'
+    result = pre_git_checks.is_pre_push_check_step('Test', cmd)
+    assert result is False
 
 
 def test_is_pre_push_check_step_detects_unit_test(pre_git_checks):
@@ -218,11 +225,11 @@ def test_extract_pre_deployment_test_commands_returns_list(pre_git_checks, sampl
     assert isinstance(result, list)
 
 
-def test_extract_pre_deployment_test_commands_finds_tests(pre_git_checks, sample_workflow):
-    """Test that Extract pre deployment commands finds tests."""
+def test_extract_pre_deployment_test_commands_finds_unit_tests(pre_git_checks, sample_workflow):
+    """Test that Extract pre deployment commands finds unit tests."""
     result = pre_git_checks.extract_pre_deployment_test_commands(sample_workflow)
     names = [cmd['name'] for cmd in result]
-    assert 'Run pre_deployment tests' in names
+    assert 'Run unit tests' in names
 
 
 def test_clean_command_removes_github_expressions(pre_git_checks):

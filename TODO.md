@@ -222,11 +222,11 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
 - [x] 2.2.12. Test `should_wait_for` with no deps
 
 #### 2.3 Integration Tests for Workflow Ordering
-- [ ] 2.3.1. Test workflow trigger via GitHub API
-- [ ] 2.3.2. Test workflow status polling
+- [ ] 2.3.1. Test workflow trigger via GitHub API (requires CI environment)
+- [ ] 2.3.2. Test workflow status polling (requires CI environment)
 
 #### 2.4 Documentation
-- [ ] 2.4.1. Document workflow ordering system in README
+- [x] 2.4.1. Document workflow ordering system (see `docs/workflow-ordering.md`)
 
 ### Phase 3: Runner Label System Refactor
 
