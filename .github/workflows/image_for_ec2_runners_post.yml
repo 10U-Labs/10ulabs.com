@@ -18,7 +18,8 @@ jobs:
       id-token: write
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -47,7 +48,7 @@ jobs:
           echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install paramiko
         run: python3 -m pip install paramiko
       - env:
@@ -108,7 +109,8 @@ jobs:
       - promoting-ami
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -119,12 +121,12 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install boto3 pyyaml
       - name: Clean up old AMIs
@@ -156,7 +158,8 @@ jobs:
       yq_version: ${{ steps.config.outputs.yq_version }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -227,7 +230,8 @@ jobs:
       - integration-testing-post-deployment
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -238,12 +242,12 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install dependencies
         run: python3 -m pip install boto3 pytest pyyaml
       - name: Setup Terraform
@@ -275,7 +279,8 @@ jobs:
       - declaring-common-variables
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -286,12 +291,12 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install boto3 pytest pyyaml
       - env:
@@ -315,7 +320,8 @@ jobs:
       id-token: write
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -331,12 +337,12 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install boto3 botocore pytest pyyaml
       - name: Run pre-deployment integration tests
@@ -349,18 +355,19 @@ jobs:
     needs: declaring-common-variables
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install yamllint
         run: python3 -m pip install yamllint
       - name: Linting YAML files
@@ -376,7 +383,7 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners_post.yml \
             src/api/endpoints/image_for_ec2_runners/post/config.yml
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python linting dependencies
         run: python3 -m pip install boto3 boto3-stubs mypy paramiko pylint pytest types-paramiko types-PyYAML
       - env:
@@ -406,7 +413,8 @@ jobs:
       id-token: write
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -429,12 +437,12 @@ jobs:
           terraform init -backend=true -input=false
           AMI_SSM_PARAMETER=$(terraform output -raw ssm_parameter_name_for_latest_ami)
           echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" >> $GITHUB_OUTPUT
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install boto3
       - name: Promote AMI
@@ -450,18 +458,19 @@ jobs:
     needs: performing-static-analysis
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install boto3 botocore paramiko pytest pyyaml
       - name: Run unit tests

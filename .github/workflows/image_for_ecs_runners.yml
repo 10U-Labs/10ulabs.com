@@ -20,7 +20,7 @@ jobs:
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
       || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -162,18 +162,18 @@ jobs:
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
       || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
         run: pip install pylint mypy yamllint pytest boto3 boto3-stubs[ecr] botocore dockerfile-parse types-dockerfile-parse types-PyYAML
       - name: Linting YAML files
@@ -205,7 +205,7 @@ jobs:
             python3 -m mypy "$file"
           done
           MYPYPATH=src/api/endpoints/image_for_ecs_runners:src/api/endpoints/image_for_ecs_runners/files python3 -m mypy test/api/endpoints/image_for_ecs_runners/
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install hadolint
         run: |
           HADOLINT_VERSION=$(curl -fsSL https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name')
@@ -218,7 +218,7 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -228,7 +228,7 @@ jobs:
         run: cd src/api/endpoints/image_for_ecs_runners && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/image_for_ecs_runners && terraform init
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Setup tflint
         uses: terraform-linters/setup-tflint@v4
       - env:
@@ -250,7 +250,7 @@ jobs:
       contents: read
       id-token: write
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
       || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -261,12 +261,12 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: pip install boto3
       - name: Promote image
@@ -281,18 +281,18 @@ jobs:
       - declaring-common-variables
       - performing-static-analysis
     runs-on: >-
-      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]'))
+      ${{ (github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]'))
       && 'ubuntu-latest'
       || fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: pip install pytest boto3 botocore dockerfile-parse pyyaml
       - name: Run unit tests

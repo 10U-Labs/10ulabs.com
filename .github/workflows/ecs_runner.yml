@@ -15,7 +15,8 @@ jobs:
       tf_version: ${{ steps.shared.outputs.tf_version }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -44,7 +45,8 @@ jobs:
           echo "tf_version=$TF_VERSION" >> $GITHUB_OUTPUT
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -60,7 +62,8 @@ jobs:
       id-token: write
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -74,14 +77,16 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.role_arn }}
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - env:
@@ -101,7 +106,8 @@ jobs:
       id-token: write
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -115,7 +121,8 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.role_arn }}
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -135,7 +142,8 @@ jobs:
       id-token: write
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -149,14 +157,16 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.role_arn }}
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run integration tests
@@ -169,7 +179,8 @@ jobs:
     needs: declaring-common-variables
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -177,14 +188,16 @@ jobs:
         uses: actions/checkout@v4
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -192,14 +205,16 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.tf_version }}
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
         run: |
           python3 -m pip install pylint mypy yamllint pytest boto3 \
@@ -257,7 +272,8 @@ jobs:
       - performing-static-analysis
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -265,14 +281,16 @@ jobs:
         uses: actions/checkout@v4
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
       - if: >-
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests

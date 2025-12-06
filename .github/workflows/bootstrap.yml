@@ -16,7 +16,8 @@ jobs:
       oidc_available: ${{ steps.oidc.outcome == 'success' }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -42,7 +43,8 @@ jobs:
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -68,7 +70,8 @@ jobs:
       - integration-testing
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -87,12 +90,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 dnspython
       - name: Run E2E tests
@@ -108,7 +111,8 @@ jobs:
       - unit-testing
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -146,7 +150,8 @@ jobs:
       - ensuring-infrastructure-in-desired-state
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
@@ -165,12 +170,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3
       - name: Run integration tests
@@ -182,13 +187,14 @@ jobs:
       - declaring-common-variables
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -214,7 +220,7 @@ jobs:
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install linting dependencies
         run: python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs dnspython python-hcl2
       - name: Terraform Format Check
@@ -257,18 +263,19 @@ jobs:
     needs: performing-static-analysis
     runs-on: >-
       ${{ ( github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs-fargate", "runner-{0}"]', github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
+      - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]') || contains(github.event.workflow_run.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 python-hcl2
       - name: Run unit tests
