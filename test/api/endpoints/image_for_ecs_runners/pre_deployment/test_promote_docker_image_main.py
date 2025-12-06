@@ -1,3 +1,4 @@
+"""Tests for promote_docker_image main function."""
 import sys
 from unittest.mock import patch
 
@@ -7,8 +8,12 @@ promote_docker_image = sys.modules['promote_docker_image']
 
 
 @patch('promote_docker_image.promote_image')
-@patch('sys.argv', ['promote_docker_image.py', '--repository', 'my-repo', '--image-tag', 'v1.0', '--region', 'us-east-1'])
+@patch('sys.argv', [
+    'promote_docker_image.py', '--repository', 'my-repo',
+    '--image-tag', 'v1.0', '--region', 'us-east-1'
+])
 def test_main_calls_promote_image(mock_promote):
+    """Test that main calls promote_image."""
     mock_promote.return_value = 0
     with pytest.raises(SystemExit):
         promote_docker_image.main()
@@ -16,8 +21,12 @@ def test_main_calls_promote_image(mock_promote):
 
 
 @patch('promote_docker_image.promote_image')
-@patch('sys.argv', ['promote_docker_image.py', '--repository', 'my-repo', '--image-tag', 'v1.0', '--region', 'us-east-1'])
+@patch('sys.argv', [
+    'promote_docker_image.py', '--repository', 'my-repo',
+    '--image-tag', 'v1.0', '--region', 'us-east-1'
+])
 def test_main_passes_repository_to_promote_image(mock_promote):
+    """Test that main passes repository to promote_image."""
     mock_promote.return_value = 0
     with pytest.raises(SystemExit):
         promote_docker_image.main()
@@ -25,8 +34,12 @@ def test_main_passes_repository_to_promote_image(mock_promote):
 
 
 @patch('promote_docker_image.promote_image')
-@patch('sys.argv', ['promote_docker_image.py', '--repository', 'repo', '--image-tag', 'v2.0', '--region', 'us-east-1'])
+@patch('sys.argv', [
+    'promote_docker_image.py', '--repository', 'repo',
+    '--image-tag', 'v2.0', '--region', 'us-east-1'
+])
 def test_main_passes_image_tag_to_promote_image(mock_promote):
+    """Test that main passes image tag to promote_image."""
     mock_promote.return_value = 0
     with pytest.raises(SystemExit):
         promote_docker_image.main()
@@ -34,8 +47,12 @@ def test_main_passes_image_tag_to_promote_image(mock_promote):
 
 
 @patch('promote_docker_image.promote_image')
-@patch('sys.argv', ['promote_docker_image.py', '--repository', 'repo', '--image-tag', 'v1.0', '--region', 'eu-west-1'])
+@patch('sys.argv', [
+    'promote_docker_image.py', '--repository', 'repo',
+    '--image-tag', 'v1.0', '--region', 'eu-west-1'
+])
 def test_main_passes_region_to_promote_image(mock_promote):
+    """Test that main passes region to promote_image."""
     mock_promote.return_value = 0
     with pytest.raises(SystemExit):
         promote_docker_image.main()
@@ -43,8 +60,12 @@ def test_main_passes_region_to_promote_image(mock_promote):
 
 
 @patch('promote_docker_image.promote_image')
-@patch('sys.argv', ['promote_docker_image.py', '--repository', 'repo', '--image-tag', 'v1.0', '--region', 'us-east-1'])
+@patch('sys.argv', [
+    'promote_docker_image.py', '--repository', 'repo',
+    '--image-tag', 'v1.0', '--region', 'us-east-1'
+])
 def test_main_exits_with_promote_image_result(mock_promote):
+    """Test that main exits with promote_image result."""
     mock_promote.return_value = 42
     with pytest.raises(SystemExit) as exc_info:
         promote_docker_image.main()
@@ -52,8 +73,12 @@ def test_main_exits_with_promote_image_result(mock_promote):
 
 
 @patch('promote_docker_image.promote_image')
-@patch('sys.argv', ['promote_docker_image.py', '--repository', 'repo', '--image-tag', 'v1.0', '--region', 'us-east-1'])
+@patch('sys.argv', [
+    'promote_docker_image.py', '--repository', 'repo',
+    '--image-tag', 'v1.0', '--region', 'us-east-1'
+])
 def test_main_exits_with_zero_on_success(mock_promote):
+    """Test that main exits with zero on success."""
     mock_promote.return_value = 0
     with pytest.raises(SystemExit) as exc_info:
         promote_docker_image.main()

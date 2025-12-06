@@ -1,3 +1,6 @@
+"""
+E2E test configuration and utilities for ECS runner image lifecycle tests.
+"""
 import json
 import subprocess
 import time
@@ -6,13 +9,17 @@ import pytest
 
 @pytest.fixture(scope="module")
 def runner_registration_token(github_pat, github_repo):
+    """
+    Generate a GitHub Actions runner registration token.
+    """
     result = subprocess.run(
         [
             "curl",
             "-X", "POST",
             "-H", f"Authorization: token {github_pat}",
             "-H", "Accept: application/vnd.github.v3+json",
-            f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token"
+            (f"https://api.github.com/repos/{github_repo}/"
+             "actions/runners/registration-token")
         ],
         check=False,
         capture_output=True,
@@ -27,6 +34,9 @@ def runner_registration_token(github_pat, github_repo):
 
 
 def start_runner_container(uri, repo, name, labels, token):
+    """
+    Start a GitHub Actions runner container with specified configuration.
+    """
     args = [
         "docker", "run", "--rm",
         "--platform", "linux/arm64",
@@ -46,6 +56,9 @@ def start_runner_container(uri, repo, name, labels, token):
 
 
 def wait_for_process_with_backoff(process, max_attempts=7):
+    """
+    Wait for a process to complete with exponential backoff.
+    """
     attempt = 0
     total_wait = 0
     while attempt < max_attempts:
@@ -62,6 +75,9 @@ def wait_for_process_with_backoff(process, max_attempts=7):
 
 
 def get_github_runners(pat, repo):
+    """
+    Retrieve the list of GitHub Actions runners for a repository.
+    """
     result = subprocess.run(
         [
             "curl",
@@ -82,6 +98,9 @@ def get_github_runners(pat, repo):
 
 
 def get_runner_and_cleanup(process, pat, repo, name):
+    """
+    Get runner information from GitHub and clean up the process.
+    """
     time.sleep(30)
     runners = get_github_runners(pat, repo)
     runner = find_runner_by_name(runners, name)
@@ -91,6 +110,9 @@ def get_runner_and_cleanup(process, pat, repo, name):
 
 
 def find_runner_by_name(runners, target_name):
+    """
+    Find a runner in the list by its name.
+    """
     index = 0
     while index < len(runners):
         runner = runners[index]
@@ -101,6 +123,9 @@ def find_runner_by_name(runners, target_name):
 
 
 def runner_exists_with_name(runners, target_name):
+    """
+    Check if a runner with the specified name exists in the list.
+    """
     index = 0
     while index < len(runners):
         runner = runners[index]
@@ -111,6 +136,9 @@ def runner_exists_with_name(runners, target_name):
 
 
 def get_label_by_name(labels, target_name):
+    """
+    Find a label in the list by its name.
+    """
     index = 0
     while index < len(labels):
         label = labels[index]

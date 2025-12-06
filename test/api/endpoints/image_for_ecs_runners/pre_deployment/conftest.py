@@ -1,9 +1,14 @@
+"""Fixtures for pre-deployment tests of ECS runner Docker image."""
 import importlib.util
 import os
 import re
 import sys
 
-from test.api.endpoints.image_for_ecs_runners.conftest import BASE_DIR, FILES_DIR, DOCKERFILE_PATH
+from test.api.endpoints.image_for_ecs_runners.conftest import (
+    BASE_DIR,
+    FILES_DIR,
+    DOCKERFILE_PATH,
+)
 
 from dockerfile_parse import DockerfileParser
 import pytest
@@ -28,22 +33,26 @@ promote_spec.loader.exec_module(promote_docker_image)
 
 
 def _read_dockerfile():
+    """Read and return the Dockerfile contents."""
     with open(DOCKERFILE_PATH, 'r', encoding='utf-8') as f:
         return f.read()
 
 
 @pytest.fixture
 def dockerfile_content():
+    """Fixture providing the raw Dockerfile content."""
     return _read_dockerfile()
 
 
 @pytest.fixture
 def dockerfile_parser():
+    """Fixture providing a DockerfileParser instance."""
     return DockerfileParser(path=DOCKERFILE_PATH)
 
 
 @pytest.fixture
 def apt_get_install_packages():
+    """Fixture extracting apt-get install packages from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'apt-get install.*?(?=&&\s*rm|$)', content, re.DOTALL)
     if match:
@@ -53,6 +62,7 @@ def apt_get_install_packages():
 
 @pytest.fixture
 def pip3_install_packages():
+    """Fixture extracting pip3 install packages from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'python3 -m pip install.*', content, re.DOTALL)
     if match:
@@ -62,6 +72,7 @@ def pip3_install_packages():
 
 @pytest.fixture
 def npm_install_packages():
+    """Fixture extracting npm install packages from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'npm install.*', content)
     if match:
@@ -71,6 +82,7 @@ def npm_install_packages():
 
 @pytest.fixture
 def dockerfile_node_version():
+    """Fixture extracting NODE_VERSION ARG from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'ARG\s+NODE_VERSION=(.+)', content)
     if match:
@@ -80,6 +92,7 @@ def dockerfile_node_version():
 
 @pytest.fixture
 def dockerfile_terraform_version():
+    """Fixture extracting TERRAFORM_VERSION ARG from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'ARG\s+TERRAFORM_VERSION=(.+)', content)
     if match:
@@ -89,6 +102,7 @@ def dockerfile_terraform_version():
 
 @pytest.fixture
 def dockerfile_runner_version():
+    """Fixture extracting RUNNER_VERSION ARG from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'ARG\s+RUNNER_VERSION=(.+)', content)
     if match:
@@ -98,6 +112,7 @@ def dockerfile_runner_version():
 
 @pytest.fixture
 def dockerfile_runner_arch():
+    """Fixture extracting RUNNER_ARCH ARG from Dockerfile."""
     content = _read_dockerfile()
     match = re.search(r'ARG\s+RUNNER_ARCH=(.+)', content)
     if match:
@@ -107,6 +122,7 @@ def dockerfile_runner_arch():
 
 @pytest.fixture
 def dockerfile_run_commands_joined():
+    """Fixture providing all RUN commands joined as a single string."""
     parser = DockerfileParser(path=DOCKERFILE_PATH)
     commands = []
     structure = parser.structure

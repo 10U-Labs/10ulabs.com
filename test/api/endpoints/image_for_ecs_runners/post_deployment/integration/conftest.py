@@ -1,3 +1,4 @@
+"""Test fixtures for ECS runner image integration tests."""
 import subprocess
 
 from test.api.endpoints.image_for_ecs_runners.conftest import CONFIG_PATH
@@ -12,8 +13,13 @@ def _read_config():
 
 
 def run_command_in_container(tag, command):
+    """Execute a command inside a Docker container."""
     result = subprocess.run(
-        ["docker", "run", "--rm", "--entrypoint", "/bin/bash", tag, "-c", command],
+        [
+            "docker", "run", "--rm",
+            "--entrypoint", "/bin/bash",
+            tag, "-c", command
+        ],
         check=False,
         capture_output=True,
         text=True
@@ -23,11 +29,13 @@ def run_command_in_container(tag, command):
 
 @pytest.fixture(scope="module")
 def config_node_version():
+    """Fixture that provides the configured Node.js version."""
     config = _read_config()
     return config["node_version"]
 
 
 @pytest.fixture(scope="module")
 def config_terraform_version():
+    """Fixture that provides the configured Terraform version."""
     config = _read_config()
     return config["terraform_version"]

@@ -1,8 +1,10 @@
+"""Tests for runner argument validation in ECS runner image."""
 import subprocess
 from ..conftest import login_to_ecr
 
 
 def test_runner_fails_with_missing_repo_argument(ecr_image_uri, aws_region):
+    """Test that runner fails when --repo argument is missing."""
     login_to_ecr(aws_region)
 
     result = subprocess.run(
@@ -21,6 +23,7 @@ def test_runner_fails_with_missing_repo_argument(ecr_image_uri, aws_region):
 
 
 def test_runner_fails_with_missing_name_argument(ecr_image_uri, aws_region):
+    """Test that runner fails when --name argument is missing."""
     login_to_ecr(aws_region)
 
     result = subprocess.run(
@@ -38,7 +41,10 @@ def test_runner_fails_with_missing_name_argument(ecr_image_uri, aws_region):
     assert result.returncode != 0
 
 
-def test_runner_fails_with_missing_labels_argument(ecr_image_uri, aws_region):
+def test_runner_fails_with_missing_labels_argument(
+    ecr_image_uri, aws_region
+):
+    """Test that runner fails when --labels argument is missing."""
     login_to_ecr(aws_region)
 
     result = subprocess.run(
@@ -57,6 +63,7 @@ def test_runner_fails_with_missing_labels_argument(ecr_image_uri, aws_region):
 
 
 def test_runner_fails_with_missing_token_argument(ecr_image_uri, aws_region):
+    """Test that runner fails when --token argument is missing."""
     login_to_ecr(aws_region)
 
     result = subprocess.run(

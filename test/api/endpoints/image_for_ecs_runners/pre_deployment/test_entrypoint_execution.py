@@ -1,11 +1,16 @@
+"""Tests for entrypoint execution."""
 from unittest.mock import Mock, patch
 import entrypoint
 import pytest
 
 
 @patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+@patch('sys.argv', [
+    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+    '--labels', 'lbl', '--token', 'tok'
+])
 def test_main_exits_with_code_1_when_config_fails(mock_run):
+    """Test that main exits with code 1 when config fails."""
     mock_run.return_value = Mock(returncode=1)
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
@@ -13,27 +18,44 @@ def test_main_exits_with_code_1_when_config_fails(mock_run):
 
 
 @patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+@patch('sys.argv', [
+    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+    '--labels', 'lbl', '--token', 'tok'
+])
 def test_run_sh_called_after_successful_configuration(mock_run):
+    """Test that run.sh is called after successful configuration."""
     mock_run.return_value = Mock(returncode=0)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    run_sh_calls = [c for c in mock_run.call_args_list if c[0][0] == ['./run.sh']]
+    run_sh_calls = [
+        c for c in mock_run.call_args_list if c[0][0] == ['./run.sh']
+    ]
     assert len(run_sh_calls) == 1
 
 
 @patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+@patch('sys.argv', [
+    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+    '--labels', 'lbl', '--token', 'tok'
+])
 def test_main_exits_with_run_sh_return_code(mock_run):
-    mock_run.side_effect = [Mock(returncode=0), Mock(returncode=0), Mock(returncode=42), Mock(returncode=0)]
+    """Test that main exits with run.sh return code."""
+    mock_run.side_effect = [
+        Mock(returncode=0), Mock(returncode=0),
+        Mock(returncode=42), Mock(returncode=0)
+    ]
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
     assert exc_info.value.code == 42
 
 
 @patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+@patch('sys.argv', [
+    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+    '--labels', 'lbl', '--token', 'tok'
+])
 def test_run_sh_uses_check_false_parameter(mock_run):
+    """Test that run.sh uses check=False parameter."""
     mock_run.return_value = Mock(returncode=0)
     with pytest.raises(SystemExit):
         entrypoint.main()
@@ -41,8 +63,12 @@ def test_run_sh_uses_check_false_parameter(mock_run):
 
 
 @patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+@patch('sys.argv', [
+    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+    '--labels', 'lbl', '--token', 'tok'
+])
 def test_config_sh_returns_non_zero_exit_code(mock_run):
+    """Test that config.sh returning non-zero exit code is handled."""
     mock_run.return_value = Mock(returncode=127)
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
@@ -50,8 +76,12 @@ def test_config_sh_returns_non_zero_exit_code(mock_run):
 
 
 @patch('entrypoint.subprocess.run')
-@patch('sys.argv', ['entrypoint.py', '--repo', 'org/repo', '--name', 'runner', '--labels', 'lbl', '--token', 'tok'])
+@patch('sys.argv', [
+    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
+    '--labels', 'lbl', '--token', 'tok'
+])
 def test_run_sh_not_called_when_config_fails(mock_run):
+    """Test that run.sh is not called when config fails."""
     mock_run.return_value = Mock(returncode=1)
     with pytest.raises(SystemExit):
         entrypoint.main()
