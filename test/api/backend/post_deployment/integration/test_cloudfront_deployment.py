@@ -100,13 +100,11 @@ def test_cloudfront_distribution_has_logging_enabled(cloudfront_client):
     assert dist_found_with_logging
 
 
-def test_cloudfront_logging_bucket_is_central_logs(cloudfront_client, config):
+def test_cloudfront_logging_bucket_is_central_logs(cloudfront_client, api_distribution_id, config):
     """Verify CloudFront logs to central logs bucket."""
-    distributions = cloudfront_client.list_distributions()
-    if distributions['DistributionList']['Quantity'] == 0:
-        pytest.skip("No CloudFront distributions deployed yet")
-    dist_id = distributions['DistributionList']['Items'][0]['Id']
-    dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
+    if api_distribution_id is None:
+        pytest.skip("API CloudFront distribution not found")
+    dist_config = cloudfront_client.get_distribution_config(Id=api_distribution_id)
     logging_config = dist_config['DistributionConfig'].get('Logging', {})
     if not logging_config.get('Enabled', False):
         pytest.skip("CloudFront logging not yet enabled on distribution")
