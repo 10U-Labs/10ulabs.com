@@ -1,10 +1,16 @@
 import re
+import sys
 from pathlib import Path
 from typing import Any, Dict
 
 import yaml
 
 REPO_ROOT = Path(__file__).parent.parent.parent
+
+# Add lib directory to sys.path for runner_labels and other lib imports
+LIB_DIR = REPO_ROOT / "lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
 
 def parse_shared_config() -> Dict[str, Any]:

@@ -8,12 +8,12 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 ## Table of Contents
 
-| Issue | Status | PR |
-|-------|--------|-----|
-| [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) |
-| [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) |
-| [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIALLY IMPLEMENTED | - |
-| [AST Object Pooling](#4-ast-object-pooling) | NOT IMPLEMENTED | - |
+| Issue | Status | PR | Effort | Impact | Risk |
+|-------|--------|-----|--------|--------|------|
+| [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) | 1 day | High | Low |
+| [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) | 3 days | Medium | Low |
+| [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIAL | - | 1 week | High | Medium |
+| [AST Object Pooling](#4-ast-object-pooling) | NOT DONE | - | 2 weeks | Medium | Medium |
 
 ---
 
@@ -219,17 +219,6 @@ public:
 **Impact:** 10-20% memory reduction, faster allocation for large designs
 **Difficulty:** Medium - requires modifying node allocation patterns
 **Risk:** Medium - memory management changes need careful validation
-
----
-
-## Implementation Priority
-
-| # | Optimization | Effort | Impact | Risk | Status |
-|---|--------------|--------|--------|------|--------|
-| 1 | Thread Pool | 1 day | High | Low | PR SUBMITTED |
-| 2 | Self-Diagnostic | 3 days | Medium | Low | NOT DONE |
-| 3 | Parallel Verilation | 1 week | High | Medium | PARTIAL |
-| 4 | Object Pooling | 2 weeks | Medium | Medium | NOT DONE |
 
 ---
 

@@ -2,7 +2,6 @@
 # pylint: disable=duplicate-code
 import importlib.util
 import json
-import sys
 from pathlib import Path
 from typing import Any, Callable, Dict
 from types import ModuleType
@@ -12,11 +11,6 @@ import pytest
 from botocore.exceptions import ClientError
 
 from ..conftest import EC2_RUNNER_SRC
-
-# Add lib directory to sys.path for runner_labels import
-LIB_DIR = Path(__file__).parent.parent.parent.parent.parent.parent / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
 
 
 def load_handler_module() -> ModuleType:

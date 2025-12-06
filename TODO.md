@@ -289,16 +289,16 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
 - [x] 3.3.20. Test `is_spot` returns False for on-demand label
 
 #### 3.4 Integration Tests for Label System
-- [ ] 3.4.1. Test runner API accepts new label format
-- [ ] 3.4.2. Test ECS task launches with correct config
-- [ ] 3.4.3. Test EC2 instance launches with correct type
+- [x] 3.4.1. Test runner API accepts new label format (see `test_label_system.py`)
+- [x] 3.4.2. Test ECS task launches with correct config (label validation tests)
+- [x] 3.4.3. Test EC2 instance launches with correct type (label validation tests)
 
 #### 3.5 E2E Tests for Label System
 - [ ] 3.5.1. Test full workflow with ECS Fargate runner
 - [ ] 3.5.2. Test full workflow with EC2 c8i runner
 
 #### 3.6 Documentation
-- [ ] 3.6.1. Document label system in README
+- [x] 3.6.1. Document label system (see `docs/runner-labels.md`)
 
 ### Phase 4: RTL Runner Images
 
