@@ -39,7 +39,7 @@ See RTL.md for simulation_soc.yml.
 ## Tasks
 
 - [x] Task 1: Ensure bootstrap.yml runs without problems
-- [ ] Task 2: Ensure www_shared.yml runs without problems
+- [x] Task 2: Ensure www_shared.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
   - Trigger: `gh workflow run www_shared.yml --field github_hosted=true`
 - [ ] Task 3: Ensure api.yml runs without problems
