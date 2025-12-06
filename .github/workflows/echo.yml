@@ -11,13 +11,16 @@ jobs:
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
+      github_actions_role_arn: >-
+        ${{ steps.bootstrap.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     permissions:
       contents: read
       id-token: write
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -25,14 +28,24 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' src/api/endpoints/echo/backend.tf | cut -d'"' -f2 | sed 's/>= //')
-          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
+            src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' \
+            lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/api/endpoints/echo/backend.tf | \
+            cut -d'"' -f2 | sed 's/>= //')
+          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -42,9 +55,12 @@ jobs:
       - id: bootstrap
         name: Get bootstrap outputs
         run: |
-          terraform -chdir=src/bootstrap init -backend=true -input=false > /dev/null
-          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          terraform -chdir=src/bootstrap init \
+            -backend=true -input=false > /dev/null
+          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
+            output -raw arn_for_github_actions_role)
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -54,7 +70,9 @@ jobs:
       - declaring-common-variables
       - unit-testing
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -63,7 +81,9 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Terraform Init
         run: terraform init
       - name: Terraform Apply
@@ -74,7 +94,9 @@ jobs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -83,15 +105,21 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Run integration tests
-        run: python3 -m pytest test/api/endpoints/echo/post_deployment/integration/ -v
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/echo/post_deployment/integration/ -v
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -100,7 +128,9 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -128,7 +158,9 @@ jobs:
       - name: Run mypy on tests
         run: python3 -m mypy test/api/endpoints/echo/
       - name: Terraform Format Check
-        run: cd src/api/endpoints/echo && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/endpoints/echo && \
+            terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/echo && terraform init
       - env:
@@ -146,7 +178,9 @@ jobs:
       - declaring-common-variables
       - performing-static-analysis
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -170,8 +204,9 @@ on:
     types:
       - completed
     workflows:
-      - 'Ensuring API backend exists and is properly configured'
-      - 'Ensuring the /v1/runners API endpoint exists and is properly configured'
+      - >-
+        Ensuring the /v1/ecs-runner API endpoint exists and is properly
+        configured
 permissions:
   contents: read
   id-token: write

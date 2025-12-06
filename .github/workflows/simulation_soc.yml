@@ -18,7 +18,9 @@ jobs:
       contents: read
       id-token: write
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -62,7 +64,9 @@ jobs:
       - declaring-common-variables
       - integration-testing
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -89,7 +93,9 @@ jobs:
       - declaring-common-variables
       - unit-testing
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -161,7 +167,9 @@ jobs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -184,7 +192,9 @@ jobs:
     name: Performing static analysis
     needs: declaring-common-variables
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -248,7 +258,9 @@ jobs:
       - declaring-common-variables
       - performing-static-analysis
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -287,9 +299,9 @@ on:
     types:
       - completed
     workflows:
-      - 'Ensuring API backend exists and is properly configured'
-      - 'Ensuring the /v1/runners API endpoint exists and is properly configured'
-      - 'Ensuring www shared infrastructure exists and is properly configured'
+      - >-
+        Ensuring the /v1/ecs-runner API endpoint exists and is properly
+        configured
 permissions:
   contents: read
   id-token: write

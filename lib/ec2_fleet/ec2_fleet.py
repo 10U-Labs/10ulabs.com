@@ -157,6 +157,7 @@ def get_instance_state(ec2_client: Any, instance_id: str) -> str:
 
 
 def get_instance_az(ec2_client: Any, instance_id: str) -> str:
+    """Get the availability zone of an EC2 instance."""
     response = ec2_client.describe_instances(InstanceIds=[instance_id])
     return response["Reservations"][0]["Instances"][0]["Placement"]["AvailabilityZone"]
 
@@ -164,6 +165,7 @@ def get_instance_az(ec2_client: Any, instance_id: str) -> str:
 def wait_for_instance_running(
     ec2_client: Any, instance_id: str, max_attempts: int = 60, poll_interval: int = 5
 ) -> None:
+    """Wait for an EC2 instance to enter the running state."""
     running = False
     attempt = 0
     while not running and attempt < max_attempts:
@@ -185,6 +187,7 @@ def wait_for_instance_running(
 def wait_for_status_checks(
     ec2_client: Any, instance_id: str, max_attempts: int = 40, poll_interval: int = 15
 ) -> None:
+    """Wait for an EC2 instance to pass status checks."""
     passed = False
     attempt = 0
     while not passed and attempt < max_attempts:
