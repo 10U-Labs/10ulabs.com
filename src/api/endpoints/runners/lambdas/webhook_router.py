@@ -506,7 +506,7 @@ def make_http_request_with_retry(
     return (False, None, 'Max retries exceeded', last_status_code)
 
 
-def get_runner_type_from_labels(  # pylint: disable=too-many-return-statements
+def get_runner_type_from_labels(
     job_labels: List[str]
 ) -> Tuple[str | None, str | None]:
     """Determine runner type and endpoint from job labels.
@@ -514,39 +514,41 @@ def get_runner_type_from_labels(  # pylint: disable=too-many-return-statements
     Supports both new composable label format (ecs/ec2 + compute + pricing)
     and legacy labels from environment variables for backwards compatibility.
     """
+    runner_type: str | None = None
+    endpoint_suffix: str | None = None
+
     # Try new label format first
     try:
         parsed = parse_labels(job_labels)
         validate_labels(parsed)
-        platform = parsed.platform
         is_e2e = 'e2e' in job_labels
-        if platform == 'ec2':
+        if parsed.platform == 'ec2':
             runner_type = 'ec2-e2e' if is_e2e else 'ec2'
-            return (runner_type, 'ec2-runner')
-        if platform == 'ecs':
+            endpoint_suffix = 'ec2-runner'
+        elif parsed.platform == 'ecs':
             runner_type = 'fargate-e2e' if is_e2e else 'fargate'
-            return (runner_type, 'ecs-runner')
+            endpoint_suffix = 'ecs-runner'
     except (LabelParseError, LabelValidationError):
         # Fall through to legacy label check
         pass
 
-    # Legacy label format for backwards compatibility
-    runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2')
-    runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_E2E')
-    runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE')
-    runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_E2E')
-    is_ec2 = runner_label_ec2 in job_labels or runner_label_ec2_e2e in job_labels
-    is_fargate = runner_label_fargate in job_labels or runner_label_fargate_e2e in job_labels
-    is_e2e = runner_label_ec2_e2e in job_labels or runner_label_fargate_e2e in job_labels
-    if is_ec2 and is_e2e:
-        return ('ec2-e2e', 'ec2-runner')
-    if is_ec2:
-        return ('ec2', 'ec2-runner')
-    if is_fargate and is_e2e:
-        return ('fargate-e2e', 'ecs-runner')
-    if is_fargate:
-        return ('fargate', 'ecs-runner')
-    return (None, None)
+    # Legacy label format for backwards compatibility (if new format didn't match)
+    if not runner_type:
+        runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2')
+        runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_E2E')
+        runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE')
+        runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_E2E')
+        is_ec2 = runner_label_ec2 in job_labels or runner_label_ec2_e2e in job_labels
+        is_fargate = runner_label_fargate in job_labels or runner_label_fargate_e2e in job_labels
+        is_e2e = runner_label_ec2_e2e in job_labels or runner_label_fargate_e2e in job_labels
+        if is_ec2:
+            runner_type = 'ec2-e2e' if is_e2e else 'ec2'
+            endpoint_suffix = 'ec2-runner'
+        elif is_fargate:
+            runner_type = 'fargate-e2e' if is_e2e else 'fargate'
+            endpoint_suffix = 'ecs-runner'
+
+    return (runner_type, endpoint_suffix)
 
 
 def _build_runner_endpoint(endpoint_suffix: str) -> str:

@@ -660,53 +660,68 @@ def delete_launch_template(template_id: str):
         logger.warning("Failed to delete launch template %s: %s", template_id, e)
 
 
-def launch_ec2_runner(  # pylint: disable=too-many-locals
+def _check_existing_runner(cfg: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Check for and return existing runner if available."""
+    existing = get_existing_runner_for_workflow(
+        cfg['github_token'], cfg['github_repo'], cfg['run_id'], cfg['job_labels'])
+    if existing:
+        logger.info("Reusing runner %s for run %s", existing.get('name'), cfg['run_id'])
+        return {
+            'success': True,
+            'job_id': cfg['job_id'],
+            'runner_type': cfg['runner_type'],
+            'run_id': cfg['run_id'],
+            'runner_name': existing.get('name'),
+            'reused': True
+        }
+    return None
+
+
+def _handle_missing_ami() -> Dict[str, Any]:
+    """Handle case where no AMI is available by triggering creation."""
+    logger.warning("No AMI available - triggering AMI creation")
+    ami_trigger = trigger_ami_creation()
+    if ami_trigger['success']:
+        return {
+            'success': False,
+            'ami_creation_triggered': True,
+            'error': 'No AMI available - AMI creation has been triggered. Please retry.'
+        }
+    return {
+        'success': False,
+        'ami_creation_triggered': False,
+        'error': f"No AMI available and failed to trigger creation: {ami_trigger.get('error')}"
+    }
+
+
+def launch_ec2_runner(
         job_id: int, job_labels: List[str], github_repo: str,
         run_id: int | None = None, runner_type: str = 'ec2') -> Dict[str, Any]:
     """Launch an EC2 instance as a GitHub Actions self-hosted runner."""
-    result: Dict[str, Any] = {'success': False, 'job_id': job_id}
-
     try:
         ensure_dependencies_valid()
-    except RuntimeError as e:
-        logger.error("Dependency validation failed: %s", e)
-        result['error'] = str(e)
-        return result
+    except RuntimeError as exc:
+        logger.error("Dependency validation failed: %s", exc)
+        return {'success': False, 'job_id': job_id, 'error': str(exc)}
 
     github_token = get_github_token()
     if not github_token:
         logger.error("GITHUB_TOKEN not set - cannot register runner")
-        result['error'] = 'GITHUB_TOKEN not configured'
-        return result
+        return {'success': False, 'job_id': job_id, 'error': 'GITHUB_TOKEN not configured'}
 
     if run_id:
-        existing_runner = get_existing_runner_for_workflow(
-            github_token, github_repo, run_id, job_labels)
-        if existing_runner:
-            runner_name = existing_runner.get('name')
-            logger.info(
-                "Reusing existing runner %s for workflow run %s", runner_name, run_id)
-            result = {
-                'success': True,
-                'job_id': job_id,
-                'runner_type': runner_type,
-                'run_id': run_id,
-                'runner_name': runner_name,
-                'reused': True
-            }
-            return result
+        reused = _check_existing_runner({
+            'github_token': github_token, 'github_repo': github_repo,
+            'run_id': run_id, 'job_id': job_id,
+            'job_labels': job_labels, 'runner_type': runner_type
+        })
+        if reused:
+            return reused
 
     ami_id = get_latest_ami()
     if not ami_id:
-        logger.warning("No AMI available - triggering AMI creation")
-        ami_trigger = trigger_ami_creation()
-        result['ami_creation_triggered'] = ami_trigger['success']
-        if ami_trigger['success']:
-            result['error'] = ('No AMI available - AMI creation has been triggered. '
-                               'Please retry in a few minutes.')
-        else:
-            err = ami_trigger.get('error')
-            result['error'] = f"No AMI available and failed to trigger creation: {err}"
+        result = _handle_missing_ami()
+        result['job_id'] = job_id
         return result
 
     cleanup_offline_runners(github_token, github_repo, run_id)
@@ -714,20 +729,20 @@ def launch_ec2_runner(  # pylint: disable=too-many-locals
     registration_token = get_runner_registration_token(github_token, github_repo)
     if not registration_token:
         logger.error("Failed to get runner registration token")
-        result['error'] = 'Failed to get runner registration token'
-        return result
+        return {
+            'success': False, 'job_id': job_id,
+            'error': 'Failed to get runner registration token'
+        }
 
-    runner_labels = build_runner_labels(job_labels, run_id)
-    runner_config = {
+    return _try_launch_ec2_fleet({
         'job_id': job_id,
-        'job_labels': runner_labels,
+        'job_labels': build_runner_labels(job_labels, run_id),
         'github_repo': github_repo,
         'ami_id': ami_id,
         'registration_token': registration_token,
         'run_id': run_id,
         'runner_type': runner_type
-    }
-    return _try_launch_ec2_fleet(runner_config)
+    })
 
 
 def _build_ec2_template_config(cfg: Dict[str, Any], ec2_config: Dict[str, Any]) -> Dict[str, Any]:
@@ -780,79 +795,70 @@ def _handle_ec2_fleet_success(
     }
 
 
-def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:  # pylint: disable=too-many-locals
+def _get_fleet_instance_config(job_labels: List[str], ec2_config: Dict[str, Any]) -> tuple:
+    """Get instance types and capacity type based on labels."""
+    label_type = _get_instance_type_from_labels(job_labels)
+    if label_type:
+        instance_types = [label_type]
+        logger.info("Using instance type from labels: %s", label_type)
+    else:
+        instance_types = ec2_config['instance_types']
+        logger.info("Using instance types from config: %s", instance_types)
+    use_spot = _is_spot_from_labels(job_labels)
+    capacity_type = 'spot' if use_spot else 'on-demand'
+    logger.info("Using capacity type: %s", capacity_type)
+    return instance_types, use_spot, capacity_type
+
+
+def _create_fleet_request(
+        template_id: str, capacity_type: str, use_spot: bool,
+        instance_types: List[str], subnet_ids: List[str]
+) -> Dict[str, Any]:
+    """Create and execute EC2 Fleet request."""
+    target_spec = {'TotalTargetCapacity': 1, 'DefaultTargetCapacityType': capacity_type}
+    template_spec = {'LaunchTemplateId': template_id, 'Version': '$Latest'}
+    overrides = [
+        {'InstanceType': itype, 'SubnetId': subnet}
+        for subnet in subnet_ids for itype in instance_types
+    ]
+    config = [{
+        'LaunchTemplateSpecification': template_spec,
+        'Overrides': overrides
+    }]
+    if use_spot:
+        return get_ec2_client().create_fleet(
+            Type='instant', TargetCapacitySpecification=target_spec,
+            SpotOptions={'AllocationStrategy': 'price-capacity-optimized'},
+            LaunchTemplateConfigs=config)
+    return get_ec2_client().create_fleet(
+        Type='instant', TargetCapacitySpecification=target_spec,
+        OnDemandOptions={'AllocationStrategy': 'lowest-price'},
+        LaunchTemplateConfigs=config)
+
+
+def _try_launch_ec2_fleet(cfg: Dict[str, Any]) -> Dict[str, Any]:
     """Attempt to launch an EC2 runner using the EC2 Fleet API."""
     ec2_config = get_ec2_config()
     template_config = _build_ec2_template_config(cfg, ec2_config)
     result: Dict[str, Any] = {'success': False, 'job_id': cfg['job_id']}
     launch_template_id = None
-
-    # Determine instance type from labels, fallback to env config
     job_labels = cfg.get('job_labels', [])
-    label_instance_type = _get_instance_type_from_labels(job_labels)
-    if label_instance_type:
-        instance_types = [label_instance_type]
-        logger.info("Using instance type from labels: %s", label_instance_type)
-    else:
-        instance_types = ec2_config['instance_types']
-        logger.info("Using instance types from config: %s", instance_types)
-
-    # Determine pricing from labels
-    use_spot = _is_spot_from_labels(job_labels)
-    capacity_type = 'spot' if use_spot else 'on-demand'
-    logger.info("Using capacity type: %s", capacity_type)
+    instance_types, use_spot, capacity_type = _get_fleet_instance_config(job_labels, ec2_config)
 
     try:
         launch_template_id = create_fleet_launch_template(template_config)
-        target_spec = {
-            'TotalTargetCapacity': 1,
-            'DefaultTargetCapacityType': capacity_type
-        }
-        template_spec = {
-            'LaunchTemplateId': launch_template_id,
-            'Version': '$Latest'
-        }
-        overrides = [
-            {'InstanceType': itype, 'SubnetId': subnet}
-            for subnet in ec2_config['subnet_ids']
-            for itype in instance_types
-        ]
-
-        # Use appropriate allocation strategy based on pricing
-        if use_spot:
-            fleet_response = get_ec2_client().create_fleet(
-                Type='instant',
-                TargetCapacitySpecification=target_spec,
-                SpotOptions={'AllocationStrategy': 'price-capacity-optimized'},
-                LaunchTemplateConfigs=[{
-                    'LaunchTemplateSpecification': template_spec,
-                    'Overrides': overrides
-                }]
-            )
-        else:
-            fleet_response = get_ec2_client().create_fleet(
-                Type='instant',
-                TargetCapacitySpecification=target_spec,
-                OnDemandOptions={'AllocationStrategy': 'lowest-price'},
-                LaunchTemplateConfigs=[{
-                    'LaunchTemplateSpecification': template_spec,
-                    'Overrides': overrides
-                }]
-            )
+        fleet_response = _create_fleet_request(
+            launch_template_id, capacity_type, use_spot,
+            instance_types, ec2_config['subnet_ids'])
         if fleet_response.get('Instances'):
             instance_ids = fleet_response['Instances'][0].get('InstanceIds', [])
             if instance_ids:
                 instance = wait_for_instance_describable(instance_ids[0])
-                result = _handle_ec2_fleet_success(cfg, instance, instance_ids[0])
-                return result
+                return _handle_ec2_fleet_success(cfg, instance, instance_ids[0])
         errors = fleet_response.get('Errors', [])
-        if errors:
-            error_msgs = [e.get('ErrorMessage', str(e)) for e in errors]
-            result['error'] = '; '.join(error_msgs)
-        else:
-            result['error'] = 'No instances launched'
-        logger.error(
-            "Failed to launch EC2 runner for job %s: %s", cfg['job_id'], result['error'])
+        result['error'] = '; '.join(
+            e.get('ErrorMessage', str(e)) for e in errors) if errors else 'No instances launched'
+        logger.error("Failed to launch EC2 runner for job %s: %s", cfg['job_id'], result['error'])
     except ClientError as e:
         logger.error("Error launching EC2 runner for job %s: %s", cfg['job_id'], e)
         result['error'] = str(e)
@@ -975,12 +981,5 @@ def lambda_handler(event, _context):
         }
 
     path = event.get('path', '')
-
     handler = ROUTE_MAP.get((path, method))
-
-    if handler:
-        response = handler(event)
-    else:
-        response = error_response(404, 'Not found')
-
-    return response
+    return handler(event) if handler else error_response(404, 'Not found')
