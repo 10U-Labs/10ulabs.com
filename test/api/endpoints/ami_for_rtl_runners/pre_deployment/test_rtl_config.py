@@ -1,6 +1,5 @@
-"""Unit tests for RTL runner image configuration parsing."""
+"""Unit tests for RTL runner AMI configuration parsing."""
 
-import pytest
 from pathlib import Path
 
 
@@ -128,66 +127,12 @@ class TestRtlGpuConfig:
         assert "CUDA_HOME" in rtl_gpu_config["environment"]
 
 
-class TestDockerfileExists:
-    """Tests for Dockerfile existence."""
-
-    def test_dockerfile_sim_exists(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.sim exists."""
-        dockerfile = dockerfile_dir / "Dockerfile.sim"
-        assert dockerfile.exists(), f"Dockerfile not found: {dockerfile}"
-
-    def test_dockerfile_synth_exists(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.synth exists."""
-        dockerfile = dockerfile_dir / "Dockerfile.synth"
-        assert dockerfile.exists(), f"Dockerfile not found: {dockerfile}"
-
-    def test_dockerfile_gpu_exists(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.gpu exists."""
-        dockerfile = dockerfile_dir / "Dockerfile.gpu"
-        assert dockerfile.exists(), f"Dockerfile not found: {dockerfile}"
-
-
-class TestDockerfileSyntax:
-    """Tests for Dockerfile syntax validation."""
-
-    def test_dockerfile_sim_has_from(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.sim has FROM instruction."""
-        dockerfile = dockerfile_dir / "Dockerfile.sim"
-        content = dockerfile.read_text()
-        assert "FROM " in content
-
-    def test_dockerfile_sim_has_runner_user(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.sim creates github-runner user."""
-        dockerfile = dockerfile_dir / "Dockerfile.sim"
-        content = dockerfile.read_text()
-        assert "github-runner" in content
-
-    def test_dockerfile_synth_has_openlane(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.synth installs OpenLane."""
-        dockerfile = dockerfile_dir / "Dockerfile.synth"
-        content = dockerfile.read_text()
-        assert "openlane" in content.lower()
-
-    def test_dockerfile_gpu_has_cuda_base(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.gpu uses CUDA base image."""
-        dockerfile = dockerfile_dir / "Dockerfile.gpu"
-        content = dockerfile.read_text()
-        assert "nvidia/cuda" in content or "cuda" in content.lower()
-
-    def test_dockerfile_sim_has_verilator(self, dockerfile_dir: Path) -> None:
-        """Test that Dockerfile.sim installs Verilator."""
-        dockerfile = dockerfile_dir / "Dockerfile.sim"
-        content = dockerfile.read_text()
-        assert "verilator" in content.lower()
-
-
 class TestVersionExtraction:
     """Tests for version extraction from configs."""
 
     def test_extract_chipyard_version(self, rtl_sim_config: dict) -> None:
         """Test extracting Chipyard version."""
         version = rtl_sim_config["tools"]["chipyard"]["version"]
-        # Version should be a valid semver or tag
         assert version is not None
         assert len(version) > 0
 
@@ -201,6 +146,5 @@ class TestVersionExtraction:
         """Test extracting CUDA version."""
         version = rtl_gpu_config["nvidia"]["cuda_version"]
         assert version is not None
-        # CUDA version should be like "12.4"
         parts = version.split(".")
         assert len(parts) >= 1

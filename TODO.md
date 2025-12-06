@@ -9,14 +9,14 @@
   - [Phase 1: Region Migration](#phase-1-region-migration-us-east-1--us-east-2)
   - [Phase 2: Workflow Ordering System](#phase-2-workflow-ordering-system)
   - [Phase 3: Runner Label System Refactor](#phase-3-runner-label-system-refactor)
-  - [Phase 4: RTL Runner Images](#phase-4-rtl-runner-images)
-  - [Phase 4.5: Simulation Acceleration](#phase-45-simulation-acceleration)
-  - [Phase 5: EC2 Runner Infrastructure for RTL](#phase-5-ec2-runner-infrastructure-for-rtl)
-  - [Phase 6: RTL Simulation Endpoint](#phase-6-rtl-simulation-endpoint)
-  - [Phase 7: Tri-Mode Core Development](#phase-7-tri-mode-core-development)
-  - [Phase 8: RTL Synthesis Pipeline](#phase-8-rtl-synthesis-pipeline)
-  - [Phase 9: Frontend Updates](#phase-9-frontend-updates)
-  - [Phase 10: Fabrication Preparation](#phase-10-fabrication-preparation)
+  - [Phase 4: EC2 Infrastructure Foundation](#phase-4-ec2-infrastructure-foundation-for-rtl)
+  - [Phase 5: RTL Runner AMIs](#phase-5-rtl-runner-amis)
+  - [Phase 6: EC2 Launch Templates and Scaling](#phase-6-ec2-launch-templates-and-scaling)
+  - [Phase 7: RTL Simulation Endpoint](#phase-7-rtl-simulation-endpoint)
+  - [Phase 8: Tri-Mode Core Development](#phase-8-tri-mode-core-development)
+  - [Phase 9: RTL Synthesis Pipeline](#phase-9-rtl-synthesis-pipeline)
+  - [Phase 10: Frontend Updates](#phase-10-frontend-updates)
+  - [Phase 11: Fabrication Preparation](#phase-11-fabrication-preparation)
 - [File Changes Summary](#file-changes-summary)
 - [References](#references)
 
@@ -300,249 +300,267 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
 #### 3.6 Documentation
 - [x] 3.6.1. Document label system (see `docs/runner-labels.md`)
 
-### Phase 4: RTL Runner Images
+### Phase 4: EC2 Infrastructure Foundation for RTL
 
-#### 4.1 Directory Structure
-- [x] 4.1.1. Create `src/api/endpoints/image_for_rtl_runners/` directory
-- [x] 4.1.2. Create `src/api/endpoints/image_for_rtl_runners/config/` directory
-- [x] 4.1.3. Create `src/api/endpoints/image_for_rtl_runners/dockerfiles/` directory
+> **Architecture Decision**: RTL runners use EC2 with custom AMIs (not Docker/ECS) because:
+> - GPU support required (Fargate has none)
+> - Memory needs exceed Fargate limits (128GB for synthesis)
+> - Cache-bound Verilator benefits from bare-metal performance
+> - Long-running jobs (hours) without container overhead
 
-#### 4.2 Configuration Files
-- [x] 4.2.1. Create `config/rtl-sim.yml`:
-  ```yaml
-  runner_user: "github-runner"
-  runner_version: "2.330.0"
-  instance_type: c8i.4xlarge
-  ami_base: ubuntu-24.04-amd64
-  disk_size_gb: 100
-  chipyard_version: "1.11.0"
-  verilator_version: "5.024"
-  ```
-- [x] 4.2.2. Create `config/rtl-synth.yml`:
-  ```yaml
-  runner_user: "github-runner"
-  runner_version: "2.330.0"
-  instance_type: r8i.4xlarge
-  ami_base: ubuntu-24.04-amd64
-  disk_size_gb: 200
-  openlane_version: "2.1.0"
-  sky130_pdk_version: "1.0.457"
-  ```
-- [x] 4.2.3. Create `config/rtl-gpu.yml`:
-  ```yaml
-  runner_user: "github-runner"
-  runner_version: "2.330.0"
-  instance_type: g6e.xlarge
-  ami_base: nvidia-cuda-ubuntu-24.04
-  disk_size_gb: 100
-  rtlflow_version: "main"
-  ```
+#### 4.1 IAM Roles
+- [ ] 4.1.1. Create IAM role for Packer (EC2 + AMI creation permissions)
+- [ ] 4.1.2. Create IAM role for RTL runners (S3, CloudWatch, SSM access)
+- [ ] 4.1.3. Create instance profile for RTL runners
 
-#### 4.3 Dockerfiles
-- [x] 4.3.1. Create `dockerfiles/Dockerfile.sim` for RTL simulation
-- [x] 4.3.2. Create `dockerfiles/Dockerfile.synth` for RTL synthesis
-- [x] 4.3.3. Create `dockerfiles/Dockerfile.gpu` for GPU acceleration
+#### 4.2 Security Groups
+- [ ] 4.2.1. Create security group for Packer build instances
+- [ ] 4.2.2. Create security group for RTL runners (egress only, no ingress)
 
-#### 4.4 Build Infrastructure
-- [ ] 4.4.1. Create ECR repositories for each RTL image
-- [ ] 4.4.2. Create GitHub workflow `image_for_rtl_runners.yml`
-- [ ] 4.4.3. Create Terraform for RTL image infrastructure
-- [ ] 4.4.4. Add health checks for RTL runners
+#### 4.3 VPC Configuration
+- [ ] 4.3.1. Verify VPC has subnets in availability zones with c8i, r8i, g6e capacity
+- [ ] 4.3.2. Ensure NAT gateway for private subnet egress (GitHub API access)
 
-#### 4.5 Unit Tests for RTL Images
-- [x] 4.5.1. Test config YAML parsing for rtl-sim
-- [x] 4.5.2. Test config YAML parsing for rtl-synth
-- [x] 4.5.3. Test config YAML parsing for rtl-gpu
-- [x] 4.5.4. Test Dockerfile syntax validation
-- [x] 4.5.5. Test version extraction from configs
+#### 4.4 Terraform
+- [ ] 4.4.1. Create `src/api/endpoints/rtl_runner/` directory
+- [ ] 4.4.2. Create Terraform for IAM roles and policies
+- [ ] 4.4.3. Create Terraform for security groups
+- [ ] 4.4.4. Create GitHub workflow `rtl_runner.yml` for infrastructure
 
-#### 4.6 Integration Tests for RTL Images
-- [ ] 4.6.1. Test Docker image builds successfully
-- [ ] 4.6.2. Test image push to ECR
-- [ ] 4.6.3. Test image pull from ECR
+#### 4.5 Unit Tests for Infrastructure
+- [ ] 4.5.1. Test IAM policy document construction
+- [ ] 4.5.2. Test security group rule validation
+- [ ] 4.5.3. Test instance type validation (c8i, r8i, g6e only)
 
-#### 4.7 Documentation
-- [ ] 4.7.1. Document RTL runner image build process
+#### 4.6 Integration Tests for Infrastructure
+- [ ] 4.6.1. Test IAM role assumption
+- [ ] 4.6.2. Test security group allows required egress
 
-### Phase 5: EC2 Runner Infrastructure for RTL
+### Phase 5: RTL Runner AMIs
 
-#### 5.1 Launch Templates
-- [ ] 5.1.1. Create launch template `rtl-sim-c8i`:
+#### 5.1 Directory Structure
+- [x] 5.1.1. Create `src/api/endpoints/ami_for_rtl_runners/` directory
+- [ ] 5.1.2. Create `src/api/endpoints/ami_for_rtl_runners/packer/` directory
+- [ ] 5.1.3. Create `src/api/endpoints/ami_for_rtl_runners/scripts/` directory
+
+#### 5.2 Configuration Files
+- [x] 5.2.1. Create `config/rtl-sim.yml` (instance config for c8i.4xlarge)
+- [x] 5.2.2. Create `config/rtl-synth.yml` (instance config for r8i.4xlarge)
+- [x] 5.2.3. Create `config/rtl-gpu.yml` (instance config for g6e.xlarge)
+
+#### 5.3 Packer Templates
+- [ ] 5.3.1. Create `packer/rtl-sim.pkr.hcl`:
+  - Base: Ubuntu 24.04 AMI
+  - Install: Verilator 5.024, Chipyard 1.11.0, RISC-V toolchain
+  - Install: GitHub Actions runner
+  - Configure: Environment variables, paths
+- [ ] 5.3.2. Create `packer/rtl-synth.pkr.hcl`:
+  - Base: Ubuntu 24.04 AMI
+  - Install: OpenLane 2.1.0, SKY130 PDK, Yosys, Magic, KLayout
+  - Install: GitHub Actions runner
+- [ ] 5.3.3. Create `packer/rtl-gpu.pkr.hcl`:
+  - Base: NVIDIA CUDA Ubuntu 24.04 AMI
+  - Install: CUDA 12.4, RTLflow, Verilator
+  - Install: GitHub Actions runner
+
+#### 5.4 Provisioning Scripts
+- [ ] 5.4.1. Create `scripts/install-runner.sh` (GitHub Actions runner setup)
+- [ ] 5.4.2. Create `scripts/install-verilator.sh`
+- [ ] 5.4.3. Create `scripts/install-chipyard.sh`
+- [ ] 5.4.4. Create `scripts/install-openlane.sh`
+- [ ] 5.4.5. Create `scripts/install-rtlflow.sh`
+
+#### 5.5 Build Workflow
+- [ ] 5.5.1. Create GitHub workflow `ami_for_rtl_runners.yml`
+- [ ] 5.5.2. Add AMI tagging and versioning
+- [ ] 5.5.3. Add AMI cleanup (delete old versions)
+
+#### 5.6 Unit Tests for RTL AMIs
+- [x] 5.6.1. Test config YAML parsing for rtl-sim
+- [x] 5.6.2. Test config YAML parsing for rtl-synth
+- [x] 5.6.3. Test config YAML parsing for rtl-gpu
+- [ ] 5.6.4. Test Packer template validation (packer validate)
+- [ ] 5.6.5. Test provisioning script syntax (shellcheck)
+
+#### 5.7 Integration Tests for RTL AMIs
+- [ ] 5.7.1. Test AMI builds successfully
+- [ ] 5.7.2. Test AMI boots and tools are available
+- [ ] 5.7.3. Test runner registration works
+
+#### 5.8 Documentation
+- [ ] 5.8.1. Document RTL AMI build process
+
+### Phase 6: EC2 Launch Templates and Scaling
+
+#### 6.1 Launch Templates
+- [ ] 6.1.1. Create launch template `rtl-sim-c8i`:
   - Instance type: c8i.4xlarge
-  - AMI: Custom RTL sim image
+  - AMI: RTL sim AMI from Phase 5
   - Storage: 100 GB gp3
   - User data: Runner registration script
-- [ ] 5.1.2. Create launch template `rtl-synth-r8i`:
+- [ ] 6.1.2. Create launch template `rtl-synth-r8i`:
   - Instance type: r8i.4xlarge
-  - AMI: Custom RTL synth image
+  - AMI: RTL synth AMI from Phase 5
   - Storage: 200 GB gp3
-- [ ] 5.1.3. Create launch template `rtl-gpu-g6e`:
+- [ ] 6.1.3. Create launch template `rtl-gpu-g6e`:
   - Instance type: g6e.xlarge
-  - AMI: Custom RTL GPU image
+  - AMI: RTL GPU AMI from Phase 5
   - Storage: 100 GB gp3
 
-#### 5.2 IAM and Security
-- [ ] 5.2.1. Create IAM roles for RTL runners
-- [ ] 5.2.2. Create security groups for RTL runners
-- [ ] 5.2.3. Update VPC subnets if needed
+#### 6.2 Scaling and Lifecycle
+- [ ] 6.2.1. Update ec2_runner Lambda to support RTL instance types
+- [ ] 6.2.2. Add CloudWatch metrics for RTL runner utilization
+- [ ] 6.2.3. Add cost allocation tags
 
-#### 5.3 Scaling and Lifecycle
-- [ ] 5.3.1. Create Auto Scaling groups (min 0, scale on demand)
-- [ ] 5.3.2. Create Lambda for RTL runner lifecycle management
-- [ ] 5.3.3. Add CloudWatch metrics for RTL runner utilization
-- [ ] 5.3.4. Add cost allocation tags
+#### 6.3 Unit Tests for Launch Templates
+- [ ] 6.3.1. Test launch template generation
+- [ ] 6.3.2. Test user data script construction
+- [ ] 6.3.3. Test cost tag generation
 
-#### 5.4 Unit Tests for EC2 Infrastructure
-- [ ] 5.4.1. Test launch template generation
-- [ ] 5.4.2. Test IAM policy document construction
-- [ ] 5.4.3. Test security group rule validation
-- [ ] 5.4.4. Test instance type validation (c8i, r8i, g6e only)
-- [ ] 5.4.5. Test cost tag generation
+#### 6.4 Integration Tests for EC2 Runners
+- [ ] 6.4.1. Test EC2 instance launch with RTL AMI
+- [ ] 6.4.2. Test runner registration with GitHub
+- [ ] 6.4.3. Test runner termination on job complete
 
-#### 5.5 Integration Tests for EC2 Infrastructure
-- [ ] 5.5.1. Test EC2 instance launch
-- [ ] 5.5.2. Test runner registration with GitHub
-- [ ] 5.5.3. Test runner termination on job complete
+#### 6.5 E2E Tests for RTL Runners
+- [ ] 6.5.1. Test full RTL simulation job on c8i
+- [ ] 6.5.2. Test full RTL synthesis job on r8i
 
-#### 5.6 E2E Tests for EC2 Infrastructure
-- [ ] 5.6.1. Test full RTL simulation job on c8i
-- [ ] 5.6.2. Test full RTL synthesis job on r8i
+### Phase 7: RTL Simulation Endpoint
 
-### Phase 6: RTL Simulation Endpoint
-
-#### 6.1 API Design
-- [ ] 6.1.1. Create `src/api/endpoints/rtl_simulation/` directory
-- [ ] 6.1.2. Create API Lambda handler with endpoints:
+#### 7.1 API Design
+- [ ] 7.1.1. Create `src/api/endpoints/rtl_simulation/` directory
+- [ ] 7.1.2. Create API Lambda handler with endpoints:
   - `POST /v1/rtl-simulation` - Submit simulation job
   - `GET /v1/rtl-simulation/{job_id}` - Get job status
   - `GET /v1/rtl-simulation/{job_id}/results` - Get results
-- [ ] 6.1.3. Create DynamoDB table for job tracking
-- [ ] 6.1.4. Create S3 bucket for simulation artifacts
+- [ ] 7.1.3. Create DynamoDB table for job tracking
+- [ ] 7.1.4. Create S3 bucket for simulation artifacts
 
-#### 6.2 Simulation Runner
-- [ ] 6.2.1. Create simulation runner script:
+#### 7.2 Simulation Runner
+- [ ] 7.2.1. Create simulation runner script:
   - Clone/update Chipyard
   - Build BOOM with tri-mode modifications
   - Run Verilator simulation
   - Upload results to S3
   - Update job status in DynamoDB
-- [ ] 6.2.2. Add job timeout and cleanup
-- [ ] 6.2.3. Add cost tracking per job
+- [ ] 7.2.2. Add job timeout and cleanup
+- [ ] 7.2.3. Add cost tracking per job
 
-#### 6.3 Unit Tests for RTL Simulation
-- [ ] 6.3.1. Test job submission validation
-- [ ] 6.3.2. Test job ID generation
-- [ ] 6.3.3. Test job status state machine
-- [ ] 6.3.4. Test persona validation (riscv, desktop64, mobile64)
-- [ ] 6.3.5. Test workload parameter validation
-- [ ] 6.3.6. Test S3 artifact path generation
-- [ ] 6.3.7. Test DynamoDB item construction
-- [ ] 6.3.8. Test cost calculation logic
-- [ ] 6.3.9. Test timeout detection
-- [ ] 6.3.10. Test error response formatting
+#### 7.3 Unit Tests for RTL Simulation
+- [ ] 7.3.1. Test job submission validation
+- [ ] 7.3.2. Test job ID generation
+- [ ] 7.3.3. Test job status state machine
+- [ ] 7.3.4. Test persona validation (riscv, desktop64, mobile64)
+- [ ] 7.3.5. Test workload parameter validation
+- [ ] 7.3.6. Test S3 artifact path generation
+- [ ] 7.3.7. Test DynamoDB item construction
+- [ ] 7.3.8. Test cost calculation logic
+- [ ] 7.3.9. Test timeout detection
+- [ ] 7.3.10. Test error response formatting
 
-#### 6.4 Integration Tests for RTL Simulation
-- [ ] 6.4.1. Test job submission to API
-- [ ] 6.4.2. Test job status retrieval
-- [ ] 6.4.3. Test S3 artifact upload/download
-- [ ] 6.4.4. Test DynamoDB read/write
+#### 7.4 Integration Tests for RTL Simulation
+- [ ] 7.4.1. Test job submission to API
+- [ ] 7.4.2. Test job status retrieval
+- [ ] 7.4.3. Test S3 artifact upload/download
+- [ ] 7.4.4. Test DynamoDB read/write
 
-#### 6.5 E2E Tests for RTL Simulation
-- [ ] 6.5.1. Test full simulation workflow (submit → poll → results)
+#### 7.5 E2E Tests for RTL Simulation
+- [ ] 7.5.1. Test full simulation workflow (submit → poll → results)
 
-#### 6.6 Frontend Updates
-- [ ] 6.6.1. Update simulation UI to trigger real RTL simulations
-- [ ] 6.6.2. Add job queue visualization
-- [ ] 6.6.3. Add simulation progress tracking
+#### 7.6 Frontend Updates
+- [ ] 7.6.1. Update simulation UI to trigger real RTL simulations
+- [ ] 7.6.2. Add job queue visualization
+- [ ] 7.6.3. Add simulation progress tracking
 
-### Phase 7: Tri-Mode Core Development
+### Phase 8: Tri-Mode Core Development
 
-#### 7.1 Repository Setup
-- [ ] 7.1.1. Fork Chipyard repository to 10U-Labs-LLC GitHub
-- [ ] 7.1.2. Create branch for tri-mode modifications
-- [ ] 7.1.3. Study BOOM frontend decode stage implementation
+#### 8.1 Repository Setup
+- [ ] 8.1.1. Fork Chipyard repository to 10U-Labs-LLC GitHub
+- [ ] 8.1.2. Create branch for tri-mode modifications
+- [ ] 8.1.3. Study BOOM frontend decode stage implementation
 
-#### 7.2 Tri-Mode Decode Architecture
-- [ ] 7.2.1. Design mode detection from instruction stream
-- [ ] 7.2.2. Design Desktop64 decode lane
-- [ ] 7.2.3. Design Mobile64 decode lane
-- [ ] 7.2.4. Design unified micro-op emission to backend
+#### 8.2 Tri-Mode Decode Architecture
+- [ ] 8.2.1. Design mode detection from instruction stream
+- [ ] 8.2.2. Design Desktop64 decode lane
+- [ ] 8.2.3. Design Mobile64 decode lane
+- [ ] 8.2.4. Design unified micro-op emission to backend
 
-#### 7.3 Implementation
-- [ ] 7.3.1. Implement mode switching logic
-- [ ] 7.3.2. Implement Desktop64 decoder stub
-- [ ] 7.3.3. Implement Mobile64 decoder stub
-- [ ] 7.3.4. Implement micro-op translation tables
-- [ ] 7.3.5. Add flags speculation hardware
-- [ ] 7.3.6. Add hardware TSO mode for Desktop64
+#### 8.3 Implementation
+- [ ] 8.3.1. Implement mode switching logic
+- [ ] 8.3.2. Implement Desktop64 decoder stub
+- [ ] 8.3.3. Implement Mobile64 decoder stub
+- [ ] 8.3.4. Implement micro-op translation tables
+- [ ] 8.3.5. Add flags speculation hardware
+- [ ] 8.3.6. Add hardware TSO mode for Desktop64
 
-#### 7.4 Unit Tests for Tri-Mode Core
-- [ ] 7.4.1. Test mode detection logic
-- [ ] 7.4.2. Test Desktop64 instruction decode
-- [ ] 7.4.3. Test Mobile64 instruction decode
-- [ ] 7.4.4. Test micro-op emission format
-- [ ] 7.4.5. Test flags speculation hit/miss
-- [ ] 7.4.6. Test TSO mode memory ordering
+#### 8.4 Unit Tests for Tri-Mode Core
+- [ ] 8.4.1. Test mode detection logic
+- [ ] 8.4.2. Test Desktop64 instruction decode
+- [ ] 8.4.3. Test Mobile64 instruction decode
+- [ ] 8.4.4. Test micro-op emission format
+- [ ] 8.4.5. Test flags speculation hit/miss
+- [ ] 8.4.6. Test TSO mode memory ordering
 
-#### 7.5 Integration Tests for Tri-Mode Core
-- [ ] 7.5.1. Run RISC-V compliance tests (native mode)
-- [ ] 7.5.2. Measure IPC overhead vs. baseline BOOM
+#### 8.5 Integration Tests for Tri-Mode Core
+- [ ] 8.5.1. Run RISC-V compliance tests (native mode)
+- [ ] 8.5.2. Measure IPC overhead vs. baseline BOOM
 
-#### 7.6 Documentation
-- [ ] 7.6.1. Document tri-mode architecture
+#### 8.6 Documentation
+- [ ] 8.6.1. Document tri-mode architecture
 
-### Phase 8: RTL Synthesis Pipeline
+### Phase 9: RTL Synthesis Pipeline
 
-#### 8.1 API Design
-- [ ] 8.1.1. Create `src/api/endpoints/rtl_synthesis/` directory
-- [ ] 8.1.2. Create synthesis job API endpoint
-- [ ] 8.1.3. Create synthesis job tracking in DynamoDB
+#### 9.1 API Design
+- [ ] 9.1.1. Create `src/api/endpoints/rtl_synthesis/` directory
+- [ ] 9.1.2. Create synthesis job API endpoint
+- [ ] 9.1.3. Create synthesis job tracking in DynamoDB
 
-#### 8.2 Synthesis Runner
-- [ ] 8.2.1. Create synthesis runner script:
+#### 9.2 Synthesis Runner
+- [ ] 9.2.1. Create synthesis runner script:
   - Take Verilog from simulation output
   - Run OpenLane flow
   - Generate timing/area reports
   - Generate GDSII
   - Upload artifacts to S3
-- [ ] 8.2.2. Add DRC/LVS verification step
+- [ ] 9.2.2. Add DRC/LVS verification step
 
-#### 8.3 Unit Tests for RTL Synthesis
-- [ ] 8.3.1. Test synthesis job validation
-- [ ] 8.3.2. Test Verilog input validation
-- [ ] 8.3.3. Test OpenLane config generation
-- [ ] 8.3.4. Test timing report parsing
-- [ ] 8.3.5. Test area report parsing
-- [ ] 8.3.6. Test DRC result parsing
+#### 9.3 Unit Tests for RTL Synthesis
+- [ ] 9.3.1. Test synthesis job validation
+- [ ] 9.3.2. Test Verilog input validation
+- [ ] 9.3.3. Test OpenLane config generation
+- [ ] 9.3.4. Test timing report parsing
+- [ ] 9.3.5. Test area report parsing
+- [ ] 9.3.6. Test DRC result parsing
 
-#### 8.4 Integration Tests for RTL Synthesis
-- [ ] 8.4.1. Test synthesis job submission
-- [ ] 8.4.2. Test GDSII artifact download
+#### 9.4 Integration Tests for RTL Synthesis
+- [ ] 9.4.1. Test synthesis job submission
+- [ ] 9.4.2. Test GDSII artifact download
 
-#### 8.5 Frontend and Documentation
-- [ ] 8.5.1. Create synthesis results dashboard
-- [ ] 8.5.2. Document synthesis pipeline
+#### 9.5 Frontend and Documentation
+- [ ] 9.5.1. Create synthesis results dashboard
+- [ ] 9.5.2. Document synthesis pipeline
 
-### Phase 9: Frontend Updates
+### Phase 10: Frontend Updates
 
-- [ ] 9.1. Update simulation UI to trigger real RTL simulations
-- [ ] 9.2. Add job queue visualization
-- [ ] 9.3. Add simulation progress tracking
-- [ ] 9.4. Add waveform viewer (load VCD from S3)
-- [ ] 9.5. Add synthesis results visualization
-- [ ] 9.6. Add cost tracking display
-- [ ] 9.7. Add architecture documentation pages
-- [ ] 9.8. Add fabrication path documentation
+- [ ] 10.1. Update simulation UI to trigger real RTL simulations
+- [ ] 10.2. Add job queue visualization
+- [ ] 10.3. Add simulation progress tracking
+- [ ] 10.4. Add waveform viewer (load VCD from S3)
+- [ ] 10.5. Add synthesis results visualization
+- [ ] 10.6. Add cost tracking display
+- [ ] 10.7. Add architecture documentation pages
+- [ ] 10.8. Add fabrication path documentation
 
-### Phase 10: Fabrication Preparation
+### Phase 11: Fabrication Preparation
 
-- [ ] 10.1. Research ChipFoundry.io submission requirements
-- [ ] 10.2. Create GDSII validation pipeline
-- [ ] 10.3. Create design rule check automation
-- [ ] 10.4. Create submission package generator
-- [ ] 10.5. Document fabrication process
-- [ ] 10.6. Estimate fabrication cost and timeline
-- [ ] 10.7. Create fabrication checklist
+- [ ] 11.1. Research ChipFoundry.io submission requirements
+- [ ] 11.2. Create GDSII validation pipeline
+- [ ] 11.3. Create design rule check automation
+- [ ] 11.4. Create submission package generator
+- [ ] 11.5. Document fabrication process
+- [ ] 11.6. Estimate fabrication cost and timeline
+- [ ] 11.7. Create fabrication checklist
 
 ---
 
