@@ -1,6 +1,13 @@
 data "archive_file" "runners_handler" {
-  type        = "zip"
-  source_file = "${path.module}/lambdas/webhook_router.py"
+  type = "zip"
+  source {
+    content  = file("${path.module}/lambdas/webhook_router.py")
+    filename = "webhook_router.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/runner_labels.py")
+    filename = "runner_labels.py"
+  }
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
 }
 
