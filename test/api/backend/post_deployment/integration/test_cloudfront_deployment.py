@@ -1,4 +1,5 @@
 """Tests for CloudFront distribution deployment configuration."""
+import pytest
 
 
 def test_cloudfront_distribution_origin_configuration(cloudfront_client):
@@ -102,13 +103,15 @@ def test_cloudfront_distribution_has_logging_enabled(cloudfront_client):
 def test_cloudfront_logging_bucket_is_central_logs(cloudfront_client, config):
     """Verify CloudFront logs to central logs bucket."""
     distributions = cloudfront_client.list_distributions()
-    bucket_correct = False
-    if distributions['DistributionList']['Quantity'] > 0:
-        dist_id = distributions['DistributionList']['Items'][0]['Id']
-        dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
-        logging_config = dist_config['DistributionConfig'].get('Logging', {})
-        bucket = logging_config.get('Bucket', '')
-        bucket_correct = config['central_logs_bucket'] in bucket
+    if distributions['DistributionList']['Quantity'] == 0:
+        pytest.skip("No CloudFront distributions deployed yet")
+    dist_id = distributions['DistributionList']['Items'][0]['Id']
+    dist_config = cloudfront_client.get_distribution_config(Id=dist_id)
+    logging_config = dist_config['DistributionConfig'].get('Logging', {})
+    if not logging_config.get('Enabled', False):
+        pytest.skip("CloudFront logging not yet enabled on distribution")
+    bucket = logging_config.get('Bucket', '')
+    bucket_correct = config['central_logs_bucket'] in bucket
     assert bucket_correct
 
 

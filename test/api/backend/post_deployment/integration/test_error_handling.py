@@ -1,4 +1,5 @@
 """Tests for API error handling and response codes."""
+import pytest
 import requests
 
 from ..conftest import skip_if_endpoint_not_deployed
@@ -41,6 +42,9 @@ def test_internal_server_error_returns_500(api_url, api_key):
     response = requests.post(
         f"{api_url}/v1/ecs-runner", json=payload, headers=headers, timeout=10
     )
+    # 404 means endpoint not deployed (skip check is unauthenticated)
+    if response.status_code == 404:
+        pytest.skip("Endpoint /v1/ecs-runner not deployed (managed by ecs_runner.yml)")
     assert response.status_code in [200, 400, 403, 500]
 
 
