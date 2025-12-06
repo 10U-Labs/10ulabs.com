@@ -141,10 +141,15 @@ def test_api_gateway_propagation_wait_uses_exponential_backoff():
     assert "1 << N" in content
 
 
-def test_api_gateway_propagation_wait_polls_echo_endpoint():
-    """Verify propagation wait polls echo endpoint."""
+def test_api_gateway_propagation_wait_polls_health_endpoint():
+    """Verify propagation wait polls health endpoint.
+
+    The health endpoint falls back to CatchAllHandler when the health
+    Lambda doesn't exist, allowing the API workflow to complete without
+    requiring other endpoint workflows to have run first.
+    """
     content = _read_apigateway_tf()
-    assert "/v1/echo" in content
+    assert "/health" in content
 
 
 def test_lambda_permission_simulation_soc_handler_exists():

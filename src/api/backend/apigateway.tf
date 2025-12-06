@@ -270,10 +270,10 @@ resource "null_resource" "api_gateway_propagation_wait" {
       MAX_N=8
       SUCCESS=false
       while [ $N -le $MAX_N ]; do
-        HTTP_STATUS=$(curl -s -o /dev/null -w "%%{http_code}" -X POST \
-          -H "Content-Type: application/json" \
-          -d '{"test":"health"}' \
-          "https://${local.api_fqdn}/v1/echo" || echo "000")
+        # Poll /health endpoint with GET - it falls back to CatchAllHandler
+        # when health Lambda doesn't exist, which returns 200 for any request
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%%{http_code}" -X GET \
+          "https://${local.api_fqdn}/health" || echo "000")
         if [ "$HTTP_STATUS" = "200" ]; then
           echo "API Gateway is ready (status: $HTTP_STATUS)"
           SUCCESS=true
