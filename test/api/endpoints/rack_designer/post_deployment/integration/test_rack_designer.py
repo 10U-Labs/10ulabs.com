@@ -71,6 +71,7 @@ def test_rack_designer_post_missing_device_id_returns_400(api_url):
 
 
 def test_rack_designer_post_missing_configuration_returns_400(api_url, test_device_id):
+    """Test that POST without configuration field returns 400."""
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
         json={"device_id": test_device_id},
@@ -80,6 +81,7 @@ def test_rack_designer_post_missing_configuration_returns_400(api_url, test_devi
 
 
 def test_rack_designer_post_invalid_configuration_returns_400(api_url, test_device_id):
+    """Test that POST with invalid configuration returns 400."""
     config = {"rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -90,6 +92,7 @@ def test_rack_designer_post_invalid_configuration_returns_400(api_url, test_devi
 
 
 def test_rack_designer_get_not_found_returns_404(api_url):
+    """Test that GET with non-existent hash returns 404."""
     response = requests.get(
         f"{api_url}/v1/rack-designer/configurations/NOTFOUND0",
         timeout=10
@@ -98,6 +101,7 @@ def test_rack_designer_get_not_found_returns_404(api_url):
 
 
 def test_rack_designer_get_invalid_format_returns_400(api_url):
+    """Test that GET with invalid hash format returns 400."""
     response = requests.get(
         f"{api_url}/v1/rack-designer/configurations/invalid",
         timeout=10
@@ -106,6 +110,7 @@ def test_rack_designer_get_invalid_format_returns_400(api_url):
 
 
 def test_rack_designer_roundtrip_saves_and_loads(api_url, test_device_id):
+    """Test that a configuration can be saved and retrieved correctly."""
     config = {
         "rackHeight": 42,
         "rackCount": 5,

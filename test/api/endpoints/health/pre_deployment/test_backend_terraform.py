@@ -20,7 +20,7 @@ def test_backend_uses_correct_bucket():
     """Verify correct S3 bucket is used."""
     with open(BACKEND_FILE, encoding="utf-8") as f:
         content = f.read()
-    assert 'bucket       = "10ulabs-terraform-state"' in content
+    assert 'bucket       = "10ulabs-terraform-state-us-east-2"' in content
 
 
 def test_backend_uses_correct_key():

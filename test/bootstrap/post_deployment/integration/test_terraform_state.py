@@ -9,7 +9,7 @@ def test_terraform_state_exists(config):
 
     try:
         s3_client.head_object(
-            Bucket='10ulabs-terraform-state',
+            Bucket='10ulabs-terraform-state-us-east-2',
             Key='bootstrap/terraform.tfstate'
         )
         state_exists = True

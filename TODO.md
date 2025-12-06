@@ -146,6 +146,25 @@ Level 5: All other endpoints (health, echo, contact, rack_designer, simulation_s
 
 When a commit affects multiple levels, workflows must deploy in order. When a commit affects only one workflow, it deploys independently.
 
+### GitOps and Bootstrap Resources
+
+**Principle**: All infrastructure must be reproducible from zero without human intervention.
+
+When bootstrapping (chicken-and-egg problems):
+1. **Initial creation via CLI is acceptable** for truly foundational resources (S3 state bucket, bootstrap IAM)
+2. **Terraform must track these resources afterward** via import or data sources
+3. **Subsequent deployments must be fully automated** through CI/CD workflows
+
+Resources that require bootstrapping:
+- S3 bucket for Terraform state (created via CLI, then managed by `src/bootstrap/state.tf`)
+- S3 bucket for central logs (created via CLI, then managed by `src/bootstrap/central_logs.tf`)
+- OIDC provider for GitHub Actions (managed by `src/bootstrap/oidc.tf`)
+
+**Integration Test Race Conditions**: Tests must handle resource availability:
+- Use retry logic with exponential backoff for eventual consistency
+- Check resource existence before testing dependent functionality
+- Tests must pass when run repeatedly from a clean state
+
 ### Simulation Acceleration Strategy
 
 | Method | Speedup | Status |
@@ -165,14 +184,14 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
 
 #### 1.1 Infrastructure Changes
 - [x] 1.1.1. Update `lib/terraform/outputs.tf` to change `aws_region` from `us-east-1` to `us-east-2`
-- [ ] 1.1.2. Create new S3 bucket for Terraform state in us-east-2
-- [ ] 1.1.3. Create new S3 bucket for central logs in us-east-2
-- [ ] 1.1.4. Migrate Route53 hosted zone (global, no region change needed)
-- [ ] 1.1.5. Update bootstrap Terraform to target us-east-2
-- [ ] 1.1.6. Run bootstrap in us-east-2 to create IAM roles, OIDC provider
-- [ ] 1.1.7. Update ECR repository to us-east-2 (or use ECR replication)
-- [ ] 1.1.8. Update all workflow files to reference us-east-2
-- [ ] 1.1.9. Update all Terraform backend configs to use new state bucket
+- [x] 1.1.2. Create new S3 bucket for Terraform state in us-east-2
+- [x] 1.1.3. Create new S3 bucket for central logs in us-east-2
+- [x] 1.1.4. Migrate Route53 hosted zone (global, no region change needed)
+- [x] 1.1.5. Update bootstrap Terraform to target us-east-2
+- [x] 1.1.6. Run bootstrap in us-east-2 to create IAM roles, OIDC provider
+- [x] 1.1.7. Update ECR repository to us-east-2 (or use ECR replication)
+- [x] 1.1.8. Update all workflow files to reference us-east-2
+- [x] 1.1.9. Update all Terraform backend configs to use new state bucket
 - [ ] 1.1.10. Migrate existing infrastructure (destroy us-east-1, apply us-east-2)
 - [ ] 1.1.11. Update DNS records if any reference regional endpoints
 - [ ] 1.1.12. Verify all endpoints functional in us-east-2

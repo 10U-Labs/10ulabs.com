@@ -23,7 +23,7 @@ output "github_org" {
 }
 
 output "name_for_central_logs_bucket" {
-  value = "10ulabs-central-logs"
+  value = "10ulabs-central-logs-us-east-2"
 }
 
 output "name_for_github_repo" {
@@ -31,7 +31,7 @@ output "name_for_github_repo" {
 }
 
 output "name_for_terraform_state_bucket" {
-  value = "10ulabs-terraform-state"
+  value = "10ulabs-terraform-state-us-east-2"
 }
 
 output "resource_prefix" {

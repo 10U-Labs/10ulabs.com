@@ -6,7 +6,7 @@ workflows:
     level: 2
     paths:
       - .github/workflows/api.yml
-      - src/api/gateway/**
+      - src/api/backend/**
   bootstrap:
     depends_on: []
     level: 0

@@ -1,16 +1,31 @@
 locals {
+  # CatchAllHandler ARN used as fallback when endpoint lambdas don't exist yet
+  catchall_integration_arn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
+
+  # Helper function to create integration ARN, falling back to catchall if lambda doesn't exist
+  contact_arn               = data.terraform_remote_state.contact.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.contact.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  ecs_runner_arn            = data.terraform_remote_state.ecs_runner.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ecs_runner.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  ec2_runner_arn            = data.terraform_remote_state.ec2_runner.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ec2_runner.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  echo_arn                  = data.terraform_remote_state.echo.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  health_arn                = data.terraform_remote_state.health.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  image_for_ecs_runners_arn = data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  image_for_ec2_runners_arn = data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  rack_designer_arn         = data.terraform_remote_state.rack_designer.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  runners_arn               = data.terraform_remote_state.runners.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+  simulation_soc_arn        = data.terraform_remote_state.simulation_soc.outputs.lambda_function_arn != "" ? "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.simulation_soc.outputs.lambda_function_arn}/invocations" : local.catchall_integration_arn
+
   openapi_spec = templatefile("${path.module}/../../www/api/openapi.yml", {
-    CatchAllHandlerArn           = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.catchall_handler.arn}/invocations"
-    ContactHandlerArn            = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.contact.outputs.lambda_function_arn}/invocations"
-    EcsRunnerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ecs_runner.outputs.lambda_function_arn}/invocations"
-    EC2RunnerHandlerArn          = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.ec2_runner.outputs.lambda_function_arn}/invocations"
-    EchoHandlerArn               = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.echo.outputs.lambda_function_arn}/invocations"
-    HealthHandlerArn             = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.health.outputs.lambda_function_arn}/invocations"
-    ImageForEcsRunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_arn}/invocations"
-    ImageForEC2RunnersHandlerArn = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_arn}/invocations"
-    RackDesignerHandlerArn       = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.rack_designer.outputs.lambda_function_arn}/invocations"
-    RunnersHandlerArn            = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.runners.outputs.lambda_function_arn}/invocations"
-    SimulationSocHandlerArn      = "arn:aws:apigateway:${local.aws_region}:lambda:path/2015-03-31/functions/${data.terraform_remote_state.simulation_soc.outputs.lambda_function_arn}/invocations"
+    CatchAllHandlerArn           = local.catchall_integration_arn
+    ContactHandlerArn            = local.contact_arn
+    EcsRunnerHandlerArn          = local.ecs_runner_arn
+    EC2RunnerHandlerArn          = local.ec2_runner_arn
+    EchoHandlerArn               = local.echo_arn
+    HealthHandlerArn             = local.health_arn
+    ImageForEcsRunnersHandlerArn = local.image_for_ecs_runners_arn
+    ImageForEC2RunnersHandlerArn = local.image_for_ec2_runners_arn
+    RackDesignerHandlerArn       = local.rack_designer_arn
+    RunnersHandlerArn            = local.runners_arn
+    SimulationSocHandlerArn      = local.simulation_soc_arn
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }
@@ -116,6 +131,7 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
 }
 
 resource "aws_lambda_permission" "runners_handler" {
+  count         = data.terraform_remote_state.runners.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.runners.outputs.lambda_function_name
@@ -132,6 +148,7 @@ resource "aws_lambda_permission" "catchall_handler" {
 }
 
 resource "aws_lambda_permission" "health_handler" {
+  count         = data.terraform_remote_state.health.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.health.outputs.lambda_function_name
@@ -140,6 +157,7 @@ resource "aws_lambda_permission" "health_handler" {
 }
 
 resource "aws_lambda_permission" "echo_handler" {
+  count         = data.terraform_remote_state.echo.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.echo.outputs.lambda_function_name
@@ -148,6 +166,7 @@ resource "aws_lambda_permission" "echo_handler" {
 }
 
 resource "aws_lambda_permission" "contact_handler" {
+  count         = data.terraform_remote_state.contact.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.contact.outputs.lambda_function_name
@@ -156,6 +175,7 @@ resource "aws_lambda_permission" "contact_handler" {
 }
 
 resource "aws_lambda_permission" "image_for_ecs_runners_handler" {
+  count         = data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.image_for_ecs_runners.outputs.lambda_function_name
@@ -164,6 +184,7 @@ resource "aws_lambda_permission" "image_for_ecs_runners_handler" {
 }
 
 resource "aws_lambda_permission" "image_for_ec2_runners_handler" {
+  count         = data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.image_for_ec2_runners.outputs.lambda_function_name
@@ -172,6 +193,7 @@ resource "aws_lambda_permission" "image_for_ec2_runners_handler" {
 }
 
 resource "aws_lambda_permission" "ecs_runner_handler" {
+  count         = data.terraform_remote_state.ecs_runner.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.ecs_runner.outputs.lambda_function_name
@@ -180,6 +202,7 @@ resource "aws_lambda_permission" "ecs_runner_handler" {
 }
 
 resource "aws_lambda_permission" "ec2_runner_handler" {
+  count         = data.terraform_remote_state.ec2_runner.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.ec2_runner.outputs.lambda_function_name
@@ -188,6 +211,7 @@ resource "aws_lambda_permission" "ec2_runner_handler" {
 }
 
 resource "aws_lambda_permission" "simulation_soc_handler" {
+  count         = data.terraform_remote_state.simulation_soc.outputs.lambda_function_name != "" ? 1 : 0
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = data.terraform_remote_state.simulation_soc.outputs.lambda_function_name
@@ -233,8 +257,7 @@ resource "aws_api_gateway_usage_plan_key" "main" {
 
 resource "null_resource" "api_gateway_propagation_wait" {
   depends_on = [
-    aws_api_gateway_stage.prod,
-    aws_lambda_permission.echo_handler
+    aws_api_gateway_stage.prod
   ]
 
   triggers = {

@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket       = "10ulabs-terraform-state"
+    bucket       = "10ulabs-terraform-state-us-east-2"
     key          = "contact/terraform.tfstate"
-    region       = "us-east-1"
+    region       = "us-east-2"
     encrypt      = true
     use_lockfile = true
   }

@@ -10,12 +10,12 @@ LOCALS_TF_PATH = BOOTSTRAP_DIR / "locals.tf"
 SHARED_MODULE_VALUES = {
     'admin_iam_user': 'jdrowne',
     'aws_account_id': '781581267945',
-    'aws_region': 'us-east-1',
+    'aws_region': 'us-east-2',
     'domain_name': '10ulabs.com',
     'github_org': '10U-Labs-LLC',
-    'name_for_central_logs_bucket': '10ulabs-central-logs',
+    'name_for_central_logs_bucket': '10ulabs-central-logs-us-east-2',
     'name_for_github_repo': '10ulabs.com',
-    'name_for_terraform_state_bucket': '10ulabs-terraform-state',
+    'name_for_terraform_state_bucket': '10ulabs-terraform-state-us-east-2',
     'resource_prefix': 'TenULabs',
 }
 

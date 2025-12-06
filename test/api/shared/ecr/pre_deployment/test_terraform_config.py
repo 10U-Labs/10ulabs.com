@@ -57,7 +57,7 @@ def test_backend_contains_s3_backend_block(backend_tf_content):
 
 def test_backend_bucket_is_correct(backend_tf_content):
     """Test that backend bucket is correctly configured."""
-    pattern = r'bucket\s*=\s*"10ulabs-terraform-state"'
+    pattern = r'bucket\s*=\s*"10ulabs-terraform-state-us-east-2"'
     assert re.search(pattern, backend_tf_content) is not None
 
 
@@ -69,7 +69,7 @@ def test_backend_key_is_correct(backend_tf_content):
 
 def test_backend_region_is_correct(backend_tf_content):
     """Test that backend region is correctly configured."""
-    pattern = r'region\s*=\s*"us-east-1"'
+    pattern = r'region\s*=\s*"us-east-2"'
     assert re.search(pattern, backend_tf_content) is not None
 
 

@@ -336,8 +336,8 @@ def handle_ecs_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
     path_params = event.get('pathParameters', {})
     image_digest = path_params.get('digest')
     if not image_digest:
-        result = {'success': False, 'error': 'Missing required path parameter: digest'}
-        response = error_response(400, result['error'])
+        error_msg = 'Missing required path parameter: digest'
+        response = error_response(400, error_msg)
     else:
         result = delete_ecr_image(image_digest)
         response = success_response(result)

@@ -31,7 +31,10 @@ def test_runner_fails_with_invalid_registration_token(ecr_image_uri, github_repo
     assert result.returncode == 1
 
 
-def test_runner_successfully_registers_with_github(ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat):
+def test_runner_successfully_registers_with_github(
+    ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat
+):
+    """Test that a runner successfully registers with GitHub."""
     login_to_ecr(aws_region)
 
     runner_name = f"e2e-test-runner-{int(time.time())}"
