@@ -85,9 +85,13 @@ def api_distribution_id_fixture(cloudfront_client, config):
 
 
 @pytest.fixture(name="acm_client", scope="module")
-def acm_client_fixture(aws_region):
-    """Create and return a boto3 ACM client for the specified region."""
-    return boto3.client("acm", region_name=aws_region)
+def acm_client_fixture():
+    """Create and return a boto3 ACM client for us-east-1.
+
+    CloudFront requires ACM certificates to be in us-east-1, regardless of
+    where other resources are deployed.
+    """
+    return boto3.client("acm", region_name="us-east-1")
 
 
 @pytest.fixture(name="iam_client", scope="module")
