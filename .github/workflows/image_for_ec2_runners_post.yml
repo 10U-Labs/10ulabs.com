@@ -376,7 +376,7 @@ jobs:
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
-          yamllint \
+          yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/image_for_ec2_runners_post.yml \
             src/api/endpoints/image_for_ec2_runners/post/config.yml

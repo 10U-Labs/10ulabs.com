@@ -459,45 +459,50 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter"
-        ]
-        Resource = [
-          data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
-          data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
-        ]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:Query"
-        ]
-        Resource = [aws_dynamodb_table.workflow_runners.arn]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:DescribeInstances"
-        ]
-        Resource = ["*"]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ecs:DescribeTasks"
-        ]
-        Resource = ["*"]
-        Condition = {
-          ArnEquals = {
-            "ecs:cluster" = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+    Statement = concat(
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "ssm:GetParameter"
+          ]
+          Resource = [
+            data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
+            data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
+          ]
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "dynamodb:GetItem",
+            "dynamodb:Query"
+          ]
+          Resource = [aws_dynamodb_table.workflow_runners.arn]
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "ec2:DescribeInstances"
+          ]
+          Resource = ["*"]
+        }
+      ],
+      # ECS statement only when cluster exists (empty ARN causes malformed policy)
+      data.terraform_remote_state.ecs_runner.outputs.cluster_arn != "" ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "ecs:DescribeTasks"
+          ]
+          Resource = ["*"]
+          Condition = {
+            ArnEquals = {
+              "ecs:cluster" = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+            }
           }
         }
-      }
-    ]
+      ] : []
+    )
   })
 }
 
@@ -531,44 +536,49 @@ resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter"
-        ]
-        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "dynamodb:Scan",
-          "dynamodb:DeleteItem"
-        ]
-        Resource = [aws_dynamodb_table.workflow_runners.arn]
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ecs:StopTask",
-          "ecs:ListTasks",
-          "ecs:DescribeTasks"
-        ]
-        Resource = ["*"]
-        Condition = {
-          ArnEquals = {
-            "ecs:cluster" = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+    Statement = concat(
+      [
+        {
+          Effect = "Allow"
+          Action = [
+            "ssm:GetParameter"
+          ]
+          Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "dynamodb:Scan",
+            "dynamodb:DeleteItem"
+          ]
+          Resource = [aws_dynamodb_table.workflow_runners.arn]
+        },
+        {
+          Effect = "Allow"
+          Action = [
+            "ec2:TerminateInstances",
+            "ec2:DescribeInstances"
+          ]
+          Resource = ["*"]
+        }
+      ],
+      # ECS statement only when cluster exists (empty ARN causes malformed policy)
+      data.terraform_remote_state.ecs_runner.outputs.cluster_arn != "" ? [
+        {
+          Effect = "Allow"
+          Action = [
+            "ecs:StopTask",
+            "ecs:ListTasks",
+            "ecs:DescribeTasks"
+          ]
+          Resource = ["*"]
+          Condition = {
+            ArnEquals = {
+              "ecs:cluster" = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+            }
           }
         }
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "ec2:TerminateInstances",
-          "ec2:DescribeInstances"
-        ]
-        Resource = ["*"]
-      }
-    ]
+      ] : []
+    )
   })
 }

@@ -156,7 +156,7 @@ jobs:
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint \
+          python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/ecr.yml
       - name: Run pylint

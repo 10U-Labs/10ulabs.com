@@ -197,7 +197,7 @@ jobs:
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint \
+          python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
   unit-testing:
