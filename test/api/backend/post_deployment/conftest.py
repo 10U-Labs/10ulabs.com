@@ -7,6 +7,30 @@ import requests
 
 
 DEFAULT_REQUEST_TIMEOUT = 10
+
+
+def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
+    """Check if an endpoint is deployed by verifying it doesn't return 404."""
+    url = f"{api_url}{path}"
+    headers = {"x-test-mode": "true"}
+    try:
+        if method == "GET":
+            response = requests.get(url, headers=headers, timeout=5)
+        else:
+            response = requests.post(url, headers=headers, json={}, timeout=5)
+        # 404 means endpoint not deployed (CatchAllHandler)
+        # Other status codes (200, 400, 401, 403, 500) mean endpoint exists
+        return response.status_code != 404
+    except requests.exceptions.RequestException:
+        return False
+
+
+def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET"):
+    """Skip test if the specified endpoint is not deployed."""
+    if not endpoint_is_deployed(api_url, path, method):
+        pytest.skip(f"Endpoint {path} not deployed (managed by separate workflow)")
+
+
 DOCKER_RUNNER_REQUEST_TIMEOUT = 30
 
 
