@@ -165,6 +165,13 @@ jobs:
           role-to-assume: >-
             ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
             }}
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install pytest boto3 requests
       - name: Run integration tests
         run: |
           python3 -m pytest \
@@ -219,11 +226,9 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
-          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_shared.yml
@@ -263,6 +268,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - if: >-
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install pytest boto3
       - name: Run unit tests
         run: python3 -m pytest test/www/shared/pre_deployment/ -v
 name: Ensuring www shared infrastructure exists and is properly configured
