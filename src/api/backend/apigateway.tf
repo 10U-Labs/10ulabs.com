@@ -271,10 +271,12 @@ resource "null_resource" "api_gateway_propagation_wait" {
       SUCCESS=false
       while [ $N -le $MAX_N ]; do
         # Poll /health endpoint with GET - it falls back to CatchAllHandler
-        # when health Lambda doesn't exist, which returns 200 for any request
+        # when health Lambda doesn't exist, which returns 404 (valid response)
         HTTP_STATUS=$(curl -s -o /dev/null -w "%%{http_code}" -X GET \
           "https://${local.api_fqdn}/health" || echo "000")
-        if [ "$HTTP_STATUS" = "200" ]; then
+        # Accept 200 (health Lambda exists) or 404 (CatchAllHandler fallback)
+        # Both indicate API Gateway is deployed and functioning
+        if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "404" ]; then
           echo "API Gateway is ready (status: $HTTP_STATUS)"
           SUCCESS=true
           N=$((MAX_N + 1))

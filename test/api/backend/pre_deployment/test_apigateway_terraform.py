@@ -152,6 +152,17 @@ def test_api_gateway_propagation_wait_polls_health_endpoint():
     assert "/health" in content
 
 
+def test_api_gateway_propagation_wait_accepts_404():
+    """Verify propagation wait accepts 404 as success.
+
+    CatchAllHandler returns 404 for missing endpoints, which is valid.
+    Both 200 (health Lambda exists) and 404 (CatchAllHandler fallback)
+    indicate API Gateway is deployed and functioning.
+    """
+    content = _read_apigateway_tf()
+    assert '"$HTTP_STATUS" = "404"' in content
+
+
 def test_lambda_permission_simulation_soc_handler_exists():
     """Verify Lambda permission for simulation SOC handler exists."""
     content = _read_apigateway_tf()
