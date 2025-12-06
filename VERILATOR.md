@@ -8,12 +8,12 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 ## Table of Contents
 
-| Issue | Status | PR | Effort | Impact | Risk |
-|-------|--------|-----|--------|--------|------|
-| [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) | 1 day | High | Low |
-| [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) | 3 days | Medium | Low |
-| [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIAL | - | 1 week | High | Medium |
-| [AST Object Pooling](#4-ast-object-pooling) | NOT DONE | - | 2 weeks | Medium | Medium |
+| # | Issue | Status | PR | Impact |
+|---|-------|--------|-----|--------|
+| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
+| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
+| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIAL | - | 2-4x faster compilation on large multi-module designs |
+| 4 | [AST Object Pooling](#4-ast-object-pooling) | NOT DONE | - | 10-20% memory reduction, faster allocation |
 
 ---
 
