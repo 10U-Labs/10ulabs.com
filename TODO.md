@@ -232,6 +232,13 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
   - Remove check-deps job from workflows that have upstream dependencies
   - Keep workflow_dispatch for manual triggers with github_hosted input
   - **DONE**: Deleted check-dependencies.yml and orchestrator.yml, updated all workflows
+- [x] 2.1.8. **FIX**: Add dependency check for `push` triggers to prevent parallel execution
+  - When `push` triggers a workflow that has dependencies, check if those dependencies
+    are also running for the same commit and wait for them to complete
+  - Skip the workflow if triggered by `push` but dependencies haven't completed yet
+  - This prevents race conditions when multiple workflows are triggered by the same commit
+  - **DONE**: Created `.github/actions/check-push-dependencies` composite action and
+    updated key workflows (health, ec2_runner, ecs_runner, runners, image_for_ecs_runners)
 
 #### 2.2 Unit Tests for Workflow Ordering
 - [x] 2.2.1. Test `parse_workflow_order` with valid YAML

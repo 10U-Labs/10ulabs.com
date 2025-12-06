@@ -1,0 +1,59 @@
+name: 'Check Push Dependencies'
+description: 'Checks if dependency workflows are running for the same commit. If so, skip (let workflow_run handle it).'
+inputs:
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+  dependencies:
+    description: 'Comma-separated list of dependency workflow file names (e.g., "api.yml,runners.yml")'
+    required: true
+outputs:
+  should_skip:
+    description: 'Whether this workflow should skip (true if dependencies are in progress)'
+    value: ${{ steps.check.outputs.should_skip }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if dependencies are running
+      id: check
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        DEPENDENCIES: ${{ inputs.dependencies }}
+        COMMIT_SHA: ${{ github.sha }}
+        REPO: ${{ github.repository }}
+      run: |
+        # Check if any dependency workflows are running or queued for this commit
+        should_skip="false"
+
+        IFS=',' read -ra DEPS <<< "$DEPENDENCIES"
+        for dep in "${DEPS[@]}"; do
+          dep=$(echo "$dep" | xargs)  # trim whitespace
+          echo "Checking if $dep is running for commit $COMMIT_SHA..."
+
+          # Get workflow runs for this commit
+          runs=$(gh api \
+            "repos/$REPO/actions/workflows/$dep/runs?head_sha=$COMMIT_SHA&status=in_progress" \
+            --jq '.workflow_runs | length' 2>/dev/null || echo "0")
+
+          queued=$(gh api \
+            "repos/$REPO/actions/workflows/$dep/runs?head_sha=$COMMIT_SHA&status=queued" \
+            --jq '.workflow_runs | length' 2>/dev/null || echo "0")
+
+          if [ "$runs" -gt 0 ] || [ "$queued" -gt 0 ]; then
+            echo "  -> $dep is running ($runs in_progress, $queued queued). Will skip and let workflow_run handle it."
+            should_skip="true"
+            break
+          else
+            echo "  -> $dep is not running for this commit"
+          fi
+        done
+
+        echo "should_skip=$should_skip" >> $GITHUB_OUTPUT
+
+        if [ "$should_skip" = "true" ]; then
+          echo ""
+          echo "### Skipping Workflow"
+          echo "One or more dependency workflows are running for this commit."
+          echo "This workflow will be triggered via workflow_run when dependencies complete."
+        fi
