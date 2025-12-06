@@ -3,16 +3,12 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  check-deps:
-    uses: ./.github/workflows/check-dependencies.yml
-    with:
-      workflow_name: image_for_ec2_runners_endpoint
   declaring-common-variables:
     if: >-
-      needs.check-deps.outputs.can_proceed == 'true' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       github.event.workflow_run.conclusion == 'success')
     name: Declaring common variables
-    needs: check-deps
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.shared.outputs.github_actions_role_arn }}
@@ -156,6 +152,14 @@ on:
       - 'test/api/endpoints/image_for_ec2_runners/endpoint/**'
   workflow_call:
   workflow_dispatch:
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - 'Ensuring ECR repository exists and is properly configured'
+      - 'Ensuring the /v1/runners API endpoint exists and is properly configured'
 permissions:
   contents: read
   id-token: write

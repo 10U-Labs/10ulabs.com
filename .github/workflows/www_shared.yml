@@ -3,14 +3,12 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  check-deps:
-    uses: ./.github/workflows/check-dependencies.yml
-    with:
-      workflow_name: www_shared
   declaring-common-variables:
-    if: needs.check-deps.outputs.can_proceed == 'true'
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       github.event.workflow_run.conclusion == 'success')
     name: Declaring common variables
-    needs: check-deps
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
@@ -205,6 +203,13 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - 'Ensuring bootstrap infrastructure exists and is properly configured'
 permissions:
   contents: read
   id-token: write

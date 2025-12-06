@@ -3,16 +3,12 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  check-deps:
-    uses: ./.github/workflows/check-dependencies.yml
-    with:
-      workflow_name: ec2_runner
   declaring-common-variables:
     if: >-
-      needs.check-deps.outputs.can_proceed == 'true' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+       github.event.workflow_run.conclusion == 'success')
     name: Declaring common variables
-    needs: check-deps
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       role_arn: ${{ steps.shared.outputs.role_arn }}
@@ -288,6 +284,15 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - 'Building AMI for EC2 self-hosted runners'
+      - 'Deploying image_for_ec2_runners endpoint'
+      - 'Ensuring the /v1/runners API endpoint exists and is properly configured'
 permissions:
   contents: read
   id-token: write

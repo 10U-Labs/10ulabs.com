@@ -225,6 +225,12 @@ FireSim F2 support is in development. Monitor: https://github.com/firesim/firesi
 - [x] 2.1.4. Add `workflow_call` triggers to all workflows for orchestration
 - [x] 2.1.5. Create orchestrator workflow that triggers workflows in correct order
 - [x] 2.1.6. Update each workflow to check dependencies before running
+- [ ] 2.1.7. **PRIORITY**: Refactor all workflows to use GitHub's native `workflow_run` event
+  instead of custom check-deps. This eliminates state lock issues and race conditions:
+  - Use `workflow_run` trigger with `types: [completed]` for dependent workflows
+  - Use `if: github.event.workflow_run.conclusion == 'success'` to only run on success
+  - Remove check-deps job from workflows that have upstream dependencies
+  - Keep workflow_dispatch for manual triggers with github_hosted input
 
 #### 2.2 Unit Tests for Workflow Ordering
 - [x] 2.2.1. Test `parse_workflow_order` with valid YAML
