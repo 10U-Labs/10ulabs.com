@@ -10,6 +10,7 @@
   - [Phase 2: Workflow Ordering System](#phase-2-workflow-ordering-system)
   - [Phase 3: Runner Label System Refactor](#phase-3-runner-label-system-refactor)
   - [Phase 4: RTL Runner Images](#phase-4-rtl-runner-images)
+  - [Phase 4.5: Simulation Acceleration](#phase-45-simulation-acceleration)
   - [Phase 5: EC2 Runner Infrastructure for RTL](#phase-5-ec2-runner-infrastructure-for-rtl)
   - [Phase 6: RTL Simulation Endpoint](#phase-6-rtl-simulation-endpoint)
   - [Phase 7: Tri-Mode Core Development](#phase-7-tri-mode-core-development)
@@ -144,6 +145,17 @@ Level 5: All other endpoints (health, echo, contact, rack_designer, simulation_s
 ```
 
 When a commit affects multiple levels, workflows must deploy in order. When a commit affects only one workflow, it deploys independently.
+
+### Simulation Acceleration Strategy
+
+| Method | Speedup | Status |
+|--------|---------|--------|
+| Checkpointing | 10-100x (skip boot) | Implement now |
+| GPU Batch (RTLflow) | 100x throughput | Implement now |
+| FPGA (FireSim) | 1000x | Blocked until FireSim supports F2 |
+
+AWS F1 instances are deprecated (EOL December 31, 2025) and unavailable to new users.
+FireSim F2 support is in development. Monitor: https://github.com/firesim/firesim
 
 ---
 
