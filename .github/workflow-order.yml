@@ -106,8 +106,9 @@ workflows:
       - test/api/endpoints/rack_designer/**
   runners:
     depends_on:
+      - api
       - ecr
-    level: 2
+    level: 3
     paths:
       - .github/workflows/runners.yml
       - etc/runners.yml
