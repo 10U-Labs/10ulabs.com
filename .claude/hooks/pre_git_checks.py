@@ -67,7 +67,8 @@ def is_pre_push_check_step(step_name, run_cmd):
     ]
     if any(kw in step_lower for kw in static_keywords):
         return True
-    if 'pre_deployment' in run_cmd or 'pre-deployment' in step_lower:
+    # Only run unit tests locally, skip integration tests (they require AWS resources)
+    if 'pre_deployment/unit' in run_cmd or 'pre-deployment/unit' in run_cmd:
         return True
     if 'unit test' in step_lower:
         return True

@@ -1,3 +1,5 @@
+"""Integration tests for GitHub runner files on EC2 AMI."""
+# pylint: disable=missing-function-docstring,missing-class-docstring,line-too-long
 import pytest
 
 
@@ -230,6 +232,7 @@ class TestNodeJsExternals:
         assert output["Status"] == "Success"
 
     def test_node24_directory_exists(self, ssm_client, test_instance, run_ssm_command):
+        """Test that node24 directory exists."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
@@ -238,6 +241,7 @@ class TestNodeJsExternals:
         assert output["StandardOutputContent"].strip() == "exists"
 
     def test_node24_binary_exists(self, ssm_client, test_instance, run_ssm_command):
+        """Test that node24 binary exists and is executable."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
@@ -246,6 +250,7 @@ class TestNodeJsExternals:
         assert output["StandardOutputContent"].strip() == "executable"
 
     def test_node24_binary_executes(self, ssm_client, test_instance, run_ssm_command):
+        """Test that node24 binary can execute."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
@@ -255,8 +260,10 @@ class TestNodeJsExternals:
 
 
 class TestRequiredSystemCommands:
+    """Tests for required system commands on the runner."""
 
     def test_ldd_command_exists(self, ssm_client, test_instance, run_ssm_command):
+        """Test that ldd command exists."""
         if not test_instance:
             pytest.fail("Test instance not created")
 
@@ -265,6 +272,7 @@ class TestRequiredSystemCommands:
         assert "found" in output["StandardOutputContent"]
 
     def test_ldconfig_command_exists(self, ssm_client, test_instance, run_ssm_command):
+        """Test that ldconfig command exists."""
         if not test_instance:
             pytest.fail("Test instance not created")
 

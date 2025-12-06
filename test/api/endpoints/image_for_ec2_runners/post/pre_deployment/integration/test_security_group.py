@@ -1,8 +1,13 @@
+"""Integration tests for security group configuration."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+import pytest
 from botocore.exceptions import ClientError
 
 
 class TestSecurityGroupExists:
     def test_security_group_exists_in_aws(self, ec2_client, security_group_id):
+        if not security_group_id:
+            pytest.skip("No security group ID configured")
         exists = False
         if security_group_id:
             try:
@@ -13,6 +18,8 @@ class TestSecurityGroupExists:
         assert exists
 
     def test_security_group_has_description(self, ec2_client, security_group_id):
+        if not security_group_id:
+            pytest.skip("No security group ID configured")
         has_description = False
         if security_group_id:
             try:
@@ -25,6 +32,8 @@ class TestSecurityGroupExists:
         assert has_description
 
     def test_security_group_has_vpc_id(self, ec2_client, security_group_id):
+        if not security_group_id:
+            pytest.skip("No security group ID configured")
         has_vpc = False
         if security_group_id:
             try:

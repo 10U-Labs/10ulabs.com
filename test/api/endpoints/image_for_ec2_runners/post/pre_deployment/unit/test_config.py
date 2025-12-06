@@ -1,3 +1,7 @@
+"""Unit tests for runner configuration validation."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+
+
 class TestConfigRunnerVersion:
     def test_config_has_runner_version_field(self, loaded_config):
         has_field = "runner_version" in loaded_config

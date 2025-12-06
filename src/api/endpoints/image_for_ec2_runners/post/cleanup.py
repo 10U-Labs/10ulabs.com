@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Script to clean up old AMIs, snapshots, and launch templates."""
 import argparse
 from dataclasses import dataclass
 import re
@@ -10,6 +11,8 @@ import yaml
 
 @dataclass
 class AmiCleanupParams:
+    """Parameters for AMI cleanup operations."""
+
     latest_ami_id: str
     latest_snapshot_ids: set
     dry_run: bool
@@ -19,6 +22,7 @@ class AmiCleanupParams:
 
 
 def has_excluded_tags(resource_tags, exclude_tags):
+    """Check if a resource has any excluded tags."""
     if not exclude_tags:
         return False
     resource_tag_dict = {tag['Key']: tag['Value'] for tag in (resource_tags or [])}
@@ -29,6 +33,7 @@ def has_excluded_tags(resource_tags, exclude_tags):
 
 
 def get_latest_ami_id(ssm_client, ssm_parameter_name):
+    """Get the latest AMI ID from SSM parameter."""
     result = None
     try:
         response = ssm_client.get_parameter(Name=ssm_parameter_name)
@@ -42,6 +47,7 @@ def get_latest_ami_id(ssm_client, ssm_parameter_name):
 
 
 def get_latest_snapshot_ids(ec2_client, latest_ami_id):
+    """Get snapshot IDs associated with the latest AMI."""
     latest_snapshot_ids = set()
     if latest_ami_id:
         try:
@@ -59,6 +65,7 @@ def get_latest_snapshot_ids(ec2_client, latest_ami_id):
 
 
 def get_snapshot_ids_for_ami(image):
+    """Get snapshot IDs from an AMI's block device mappings."""
     snapshot_ids = set()
     for block_device in image.get('BlockDeviceMappings', []):
         ebs = block_device.get('Ebs', {})
@@ -69,6 +76,7 @@ def get_snapshot_ids_for_ami(image):
 
 
 def cleanup_amis(ec2_client, params: AmiCleanupParams):
+    """Clean up old AMIs matching the specified tags."""
     deleted_count = 0
     snapshots_to_delete = set()
     images_by_id = {}
@@ -109,6 +117,7 @@ def cleanup_amis(ec2_client, params: AmiCleanupParams):
 
 
 def cleanup_snapshots(ec2_client, snapshot_ids_to_delete, dry_run):
+    """Delete snapshots from the provided set."""
     deleted_count = 0
     for snapshot_id in sorted(snapshot_ids_to_delete):
         try:
@@ -124,6 +133,7 @@ def cleanup_snapshots(ec2_client, snapshot_ids_to_delete, dry_run):
 
 
 def extract_ami_id_from_description(description):
+    """Extract AMI ID from a snapshot description."""
     result = None
     match = re.search(r'for (ami-[a-f0-9]+)', description)
     if match:
@@ -132,6 +142,7 @@ def extract_ami_id_from_description(description):
 
 
 def get_existing_ami_ids(ec2_client):
+    """Get all existing AMI IDs owned by self."""
     existing_ami_ids = set()
     try:
         response = ec2_client.describe_images(Owners=['self'])
@@ -143,6 +154,7 @@ def get_existing_ami_ids(ec2_client):
 
 
 def find_orphaned_snapshots(ec2_client, latest_snapshot_ids):
+    """Find snapshots that are not associated with any existing AMI."""
     orphaned_snapshots = set()
     existing_ami_ids = get_existing_ami_ids(ec2_client)
     try:
@@ -167,6 +179,7 @@ def find_orphaned_snapshots(ec2_client, latest_snapshot_ids):
 
 
 def cleanup_security_groups(ec2_client, dry_run, tags, exclude_tags):
+    """Clean up security groups matching the specified tags."""
     deleted_count = 0
     sgs_by_id = {}
     for tag_key, tag_value in tags.items():
@@ -202,6 +215,7 @@ def cleanup_security_groups(ec2_client, dry_run, tags, exclude_tags):
 
 
 def cleanup_key_pairs(ec2_client, dry_run, tags, exclude_tags):
+    """Clean up key pairs matching the specified tags."""
     deleted_count = 0
     kps_by_name = {}
     for tag_key, tag_value in tags.items():
@@ -233,6 +247,7 @@ def cleanup_key_pairs(ec2_client, dry_run, tags, exclude_tags):
 
 
 def cleanup_instances(ec2_client, dry_run, tags, exclude_tags):
+    """Terminate instances matching the specified tags."""
     deleted_count = 0
     instances_by_id = {}
     for tag_key, tag_value in tags.items():
@@ -240,7 +255,10 @@ def cleanup_instances(ec2_client, dry_run, tags, exclude_tags):
             response = ec2_client.describe_instances(
                 Filters=[
                     {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
-                    {'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'stopping', 'pending']}
+                    {
+                        'Name': 'instance-state-name',
+                        'Values': ['running', 'stopped', 'stopping', 'pending'],
+                    },
                 ]
             )
             for reservation in response.get('Reservations', []):
@@ -265,6 +283,7 @@ def cleanup_instances(ec2_client, dry_run, tags, exclude_tags):
 
 
 def cleanup_launch_templates(ec2_client, dry_run, tags, exclude_tags):
+    """Clean up launch templates matching the specified tags."""
     deleted_count = 0
     lts_by_id = {}
     for tag_key, tag_value in tags.items():
@@ -297,6 +316,7 @@ def cleanup_launch_templates(ec2_client, dry_run, tags, exclude_tags):
 
 
 def run_cleanup(label, cleanup_fn):
+    """Run a cleanup function and print the results."""
     print("-" * 80)
     print(f"CLEANING UP {label}")
     print("-" * 80)
@@ -307,11 +327,13 @@ def run_cleanup(label, cleanup_fn):
 
 
 def load_config(config_path):
+    """Load configuration from a YAML file."""
     with open(config_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def print_header(args, resource_types_set, tags, exclude_tags):
+    """Print the cleanup header information."""
     print("=" * 80)
     print("EC2 RUNNER IMAGE CLEANUP")
     print("=" * 80)
@@ -326,6 +348,7 @@ def print_header(args, resource_types_set, tags, exclude_tags):
 
 
 def print_protected_resources(latest_ami_id, latest_snapshot_ids):
+    """Print information about protected resources."""
     if latest_ami_id:
         print(f"Protected latest AMI: {latest_ami_id}")
     else:
@@ -339,6 +362,7 @@ def print_protected_resources(latest_ami_id, latest_snapshot_ids):
 
 
 def print_summary(total_deleted, dry_run):
+    """Print the cleanup summary."""
     print("=" * 80)
     print("CLEANUP SUMMARY")
     print("=" * 80)
@@ -349,6 +373,7 @@ def print_summary(total_deleted, dry_run):
 
 
 def parse_tags(tag_list):
+    """Parse KEY=VALUE tag arguments into a dictionary."""
     tags = {}
     for item in tag_list or []:
         if '=' in item:
@@ -358,6 +383,7 @@ def parse_tags(tag_list):
 
 
 def handle_ami_cleanup(args):
+    """Handle the main cleanup process based on command line arguments."""
     ec2_client = boto3.client('ec2', region_name=args.region)
     ssm_client = boto3.client('ssm', region_name=args.region)
 
@@ -370,7 +396,10 @@ def handle_ami_cleanup(args):
     exclude_tags = parse_tags(args.exclude_tag)
 
     if args.resource_types.lower() == 'all':
-        resource_types_set = {'amis', 'snapshots', 'instances', 'security-groups', 'key-pairs', 'launch-templates'}
+        resource_types_set = {
+            'amis', 'snapshots', 'instances', 'security-groups',
+            'key-pairs', 'launch-templates',
+        }
     else:
         resource_types_set = set(rt.strip() for rt in args.resource_types.lower().split(','))
 
@@ -405,25 +434,41 @@ def handle_ami_cleanup(args):
         all_snapshots_to_delete = snapshots_to_delete | orphaned_snapshots
         if orphaned_snapshots:
             print(f"Found {len(orphaned_snapshots)} orphaned snapshot(s)")
-        total_deleted += run_cleanup('SNAPSHOTS', lambda: cleanup_snapshots(ec2_client, all_snapshots_to_delete, args.dry_run))
+        total_deleted += run_cleanup(
+            'SNAPSHOTS',
+            lambda: cleanup_snapshots(ec2_client, all_snapshots_to_delete, args.dry_run)
+        )
 
     if 'instances' in resource_types_set:
-        total_deleted += run_cleanup('INSTANCES', lambda: cleanup_instances(ec2_client, args.dry_run, tags, exclude_tags))
+        total_deleted += run_cleanup(
+            'INSTANCES',
+            lambda: cleanup_instances(ec2_client, args.dry_run, tags, exclude_tags)
+        )
 
     if 'launch-templates' in resource_types_set:
-        total_deleted += run_cleanup('LAUNCH TEMPLATES', lambda: cleanup_launch_templates(ec2_client, args.dry_run, tags, exclude_tags))
+        total_deleted += run_cleanup(
+            'LAUNCH TEMPLATES',
+            lambda: cleanup_launch_templates(ec2_client, args.dry_run, tags, exclude_tags)
+        )
 
     if 'security-groups' in resource_types_set:
-        total_deleted += run_cleanup('SECURITY GROUPS', lambda: cleanup_security_groups(ec2_client, args.dry_run, tags, exclude_tags))
+        total_deleted += run_cleanup(
+            'SECURITY GROUPS',
+            lambda: cleanup_security_groups(ec2_client, args.dry_run, tags, exclude_tags)
+        )
 
     if 'key-pairs' in resource_types_set:
-        total_deleted += run_cleanup('KEY PAIRS', lambda: cleanup_key_pairs(ec2_client, args.dry_run, tags, exclude_tags))
+        total_deleted += run_cleanup(
+            'KEY PAIRS',
+            lambda: cleanup_key_pairs(ec2_client, args.dry_run, tags, exclude_tags)
+        )
 
     print_summary(total_deleted, args.dry_run)
     return 0
 
 
 def main():
+    """Parse command line arguments and run the cleanup."""
     parser = argparse.ArgumentParser(
         description='Cleanup old AMIs and snapshots for GitHub EC2 runners'
     )
@@ -450,19 +495,19 @@ def main():
     parser.add_argument(
         '--resource-types',
         default='all',
-        help='Comma-separated list of resource types to clean (amis,snapshots,instances,security-groups,key-pairs,launch-templates) or "all" (default: all)'
+        help='Resource types to clean: amis,snapshots,instances,etc. (default: all)'
     )
     parser.add_argument(
         '--tag',
         action='append',
         metavar='KEY=VALUE',
-        help='Additional tag filter (can be specified multiple times). Resources matching ANY tag will be deleted.'
+        help='Additional tag filter (can be repeated). Matching resources deleted.'
     )
     parser.add_argument(
         '--exclude-tag',
         action='append',
         metavar='KEY=VALUE',
-        help='Exclude resources with this tag (can be specified multiple times). Resources with ANY excluded tag will be skipped.'
+        help='Exclude resources with tag (can be repeated). Excluded resources skipped.'
     )
 
     args = parser.parse_args()

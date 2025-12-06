@@ -1,3 +1,5 @@
+"""Integration tests to verify AMI exists and is available."""
+# pylint: disable=missing-function-docstring
 import pytest
 
 

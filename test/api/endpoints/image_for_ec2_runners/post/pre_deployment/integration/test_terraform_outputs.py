@@ -1,3 +1,7 @@
+"""Integration tests for Terraform outputs."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+
+
 class TestRequiredTerraformOutputs:
     def test_terraform_init_succeeds(self, terraform_initialized):
         assert terraform_initialized

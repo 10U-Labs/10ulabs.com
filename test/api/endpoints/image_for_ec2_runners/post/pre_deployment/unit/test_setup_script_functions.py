@@ -1,3 +1,7 @@
+"""Unit tests for setup script function definitions."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+
+
 class TestSetupScriptMainFunction:
     def test_script_calls_main_function(self, setup_script_content):
         has_call = '__main__ "$@"' in setup_script_content

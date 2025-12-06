@@ -1,3 +1,5 @@
+"""Integration tests for build tools on EC2 runner AMI."""
+# pylint: disable=missing-function-docstring
 import pytest
 
 

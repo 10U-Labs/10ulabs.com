@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
+"""Script to promote an AMI by tagging it and updating SSM parameter."""
 import argparse
 import sys
 import boto3
 from botocore.exceptions import ClientError
 
 
-def promote_ami(ami_id: str, region: str, run_id: str, ssm_parameter_name: str, tag_key: str) -> int:
+def promote_ami(
+    ami_id: str, region: str, run_id: str, ssm_parameter_name: str, tag_key: str
+) -> int:
+    """Promote an AMI by tagging it and updating the SSM parameter."""
     ec2_client = boto3.client('ec2', region_name=region)
     ssm_client = boto3.client('ssm', region_name=region)
 
@@ -41,6 +45,7 @@ def promote_ami(ami_id: str, region: str, run_id: str, ssm_parameter_name: str, 
 
 
 def main():
+    """Parse command line arguments and run AMI promotion."""
     parser = argparse.ArgumentParser()
     parser.add_argument('--ami-id', required=True)
     parser.add_argument('--region', required=True)
@@ -49,7 +54,9 @@ def main():
     parser.add_argument('--tag-key', required=True)
     args = parser.parse_args()
 
-    result = promote_ami(args.ami_id, args.region, args.run_id, args.ssm_parameter_name, args.tag_key)
+    result = promote_ami(
+        args.ami_id, args.region, args.run_id, args.ssm_parameter_name, args.tag_key
+    )
     sys.exit(result)
 
 

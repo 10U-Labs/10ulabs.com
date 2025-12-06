@@ -1,3 +1,5 @@
+"""Integration test fixtures for EC2 runner AMI."""
+# pylint: disable=duplicate-code,missing-function-docstring,line-too-long,import-error
 import os
 import time
 from ec2_helpers import launch_instance, wait_for_instance_ready, terminate_instance_safely
@@ -113,12 +115,14 @@ def get_subnet_ids():
 
 
 def get_instance_types():
+    """Get instance types from INSTANCE_TYPES environment variable."""
     env_value = os.environ.get("INSTANCE_TYPES", "")
     result = env_value.split(",") if env_value else []
     return result
 
 
 def build_launch_config(test_ami_id, config):
+    """Build launch configuration for integration test instance."""
     result = {
         "ami_id": test_ami_id,
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),

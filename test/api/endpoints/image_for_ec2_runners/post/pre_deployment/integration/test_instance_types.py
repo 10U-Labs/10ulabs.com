@@ -1,3 +1,5 @@
+"""Integration tests for EC2 instance type availability."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
 from botocore.exceptions import ClientError
 
 

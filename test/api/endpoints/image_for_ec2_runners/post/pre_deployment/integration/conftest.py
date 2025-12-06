@@ -1,3 +1,5 @@
+"""Pytest fixtures for pre-deployment integration tests."""
+# pylint: disable=missing-function-docstring,line-too-long
 import json
 import subprocess
 from pathlib import Path

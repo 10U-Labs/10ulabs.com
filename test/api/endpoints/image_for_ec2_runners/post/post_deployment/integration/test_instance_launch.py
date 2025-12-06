@@ -1,3 +1,5 @@
+"""Integration tests for EC2 instance launch and status checks."""
+# pylint: disable=missing-function-docstring
 import time
 import pytest
 

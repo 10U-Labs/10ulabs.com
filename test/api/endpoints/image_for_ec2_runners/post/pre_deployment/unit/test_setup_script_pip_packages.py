@@ -1,3 +1,7 @@
+"""Unit tests for pip package installations in setup script."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+
+
 class TestSetupScriptPipAwsPackages:
     def test_script_installs_boto3(self, setup_script_content):
         has_package = "boto3" in setup_script_content

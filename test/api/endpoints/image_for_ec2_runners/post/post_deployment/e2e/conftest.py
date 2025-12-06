@@ -1,3 +1,5 @@
+"""E2E test fixtures for EC2 runner AMI."""
+# pylint: disable=duplicate-code,import-error
 import base64
 import json
 import os
@@ -8,6 +10,7 @@ import pytest
 
 
 def get_registration_token(github_repo, github_token):
+    """Get a GitHub Actions runner registration token."""
     req = urllib.request.Request(
         f"https://api.github.com/repos/{github_repo}/actions/runners/registration-token",
         method="POST",
@@ -23,6 +26,7 @@ def get_registration_token(github_repo, github_token):
 
 
 def create_user_data(github_repo, registration_token):
+    """Create base64-encoded user data script for runner setup."""
     user_data_script = f"""#!/bin/bash
 exec > /var/log/user-data.log 2>&1
 set -ex
@@ -59,6 +63,7 @@ echo "=== run.sh started with PID $RUNNER_PID ==="
 
 
 def validate_e2e_inputs(test_ami_id, github_token):
+    """Validate required E2E test inputs."""
     if not test_ami_id:
         pytest.fail("TEST_AMI_ID not provided")
     if not github_token:
@@ -72,6 +77,7 @@ def validate_e2e_inputs(test_ami_id, github_token):
 
 
 def get_subnet_ids():
+    """Get subnet IDs from environment variables."""
     subnet_ids_env = os.environ.get("TEST_SUBNET_IDS", "")
     subnet_id_env = os.environ.get("TEST_SUBNET_ID", "")
     result = []
@@ -95,7 +101,9 @@ def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):
         "ami_id": test_ami_id,
         "subnet_ids": get_subnet_ids(),
         "security_group_id": os.environ.get("TEST_SECURITY_GROUP_ID", ""),
-        "instance_profile": test_config.get("github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"),
+        "instance_profile": test_config.get(
+            "github_runner_iam_instance_profile_name", "GitHubSelfHostedRunnerInstanceProfile"
+        ),
         "user_data": create_user_data(github_repo, registration_token),
         "instance_types": get_instance_types(),
         "tags": [

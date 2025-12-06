@@ -1,3 +1,7 @@
+"""Unit tests for setup script command line arguments."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+
+
 class TestSetupScriptRunnerVersionArgument:
     def test_script_accepts_runner_version_flag(self, setup_script_content):
         has_flag = "--runner-version)" in setup_script_content

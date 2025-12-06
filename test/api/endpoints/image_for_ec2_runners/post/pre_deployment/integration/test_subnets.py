@@ -1,8 +1,13 @@
+"""Integration tests for subnet configuration."""
+# pylint: disable=missing-function-docstring,missing-class-docstring
+import pytest
 from botocore.exceptions import ClientError
 
 
 class TestSubnetsExist:
     def test_all_subnets_exist_in_aws(self, ec2_client, subnet_ids):
+        if not subnet_ids:
+            pytest.skip("No subnet IDs configured")
         all_exist = False
         if subnet_ids:
             try:
@@ -14,6 +19,8 @@ class TestSubnetsExist:
         assert all_exist
 
     def test_subnets_are_available(self, ec2_client, subnet_ids):
+        if not subnet_ids:
+            pytest.skip("No subnet IDs configured")
         all_available = False
         if subnet_ids:
             try:
@@ -26,6 +33,8 @@ class TestSubnetsExist:
         assert all_available
 
     def test_subnets_have_available_ips(self, ec2_client, subnet_ids):
+        if not subnet_ids:
+            pytest.skip("No subnet IDs configured")
         have_ips = False
         if subnet_ids:
             try:
@@ -38,6 +47,8 @@ class TestSubnetsExist:
         assert have_ips
 
     def test_subnets_are_public(self, ec2_client, subnet_ids):
+        if not subnet_ids:
+            pytest.skip("No subnet IDs configured")
         are_public = False
         if subnet_ids:
             try:

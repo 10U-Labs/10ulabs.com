@@ -29,17 +29,17 @@ def _extract_role_suffix(local_name: str) -> str:
     return match.group(1) if match else ''
 
 
-_prefix = SHARED_MODULE_VALUES['resource_prefix']
-_logs = SHARED_MODULE_VALUES['name_for_central_logs_bucket']
-_ct_suffix = _extract_role_suffix('name_for_cloudtrail_iam_role')
-_gh_suffix = _extract_role_suffix('name_for_github_actions_role')
+_PREFIX = SHARED_MODULE_VALUES['resource_prefix']
+_LOGS = SHARED_MODULE_VALUES['name_for_central_logs_bucket']
+_CT_SUFFIX = _extract_role_suffix('name_for_cloudtrail_iam_role')
+_GH_SUFFIX = _extract_role_suffix('name_for_github_actions_role')
 
 LOCALS_DERIVED_VALUES = {
-    'name_for_cloudtrail': f"{_prefix}-cloudtrail",
-    'name_for_cloudtrail_bucket': _logs,
-    'name_for_cloudtrail_iam_role': f"{_prefix}{_ct_suffix}",
-    'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{_prefix}",
-    'name_for_github_actions_role': f"{_prefix}{_gh_suffix}",
+    'name_for_cloudtrail': f"{_PREFIX}-cloudtrail",
+    'name_for_cloudtrail_bucket': _LOGS,
+    'name_for_cloudtrail_iam_role': f"{_PREFIX}{_CT_SUFFIX}",
+    'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{_PREFIX}",
+    'name_for_github_actions_role': f"{_PREFIX}{_GH_SUFFIX}",
 }
 
 

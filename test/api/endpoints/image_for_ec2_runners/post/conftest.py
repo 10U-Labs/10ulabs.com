@@ -1,3 +1,5 @@
+"""Pytest fixtures for image_for_ec2_runners post tests."""
+# pylint: disable=missing-function-docstring
 import os
 import re
 import subprocess

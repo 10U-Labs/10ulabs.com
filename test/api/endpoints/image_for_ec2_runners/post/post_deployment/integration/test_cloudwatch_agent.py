@@ -1,3 +1,5 @@
+"""Integration tests for CloudWatch agent on EC2 runner AMI."""
+# pylint: disable=missing-function-docstring,line-too-long
 import pytest
 
 
