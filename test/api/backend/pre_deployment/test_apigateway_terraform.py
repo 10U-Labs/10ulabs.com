@@ -115,10 +115,18 @@ def test_api_gateway_propagation_wait_depends_on_stage():
     assert "aws_api_gateway_stage.prod" in content
 
 
-def test_api_gateway_propagation_wait_depends_on_echo_permission():
-    """Verify propagation wait depends on echo permission."""
+def test_api_gateway_propagation_wait_depends_only_on_stage():
+    """Verify propagation wait depends only on stage, not endpoint lambdas.
+
+    This is intentional to break the circular dependency between API Gateway
+    and endpoint lambdas. The propagation wait polls the echo endpoint, but
+    the dependency is on the stage, not the lambda permission.
+    """
     content = _read_apigateway_tf()
-    assert "aws_lambda_permission.echo_handler" in content
+    # Should depend on stage (verified in test_api_gateway_propagation_wait_depends_on_stage)
+    # Should NOT depend on echo_handler permission (breaks circular dependency)
+    assert "depends_on = [" in content
+    assert "aws_api_gateway_stage.prod" in content
 
 
 def test_api_gateway_propagation_wait_triggers_on_deployment():

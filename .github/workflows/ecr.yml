@@ -199,7 +199,7 @@ jobs:
           python-version: '3.13'
       - if: github.event.inputs.github_hosted == 'true' || contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
+        run: python3 -m pip install pytest boto3 PyYAML
       - name: Run unit tests
         run: python3 -m pytest test/api/shared/ecr/pre_deployment/ -v
 name: Ensuring ECR repository exists and is properly configured

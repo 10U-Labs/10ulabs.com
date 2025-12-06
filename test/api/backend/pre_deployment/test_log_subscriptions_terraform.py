@@ -113,22 +113,32 @@ def test_waf_subscription_uses_waf_log_group():
 
 
 def test_waf_subscription_uses_firehose_destination():
-    """Verify that WAF subscription uses Firehose destination."""
+    """Verify that WAF subscription uses dedicated WAF Firehose destination.
+
+    WAF logs are in us-east-1 (required for CloudFront) so they use a
+    dedicated Firehose stream that writes to the central S3 bucket in us-east-2.
+    """
     with open(_get_terraform_path(), encoding="utf-8") as f:
         content = f.read()
     filter_start = 'resource "aws_cloudwatch_log_subscription_filter" "waf"'
     waf_section_start = content.find(filter_start)
     waf_section = content[waf_section_start:waf_section_start + 500]
-    firehose_arn = 'aws_kinesis_firehose_delivery_stream.cloudwatch_logs.arn'
+    # Uses dedicated WAF Firehose stream for cross-region log forwarding
+    firehose_arn = 'aws_kinesis_firehose_delivery_stream.waf_logs.arn'
     assert firehose_arn in waf_section
 
 
 def test_waf_subscription_uses_cloudwatch_logs_firehose_role():
-    """Verify that WAF subscription uses CloudWatch Logs Firehose role."""
+    """Verify that WAF subscription uses dedicated WAF Firehose role.
+
+    WAF logs are in us-east-1 so they use a dedicated IAM role that allows
+    CloudWatch Logs in us-east-1 to write to the Firehose stream.
+    """
     with open(_get_terraform_path(), encoding="utf-8") as f:
         content = f.read()
     filter_start = 'resource "aws_cloudwatch_log_subscription_filter" "waf"'
     waf_section_start = content.find(filter_start)
     waf_section = content[waf_section_start:waf_section_start + 500]
-    role_arn = 'aws_iam_role.cloudwatch_logs_firehose.arn'
+    # Uses dedicated WAF Firehose role for cross-region access
+    role_arn = 'aws_iam_role.cloudwatch_logs_firehose_waf.arn'
     assert role_arn in waf_section
