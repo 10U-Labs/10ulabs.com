@@ -10,7 +10,7 @@ DEFAULT_REQUEST_TIMEOUT = 10
 
 
 def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
-    """Check if an endpoint is deployed by verifying it doesn't return 404."""
+    """Check if an endpoint is deployed by verifying it doesn't return 404/Not Found."""
     url = f"{api_url}{path}"
     headers = {"x-test-mode": "true"}
     try:
@@ -19,8 +19,17 @@ def endpoint_is_deployed(api_url: str, path: str, method: str = "GET") -> bool:
         else:
             response = requests.post(url, headers=headers, json={}, timeout=5)
         # 404 means endpoint not deployed (CatchAllHandler)
-        # Other status codes (200, 400, 401, 403, 500) mean endpoint exists
-        return response.status_code != 404
+        if response.status_code == 404:
+            return False
+        # CatchAllHandler returns JSON with "error": "Not Found" for missing endpoints
+        # This handles cases where auth-required endpoints return 403 but don't exist
+        try:
+            body = response.json()
+            if body.get("error") == "Not Found":
+                return False
+        except (ValueError, KeyError):
+            pass
+        return True
     except requests.exceptions.RequestException:
         return False
 
