@@ -12,7 +12,10 @@ Remaining optimization opportunities for Verilator (v5.x).
 |---|-------|--------|-----|--------|
 | 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
 | 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
-| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PARTIAL | - | 2-4x faster compilation on large multi-module designs |
+| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | IN PROGRESS | - | 2-4x faster compilation on large multi-module designs |
+| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | PR SUBMITTED | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallel optimization |
+| 3b | [Parallelize V3Const](#3b-parallelize-v3const) | NOT DONE | - | Per-module constant propagation |
+| 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | NOT DONE | - | Per-module dead code elimination |
 | 4 | [AST Object Pooling](#4-ast-object-pooling) | NOT DONE | - | 10-20% memory reduction, faster allocation |
 
 ---
@@ -128,36 +131,57 @@ class VlThreadingAdvisor {
 
 **Files:** `src/Verilator.cpp`, various V3*.cpp passes
 
-**Status:** PARTIALLY IMPLEMENTED
+**Status:** IN PROGRESS
 
-**Current state:**
+**Goal:** Extend the `V3ThreadScope` parallel processing pattern to additional compiler passes.
+
+**Already parallelized (upstream):**
 - `V3VariableOrder.cpp` - Uses parallel module processing (lines 272-280)
 - `V3EmitCImp.cpp` - Uses parallel code emission (lines 886-894)
-- Many passes still sequential: V3Const, V3Dead, V3FuncOpt, etc.
 
+**Pattern:**
 ```cpp
-// Already implemented in V3VariableOrder.cpp:272-280
+// Established pattern in V3VariableOrder.cpp:272-280
 V3ThreadScope threadScope;
 for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
      modp = VN_AS(modp->nextp(), NodeModule)) {
-    std::vector<AstVar*>& varps = sortedVars[modp];
-    threadScope.enqueue([modp, &mTaskAffinity, &varps]() {
-        VariableOrder::processModule(modp, mTaskAffinity, varps);
+    threadScope.enqueue([modp, ...]() {
+        processModule(modp, ...);
     });
 }
 ```
 
-**Remaining opportunity:** Apply same pattern to other passes.
+**Impact:** 2-4x faster compilation on large multi-module designs
+**Difficulty:** Medium - need to verify each pass is thread-safe
+**Risk:** Medium - requires identifying which passes have global state
 
-**Passes safe for parallel execution per-module:**
-- V3Const (constant propagation) - NOT parallelized
-- V3Dead (dead code elimination) - NOT parallelized
-- V3FuncOpt (function optimization) - NOT parallelized
+---
 
-**Solution:** Extend `V3ThreadScope` usage to additional passes.
+### 3a. Parallelize V3FuncOpt
+
+**File:** `src/V3FuncOpt.cpp`
+
+**Status:** PR SUBMITTED - [PR #6763](https://github.com/verilator/verilator/pull/6763)
+
+**Solution:** Apply per-function parallelization using `V3ThreadScope`. Each `AstCFunc` is processed independently in parallel.
+
+**Changes:**
+- Add `V3ThreadScope` to `funcOptAll()` to parallelize function processing
+- Convert `FuncOptStats` to use `std::atomic<uint64_t>` for thread-safe updates
+- Add `VL_MT_SAFE` annotation to `FuncOptVisitor::apply()`
+
+---
+
+### 3b. Parallelize V3Const
+
+**File:** `src/V3Const.cpp`
+
+**Status:** NOT DONE
+
+**Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Would need conversion to `V3PchAstMT.h` and analysis of cross-module constant propagation dependencies.
 
 ```cpp
-// Example for V3Const - pattern already proven in V3VariableOrder
+// Proposed approach
 void V3Const::constifyAllModules(AstNetlist* nodep) {
     V3ThreadScope threadScope;
     for (AstNodeModule* modp = nodep->modulesp(); modp;
@@ -169,9 +193,15 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 }
 ```
 
-**Impact:** 2-4x faster compilation on large multi-module designs
-**Difficulty:** Medium - need to verify each pass is thread-safe
-**Risk:** Medium - requires identifying which passes have global state
+---
+
+### 3c. Parallelize V3Dead
+
+**File:** `src/V3Dead.cpp`
+
+**Status:** NOT DONE
+
+**Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Dead code elimination may have cross-module reference counting dependencies that need careful analysis.
 
 ---
 
@@ -232,3 +262,4 @@ public:
 
 - [PR #6761: Optimize V3ThreadPool::wait() to use condition variable](https://github.com/verilator/verilator/pull/6761)
 - [PR #6762: Add runtime threading advisor for configuration warnings](https://github.com/verilator/verilator/pull/6762)
+- [PR #6763: Parallelize V3FuncOpt using V3ThreadScope](https://github.com/verilator/verilator/pull/6763)
