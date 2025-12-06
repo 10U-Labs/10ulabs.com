@@ -3,12 +3,9 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  check-deps:
-    uses: ./.github/workflows/check-dependencies.yml
-    with:
-      workflow_name: bootstrap
   checking-oidc-availability:
     if: |
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') &&
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
         (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
@@ -33,13 +30,12 @@ jobs:
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
   declaring-common-variables:
     if: |
-      needs.check-deps.outputs.can_proceed == 'true' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success') &&
       github.ref == 'refs/heads/main' && (
         (github.event_name == 'push' && !contains(github.event.head_commit.message, '[dry run]')) ||
         (github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run != 'true')
       )
     name: Declaring common variables
-    needs: check-deps
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.config.outputs.github_actions_role_arn }}
