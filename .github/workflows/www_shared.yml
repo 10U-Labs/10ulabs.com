@@ -3,12 +3,47 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  check-push-deps:
+    if: github.ref == 'refs/heads/main'
+    name: Check if upstream workflows were also modified
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    runs-on: ubuntu-latest
+    steps:
+      - if: github.event_name == 'push'
+        name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        name: Check for bootstrap changes
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "Not a push event - proceeding"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} \
+            ${{ github.sha }} 2>/dev/null || git diff --name-only HEAD~1 HEAD)
+          BOOTSTRAP_PATTERN='^(\.github/workflows/bootstrap\.yml'
+          BOOTSTRAP_PATTERN="${BOOTSTRAP_PATTERN}|src/bootstrap/|test/bootstrap/)"
+          if echo "$CHANGED_FILES" | grep -qE "$BOOTSTRAP_PATTERN"; then
+            echo "Bootstrap files were modified - skipping push trigger"
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "No bootstrap files modified - proceeding"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
   declaring-common-variables:
     if: >-
       github.ref == 'refs/heads/main' &&
+      (github.event_name != 'push' ||
+       needs.check-push-deps.outputs.should_skip != 'true') &&
       (github.event_name != 'workflow_run' ||
        github.event.workflow_run.conclusion == 'success')
     name: Declaring common variables
+    needs:
+      - check-push-deps
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: >-
