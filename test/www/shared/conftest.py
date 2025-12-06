@@ -40,6 +40,8 @@ def parse_website_locals() -> Dict[str, str]:
                         config[key] = shared.get(ref, '')
     config['www_fqdn'] = f"www.{shared.get('domain_name', '')}"
     config['apex_fqdn'] = shared.get('domain_name', '')
+    domain_name = shared.get('domain_name', '')
+    config['website_bucket_name'] = f"www-{domain_name.replace('.', '-')}"
     github_org = shared.get('github_org', '')
     github_repo = shared.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{github_repo}"
@@ -56,6 +58,7 @@ def config_fixture() -> Dict[str, str]:
     result['aws_account_id'] = website_locals.get('aws_account_id', '')
     result['central_logs_bucket'] = shared.get('name_for_central_logs_bucket', '')
     result['website_fqdn'] = website_locals.get('www_fqdn', '')
+    result['website_bucket_name'] = website_locals.get('website_bucket_name', '')
     result['apex_fqdn'] = website_locals.get('apex_fqdn', '')
     result['github_org'] = shared.get('github_org', '')
     result['github_repo'] = website_locals.get('github_repo_full', '')
