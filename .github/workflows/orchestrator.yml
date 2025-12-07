@@ -24,19 +24,6 @@ jobs:
           echo "Either:"
           echo "  - No workflow-related files were changed"
           echo "  - Commit message contains [skip ci]"
-  concluding-workflows-should-be-dispatched:
-    if: >-
-      needs.determining.outputs.count != '0' &&
-      !contains(github.event.head_commit.message, '[skip ci]')
-    name: Concluding workflows should be dispatched
-    needs: determining
-    runs-on: ubuntu-latest
-    steps:
-      - name: Summary
-        run: |
-          echo "Workflows to dispatch: ${{ needs.determining.outputs.count }}"
-          echo "Execution plan:"
-          echo '${{ needs.determining.outputs.execution_plan }}' | jq -r '.[]'
   determining:
     if: github.ref == 'refs/heads/main'
     name: Determining which workflows should be dispatched
@@ -99,9 +86,7 @@ jobs:
       needs.determining.outputs.count != '0' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     name: ${{ matrix.workflow.idx }}. ${{ matrix.workflow.name }}
-    needs:
-      - determining
-      - concluding-workflows-should-be-dispatched
+    needs: determining
     runs-on: ubuntu-latest
     steps:
       - if: >-
