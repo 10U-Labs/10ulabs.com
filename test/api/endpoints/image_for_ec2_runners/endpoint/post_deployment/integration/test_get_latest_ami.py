@@ -10,15 +10,9 @@ def latest_response_fixture(latest_ami_endpoint, api_key):
     return make_authenticated_get(latest_ami_endpoint, api_key)
 
 
-@pytest.fixture(name="has_available_ami", scope="module")
-def has_available_ami_fixture(latest_response):
-    """Check if an AMI is available from the response."""
-    return latest_response.json().get("success", False)
-
-
-def test_get_latest_ami_returns_200_or_500(latest_response):
-    """Test that the endpoint returns either 200 or 500 status."""
-    assert latest_response.status_code in [200, 500]
+def test_get_latest_ami_returns_200(latest_response):
+    """Test that the endpoint returns 200 status."""
+    assert latest_response.status_code == 200
 
 
 def test_get_latest_ami_returns_json(latest_response):
@@ -31,36 +25,26 @@ def test_get_latest_ami_has_success_field(latest_response):
     assert "success" in latest_response.json()
 
 
-def test_get_latest_ami_has_ami_id_when_available(latest_response, has_available_ami):
-    """Test that response contains ami_id when AMI is available."""
-    if not has_available_ami:
-        pytest.skip("No AMI available")
+def test_get_latest_ami_returns_success_true(latest_response):
+    """Test that the response returns success true."""
+    assert latest_response.json().get("success") is True
+
+
+def test_get_latest_ami_has_ami_id(latest_response):
+    """Test that response contains ami_id."""
     assert "ami_id" in latest_response.json()
 
 
-def test_get_latest_ami_has_name_when_available(latest_response, has_available_ami):
-    """Test that response contains name when AMI is available."""
-    if not has_available_ami:
-        pytest.skip("No AMI available")
+def test_get_latest_ami_has_name(latest_response):
+    """Test that response contains name."""
     assert "name" in latest_response.json()
 
 
-def test_get_latest_ami_has_state_when_available(latest_response, has_available_ami):
-    """Test that response contains state when AMI is available."""
-    if not has_available_ami:
-        pytest.skip("No AMI available")
+def test_get_latest_ami_has_state(latest_response):
+    """Test that response contains state."""
     assert "state" in latest_response.json()
 
 
-def test_get_latest_ami_has_creation_date_when_available(latest_response, has_available_ami):
-    """Test that response contains creation_date when AMI is available."""
-    if not has_available_ami:
-        pytest.skip("No AMI available")
+def test_get_latest_ami_has_creation_date(latest_response):
+    """Test that response contains creation_date."""
     assert "creation_date" in latest_response.json()
-
-
-def test_get_latest_ami_has_error_when_unavailable(latest_response, has_available_ami):
-    """Test that response contains error when no AMI is available."""
-    if has_available_ami:
-        pytest.skip("AMI is available")
-    assert "error" in latest_response.json()

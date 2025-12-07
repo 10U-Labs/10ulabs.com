@@ -1,5 +1,8 @@
-"""Integration tests for AMI promotion functionality."""
-import pytest
+"""Pre-deployment integration tests for AMI promotion functionality.
+
+These tests verify that AWS permissions allow tagging AMIs and updating
+SSM parameters, using a generic AWS-provided base AMI (e.g., Debian).
+"""
 
 
 def _find_tag_value(tags, key):
@@ -10,31 +13,30 @@ def _find_tag_value(tags, key):
     return None
 
 
-def test_promote_ami_can_tag_ami(ec2_client, test_ami_id):
+def test_can_create_tag_on_ami(ec2_client, source_ami_id):
     """Test that AMI can be tagged for promotion."""
-    if not test_ami_id:
-        pytest.fail("TEST_AMI_ID not provided")
-
     test_tag_key = "TestPromotionTag"
-    test_tag_value = "test-value"
+    test_tag_value = "integration-test-value"
 
     ec2_client.create_tags(
-        Resources=[test_ami_id],
+        Resources=[source_ami_id],
         Tags=[{"Key": test_tag_key, "Value": test_tag_value}]
     )
 
-    response = ec2_client.describe_images(ImageIds=[test_ami_id])
+    response = ec2_client.describe_images(ImageIds=[source_ami_id])
     tags = response["Images"][0].get("Tags", [])
     actual_value = _find_tag_value(tags, test_tag_key)
 
     assert actual_value == test_tag_value
 
+    ec2_client.delete_tags(
+        Resources=[source_ami_id],
+        Tags=[{"Key": test_tag_key}]
+    )
 
-def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
+
+def test_can_update_ssm_parameter_with_ami_id(ssm_client, source_ami_id):
     """Test that SSM parameter can be updated with AMI ID."""
-    if not test_ami_id:
-        pytest.fail("TEST_AMI_ID not provided")
-
     test_parameter_name = "/github-runner/ami/integration-test"
 
     try:
@@ -44,7 +46,7 @@ def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
 
     ssm_client.put_parameter(
         Name=test_parameter_name,
-        Value=test_ami_id,
+        Value=source_ami_id,
         Type="String",
         Overwrite=True,
         Description="Integration test parameter"
@@ -53,6 +55,6 @@ def test_promote_ami_can_update_ssm_parameter(ssm_client, test_ami_id):
     response = ssm_client.get_parameter(Name=test_parameter_name)
     parameter_value = response["Parameter"]["Value"]
 
-    assert parameter_value == test_ami_id
+    assert parameter_value == source_ami_id
 
     ssm_client.delete_parameter(Name=test_parameter_name)

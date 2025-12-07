@@ -115,6 +115,12 @@ def instance_types(request):
 
 
 @pytest.fixture(scope="session")
+def ssm_client(aws_region):
+    """Create an SSM client for the test session."""
+    return boto3.client("ssm", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
 def source_ami_pattern(config):
     """Source ami pattern."""
 
@@ -124,3 +130,32 @@ def source_ami_pattern(config):
         "os_architecture": config.get("os_architecture", "arm64"),
     }
     return result
+
+
+@pytest.fixture(scope="session")
+def source_ami_id(request):
+    """Fetch the AMI ID for the source_ami specified in config.yml.
+
+    Uses the exact AMI name (e.g., debian-13-arm64-20251117-2299) from
+    config.yml to look up the corresponding AMI ID.
+    """
+    client = request.getfixturevalue("ec2_client")
+    cfg = request.getfixturevalue("config")
+    source_ami_name = cfg.get("source_ami", "")
+
+    if not source_ami_name:
+        pytest.skip("source_ami not configured in config.yml")
+
+    response = client.describe_images(
+        Filters=[
+            {"Name": "name", "Values": [source_ami_name]},
+            {"Name": "state", "Values": ["available"]},
+        ],
+        Owners=["amazon", "aws-marketplace"],
+    )
+
+    images = response.get("Images", [])
+    if not images:
+        pytest.skip(f"AMI not found: {source_ami_name}")
+
+    return images[0]["ImageId"]

@@ -88,7 +88,7 @@ endpoint_v1_ecs_runner:
     - 'test/api/endpoints/ecs_runner/**'
 endpoint_v1_image_for_ec2_runners:
   depends_on:
-    - endpoint_health
+    - endpoint_v1_image_for_ec2_runners_post
   name: Deploying image_for_ec2_runners endpoint
   paths:
     - '.github/workflows/endpoint_v1_image_for_ec2_runners.yml'
@@ -96,7 +96,7 @@ endpoint_v1_image_for_ec2_runners:
     - 'test/api/endpoints/image_for_ec2_runners/endpoint/**'
 endpoint_v1_image_for_ec2_runners_post:
   depends_on:
-    - endpoint_v1_image_for_ec2_runners
+    - endpoint_health
   name: Building AMI for EC2 self-hosted runners
   paths:
     - '.github/workflows/endpoint_v1_image_for_ec2_runners_post.yml'
