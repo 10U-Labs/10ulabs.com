@@ -162,7 +162,7 @@ jobs:
             '[github-hosted]')
         name: Install linting dependencies
         run: |
-          python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs requests
+          python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs requests types-requests
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
