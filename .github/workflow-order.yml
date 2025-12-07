@@ -46,7 +46,7 @@ workflows:
       - bootstrap
     level: 1
     paths:
-      - .github/workflows/ecr.yml
+      - .github/workflows/api_shared_ecr.yml
       - src/ecr/**
   ecs_runner:
     depends_on:

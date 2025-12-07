@@ -15,7 +15,7 @@ jobs:
        !contains(toJSON(github.event.commits), 'src/api/backend/') &&
        !contains(toJSON(github.event.commits), 'src/www/api/') &&
        !contains(toJSON(github.event.commits), 'test/api/backend/') &&
-       !contains(toJSON(github.event.commits), '.github/workflows/ecr.yml') &&
+       !contains(toJSON(github.event.commits), '.github/workflows/api_shared_ecr.yml') &&
        !contains(toJSON(github.event.commits), 'src/api/shared/ecr/') &&
        !contains(toJSON(github.event.commits), 'lib/terraform/'))
     name: Declaring common variables

@@ -238,7 +238,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/ecr.yml
+            .github/workflows/api_shared_ecr.yml
       - name: Run pylint
         run: |
           python3 -m pylint test/api/shared/ecr/ \

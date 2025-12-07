@@ -44,7 +44,7 @@ workflows:
   ecr:
     level: 1
     paths:
-      - .github/workflows/ecr.yml
+      - .github/workflows/api_shared_ecr.yml
     depends_on:
       - bootstrap
 
@@ -302,7 +302,7 @@ class TestGetAffectedWorkflows:
         affected = get_affected_workflows(
             [
                 "src/bootstrap/main.tf",
-                ".github/workflows/ecr.yml",
+                ".github/workflows/api_shared_ecr.yml",
             ],
             order,
         )

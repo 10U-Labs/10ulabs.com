@@ -18,7 +18,7 @@ health.yml (github_hosted)
     │        ↓
     │    ec2_runner.yml (github_hosted) ────────────┐
     │                                               │
-    └──→ ecr.yml (github_hosted) ───────────────────┤
+    └──→ api_shared_ecr.yml (github_hosted) ───────────────────┤
                                                     ↓
                             image_for_ecs_runners.yml (github_hosted)
                                                     ↓
@@ -60,9 +60,9 @@ See RTL.md for simulation_soc.yml.
 - [ ] Task 8: Ensure ec2_runner.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
   - Trigger: `gh workflow run ec2_runner.yml --field github_hosted=true`
-- [ ] Task 9: Ensure ecr.yml runs without problems
+- [ ] Task 9: Ensure api_shared_ecr.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
-  - Trigger: `gh workflow run ecr.yml --field github_hosted=true`
+  - Trigger: `gh workflow run api_shared_ecr.yml --field github_hosted=true`
 - [ ] Task 10: Ensure image_for_ecs_runners.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
   - Trigger: `gh workflow run image_for_ecs_runners.yml --field github_hosted=true`

@@ -41,7 +41,7 @@ SAMPLE_GRAPH = {
     "ecr": {
         "name": "ECR",
         "depends_on": ["health"],
-        "paths": [".github/workflows/ecr.yml", "src/api/shared/ecr/**"],
+        "paths": [".github/workflows/api_shared_ecr.yml", "src/api/shared/ecr/**"],
     },
     "image_for_ecs_runners": {
         "name": "Image for ECS Runners",
