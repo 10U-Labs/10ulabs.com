@@ -5,6 +5,26 @@ import sys
 from typing import Callable
 
 
+LINT_DISABLE_PATTERNS = [
+    (r'eslint-disable', 'eslint-disable'),
+    (r'@ts-ignore', '@ts-ignore'),
+    (r'@ts-nocheck', '@ts-nocheck'),
+    (r'@ts-expect-error', '@ts-expect-error'),
+    (r'#\s*noqa', 'noqa'),
+    (r'#\s*type:\s*ignore', 'type: ignore'),
+    (r'#\s*pylint:\s*disable', 'pylint: disable'),
+    (r'#\s*pragma:\s*no\s*cover', 'pragma: no cover'),
+    (r'#\s*flake8:\s*noqa', 'flake8: noqa'),
+    (r'//\s*nolint', 'nolint (Go)'),
+    (r'#\s*rubocop:disable', 'rubocop:disable'),
+    (r'//\s*NOLINT', 'NOLINT (C++)'),
+    (r'#\s*shellcheck\s+disable', 'shellcheck disable'),
+    (r'<!--\s*markdownlint-disable', 'markdownlint-disable'),
+    (r'#\s*yamllint\s+disable', 'yamllint disable'),
+    (r'stylelint-disable', 'stylelint-disable'),
+]
+
+
 def get_tool_input():
     """Read and parse JSON input from stdin, return tool_input dict."""
     input_data = sys.stdin.read()

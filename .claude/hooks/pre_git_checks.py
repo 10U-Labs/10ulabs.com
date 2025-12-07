@@ -10,6 +10,14 @@ from pathlib import Path
 
 import yaml
 
+from hook_utils import LINT_DISABLE_PATTERNS
+
+
+SKIP_LINT_CHECK_PATTERNS = [
+    r'test.*lint.*blocker',  # Test files for the lint blocker itself
+    r'\.claude/hooks/',  # Hook files (they contain patterns as strings)
+]
+
 
 def get_changed_files():
     """Get list of changed files from git staging area or last commit."""
@@ -25,6 +33,67 @@ def get_changed_files():
         )
         files = result.stdout.strip().split('\n') if result.stdout.strip() else []
     return [f for f in files if f]
+
+
+def should_skip_lint_check(file_path):
+    """Check if a file should be skipped for lint disable checking."""
+    for pattern in SKIP_LINT_CHECK_PATTERNS:
+        if re.search(pattern, file_path, re.IGNORECASE):
+            return True
+    return False
+
+
+def check_file_for_lint_disables(file_path):
+    """Check a single file for lint disable patterns. Returns list of violations."""
+    if should_skip_lint_check(file_path):
+        return []
+
+    if not os.path.isfile(file_path):
+        return []
+
+    try:
+        with open(file_path, encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+    except (OSError, IOError):
+        return []
+
+    violations = []
+    for pattern, description in LINT_DISABLE_PATTERNS:
+        matches = list(re.finditer(pattern, content, re.IGNORECASE))
+        for match in matches:
+            line_num = content[:match.start()].count('\n') + 1
+            violations.append((file_path, line_num, description))
+
+    return violations
+
+
+def check_changed_files_for_lint_disables(changed_files):
+    """Check all changed files for lint disable patterns."""
+    all_violations = []
+    for file_path in changed_files:
+        violations = check_file_for_lint_disables(file_path)
+        all_violations.extend(violations)
+    return all_violations
+
+
+def run_lint_disable_check(changed_files):
+    """Run lint disable check phase. Returns True if passed, False if failed."""
+    print("\n" + "="*60)
+    print("PHASE: LINT DISABLE CHECK")
+    print("="*60)
+    lint_violations = check_changed_files_for_lint_disables(changed_files)
+    if lint_violations:
+        print("\nLINT DISABLE VIOLATIONS FOUND:")
+        for file_path, line_num, description in lint_violations:
+            print(f"  {file_path}:{line_num} - {description}")
+        print("\n" + "="*60)
+        print("LINT DISABLE CHECK FAILED - Remove lint disable comments")
+        print("Fix the actual code instead of disabling lint checks.")
+        print("="*60)
+        print("LINT DISABLE CHECK FAILED", file=sys.stderr)
+        return False
+    print("No lint disable patterns found in changed files.")
+    return True
 
 
 def path_matches_pattern(file_path, pattern):
@@ -291,10 +360,13 @@ def main():
     for f in changed_files:
         print(f"  - {f}")
 
+    if not run_lint_disable_check(changed_files):
+        sys.exit(2)
+
     workflows_dir = os.path.join(project_dir, '.github/workflows')
     matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
     if not matching_workflows:
-        print("No matching workflows found.")
+        print("\nNo matching workflows found for additional checks.")
         sys.exit(0)
 
     print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
