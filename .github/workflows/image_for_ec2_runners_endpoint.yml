@@ -267,7 +267,7 @@ jobs:
         run: |
           ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
           pytest $ENDPOINT/pre_deployment/ --confcutdir=$ENDPOINT -v
-name: Deploying image_for_ec2_runners endpoint
+name: Ensuring /v1/image-for-ec2-runners exists and is properly configured
 on:
   workflow_call:
     inputs:

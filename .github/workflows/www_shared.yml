@@ -299,7 +299,7 @@ jobs:
         run: python3 -m pip install pytest boto3
       - name: Run unit tests
         run: python3 -m pytest test/www/shared/pre_deployment/ -v
-name: Ensuring www shared infrastructure exists and is properly configured
+name: Ensuring www_shared infrastructure exists and is properly configured
 on:
   workflow_call:
     inputs:
