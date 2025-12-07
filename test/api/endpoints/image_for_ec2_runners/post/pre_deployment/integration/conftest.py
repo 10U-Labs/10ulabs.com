@@ -12,6 +12,8 @@ BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 
 
 def _run_terraform_output(output_name: str, as_json: bool = False) -> str:
+    """ run terraform output."""
+
     cmd = ["terraform", "output"]
     if as_json:
         cmd.append("-json")
@@ -29,6 +31,8 @@ def _run_terraform_output(output_name: str, as_json: bool = False) -> str:
 
 
 def _terraform_init() -> bool:
+    """ terraform init."""
+
     result = subprocess.run(
         ["terraform", "init", "-backend=true", "-input=false"],
         cwd=str(BACKEND_DIR),
@@ -41,29 +45,39 @@ def _terraform_init() -> bool:
 
 @pytest.fixture(scope="session")
 def terraform_initialized():
+    """Terraform initialized."""
+
     success = _terraform_init()
     return success
 
 
 @pytest.fixture(scope="session")
 def ec2_client(aws_region):
+    """Ec2 client."""
+
     return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
 def iam_client(aws_region):
+    """Iam client."""
+
     return boto3.client("iam", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def terraform_outputs(terraform_initialized):
+def terraform_outputs(request):
+    """Terraform outputs."""
+    initialized = request.getfixturevalue("terraform_initialized")
     result = {}
-    if terraform_initialized:
+    if initialized:
         result = {
             "ec2_runner_ami_purpose_value": _run_terraform_output("ec2_runner_ami_purpose_value"),
             "ec2_runner_ami_stable_tag": _run_terraform_output("ec2_runner_ami_stable_tag"),
             "runner_security_group_id": _run_terraform_output("runner_security_group_id"),
-            "ssm_parameter_name_for_latest_ami": _run_terraform_output("ssm_parameter_name_for_latest_ami"),
+            "ssm_parameter_name_for_latest_ami": _run_terraform_output(
+                "ssm_parameter_name_for_latest_ami"
+            ),
             "vpc_public_subnet_ids": _run_terraform_output("vpc_public_subnet_ids"),
             "ec2_instance_types": _run_terraform_output("ec2_instance_types", as_json=True),
         }
@@ -71,20 +85,26 @@ def terraform_outputs(terraform_initialized):
 
 
 @pytest.fixture(scope="session")
-def security_group_id(terraform_outputs):
-    return terraform_outputs.get("runner_security_group_id", "")
+def security_group_id(request):
+    """Security group id."""
+    outputs = request.getfixturevalue("terraform_outputs")
+    return outputs.get("runner_security_group_id", "")
 
 
 @pytest.fixture(scope="session")
-def subnet_ids(terraform_outputs):
-    raw = terraform_outputs.get("vpc_public_subnet_ids", "")
+def subnet_ids(request):
+    """Subnet ids."""
+    outputs = request.getfixturevalue("terraform_outputs")
+    raw = outputs.get("vpc_public_subnet_ids", "")
     result = [s.strip() for s in raw.split(",") if s.strip()]
     return result
 
 
 @pytest.fixture(scope="session")
-def instance_types(terraform_outputs):
-    raw = terraform_outputs.get("ec2_instance_types", "[]")
+def instance_types(request):
+    """Instance types."""
+    outputs = request.getfixturevalue("terraform_outputs")
+    raw = outputs.get("ec2_instance_types", "[]")
     result = []
     if raw:
         try:
@@ -96,6 +116,8 @@ def instance_types(terraform_outputs):
 
 @pytest.fixture(scope="session")
 def source_ami_pattern(config):
+    """Source ami pattern."""
+
     result = {
         "os_family": config.get("os_family", ""),
         "os_version": config.get("os_version", ""),

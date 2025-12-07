@@ -4,7 +4,11 @@ from botocore.exceptions import ClientError
 
 
 class TestSubnetsExist:
+    """Tests for subnets exist."""
+
     def test_all_subnets_exist_in_aws(self, ec2_client, subnet_ids):
+        """All subnets exist in aws."""
+
         if not subnet_ids:
             pytest.skip("No subnet IDs configured")
         all_exist = False
@@ -18,6 +22,8 @@ class TestSubnetsExist:
         assert all_exist
 
     def test_subnets_are_available(self, ec2_client, subnet_ids):
+        """Subnets are available."""
+
         if not subnet_ids:
             pytest.skip("No subnet IDs configured")
         all_available = False
@@ -32,6 +38,8 @@ class TestSubnetsExist:
         assert all_available
 
     def test_subnets_have_available_ips(self, ec2_client, subnet_ids):
+        """Subnets have available ips."""
+
         if not subnet_ids:
             pytest.skip("No subnet IDs configured")
         have_ips = False
@@ -46,6 +54,8 @@ class TestSubnetsExist:
         assert have_ips
 
     def test_subnets_are_public(self, ec2_client, subnet_ids):
+        """Subnets are public."""
+
         if not subnet_ids:
             pytest.skip("No subnet IDs configured")
         are_public = False

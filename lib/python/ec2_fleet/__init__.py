@@ -8,15 +8,17 @@ from botocore.exceptions import ClientError
 
 
 class FleetError(Exception):
-    pass
+    """Base exception for fleet-related errors."""
 
 
 class CapacityError(Exception):
-    pass
+    """Raised when EC2 capacity is insufficient to launch instances."""
 
 
 @dataclass
 class LaunchOptions:
+    """Configuration options for launching EC2 instances via fleet."""
+
     instance_types: list[str]
     subnet_ids: list[str]
     allocation_strategy: str = "lowest-price"
@@ -26,11 +28,13 @@ class LaunchOptions:
 
 
 def get_subnet_az(ec2_client: Any, subnet_id: str) -> str:
+    """Get the availability zone of a subnet."""
     response = ec2_client.describe_subnets(SubnetIds=[subnet_id])
     return response["Subnets"][0]["AvailabilityZone"]
 
 
 def get_subnet_azs(ec2_client: Any, subnet_ids: list[str]) -> dict[str, str]:
+    """Get availability zones for multiple subnets."""
     result = {}
     if subnet_ids:
         response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
@@ -42,6 +46,7 @@ def get_subnet_azs(ec2_client: Any, subnet_ids: list[str]) -> dict[str, str]:
 def filter_subnets_by_az(
     ec2_client: Any, subnet_ids: list[str], excluded_azs: list[str]
 ) -> list[str]:
+    """Filter subnets to exclude those in specified availability zones."""
     result = subnet_ids
     if excluded_azs:
         subnet_azs = get_subnet_azs(ec2_client, subnet_ids)
@@ -52,6 +57,7 @@ def filter_subnets_by_az(
 def create_launch_template(
     ec2_client: Any, template_name: str, config: dict[str, Any]
 ) -> str:
+    """Create an EC2 launch template with the specified configuration."""
     template_data: dict[str, Any] = {"ImageId": config["ami_id"]}
     if "security_group_id" in config:
         template_data["SecurityGroupIds"] = [config["security_group_id"]]
@@ -89,6 +95,7 @@ def create_launch_template(
 
 
 def delete_launch_template(ec2_client: Any, template_id: str) -> None:
+    """Delete an EC2 launch template, ignoring errors if it doesn't exist."""
     try:
         ec2_client.delete_launch_template(LaunchTemplateId=template_id)
     except ClientError:
@@ -98,6 +105,7 @@ def delete_launch_template(ec2_client: Any, template_id: str) -> None:
 def create_fleet_instance(
     ec2_client: Any, template_id: str, options: LaunchOptions
 ) -> str:
+    """Create an EC2 instance using fleet API with the specified template."""
     overrides = _build_fleet_overrides(options)
     response = ec2_client.create_fleet(
         Type="instant",
@@ -138,12 +146,16 @@ def _extract_instance_id(response: dict[str, Any]) -> str:
         result = instances[0]["InstanceIds"][0]
     else:
         errors = response.get("Errors", [])
-        error_msg = "; ".join([e.get("ErrorMessage", str(e)) for e in errors]) if errors else "No instances launched"
+        if errors:
+            error_msg = "; ".join([e.get("ErrorMessage", str(e)) for e in errors])
+        else:
+            error_msg = "No instances launched"
         raise CapacityError(error_msg)
     return result
 
 
 def get_instance_state(ec2_client: Any, instance_id: str) -> str:
+    """Get the current state of an EC2 instance."""
     result = "unknown"
     try:
         response = ec2_client.describe_instances(InstanceIds=[instance_id])
@@ -180,7 +192,8 @@ def wait_for_instance_running(
             logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)
     if not running:
-        raise RuntimeError(f"Instance {instance_id} did not reach running state after {max_attempts} attempts")
+        msg = f"Instance {instance_id} did not reach running state after {max_attempts} attempts"
+        raise RuntimeError(msg)
 
 
 def wait_for_status_checks(
@@ -210,10 +223,12 @@ def wait_for_status_checks(
             logging.info("  Waiting %ds before next check...", poll_interval)
             time.sleep(poll_interval)
     if not passed:
-        raise RuntimeError(f"Instance {instance_id} did not pass status checks after {max_attempts} attempts")
+        msg = f"Instance {instance_id} did not pass status checks after {max_attempts} attempts"
+        raise RuntimeError(msg)
 
 
 def terminate_instance(ec2_client: Any, instance_id: str) -> None:
+    """Terminate an EC2 instance, ignoring errors if it doesn't exist."""
     try:
         ec2_client.terminate_instances(InstanceIds=[instance_id])
     except ClientError:
@@ -223,6 +238,7 @@ def terminate_instance(ec2_client: Any, instance_id: str) -> None:
 def launch_instance(
     ec2_client: Any, launch_template_config: dict[str, Any], options: LaunchOptions
 ) -> str:
+    """Launch a single EC2 instance using the fleet API."""
     template_name = f"fleet-launch-{uuid.uuid4().hex[:8]}"
     template_id = create_launch_template(ec2_client, template_name, launch_template_config)
     instance_id = ""
@@ -274,6 +290,7 @@ def _attempt_launch(
 def launch_instance_with_retry(
     ec2_client: Any, launch_template_config: dict[str, Any], options: LaunchOptions
 ) -> str:
+    """Launch an EC2 instance with automatic retries on failure."""
     attempt = 0
     instance_id = ""
     last_error: Exception | None = None

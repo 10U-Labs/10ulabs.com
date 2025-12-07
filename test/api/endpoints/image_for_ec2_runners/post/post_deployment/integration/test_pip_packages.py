@@ -3,6 +3,8 @@ import pytest
 
 
 def test_boto3_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Boto3 is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -12,6 +14,8 @@ def test_boto3_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_boto3_stubs_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Boto3 stubs is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -21,6 +25,8 @@ def test_boto3_stubs_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_botocore_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Botocore is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -30,6 +36,8 @@ def test_botocore_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_dnspython_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Dnspython is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -39,6 +47,8 @@ def test_dnspython_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_dockerfile_parse_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Dockerfile parse is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -48,6 +58,8 @@ def test_dockerfile_parse_is_importable(ssm_client, test_instance, run_ssm_comma
 
 
 def test_mypy_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Mypy is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -57,6 +69,8 @@ def test_mypy_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_mypy_can_run_version_check(ssm_client, test_instance, run_ssm_command):
+    """Mypy can run version check."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -66,6 +80,8 @@ def test_mypy_can_run_version_check(ssm_client, test_instance, run_ssm_command):
 
 
 def test_pylint_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Pylint is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -75,6 +91,8 @@ def test_pylint_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_pylint_can_run_version_check(ssm_client, test_instance, run_ssm_command):
+    """Pylint can run version check."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -84,6 +102,8 @@ def test_pylint_can_run_version_check(ssm_client, test_instance, run_ssm_command
 
 
 def test_python_hcl2_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Python hcl2 is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -93,6 +113,8 @@ def test_python_hcl2_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_pyyaml_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Pyyaml is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -102,6 +124,8 @@ def test_pyyaml_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_requests_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Requests is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -111,6 +135,8 @@ def test_requests_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_types_pyyaml_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Types pyyaml is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -120,6 +146,8 @@ def test_types_pyyaml_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_types_dockerfile_parse_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Types dockerfile parse is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -130,6 +158,8 @@ def test_types_dockerfile_parse_is_installed(ssm_client, test_instance, run_ssm_
 
 
 def test_types_requests_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Types requests is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -139,6 +169,8 @@ def test_types_requests_is_installed(ssm_client, test_instance, run_ssm_command)
 
 
 def test_yamllint_is_importable(ssm_client, test_instance, run_ssm_command):
+    """Yamllint is importable."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -148,6 +180,8 @@ def test_yamllint_is_importable(ssm_client, test_instance, run_ssm_command):
 
 
 def test_yamllint_can_run_version_check(ssm_client, test_instance, run_ssm_command):
+    """Yamllint can run version check."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 

@@ -4,6 +4,7 @@ import pytest
 
 
 def test_instance_passes_instance_status_checks(ec2_client, test_instance):
+    """Test that the instance passes EC2 instance status checks."""
     if not test_instance:
         pytest.fail("Test instance not created")
 

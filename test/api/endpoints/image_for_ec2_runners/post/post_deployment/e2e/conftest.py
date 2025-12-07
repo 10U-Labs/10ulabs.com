@@ -4,8 +4,14 @@ import json
 import os
 import urllib.request
 import urllib.error
-from ec2_helpers import launch_instance, wait_for_instance_ready, terminate_instance_safely
 import pytest
+from ec2_helpers import (
+    launch_instance,
+    wait_for_instance_ready,
+    terminate_instance_safely,
+    get_subnet_ids,
+    get_instance_types,
+)
 
 
 def get_registration_token(github_repo, github_token):
@@ -73,25 +79,6 @@ def validate_e2e_inputs(test_ami_id, github_token):
         pytest.fail("TEST_SUBNET_IDS or TEST_SUBNET_ID environment variable not set")
     if not os.environ.get("TEST_SECURITY_GROUP_ID", ""):
         pytest.fail("TEST_SECURITY_GROUP_ID environment variable not set")
-
-
-def get_subnet_ids():
-    """Get subnet IDs from environment variables."""
-    subnet_ids_env = os.environ.get("TEST_SUBNET_IDS", "")
-    subnet_id_env = os.environ.get("TEST_SUBNET_ID", "")
-    result = []
-    if subnet_ids_env:
-        result = [s.strip() for s in subnet_ids_env.split(",") if s.strip()]
-    elif subnet_id_env:
-        result = [subnet_id_env]
-    return result
-
-
-def get_instance_types():
-    """Get instance types from environment variable."""
-    env_value = os.environ.get("INSTANCE_TYPES", "")
-    result = env_value.split(",") if env_value else []
-    return result
 
 
 def build_e2e_config(test_ami_id, test_config, github_repo, registration_token):

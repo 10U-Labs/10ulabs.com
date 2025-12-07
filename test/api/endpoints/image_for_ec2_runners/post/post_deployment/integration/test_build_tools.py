@@ -3,6 +3,8 @@ import pytest
 
 
 def test_aws_cli_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Aws cli is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -12,6 +14,8 @@ def test_aws_cli_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_aws_cli_version_is_v2(ssm_client, test_instance, run_ssm_command):
+    """Aws cli version is v2."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -21,6 +25,8 @@ def test_aws_cli_version_is_v2(ssm_client, test_instance, run_ssm_command):
 
 
 def test_curl_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Curl is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -30,6 +36,8 @@ def test_curl_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_docker_buildx_is_available(ssm_client, test_instance, run_ssm_command):
+    """Docker buildx is available."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -39,6 +47,8 @@ def test_docker_buildx_is_available(ssm_client, test_instance, run_ssm_command):
 
 
 def test_git_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Git is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -48,6 +58,8 @@ def test_git_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_jq_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Jq is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -57,6 +69,8 @@ def test_jq_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_pip_is_available(ssm_client, test_instance, run_ssm_command):
+    """Pip is available."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -66,6 +80,8 @@ def test_pip_is_available(ssm_client, test_instance, run_ssm_command):
 
 
 def test_pytest_can_run_version_check(ssm_client, test_instance, run_ssm_command):
+    """Pytest can run version check."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -75,6 +91,8 @@ def test_pytest_can_run_version_check(ssm_client, test_instance, run_ssm_command
 
 
 def test_pytest_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Pytest is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -84,6 +102,8 @@ def test_pytest_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_python3_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Python3 is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -93,6 +113,8 @@ def test_python3_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_python3_version_is_3_13(ssm_client, test_instance, run_ssm_command):
+    """Python3 version is 3 13."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -102,6 +124,8 @@ def test_python3_version_is_3_13(ssm_client, test_instance, run_ssm_command):
 
 
 def test_unzip_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Unzip is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -111,6 +135,8 @@ def test_unzip_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_yq_can_parse_yaml(ssm_client, test_instance, run_ssm_command):
+    """Yq can parse yaml."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -120,6 +146,8 @@ def test_yq_can_parse_yaml(ssm_client, test_instance, run_ssm_command):
 
 
 def test_yq_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Yq is installed."""
+
     if not test_instance:
         pytest.fail("Test instance not created")
 

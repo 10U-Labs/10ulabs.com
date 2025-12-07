@@ -3,7 +3,11 @@ from botocore.exceptions import ClientError
 
 
 class TestSourceAmiExists:
+    """Tests for source ami exists."""
+
     def test_source_ami_exists_in_aws(self, ec2_client, source_ami_pattern):
+        """Source ami exists in aws."""
+
         exists = False
         os_family = source_ami_pattern.get("os_family", "")
         os_version = source_ami_pattern.get("os_version", "")
@@ -25,6 +29,8 @@ class TestSourceAmiExists:
         assert exists
 
     def test_source_ami_is_available(self, ec2_client, source_ami_pattern):
+        """Source ami is available."""
+
         is_available = False
         os_family = source_ami_pattern.get("os_family", "")
         os_version = source_ami_pattern.get("os_version", "")

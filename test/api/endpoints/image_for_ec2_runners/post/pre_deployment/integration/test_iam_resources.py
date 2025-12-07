@@ -3,7 +3,11 @@ from botocore.exceptions import ClientError
 
 
 class TestIamInstanceProfile:
+    """Tests for iam instance profile."""
+
     def test_runner_instance_profile_exists(self, iam_client, config):
+        """Runner instance profile exists."""
+
         exists = False
         profile_name = config.get("github_runner_iam_instance_profile_name", "")
         if profile_name:
@@ -15,6 +19,8 @@ class TestIamInstanceProfile:
         assert exists
 
     def test_runner_instance_profile_has_role(self, iam_client, config):
+        """Runner instance profile has role."""
+
         has_role = False
         profile_name = config.get("github_runner_iam_instance_profile_name", "")
         if profile_name:

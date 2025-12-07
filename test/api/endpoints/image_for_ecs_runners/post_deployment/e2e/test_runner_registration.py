@@ -7,7 +7,7 @@ from .conftest import (
     get_github_runners,
     wait_for_process_with_backoff,
     runner_exists_with_name,
-    get_runner_and_cleanup,
+    start_runner_and_get_info,
 )
 
 
@@ -77,18 +77,10 @@ def test_runner_appears_online_in_github(
 ):
     """Test that a runner appears online in GitHub after registration."""
     login_to_ecr(aws_region)
-    runner_name = f"e2e-test-runner-online-{int(time.time())}"
-    process = start_runner_container(
-        ecr_image_uri,
-        github_repo,
-        runner_name,
-        "e2e-test-online",
-        runner_registration_token
-    )
-    runner = get_runner_and_cleanup(
-        process,
-        github_pat,
-        github_repo,
-        runner_name
-    )
+    runner = start_runner_and_get_info({
+        "uri": ecr_image_uri, "repo": github_repo,
+        "name": f"e2e-test-runner-online-{int(time.time())}",
+        "labels": "e2e-test-online",
+        "token": runner_registration_token, "pat": github_pat
+    })
     assert runner is not None

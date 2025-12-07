@@ -16,6 +16,7 @@ TFVARS_PATH = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
 
 
 def _get_terraform_output_value(output_name: str) -> str:
+    """ get terraform output value."""
     with open(SHARED_MODULE_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
     pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
@@ -25,6 +26,7 @@ def _get_terraform_output_value(output_name: str) -> str:
 
 
 def get_aws_region() -> str:
+    """Get aws region."""
     try:
         region = os.environ["AWS_REGION"]
     except KeyError:
@@ -33,6 +35,7 @@ def get_aws_region() -> str:
 
 
 def get_aws_account_id() -> str:
+    """Get aws account id."""
     result = subprocess.run(
         ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
         check=False,
@@ -43,6 +46,7 @@ def get_aws_account_id() -> str:
 
 
 def get_github_repo() -> str:
+    """Get github repo."""
     result = subprocess.run(
         ["git", "remote", "get-url", "origin"],
         check=False,
@@ -61,31 +65,37 @@ def get_github_repo() -> str:
 
 @pytest.fixture(scope="session")
 def aws_region():
+    """Aws region."""
     return get_aws_region()
 
 
 @pytest.fixture(scope="session")
 def aws_account_id():
+    """Aws account id."""
     return get_aws_account_id()
 
 
 @pytest.fixture(scope="session")
 def github_repo():
+    """Github repo."""
     return get_github_repo()
 
 
 @pytest.fixture(scope="session")
 def project_root():
+    """Project root."""
     return REPO_ROOT
 
 
 @pytest.fixture(scope="session")
 def post_dir():
+    """Post dir."""
     return POST_DIR
 
 
 @pytest.fixture(scope="session")
 def config():
+    """Config."""
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
         raw_config = yaml.safe_load(f)
     source_ami = raw_config.get("source_ami", "")

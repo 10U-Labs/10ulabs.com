@@ -3,6 +3,8 @@ import pytest
 
 
 def test_ami_architecture_matches_expected(fetched_ami, config):
+    """Ami architecture matches expected."""
+
     if not fetched_ami:
         pytest.fail("AMI details not available")
 
@@ -12,6 +14,8 @@ def test_ami_architecture_matches_expected(fetched_ami, config):
 
 
 def test_ami_has_root_device_mapping(fetched_ami):
+    """Ami has root device mapping."""
+
     if not fetched_ami:
         pytest.fail("AMI details not available")
 
@@ -19,6 +23,8 @@ def test_ami_has_root_device_mapping(fetched_ami):
 
 
 def test_ami_root_device_is_ebs(fetched_ami):
+    """Ami root device is ebs."""
+
     if not fetched_ami:
         pytest.fail("AMI details not available")
 

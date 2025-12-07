@@ -10,24 +10,29 @@ POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "
 
 @pytest.fixture
 def config_path():
+    """Config path."""
     return POST_DIR / "config.yml"
 
 
 @pytest.fixture
 def loaded_config():
+    """Loaded config."""
     return yaml.safe_load((POST_DIR / "config.yml").read_text())
 
 
 @pytest.fixture
 def post_dir():
+    """Post dir."""
     return POST_DIR
 
 
 @pytest.fixture
 def setup_script_content():
+    """Setup script content."""
     return (POST_DIR / "setup.sh").read_text()
 
 
 @pytest.fixture
 def setup_script_path():
+    """Setup script path."""
     return POST_DIR / "setup.sh"

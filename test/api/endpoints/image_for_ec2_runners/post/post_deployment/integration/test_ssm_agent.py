@@ -3,6 +3,7 @@ import pytest
 
 
 def test_ssm_agent_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Test that SSM agent is installed on the instance."""
     if not test_instance:
         pytest.fail("Test instance not created")
 
@@ -12,6 +13,7 @@ def test_ssm_agent_is_installed(ssm_client, test_instance, run_ssm_command):
 
 
 def test_ssm_agent_service_is_running(ssm_client, test_instance, run_ssm_command):
+    """Test that SSM agent service is running on the instance."""
     if not test_instance:
         pytest.fail("Test instance not created")
 

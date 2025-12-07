@@ -181,11 +181,13 @@ def extract_commands_from_jobs(workflow, job_filter):
             if not is_pre_push_check_step(step_name, run_cmd):
                 continue
             condition = step.get('if', '')
+            step_env = step.get('env', {})
             commands.append({
                 'name': step_name or 'unnamed',
                 'run': run_cmd,
                 'conditional': is_conditional_on_github_hosted(condition),
-                'job': job_name
+                'job': job_name,
+                'env': step_env
             })
     return commands
 
@@ -264,6 +266,17 @@ def clean_script(raw_cmd):
     return '\n'.join(lines)
 
 
+def build_step_env(step_env):
+    """Build environment dict with step-level env vars merged with current env."""
+    run_env = os.environ.copy()
+    for key, value in step_env.items():
+        # Clean GitHub Actions template variables from env values
+        cleaned_value = re.sub(r'\$\{\{[^}]+\}\}', '', str(value)).strip()
+        if cleaned_value:
+            run_env[key] = cleaned_value
+    return run_env
+
+
 def run_command(cmd_info, workflow_name):
     """Run a single command and return True if it passes."""
     if cmd_info.get('conditional'):
@@ -271,8 +284,7 @@ def run_command(cmd_info, workflow_name):
         return True
 
     name = cmd_info['name']
-    raw_cmd = cmd_info['run']
-    script = clean_script(raw_cmd)
+    script = clean_script(cmd_info['run'])
 
     if not script.strip():
         return True
@@ -282,15 +294,15 @@ def run_command(cmd_info, workflow_name):
     first_line = script.split('\n', maxsplit=1)[0].strip()
     print(f"  $ {first_line[:70]}{'...' if len(first_line) > 70 else ''}")
 
-    full_script = f"set -e\n{script}"
     result = subprocess.run(
-        full_script,
+        f"set -e\n{script}",
         shell=True,
         cwd=os.environ.get('CLAUDE_PROJECT_DIR', '.'),
         capture_output=True,
         text=True,
         check=False,
-        executable='/bin/bash'
+        executable='/bin/bash',
+        env=build_step_env(cmd_info.get('env', {}))
     )
 
     if result.returncode != 0:

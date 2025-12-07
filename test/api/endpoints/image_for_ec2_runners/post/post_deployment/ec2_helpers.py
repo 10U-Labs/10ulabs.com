@@ -1,4 +1,5 @@
 """Helper functions for EC2 instance management in tests."""
+import os
 import time
 from botocore.exceptions import ClientError
 from ec2_fleet import (
@@ -11,6 +12,8 @@ from ec2_fleet import (
 
 
 def build_launch_template_config(config):
+    """Build launch template config."""
+
     template_config = {
         "ami_id": config["ami_id"],
         "security_group_id": config["security_group_id"],
@@ -35,6 +38,8 @@ def build_launch_template_config(config):
 
 
 def launch_instance(ec2_client, config):
+    """Launch instance."""
+
     template_config = build_launch_template_config(config)
     instance_types = config.get("instance_types", [config.get("instance_type", "m7gd.xlarge")])
     subnet_ids = config.get("subnet_ids", [config.get("subnet_id")])
@@ -49,12 +54,16 @@ def launch_instance(ec2_client, config):
 
 
 def wait_for_instance_ready(ec2_client, instance_id):
+    """Wait for instance ready."""
+
     wait_for_instance_running(ec2_client, instance_id)
     wait_for_status_checks(ec2_client, instance_id)
     return True
 
 
 def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=60):
+    """Poll ssm command."""
+
     start_time = time.time()
     while time.time() - start_time < max_wait:
         time.sleep(3)
@@ -72,6 +81,8 @@ def poll_ssm_command(ssm_client, instance_id, command_id, max_wait=60):
 
 
 def get_instance_logs(ssm_client, instance_id):
+    """Get instance logs."""
+
     log_commands = """
 echo '=== cloud-init status ==='
 cloud-init status 2>&1 || echo 'cloud-init status failed'
@@ -112,4 +123,24 @@ ps aux | grep -E 'runner|Runner' || echo 'No runner processes'
 
 
 def terminate_instance_safely(ec2_client, instance_id):
+    """Safely terminate an EC2 instance."""
     terminate_instance(ec2_client, instance_id)
+
+
+def get_subnet_ids():
+    """Get subnet IDs from environment variables."""
+    subnet_ids_env = os.environ.get("TEST_SUBNET_IDS", "")
+    subnet_id_env = os.environ.get("TEST_SUBNET_ID", "")
+    result = []
+    if subnet_ids_env:
+        result = [s.strip() for s in subnet_ids_env.split(",") if s.strip()]
+    elif subnet_id_env:
+        result = [subnet_id_env]
+    return result
+
+
+def get_instance_types():
+    """Get instance types from INSTANCE_TYPES environment variable."""
+    env_value = os.environ.get("INSTANCE_TYPES", "")
+    result = env_value.split(",") if env_value else []
+    return result

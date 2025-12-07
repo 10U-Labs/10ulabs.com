@@ -1,7 +1,7 @@
 """E2E tests for ECS runner status verification."""
 import time
 from ..conftest import login_to_ecr
-from .conftest import start_runner_container, get_runner_and_cleanup
+from .conftest import start_runner_and_get_info
 
 
 def test_runner_status_is_online(
@@ -13,18 +13,10 @@ def test_runner_status_is_online(
 ):
     """Test that a runner registers and shows online status in GitHub."""
     login_to_ecr(aws_region)
-    runner_name = f"e2e-test-status-{int(time.time())}"
-    process = start_runner_container(
-        ecr_image_uri,
-        github_repo,
-        runner_name,
-        "e2e-test-status",
-        runner_registration_token
-    )
-    runner = get_runner_and_cleanup(
-        process,
-        github_pat,
-        github_repo,
-        runner_name
-    )
+    runner = start_runner_and_get_info({
+        "uri": ecr_image_uri, "repo": github_repo,
+        "name": f"e2e-test-status-{int(time.time())}",
+        "labels": "e2e-test-status",
+        "token": runner_registration_token, "pat": github_pat
+    })
     assert runner["status"] == "online"

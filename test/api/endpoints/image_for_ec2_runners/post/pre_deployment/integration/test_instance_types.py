@@ -3,7 +3,11 @@ from botocore.exceptions import ClientError
 
 
 class TestInstanceTypesAvailability:
+    """Tests for instance types availability."""
+
     def test_instance_types_are_valid(self, ec2_client, instance_types):
+        """Instance types are valid."""
+
         all_valid = False
         if instance_types:
             try:
@@ -15,6 +19,8 @@ class TestInstanceTypesAvailability:
         assert all_valid
 
     def test_instance_types_available_in_region(self, ec2_client, instance_types, aws_region):
+        """Instance types available in region."""
+
         all_available = False
         if instance_types:
             try:
@@ -32,6 +38,8 @@ class TestInstanceTypesAvailability:
         assert all_available
 
     def test_instance_types_have_instance_storage(self, ec2_client, instance_types):
+        """Instance types have instance storage."""
+
         all_have_storage = False
         if instance_types:
             try:

@@ -125,7 +125,7 @@ jobs:
           pytest \
             test/api/endpoints/image_for_ecs_runners/post_deployment/e2e/ \
             --confcutdir=test/api/endpoints/image_for_ecs_runners \
-            -v
+            --verbose --pythonwarnings=error
   ensuring-infrastructure-in-desired-state:
     name: Ensuring infrastructure is in desired state
     needs:
@@ -241,7 +241,7 @@ jobs:
           pytest \
             $TEST_DIR/post_deployment/integration/ \
             --confcutdir=$TEST_DIR \
-            -v
+            --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -494,7 +494,7 @@ jobs:
           pytest \
             test/api/endpoints/image_for_ecs_runners/pre_deployment/ \
             --confcutdir=test/api/endpoints/image_for_ecs_runners \
-            -v
+            --verbose --pythonwarnings=error
 name: Building Docker image for ECS runners
 on:
   workflow_call:

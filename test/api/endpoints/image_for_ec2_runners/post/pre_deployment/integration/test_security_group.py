@@ -4,7 +4,11 @@ from botocore.exceptions import ClientError
 
 
 class TestSecurityGroupExists:
+    """Tests for security group exists."""
+
     def test_security_group_exists_in_aws(self, ec2_client, security_group_id):
+        """Security group exists in aws."""
+
         if not security_group_id:
             pytest.skip("No security group ID configured")
         exists = False
@@ -17,6 +21,8 @@ class TestSecurityGroupExists:
         assert exists
 
     def test_security_group_has_description(self, ec2_client, security_group_id):
+        """Security group has description."""
+
         if not security_group_id:
             pytest.skip("No security group ID configured")
         has_description = False
@@ -31,6 +37,8 @@ class TestSecurityGroupExists:
         assert has_description
 
     def test_security_group_has_vpc_id(self, ec2_client, security_group_id):
+        """Security group has vpc id."""
+
         if not security_group_id:
             pytest.skip("No security group ID configured")
         has_vpc = False

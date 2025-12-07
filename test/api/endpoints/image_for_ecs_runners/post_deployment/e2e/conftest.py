@@ -146,3 +146,22 @@ def get_label_by_name(labels, target_name):
             return label
         index = index + 1
     return None
+
+
+def start_runner_and_get_info(config):
+    """
+    Start a runner container and retrieve its info from GitHub.
+
+    Combines start_runner_container and get_runner_and_cleanup into a single
+    operation to reduce code duplication in tests.
+
+    Args:
+        config: Dict with keys: uri, repo, name, labels, token, pat
+    """
+    process = start_runner_container(
+        config["uri"], config["repo"], config["name"],
+        config["labels"], config["token"]
+    )
+    return get_runner_and_cleanup(
+        process, config["pat"], config["repo"], config["name"]
+    )
