@@ -101,6 +101,26 @@ source "amazon-ebs" "example" {
 
 ---
 
+### PR 5: Wait and poll EC2 instance status
+
+**Goal:** After launching an instance via Fleet API, properly wait for and poll the EC2 instance status before proceeding with provisioning.
+
+**Changes:**
+- Add polling logic to wait for instance to reach `running` state after Fleet creation
+- Handle instance status checks (system status, instance status)
+- Implement configurable timeout and polling interval
+- Surface meaningful errors when instance fails to reach ready state
+
+**Example config:**
+```hcl
+source "amazon-ebs" "example" {
+  on_demand_instance_types = ["m6i.large", "m5.large"]
+  # ... other config
+}
+```
+
+---
+
 ## Implementation Notes
 
 ### EC2 Fleet API usage
