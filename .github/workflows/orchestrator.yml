@@ -90,8 +90,10 @@ jobs:
           with open("etc/workflow-dependencies.yml") as f:
               graph = yaml.safe_load(f)
 
-          # Workflows that run on ECS on-demand (don't need github_hosted)
-          # All others need github_hosted=true until ECS runners are operational
+          # Check for github-hosted flag in commit message
+          github_hosted = "[github-hosted]" in commit_msg
+
+          # Workflows that run on ECS on-demand (don't support github_hosted input)
           ecs_on_demand_workflows = {"contact", "echo", "rack_designer", "www_index"}
 
           for workflow_key in roots:
@@ -103,9 +105,8 @@ jobs:
 
               cmd = ["gh", "workflow", "run", workflow_file]
 
-              # Pass github_hosted=true for workflows that support it
-              # (all except ECS on-demand workflows)
-              if workflow_key not in ecs_on_demand_workflows:
+              # Pass github_hosted=true if requested and workflow supports it
+              if github_hosted and workflow_key not in ecs_on_demand_workflows:
                   cmd.extend(["--field", "github_hosted=true"])
 
               result = subprocess.run(cmd, capture_output=True, text=True)
