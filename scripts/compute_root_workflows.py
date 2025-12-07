@@ -246,6 +246,10 @@ def main() -> None:
         action="store_true",
         help="Output full execution plan (roots + descendants) in topological order",
     )
+    parser.add_argument(
+        "--start-from",
+        help="Specify a workflow to start from (bypasses file detection)",
+    )
 
     args = parser.parse_args()
 
@@ -267,8 +271,15 @@ def main() -> None:
 
     graph = load_dependency_graph(graph_path)
 
-    # Compute root workflows
-    roots = compute_root_workflows(changed_files, graph)
+    # Determine roots: either from --start-from or from changed files
+    if args.start_from:
+        if args.start_from not in graph:
+            print(f"Error: Unknown workflow '{args.start_from}'", file=sys.stderr)
+            print(f"Available workflows: {', '.join(sorted(graph.keys()))}", file=sys.stderr)
+            sys.exit(1)
+        roots = [args.start_from]
+    else:
+        roots = compute_root_workflows(changed_files, graph)
 
     # Compute execution plan if requested
     if args.execution_plan:

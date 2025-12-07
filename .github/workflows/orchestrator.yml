@@ -82,10 +82,18 @@ jobs:
         name: Compute root workflows and execution plan
         run: |
           GRAPH="etc/workflow-dependencies.yml"
-          ROOTS=$(echo "${{ steps.files.outputs.changed }}" | \
-            python3 scripts/compute_root_workflows.py --graph $GRAPH)
-          PLAN=$(echo "${{ steps.files.outputs.changed }}" | \
-            python3 scripts/compute_root_workflows.py --graph $GRAPH --execution-plan)
+          START_FROM="${{ inputs.start_from }}"
+          if [ -n "$START_FROM" ]; then
+            echo "Manual trigger: starting from '$START_FROM'"
+            ROOTS="[\"$START_FROM\"]"
+            PLAN=$(python3 scripts/compute_root_workflows.py \
+              --graph $GRAPH --execution-plan --start-from "$START_FROM")
+          else
+            ROOTS=$(echo "${{ steps.files.outputs.changed }}" | \
+              python3 scripts/compute_root_workflows.py --graph $GRAPH)
+            PLAN=$(echo "${{ steps.files.outputs.changed }}" | \
+              python3 scripts/compute_root_workflows.py --graph $GRAPH --execution-plan)
+          fi
           echo "Root workflows: $ROOTS"
           echo "Execution plan: $PLAN"
           echo "roots=$ROOTS" >> "$GITHUB_OUTPUT"
@@ -113,7 +121,8 @@ jobs:
         name: Execute workflow plan sequentially
         run: |
           GITHUB_HOSTED_FLAG=""
-          if [[ "${{ github.event.head_commit.message }}" == *"[github-hosted]"* ]]; then
+          if [[ "${{ inputs.github_hosted }}" == "true" ]] || \
+             [[ "${{ github.event.head_commit.message }}" == *"[github-hosted]"* ]]; then
             GITHUB_HOSTED_FLAG="--github-hosted"
           fi
           python3 scripts/execute_workflow_plan.py \
@@ -125,6 +134,14 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      github_hosted:
+        default: false
+        description: Use GitHub-hosted runners
+        type: boolean
+      start_from:
+        description: 'Workflow to start from (e.g., "health", "bootstrap")'
+        type: string
 permissions:
   actions: write
   contents: read
