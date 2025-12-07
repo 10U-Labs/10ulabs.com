@@ -12,9 +12,15 @@ jobs:
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       github_actions_role_arn: ${{ steps.shared.outputs.github_actions_role_arn }}
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,9 +42,15 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,6 +59,14 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
         run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform init
       - name: Terraform Apply
@@ -59,9 +79,15 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,6 +96,24 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install pytest boto3
       - name: Run integration tests
         run: |
           pytest test/api/endpoints/image_for_ec2_runners/endpoint/post_deployment/integration/ \
@@ -78,12 +122,37 @@ jobs:
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install linting dependencies
+        run: |
+          python3 -m pip install pylint mypy yamllint pytest boto3 boto3-stubs
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -112,6 +181,24 @@ jobs:
         with:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
       - name: Terraform Format Check
         run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform fmt -diff -check -recursive
       - name: Terraform Init
@@ -130,12 +217,36 @@ jobs:
     needs:
       - declaring-common-variables
       - performing-static-analysis
-    runs-on:
-      - ecs-fargate
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install pytest boto3
       - name: Run unit tests
         run: |
           pytest test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/ \
@@ -144,15 +255,24 @@ jobs:
 name: Deploying image_for_ec2_runners endpoint
 on:
   workflow_call:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
   workflow_dispatch:
+    inputs:
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
   workflow_run:
     branches:
       - main
     types:
       - completed
     workflows:
-      - 'Ensuring ECR repository exists and is properly configured'
-      - 'Ensuring the /v1/runners API endpoint exists and is properly configured'
+      - 'Ensuring health endpoint exists and is properly configured'
 permissions:
   contents: read
   id-token: write
