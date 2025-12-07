@@ -43,10 +43,7 @@ jobs:
           echo "Full execution plan:"
           echo '${{ needs.determining.outputs.execution_plan }}' | jq -r '.[]'
   determining:
-    if: >-
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      !failure() && !cancelled()
+    if: github.ref == 'refs/heads/main'
     name: Determining if workflows should be dispatched or not
     needs: unit-testing
     outputs:
@@ -148,19 +145,26 @@ jobs:
           echo "$EXECUTION_PLAN" | python3 -c "import sys,json; \
             [print(f'  {i+1}. {w}') for i,w in enumerate(json.load(sys.stdin))]"
   performing-static-analysis:
-    if: github.ref == 'refs/heads/main' && inputs.dry_run != true
+    if: github.ref == 'refs/heads/main'
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Dry run - skipping static analysis"
+      - if: inputs.dry_run != true
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: inputs.dry_run != true
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install linting dependencies
+      - if: inputs.dry_run != true
+        name: Install linting dependencies
         run: python3 -m pip install pylint mypy yamllint pyyaml types-PyYAML
-      - name: Linting YAML files
+      - if: inputs.dry_run != true
+        name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -171,33 +175,42 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/orchestrator.yml \
             etc/workflow-dependencies.yml
-      - name: Run pylint
+      - if: inputs.dry_run != true
+        name: Run pylint
         run: |
           python3 -m pylint \
             scripts/compute_root_workflows.py \
             scripts/execute_workflow_plan.py \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - name: Run mypy
+      - if: inputs.dry_run != true
+        name: Run mypy
         run: |
           python3 -m mypy \
             scripts/compute_root_workflows.py \
             scripts/execute_workflow_plan.py
   unit-testing:
-    if: github.ref == 'refs/heads/main' && inputs.dry_run != true
+    if: github.ref == 'refs/heads/main'
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Dry run - skipping unit tests"
+      - if: inputs.dry_run != true
+        name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Python
+      - if: inputs.dry_run != true
+        name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install test dependencies
+      - if: inputs.dry_run != true
+        name: Install test dependencies
         run: python3 -m pip install pytest pyyaml
-      - name: Run unit tests
+      - if: inputs.dry_run != true
+        name: Run unit tests
         run: python3 -m pytest test/orchestrator/ -v
 name: Workflow Orchestrator
 on:
