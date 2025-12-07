@@ -1,11 +1,15 @@
+"""Pytest configuration and fixtures for rack designer tests."""
 import re
 from pathlib import Path
 from typing import Dict
+
 import pytest
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
-    outputs_path = Path(__file__).parent.parent.parent.parent.parent / "lib" / "terraform" / "outputs.tf"
+    """Parse shared module outputs from terraform outputs.tf file."""
+    base_path = Path(__file__).parent.parent.parent.parent.parent
+    outputs_path = base_path / "lib" / "terraform" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -18,6 +22,7 @@ def parse_shared_module_outputs() -> Dict[str, str]:
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture() -> Dict[str, str]:
+    """Provide rack designer configuration for tests."""
     shared = parse_shared_module_outputs()
     result = {
         'aws_region': shared.get('aws_region', ''),

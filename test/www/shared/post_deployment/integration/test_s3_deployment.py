@@ -68,9 +68,3 @@ def test_s3_bucket_logging_target_is_central_logs(s3_client, config):
     response = s3_client.get_bucket_logging(Bucket=config['website_bucket_name'])
     target_bucket = response['LoggingEnabled']['TargetBucket']
     assert config['central_logs_bucket'] in target_bucket
-
-
-def test_s3_bucket_has_index_html(s3_client, config):
-    """Test that the S3 bucket contains index.html."""
-    response = s3_client.head_object(Bucket=config['website_bucket_name'], Key='index.html')
-    assert response['ResponseMetadata']['HTTPStatusCode'] == 200

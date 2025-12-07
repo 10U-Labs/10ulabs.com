@@ -1,4 +1,8 @@
+"""Unit tests for DynamoDB export handler."""
+
+
 def test_lambda_handler_returns_status_code_200(export_module):
+    """Test lambda handler returns 200 status code."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -10,6 +14,7 @@ def test_lambda_handler_returns_status_code_200(export_module):
 
 
 def test_lambda_handler_calls_export_table_to_point_in_time(export_module):
+    """Test lambda handler calls export API."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -21,6 +26,7 @@ def test_lambda_handler_calls_export_table_to_point_in_time(export_module):
 
 
 def test_lambda_handler_uses_correct_table_arn(export_module):
+    """Test lambda handler uses correct table ARN."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -29,10 +35,12 @@ def test_lambda_handler_uses_correct_table_arn(export_module):
     }
     module.lambda_handler({}, None)
     call_kwargs = dynamodb_client.export_table_to_point_in_time.call_args[1]
-    assert call_kwargs['TableArn'] == 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events'
+    expected = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events'
+    assert call_kwargs['TableArn'] == expected
 
 
 def test_lambda_handler_uses_correct_s3_bucket(export_module):
+    """Test lambda handler uses correct S3 bucket."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -45,6 +53,7 @@ def test_lambda_handler_uses_correct_s3_bucket(export_module):
 
 
 def test_lambda_handler_uses_dynamodb_json_format(export_module):
+    """Test lambda handler uses DynamoDB JSON format."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -57,6 +66,7 @@ def test_lambda_handler_uses_dynamodb_json_format(export_module):
 
 
 def test_lambda_handler_returns_export_arn(export_module):
+    """Test lambda handler returns export ARN."""
     module, dynamodb_client = export_module
     expected_arn = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-events/export/123'
     dynamodb_client.export_table_to_point_in_time.return_value = {
@@ -69,6 +79,7 @@ def test_lambda_handler_returns_export_arn(export_module):
 
 
 def test_lambda_handler_returns_s3_path(export_module):
+    """Test lambda handler returns S3 path."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -80,6 +91,7 @@ def test_lambda_handler_returns_s3_path(export_module):
 
 
 def test_lambda_handler_returns_timestamp(export_module):
+    """Test lambda handler returns timestamp."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {
@@ -91,6 +103,7 @@ def test_lambda_handler_returns_timestamp(export_module):
 
 
 def test_lambda_handler_uses_correct_s3_prefix(export_module):
+    """Test lambda handler uses correct S3 prefix."""
     module, dynamodb_client = export_module
     dynamodb_client.export_table_to_point_in_time.return_value = {
         'ExportDescription': {

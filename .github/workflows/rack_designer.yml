@@ -225,9 +225,9 @@ on:
     types:
       - completed
     workflows:
-      - 'Ensuring API backend exists and is properly configured'
-      - 'Ensuring the /v1/runners API endpoint exists and is properly configured'
-      - 'Ensuring www shared infrastructure exists and is properly configured'
+      - >-
+        Ensuring the /v1/ecs-runner API endpoint exists
+        and is properly configured
 permissions:
   contents: read
   id-token: write

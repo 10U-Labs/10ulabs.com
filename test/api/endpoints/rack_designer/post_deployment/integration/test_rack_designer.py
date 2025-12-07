@@ -1,7 +1,9 @@
+"""Integration tests for rack designer API endpoints."""
 import requests
 
 
 def test_rack_designer_post_returns_200(api_url, test_device_id):
+    """Test that POST returns 200 status code."""
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -12,6 +14,7 @@ def test_rack_designer_post_returns_200(api_url, test_device_id):
 
 
 def test_rack_designer_post_returns_config_hash(api_url, test_device_id):
+    """Test that POST returns a config_hash in response."""
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -23,6 +26,7 @@ def test_rack_designer_post_returns_config_hash(api_url, test_device_id):
 
 
 def test_rack_designer_post_config_hash_is_9_chars(api_url, test_device_id):
+    """Test that config_hash is exactly 9 characters."""
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -34,6 +38,7 @@ def test_rack_designer_post_config_hash_is_9_chars(api_url, test_device_id):
 
 
 def test_rack_designer_post_config_hash_uses_valid_chars(api_url, test_device_id):
+    """Test that config_hash uses only valid alphanumeric characters."""
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -46,6 +51,7 @@ def test_rack_designer_post_config_hash_uses_valid_chars(api_url, test_device_id
 
 
 def test_rack_designer_post_same_config_same_hash(api_url, test_device_id):
+    """Test that same configuration produces same hash."""
     config = {"rackHeight": 24, "rackCount": 2, "placedParts": []}
     response1 = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -61,6 +67,7 @@ def test_rack_designer_post_same_config_same_hash(api_url, test_device_id):
 
 
 def test_rack_designer_post_missing_device_id_returns_400(api_url):
+    """Test that POST without device_id returns 400."""
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -114,9 +121,10 @@ def test_rack_designer_roundtrip_saves_and_loads(api_url, test_device_id):
     config = {
         "rackHeight": 42,
         "rackCount": 5,
-        "placedParts": [
-            {"type": "server", "size": 2, "rackId": 1, "startSlot": 1, "customName": None, "customColor": None}
-        ]
+        "placedParts": [{
+            "type": "server", "size": 2, "rackId": 1, "startSlot": 1,
+            "customName": None, "customColor": None
+        }]
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -132,12 +140,14 @@ def test_rack_designer_roundtrip_saves_and_loads(api_url, test_device_id):
 
 
 def test_rack_designer_roundtrip_returns_correct_config(api_url, test_device_id):
+    """Test that retrieved config matches saved config."""
     config = {
         "rackHeight": 36,
         "rackCount": 4,
-        "placedParts": [
-            {"type": "nas", "size": 4, "rackId": 2, "startSlot": 5, "customName": "Storage", "customColor": "#ff0000"}
-        ]
+        "placedParts": [{
+            "type": "nas", "size": 4, "rackId": 2, "startSlot": 5,
+            "customName": "Storage", "customColor": "#ff0000"
+        }]
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -154,12 +164,14 @@ def test_rack_designer_roundtrip_returns_correct_config(api_url, test_device_id)
 
 
 def test_rack_designer_roundtrip_preserves_placed_parts(api_url, test_device_id):
+    """Test that placed parts are preserved in roundtrip."""
     config = {
         "rackHeight": 12,
         "rackCount": 1,
-        "placedParts": [
-            {"type": "switch", "size": 1, "rackId": 1, "startSlot": 12, "customName": "Top Switch", "customColor": "#00ff00"}
-        ]
+        "placedParts": [{
+            "type": "switch", "size": 1, "rackId": 1, "startSlot": 12,
+            "customName": "Top Switch", "customColor": "#00ff00"
+        }]
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -176,6 +188,7 @@ def test_rack_designer_roundtrip_preserves_placed_parts(api_url, test_device_id)
 
 
 def test_rack_designer_options_returns_cors_headers(api_url):
+    """Test that OPTIONS request returns CORS headers."""
     response = requests.options(
         f"{api_url}/v1/rack-designer/configurations",
         timeout=10
@@ -184,6 +197,7 @@ def test_rack_designer_options_returns_cors_headers(api_url):
 
 
 def test_rack_designer_post_returns_cors_headers(api_url, test_device_id):
+    """Test that POST request returns CORS headers."""
     config = {"rackHeight": 12, "rackCount": 3, "placedParts": []}
     response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -194,6 +208,7 @@ def test_rack_designer_post_returns_cors_headers(api_url, test_device_id):
 
 
 def test_rack_designer_roundtrip_returns_correct_rack_count(api_url, test_device_id):
+    """Test that rack count is preserved in roundtrip."""
     config = {
         "rackHeight": 24,
         "rackCount": 3,
@@ -214,12 +229,14 @@ def test_rack_designer_roundtrip_returns_correct_rack_count(api_url, test_device
 
 
 def test_rack_designer_roundtrip_preserves_custom_name(api_url, test_device_id):
+    """Test that custom name is preserved in roundtrip."""
     config = {
         "rackHeight": 12,
         "rackCount": 1,
-        "placedParts": [
-            {"type": "server", "size": 2, "rackId": 1, "startSlot": 1, "customName": "Web Server", "customColor": None}
-        ]
+        "placedParts": [{
+            "type": "server", "size": 2, "rackId": 1, "startSlot": 1,
+            "customName": "Web Server", "customColor": None
+        }]
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
@@ -236,12 +253,14 @@ def test_rack_designer_roundtrip_preserves_custom_name(api_url, test_device_id):
 
 
 def test_rack_designer_roundtrip_preserves_custom_color(api_url, test_device_id):
+    """Test that custom color is preserved in roundtrip."""
     config = {
         "rackHeight": 12,
         "rackCount": 1,
-        "placedParts": [
-            {"type": "server", "size": 2, "rackId": 1, "startSlot": 1, "customName": None, "customColor": "#3498db"}
-        ]
+        "placedParts": [{
+            "type": "server", "size": 2, "rackId": 1, "startSlot": 1,
+            "customName": None, "customColor": "#3498db"
+        }]
     }
     post_response = requests.post(
         f"{api_url}/v1/rack-designer/configurations",
