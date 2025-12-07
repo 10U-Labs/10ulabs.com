@@ -121,6 +121,25 @@ jobs:
         run: |
           echo "Unit testing phase complete."
           echo "Performed: ${{ needs.unit-testing.result != 'skipped' }}"
+  concluded-workflows-should-be-dispatched:
+    if: >-
+      always() &&
+      needs.plan-workflows.result == 'success' &&
+      needs.static-analysis.result != 'failure' &&
+      needs.unit-testing.result != 'failure' &&
+      needs.plan-workflows.outputs.count != '0' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    name: Concluding workflows should be dispatched
+    needs:
+      - plan-workflows
+      - static-analysis
+      - unit-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflows will be dispatched
+        run: |
+          echo "Workflow dispatching phase starting."
+          echo "Count: ${{ needs.plan-workflows.outputs.count }}"
   concluding:
     if: >-
       always() &&
@@ -154,6 +173,7 @@ jobs:
       !contains(github.event.head_commit.message, '[skip ci]')
     name: ${{ matrix.workflow.idx }}. ${{ matrix.workflow.name }}
     needs:
+      - concluded-workflows-should-be-dispatched
       - plan-workflows
       - static-analysis
       - unit-testing
