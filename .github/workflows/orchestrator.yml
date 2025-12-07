@@ -71,11 +71,11 @@ jobs:
         run: |
           echo "Root workflows to dispatch:"
           echo '${{ needs.determining-if-workflow-should-be-dispatched-or-not.outputs.root_workflows }}' | jq -r '.[]'
-  concluding-workflow-should-not-be-dispatched:
+  concluding-no-workflow-should-be-dispatched:
     if: >-
       needs.determining-if-workflow-should-be-dispatched-or-not.outputs.has_roots != 'true' ||
       contains(github.event.head_commit.message, '[skip ci]')
-    name: Concluding workflow should not be dispatched
+    name: Concluding no workflow should be dispatched
     needs: determining-if-workflow-should-be-dispatched-or-not
     runs-on: ubuntu-latest
     steps:
