@@ -149,92 +149,12 @@ resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
-resource "aws_lambda_permission" "runners_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.runners
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/runners*"
-}
-
 resource "aws_lambda_permission" "catchall_handler" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.catchall_handler.function_name
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
-}
-
-resource "aws_lambda_permission" "health_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.health
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/GET/health*"
-}
-
-resource "aws_lambda_permission" "echo_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.echo
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/echo*"
-}
-
-resource "aws_lambda_permission" "contact_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.contact
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/contact*"
-}
-
-resource "aws_lambda_permission" "image_for_ecs_runners_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.image_for_ecs_runners
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-ecs-runners*"
-}
-
-resource "aws_lambda_permission" "image_for_ec2_runners_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.image_for_ec2_runners
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/image-for-ec2-runners*"
-}
-
-resource "aws_lambda_permission" "ecs_runner_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.ecs_runner
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/ecs-runner*"
-}
-
-resource "aws_lambda_permission" "ec2_runner_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.ec2_runner
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/ec2-runner*"
-}
-
-resource "aws_lambda_permission" "rack_designer_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.rack_designer
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/rack-designer*"
-}
-
-resource "aws_lambda_permission" "simulation_soc_handler" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = local.lambda_function_names.simulation_soc
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/${var.api_version}/simulation-soc*"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*"
 }
 
 resource "random_password" "api_key" {

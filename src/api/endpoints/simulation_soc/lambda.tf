@@ -44,3 +44,11 @@ resource "aws_cloudwatch_log_group" "simulation_soc_handler" {
     Name = "${var.simulation_soc_handler_function_name}-logs"
   })
 }
+
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.simulation_soc_handler.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
+}

@@ -40,11 +40,10 @@ def test_health_handler_log_subscription_exists():
 
 
 def test_health_handler_api_gateway_permission_exists():
-    """Verify API Gateway Lambda permission is defined."""
-    apigateway_file = API_BACKEND_SRC / "apigateway.tf"
-    with open(apigateway_file, encoding="utf-8") as f:
+    """Verify API Gateway Lambda permission is defined in the health stack."""
+    with open(LAMBDA_FILE, encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_lambda_permission" "health_handler"' in content
+    assert 'resource "aws_lambda_permission" "api_gateway"' in content
 
 
 def test_health_handler_uses_python_313_runtime():

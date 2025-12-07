@@ -1,4 +1,5 @@
 locals {
+  aws_account_id      = module.shared.aws_account_id
   aws_region          = module.shared.aws_region
   ecr_repository_arn  = data.terraform_remote_state.ecr.outputs.repository_arn
   ecr_repository_name = data.terraform_remote_state.ecr.outputs.repository_name
