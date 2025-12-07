@@ -43,7 +43,10 @@ jobs:
           echo "Full execution plan:"
           echo '${{ needs.determining.outputs.execution_plan }}' | jq -r '.[]'
   determining:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      !failure() && !cancelled()
     name: Determining if workflows should be dispatched or not
     needs: unit-testing
     outputs:
@@ -145,7 +148,7 @@ jobs:
           echo "$EXECUTION_PLAN" | python3 -c "import sys,json; \
             [print(f'  {i+1}. {w}') for i,w in enumerate(json.load(sys.stdin))]"
   performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.dry_run != true
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
@@ -181,7 +184,7 @@ jobs:
             scripts/compute_root_workflows.py \
             scripts/execute_workflow_plan.py
   unit-testing:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.dry_run != true
     name: Unit testing
     needs: performing-static-analysis
     runs-on: ubuntu-latest
