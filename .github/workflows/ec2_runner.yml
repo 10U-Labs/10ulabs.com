@@ -18,7 +18,7 @@ jobs:
        !contains(toJSON(github.event.commits),
          'test/api/endpoints/image_for_ec2_runners/endpoint/') &&
        !contains(toJSON(github.event.commits),
-         '.github/workflows/image_for_ec2_runners_post.yml') &&
+         '.github/workflows/endpoint_v1_image_for_ec2_runners_post.yml') &&
        !contains(toJSON(github.event.commits),
          'src/api/endpoints/image_for_ec2_runners/post/') &&
        !contains(toJSON(github.event.commits),

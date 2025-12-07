@@ -575,7 +575,7 @@ jobs:
         run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
-          WF=.github/workflows/image_for_ec2_runners_post.yml
+          WF=.github/workflows/endpoint_v1_image_for_ec2_runners_post.yml
           CONF=src/api/endpoints/image_for_ec2_runners/post/config.yml
           EMPTY='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY='key-ordering: enable'

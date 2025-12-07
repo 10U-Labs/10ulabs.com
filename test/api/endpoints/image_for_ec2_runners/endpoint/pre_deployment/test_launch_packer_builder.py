@@ -32,7 +32,7 @@ class TestLaunchPackerBuilder:
         ) as mock_trigger:
             handler_module.launch_packer_builder({})
 
-            assert mock_trigger.call_args[0][0] == 'image_for_ec2_runners_post.yml'
+            assert mock_trigger.call_args[0][0] == 'endpoint_v1_image_for_ec2_runners_post.yml'
 
     def test_error_handling(self, handler_module):
         """Test that errors from workflow trigger are properly handled."""

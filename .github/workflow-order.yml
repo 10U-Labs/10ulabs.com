@@ -25,7 +25,7 @@ workflows:
   ec2_runner:
     depends_on:
       - endpoint_v1_image_for_ec2_runners
-      - image_for_ec2_runners_post
+      - endpoint_v1_image_for_ec2_runners_post
       - runners
     level: 4
     paths:
@@ -66,6 +66,15 @@ workflows:
       - .github/workflows/endpoint_v1_image_for_ec2_runners.yml
       - src/api/endpoints/image_for_ec2_runners/endpoint/**
       - test/api/endpoints/image_for_ec2_runners/endpoint/**
+  endpoint_v1_image_for_ec2_runners_post:
+    depends_on:
+      - ecr
+      - runners
+    level: 3
+    paths:
+      - .github/workflows/endpoint_v1_image_for_ec2_runners_post.yml
+      - src/api/endpoints/image_for_ec2_runners/post/**
+      - test/api/endpoints/image_for_ec2_runners/post/**
   health:
     depends_on:
       - api
@@ -75,15 +84,6 @@ workflows:
       - .github/workflows/endpoint_health.yml
       - src/api/endpoints/health/**
       - test/api/endpoints/health/**
-  image_for_ec2_runners_post:
-    depends_on:
-      - ecr
-      - runners
-    level: 3
-    paths:
-      - .github/workflows/image_for_ec2_runners_post.yml
-      - src/api/endpoints/image_for_ec2_runners/post/**
-      - test/api/endpoints/image_for_ec2_runners/post/**
   image_for_ecs_runners:
     depends_on:
       - ecr
