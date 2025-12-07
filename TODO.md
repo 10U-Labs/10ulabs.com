@@ -121,3 +121,27 @@ Descendants cascade via workflow_run
 - Workflows after ecs_runner.yml run on ECS fargate on-demand only
 - Complete each task fully before starting the next
 - All workflows are triggered via orchestrator.yml on push to main
+
+---
+
+## USE_GITHUB_HOSTED Repository Variable
+
+Until ECS runners are operational, workflows can use GitHub-hosted runners via the `USE_GITHUB_HOSTED` repository variable.
+
+**How it works:**
+- All workflows check `vars.USE_GITHUB_HOSTED == 'true'` in addition to `github_hosted` input and `[github-hosted]` commit message
+- Set: `gh variable set USE_GITHUB_HOSTED --body "true"`
+- The variable cascades to all descendant workflows (no need for `[github-hosted]` in commit messages)
+- Once ecs_runner.yml completes successfully, it automatically sets `USE_GITHUB_HOSTED=false`
+
+**Usage:**
+```bash
+# Enable GitHub-hosted runners for all workflows
+gh variable set USE_GITHUB_HOSTED --body "true"
+
+# Disable GitHub-hosted runners (use ECS)
+gh variable set USE_GITHUB_HOSTED --body "false"
+
+# Check current value
+gh variable list
+```

@@ -12,7 +12,8 @@ jobs:
     outputs:
       oidc_available: ${{ steps.oidc.outcome == 'success' }}
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -41,7 +42,8 @@ jobs:
         ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -79,7 +81,8 @@ jobs:
       - declaring-common-variables
       - integration-testing
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -105,6 +108,7 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -114,6 +118,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -132,7 +137,8 @@ jobs:
       - declaring-common-variables
       - unit-testing
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -176,7 +182,8 @@ jobs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -202,6 +209,7 @@ jobs:
           aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -211,6 +219,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -225,7 +234,8 @@ jobs:
       - checking-oidc-availability
       - declaring-common-variables
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -236,6 +246,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -269,6 +280,7 @@ jobs:
         with:
           tflint_version: latest
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -314,7 +326,8 @@ jobs:
     name: Unit testing
     needs: performing-static-analysis
     runs-on: >-
-      ${{ ( github.event.inputs.github_hosted == 'true' ||
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
@@ -325,6 +338,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
@@ -334,6 +348,7 @@ jobs:
         with:
           python-version: '3.13'
       - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
