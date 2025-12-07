@@ -54,7 +54,7 @@ jobs:
       needs.static-analysis.result != 'failure'
     name: Determining if unit testing should be performed
     needs:
-      - check-static-analysis
+      - concluded-static-analysis
       - static-analysis
     outputs:
       should_perform: ${{ steps.check.outputs.should_perform }}
@@ -89,6 +89,38 @@ jobs:
           done
           echo "should_perform=$SHOULD_PERFORM" >> "$GITHUB_OUTPUT"
           echo "Should perform unit testing: $SHOULD_PERFORM"
+  concluded-static-analysis:
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.static-analysis.result != 'failure'
+    name: Concluded static analysis check
+    needs:
+      - check-static-analysis
+      - static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Static analysis complete
+        run: |
+          echo "Static analysis phase complete."
+          echo "Performed: ${{ needs.static-analysis.result != 'skipped' }}"
+  concluded-unit-testing:
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.static-analysis.result != 'failure' &&
+      needs.unit-testing.result != 'failure'
+    name: Concluded unit testing check
+    needs:
+      - check-unit-testing
+      - static-analysis
+      - unit-testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unit testing complete
+        run: |
+          echo "Unit testing phase complete."
+          echo "Performed: ${{ needs.unit-testing.result != 'skipped' }}"
   concluding:
     if: >-
       always() &&
@@ -159,7 +191,7 @@ jobs:
       needs.unit-testing.result != 'failure'
     name: Determining which workflows should be dispatched
     needs:
-      - check-unit-testing
+      - concluded-unit-testing
       - static-analysis
       - unit-testing
     outputs:
