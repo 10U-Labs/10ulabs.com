@@ -284,15 +284,6 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - >-
-        Ensuring the /v1/ecs-runner API endpoint exists and is properly
-        configured
 permissions:
   contents: read
   id-token: write

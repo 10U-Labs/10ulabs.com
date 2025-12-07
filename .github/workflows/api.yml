@@ -351,6 +351,16 @@ jobs:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Plan
         run: cd src/api/backend && terraform plan
+  triggering-descendants:
+    name: Triggering descendants
+    needs: integration-testing
+    secrets: inherit
+    uses: ./.github/workflows/health.yml
+    with:
+      github_hosted: >-
+        ${{ vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:
@@ -413,13 +423,6 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Ensuring www shared infrastructure exists and is properly configured'
 permissions:
   contents: read
   id-token: write

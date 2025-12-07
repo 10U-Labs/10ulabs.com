@@ -108,6 +108,7 @@ ec2_runner:
 
 image_for_ecs_runners:
   depends_on:
+    - ec2_runner
     - ecr
   name: Building Docker image for ECS runners
   paths:
@@ -117,7 +118,6 @@ image_for_ecs_runners:
 
 ecs_runner:
   depends_on:
-    - ec2_runner
     - image_for_ecs_runners
   name: Ensuring the /v1/ecs-runner API endpoint exists and is properly configured
   paths:

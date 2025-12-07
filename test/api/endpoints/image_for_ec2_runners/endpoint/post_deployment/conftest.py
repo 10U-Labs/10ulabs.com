@@ -1,3 +1,4 @@
+"""Pytest fixtures for post-deployment integration and e2e tests."""
 from typing import Any, Dict, Optional
 
 import boto3
@@ -9,32 +10,38 @@ from ..helpers import get_api_fqdn, get_aws_region
 
 @pytest.fixture(name="aws_region", scope="module")
 def aws_region_fixture() -> str:
+    """Return the AWS region for tests."""
     return get_aws_region()
 
 
 @pytest.fixture(name="api_url", scope="module")
 def api_url_fixture() -> str:
+    """Return the API base URL."""
     return f"https://{get_api_fqdn()}"
 
 
 @pytest.fixture(name="ssm_client", scope="module")
 def ssm_client_fixture(aws_region: str) -> Any:
+    """Create an SSM client for the test module."""
     return boto3.client("ssm", region_name=aws_region)
 
 
 @pytest.fixture(name="ec2_client", scope="module")
 def ec2_client_fixture(aws_region: str) -> Any:
+    """Create an EC2 client for the test module."""
     return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(name="api_key", scope="module")
 def api_key_fixture(ssm_client: Any) -> str:
+    """Retrieve the API key from SSM Parameter Store."""
     param_response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
     return param_response['Parameter']['Value']
 
 
 @pytest.fixture(name="config", scope="module")
 def config_fixture(aws_region: str, api_url: str, api_key: str) -> Dict[str, Any]:
+    """Return the test configuration dictionary."""
     return {
         'aws_region': aws_region,
         'api_url': api_url,
@@ -45,11 +52,20 @@ def config_fixture(aws_region: str, api_url: str, api_key: str) -> Dict[str, Any
     }
 
 
-def make_authenticated_get(url: str, api_key: str, timeout: int = 10) -> requests.Response:
+def make_authenticated_get(
+    url: str, api_key: str, timeout: int = 10
+) -> requests.Response:
+    """Make an authenticated GET request to the API."""
     headers = {"x-api-key": api_key}
     return requests.get(url, headers=headers, timeout=timeout)
 
 
-def make_authenticated_post(url: str, api_key: str, json: Optional[Dict[str, Any]] = None, timeout: int = 10) -> requests.Response:
+def make_authenticated_post(
+    url: str,
+    api_key: str,
+    json: Optional[Dict[str, Any]] = None,
+    timeout: int = 10
+) -> requests.Response:
+    """Make an authenticated POST request to the API in test mode."""
     headers = {"x-api-key": api_key, "x-test-mode": "true"}
     return requests.post(url, json=json, headers=headers, timeout=timeout)

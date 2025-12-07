@@ -3,7 +3,7 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  declaring-common-variables:
+  common-vars:
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name != 'workflow_run' ||
@@ -11,7 +11,7 @@ jobs:
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
-      github_actions_role_arn: ${{ steps.shared.outputs.github_actions_role_arn }}
+      role_arn: ${{ steps.shared.outputs.role_arn }}
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -27,17 +27,23 @@ jobs:
       - id: shared
         name: Extract shared configuration values
         run: |
-          AWS_REGION=$(grep -A1 'output "aws_region"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' lib/terraform/outputs.tf | grep 'value' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' src/bootstrap/locals.tf | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          TF_OUTPUTS="lib/terraform/outputs.tf"
+          AWS_REGION=$(grep -A1 'output "aws_region"' $TF_OUTPUTS \
+            | grep 'value' | cut -d'"' -f2)
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $TF_OUTPUTS \
+            | grep 'value' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' $TF_OUTPUTS \
+            | grep 'value' | cut -d'"' -f2)
+          LOCALS="src/bootstrap/locals.tf"
+          ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
+            | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
   ensuring-endpoint-infrastructure-in-desired-state:
     name: Ensuring endpoint infrastructure is in desired state
     needs:
-      - declaring-common-variables
+      - common-vars
       - unit-testing
     permissions:
       contents: read
@@ -57,8 +63,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: ${{ needs.common-vars.outputs.aws_region }}
+          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -68,13 +74,17 @@ jobs:
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform init
+        run: |
+          cd src/api/endpoints/image_for_ec2_runners
+          terraform init
       - name: Terraform Apply
-        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform apply -auto-approve
+        run: |
+          cd src/api/endpoints/image_for_ec2_runners
+          terraform apply -auto-approve
   integration-testing:
     name: Integration testing
     needs:
-      - declaring-common-variables
+      - common-vars
       - ensuring-endpoint-infrastructure-in-desired-state
     permissions:
       contents: read
@@ -94,8 +104,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: ${{ needs.common-vars.outputs.aws_region }}
+          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -116,12 +126,12 @@ jobs:
         run: python3 -m pip install pytest boto3
       - name: Run integration tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/endpoint/post_deployment/integration/ \
-            --confcutdir=test/api/endpoints/image_for_ec2_runners/endpoint \
-            -v
+          ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
+          pytest $ENDPOINT/post_deployment/integration/ \
+            --confcutdir=$ENDPOINT -v
   performing-static-analysis:
     name: Performing static analysis
-    needs: declaring-common-variables
+    needs: common-vars
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -168,19 +178,21 @@ jobs:
       - name: Linting Python files
         run: |
           pylint \
-            src/api/endpoints/image_for_ec2_runners/endpoint/lambda/handler.py \
+            src/api/endpoints/image_for_ec2_runners/lambda/handler.py \
             test/api/endpoints/image_for_ec2_runners/endpoint/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          MYPYPATH=lib python3 -m mypy src/api/endpoints/image_for_ec2_runners/endpoint/lambda/handler.py
-          MYPYPATH=lib python3 -m mypy --explicit-package-bases test/api/endpoints/image_for_ec2_runners/endpoint/
+          SRC="src/api/endpoints/image_for_ec2_runners/lambda/handler.py"
+          TEST="test/api/endpoints/image_for_ec2_runners/endpoint/"
+          MYPYPATH=lib python3 -m mypy $SRC
+          MYPYPATH=lib python3 -m mypy --explicit-package-bases $TEST
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: ${{ needs.declaring-common-variables.outputs.github_actions_role_arn }}
+          aws-region: ${{ needs.common-vars.outputs.aws_region }}
+          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -200,22 +212,36 @@ jobs:
         with:
           tflint_version: latest
       - name: Terraform Format Check
-        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/endpoints/image_for_ec2_runners
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform init
+        run: |
+          cd src/api/endpoints/image_for_ec2_runners
+          terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api/endpoints/image_for_ec2_runners/endpoint && \
+          cd src/api/endpoints/image_for_ec2_runners && \
             tflint --init && \
             tflint
       - name: Terraform Plan
-        run: cd src/api/endpoints/image_for_ec2_runners/endpoint && terraform plan
+        run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
+  triggering-descendants:
+    name: Triggering descendants
+    needs: integration-testing
+    secrets: inherit
+    uses: ./.github/workflows/image_for_ec2_runners_post.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:
-      - declaring-common-variables
+      - common-vars
       - performing-static-analysis
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
@@ -249,9 +275,8 @@ jobs:
         run: python3 -m pip install pytest boto3
       - name: Run unit tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/ \
-            --confcutdir=test/api/endpoints/image_for_ec2_runners/endpoint \
-            -v
+          ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
+          pytest $ENDPOINT/pre_deployment/ --confcutdir=$ENDPOINT -v
 name: Deploying image_for_ec2_runners endpoint
 on:
   workflow_call:
@@ -266,13 +291,6 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Ensuring health endpoint exists and is properly configured'
 permissions:
   contents: read
   id-token: write

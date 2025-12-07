@@ -254,6 +254,16 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/api/endpoints/runners && terraform plan
+  triggering-descendants:
+    name: Triggering descendants
+    needs: integration-testing
+    secrets: inherit
+    uses: ./.github/workflows/ec2_runner.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:
@@ -308,13 +318,6 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Building AMI for EC2 self-hosted runners'
 permissions:
   contents: read
   id-token: write

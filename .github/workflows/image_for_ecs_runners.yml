@@ -451,6 +451,16 @@ jobs:
             --repository "$REPO" \
             --image-tag "$TAG" \
             --region "$REGION"
+  triggering-descendants:
+    name: Triggering descendants
+    needs: promoting-image
+    secrets: inherit
+    uses: ./.github/workflows/ecs_runner.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:
@@ -519,13 +529,6 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Ensuring ECR repository exists and is properly configured'
 permissions:
   contents: read
   id-token: write

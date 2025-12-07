@@ -96,6 +96,7 @@ def config_fixture() -> Dict[str, Any]:
     result['task_family'] = ecs_runner_tfvars.get('task_family', '')
     runner_labels = get_runner_labels()
     result.update(runner_labels)
+    result['api_version'] = 'v1'
     return result
 
 

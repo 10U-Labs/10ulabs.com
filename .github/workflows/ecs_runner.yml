@@ -315,6 +315,40 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/api/endpoints/ecs_runner && terraform plan
+  switching-to-ecs-runners:
+    if: success()
+    name: Switching to ECS runners
+    needs: e2e-testing
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: Disable USE_GITHUB_HOSTED variable
+        run: |
+          echo "ECS runner workflow completed successfully."
+          echo "Disabling USE_GITHUB_HOSTED to switch future workflows to ECS."
+          gh variable set USE_GITHUB_HOSTED --body "false" \
+            --repo ${{ github.repository }}
+  triggering-contact:
+    name: Triggering contact endpoint
+    needs: switching-to-ecs-runners
+    secrets: inherit
+    uses: ./.github/workflows/contact.yml
+  triggering-echo:
+    name: Triggering echo endpoint
+    needs: switching-to-ecs-runners
+    secrets: inherit
+    uses: ./.github/workflows/echo.yml
+  triggering-rack-designer:
+    name: Triggering rack designer
+    needs: switching-to-ecs-runners
+    secrets: inherit
+    uses: ./.github/workflows/rack_designer.yml
+  triggering-simulation-soc:
+    name: Triggering simulation SOC
+    needs: switching-to-ecs-runners
+    secrets: inherit
+    uses: ./.github/workflows/simulation_soc.yml
   unit-testing:
     name: Unit testing
     needs:
@@ -355,19 +389,6 @@ jobs:
           python3 -m pytest test/api/endpoints/ecs_runner/pre_deployment/ \
             --confcutdir=test/api/endpoints/ecs_runner \
             -v
-  switching-to-ecs-runners:
-    if: success()
-    name: Switching to ECS runners
-    needs: e2e-testing
-    runs-on: ubuntu-latest
-    steps:
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        name: Disable USE_GITHUB_HOSTED variable
-        run: |
-          echo "ECS runner workflow completed successfully."
-          echo "Disabling USE_GITHUB_HOSTED to switch future workflows to ECS."
-          gh variable set USE_GITHUB_HOSTED --body "false" --repo ${{ github.repository }}
 name: Ensuring the /v1/ecs-runner API endpoint exists and is properly configured
 on:
   workflow_call:
@@ -382,16 +403,6 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Building Docker image for ECS runners'
-      - >-
-        Ensuring the /v1/ec2-runner API endpoint exists and is properly
-        configured
 permissions:
   actions: write
   contents: read

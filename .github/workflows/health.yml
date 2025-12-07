@@ -330,6 +330,38 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/api/endpoints/health && terraform plan
+  triggering-ec2-branch:
+    name: Triggering EC2 runner branch
+    needs: e2e-testing
+    secrets: inherit
+    uses: ./.github/workflows/image_for_ec2_runners_endpoint.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
+  triggering-ecr-branch:
+    name: Triggering ECR branch
+    needs: e2e-testing
+    secrets: inherit
+    uses: ./.github/workflows/ecr.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
+  triggering-ecs-runner-prerequisites:
+    name: Triggering ECS runner prerequisites
+    needs:
+      - triggering-ecr-branch
+      - triggering-ec2-branch
+    secrets: inherit
+    uses: ./.github/workflows/image_for_ecs_runners.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:
@@ -381,13 +413,6 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Ensuring API backend exists and is properly configured'
 permissions:
   contents: read
   id-token: write

@@ -310,13 +310,6 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Ensuring health endpoint exists and is properly configured'
 permissions:
   contents: read
   id-token: write

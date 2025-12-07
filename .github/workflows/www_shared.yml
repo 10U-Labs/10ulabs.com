@@ -272,6 +272,16 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/www/shared && terraform plan
+  triggering-descendants:
+    name: Triggering descendants
+    needs: integration-testing
+    secrets: inherit
+    uses: ./.github/workflows/api.yml
+    with:
+      github_hosted: >-
+        ${{ inputs.github_hosted ||
+            vars.USE_GITHUB_HOSTED == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:
@@ -321,13 +331,6 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - 'Ensuring bootstrap infrastructure exists and is properly configured'
 permissions:
   contents: read
   id-token: write

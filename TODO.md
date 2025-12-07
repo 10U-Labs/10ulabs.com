@@ -18,12 +18,12 @@ health.yml (github_hosted)
     │        ↓
     │    ec2_runner.yml (github_hosted) ────────────┐
     │                                               │
-    └──→ ecr.yml (github_hosted)                    │
-             ↓                                      │
-         image_for_ecs_runners.yml (github_hosted)  │
-             ↓                                      │
-         ecs_runner.yml (github_hosted) ←───────────┘
-             ↓
+    └──→ ecr.yml (github_hosted) ───────────────────┤
+                                                    ↓
+                            image_for_ecs_runners.yml (github_hosted)
+                                                    ↓
+                            ecs_runner.yml (github_hosted)
+                                                    ↓
              ├──→ contact.yml (ECS on-demand)
              │        ↓
              │    www_index.yml (ECS on-demand)

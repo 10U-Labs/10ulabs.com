@@ -1,8 +1,10 @@
+"""Pytest fixtures for image_for_ec2_runners integration tests."""
 import pytest
 
 
 @pytest.fixture(name="amis_endpoint", scope="module")
 def amis_endpoint_fixture(api_url) -> str:
+    """Return the endpoint URL for listing AMIs."""
     return f"{api_url}/v1/image-for-ec2-runners"
 
 

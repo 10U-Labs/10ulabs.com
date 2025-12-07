@@ -1,3 +1,4 @@
+"""Lambda handler for EC2 AMI management endpoints."""
 import json
 import logging
 import os
@@ -15,14 +16,17 @@ _test_mode = {'enabled': False}
 
 
 def is_test_mode() -> bool:
+    """Check if test mode is enabled."""
     return _test_mode['enabled']
 
 
 def set_test_mode(enabled: bool):
+    """Enable or disable test mode."""
     _test_mode['enabled'] = enabled
 
 
 def get_header_case_insensitive(headers: dict, header_name: str) -> str:
+    """Get a header value case-insensitively."""
     if not headers:
         return ''
     for key, value in headers.items():
@@ -32,22 +36,26 @@ def get_header_case_insensitive(headers: dict, header_name: str) -> str:
 
 
 def get_ec2_client():
+    """Get or create an EC2 client."""
     if 'ec2' not in _clients:
         _clients['ec2'] = boto3.client('ec2')
     return _clients['ec2']
 
 
 def get_ssm_client():
+    """Get or create an SSM client."""
     if 'ssm' not in _clients:
         _clients['ssm'] = boto3.client('ssm')
     return _clients['ssm']
 
 
 def set_client(name, client):
+    """Set a client for testing purposes."""
     _clients[name] = client
 
 
 def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a JSON API Gateway response."""
     return {
         'statusCode': status_code,
         'headers': {
@@ -61,11 +69,15 @@ def json_response(status_code: int, body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def success_response(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Create a success response with appropriate status code."""
     status_code = 200 if data.get('success', True) else 500
     return json_response(status_code, data)
 
 
-def error_response(status_code: int, error: str, details: str | None = None) -> Dict[str, Any]:
+def error_response(
+    status_code: int, error: str, details: str | None = None
+) -> Dict[str, Any]:
+    """Create an error response."""
     body: Dict[str, Any] = {'success': False, 'error': error}
     if details:
         body['details'] = details
@@ -73,6 +85,7 @@ def error_response(status_code: int, error: str, details: str | None = None) -> 
 
 
 def parse_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Parse the request body from an API Gateway event."""
     body = event.get('body', {})
     result = json.loads(body) if isinstance(body, str) else body
     return result
@@ -82,6 +95,7 @@ _github_token_cache: Dict[str, str] = {'value': ''}
 
 
 def get_github_token() -> str:
+    """Retrieve GitHub token from SSM Parameter Store."""
     if _github_token_cache['value']:
         return _github_token_cache['value']
 
@@ -97,7 +111,10 @@ def get_github_token() -> str:
     return _github_token_cache['value']
 
 
-def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def trigger_github_workflow(
+    workflow_file: str, payload: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Trigger a GitHub Actions workflow via the API."""
     github_repo = os.environ['GITHUB_REPO']
     github_token = get_github_token()
 
@@ -105,7 +122,8 @@ def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict
         logger.error("GITHUB_TOKEN not available from SSM")
         result = {'success': False, 'error': 'GITHUB_TOKEN not configured'}
     else:
-        workflow_url = f'https://api.github.com/repos/{github_repo}/actions/workflows/{workflow_file}/dispatches'
+        base_url = 'https://api.github.com/repos'
+        workflow_url = f'{base_url}/{github_repo}/actions/workflows/{workflow_file}/dispatches'
 
         try:
             req = urllib.request.Request(
@@ -123,10 +141,12 @@ def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict
             with urllib.request.urlopen(req, timeout=10) as response:
                 if response.status == 204:
                     logger.info("GitHub Actions workflow triggered successfully")
-                    result = {'success': True, 'message': f'{workflow_file} workflow triggered via GitHub Actions'}
+                    msg = f'{workflow_file} workflow triggered via GitHub Actions'
+                    result = {'success': True, 'message': msg}
                 else:
                     logger.warning("Unexpected response status: %s", response.status)
-                    result = {'success': False, 'error': f'Unexpected response status: {response.status}'}
+                    err = f'Unexpected response status: {response.status}'
+                    result = {'success': False, 'error': err}
         except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError) as e:
             logger.error("Failed to trigger GitHub Actions workflow: %s", e)
             result = {'success': False, 'error': str(e)}
@@ -135,6 +155,7 @@ def trigger_github_workflow(workflow_file: str, payload: Dict[str, Any]) -> Dict
 
 
 def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
+    """Handle a POST request with optional test mode mocking."""
     try:
         path = event.get('path', '')
         if is_test_mode() and path in TEST_MODE_MOCK_PATHS:
@@ -150,6 +171,7 @@ def handle_post_request(event: Dict[str, Any], handler_func) -> Dict[str, Any]:
 
 
 def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Launch the Packer AMI builder workflow."""
     subnet_ids = os.environ['SUBNETS'].split(',')
     vpc_id = os.environ['VPC_ID']
     region = os.environ['AWS_REGION']
@@ -168,6 +190,7 @@ def launch_packer_builder(_config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_amis() -> Dict[str, Any]:
+    """List all AMIs with the configured purpose tag."""
     ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
     ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     try:
@@ -198,6 +221,7 @@ def list_amis() -> Dict[str, Any]:
 
 
 def get_latest_ami_details() -> Dict[str, Any]:
+    """Get details of the latest available AMI."""
     ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
     ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
@@ -246,6 +270,7 @@ def get_latest_ami_details() -> Dict[str, Any]:
 
 
 def deregister_ami(ami_id: str) -> Dict[str, Any]:
+    """Deregister an AMI and delete its associated snapshots."""
     try:
         image_response = get_ec2_client().describe_images(ImageIds=[ami_id])
         if not image_response['Images']:
@@ -278,6 +303,7 @@ def deregister_ami(ami_id: str) -> Dict[str, Any]:
 
 
 def handle_ec2_image_get(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle GET requests for AMI endpoints."""
     path = event.get('path', '')
     result = get_latest_ami_details() if path.endswith('/latest') else list_amis()
     response = success_response(result)
@@ -285,10 +311,15 @@ def handle_ec2_image_get(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def handle_ec2_image_delete(event: Dict[str, Any]) -> Dict[str, Any]:
+    """Handle DELETE requests to deregister an AMI."""
     path_params = event.get('pathParameters', {})
     ami_id = path_params.get('ami_id')
-    result = deregister_ami(ami_id) if ami_id else {'success': False, 'error': 'Missing required path parameter: ami_id'}
-    response = error_response(400, result['error']) if not ami_id else success_response(result)
+    if not ami_id:
+        error_msg = 'Missing required path parameter: ami_id'
+        response = error_response(400, error_msg)
+    else:
+        result = deregister_ami(ami_id)
+        response = success_response(result)
     return response
 
 
@@ -300,11 +331,16 @@ ROUTE_MAP = {
 
 
 TEST_MODE_MOCK_PATHS = {
-    '/v1/image-for-ec2-runners': {'success': True, 'message': 'Test mode - no AMI created', 'test_mode': True}
+    '/v1/image-for-ec2-runners': {
+        'success': True,
+        'message': 'Test mode - no AMI created',
+        'test_mode': True
+    }
 }
 
 
 def lambda_handler(event, _context):
+    """Main Lambda handler for API Gateway requests."""
     logger.info("Received API request: %s", json.dumps(event))
 
     headers = event.get('headers', {})
