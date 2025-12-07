@@ -511,13 +511,11 @@ def get_runner_type_from_labels(
 ) -> Tuple[str | None, str | None]:
     """Determine runner type and endpoint from job labels.
 
-    Supports both new composable label format (ecs/ec2 + compute + pricing)
-    and legacy labels from environment variables for backwards compatibility.
+    Uses composable label format: platform (ecs/ec2) + compute + pricing + runner-id.
     """
     runner_type: str | None = None
     endpoint_suffix: str | None = None
 
-    # Try new label format first
     try:
         parsed = parse_labels(job_labels)
         validate_labels(parsed)
@@ -529,24 +527,7 @@ def get_runner_type_from_labels(
             runner_type = 'fargate-e2e' if is_e2e else 'fargate'
             endpoint_suffix = 'ecs-runner'
     except (LabelParseError, LabelValidationError):
-        # Fall through to legacy label check
         pass
-
-    # Legacy label format for backwards compatibility (if new format didn't match)
-    if not runner_type:
-        runner_label_ec2 = os.environ.get('RUNNER_LABEL_EC2')
-        runner_label_ec2_e2e = os.environ.get('RUNNER_LABEL_EC2_E2E')
-        runner_label_fargate = os.environ.get('RUNNER_LABEL_FARGATE')
-        runner_label_fargate_e2e = os.environ.get('RUNNER_LABEL_FARGATE_E2E')
-        is_ec2 = runner_label_ec2 in job_labels or runner_label_ec2_e2e in job_labels
-        is_fargate = runner_label_fargate in job_labels or runner_label_fargate_e2e in job_labels
-        is_e2e = runner_label_ec2_e2e in job_labels or runner_label_fargate_e2e in job_labels
-        if is_ec2:
-            runner_type = 'ec2-e2e' if is_e2e else 'ec2'
-            endpoint_suffix = 'ec2-runner'
-        elif is_fargate:
-            runner_type = 'fargate-e2e' if is_e2e else 'fargate'
-            endpoint_suffix = 'ecs-runner'
 
     return (runner_type, endpoint_suffix)
 

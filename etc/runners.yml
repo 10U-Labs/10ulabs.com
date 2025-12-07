@@ -1,5 +1,0 @@
-runner_labels:
-  ec2: ec2
-  fargate: ecs-fargate
-  ec2_e2e_test: e2e-test-ec2
-  fargate_e2e_test: e2e-test-ecs-fargate

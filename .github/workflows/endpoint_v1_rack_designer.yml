@@ -17,7 +17,9 @@ jobs:
       contents: read
       id-token: write
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -63,7 +65,9 @@ jobs:
       - common-vars
       - unit-testing
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -127,7 +131,9 @@ jobs:
       - common-vars
       - ensuring-infrastructure-in-desired-state
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -146,7 +152,9 @@ jobs:
     name: Performing static analysis
     needs: common-vars
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
@@ -207,7 +215,9 @@ jobs:
       - common-vars
       - performing-static-analysis
     runs-on:
-      - ecs-fargate
+      - ecs
+      - fargate
+      - on-demand
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code

@@ -15,7 +15,6 @@ api_backend:
   name: Ensuring API backend exists and is properly configured
   paths:
     - '.github/workflows/api_backend.yml'
-    - 'etc/runners.yml'
     - 'src/api/backend/**'
     - 'src/www/api/**'
     - 'test/api/backend/**'
@@ -66,7 +65,6 @@ endpoint_v1_ec2_runner:
     Ensuring the /v1/ec2-runner API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_ec2_runner.yml'
-    - 'etc/runners.yml'
     - 'src/api/endpoints/ec2_runner/**'
     - 'test/api/conftest.py'
     - 'test/api/endpoints/ec2_runner/**'
@@ -85,7 +83,6 @@ endpoint_v1_ecs_runner:
     Ensuring the /v1/ecs-runner API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_ecs_runner.yml'
-    - 'etc/runners.yml'
     - 'src/api/endpoints/ecs_runner/**'
     - 'test/api/conftest.py'
     - 'test/api/endpoints/ecs_runner/**'
@@ -131,7 +128,6 @@ endpoint_v1_runners:
     Ensuring the /v1/runners API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_runners.yml'
-    - 'etc/runners.yml'
     - 'src/api/endpoints/runners/**'
     - 'test/api/conftest.py'
     - 'test/api/endpoints/runners/**'

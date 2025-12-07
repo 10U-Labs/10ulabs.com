@@ -104,10 +104,6 @@ def webhook_router(config):
         'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
         'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
         'API_BASE_URL': f"https://{config['api_fqdn']}/{config['api_version']}",
-        'RUNNER_LABEL_EC2': config['ec2'],
-        'RUNNER_LABEL_FARGATE': config['fargate'],
-        'RUNNER_LABEL_EC2_E2E': config['ec2_e2e_test'],
-        'RUNNER_LABEL_FARGATE_E2E': config['fargate_e2e_test']
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("webhook_router.py", "webhook_router")

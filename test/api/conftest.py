@@ -2,11 +2,10 @@
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Dict, List
 
 import pytest
 import requests
-import yaml
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 
@@ -16,17 +15,41 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 
-def parse_shared_config() -> Dict[str, Any]:
-    """Parse the shared runners configuration from etc/runners.yml."""
-    config_path = REPO_ROOT / "etc" / "runners.yml"
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def get_composite_labels(
+    platform: str = "ecs",
+    compute: str = "fargate",
+    pricing: str = "spot",
+    runner_id: str = "runner-12345"
+) -> List[str]:
+    """Generate composite runner labels for testing.
+
+    Args:
+        platform: Platform type ('ecs' or 'ec2')
+        compute: Compute type ('fargate', 'c8i', 'r8i', 'g6e')
+        pricing: Pricing model ('spot' or 'on-demand')
+        runner_id: Runner ID label (e.g., 'runner-12345')
+
+    Returns:
+        List of composite labels.
+    """
+    return [platform, compute, pricing, runner_id]
 
 
-def get_runner_labels() -> Dict[str, str]:
-    """Get runner labels from the shared configuration."""
-    shared_config = parse_shared_config()
-    return shared_config.get('runner_labels', {})
+def get_runner_labels() -> Dict[str, List[str]]:
+    """Get runner labels as composite label lists for testing.
+
+    Returns dict with keys mapping to composite label lists:
+        - ec2: EC2 c8i spot labels
+        - fargate: ECS fargate spot labels
+        - ec2_e2e_test: EC2 c8i spot labels with e2e marker
+        - fargate_e2e_test: ECS fargate spot labels with e2e marker
+    """
+    return {
+        'ec2': ['ec2', 'c8i', 'spot', 'runner-12345'],
+        'fargate': ['ecs', 'fargate', 'spot', 'runner-12345'],
+        'ec2_e2e_test': ['ec2', 'c8i', 'spot', 'runner-12345', 'e2e'],
+        'fargate_e2e_test': ['ecs', 'fargate', 'spot', 'runner-12345', 'e2e'],
+    }
 
 
 def parse_shared_module_outputs() -> Dict[str, str]:
