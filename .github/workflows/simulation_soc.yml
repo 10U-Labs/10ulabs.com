@@ -272,15 +272,6 @@ jobs:
 name: >-
   Ensuring the /v1/simulation-soc API endpoint exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/simulation_soc.yml'
-      - 'src/api/endpoints/simulation_soc/**'
-      - 'src/www/paths/simulations/soc/**'
-      - '!src/www/paths/simulations/soc/docs/**'
-      - 'test/api/endpoints/simulation_soc/**'
   workflow_call:
     inputs:
       invalidate_cloudfront:
