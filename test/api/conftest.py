@@ -52,16 +52,39 @@ def get_runner_labels() -> Dict[str, List[str]]:
     }
 
 
+def _parse_shared_locals() -> Dict[str, str]:
+    """Parse locals from the shared module's locals.tf file."""
+    locals_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
+    locals_dict = {}
+    with open(locals_path, encoding="utf-8") as f:
+        content = f.read()
+    # Match simple string locals like: resource_prefix = "TenULabs"
+    pattern = r'(\w+)\s*=\s*"([^"]+)"'
+    for match in re.finditer(pattern, content):
+        key, value = match.groups()
+        locals_dict[key] = value
+    return locals_dict
+
+
 def parse_shared_module_outputs() -> Dict[str, str]:
     """Parse Terraform outputs from the shared module."""
     outputs_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
-    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
-    matches = re.findall(pattern, content)
+    # Match outputs with literal string values
+    literal_pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
+    matches = re.findall(literal_pattern, content)
     for key, value in matches:
         config[key] = value
+    # Match outputs that reference local.* and resolve them
+    local_pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*local\.(\w+)'
+    local_matches = re.findall(local_pattern, content)
+    if local_matches:
+        locals_dict = _parse_shared_locals()
+        for output_name, local_name in local_matches:
+            if local_name in locals_dict:
+                config[output_name] = locals_dict[local_name]
     return config
 
 
