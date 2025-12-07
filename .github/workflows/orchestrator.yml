@@ -12,10 +12,17 @@ concurrency:
 jobs:
   concluding-no-workflows-should-be-dispatched:
     if: >-
-      needs.determining.outputs.count == '0' ||
-      contains(github.event.head_commit.message, '[skip ci]')
+      always() &&
+      needs.determining.result == 'success' &&
+      needs.performing-static-analysis.result != 'failure' &&
+      needs.unit-testing.result != 'failure' &&
+      (needs.determining.outputs.count == '0' ||
+       contains(github.event.head_commit.message, '[skip ci]'))
     name: Concluding no workflows should be dispatched
-    needs: determining
+    needs:
+      - determining
+      - performing-static-analysis
+      - unit-testing
     runs-on: ubuntu-latest
     steps:
       - name: No workflows to trigger
@@ -79,15 +86,9 @@ jobs:
           echo "Static analysis changed: $STATIC_CHANGED"
           echo "Unit testing changed: $UNIT_CHANGED"
   determining:
-    if: |
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.performing-static-analysis.result != 'failure' &&
-      needs.unit-testing.result != 'failure'
+    if: github.ref == 'refs/heads/main'
     name: Determining which workflows should be dispatched
-    needs:
-      - performing-static-analysis
-      - unit-testing
+    needs: detecting-changes
     outputs:
       count: ${{ steps.plan.outputs.count }}
       execution_plan: ${{ steps.plan.outputs.execution_plan }}
@@ -143,10 +144,17 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: >-
+      always() &&
+      needs.determining.result == 'success' &&
+      needs.performing-static-analysis.result != 'failure' &&
+      needs.unit-testing.result != 'failure' &&
       needs.determining.outputs.count != '0' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     name: ${{ matrix.workflow.idx }}. ${{ matrix.workflow.name }}
-    needs: determining
+    needs:
+      - determining
+      - performing-static-analysis
+      - unit-testing
     runs-on: ubuntu-latest
     steps:
       - if: >-
