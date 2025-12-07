@@ -10,7 +10,7 @@ www_shared.yml (github_hosted)
 api_backend.yml (github_hosted)
     ↓
 endpoint_health.yml (github_hosted)
-    ├──→ image_for_ec2_runners_endpoint.yml (github_hosted)
+    ├──→ endpoint_v1_image_for_ec2_runners.yml (github_hosted)
     │        ↓
     │    image_for_ec2_runners_post.yml (github_hosted)
     │        ↓
@@ -48,9 +48,9 @@ See RTL.md for simulation_soc.yml.
 - [ ] Task 4: Ensure endpoint_health.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
   - Trigger: `gh workflow run endpoint_health.yml --field github_hosted=true`
-- [ ] Task 5: Ensure image_for_ec2_runners_endpoint.yml runs without problems
+- [ ] Task 5: Ensure endpoint_v1_image_for_ec2_runners.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
-  - Trigger: `gh workflow run image_for_ec2_runners_endpoint.yml --field github_hosted=true`
+  - Trigger: `gh workflow run endpoint_v1_image_for_ec2_runners.yml --field github_hosted=true`
 - [ ] Task 6: Ensure image_for_ec2_runners_post.yml runs without problems
   - Uses: `github_hosted=true` or `[github-hosted]`
   - Trigger: `gh workflow run image_for_ec2_runners_post.yml --field github_hosted=true`

@@ -12,7 +12,7 @@ jobs:
        github.event_name == 'workflow_call' ||
        github.event_name == 'push' &&
        !contains(toJSON(github.event.commits),
-         '.github/workflows/image_for_ec2_runners_endpoint.yml') &&
+         '.github/workflows/endpoint_v1_image_for_ec2_runners.yml') &&
        !contains(toJSON(github.event.commits),
          'src/api/endpoints/image_for_ec2_runners/endpoint/') &&
        !contains(toJSON(github.event.commits),

@@ -174,7 +174,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/image_for_ec2_runners_endpoint.yml
+            .github/workflows/endpoint_v1_image_for_ec2_runners.yml
       - name: Linting Python files
         run: |
           pylint \
