@@ -12,7 +12,7 @@ concurrency:
 jobs:
   determining:
     if: github.ref == 'refs/heads/main'
-    name: Determining
+    name: Determining if workflows should be dispatched or not
     outputs:
       has_roots: ${{ steps.compute.outputs.has_roots }}
       root_workflows: ${{ steps.compute.outputs.roots }}
@@ -61,7 +61,7 @@ jobs:
     if: >-
       needs.determining.outputs.has_roots == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
-    name: Concluding (will dispatch)
+    name: Concluding workflows should be dispatched
     needs: determining
     outputs:
       root_workflows: ${{ needs.determining.outputs.root_workflows }}
@@ -75,7 +75,7 @@ jobs:
     if: >-
       needs.determining.outputs.has_roots != 'true' ||
       contains(github.event.head_commit.message, '[skip ci]')
-    name: Concluding (skipping)
+    name: Concluding workflows should not be dispatched
     needs: determining
     runs-on: ubuntu-latest
     steps:
@@ -86,7 +86,7 @@ jobs:
           echo "  - No workflow-related files were changed"
           echo "  - Commit message contains [skip ci]"
   dispatching:
-    name: Dispatching
+    name: Dispatching workflows
     needs: concluding-will-dispatch
     runs-on: ubuntu-latest
     steps:
