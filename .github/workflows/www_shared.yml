@@ -183,13 +183,7 @@ jobs:
           role-to-assume: >-
             ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
             }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: python3 -m pip install pytest boto3 requests
       - name: Run integration tests
         run: |
