@@ -1,7 +1,7 @@
 """Helper functions for EC2 instance management in tests."""
 import time
 from botocore.exceptions import ClientError
-from ec2_fleet.ec2_fleet import (
+from ec2_fleet import (
     launch_instance_with_retry,
     wait_for_instance_running,
     wait_for_status_checks,

@@ -12,7 +12,7 @@ from typing import Any, Optional
 import boto3
 from botocore.exceptions import ClientError
 import paramiko
-from ec2_fleet.ec2_fleet import (
+from ec2_fleet import (
     create_fleet_instance as shared_create_fleet,
     wait_for_instance_running as shared_wait_running,
     wait_for_status_checks as shared_wait_status,
