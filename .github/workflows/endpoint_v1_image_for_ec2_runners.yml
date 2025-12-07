@@ -262,7 +262,7 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
+        run: python3 -m pip install pytest boto3 paramiko PyYAML
       - name: Run unit tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
