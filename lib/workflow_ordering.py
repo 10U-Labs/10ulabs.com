@@ -6,9 +6,9 @@ workflows based on their dependencies. Workflows are ordered in levels:
 
     Level 0: bootstrap.yml (foundation - IAM, S3, Route53)
     Level 1: api_shared_ecr.yml, www_shared.yml (shared resources)
-    Level 2: runners.yml, api_backend.yml (runner infra, API Gateway)
-    Level 3: image_for_ecs_runners.yml, image_for_ec2_runners_*.yml (runner images)
-    Level 4: ecs_runner.yml, ec2_runner.yml (runner endpoints)
+    Level 2: endpoint_v1_runners.yml, api_backend.yml (runner infra, API Gateway)
+    Level 3: endpoint_v1_image_for_ecs_runners.yml, endpoint_v1_image_for_ec2_runners_*.yml (runner images)
+    Level 4: endpoint_v1_ecs_runner.yml, endpoint_v1_ec2_runner.yml (runner endpoints)
     Level 5: All other endpoints
 
 When a commit affects multiple levels, workflows deploy in order.

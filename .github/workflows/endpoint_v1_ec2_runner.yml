@@ -24,7 +24,7 @@ jobs:
        !contains(toJSON(github.event.commits),
          'test/api/endpoints/image_for_ec2_runners/post/') &&
        !contains(toJSON(github.event.commits),
-         '.github/workflows/runners.yml') &&
+         '.github/workflows/endpoint_v1_runners.yml') &&
        !contains(toJSON(github.event.commits),
          'src/api/endpoints/runners/') &&
        !contains(toJSON(github.event.commits),
@@ -264,7 +264,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/ec2_runner.yml
+            .github/workflows/endpoint_v1_ec2_runner.yml
       - name: Linting Python files
         run: |
           PYTHONPATH=lib python3 -m pylint \

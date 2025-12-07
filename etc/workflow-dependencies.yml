@@ -39,7 +39,7 @@ contact:
     - ecs_runner
   name: Ensuring contact endpoint exists and is properly configured
   paths:
-    - '.github/workflows/contact.yml'
+    - '.github/workflows/endpoint_v1_contact.yml'
     - 'src/api/endpoints/contact/**'
     - 'test/api/endpoints/contact/**'
 ec2_runner:
@@ -48,7 +48,7 @@ ec2_runner:
   name: >-
     Ensuring the /v1/ec2-runner API endpoint exists and is properly configured
   paths:
-    - '.github/workflows/ec2_runner.yml'
+    - '.github/workflows/endpoint_v1_ec2_runner.yml'
     - 'etc/runners.yml'
     - 'src/api/endpoints/ec2_runner/**'
     - 'test/api/conftest.py'
@@ -58,7 +58,7 @@ echo:
     - ecs_runner
   name: Ensuring echo endpoint exists and is properly configured
   paths:
-    - '.github/workflows/echo.yml'
+    - '.github/workflows/endpoint_v1_echo.yml'
     - 'src/api/endpoints/echo/**'
     - 'test/api/endpoints/echo/**'
 ecr:
@@ -76,7 +76,7 @@ ecs_runner:
   name: >-
     Ensuring the /v1/ecs-runner API endpoint exists and is properly configured
   paths:
-    - '.github/workflows/ecs_runner.yml'
+    - '.github/workflows/endpoint_v1_ecs_runner.yml'
     - 'etc/runners.yml'
     - 'src/api/endpoints/ecs_runner/**'
     - 'test/api/conftest.py'
@@ -112,7 +112,7 @@ image_for_ecs_runners:
     - ecr
   name: Building Docker image for ECS runners
   paths:
-    - '.github/workflows/image_for_ecs_runners.yml'
+    - '.github/workflows/endpoint_v1_image_for_ecs_runners.yml'
     - 'src/api/endpoints/image_for_ecs_runners/**'
     - 'test/api/endpoints/image_for_ecs_runners/**'
 orchestrator:
@@ -129,7 +129,7 @@ rack_designer:
     - ecs_runner
   name: Ensuring Rack Designer exists and is properly configured
   paths:
-    - '.github/workflows/rack_designer.yml'
+    - '.github/workflows/endpoint_v1_rack_designer.yml'
     - 'src/api/endpoints/rack_designer/**'
     - 'src/www/paths/rack_designer/**'
     - 'test/api/endpoints/rack_designer/**'
@@ -139,7 +139,7 @@ runners:
   name: >-
     Ensuring the /v1/runners API endpoint exists and is properly configured
   paths:
-    - '.github/workflows/runners.yml'
+    - '.github/workflows/endpoint_v1_runners.yml'
     - 'etc/runners.yml'
     - 'src/api/endpoints/runners/**'
     - 'test/api/conftest.py'
@@ -151,7 +151,7 @@ simulation_soc:
     Ensuring the /v1/simulation-soc API endpoint exists and is properly
     configured
   paths:
-    - '.github/workflows/simulation_soc.yml'
+    - '.github/workflows/endpoint_v1_simulation_soc.yml'
     - 'src/api/endpoints/simulation_soc/**'
     - 'src/www/paths/simulations/soc/**'
     - 'test/api/endpoints/simulation_soc/**'

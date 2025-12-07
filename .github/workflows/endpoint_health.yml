@@ -17,7 +17,7 @@ jobs:
        !contains(toJSON(github.event.commits), 'src/www/api/') &&
        !contains(toJSON(github.event.commits), 'test/api/backend/') &&
        !contains(toJSON(github.event.commits),
-         '.github/workflows/runners.yml') &&
+         '.github/workflows/endpoint_v1_runners.yml') &&
        !contains(toJSON(github.event.commits),
          'src/api/endpoints/runners/') &&
        !contains(toJSON(github.event.commits),

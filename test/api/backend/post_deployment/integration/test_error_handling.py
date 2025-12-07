@@ -44,7 +44,7 @@ def test_internal_server_error_returns_500(api_url, api_key):
     )
     # 404 means endpoint not deployed (skip check is unauthenticated)
     if response.status_code == 404:
-        pytest.skip("Endpoint /v1/ecs-runner not deployed (managed by ecs_runner.yml)")
+        pytest.skip("Endpoint /v1/ecs-runner not deployed (managed by endpoint_v1_ecs_runner.yml)")
     assert response.status_code in [200, 400, 403, 500]
 
 

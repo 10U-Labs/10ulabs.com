@@ -60,7 +60,7 @@ workflows:
     level: 2
     paths:
       - src/api/endpoints/runners/**
-      - .github/workflows/runners.yml
+      - .github/workflows/endpoint_v1_runners.yml
     depends_on:
       - ecr
 
@@ -68,7 +68,7 @@ workflows:
     level: 5
     paths:
       - src/api/endpoints/simulation_soc/**
-      - .github/workflows/simulation_soc.yml
+      - .github/workflows/endpoint_v1_simulation_soc.yml
     depends_on:
       - runners
 """

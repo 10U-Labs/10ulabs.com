@@ -47,7 +47,7 @@ SAMPLE_GRAPH = {
         "name": "Image for ECS Runners",
         "depends_on": ["ecr"],
         "paths": [
-            ".github/workflows/image_for_ecs_runners.yml",
+            ".github/workflows/endpoint_v1_image_for_ecs_runners.yml",
             "src/api/endpoints/image_for_ecs_runners/**",
         ],
     },
@@ -55,14 +55,14 @@ SAMPLE_GRAPH = {
         "name": "ECS Runner",
         "depends_on": ["image_for_ecs_runners"],
         "paths": [
-            ".github/workflows/ecs_runner.yml",
+            ".github/workflows/endpoint_v1_ecs_runner.yml",
             "src/api/endpoints/ecs_runner/**",
         ],
     },
     "contact": {
         "name": "Contact",
         "depends_on": ["ecs_runner"],
-        "paths": [".github/workflows/contact.yml", "src/api/endpoints/contact/**"],
+        "paths": [".github/workflows/endpoint_v1_contact.yml", "src/api/endpoints/contact/**"],
     },
 }
 

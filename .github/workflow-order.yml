@@ -19,7 +19,7 @@ workflows:
       - runners
     level: 5
     paths:
-      - .github/workflows/contact.yml
+      - .github/workflows/endpoint_v1_contact.yml
       - src/api/endpoints/contact/**
       - test/api/endpoints/contact/**
   ec2_runner:
@@ -29,7 +29,7 @@ workflows:
       - runners
     level: 4
     paths:
-      - .github/workflows/ec2_runner.yml
+      - .github/workflows/endpoint_v1_ec2_runner.yml
       - src/api/endpoints/ec2_runner/**
       - test/api/endpoints/ec2_runner/**
   echo:
@@ -38,7 +38,7 @@ workflows:
       - runners
     level: 5
     paths:
-      - .github/workflows/echo.yml
+      - .github/workflows/endpoint_v1_echo.yml
       - src/api/endpoints/echo/**
       - test/api/endpoints/echo/**
   ecr:
@@ -54,7 +54,7 @@ workflows:
       - runners
     level: 4
     paths:
-      - .github/workflows/ecs_runner.yml
+      - .github/workflows/endpoint_v1_ecs_runner.yml
       - src/api/endpoints/ecs_runner/**
       - test/api/endpoints/ecs_runner/**
   endpoint_v1_image_for_ec2_runners:
@@ -90,7 +90,7 @@ workflows:
       - runners
     level: 3
     paths:
-      - .github/workflows/image_for_ecs_runners.yml
+      - .github/workflows/endpoint_v1_image_for_ecs_runners.yml
       - src/api/endpoints/image_for_ecs_runners/**
       - test/api/endpoints/image_for_ecs_runners/**
   rack_designer:
@@ -100,7 +100,7 @@ workflows:
       - www_shared
     level: 5
     paths:
-      - .github/workflows/rack_designer.yml
+      - .github/workflows/endpoint_v1_rack_designer.yml
       - src/api/endpoints/rack_designer/**
       - src/www/paths/rack-designer/**
       - test/api/endpoints/rack_designer/**
@@ -110,7 +110,7 @@ workflows:
       - ecr
     level: 3
     paths:
-      - .github/workflows/runners.yml
+      - .github/workflows/endpoint_v1_runners.yml
       - etc/runners.yml
       - src/api/endpoints/runners/**
       - test/api/endpoints/runners/**
@@ -121,7 +121,7 @@ workflows:
       - www_shared
     level: 5
     paths:
-      - .github/workflows/simulation_soc.yml
+      - .github/workflows/endpoint_v1_simulation_soc.yml
       - src/api/endpoints/simulation_soc/**
       - src/www/paths/simulations/soc/**
       - test/api/endpoints/simulation_soc/**
