@@ -1,9 +1,8 @@
 """Tests for webhook endpoints."""
-
 import pytest
 import requests
 
-from ..conftest import (
+from .conftest import (
     assert_circuit_breaker_state_in_response,
     make_health_check_request,
     skip_if_endpoint_not_deployed,

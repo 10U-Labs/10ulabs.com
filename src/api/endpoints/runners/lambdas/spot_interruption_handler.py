@@ -90,6 +90,27 @@ def rerun_github_job(github_token: str, github_repo: str, job_id: str) -> bool:
     return result
 
 
+def _is_spot_interruption(stop_code: str, stopped_reason: str) -> bool:
+    """Check if the task stop was due to spot interruption."""
+    return 'SpotInterruption' in stop_code or 'capacity' in stopped_reason.lower()
+
+
+def _trigger_job_rerun(github_repo: str, run_id: str, job_id: str) -> dict:
+    """Trigger a job re-run if the workflow is still active."""
+    github_token = get_github_token()
+    if not github_token:
+        logger.error("No GitHub token available")
+        return {'statusCode': 500, 'body': 'No GitHub token'}
+    workflow_status = get_workflow_run_status(github_token, github_repo, run_id)
+    if workflow_status not in ['queued', 'in_progress', 'waiting']:
+        logger.info("Workflow %s not active (status=%s), skipping", run_id, workflow_status)
+        return {'statusCode': 200, 'body': f'Workflow not active: {workflow_status}'}
+    logger.info("Triggering job re-run for job_id=%s", job_id)
+    if rerun_github_job(github_token, github_repo, job_id):
+        return {'statusCode': 200, 'body': 'Job re-run triggered'}
+    return {'statusCode': 500, 'body': 'Failed to re-run'}
+
+
 def handle_ecs_task_stopped(event: dict) -> dict:
     """Handle ECS task stopped event for spot interruption."""
     detail = event.get('detail', {})
@@ -104,40 +125,13 @@ def handle_ecs_task_stopped(event: dict) -> dict:
         "ECS task stopped: arn=%s, stopCode=%s, reason=%s, run_id=%s, job_id=%s",
         task_arn, stop_code, stopped_reason, run_id, job_id
     )
-    result: dict = {'statusCode': 200, 'body': 'No run_id or job_id'}
     if not run_id or not job_id:
         logger.info("No run_id or job_id in task tags, skipping")
-    else:
-        is_spot = 'SpotInterruption' in stop_code
-        is_capacity = 'capacity' in stopped_reason.lower()
-        is_spot_interruption = is_spot or is_capacity
-        if not is_spot_interruption:
-            logger.info("Not a spot interruption, skipping job re-run")
-            result = {'statusCode': 200, 'body': 'Not a spot interruption'}
-        else:
-            github_token = get_github_token()
-            if not github_token:
-                logger.error("No GitHub token available")
-                result = {'statusCode': 500, 'body': 'No GitHub token'}
-            else:
-                workflow_status = get_workflow_run_status(github_token, github_repo, run_id)
-                if workflow_status not in ['queued', 'in_progress', 'waiting']:
-                    logger.info(
-                        "Workflow %s not active (status=%s), skipping",
-                        run_id, workflow_status
-                    )
-                    body = f'Workflow not active: {workflow_status}'
-                    result = {'statusCode': 200, 'body': body}
-                else:
-                    logger.info(
-                        "Triggering job re-run for job_id=%s", job_id
-                    )
-                    success = rerun_github_job(github_token, github_repo, job_id)
-                    if success:
-                        result = {'statusCode': 200, 'body': 'Job re-run triggered'}
-                    else:
-                        result = {'statusCode': 500, 'body': 'Failed to re-run'}
-    return result
+        return {'statusCode': 200, 'body': 'No run_id or job_id'}
+    if not _is_spot_interruption(stop_code, stopped_reason):
+        logger.info("Not a spot interruption, skipping job re-run")
+        return {'statusCode': 200, 'body': 'Not a spot interruption'}
+    return _trigger_job_rerun(github_repo, run_id, job_id)
 
 
 def _get_ecs_task_tags(task_arn: str) -> dict:

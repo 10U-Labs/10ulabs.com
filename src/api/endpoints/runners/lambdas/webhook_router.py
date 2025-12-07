@@ -1,18 +1,13 @@
 """Lambda handler for GitHub webhook routing to runner endpoints."""
-import os
-import sys
-
-# Add lib directory to path for runner_labels import (needed at Lambda runtime)
-_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib', 'python')
-if _lib_path not in sys.path:
-    sys.path.insert(0, os.path.abspath(_lib_path))
-
 import base64
 import datetime
 import hashlib
 import hmac
+import importlib
 import json
 import logging
+import os
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -21,12 +16,17 @@ from typing import Any, Dict, List, Tuple
 
 import boto3
 from botocore.exceptions import ClientError
-from runner_labels import (
-    parse_labels,
-    validate_labels,
-    LabelParseError,
-    LabelValidationError,
-)
+
+# Add lib directory to path for runner_labels import (needed at Lambda runtime)
+_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib', 'python')
+if _lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(_lib_path))
+
+_runner_labels = importlib.import_module('runner_labels')
+parse_labels = _runner_labels.parse_labels
+validate_labels = _runner_labels.validate_labels
+LabelParseError = _runner_labels.LabelParseError
+LabelValidationError = _runner_labels.LabelValidationError
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)

@@ -1,6 +1,11 @@
 """Pytest fixtures for echo integration tests."""
+from test.api.conftest import skip_if_endpoint_not_deployed
+
 import boto3
 import pytest
+
+# Re-export for local imports
+__all__ = ['skip_if_endpoint_not_deployed']
 
 
 @pytest.fixture(name="lambda_client", scope="module")

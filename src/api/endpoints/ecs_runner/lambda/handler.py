@@ -1,14 +1,9 @@
 """Lambda handler for ECS runner endpoint."""
-import os
-import sys
-
-# Add lib directory to path for runner_labels import (needed at Lambda runtime)
-_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib', 'python')
-if _lib_path not in sys.path:
-    sys.path.insert(0, os.path.abspath(_lib_path))
-
+import importlib
 import json
 import logging
+import os
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -17,13 +12,18 @@ from typing import Any, Dict, List
 
 import boto3
 from botocore.exceptions import ClientError
-from runner_labels import (
-    parse_labels,
-    validate_labels,
-    is_spot,
-    LabelParseError,
-    LabelValidationError,
-)
+
+# Add lib directory to path for runner_labels import (needed at Lambda runtime)
+_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib', 'python')
+if _lib_path not in sys.path:
+    sys.path.insert(0, os.path.abspath(_lib_path))
+
+_runner_labels = importlib.import_module('runner_labels')
+parse_labels = _runner_labels.parse_labels
+validate_labels = _runner_labels.validate_labels
+is_spot = _runner_labels.is_spot
+LabelParseError = _runner_labels.LabelParseError
+LabelValidationError = _runner_labels.LabelValidationError
 
 
 @dataclass

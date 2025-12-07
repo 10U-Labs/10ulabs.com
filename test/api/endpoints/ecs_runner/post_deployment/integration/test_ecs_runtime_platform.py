@@ -6,7 +6,9 @@ def get_task_definition_or_skip(ecs_client):
     """Get the latest github-runner task definition or skip if none exist."""
     response = ecs_client.list_task_definitions(familyPrefix='github-runner', status='ACTIVE')
     if not response['taskDefinitionArns']:
-        pytest.skip("ECS task definitions not deployed (managed by endpoint_v1_ecs_runner.yml workflow)")
+        pytest.skip(
+            "ECS task definitions not deployed (managed by endpoint_v1_ecs_runner.yml workflow)"
+        )
     task_def_arn = response['taskDefinitionArns'][-1]
     return ecs_client.describe_task_definition(taskDefinition=task_def_arn)['taskDefinition']
 

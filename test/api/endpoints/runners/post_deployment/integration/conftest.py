@@ -1,7 +1,12 @@
-"""Unit tests for conftest."""
+"""Pytest fixtures for runners integration tests."""
+from test.api.conftest import skip_if_endpoint_not_deployed
+
 import boto3
 import pytest
 import requests
+
+# Re-export for local imports
+__all__ = ['skip_if_endpoint_not_deployed']
 
 
 DEFAULT_REQUEST_TIMEOUT = 10

@@ -9,11 +9,70 @@ from botocore.exceptions import ClientError
 from .conftest import parse_response_body, assert_response_status
 
 
+def set_module_clients(module, clients):
+    """Set the _clients attribute on a module for testing."""
+    setattr(module, '_clients', clients)
+
+
+def call_has_running_ecs_task_by_name(module, name):
+    """Call the _has_running_ecs_task_by_name function for testing."""
+    func = getattr(module, '_has_running_ecs_task_by_name')
+    return func(name)
+
+
+def call_has_running_ec2_by_name(module, name):
+    """Call the _has_running_ec2_by_name function for testing."""
+    func = getattr(module, '_has_running_ec2_by_name')
+    return func(name)
+
+
+def call_runner_has_infrastructure(module, name):
+    """Call the _runner_has_infrastructure function for testing."""
+    func = getattr(module, '_runner_has_infrastructure')
+    return func(name)
+
+
+def call_terminate_runner(module, *args, **kwargs):
+    """Call the _terminate_runner function for testing."""
+    func = getattr(module, '_terminate_runner')
+    return func(*args, **kwargs)
+
+
+def call_extract_run_id_from_runner_name(module, name):
+    """Call the _extract_run_id_from_runner_name function for testing."""
+    func = getattr(module, '_extract_run_id_from_runner_name')
+    return func(name)
+
+
+def call_get_ecs_task_arns(module, *args, **kwargs):
+    """Call the _get_ecs_task_arns function for testing."""
+    func = getattr(module, '_get_ecs_task_arns')
+    return func(*args, **kwargs)
+
+
+def call_check_tasks_for_run_id(module, *args, **kwargs):
+    """Call the _check_tasks_for_run_id function for testing."""
+    func = getattr(module, '_check_tasks_for_run_id')
+    return func(*args, **kwargs)
+
+
+def call_is_runner_stale(module, *args, **kwargs):
+    """Call the _is_runner_stale function for testing."""
+    func = getattr(module, '_is_runner_stale')
+    return func(*args, **kwargs)
+
+
+def call_is_orphaned_ecs_task(module, *args, **kwargs):
+    """Call the _is_orphaned_ecs_task function for testing."""
+    func = getattr(module, '_is_orphaned_ecs_task')
+    return func(*args, **kwargs)
+
+
 def test_get_github_token_returns_token_from_ssm(stale_runner_cleanup):
     """Test get github token returns token from ssm."""
     mock_ssm = MagicMock()
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token-123'}}
-    stale_runner_cleanup._clients = {'ssm': mock_ssm}
+    set_module_clients(stale_runner_cleanup, {'ssm': mock_ssm})
     with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/github/token'}):
         result = stale_runner_cleanup.get_github_token()
     assert result == 'test-token-123'
@@ -21,7 +80,7 @@ def test_get_github_token_returns_token_from_ssm(stale_runner_cleanup):
 
 def test_get_github_token_returns_empty_when_no_parameter_name(stale_runner_cleanup):
     """Test get github token returns empty when no parameter name."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.get_github_token()
     assert result == ''
@@ -32,7 +91,7 @@ def test_get_github_token_returns_empty_on_client_error(stale_runner_cleanup):
     mock_ssm = MagicMock()
     error = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
     mock_ssm.get_parameter.side_effect = error
-    stale_runner_cleanup._clients = {'ssm': mock_ssm}
+    set_module_clients(stale_runner_cleanup, {'ssm': mock_ssm})
     with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/github/token'}):
         result = stale_runner_cleanup.get_github_token()
     assert result == ''
@@ -138,7 +197,7 @@ def test_get_all_workflow_runners_returns_runners(stale_runner_cleanup):
             }
         ]
     }
-    stale_runner_cleanup._clients = {'dynamodb': mock_dynamodb}
+    set_module_clients(stale_runner_cleanup, {'dynamodb': mock_dynamodb})
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         result = stale_runner_cleanup.get_all_workflow_runners()
     assert len(result) == 1
@@ -146,7 +205,7 @@ def test_get_all_workflow_runners_returns_runners(stale_runner_cleanup):
 
 def test_get_all_workflow_runners_returns_empty_when_no_table(stale_runner_cleanup):
     """Test get all workflow runners returns empty when no table."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.get_all_workflow_runners()
     assert len(result) == 0
@@ -157,7 +216,7 @@ def test_get_all_workflow_runners_returns_empty_on_client_error(stale_runner_cle
     mock_dynamodb = MagicMock()
     error = ClientError({'Error': {'Code': 'ResourceNotFoundException'}}, 'Scan')
     mock_dynamodb.scan.side_effect = error
-    stale_runner_cleanup._clients = {'dynamodb': mock_dynamodb}
+    set_module_clients(stale_runner_cleanup, {'dynamodb': mock_dynamodb})
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         result = stale_runner_cleanup.get_all_workflow_runners()
     assert len(result) == 0
@@ -167,7 +226,7 @@ def test_delete_workflow_runner_returns_true_on_success(stale_runner_cleanup):
     """Test delete workflow runner returns true on success."""
     mock_dynamodb = MagicMock()
     mock_dynamodb.delete_item.return_value = {}
-    stale_runner_cleanup._clients = {'dynamodb': mock_dynamodb}
+    set_module_clients(stale_runner_cleanup, {'dynamodb': mock_dynamodb})
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         result = stale_runner_cleanup.delete_workflow_runner('123', 'fargate')
     assert result is True
@@ -175,7 +234,7 @@ def test_delete_workflow_runner_returns_true_on_success(stale_runner_cleanup):
 
 def test_delete_workflow_runner_returns_false_when_no_table(stale_runner_cleanup):
     """Test delete workflow runner returns false when no table."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.delete_workflow_runner('123', 'fargate')
     assert result is False
@@ -186,7 +245,7 @@ def test_delete_workflow_runner_returns_false_on_client_error(stale_runner_clean
     mock_dynamodb = MagicMock()
     error = ClientError({'Error': {'Code': 'ResourceNotFoundException'}}, 'DeleteItem')
     mock_dynamodb.delete_item.side_effect = error
-    stale_runner_cleanup._clients = {'dynamodb': mock_dynamodb}
+    set_module_clients(stale_runner_cleanup, {'dynamodb': mock_dynamodb})
     with patch.dict('os.environ', {'WORKFLOW_RUNNERS_TABLE': 'test-table'}):
         result = stale_runner_cleanup.delete_workflow_runner('123', 'fargate')
     assert result is False
@@ -196,7 +255,7 @@ def test_terminate_ecs_task_returns_true_on_success(stale_runner_cleanup):
     """Test terminate ecs task returns true on success."""
     mock_ecs = MagicMock()
     mock_ecs.stop_task.return_value = {}
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         result = stale_runner_cleanup.terminate_ecs_task('task-arn')
     assert result is True
@@ -204,7 +263,7 @@ def test_terminate_ecs_task_returns_true_on_success(stale_runner_cleanup):
 
 def test_terminate_ecs_task_returns_false_when_no_cluster(stale_runner_cleanup):
     """Test terminate ecs task returns false when no cluster."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.terminate_ecs_task('task-arn')
     assert result is False
@@ -214,7 +273,7 @@ def test_terminate_ecs_task_returns_true_on_task_not_found(stale_runner_cleanup)
     """Test terminate ecs task returns true on task not found."""
     mock_ecs = MagicMock()
     mock_ecs.stop_task.side_effect = ClientError({'Error': {'Code': 'TaskNotFound'}}, 'StopTask')
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         result = stale_runner_cleanup.terminate_ecs_task('task-arn')
     assert result is True
@@ -225,7 +284,7 @@ def test_terminate_ecs_task_returns_false_on_other_error(stale_runner_cleanup):
     mock_ecs = MagicMock()
     error = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'StopTask')
     mock_ecs.stop_task.side_effect = error
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         result = stale_runner_cleanup.terminate_ecs_task('task-arn')
     assert result is False
@@ -235,7 +294,7 @@ def test_terminate_ec2_instance_returns_true_on_success(stale_runner_cleanup):
     """Test terminate ec2 instance returns true on success."""
     mock_ec2 = MagicMock()
     mock_ec2.terminate_instances.return_value = {}
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     result = stale_runner_cleanup.terminate_ec2_instance('i-12345')
     assert result is True
 
@@ -246,7 +305,7 @@ def test_terminate_ec2_instance_returns_true_on_not_found(stale_runner_cleanup):
     err_response = {'Error': {'Code': 'InvalidInstanceID.NotFound'}}
     error = ClientError(err_response, 'TerminateInstances')
     mock_ec2.terminate_instances.side_effect = error
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     result = stale_runner_cleanup.terminate_ec2_instance('i-12345')
     assert result is True
 
@@ -256,7 +315,7 @@ def test_terminate_ec2_instance_returns_false_on_other_error(stale_runner_cleanu
     mock_ec2 = MagicMock()
     error = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'TerminateInstances')
     mock_ec2.terminate_instances.side_effect = error
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     result = stale_runner_cleanup.terminate_ec2_instance('i-12345')
     assert result is False
 
@@ -265,7 +324,7 @@ def test_is_runner_stale_returns_true_when_old(stale_runner_cleanup):
     """Test is runner stale returns true when old."""
     current_time = int(time.time())
     created_at = current_time - 7200
-    result = stale_runner_cleanup._is_runner_stale(created_at, current_time)
+    result = call_is_runner_stale(stale_runner_cleanup,created_at, current_time)
     assert result is True
 
 
@@ -273,14 +332,14 @@ def test_is_runner_stale_returns_false_when_recent(stale_runner_cleanup):
     """Test is runner stale returns false when recent."""
     current_time = int(time.time())
     created_at = current_time - 1800
-    result = stale_runner_cleanup._is_runner_stale(created_at, current_time)
+    result = call_is_runner_stale(stale_runner_cleanup,created_at, current_time)
     assert result is False
 
 
 def test_is_runner_stale_returns_true_when_no_created_at(stale_runner_cleanup):
     """Test is runner stale returns true when no created at."""
     current_time = int(time.time())
-    result = stale_runner_cleanup._is_runner_stale(0, current_time)
+    result = call_is_runner_stale(stale_runner_cleanup,0, current_time)
     assert result is True
 
 
@@ -288,7 +347,7 @@ def test_is_orphaned_ecs_task_returns_none_when_wrong_type(stale_runner_cleanup)
     """Test is orphaned ecs task returns none when wrong type."""
     task = {'tags': [{'key': 'Type', 'value': 'other'}], 'taskArn': 'arn'}
     current_time = datetime.now(timezone.utc)
-    result = stale_runner_cleanup._is_orphaned_ecs_task(task, current_time)
+    result = call_is_orphaned_ecs_task(stale_runner_cleanup,task, current_time)
     assert result is None
 
 
@@ -302,7 +361,7 @@ def test_is_orphaned_ecs_task_returns_none_when_wrong_managed_by(stale_runner_cl
         'taskArn': 'arn'
     }
     current_time = datetime.now(timezone.utc)
-    result = stale_runner_cleanup._is_orphaned_ecs_task(task, current_time)
+    result = call_is_orphaned_ecs_task(stale_runner_cleanup,task, current_time)
     assert result is None
 
 
@@ -316,7 +375,7 @@ def test_is_orphaned_ecs_task_returns_none_when_no_start_time(stale_runner_clean
         'taskArn': 'arn'
     }
     current_time = datetime.now(timezone.utc)
-    result = stale_runner_cleanup._is_orphaned_ecs_task(task, current_time)
+    result = call_is_orphaned_ecs_task(stale_runner_cleanup,task, current_time)
     assert result is None
 
 
@@ -331,7 +390,7 @@ def test_is_orphaned_ecs_task_returns_none_when_recent(stale_runner_cleanup):
         'taskArn': 'arn',
         'startedAt': current_time - timedelta(minutes=30)
     }
-    result = stale_runner_cleanup._is_orphaned_ecs_task(task, current_time)
+    result = call_is_orphaned_ecs_task(stale_runner_cleanup,task, current_time)
     assert result is None
 
 
@@ -348,13 +407,13 @@ def test_is_orphaned_ecs_task_returns_task_when_stale(stale_runner_cleanup):
         'taskArn': 'arn:aws:ecs:us-east-1:123:task/test',
         'startedAt': current_time - timedelta(hours=2)
     }
-    result = stale_runner_cleanup._is_orphaned_ecs_task(task, current_time)
+    result = call_is_orphaned_ecs_task(stale_runner_cleanup,task, current_time)
     assert result is not None
 
 
 def test_get_orphaned_ecs_tasks_returns_empty_when_no_cluster(stale_runner_cleanup):
     """Test get orphaned ecs tasks returns empty when no cluster."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.get_orphaned_ecs_tasks()
     assert len(result) == 0
@@ -366,7 +425,7 @@ def test_get_orphaned_ecs_tasks_returns_empty_when_no_tasks(stale_runner_cleanup
     mock_paginator = MagicMock()
     mock_paginator.paginate.return_value = [{'taskArns': []}]
     mock_ecs.get_paginator.return_value = mock_paginator
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         result = stale_runner_cleanup.get_orphaned_ecs_tasks()
     assert len(result) == 0
@@ -377,7 +436,7 @@ def test_get_orphaned_ecs_tasks_returns_empty_on_client_error(stale_runner_clean
     mock_ecs = MagicMock()
     err = ClientError({'Error': {'Code': 'ClusterNotFoundException'}}, 'GetPaginator')
     mock_ecs.get_paginator.side_effect = err
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
         result = stale_runner_cleanup.get_orphaned_ecs_tasks()
     assert len(result) == 0
@@ -385,7 +444,7 @@ def test_get_orphaned_ecs_tasks_returns_empty_on_client_error(stale_runner_clean
 
 def test_get_orphaned_ec2_instances_returns_empty_when_no_tag(stale_runner_cleanup):
     """Test get orphaned ec2 instances returns empty when no tag."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.get_orphaned_ec2_instances()
     assert len(result) == 0
@@ -407,7 +466,7 @@ def test_get_orphaned_ec2_instances_returns_stale_instances(stale_runner_cleanup
             }]
         }]
     }
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
         result = stale_runner_cleanup.get_orphaned_ec2_instances()
     assert len(result) == 1
@@ -426,7 +485,7 @@ def test_get_orphaned_ec2_instances_filters_recent_instances(stale_runner_cleanu
             }]
         }]
     }
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
         result = stale_runner_cleanup.get_orphaned_ec2_instances()
     assert len(result) == 0
@@ -437,7 +496,7 @@ def test_get_orphaned_ec2_instances_returns_empty_on_client_error(stale_runner_c
     mock_ec2 = MagicMock()
     err = ClientError({'Error': {'Code': 'ServiceUnavailable'}}, 'DescribeInstances')
     mock_ec2.describe_instances.side_effect = err
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
         result = stale_runner_cleanup.get_orphaned_ec2_instances()
     assert len(result) == 0
@@ -463,7 +522,7 @@ def test_cleanup_orphaned_resources_cleans_ecs_tasks(stale_runner_cleanup):
     }
     mock_ec2 = MagicMock()
     mock_ec2.describe_instances.return_value = {'Reservations': []}
-    stale_runner_cleanup._clients = {'ecs': mock_ecs, 'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs, 'ec2': mock_ec2})
     env = {
         'ECS_CLUSTER': 'test-cluster',
         'EC2_MANAGED_BY_TAG': 'ec2-runner-api',
@@ -478,8 +537,8 @@ def test_terminate_runner_calls_ec2_for_ec2_type(stale_runner_cleanup):
     """Test terminate runner calls ec2 for ec2 type."""
     mock_ec2 = MagicMock()
     mock_ec2.terminate_instances.return_value = {}
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
-    result = stale_runner_cleanup._terminate_runner('ec2', 'i-12345')
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
+    result = call_terminate_runner(stale_runner_cleanup,'ec2', 'i-12345')
     assert result is True
 
 
@@ -487,16 +546,16 @@ def test_terminate_runner_calls_ecs_for_fargate_type(stale_runner_cleanup):
     """Test terminate runner calls ecs for fargate type."""
     mock_ecs = MagicMock()
     mock_ecs.stop_task.return_value = {}
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        result = stale_runner_cleanup._terminate_runner('fargate-spot', 'task-arn')
+        result = call_terminate_runner(stale_runner_cleanup,'fargate-spot', 'task-arn')
     assert result is True
 
 
 def test_terminate_runner_returns_false_for_unknown_type(stale_runner_cleanup):
     """Test terminate runner returns false for unknown type."""
-    stale_runner_cleanup._clients = {}
-    result = stale_runner_cleanup._terminate_runner('unknown', 'resource-id')
+    set_module_clients(stale_runner_cleanup, {})
+    result = call_terminate_runner(stale_runner_cleanup,'unknown', 'resource-id')
     assert result is False
 
 
@@ -505,7 +564,7 @@ def test_cleanup_stale_runners_returns_error_without_token(stale_runner_cleanup)
     mock_ssm = MagicMock()
     err = ClientError({'Error': {'Code': 'ParameterNotFound'}}, 'GetParameter')
     mock_ssm.get_parameter.side_effect = err
-    stale_runner_cleanup._clients = {'ssm': mock_ssm}
+    set_module_clients(stale_runner_cleanup, {'ssm': mock_ssm})
     with patch.dict('os.environ', {'GITHUB_TOKEN_SECRET_NAME': '/test/token'}):
         result = stale_runner_cleanup.cleanup_stale_runners()
     assert result['errors'] == 1
@@ -530,7 +589,7 @@ def test_cleanup_stale_runners_skips_active_workflows(
             'created_at': {'N': str(current_time - 7200)}
         }]
     }
-    stale_runner_cleanup._clients = {'ssm': mock_ssm, 'dynamodb': mock_dynamodb}
+    set_module_clients(stale_runner_cleanup, {'ssm': mock_ssm, 'dynamodb': mock_dynamodb})
     mock_response = mock_urllib_response_factory(json_data={'status': 'in_progress'})
     env = {'GITHUB_TOKEN_SECRET_NAME': '/test/token', 'WORKFLOW_RUNNERS_TABLE': 'test-table'}
     with patch.dict('os.environ', env):
@@ -557,7 +616,7 @@ def test_lambda_handler_returns_200(stale_runner_cleanup, lambda_context):
         'ecs': mock_ecs,
         'ec2': mock_ec2
     }
-    stale_runner_cleanup._clients = clients
+    set_module_clients(stale_runner_cleanup, clients)
     env = {
         'GITHUB_TOKEN_SECRET_NAME': '/test/token',
         'WORKFLOW_RUNNERS_TABLE': 'test-table',
@@ -587,7 +646,7 @@ def test_lambda_handler_returns_cleanup_counts(stale_runner_cleanup, lambda_cont
         'ecs': mock_ecs,
         'ec2': mock_ec2
     }
-    stale_runner_cleanup._clients = clients
+    set_module_clients(stale_runner_cleanup, clients)
     with patch.dict('os.environ', {
         'GITHUB_TOKEN_SECRET_NAME': '/test/token',
         'WORKFLOW_RUNNERS_TABLE': 'test-table',
@@ -601,25 +660,25 @@ def test_lambda_handler_returns_cleanup_counts(stale_runner_cleanup, lambda_cont
 
 def test_extract_run_id_from_fargate_runner_name(stale_runner_cleanup):
     """Test extract run id from fargate runner name."""
-    result = stale_runner_cleanup._extract_run_id_from_runner_name('fargate-runner-12345')
+    result = call_extract_run_id_from_runner_name(stale_runner_cleanup,'fargate-runner-12345')
     assert result == '12345'
 
 
 def test_extract_run_id_from_ec2_runner_name(stale_runner_cleanup):
     """Test extract run id from ec2 runner name."""
-    result = stale_runner_cleanup._extract_run_id_from_runner_name('ec2-runner-67890')
+    result = call_extract_run_id_from_runner_name(stale_runner_cleanup,'ec2-runner-67890')
     assert result == '67890'
 
 
 def test_extract_run_id_returns_empty_for_unknown_prefix(stale_runner_cleanup):
     """Test extract run id returns empty for unknown prefix."""
-    result = stale_runner_cleanup._extract_run_id_from_runner_name('unknown-runner-123')
+    result = call_extract_run_id_from_runner_name(stale_runner_cleanup,'unknown-runner-123')
     assert result == ''
 
 
 def test_extract_run_id_returns_empty_for_empty_string(stale_runner_cleanup):
     """Test extract run id returns empty for empty string."""
-    result = stale_runner_cleanup._extract_run_id_from_runner_name('')
+    result = call_extract_run_id_from_runner_name(stale_runner_cleanup,'')
     assert result == ''
 
 
@@ -630,8 +689,8 @@ def test_get_ecs_task_arns_returns_running_tasks(stale_runner_cleanup):
     task_arn = 'arn:aws:ecs:us-east-1:123:task/running'
     mock_paginator.paginate.return_value = [{'taskArns': [task_arn]}]
     mock_ecs.get_paginator.return_value = mock_paginator
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
-    result = stale_runner_cleanup._get_ecs_task_arns('test-cluster')
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
+    result = call_get_ecs_task_arns(stale_runner_cleanup,'test-cluster')
     assert len(result) == 2
 
 
@@ -641,8 +700,8 @@ def test_get_ecs_task_arns_returns_pending_tasks(stale_runner_cleanup):
     mock_paginator = MagicMock()
     mock_paginator.paginate.side_effect = [[{'taskArns': ['arn1']}], [{'taskArns': ['arn2']}]]
     mock_ecs.get_paginator.return_value = mock_paginator
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
-    result = stale_runner_cleanup._get_ecs_task_arns('test-cluster')
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
+    result = call_get_ecs_task_arns(stale_runner_cleanup,'test-cluster')
     assert 'arn1' in result
 
 
@@ -652,8 +711,8 @@ def test_check_tasks_for_run_id_returns_true_when_found(stale_runner_cleanup):
     mock_ecs.describe_tasks.return_value = {
         'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '12345'}]}]
     }
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
-    result = stale_runner_cleanup._check_tasks_for_run_id('cluster', ['arn1'], '12345')
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
+    result = call_check_tasks_for_run_id(stale_runner_cleanup,'cluster', ['arn1'], '12345')
     assert result is True
 
 
@@ -663,16 +722,16 @@ def test_check_tasks_for_run_id_returns_false_when_not_found(stale_runner_cleanu
     mock_ecs.describe_tasks.return_value = {
         'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '99999'}]}]
     }
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
-    result = stale_runner_cleanup._check_tasks_for_run_id('cluster', ['arn1'], '12345')
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
+    result = call_check_tasks_for_run_id(stale_runner_cleanup,'cluster', ['arn1'], '12345')
     assert result is False
 
 
 def test_check_tasks_for_run_id_returns_false_for_empty_task_list(stale_runner_cleanup):
     """Test check tasks for run id returns false for empty task list."""
     mock_ecs = MagicMock()
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
-    result = stale_runner_cleanup._check_tasks_for_run_id('cluster', [], '12345')
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
+    result = call_check_tasks_for_run_id(stale_runner_cleanup,'cluster', [], '12345')
     assert result is False
 
 
@@ -685,9 +744,9 @@ def test_has_running_ecs_task_by_name_returns_true_when_found(stale_runner_clean
     mock_ecs.describe_tasks.return_value = {
         'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '12345'}]}]
     }
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+        result = call_has_running_ecs_task_by_name(stale_runner_cleanup,'fargate-runner-12345')
     assert result is True
 
 
@@ -700,17 +759,17 @@ def test_has_running_ecs_task_by_name_returns_false_when_not_found(stale_runner_
     mock_ecs.describe_tasks.return_value = {
         'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '99999'}]}]
     }
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+        result = call_has_running_ecs_task_by_name(stale_runner_cleanup,'fargate-runner-12345')
     assert result is False
 
 
 def test_has_running_ecs_task_by_name_returns_false_without_cluster(stale_runner_cleanup):
     """Test has running ecs task by name returns false without cluster."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
-        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+        result = call_has_running_ecs_task_by_name(stale_runner_cleanup,'fargate-runner-12345')
     assert result is False
 
 
@@ -721,9 +780,9 @@ def test_has_running_ecs_task_by_name_returns_false_on_client_error(stale_runner
         {'Error': {'Code': 'ClusterNotFoundException'}}, 'GetPaginator'
     )
     mock_ecs.get_paginator.side_effect = err
-    stale_runner_cleanup._clients = {'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ecs': mock_ecs})
     with patch.dict('os.environ', {'ECS_CLUSTER': 'test-cluster'}):
-        result = stale_runner_cleanup._has_running_ecs_task_by_name('fargate-runner-12345')
+        result = call_has_running_ecs_task_by_name(stale_runner_cleanup,'fargate-runner-12345')
     assert result is False
 
 
@@ -733,9 +792,9 @@ def test_has_running_ec2_by_name_returns_true_when_found(stale_runner_cleanup):
     mock_ec2.describe_instances.return_value = {
         'Reservations': [{'Instances': [{'InstanceId': 'i-12345'}]}]
     }
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
-        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+        result = call_has_running_ec2_by_name(stale_runner_cleanup,'ec2-runner-12345')
     assert result is True
 
 
@@ -743,17 +802,17 @@ def test_has_running_ec2_by_name_returns_false_when_not_found(stale_runner_clean
     """Test has running ec2 by name returns false when not found."""
     mock_ec2 = MagicMock()
     mock_ec2.describe_instances.return_value = {'Reservations': []}
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
-        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+        result = call_has_running_ec2_by_name(stale_runner_cleanup,'ec2-runner-12345')
     assert result is False
 
 
 def test_has_running_ec2_by_name_returns_false_without_tag(stale_runner_cleanup):
     """Test has running ec2 by name returns false without tag."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
-        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+        result = call_has_running_ec2_by_name(stale_runner_cleanup,'ec2-runner-12345')
     assert result is False
 
 
@@ -764,9 +823,9 @@ def test_has_running_ec2_by_name_returns_false_on_client_error(stale_runner_clea
         {'Error': {'Code': 'ServiceUnavailable'}}, 'DescribeInstances'
     )
     mock_ec2.describe_instances.side_effect = err
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     with patch.dict('os.environ', {'EC2_MANAGED_BY_TAG': 'ec2-runner-api'}):
-        result = stale_runner_cleanup._has_running_ec2_by_name('ec2-runner-12345')
+        result = call_has_running_ec2_by_name(stale_runner_cleanup,'ec2-runner-12345')
     assert result is False
 
 
@@ -776,10 +835,10 @@ def test_runner_has_infrastructure_returns_true_for_ec2(stale_runner_cleanup):
     mock_ec2.describe_instances.return_value = {
         'Reservations': [{'Instances': [{'InstanceId': 'i-12345'}]}]
     }
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     env_vars = {'EC2_MANAGED_BY_TAG': 'ec2-runner-api', 'ECS_CLUSTER': 'cluster'}
     with patch.dict('os.environ', env_vars):
-        result = stale_runner_cleanup._runner_has_infrastructure('ec2-runner-12345')
+        result = call_runner_has_infrastructure(stale_runner_cleanup,'ec2-runner-12345')
     assert result is True
 
 
@@ -794,10 +853,10 @@ def test_runner_has_infrastructure_returns_true_for_ecs(stale_runner_cleanup):
     mock_ecs.describe_tasks.return_value = {
         'tasks': [{'taskArn': 'arn1', 'tags': [{'key': 'RunId', 'value': '12345'}]}]
     }
-    stale_runner_cleanup._clients = {'ec2': mock_ec2, 'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2, 'ecs': mock_ecs})
     env_vars = {'EC2_MANAGED_BY_TAG': 'ec2-runner-api', 'ECS_CLUSTER': 'cluster'}
     with patch.dict('os.environ', env_vars):
-        result = stale_runner_cleanup._runner_has_infrastructure('fargate-runner-12345')
+        result = call_runner_has_infrastructure(stale_runner_cleanup,'fargate-runner-12345')
     assert result is True
 
 
@@ -809,16 +868,16 @@ def test_runner_has_infrastructure_returns_false_when_none(stale_runner_cleanup)
     mock_paginator = MagicMock()
     mock_paginator.paginate.return_value = [{'taskArns': []}]
     mock_ecs.get_paginator.return_value = mock_paginator
-    stale_runner_cleanup._clients = {'ec2': mock_ec2, 'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2, 'ecs': mock_ecs})
     env_vars = {'EC2_MANAGED_BY_TAG': 'ec2-runner-api', 'ECS_CLUSTER': 'cluster'}
     with patch.dict('os.environ', env_vars):
-        result = stale_runner_cleanup._runner_has_infrastructure('fargate-runner-99999')
+        result = call_runner_has_infrastructure(stale_runner_cleanup,'fargate-runner-99999')
     assert result is False
 
 
 def test_cleanup_orphaned_github_runners_returns_error_without_repo(stale_runner_cleanup):
     """Test cleanup orphaned github runners returns error without repo."""
-    stale_runner_cleanup._clients = {}
+    set_module_clients(stale_runner_cleanup, {})
     with patch.dict('os.environ', {}, clear=True):
         result = stale_runner_cleanup.cleanup_orphaned_github_runners('token')
     assert result['errors'] == 1
@@ -847,7 +906,7 @@ def test_cleanup_orphaned_github_runners_skips_online_runners(
     """Test cleanup orphaned github runners skips online runners."""
     mock_ec2 = MagicMock()
     mock_ec2.describe_instances.return_value = {'Reservations': []}
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     mock_response = mock_urllib_response_factory(json_data={
         'runners': [{'id': 123, 'name': 'runner-1', 'status': 'online'}]
     })
@@ -867,7 +926,7 @@ def test_cleanup_orphaned_github_runners_skips_runners_with_infrastructure(
     mock_ec2.describe_instances.return_value = {
         'Reservations': [{'Instances': [{'InstanceId': 'i-123'}]}]
     }
-    stale_runner_cleanup._clients = {'ec2': mock_ec2}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2})
     mock_response = mock_urllib_response_factory(json_data={
         'runners': [{'id': 123, 'name': 'ec2-runner-12345', 'status': 'offline'}]
     })
@@ -889,7 +948,7 @@ def test_cleanup_orphaned_github_runners_deletes_orphaned_offline_runner(
     mock_paginator = MagicMock()
     mock_paginator.paginate.return_value = [{'taskArns': []}]
     mock_ecs.get_paginator.return_value = mock_paginator
-    stale_runner_cleanup._clients = {'ec2': mock_ec2, 'ecs': mock_ecs}
+    set_module_clients(stale_runner_cleanup, {'ec2': mock_ec2, 'ecs': mock_ecs})
     list_response = mock_urllib_response_factory(json_data={
         'runners': [{'id': 123, 'name': 'fargate-runner-12345', 'status': 'offline'}]
     })

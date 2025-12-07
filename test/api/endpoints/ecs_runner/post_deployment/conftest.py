@@ -162,3 +162,11 @@ def query_workflow_runners_by_run_id(dynamodb_client, table_name, run_id):
         ExpressionAttributeValues={':rid': {'S': str(run_id)}}
     )
     return response.get('Items', [])
+
+
+@pytest.fixture(name="ecr_has_latest_tag", scope="module")
+def ecr_has_latest_tag_fixture(ecr_client, config):
+    """Check if the ECR repository has an image with the latest tag."""
+    response = ecr_client.list_images(repositoryName=config["ecr_repository_name"])
+    image_tags = [img.get('imageTag') for img in response['imageIds'] if img.get('imageTag')]
+    return 'latest' in image_tags
