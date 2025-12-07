@@ -86,7 +86,7 @@ health:
     - api
   name: Ensuring health endpoint exists and is properly configured
   paths:
-    - '.github/workflows/health.yml'
+    - '.github/workflows/endpoint_health.yml'
     - 'src/api/endpoints/health/**'
     - 'test/api/endpoints/health/**'
 image_for_ec2_runners_endpoint:

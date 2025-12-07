@@ -36,7 +36,7 @@ SAMPLE_GRAPH = {
     "health": {
         "name": "Health",
         "depends_on": ["api"],
-        "paths": [".github/workflows/health.yml", "src/api/endpoints/health/**"],
+        "paths": [".github/workflows/endpoint_health.yml", "src/api/endpoints/health/**"],
     },
     "ecr": {
         "name": "ECR",

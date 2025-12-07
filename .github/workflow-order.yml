@@ -63,7 +63,7 @@ workflows:
       - runners
     level: 5
     paths:
-      - .github/workflows/health.yml
+      - .github/workflows/endpoint_health.yml
       - src/api/endpoints/health/**
       - test/api/endpoints/health/**
   image_for_ec2_runners_endpoint:

@@ -300,7 +300,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/health.yml
+            .github/workflows/endpoint_health.yml
       - name: Run pylint on source
         run: |
           python3 -m pylint src/api/endpoints/health/lambda/handler.py \

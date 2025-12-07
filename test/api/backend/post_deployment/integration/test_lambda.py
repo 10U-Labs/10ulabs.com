@@ -28,5 +28,5 @@ def test_api_gateway_has_permission_to_invoke_health_lambda(lambda_client, confi
         assert has_policy
     except ClientError as err:
         if err.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Health Lambda not deployed (managed by health.yml workflow)")
+            pytest.skip("Health Lambda not deployed (managed by endpoint_health.yml workflow)")
         raise
