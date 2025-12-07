@@ -127,33 +127,6 @@ jobs:
           fi
           AMI_ID=$(grep '^AMI_ID=' build.log | cut -d= -f2)
           echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
-      - if: steps.build.outputs.ami_id != ''
-        name: Output AMI details
-        run: |
-          echo "==================================="
-          echo "GitHub Runner AMI Built Successfully"
-          echo "==================================="
-          echo ""
-          AMI_ID="${{ steps.build.outputs.ami_id }}"
-          REGION="${{
-            needs.declaring-common-variables.outputs.aws_region
-          }}"
-          OS_FAM="${{
-            needs.declaring-common-variables.outputs.os_family
-          }}"
-          OS_VER="${{
-            needs.declaring-common-variables.outputs.os_version
-          }}"
-          OS_ARCH="${{
-            needs.declaring-common-variables.outputs.os_architecture
-          }}"
-          echo "AMI ID: $AMI_ID"
-          echo "Region: $REGION"
-          echo "OS Family: $OS_FAM"
-          echo "OS Version: $OS_VER"
-          echo "OS Architecture: $OS_ARCH"
-          echo ""
-          echo "==================================="
   cleaning-up:
     name: Cleaning up
     needs:
