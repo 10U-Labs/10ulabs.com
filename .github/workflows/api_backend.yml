@@ -385,7 +385,7 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3 PyYAML
+        run: python3 -m pip install pytest boto3 PyYAML requests
       - env:
           SSM_PARAMETER_NAME_FOR_GITHUB_PAT: >-
             ${{ needs.declaring-common-variables.outputs.pat_param }}
