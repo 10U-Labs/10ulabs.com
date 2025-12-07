@@ -38,26 +38,18 @@ See RTL.md for endpoint_v1_simulation_soc.yml.
 
 ## Tasks
 
-- [x] Task 1: Ensure bootstrap.yml runs without problems
-- [x] Task 2: Ensure www_shared.yml runs without problems
-- [x] Task 3: Ensure api_backend.yml runs without problems
-- [x] Task 4: Ensure endpoint_health.yml runs without problems
-- [ ] Task 5: Ensure endpoint_v1_image_for_ec2_runners.yml runs without problems
-- [ ] Task 6: Ensure endpoint_v1_image_for_ec2_runners_post.yml runs without problems
-- [ ] Task 7: Ensure endpoint_v1_runners.yml runs without problems
-- [ ] Task 8: Ensure endpoint_v1_ec2_runner.yml runs without problems
-- [ ] Task 9: Ensure api_shared_ecr.yml runs without problems
-- [ ] Task 10: Ensure endpoint_v1_image_for_ecs_runners.yml runs without problems
-- [ ] Task 11: Ensure endpoint_v1_ecs_runner.yml runs without problems
-- [ ] Task 12: Ensure endpoint_v1_contact.yml runs without problems
-- [ ] Task 13: Ensure endpoint_v1_echo.yml runs without problems
-- [ ] Task 14: Ensure endpoint_v1_rack_designer.yml runs without problems
-- [ ] Task 15: Ensure www_index.yml runs without problems
-
----
-
-## Notes
-
-- Workflows up to and including endpoint_v1_ecs_runner.yml support `github_hosted=true` and `[github-hosted]`
-- Workflows after endpoint_v1_ecs_runner.yml run on ECS fargate on-demand only
-- Complete each task fully before starting the next
+- [x] Task 1: Ensure `bootstrap.yml` runs without problems
+- [x] Task 2: Ensure `www_shared.yml` runs without problems
+- [x] Task 3: Ensure `api_backend.yml` runs without problems
+- [x] Task 4: Ensure `endpoint_health.yml` runs without problems
+- [ ] Task 5: Ensure `endpoint_v1_image_for_ec2_runners.yml` runs without problems
+- [ ] Task 6: Ensure `endpoint_v1_image_for_ec2_runners_post.yml` runs without problems
+- [ ] Task 7: Ensure `endpoint_v1_runners.yml` runs without problems
+- [ ] Task 8: Ensure `endpoint_v1_ec2_runner.yml` runs without problems
+- [ ] Task 9: Ensure `api_shared_ecr.yml` runs without problems
+- [ ] Task 10: Ensure `endpoint_v1_image_for_ecs_runners.yml` runs without problems
+- [ ] Task 11: Ensure `endpoint_v1_ecs_runner.yml` runs without problems
+- [ ] Task 12: Ensure `endpoint_v1_contact.yml` runs without problems
+- [ ] Task 13: Ensure `endpoint_v1_echo.yml` runs without problems
+- [ ] Task 14: Ensure `endpoint_v1_rack_designer.yml` runs without problems
+- [ ] Task 15: Ensure `www_index.yml` runs without problems
