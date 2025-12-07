@@ -228,16 +228,6 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
-  triggering-descendants:
-    name: Triggering descendants
-    needs: integration-testing
-    secrets: inherit
-    uses: ./.github/workflows/image_for_ec2_runners_post.yml
-    with:
-      github_hosted: >-
-        ${{ inputs.github_hosted ||
-            vars.USE_GITHUB_HOSTED == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs:

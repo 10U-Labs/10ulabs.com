@@ -699,16 +699,6 @@ jobs:
             --run-id "$RUN_ID" \
             --ssm-parameter-name "$SSM" \
             --tag-key "$TAG"
-  triggering-descendants:
-    name: Triggering descendants
-    needs: cleaning-up
-    secrets: inherit
-    uses: ./.github/workflows/runners.yml
-    with:
-      github_hosted: >-
-        ${{ inputs.github_hosted ||
-            vars.USE_GITHUB_HOSTED == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') }}
   unit-testing:
     name: Unit testing
     needs: performing-static-analysis

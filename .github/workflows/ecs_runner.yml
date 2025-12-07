@@ -329,26 +329,6 @@ jobs:
           echo "Disabling USE_GITHUB_HOSTED to switch future workflows to ECS."
           gh variable set USE_GITHUB_HOSTED --body "false" \
             --repo ${{ github.repository }}
-  triggering-contact:
-    name: Triggering contact endpoint
-    needs: switching-to-ecs-runners
-    secrets: inherit
-    uses: ./.github/workflows/contact.yml
-  triggering-echo:
-    name: Triggering echo endpoint
-    needs: switching-to-ecs-runners
-    secrets: inherit
-    uses: ./.github/workflows/echo.yml
-  triggering-rack-designer:
-    name: Triggering rack designer
-    needs: switching-to-ecs-runners
-    secrets: inherit
-    uses: ./.github/workflows/rack_designer.yml
-  triggering-simulation-soc:
-    name: Triggering simulation SOC
-    needs: switching-to-ecs-runners
-    secrets: inherit
-    uses: ./.github/workflows/simulation_soc.yml
   unit-testing:
     name: Unit testing
     needs:

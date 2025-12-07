@@ -31,17 +31,22 @@ jobs:
     name: Concluding workflow should be dispatched
     needs: determine
     outputs:
+      execution_plan: ${{ needs.determine.outputs.execution_plan }}
       root_workflows: ${{ needs.determine.outputs.root_workflows }}
     runs-on: ubuntu-latest
     steps:
       - name: Summary
         run: |
-          echo "Root workflows to dispatch:"
+          echo "Root workflows:"
           echo '${{ needs.determine.outputs.root_workflows }}' | jq -r '.[]'
+          echo ""
+          echo "Full execution plan:"
+          echo '${{ needs.determine.outputs.execution_plan }}' | jq -r '.[]'
   determine:
     if: github.ref == 'refs/heads/main'
     name: Determining if workflow should be dispatched or not
     outputs:
+      execution_plan: ${{ steps.compute.outputs.execution_plan }}
       has_roots: ${{ steps.compute.outputs.has_roots }}
       root_workflows: ${{ steps.compute.outputs.roots }}
     runs-on: ubuntu-latest
@@ -74,13 +79,17 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install pyyaml
       - id: compute
-        name: Compute root workflows
+        name: Compute root workflows and execution plan
         run: |
           GRAPH="etc/workflow-dependencies.yml"
           ROOTS=$(echo "${{ steps.files.outputs.changed }}" | \
             python3 scripts/compute_root_workflows.py --graph $GRAPH)
-          echo "Root workflows to trigger: $ROOTS"
+          PLAN=$(echo "${{ steps.files.outputs.changed }}" | \
+            python3 scripts/compute_root_workflows.py --graph $GRAPH --execution-plan)
+          echo "Root workflows: $ROOTS"
+          echo "Execution plan: $PLAN"
           echo "roots=$ROOTS" >> "$GITHUB_OUTPUT"
+          echo "execution_plan=$PLAN" >> "$GITHUB_OUTPUT"
           if [ "$ROOTS" = "[]" ]; then
             echo "has_roots=false" >> "$GITHUB_OUTPUT"
           else
@@ -101,37 +110,15 @@ jobs:
         run: python3 -m pip install pyyaml
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ROOTS: ${{ needs.should-dispatch.outputs.root_workflows }}
-        name: Dispatch root workflows
+        name: Execute workflow plan sequentially
         run: |
-          import json
-          import os
-          import subprocess
-          import yaml
-          roots = json.loads(os.environ["ROOTS"])
-          commit_msg = """${{ github.event.head_commit.message }}"""
-          # Load dependency graph to get workflow names
-          with open("etc/workflow-dependencies.yml") as f:
-              graph = yaml.safe_load(f)
-          # Check for github-hosted flag in commit message
-          github_hosted = "[github-hosted]" in commit_msg
-          # ECS on-demand workflows (no github_hosted support)
-          ecs_on_demand = {"contact", "echo", "rack_designer", "www_index"}
-          for workflow_key in roots:
-              workflow_file = f".github/workflows/{workflow_key}.yml"
-              workflow_name = graph[workflow_key]["name"]
-              print(f"Dispatching: {workflow_name}")
-              print(f"  File: {workflow_file}")
-              cmd = ["gh", "workflow", "run", workflow_file]
-              # Pass github_hosted=true if requested and workflow supports it
-              if github_hosted and workflow_key not in ecs_on_demand:
-                  cmd.extend(["--field", "github_hosted=true"])
-              result = subprocess.run(cmd, capture_output=True, text=True)
-              if result.returncode != 0:
-                  print(f"  Error: {result.stderr}")
-              else:
-                  print(f"  Success")
-        shell: python
+          GITHUB_HOSTED_FLAG=""
+          if [[ "${{ github.event.head_commit.message }}" == *"[github-hosted]"* ]]; then
+            GITHUB_HOSTED_FLAG="--github-hosted"
+          fi
+          python3 scripts/execute_workflow_plan.py \
+            --plan '${{ needs.should-dispatch.outputs.execution_plan }}' \
+            $GITHUB_HOSTED_FLAG
 name: Workflow Orchestrator
 on:
   push:
