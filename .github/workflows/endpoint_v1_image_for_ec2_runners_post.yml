@@ -289,12 +289,8 @@ jobs:
         run: |
           cd src/api/backend
           terraform init -backend=true -input=false
-          OS_ARCHITECTURE=$(terraform output -raw \
-            fargate_cpu_architecture | tr '[:upper:]' '[:lower:]')
           INSTANCE_TYPES=$(terraform output -json \
             ec2_instance_types | tr -d '[]" ')
-          echo "os_architecture=$OS_ARCHITECTURE" \
-            >> $GITHUB_OUTPUT
           echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
       - name: Install yq
         run: |
@@ -314,9 +310,10 @@ jobs:
           YQ_VERSION=$(yq '.yq_version' "$CONF")
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
+          OS_ARCH=$(echo "$SOURCE_AMI" | cut -d'-' -f3)
           REGION="${{ steps.shared.outputs.aws_region }}"
           ROLE_ARN="${{ steps.shared.outputs.github_actions_role_arn }}"
-          ARCH="${{ steps.api.outputs.os_architecture }}"
+          ARCH="$OS_ARCH"
           TYPES="${{ steps.api.outputs.instance_types }}"
           TF_VER="${{ steps.shared.outputs.terraform_version }}"
           echo "aws_region=$REGION" >> $GITHUB_OUTPUT
