@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
   group: orchestrator-${{ github.ref }}
 jobs:
-  determining:
+  determining-if-workflows-should-be-dispatched-or-not:
     if: github.ref == 'refs/heads/main'
     name: Determining if workflows should be dispatched or not
     outputs:
@@ -57,26 +57,26 @@ jobs:
           else
             echo "has_roots=true" >> "$GITHUB_OUTPUT"
           fi
-  concluding-will-dispatch:
+  concluding-workflows-should-be-dispatched:
     if: >-
-      needs.determining.outputs.has_roots == 'true' &&
+      needs.determining-if-workflows-should-be-dispatched-or-not.outputs.has_roots == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     name: Concluding workflows should be dispatched
-    needs: determining
+    needs: determining-if-workflows-should-be-dispatched-or-not
     outputs:
-      root_workflows: ${{ needs.determining.outputs.root_workflows }}
+      root_workflows: ${{ needs.determining-if-workflows-should-be-dispatched-or-not.outputs.root_workflows }}
     runs-on: ubuntu-latest
     steps:
       - name: Summary
         run: |
           echo "Root workflows to dispatch:"
-          echo '${{ needs.determining.outputs.root_workflows }}' | jq -r '.[]'
-  concluding-skip:
+          echo '${{ needs.determining-if-workflows-should-be-dispatched-or-not.outputs.root_workflows }}' | jq -r '.[]'
+  concluding-workflows-should-not-be-dispatched:
     if: >-
-      needs.determining.outputs.has_roots != 'true' ||
+      needs.determining-if-workflows-should-be-dispatched-or-not.outputs.has_roots != 'true' ||
       contains(github.event.head_commit.message, '[skip ci]')
     name: Concluding workflows should not be dispatched
-    needs: determining
+    needs: determining-if-workflows-should-be-dispatched-or-not
     runs-on: ubuntu-latest
     steps:
       - name: No workflows to trigger
@@ -85,9 +85,9 @@ jobs:
           echo "Either:"
           echo "  - No workflow-related files were changed"
           echo "  - Commit message contains [skip ci]"
-  dispatching:
+  dispatching-workflows:
     name: Dispatching workflows
-    needs: concluding-will-dispatch
+    needs: concluding-workflows-should-be-dispatched
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -100,7 +100,7 @@ jobs:
         run: python3 -m pip install pyyaml
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ROOTS: ${{ needs.concluding-will-dispatch.outputs.root_workflows }}
+          ROOTS: ${{ needs.concluding-workflows-should-be-dispatched.outputs.root_workflows }}
         name: Dispatch root workflows
         run: |
           import json
