@@ -21,7 +21,7 @@ api_backend:
     - 'test/api/conftest.py'
 api_shared_ecr:
   depends_on:
-    - endpoint_health
+    - endpoint_v1_ec2_runner
   name: Ensuring ECR repository exists and is properly configured
   paths:
     - '.github/workflows/api_shared_ecr.yml'
