@@ -58,6 +58,10 @@ def load_workflow_dependencies(project_dir):
 def is_pre_push_check_step(step_name, run_cmd):
     """Determine if a workflow step is a pre-push check (linting, testing, etc.)."""
     step_lower = step_name.lower()
+    # Skip setup/install steps - they're not actual checks
+    skip_keywords = ['install', 'setup', 'checkout', 'configure', 'set up']
+    if any(kw in step_lower for kw in skip_keywords):
+        return False
     static_keywords = [
         'lint', 'pylint', 'mypy', 'type check', 'static',
         'format check', 'fmt', 'validate', 'hadolint', 'tflint',

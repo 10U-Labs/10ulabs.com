@@ -36,6 +36,15 @@ def load_dependency_graph(graph_path: Path) -> dict[str, Any]:
         return yaml.safe_load(file)
 
 
+def load_and_validate_graph(graph_arg: str) -> dict[str, Any]:
+    """Load dependency graph from path, exiting with error if not found."""
+    graph_path = Path(graph_arg)
+    if not graph_path.exists():
+        print(f"Error: Dependency graph not found at {graph_path}", file=sys.stderr)
+        sys.exit(1)
+    return load_dependency_graph(graph_path)
+
+
 def get_all_ancestors(
     workflow: str, graph: dict[str, Any], cache: dict[str, set[str]] | None = None
 ) -> set[str]:
@@ -89,6 +98,15 @@ def get_all_descendants(
     return descendants
 
 
+def _insert_sorted(queue: list[str], item: str) -> None:
+    """Insert an item into a sorted list maintaining sort order."""
+    for i, existing in enumerate(queue):
+        if item < existing:
+            queue.insert(i, item)
+            return
+    queue.append(item)
+
+
 def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
     """
     Sort workflows in topological order (dependencies before dependents).
@@ -111,18 +129,12 @@ def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
         current = queue.pop(0)
         result.append(current)
 
-        # Find workflows that depend on current
+        # Find workflows that depend on current and add ready ones to queue
         for wf in workflows:
             if current in graph.get(wf, {}).get("depends_on", []):
                 in_degree[wf] -= 1
                 if in_degree[wf] == 0:
-                    # Insert in sorted order for deterministic output
-                    for i, item in enumerate(queue):
-                        if wf < item:
-                            queue.insert(i, wf)
-                            break
-                    else:
-                        queue.append(wf)
+                    _insert_sorted(queue, wf)
 
     return result
 
@@ -219,8 +231,8 @@ def compute_root_workflows(
     return sorted(roots)
 
 
-def main() -> None:
-    """Main entry point."""
+def _parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Compute root workflows to trigger based on changed files."
     )
@@ -256,57 +268,66 @@ def main() -> None:
         default=0,
         help="Output slot variables for GitHub Actions (key_01, key_02, ... up to N)",
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
+
+def _output_slots(output: list[str], num_slots: int) -> None:
+    """Output slot variables for GitHub Actions."""
+    print(f"count={len(output)}")
+    for i in range(1, num_slots + 1):
+        key = output[i - 1] if i <= len(output) else ""
+        print(f"key_{i:02d}={key}")
+
+
+def _output_results(output: list[str], output_format: str) -> None:
+    """Output results in the specified format."""
+    if output_format == "json":
+        print(json.dumps(output))
+    else:
+        for item in output:
+            print(item)
+
+
+def main() -> None:
+    """Main entry point."""
+    args = _parse_args()
 
     # Read changed files
-    if args.changed_files == "-":
-        changed_files_str = sys.stdin.read()
-    else:
-        changed_files_str = args.changed_files
-
+    changed_files_str = (
+        sys.stdin.read() if args.changed_files == "-" else args.changed_files
+    )
     changed_files = [
         line.strip() for line in changed_files_str.strip().split("\n") if line.strip()
     ]
 
     # Load dependency graph
-    graph_path = Path(args.graph)
-    if not graph_path.exists():
-        print(f"Error: Dependency graph not found at {graph_path}", file=sys.stderr)
-        sys.exit(1)
-
-    graph = load_dependency_graph(graph_path)
+    graph = load_and_validate_graph(args.graph)
 
     # Determine roots: either from --start-from or from changed files
     if args.start_from:
         if args.start_from not in graph:
             print(f"Error: Unknown workflow '{args.start_from}'", file=sys.stderr)
-            print(f"Available workflows: {', '.join(sorted(graph.keys()))}", file=sys.stderr)
+            print(
+                f"Available workflows: {', '.join(sorted(graph.keys()))}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         roots = [args.start_from]
     else:
         roots = compute_root_workflows(changed_files, graph)
 
     # Compute execution plan if requested
-    if args.execution_plan or args.slots > 0:
-        output = compute_execution_plan(roots, graph)
-    else:
-        output = roots
-
-    # Output as slot variables for GitHub Actions
-    if args.slots > 0:
-        print(f"count={len(output)}")
-        for i in range(1, args.slots + 1):
-            key = output[i - 1] if i <= len(output) else ""
-            print(f"key_{i:02d}={key}")
-        return
+    output = (
+        compute_execution_plan(roots, graph)
+        if args.execution_plan or args.slots > 0
+        else roots
+    )
 
     # Output results
-    if args.output_format == "json":
-        print(json.dumps(output))
+    if args.slots > 0:
+        _output_slots(output, args.slots)
     else:
-        for item in output:
-            print(item)
+        _output_results(output, args.output_format)
 
 
 if __name__ == "__main__":
