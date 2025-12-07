@@ -717,13 +717,6 @@ jobs:
             --confcutdir=$BASE -v
 name: Building AMI for EC2 self-hosted runners
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/image_for_ec2_runners_post.yml'
-      - 'src/api/endpoints/image_for_ec2_runners/post/**'
-      - 'test/api/endpoints/image_for_ec2_runners/post/**'
   workflow_call:
     inputs:
       dry_run:

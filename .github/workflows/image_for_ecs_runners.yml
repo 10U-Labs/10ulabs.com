@@ -484,13 +484,6 @@ jobs:
             -v
 name: Building Docker image for ECS runners
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/image_for_ecs_runners.yml'
-      - 'src/api/endpoints/image_for_ecs_runners/**'
-      - 'test/api/endpoints/image_for_ecs_runners/**'
   workflow_call:
     inputs:
       dry_run:

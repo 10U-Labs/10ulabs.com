@@ -85,8 +85,39 @@ See RTL.md for simulation_soc.yml.
 
 ---
 
+## Orchestrator Pattern (Implemented)
+
+All workflows now use the Orchestrator Pattern:
+
+1. **orchestrator.yml** is the ONLY workflow with a `push` trigger
+2. It analyzes changed files and determines which root workflows to trigger
+3. Root workflows cascade to descendants via `workflow_run` triggers
+4. The dependency graph is defined in `etc/workflow-dependencies.yml`
+5. The logic is in `scripts/compute_root_workflows.py` with tests in `test/orchestrator/`
+
+**How it works:**
+```
+Push to main
+    ↓
+orchestrator.yml (only push trigger)
+    ↓
+Computes root workflows from changed files
+    ↓
+Dispatches root workflows (workflow_dispatch)
+    ↓
+Descendants cascade via workflow_run
+```
+
+**Benefits:**
+- No duplicate workflow runs when multiple dependencies change in one commit
+- Centralized dependency logic in `etc/workflow-dependencies.yml`
+- Scales to any depth without manual pattern maintenance
+
+---
+
 ## Notes
 
 - Workflows up to and including ecs_runner.yml support `github_hosted=true` and `[github-hosted]`
 - Workflows after ecs_runner.yml run on ECS fargate on-demand only
 - Complete each task fully before starting the next
+- All workflows are triggered via orchestrator.yml on push to main

@@ -324,15 +324,6 @@ jobs:
             -v
 name: Ensuring the /v1/ec2-runner API endpoint exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/ec2_runner.yml'
-      - 'etc/runners.yml'
-      - 'src/api/endpoints/ec2_runner/**'
-      - 'test/api/conftest.py'
-      - 'test/api/endpoints/ec2_runner/**'
   workflow_call:
     inputs:
       github_hosted:

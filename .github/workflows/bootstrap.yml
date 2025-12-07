@@ -4,15 +4,9 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   checking-oidc-availability:
-    if: |
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success') &&
-      github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' &&
-         !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' &&
-         github.event.inputs.dry_run != 'true')
-      )
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
     name: Checking OIDC availability
     needs: declaring-common-variables
     outputs:
@@ -37,15 +31,9 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
             }}
   declaring-common-variables:
-    if: |
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success') &&
-      github.ref == 'refs/heads/main' && (
-        (github.event_name == 'push' &&
-         !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' &&
-         github.event.inputs.dry_run != 'true')
-      )
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
@@ -356,13 +344,6 @@ jobs:
         run: python3 -m pytest test/bootstrap/pre_deployment/ -v
 name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/bootstrap.yml'
-      - 'src/bootstrap/**'
-      - 'test/bootstrap/**'
   workflow_call:
     inputs:
       dry_run:

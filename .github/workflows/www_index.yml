@@ -227,13 +227,6 @@ jobs:
         run: npm test --prefix src/www/paths/index
 name: Ensuring www index (home page) exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/www_index.yml'
-      - 'src/www/paths/index/**'
-      - 'test/www/paths/index/**'
   workflow_call:
     inputs:
       invalidate_cloudfront:

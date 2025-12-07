@@ -3,33 +3,12 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  concluding-workflow-should-not-run:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      needs.determining-if-workflow-should-run.outputs.should_skip == 'true'
-    name: Concluding workflow should not run
-    needs: determining-if-workflow-should-run
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip workflow
-        run: echo "Skipping - upstream workflow was also modified"
-  concluding-workflow-should-run:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      needs.determining-if-workflow-should-run.outputs.should_skip != 'true'
-    name: Concluding workflow should run
-    needs: determining-if-workflow-should-run
-    runs-on: ubuntu-latest
-    steps:
-      - name: Proceed with workflow
-        run: echo "Proceeding - no upstream workflow conflicts"
   declaring-common-variables:
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name != 'workflow_run' ||
        github.event.workflow_run.conclusion == 'success')
     name: Declaring common variables
-    needs: concluding-workflow-should-run
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       github_actions_role_arn: >-
@@ -94,38 +73,6 @@ jobs:
             output -raw arn_for_github_actions_role)
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
             >> $GITHUB_OUTPUT
-  determining-if-workflow-should-run:
-    if: github.ref == 'refs/heads/main'
-    name: Determining if workflow should run
-    outputs:
-      should_skip: ${{ steps.check.outputs.should_skip }}
-    runs-on: ubuntu-latest
-    steps:
-      - if: github.event_name == 'push'
-        name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: check
-        name: Check for upstream workflow changes
-        run: |
-          if [ "${{ github.event_name }}" != "push" ]; then
-            echo "Not a push event - workflow should run"
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          CHANGED=$(git diff --name-only ${{ github.event.before }} \
-            ${{ github.sha }} 2>/dev/null || \
-            git diff --name-only HEAD~1 HEAD)
-          PATTERN='^(\.github/workflows/bootstrap\.yml'
-          PATTERN="${PATTERN}|src/bootstrap/|test/bootstrap/)"
-          if echo "$CHANGED" | grep -qE "$PATTERN"; then
-            echo "Bootstrap files modified - workflow should not run"
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-          else
-            echo "No bootstrap files modified - workflow should run"
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -343,13 +290,6 @@ jobs:
         run: python3 -m pytest test/www/shared/pre_deployment/ -v
 name: Ensuring www shared infrastructure exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/www_shared.yml'
-      - 'src/www/shared/**'
-      - 'test/www/shared/**'
   workflow_call:
     inputs:
       github_hosted:

@@ -339,15 +339,6 @@ jobs:
             -v
 name: Ensuring the /v1/ecs-runner API endpoint exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/ecs_runner.yml'
-      - 'etc/runners.yml'
-      - 'src/api/endpoints/ecs_runner/**'
-      - 'test/api/conftest.py'
-      - 'test/api/endpoints/ecs_runner/**'
   workflow_call:
     inputs:
       github_hosted:

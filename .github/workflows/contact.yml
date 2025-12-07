@@ -217,13 +217,6 @@ jobs:
         run: python3 -m pytest test/api/endpoints/contact/pre_deployment/ -v
 name: Ensuring contact endpoint exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/contact.yml'
-      - 'src/api/endpoints/contact/**'
-      - 'test/api/endpoints/contact/**'
   workflow_call:
   workflow_dispatch:
   workflow_run:

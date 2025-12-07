@@ -199,14 +199,6 @@ jobs:
         run: python3 -m pytest test/api/endpoints/rack_designer/pre_deployment/ -v
 name: Ensuring Rack Designer exists and is properly configured
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/rack_designer.yml'
-      - 'src/api/endpoints/rack_designer/**'
-      - 'src/www/paths/rack_designer/**'
-      - 'test/api/endpoints/rack_designer/**'
   workflow_call:
     inputs:
       invalidate_cloudfront:

@@ -1,0 +1,136 @@
+---
+# Workflow Orchestrator
+#
+# This is the ONLY workflow that responds to push events on main.
+# It analyzes changed files and triggers the appropriate root workflows.
+#
+# Root workflows are those whose files changed but have no ancestors that
+# also changed. Descendant workflows are triggered via workflow_run cascading.
+concurrency:
+  cancel-in-progress: true
+  group: orchestrator-${{ github.ref }}
+jobs:
+  analyzing-changes:
+    if: github.ref == 'refs/heads/main'
+    name: Analyzing changes
+    outputs:
+      has_roots: ${{ steps.compute.outputs.has_roots }}
+      root_workflows: ${{ steps.compute.outputs.roots }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: files
+        name: Get changed files
+        run: |
+          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
+            BASE="${{ github.event.before }}"
+          else
+            BASE="HEAD~1"
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}")
+          echo "Changed files:"
+          echo "$CHANGED"
+          EOF_MARKER=$(openssl rand -hex 8)
+          {
+            echo "changed<<$EOF_MARKER"
+            echo "$CHANGED"
+            echo "$EOF_MARKER"
+          } >> "$GITHUB_OUTPUT"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: python3 -m pip install pyyaml
+      - id: compute
+        name: Compute root workflows
+        run: |
+          ROOTS=$(echo "${{ steps.files.outputs.changed }}" | \
+            python3 scripts/compute_root_workflows.py --graph etc/workflow-dependencies.yml)
+          echo "Root workflows to trigger: $ROOTS"
+          echo "roots=$ROOTS" >> "$GITHUB_OUTPUT"
+          if [ "$ROOTS" = "[]" ]; then
+            echo "has_roots=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_roots=true" >> "$GITHUB_OUTPUT"
+          fi
+  dispatching-workflows:
+    if: >-
+      needs.analyzing-changes.outputs.has_roots == 'true' &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    name: Dispatching workflows
+    needs: analyzing-changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: python3 -m pip install pyyaml
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ROOTS: ${{ needs.analyzing-changes.outputs.root_workflows }}
+        name: Dispatch root workflows
+        run: |
+          import json
+          import os
+          import subprocess
+          import yaml
+
+          roots = json.loads(os.environ["ROOTS"])
+          commit_msg = """${{ github.event.head_commit.message }}"""
+
+          # Load dependency graph to get workflow names
+          with open("etc/workflow-dependencies.yml") as f:
+              graph = yaml.safe_load(f)
+
+          # Check for github-hosted flag
+          github_hosted = "[github-hosted]" in commit_msg
+
+          for workflow_key in roots:
+              workflow_file = f".github/workflows/{workflow_key}.yml"
+              workflow_name = graph[workflow_key]["name"]
+
+              print(f"Dispatching: {workflow_name}")
+              print(f"  File: {workflow_file}")
+
+              cmd = ["gh", "workflow", "run", workflow_file]
+
+              # Pass github_hosted input if the commit message contains the flag
+              if github_hosted:
+                  cmd.extend(["--field", "github_hosted=true"])
+
+              result = subprocess.run(cmd, capture_output=True, text=True)
+              if result.returncode != 0:
+                  print(f"  Error: {result.stderr}")
+              else:
+                  print(f"  Success")
+        shell: python
+  skipping:
+    if: >-
+      needs.analyzing-changes.outputs.has_roots != 'true' ||
+      contains(github.event.head_commit.message, '[skip ci]')
+    name: Skipping (no workflows to trigger)
+    needs: analyzing-changes
+    runs-on: ubuntu-latest
+    steps:
+      - name: No workflows to trigger
+        run: |
+          echo "No root workflows to trigger for this commit."
+          echo "Either:"
+          echo "  - No workflow-related files were changed"
+          echo "  - Commit message contains [skip ci]"
+name: Workflow Orchestrator
+on:
+  push:
+    branches:
+      - main
+permissions:
+  actions: write
+  contents: read
