@@ -146,15 +146,6 @@ endpoint_v1_simulation_soc:
     - 'src/api/endpoints/simulation_soc/**'
     - 'src/www/paths/simulations/soc/**'
     - 'test/api/endpoints/simulation_soc/**'
-orchestrator:
-  depends_on: []
-  name: Workflow Orchestrator
-  paths:
-    - '.github/workflows/orchestrator.yml'
-    - 'etc/workflow-dependencies.yml'
-    - 'scripts/compute_root_workflows.py'
-    - 'scripts/execute_workflow_plan.py'
-    - 'test/orchestrator/**'
 www_index:
   depends_on:
     - endpoint_v1_contact
