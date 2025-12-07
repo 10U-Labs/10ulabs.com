@@ -26,21 +26,6 @@ data "terraform_remote_state" "runners" {
   }
 }
 
-data "terraform_remote_state" "rack_designer" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "rack_designer/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-  }
-}
-
 data "terraform_remote_state" "health" {
   backend = "s3"
 
@@ -54,81 +39,6 @@ data "terraform_remote_state" "health" {
     lambda_function_arn  = ""
     lambda_function_name = ""
     log_group_name       = ""
-  }
-}
-
-data "terraform_remote_state" "contact" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "contact/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-  }
-}
-
-data "terraform_remote_state" "echo" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "echo/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-  }
-}
-
-data "terraform_remote_state" "image_for_ecs_runners" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "image_for_ecs_runners/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-  }
-}
-
-data "terraform_remote_state" "image_for_ec2_runners" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "image_for_ec2_runners/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-  }
-}
-
-data "terraform_remote_state" "ecs_runner" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "api/endpoints/ecs_runner/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
   }
 }
 
@@ -150,17 +60,3 @@ data "terraform_remote_state" "ec2_runner" {
   }
 }
 
-data "terraform_remote_state" "simulation_soc" {
-  backend = "s3"
-
-  config = {
-    bucket = "10ulabs-terraform-state-us-east-2"
-    key    = "simulation_soc/terraform.tfstate"
-    region = "us-east-2"
-  }
-
-  defaults = {
-    lambda_function_arn  = ""
-    lambda_function_name = ""
-  }
-}

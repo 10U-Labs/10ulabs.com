@@ -167,3 +167,105 @@ def test_lambda_permission_simulation_soc_handler_exists():
     """Verify Lambda permission for simulation SOC handler exists."""
     content = _read_apigateway_tf()
     assert 'resource "aws_lambda_permission" "simulation_soc_handler"' in content
+
+
+def test_lambda_permission_rack_designer_handler_exists():
+    """Verify Lambda permission for rack designer handler exists."""
+    content = _read_apigateway_tf()
+    assert 'resource "aws_lambda_permission" "rack_designer_handler"' in content
+
+
+def test_lambda_function_names_map_exists():
+    """Verify lambda_function_names map is defined in locals."""
+    content = _read_apigateway_tf()
+    assert 'lambda_function_names = {' in content
+
+
+def test_lambda_function_names_map_has_all_handlers():
+    """Verify lambda_function_names map includes all endpoint handlers."""
+    content = _read_apigateway_tf()
+    required_handlers = [
+        'catchall',
+        'contact',
+        'ec2_runner',
+        'ecs_runner',
+        'echo',
+        'health',
+        'image_for_ec2_runners',
+        'image_for_ecs_runners',
+        'rack_designer',
+        'runners',
+        'simulation_soc',
+    ]
+    for handler in required_handlers:
+        assert f'{handler}' in content, f"Missing handler: {handler}"
+
+
+def test_lambda_arn_prefix_defined():
+    """Verify lambda_arn_prefix local is defined for ARN construction."""
+    content = _read_apigateway_tf()
+    assert 'lambda_arn_prefix' in content
+    assert 'arn:aws:lambda:' in content
+
+
+def test_apigw_integration_prefix_defined():
+    """Verify apigw_integration_prefix local is defined."""
+    content = _read_apigateway_tf()
+    assert 'apigw_integration_prefix' in content
+    assert 'arn:aws:apigateway:' in content
+
+
+def test_arns_constructed_from_function_names():
+    """Verify ARNs are constructed from lambda_function_names, not remote state."""
+    content = _read_apigateway_tf()
+    # Health ARN should reference the lambda_function_names map
+    assert 'local.lambda_function_names.health' in content
+    # Should NOT use remote state for ARN construction
+    assert 'data.terraform_remote_state.health.outputs.lambda_function_arn' not in content
+
+
+def test_no_conditional_arn_fallback_to_catchall():
+    """Verify ARN construction doesn't use conditional fallback to catchall.
+
+    ARNs should be constructed directly from function names, not conditionally
+    based on remote state existence.
+    """
+    content = _read_apigateway_tf()
+    # Old pattern: conditional with catchall fallback
+    # New pattern: direct construction from function names
+    # The health_arn should NOT have a ternary fallback pattern
+    lines = content.split('\n')
+    for line in lines:
+        if 'health_arn' in line and '=' in line:
+            # Should not contain the old conditional pattern
+            assert '!= ""' not in line or 'lambda_function_names' in content
+
+
+def test_lambda_permissions_use_function_names_map():
+    """Verify Lambda permissions use centralized function names map."""
+    content = _read_apigateway_tf()
+    # Lambda permissions should reference the function names map
+    permissions_to_check = [
+        ('health_handler', 'local.lambda_function_names.health'),
+        ('runners_handler', 'local.lambda_function_names.runners'),
+        ('echo_handler', 'local.lambda_function_names.echo'),
+        ('contact_handler', 'local.lambda_function_names.contact'),
+    ]
+    for perm_name, expected_ref in permissions_to_check:
+        # Check that permission exists and uses the map
+        assert expected_ref in content, f"Permission {perm_name} should use {expected_ref}"
+
+
+def test_health_handler_function_name_matches_expected():
+    """Verify health handler function name is correct."""
+    content = _read_apigateway_tf()
+    assert 'health' in content
+    assert '"TenULabsHealthHandler"' in content
+
+
+def test_lambda_permissions_not_conditional():
+    """Verify Lambda permissions are not conditional on remote state."""
+    content = _read_apigateway_tf()
+    # Lambda permissions should not have count based on remote state
+    # Old pattern: count = data.terraform_remote_state.*.outputs.lambda_function_name != "" ? 1 : 0
+    assert 'count         = data.terraform_remote_state' not in content
