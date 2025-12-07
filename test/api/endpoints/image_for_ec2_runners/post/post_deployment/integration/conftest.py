@@ -81,6 +81,17 @@ def ami_os_version_tag(request):
     return result
 
 
+@pytest.fixture(scope="session")
+def ami_os_architecture_tag(request):
+    """Ami os architecture tag."""
+
+    ami = request.getfixturevalue("fetched_ami")
+    result = None
+    if ami:
+        result = _get_tag_value(ami.get("Tags", []), "OSArchitecture")
+    return result
+
+
 @pytest.fixture
 def run_ssm_command():
     """Run ssm command."""

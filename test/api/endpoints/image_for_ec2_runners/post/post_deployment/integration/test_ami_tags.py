@@ -58,3 +58,23 @@ def test_ami_os_version_matches_expected(ami_os_version_tag, config):
     expected_os_version = config["os_version"]
 
     assert ami_os_version_tag == expected_os_version
+
+
+def test_ami_has_os_architecture_tag(ami_tags_dict):
+    """Ami has os architecture tag."""
+
+    if not ami_tags_dict:
+        pytest.fail("AMI details not available")
+
+    assert "OSArchitecture" in ami_tags_dict
+
+
+def test_ami_os_architecture_matches_expected(ami_os_architecture_tag, config):
+    """Ami os architecture matches expected."""
+
+    if ami_os_architecture_tag is None:
+        pytest.fail("AMI details not available")
+
+    expected_os_architecture = config["os_architecture"]
+
+    assert ami_os_architecture_tag == expected_os_architecture
