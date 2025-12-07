@@ -82,9 +82,9 @@ def get_github_token():
 
 
 def trigger_api_workflow(github_token):
-    """Trigger the api.yml workflow to recover infrastructure."""
+    """Trigger the api_backend.yml workflow to recover infrastructure."""
     github_repo = os.environ['GITHUB_REPO']
-    workflow_file = 'api.yml'
+    workflow_file = 'api_backend.yml'
     url = f'https://api.github.com/repos/{github_repo}/actions/workflows/{workflow_file}/dispatches'
     payload = {
         'ref': 'main',
@@ -179,13 +179,14 @@ def lambda_handler(event, _context):
         else:
             result = trigger_api_workflow(github_token)
             if result['success']:
-                logger.info("Successfully triggered api.yml workflow for drift recovery")
+                logger.info("Successfully triggered api_backend.yml workflow for drift recovery")
                 send_notification(
                     f"Drift Recovery Triggered: {drift['rule_name']}",
                     f"Infrastructure drift was detected.\n\n"
                     f"Resource: {drift['summary']}\n"
                     f"Rule: {drift['rule_name']}\n\n"
-                    f"Automatically triggered api.yml workflow to recover infrastructure.\n\n"
+                    "Automatically triggered api_backend.yml workflow "
+                    "to recover infrastructure.\n\n"
                     f"Monitor the workflow at: https://github.com/{github_repo}/actions"
                 )
                 response = {'statusCode': 200, 'body': 'Recovery workflow triggered'}

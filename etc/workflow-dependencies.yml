@@ -14,7 +14,7 @@ api:
     - www_shared
   name: Ensuring API backend exists and is properly configured
   paths:
-    - '.github/workflows/api.yml'
+    - '.github/workflows/api_backend.yml'
     - 'etc/runners.yml'
     - 'src/api/backend/**'
     - 'src/www/api/**'

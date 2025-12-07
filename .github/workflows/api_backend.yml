@@ -319,7 +319,7 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/api.yml
+            .github/workflows/api_backend.yml
       - name: Run pylint
         run: |
           for file in src/api/backend/lambdas/*.py; do

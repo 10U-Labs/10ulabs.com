@@ -5,7 +5,7 @@ workflows:
       - bootstrap
     level: 2
     paths:
-      - .github/workflows/api.yml
+      - .github/workflows/api_backend.yml
       - src/api/backend/**
   bootstrap:
     depends_on: []

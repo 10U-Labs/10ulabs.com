@@ -31,7 +31,7 @@ SAMPLE_GRAPH = {
     "api": {
         "name": "API",
         "depends_on": ["www_shared"],
-        "paths": [".github/workflows/api.yml", "src/api/backend/**"],
+        "paths": [".github/workflows/api_backend.yml", "src/api/backend/**"],
     },
     "health": {
         "name": "Health",
@@ -74,7 +74,7 @@ class TestFileMatchesPatterns:
         """Test exact file path matching."""
         patterns = [".github/workflows/bootstrap.yml"]
         assert file_matches_patterns(".github/workflows/bootstrap.yml", patterns)
-        assert not file_matches_patterns(".github/workflows/api.yml", patterns)
+        assert not file_matches_patterns(".github/workflows/api_backend.yml", patterns)
 
     def test_glob_star_match(self) -> None:
         """Test single * glob pattern matching.
@@ -159,7 +159,7 @@ class TestGetAffectedWorkflows:
 
     def test_single_file_workflow_file(self) -> None:
         """Test changing a workflow file itself."""
-        changed = [".github/workflows/api.yml"]
+        changed = [".github/workflows/api_backend.yml"]
         affected = get_affected_workflows(changed, SAMPLE_GRAPH)
         assert affected == {"api"}
 
