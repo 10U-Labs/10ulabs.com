@@ -268,6 +268,11 @@ def _parse_args() -> argparse.Namespace:
         default=0,
         help="Output slot variables for GitHub Actions (key_01, key_02, ... up to N)",
     )
+    parser.add_argument(
+        "--indexed",
+        action="store_true",
+        help="Output as indexed objects [{idx, name}, ...] for GitHub Actions matrix",
+    )
     return parser.parse_args()
 
 
@@ -279,9 +284,17 @@ def _output_slots(output: list[str], num_slots: int) -> None:
         print(f"key_{i:02d}={key}")
 
 
-def _output_results(output: list[str], output_format: str) -> None:
+def _output_results(
+    output: list[str], output_format: str, indexed: bool = False
+) -> None:
     """Output results in the specified format."""
-    if output_format == "json":
+    if indexed:
+        # Output as objects with idx and name for proper ordering in GitHub Actions UI
+        indexed_output = [
+            {"idx": f"{i:02d}", "name": name} for i, name in enumerate(output, 1)
+        ]
+        print(json.dumps(indexed_output))
+    elif output_format == "json":
         print(json.dumps(output))
     else:
         for item in output:
@@ -327,7 +340,7 @@ def main() -> None:
     if args.slots > 0:
         _output_slots(output, args.slots)
     else:
-        _output_results(output, args.output_format)
+        _output_results(output, args.output_format, args.indexed)
 
 
 if __name__ == "__main__":

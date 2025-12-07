@@ -81,11 +81,12 @@ jobs:
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
             PLAN=$(python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --start-from "$START_FROM" --execution-plan)
+              --graph $GRAPH --start-from "$START_FROM" \
+              --execution-plan --indexed)
           else
             CHANGED="${{ steps.files.outputs.changed }}"
             PLAN=$(echo "$CHANGED" | python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --execution-plan)
+              --graph $GRAPH --execution-plan --indexed)
           fi
           echo "Execution plan: $PLAN"
           echo "execution_plan=$PLAN" >> "$GITHUB_OUTPUT"
@@ -97,7 +98,7 @@ jobs:
     if: >-
       needs.determining.outputs.count != '0' &&
       !contains(github.event.head_commit.message, '[skip ci]')
-    name: ${{ matrix.workflow }}
+    name: ${{ matrix.workflow.idx }}. ${{ matrix.workflow.name }}
     needs:
       - determining
       - concluding-workflows-should-be-dispatched
@@ -107,13 +108,13 @@ jobs:
           inputs.dry_run == true ||
           contains(github.event.head_commit.message, '[dry run]')
         name: Dry run
-        run: echo "Would dispatch ${{ matrix.workflow }}"
+        run: echo "Would dispatch ${{ matrix.workflow.name }}"
       - if: >-
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
         name: Dispatch and wait
         run: |
-          WORKFLOW="${{ matrix.workflow }}.yml"
+          WORKFLOW="${{ matrix.workflow.name }}.yml"
           gh workflow run ".github/workflows/$WORKFLOW" \
             --repo ${{ github.repository }}
           sleep 5
