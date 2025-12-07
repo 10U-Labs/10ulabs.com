@@ -190,7 +190,7 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3 requests
+        run: python3 -m pip install pytest 'boto3>=1.35.76' requests
       - name: Run integration tests
         run: |
           python3 -m pytest \
@@ -228,7 +228,8 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs types-requests
+            pylint mypy yamllint pytest 'boto3>=1.35.76' boto3-stubs \
+            types-requests
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -299,7 +300,7 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
+        run: python3 -m pip install pytest 'boto3>=1.35.76'
       - name: Run unit tests
         run: |
           python3 -m pytest test/www/shared/pre_deployment/ \
