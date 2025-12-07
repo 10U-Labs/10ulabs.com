@@ -390,7 +390,9 @@ jobs:
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
         name: Run unit tests
-        run: python3 -m pytest test/orchestrator/ -v
+        run: |
+          python3 -m pytest test/orchestrator/ \
+            --verbose --pythonwarnings=error
 name: Workflow Orchestrator
 on:
   push:
