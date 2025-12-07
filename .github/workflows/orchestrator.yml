@@ -45,6 +45,7 @@ jobs:
   determining:
     if: github.ref == 'refs/heads/main'
     name: Determining if workflows should be dispatched or not
+    needs: unit-testing
     outputs:
       execution_plan: ${{ steps.compute.outputs.execution_plan }}
       has_roots: ${{ steps.compute.outputs.has_roots }}
@@ -89,10 +90,12 @@ jobs:
             PLAN=$(python3 scripts/compute_root_workflows.py \
               --graph $GRAPH --execution-plan --start-from "$START_FROM")
           else
-            ROOTS=$(echo "${{ steps.files.outputs.changed }}" | \
+            CHANGED="${{ steps.files.outputs.changed }}"
+            ROOTS=$(echo "$CHANGED" | \
               python3 scripts/compute_root_workflows.py --graph $GRAPH)
-            PLAN=$(echo "${{ steps.files.outputs.changed }}" | \
-              python3 scripts/compute_root_workflows.py --graph $GRAPH --execution-plan)
+            PLAN=$(echo "$CHANGED" | \
+              python3 scripts/compute_root_workflows.py \
+                --graph $GRAPH --execution-plan)
           fi
           echo "Root workflows: $ROOTS"
           echo "Execution plan: $PLAN"
@@ -104,6 +107,11 @@ jobs:
             echo "has_roots=true" >> "$GITHUB_OUTPUT"
           fi
   dispatching-workflows:
+    env:
+      EXECUTION_PLAN: >-
+        ${{
+        needs.concluding-workflows-should-be-dispatched.outputs.execution_plan
+        }}
     name: Dispatching workflows
     needs: concluding-workflows-should-be-dispatched
     runs-on: ubuntu-latest
@@ -118,16 +126,76 @@ jobs:
         run: python3 -m pip install pyyaml
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: inputs.dry_run != true
         name: Execute workflow plan sequentially
         run: |
           GITHUB_HOSTED_FLAG=""
-          if [[ "${{ inputs.github_hosted }}" == "true" ]] || \
-             [[ "${{ github.event.head_commit.message }}" == *"[github-hosted]"* ]]; then
+          GITHUB_HOSTED="${{ inputs.github_hosted }}"
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [[ "$GITHUB_HOSTED" == "true" ]] || \
+             [[ "$COMMIT_MSG" == *"[github-hosted]"* ]]; then
             GITHUB_HOSTED_FLAG="--github-hosted"
           fi
           python3 scripts/execute_workflow_plan.py \
-            --plan '${{ needs.concluding-workflows-should-be-dispatched.outputs.execution_plan }}' \
-            $GITHUB_HOSTED_FLAG
+            --plan "$EXECUTION_PLAN" $GITHUB_HOSTED_FLAG
+      - if: inputs.dry_run == true
+        name: Dry run - show execution plan
+        run: |
+          echo "Dry run mode - would execute:"
+          echo "$EXECUTION_PLAN" | python3 -c "import sys,json; \
+            [print(f'  {i+1}. {w}') for i,w in enumerate(json.load(sys.stdin))]"
+  performing-static-analysis:
+    if: github.ref == 'refs/heads/main'
+    name: Performing static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install linting dependencies
+        run: python3 -m pip install pylint mypy yamllint pyyaml
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/orchestrator.yml \
+            etc/workflow-dependencies.yml
+      - name: Run pylint
+        run: |
+          python3 -m pylint \
+            scripts/compute_root_workflows.py \
+            scripts/execute_workflow_plan.py \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run mypy
+        run: |
+          python3 -m mypy \
+            scripts/compute_root_workflows.py \
+            scripts/execute_workflow_plan.py
+  unit-testing:
+    if: github.ref == 'refs/heads/main'
+    name: Unit testing
+    needs: performing-static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install test dependencies
+        run: python3 -m pip install pytest pyyaml
+      - name: Run unit tests
+        run: python3 -m pytest test/orchestrator/ -v
 name: Workflow Orchestrator
 on:
   push:
@@ -135,6 +203,10 @@ on:
       - main
   workflow_dispatch:
     inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        type: boolean
       github_hosted:
         default: false
         description: Use GitHub-hosted runners

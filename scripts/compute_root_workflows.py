@@ -250,6 +250,12 @@ def main() -> None:
         "--start-from",
         help="Specify a workflow to start from (bypasses file detection)",
     )
+    parser.add_argument(
+        "--slots",
+        type=int,
+        default=0,
+        help="Output slot variables for GitHub Actions (key_01, key_02, ... up to N)",
+    )
 
     args = parser.parse_args()
 
@@ -282,10 +288,18 @@ def main() -> None:
         roots = compute_root_workflows(changed_files, graph)
 
     # Compute execution plan if requested
-    if args.execution_plan:
+    if args.execution_plan or args.slots > 0:
         output = compute_execution_plan(roots, graph)
     else:
         output = roots
+
+    # Output as slot variables for GitHub Actions
+    if args.slots > 0:
+        print(f"count={len(output)}")
+        for i in range(1, args.slots + 1):
+            key = output[i - 1] if i <= len(output) else ""
+            print(f"key_{i:02d}={key}")
+        return
 
     # Output results
     if args.output_format == "json":
