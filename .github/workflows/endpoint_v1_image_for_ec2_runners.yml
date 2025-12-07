@@ -186,8 +186,8 @@ jobs:
         run: |
           SRC="src/api/endpoints/image_for_ec2_runners/lambda/handler.py"
           TEST="test/api/endpoints/image_for_ec2_runners/endpoint/"
-          MYPYPATH=lib python3 -m mypy $SRC
-          MYPYPATH=lib python3 -m mypy --explicit-package-bases $TEST
+          MYPYPATH=lib/python python3 -m mypy $SRC
+          MYPYPATH=lib/python python3 -m mypy --explicit-package-bases $TEST
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

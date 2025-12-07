@@ -6,7 +6,7 @@ data "archive_file" "handler" {
 
 resource "aws_lambda_function" "handler" {
   filename         = data.archive_file.handler.output_path
-  function_name    = "${local.resource_prefix}-ImageForEC2RunnersHandler"
+  function_name    = module.shared.lambda_handler_names.image_for_ec2_runners
   role             = aws_iam_role.lambda.arn
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.handler.output_base64sha256
@@ -33,16 +33,16 @@ resource "aws_lambda_function" "handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ImageForEC2RunnersHandler"
+    Name = module.shared.lambda_handler_names.image_for_ec2_runners
   })
 }
 
 resource "aws_cloudwatch_log_group" "handler" {
-  name              = "/aws/lambda/${local.resource_prefix}-ImageForEC2RunnersHandler"
+  name              = "/aws/lambda/${module.shared.lambda_handler_names.image_for_ec2_runners}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ImageForEC2RunnersHandler-logs"
+    Name = "${module.shared.lambda_handler_names.image_for_ec2_runners}-logs"
   })
 }
 

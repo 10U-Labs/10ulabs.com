@@ -1,17 +1,17 @@
 locals {
-  # Lambda function names - centrally defined for ARN construction
+  # Lambda function names - sourced from shared module for consistency
   lambda_function_names = {
-    catchall              = "TenULabsCatchAllHandler"
-    contact               = "TenULabsContactHandler"
-    ec2_runner            = "TenULabs-EC2RunnerHandler"
-    ecs_runner            = "TenULabsEcsRunnerHandler"
-    echo                  = "TenULabsEchoHandler"
-    health                = "TenULabsHealthHandler"
-    image_for_ec2_runners = "TenULabsImageForEC2RunnersHandler"
-    image_for_ecs_runners = "TenULabsImageForEcsRunnersHandler"
-    rack_designer         = "TenULabsRackDesignerHandler"
-    runners               = "TenULabsWebhookHandler"
-    simulation_soc        = "TenULabsSimulationSocHandler"
+    catchall              = module.shared.lambda_handler_names.catchall
+    contact               = module.shared.lambda_handler_names.contact
+    ec2_runner            = module.shared.lambda_handler_names.ec2_runner
+    ecs_runner            = module.shared.lambda_handler_names.ecs_runner
+    echo                  = module.shared.lambda_handler_names.echo
+    health                = module.shared.lambda_handler_names.health
+    image_for_ec2_runners = module.shared.lambda_handler_names.image_for_ec2_runners
+    image_for_ecs_runners = module.shared.lambda_handler_names.image_for_ecs_runners
+    rack_designer         = module.shared.lambda_handler_names.rack_designer
+    runners               = module.shared.lambda_handler_names.webhook
+    simulation_soc        = module.shared.lambda_handler_names.simulation_soc
   }
 
   # Helper to construct Lambda ARN from function name

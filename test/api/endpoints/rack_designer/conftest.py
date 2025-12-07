@@ -9,7 +9,7 @@ import pytest
 def parse_shared_module_outputs() -> Dict[str, str]:
     """Parse shared module outputs from terraform outputs.tf file."""
     base_path = Path(__file__).parent.parent.parent.parent.parent
-    outputs_path = base_path / "lib" / "terraform" / "outputs.tf"
+    outputs_path = base_path / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()

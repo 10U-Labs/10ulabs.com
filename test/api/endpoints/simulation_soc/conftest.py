@@ -10,7 +10,7 @@ SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
 
 def parse_shared_module_outputs() -> Dict[str, str]:
     """Parse shared Terraform outputs for test configuration."""
-    outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
+    outputs_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     config = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()

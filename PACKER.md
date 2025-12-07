@@ -146,6 +146,6 @@ In `packer-plugin-amazon`:
 
 ## References
 
-- Our implementation: `lib/ec2_fleet/ec2_fleet.py`
+- Our implementation: `lib/python/ec2_fleet/ec2_fleet.py`
 - Packer spot implementation: uses Fleet API already for `spot_instance_types`
 - EC2 Fleet docs: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet.html

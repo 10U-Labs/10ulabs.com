@@ -218,7 +218,7 @@ def test_no_conditional_arn_fallback_to_catchall():
 
 
 def test_health_handler_function_name_matches_expected():
-    """Verify health handler function name is correct."""
+    """Verify health handler function name comes from shared module."""
     content = _read_apigateway_tf()
     assert 'health' in content
-    assert '"TenULabsHealthHandler"' in content
+    assert 'module.shared.lambda_handler_names.health' in content

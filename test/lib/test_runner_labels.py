@@ -1,5 +1,5 @@
 """
-Unit tests for lib/runner_labels.py.
+Unit tests for lib/python/runner_labels.py.
 
 Tests follow the testing pyramid principles from CLAUDE.md:
 - Atomic tests: each test verifies one thing
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 # Add lib to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "lib"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "lib" / "python"))
 
 from runner_labels import (
     ECS_FARGATE_CONFIG,

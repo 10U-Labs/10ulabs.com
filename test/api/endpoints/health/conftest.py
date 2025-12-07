@@ -10,7 +10,7 @@ HEALTH_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "health"
 
 def parse_shared_module_outputs() -> Dict[str, str]:
     """Parse shared Terraform outputs for configuration values."""
-    outputs_path = REPO_ROOT / "lib" / "terraform" / "outputs.tf"
+    outputs_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     config: Dict[str, str] = {}
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()

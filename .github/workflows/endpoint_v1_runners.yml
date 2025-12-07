@@ -219,19 +219,19 @@ jobs:
       - name: Linting Python files
         run: |
           for file in src/api/endpoints/runners/lambdas/*.py; do
-            PYTHONPATH=lib python3 -m pylint "$file" \
+            PYTHONPATH=lib/python python3 -m pylint "$file" \
               --fail-on=C,R,W \
               --fail-under=10.0
           done
-          PYTHONPATH=lib python3 -m pylint test/api/endpoints/runners/ \
+          PYTHONPATH=lib/python python3 -m pylint test/api/endpoints/runners/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
           for file in src/api/endpoints/runners/lambdas/*.py; do
-            MYPYPATH=lib python3 -m mypy "$file"
+            MYPYPATH=lib/python python3 -m mypy "$file"
           done
-          MYPYPATH=lib python3 -m mypy test/api/endpoints/runners/
+          MYPYPATH=lib/python python3 -m mypy test/api/endpoints/runners/
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

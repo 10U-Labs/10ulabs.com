@@ -3,7 +3,7 @@ import os
 import sys
 
 # Add lib directory to path for runner_labels import (needed at Lambda runtime)
-_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib')
+_lib_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'lib', 'python')
 if _lib_path not in sys.path:
     sys.path.insert(0, os.path.abspath(_lib_path))
 

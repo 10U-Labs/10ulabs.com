@@ -6,7 +6,7 @@ import pytest
 
 
 SHARED_MODULE_PATH = os.path.join(
-    os.path.dirname(__file__), '../../../../lib/terraform/outputs.tf'
+    os.path.dirname(__file__), '../../../../lib/terraform/modules/shared/outputs.tf'
 )
 BASE_DIR = os.path.join(
     os.path.dirname(__file__), '../../../../src/api/endpoints/image_for_ecs_runners'

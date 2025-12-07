@@ -81,7 +81,7 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.os_family }}
           OS_VERSION: >-
             ${{ needs.declaring-common-variables.outputs.os_version }}
-          PYTHONPATH: lib
+          PYTHONPATH: lib/python
         id: build
         name: Build AMI with EC2 Fleet
         run: |
@@ -400,7 +400,7 @@ jobs:
           INSTANCE_TYPES: >-
             ${{ needs.declaring-common-variables.outputs.instance_types }}
           PYTHONPATH: >-
-            lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
+            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
           TEST_AMI_ID: >-
             ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: >-
@@ -463,7 +463,7 @@ jobs:
           INSTANCE_TYPES: >-
             ${{ needs.declaring-common-variables.outputs.instance_types }}
           PYTHONPATH: >-
-            lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
+            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
           TEST_AMI_ID: >-
             ${{ needs.building-ami.outputs.ami_id }}
           TEST_SECURITY_GROUP_ID: >-
@@ -599,11 +599,11 @@ jobs:
             pylint pytest types-paramiko types-PyYAML
       - env:
           PYTHONPATH: >-
-            lib:test/api/endpoints/image_for_ec2_runners/post/post_deployment
+            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
         name: Linting Python files
         run: |
           pylint \
-            lib/ec2_fleet/*.py \
+            lib/python/ec2_fleet/*.py \
             src/api/endpoints/image_for_ec2_runners/post/*.py \
             test/api/endpoints/image_for_ec2_runners/post/ \
             --fail-on=C,R,W \
@@ -612,9 +612,9 @@ jobs:
         run: |
           SRC=src/api/endpoints/image_for_ec2_runners/post
           TEST=test/api/endpoints/image_for_ec2_runners/post
-          MYPYPATH=lib python3 -m mypy $SRC/*.py
-          MYPYPATH=lib:$TEST/post_deployment python3 -m mypy \
-            --explicit-package-bases lib/ec2_fleet/ $TEST/
+          MYPYPATH=lib/python python3 -m mypy $SRC/*.py
+          MYPYPATH=lib/python:$TEST/post_deployment python3 -m mypy \
+            --explicit-package-bases lib/python/ec2_fleet/ $TEST/
   promoting-ami:
     name: Promoting AMI
     needs:

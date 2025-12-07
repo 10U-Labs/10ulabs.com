@@ -283,16 +283,16 @@ jobs:
             .github/workflows/endpoint_v1_ecs_runner.yml
       - name: Linting Python files
         run: |
-          PYTHONPATH=lib python3 -m pylint \
+          PYTHONPATH=lib/python python3 -m pylint \
             src/api/endpoints/ecs_runner/lambda/handler.py \
             test/api/endpoints/ecs_runner/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Static type checking Python files with mypy
         run: |
-          MYPYPATH=lib python3 -m mypy \
+          MYPYPATH=lib/python python3 -m mypy \
             src/api/endpoints/ecs_runner/lambda/handler.py
-          MYPYPATH=lib python3 -m mypy --explicit-package-bases \
+          MYPYPATH=lib/python python3 -m mypy --explicit-package-bases \
             test/api/endpoints/ecs_runner/
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4

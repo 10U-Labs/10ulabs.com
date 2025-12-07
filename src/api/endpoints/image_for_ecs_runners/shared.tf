@@ -1,3 +1,3 @@
 module "shared" {
-  source = "../../../../lib/terraform"
+  source = "../../../../lib/terraform/modules/shared"
 }

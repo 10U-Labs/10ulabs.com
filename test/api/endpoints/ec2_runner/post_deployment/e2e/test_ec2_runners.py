@@ -19,7 +19,7 @@ SECONDS_FOR_SETUP_AND_LAUNCH = 7
 def get_ec2_runner_subnet_count():
     """Get the number of subnets configured for EC2 runners."""
     lambda_client = boto3.client('lambda')
-    response = lambda_client.get_function_configuration(FunctionName='TenULabs-EC2RunnerHandler')
+    response = lambda_client.get_function_configuration(FunctionName='TenULabsEC2RunnerHandler')
     subnets_env = response.get('Environment', {}).get('Variables', {}).get('SUBNETS', '')
     subnet_count = len(subnets_env.split(',')) if subnets_env else 1
     return subnet_count

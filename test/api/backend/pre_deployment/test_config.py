@@ -26,7 +26,7 @@ def test_config_has_aws_region(config):
 def test_shared_module_has_github_org():
     """Verify that shared module outputs.tf has github_org."""
     base = Path(__file__).parent.parent.parent.parent.parent
-    outputs_path = base / "lib" / "terraform" / "outputs.tf"
+    outputs_path = base / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
     has_github_org = 'github_org' in content
@@ -36,7 +36,7 @@ def test_shared_module_has_github_org():
 def test_shared_module_has_github_repo():
     """Verify that shared module outputs.tf has github_repo."""
     base = Path(__file__).parent.parent.parent.parent.parent
-    outputs_path = base / "lib" / "terraform" / "outputs.tf"
+    outputs_path = base / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
     has_github_repo = 'name_for_github_repo' in content

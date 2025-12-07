@@ -35,5 +35,9 @@ output "name_for_terraform_state_bucket" {
 }
 
 output "resource_prefix" {
-  value = "TenULabs"
+  value = local.resource_prefix
+}
+
+output "lambda_handler_names" {
+  value = local.lambda_handler_names
 }

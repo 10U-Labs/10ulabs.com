@@ -138,7 +138,7 @@ GitHub Webhook → Webhook Router → Parse Labels → Validate → Route to Han
 
 ## API Reference
 
-### `lib/runner_labels.py`
+### `lib/python/runner_labels.py`
 
 #### `parse_labels(labels: List[str]) -> ParsedLabels`
 
