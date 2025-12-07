@@ -10,9 +10,9 @@ concurrency:
   cancel-in-progress: true
   group: orchestrator-${{ github.ref }}
 jobs:
-  analyzing-changes:
+  determining:
     if: github.ref == 'refs/heads/main'
-    name: Analyzing changes
+    name: Determining
     outputs:
       has_roots: ${{ steps.compute.outputs.has_roots }}
       root_workflows: ${{ steps.compute.outputs.roots }}
@@ -57,12 +57,37 @@ jobs:
           else
             echo "has_roots=true" >> "$GITHUB_OUTPUT"
           fi
-  dispatching-workflows:
+  concluding-will-dispatch:
     if: >-
-      needs.analyzing-changes.outputs.has_roots == 'true' &&
+      needs.determining.outputs.has_roots == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
-    name: Dispatching workflows
-    needs: analyzing-changes
+    name: Concluding (will dispatch)
+    needs: determining
+    outputs:
+      root_workflows: ${{ needs.determining.outputs.root_workflows }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "Root workflows to dispatch:"
+          echo '${{ needs.determining.outputs.root_workflows }}' | jq -r '.[]'
+  concluding-skip:
+    if: >-
+      needs.determining.outputs.has_roots != 'true' ||
+      contains(github.event.head_commit.message, '[skip ci]')
+    name: Concluding (skipping)
+    needs: determining
+    runs-on: ubuntu-latest
+    steps:
+      - name: No workflows to trigger
+        run: |
+          echo "No root workflows to trigger for this commit."
+          echo "Either:"
+          echo "  - No workflow-related files were changed"
+          echo "  - Commit message contains [skip ci]"
+  dispatching:
+    name: Dispatching
+    needs: concluding-will-dispatch
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -75,7 +100,7 @@ jobs:
         run: python3 -m pip install pyyaml
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ROOTS: ${{ needs.analyzing-changes.outputs.root_workflows }}
+          ROOTS: ${{ needs.concluding-will-dispatch.outputs.root_workflows }}
         name: Dispatch root workflows
         run: |
           import json
@@ -115,20 +140,6 @@ jobs:
               else:
                   print(f"  Success")
         shell: python
-  skipping:
-    if: >-
-      needs.analyzing-changes.outputs.has_roots != 'true' ||
-      contains(github.event.head_commit.message, '[skip ci]')
-    name: Skipping (no workflows to trigger)
-    needs: analyzing-changes
-    runs-on: ubuntu-latest
-    steps:
-      - name: No workflows to trigger
-        run: |
-          echo "No root workflows to trigger for this commit."
-          echo "Either:"
-          echo "  - No workflow-related files were changed"
-          echo "  - Commit message contains [skip ci]"
 name: Workflow Orchestrator
 on:
   push:
