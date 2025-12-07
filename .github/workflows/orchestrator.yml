@@ -103,10 +103,14 @@ jobs:
       - concluding-workflows-should-be-dispatched
     runs-on: ubuntu-latest
     steps:
-      - if: inputs.dry_run == true
+      - if: >-
+          inputs.dry_run == true ||
+          contains(github.event.head_commit.message, '[dry run]')
         name: Dry run
         run: echo "Would dispatch ${{ matrix.workflow }}"
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Dispatch and wait
         run: |
           WORKFLOW="${{ matrix.workflow }}.yml"
@@ -128,21 +132,31 @@ jobs:
     name: Performing static analysis
     runs-on: ubuntu-latest
     steps:
-      - if: inputs.dry_run == true
+      - if: >-
+          inputs.dry_run == true ||
+          contains(github.event.head_commit.message, '[dry run]')
         name: Dry run
         run: echo "Dry run - skipping static analysis"
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Checkout code
         uses: actions/checkout@v4
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Install linting dependencies
         run: python3 -m pip install pylint mypy yamllint pyyaml types-PyYAML
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -154,7 +168,9 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/orchestrator.yml \
             etc/workflow-dependencies.yml
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Run pylint
         run: |
           python3 -m pylint \
@@ -162,7 +178,9 @@ jobs:
             scripts/execute_workflow_plan.py \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Run mypy
         run: |
           python3 -m mypy \
@@ -174,21 +192,31 @@ jobs:
     needs: performing-static-analysis
     runs-on: ubuntu-latest
     steps:
-      - if: inputs.dry_run == true
+      - if: >-
+          inputs.dry_run == true ||
+          contains(github.event.head_commit.message, '[dry run]')
         name: Dry run
         run: echo "Dry run - skipping unit tests"
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Checkout code
         uses: actions/checkout@v4
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Install test dependencies
         run: python3 -m pip install pytest pyyaml
-      - if: inputs.dry_run != true
+      - if: >-
+          inputs.dry_run != true &&
+          !contains(github.event.head_commit.message, '[dry run]')
         name: Run unit tests
         run: python3 -m pytest test/orchestrator/ -v
 name: Workflow Orchestrator
