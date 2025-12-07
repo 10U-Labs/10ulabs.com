@@ -364,7 +364,7 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest PyYAML
+        run: python3 -m pip install pytest PyYAML boto3
       - name: Run unit tests
         run: python3 -m pytest test/api/endpoints/health/pre_deployment/ -v
 name: Ensuring health endpoint exists and is properly configured
