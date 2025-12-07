@@ -95,9 +95,9 @@ RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o aw
     npm install -g jsonlint && \
     npm cache clean --force && \
     python3 -m pip install --no-cache-dir --break-system-packages \
-        boto3 \
+        'boto3>=1.35.0' \
         boto3-stubs \
-        botocore \
+        'botocore>=1.35.0' \
         dockerfile-parse \
         dnspython \
         mypy \
