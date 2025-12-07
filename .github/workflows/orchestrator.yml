@@ -24,10 +24,70 @@ jobs:
           echo "Either:"
           echo "  - No workflow-related files were changed"
           echo "  - Commit message contains [skip ci]"
-  determining:
+  detecting-changes:
     if: github.ref == 'refs/heads/main'
+    name: Detecting changes
+    outputs:
+      static_analysis_changed: ${{ steps.check.outputs.static_analysis }}
+      unit_testing_changed: ${{ steps.check.outputs.unit_testing }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: check
+        name: Check which file groups changed
+        run: |
+          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
+            BASE="${{ github.event.before }}"
+          else
+            BASE="HEAD~1"
+          fi
+          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}")
+          echo "Changed files:"
+          echo "$CHANGED"
+          # Static analysis files
+          STATIC_PATTERNS=(
+            ".github/workflows/orchestrator.yml"
+            "etc/workflow-dependencies.yml"
+            "scripts/compute_root_workflows.py"
+            "scripts/execute_workflow_plan.py"
+          )
+          STATIC_CHANGED="false"
+          for pattern in "${STATIC_PATTERNS[@]}"; do
+            if echo "$CHANGED" | grep -qE "^${pattern}$"; then
+              STATIC_CHANGED="true"
+              break
+            fi
+          done
+          echo "static_analysis=$STATIC_CHANGED" >> "$GITHUB_OUTPUT"
+          # Unit testing files
+          UNIT_PATTERNS=(
+            "scripts/compute_root_workflows.py"
+            "scripts/execute_workflow_plan.py"
+            "test/orchestrator/"
+          )
+          UNIT_CHANGED="false"
+          for pattern in "${UNIT_PATTERNS[@]}"; do
+            if echo "$CHANGED" | grep -qE "^${pattern}"; then
+              UNIT_CHANGED="true"
+              break
+            fi
+          done
+          echo "unit_testing=$UNIT_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "Static analysis changed: $STATIC_CHANGED"
+          echo "Unit testing changed: $UNIT_CHANGED"
+  determining:
+    if: |
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.performing-static-analysis.result != 'failure' &&
+      needs.unit-testing.result != 'failure'
     name: Determining which workflows should be dispatched
-    needs: unit-testing
+    needs:
+      - performing-static-analysis
+      - unit-testing
     outputs:
       count: ${{ steps.plan.outputs.count }}
       execution_plan: ${{ steps.plan.outputs.execution_plan }}
@@ -114,8 +174,12 @@ jobs:
         workflow: ${{ fromJSON(needs.determining.outputs.execution_plan) }}
       max-parallel: 1
   performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
+    if: |
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       needs.detecting-changes.outputs.static_analysis_changed == 'true')
     name: Performing static analysis
+    needs: detecting-changes
     runs-on: ubuntu-latest
     steps:
       - if: >-
@@ -173,9 +237,16 @@ jobs:
             scripts/compute_root_workflows.py \
             scripts/execute_workflow_plan.py
   unit-testing:
-    if: github.ref == 'refs/heads/main'
+    if: |
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.performing-static-analysis.result != 'failure' &&
+      (github.event_name == 'workflow_dispatch' ||
+       needs.detecting-changes.outputs.unit_testing_changed == 'true')
     name: Unit testing
-    needs: performing-static-analysis
+    needs:
+      - detecting-changes
+      - performing-static-analysis
     runs-on: ubuntu-latest
     steps:
       - if: >-
