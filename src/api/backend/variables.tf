@@ -14,10 +14,6 @@ variable "api_gateway_log_group_name" {
   type = string
 }
 
-variable "api_version" {
-  type = string
-}
-
 variable "stack_name" {
   type = string
 }

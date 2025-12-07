@@ -147,6 +147,17 @@ rack_designer:
     - 'src/www/paths/rack_designer/**'
     - 'test/api/endpoints/rack_designer/**'
 
+simulation_soc:
+  depends_on:
+    - ecs_runner
+  name: >-
+    Ensuring the /v1/simulation-soc API endpoint exists and is properly configured
+  paths:
+    - '.github/workflows/simulation_soc.yml'
+    - 'src/api/endpoints/simulation_soc/**'
+    - 'src/www/paths/simulations/soc/**'
+    - 'test/api/endpoints/simulation_soc/**'
+
 www_index:
   depends_on:
     - contact

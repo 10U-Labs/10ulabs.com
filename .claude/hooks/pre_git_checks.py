@@ -46,15 +46,13 @@ def file_matches_workflow_paths(file_path, paths):
     return False
 
 
-def get_workflow_paths(workflow):
-    """Extract path patterns from a workflow's on.push.paths configuration."""
-    paths = []
-    on_section = workflow.get('on') or workflow.get(True) or {}
-    if isinstance(on_section, dict):
-        push_section = on_section.get('push', {})
-        if isinstance(push_section, dict):
-            paths = push_section.get('paths', [])
-    return paths
+def load_workflow_dependencies(project_dir):
+    """Load workflow dependencies from etc/workflow-dependencies.yml."""
+    deps_file = os.path.join(project_dir, 'etc', 'workflow-dependencies.yml')
+    if not os.path.exists(deps_file):
+        return {}
+    with open(deps_file, encoding='utf-8') as f:
+        return yaml.safe_load(f) or {}
 
 
 def is_pre_push_check_step(step_name, run_cmd):
@@ -129,28 +127,37 @@ def extract_pre_deployment_test_commands(workflow):
     return extract_commands_from_jobs(workflow, is_test_job)
 
 
-def find_matching_workflows(changed_files, workflows_dir):
-    """Find workflows whose path patterns match any of the changed files."""
+def find_matching_workflows(changed_files, workflows_dir, project_dir):
+    """Find workflows whose path patterns match any of the changed files.
+
+    Uses etc/workflow-dependencies.yml for path mappings instead of
+    on.push.paths in workflow files (since orchestrator handles push triggers).
+    """
     matching = []
-    workflow_files = list(Path(workflows_dir).glob('*.yml'))
-    for wf_path in workflow_files:
-        with open(wf_path, encoding='utf-8') as f:
-            try:
-                workflow = yaml.safe_load(f)
-            except yaml.YAMLError:
-                continue
-        if not workflow:
-            continue
-        paths = get_workflow_paths(workflow)
+    deps = load_workflow_dependencies(project_dir)
+
+    for workflow_key, config in deps.items():
+        paths = config.get('paths', [])
         if not paths:
             continue
         for changed_file in changed_files:
             if file_matches_workflow_paths(changed_file, paths):
-                matching.append({
-                    'name': wf_path.stem,
-                    'path': str(wf_path),
-                    'workflow': workflow
-                })
+                wf_path = Path(workflows_dir) / f'{workflow_key}.yml'
+                if not wf_path.exists():
+                    continue
+                with open(wf_path, encoding='utf-8') as f:
+                    try:
+                        workflow = yaml.safe_load(f)
+                    except yaml.YAMLError:
+                        continue
+                if workflow:
+                    matching.append({
+                        'name': workflow_key,
+                        'path': str(wf_path),
+                        'workflow': workflow
+                    })
+                break
+
     seen = set()
     unique = []
     for m in matching:
@@ -281,7 +288,7 @@ def main():
         print(f"  - {f}")
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
-    matching_workflows = find_matching_workflows(changed_files, workflows_dir)
+    matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
     if not matching_workflows:
         print("No matching workflows found.")
         sys.exit(0)
