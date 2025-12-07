@@ -86,9 +86,15 @@ jobs:
           echo "Static analysis changed: $STATIC_CHANGED"
           echo "Unit testing changed: $UNIT_CHANGED"
   determining:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      always() &&
+      github.ref == 'refs/heads/main' &&
+      needs.performing-static-analysis.result != 'failure' &&
+      needs.unit-testing.result != 'failure'
     name: Determining which workflows should be dispatched
-    needs: detecting-changes
+    needs:
+      - performing-static-analysis
+      - unit-testing
     outputs:
       count: ${{ steps.plan.outputs.count }}
       execution_plan: ${{ steps.plan.outputs.execution_plan }}
