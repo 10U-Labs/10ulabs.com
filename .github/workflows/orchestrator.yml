@@ -5,17 +5,17 @@
 # It analyzes changed files and triggers the appropriate root workflows.
 #
 # Root workflows are those whose files changed but have no ancestors that
-# also changed. Descendant workflows are triggered via workflow_run cascading.
+# also changed. The orchestrator executes all workflows sequentially.
 concurrency:
   cancel-in-progress: true
   group: orchestrator-${{ github.ref }}
 jobs:
-  concluding-no-workflow-should-be-dispatched:
+  concluding-no-workflows-should-be-dispatched:
     if: >-
-      needs.determine.outputs.has_roots != 'true' ||
+      needs.determining.outputs.has_roots != 'true' ||
       contains(github.event.head_commit.message, '[skip ci]')
-    name: Concluding no workflow should be dispatched
-    needs: determine
+    name: Concluding no workflows should be dispatched
+    needs: determining
     runs-on: ubuntu-latest
     steps:
       - name: No workflows to trigger
@@ -24,27 +24,27 @@ jobs:
           echo "Either:"
           echo "  - No workflow-related files were changed"
           echo "  - Commit message contains [skip ci]"
-  should-dispatch:
+  concluding-workflows-should-be-dispatched:
     if: >-
-      needs.determine.outputs.has_roots == 'true' &&
+      needs.determining.outputs.has_roots == 'true' &&
       !contains(github.event.head_commit.message, '[skip ci]')
-    name: Concluding workflow should be dispatched
-    needs: determine
+    name: Concluding workflows should be dispatched
+    needs: determining
     outputs:
-      execution_plan: ${{ needs.determine.outputs.execution_plan }}
-      root_workflows: ${{ needs.determine.outputs.root_workflows }}
+      execution_plan: ${{ needs.determining.outputs.execution_plan }}
+      root_workflows: ${{ needs.determining.outputs.root_workflows }}
     runs-on: ubuntu-latest
     steps:
       - name: Summary
         run: |
           echo "Root workflows:"
-          echo '${{ needs.determine.outputs.root_workflows }}' | jq -r '.[]'
+          echo '${{ needs.determining.outputs.root_workflows }}' | jq -r '.[]'
           echo ""
           echo "Full execution plan:"
-          echo '${{ needs.determine.outputs.execution_plan }}' | jq -r '.[]'
-  determine:
+          echo '${{ needs.determining.outputs.execution_plan }}' | jq -r '.[]'
+  determining:
     if: github.ref == 'refs/heads/main'
-    name: Determining if workflow should be dispatched or not
+    name: Determining if workflows should be dispatched or not
     outputs:
       execution_plan: ${{ steps.compute.outputs.execution_plan }}
       has_roots: ${{ steps.compute.outputs.has_roots }}
@@ -95,9 +95,9 @@ jobs:
           else
             echo "has_roots=true" >> "$GITHUB_OUTPUT"
           fi
-  dispatching-workflow:
-    name: Dispatching workflow
-    needs: should-dispatch
+  dispatching-workflows:
+    name: Dispatching workflows
+    needs: concluding-workflows-should-be-dispatched
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -117,7 +117,7 @@ jobs:
             GITHUB_HOSTED_FLAG="--github-hosted"
           fi
           python3 scripts/execute_workflow_plan.py \
-            --plan '${{ needs.should-dispatch.outputs.execution_plan }}' \
+            --plan '${{ needs.concluding-workflows-should-be-dispatched.outputs.execution_plan }}' \
             $GITHUB_HOSTED_FLAG
 name: Workflow Orchestrator
 on:
