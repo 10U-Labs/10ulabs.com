@@ -251,13 +251,14 @@ jobs:
       - id: shared
         name: Extract shared configuration values
         run: |
-          OUTPUTS=lib/terraform/outputs.tf
+          OUTPUTS=lib/terraform/modules/shared/outputs.tf
+          SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
           AWS_REGION=$(grep -A1 'output "aws_region"' $OUTPUTS \
             | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $OUTPUTS \
             | grep 'value' | cut -d'"' -f2)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' \
-            $OUTPUTS | grep 'value' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
           LOCALS=src/bootstrap/locals.tf
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep \
             'name_for_github_actions_role' $LOCALS | \

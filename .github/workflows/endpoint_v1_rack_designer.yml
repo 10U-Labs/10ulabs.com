@@ -27,7 +27,8 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          TF="lib/terraform/outputs.tf"
+          TF="lib/terraform/modules/shared/outputs.tf"
+          TF_LOCALS="lib/terraform/modules/shared/locals.tf"
           LOCALS="src/bootstrap/locals.tf"
           BACKEND="src/api/endpoints/rack_designer/backend.tf"
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $TF \
@@ -36,8 +37,8 @@ jobs:
             | grep 'value' | cut -d'"' -f2)
           ROLE_SUFFIX=$(grep 'name_for_github_actions_role' $LOCALS \
             | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep -A1 'output "resource_prefix"' $TF \
-            | grep 'value' | cut -d'"' -f2)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
           TF_VER=$(grep 'required_version' $BACKEND \
             | cut -d'"' -f2 | sed 's/>= //')
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
