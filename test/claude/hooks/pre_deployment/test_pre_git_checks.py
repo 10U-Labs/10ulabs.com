@@ -51,25 +51,6 @@ def test_file_matches_workflow_paths_empty_list(pre_git_checks):
     assert result is False
 
 
-def test_get_workflow_paths_from_push_section(pre_git_checks, sample_workflow):
-    """Test that Get workflow paths from push section."""
-    result = pre_git_checks.get_workflow_paths(sample_workflow)
-    assert 'src/**/*.py' in result
-
-
-def test_get_workflow_paths_returns_empty_for_no_paths(pre_git_checks, sample_workflow_no_paths):
-    """Test that Get workflow paths returns empty for no paths."""
-    result = pre_git_checks.get_workflow_paths(sample_workflow_no_paths)
-    assert result == []
-
-
-def test_get_workflow_paths_handles_missing_on_section(pre_git_checks):
-    """Test that Get workflow paths handles missing on section."""
-    workflow = {}
-    result = pre_git_checks.get_workflow_paths(workflow)
-    assert result == []
-
-
 def test_is_pre_push_check_step_detects_lint(pre_git_checks):
     """Test that Is pre push check step detects lint."""
     result = pre_git_checks.is_pre_push_check_step('Run pylint', 'pylint src/')

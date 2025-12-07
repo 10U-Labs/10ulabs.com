@@ -9,6 +9,14 @@
 #   - paths: File patterns that trigger this workflow
 #   - depends_on: List of workflows (by key) that must complete before this one
 
+claude:
+  depends_on: []
+  name: Testing Claude Code hooks
+  paths:
+    - '.claude/**'
+    - '.github/workflows/claude.yml'
+    - 'test/claude/**'
+
 bootstrap:
   depends_on: []
   name: Ensuring bootstrap infrastructure exists and is properly configured

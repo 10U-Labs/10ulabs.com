@@ -104,13 +104,6 @@ jobs:
           python3 -m pytest test/claude/ -v
 name: Testing Claude Code hooks
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.claude/**'
-      - '.github/workflows/claude.yml'
-      - 'test/claude/**'
   workflow_dispatch:
     inputs:
       github_hosted:
