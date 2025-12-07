@@ -12,7 +12,7 @@ concurrency:
 jobs:
   concluding-no-workflows-should-be-dispatched:
     if: >-
-      needs.determining.outputs.has_roots != 'true' ||
+      needs.determining.outputs.count == '0' ||
       contains(github.event.head_commit.message, '[skip ci]')
     name: Concluding no workflows should be dispatched
     needs: determining
@@ -26,30 +26,54 @@ jobs:
           echo "  - Commit message contains [skip ci]"
   concluding-workflows-should-be-dispatched:
     if: >-
-      needs.determining.outputs.has_roots == 'true' &&
+      needs.determining.outputs.count != '0' &&
       !contains(github.event.head_commit.message, '[skip ci]')
     name: Concluding workflows should be dispatched
     needs: determining
-    outputs:
-      execution_plan: ${{ needs.determining.outputs.execution_plan }}
-      root_workflows: ${{ needs.determining.outputs.root_workflows }}
     runs-on: ubuntu-latest
     steps:
       - name: Summary
         run: |
-          echo "Root workflows:"
-          echo '${{ needs.determining.outputs.root_workflows }}' | jq -r '.[]'
-          echo ""
-          echo "Full execution plan:"
-          echo '${{ needs.determining.outputs.execution_plan }}' | jq -r '.[]'
+          echo "Workflows to dispatch: ${{ needs.determining.outputs.count }}"
+          echo "Execution plan:"
+          for key in "${{ needs.determining.outputs.key_01 }}" \
+                     "${{ needs.determining.outputs.key_02 }}" \
+                     "${{ needs.determining.outputs.key_03 }}" \
+                     "${{ needs.determining.outputs.key_04 }}" \
+                     "${{ needs.determining.outputs.key_05 }}" \
+                     "${{ needs.determining.outputs.key_06 }}" \
+                     "${{ needs.determining.outputs.key_07 }}" \
+                     "${{ needs.determining.outputs.key_08 }}" \
+                     "${{ needs.determining.outputs.key_09 }}" \
+                     "${{ needs.determining.outputs.key_10 }}"; do
+            [ -n "$key" ] && echo "  - $key"
+          done
   determining:
     if: github.ref == 'refs/heads/main'
-    name: Determining if workflows should be dispatched or not
+    name: Determining which workflows should be dispatched
     needs: unit-testing
     outputs:
-      execution_plan: ${{ steps.compute.outputs.execution_plan }}
-      has_roots: ${{ steps.compute.outputs.has_roots }}
-      root_workflows: ${{ steps.compute.outputs.roots }}
+      count: ${{ steps.plan.outputs.count }}
+      key_01: ${{ steps.plan.outputs.key_01 }}
+      key_02: ${{ steps.plan.outputs.key_02 }}
+      key_03: ${{ steps.plan.outputs.key_03 }}
+      key_04: ${{ steps.plan.outputs.key_04 }}
+      key_05: ${{ steps.plan.outputs.key_05 }}
+      key_06: ${{ steps.plan.outputs.key_06 }}
+      key_07: ${{ steps.plan.outputs.key_07 }}
+      key_08: ${{ steps.plan.outputs.key_08 }}
+      key_09: ${{ steps.plan.outputs.key_09 }}
+      key_10: ${{ steps.plan.outputs.key_10 }}
+      key_11: ${{ steps.plan.outputs.key_11 }}
+      key_12: ${{ steps.plan.outputs.key_12 }}
+      key_13: ${{ steps.plan.outputs.key_13 }}
+      key_14: ${{ steps.plan.outputs.key_14 }}
+      key_15: ${{ steps.plan.outputs.key_15 }}
+      key_16: ${{ steps.plan.outputs.key_16 }}
+      key_17: ${{ steps.plan.outputs.key_17 }}
+      key_18: ${{ steps.plan.outputs.key_18 }}
+      key_19: ${{ steps.plan.outputs.key_19 }}
+      key_20: ${{ steps.plan.outputs.key_20 }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -79,71 +103,561 @@ jobs:
           python-version: '3.13'
       - name: Install dependencies
         run: python3 -m pip install pyyaml
-      - id: compute
-        name: Compute root workflows and execution plan
+      - id: plan
+        name: Compute execution plan
         run: |
           GRAPH="etc/workflow-dependencies.yml"
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
-            ROOTS="[\"$START_FROM\"]"
-            PLAN=$(python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --execution-plan --start-from "$START_FROM")
+            python3 scripts/compute_root_workflows.py \
+              --graph $GRAPH --start-from "$START_FROM" \
+              --execution-plan --slots 20 >> "$GITHUB_OUTPUT"
           else
             CHANGED="${{ steps.files.outputs.changed }}"
-            ROOTS=$(echo "$CHANGED" | \
-              python3 scripts/compute_root_workflows.py --graph $GRAPH)
-            PLAN=$(echo "$CHANGED" | \
-              python3 scripts/compute_root_workflows.py \
-                --graph $GRAPH --execution-plan)
+            echo "$CHANGED" | python3 scripts/compute_root_workflows.py \
+              --graph $GRAPH --execution-plan --slots 20 >> "$GITHUB_OUTPUT"
           fi
-          echo "Root workflows: $ROOTS"
-          echo "Execution plan: $PLAN"
-          echo "roots=$ROOTS" >> "$GITHUB_OUTPUT"
-          echo "execution_plan=$PLAN" >> "$GITHUB_OUTPUT"
-          if [ "$ROOTS" = "[]" ]; then
-            echo "has_roots=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_roots=true" >> "$GITHUB_OUTPUT"
-          fi
-  dispatching-workflows:
+  dispatching-01:
     env:
-      EXECUTION_PLAN: >-
-        ${{
-        needs.concluding-workflows-should-be-dispatched.outputs.execution_plan
-        }}
-    name: Dispatching workflows
-    needs: concluding-workflows-should-be-dispatched
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_01 != ''
+    name: ${{ needs.determining.outputs.key_01 || '—' }}
+    needs:
+      - determining
+      - concluding-workflows-should-be-dispatched
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Install dependencies
-        run: python3 -m pip install pyyaml
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: inputs.dry_run != true
-        name: Execute workflow plan sequentially
-        run: |
-          GITHUB_HOSTED_FLAG=""
-          GITHUB_HOSTED="${{ inputs.github_hosted }}"
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          if [[ "$GITHUB_HOSTED" == "true" ]] || \
-             [[ "$COMMIT_MSG" == *"[github-hosted]"* ]]; then
-            GITHUB_HOSTED_FLAG="--github-hosted"
-          fi
-          python3 scripts/execute_workflow_plan.py \
-            --plan "$EXECUTION_PLAN" $GITHUB_HOSTED_FLAG
       - if: inputs.dry_run == true
-        name: Dry run - show execution plan
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_01 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
         run: |
-          echo "Dry run mode - would execute:"
-          echo "$EXECUTION_PLAN" | python3 -c "import sys,json; \
-            [print(f'  {i+1}. {w}') for i,w in enumerate(json.load(sys.stdin))]"
+          WORKFLOW="${{ needs.determining.outputs.key_01 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-02:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_02 != ''
+    name: ${{ needs.determining.outputs.key_02 || '—' }}
+    needs:
+      - determining
+      - dispatching-01
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_02 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_02 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-03:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_03 != ''
+    name: ${{ needs.determining.outputs.key_03 || '—' }}
+    needs:
+      - determining
+      - dispatching-02
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_03 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_03 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-04:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_04 != ''
+    name: ${{ needs.determining.outputs.key_04 || '—' }}
+    needs:
+      - determining
+      - dispatching-03
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_04 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_04 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-05:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_05 != ''
+    name: ${{ needs.determining.outputs.key_05 || '—' }}
+    needs:
+      - determining
+      - dispatching-04
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_05 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_05 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-06:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_06 != ''
+    name: ${{ needs.determining.outputs.key_06 || '—' }}
+    needs:
+      - determining
+      - dispatching-05
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_06 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_06 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-07:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_07 != ''
+    name: ${{ needs.determining.outputs.key_07 || '—' }}
+    needs:
+      - determining
+      - dispatching-06
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_07 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_07 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-08:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_08 != ''
+    name: ${{ needs.determining.outputs.key_08 || '—' }}
+    needs:
+      - determining
+      - dispatching-07
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_08 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_08 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-09:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_09 != ''
+    name: ${{ needs.determining.outputs.key_09 || '—' }}
+    needs:
+      - determining
+      - dispatching-08
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_09 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_09 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-10:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_10 != ''
+    name: ${{ needs.determining.outputs.key_10 || '—' }}
+    needs:
+      - determining
+      - dispatching-09
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_10 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_10 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-11:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_11 != ''
+    name: ${{ needs.determining.outputs.key_11 || '—' }}
+    needs:
+      - determining
+      - dispatching-10
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_11 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_11 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-12:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_12 != ''
+    name: ${{ needs.determining.outputs.key_12 || '—' }}
+    needs:
+      - determining
+      - dispatching-11
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_12 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_12 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-13:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_13 != ''
+    name: ${{ needs.determining.outputs.key_13 || '—' }}
+    needs:
+      - determining
+      - dispatching-12
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_13 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_13 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-14:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_14 != ''
+    name: ${{ needs.determining.outputs.key_14 || '—' }}
+    needs:
+      - determining
+      - dispatching-13
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_14 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_14 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-15:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_15 != ''
+    name: ${{ needs.determining.outputs.key_15 || '—' }}
+    needs:
+      - determining
+      - dispatching-14
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_15 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_15 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-16:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_16 != ''
+    name: ${{ needs.determining.outputs.key_16 || '—' }}
+    needs:
+      - determining
+      - dispatching-15
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_16 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_16 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-17:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_17 != ''
+    name: ${{ needs.determining.outputs.key_17 || '—' }}
+    needs:
+      - determining
+      - dispatching-16
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_17 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_17 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-18:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_18 != ''
+    name: ${{ needs.determining.outputs.key_18 || '—' }}
+    needs:
+      - determining
+      - dispatching-17
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_18 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_18 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-19:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_19 != ''
+    name: ${{ needs.determining.outputs.key_19 || '—' }}
+    needs:
+      - determining
+      - dispatching-18
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_19 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_19 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
+  dispatching-20:
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    if: >-
+      always() && !failure() && !cancelled() &&
+      needs.determining.outputs.key_20 != ''
+    name: ${{ needs.determining.outputs.key_20 || '—' }}
+    needs:
+      - determining
+      - dispatching-19
+    runs-on: ubuntu-latest
+    steps:
+      - if: inputs.dry_run == true
+        name: Dry run
+        run: echo "Would dispatch ${{ needs.determining.outputs.key_20 }}"
+      - if: inputs.dry_run != true
+        name: Dispatch and wait
+        run: |
+          WORKFLOW="${{ needs.determining.outputs.key_20 }}.yml"
+          gh workflow run ".github/workflows/$WORKFLOW" \
+            --repo ${{ github.repository }}
+          sleep 5
+          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
+            --repo ${{ github.repository }} --limit 1 \
+            --json databaseId --jq '.[0].databaseId')
+          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
+          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
