@@ -11,11 +11,13 @@ jobs:
        github.event_name == 'workflow_dispatch' ||
        github.event_name == 'workflow_call' ||
        github.event_name == 'push' &&
-       !contains(toJSON(github.event.commits), '.github/workflows/api_backend.yml') &&
+       !contains(toJSON(github.event.commits),
+         '.github/workflows/api_backend.yml') &&
        !contains(toJSON(github.event.commits), 'src/api/backend/') &&
        !contains(toJSON(github.event.commits), 'src/www/api/') &&
        !contains(toJSON(github.event.commits), 'test/api/backend/') &&
-       !contains(toJSON(github.event.commits), '.github/workflows/api_shared_ecr.yml') &&
+       !contains(toJSON(github.event.commits),
+         '.github/workflows/api_shared_ecr.yml') &&
        !contains(toJSON(github.event.commits), 'src/api/shared/ecr/') &&
        !contains(toJSON(github.event.commits), 'lib/terraform/'))
     name: Declaring common variables
@@ -148,7 +150,7 @@ jobs:
         run: |
           TEST_DIR=test/api/endpoints/runners
           python3 -m pytest $TEST_DIR/post_deployment/integration/ \
-            --confcutdir=$TEST_DIR -v
+            --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -294,7 +296,7 @@ jobs:
         run: |
           TEST_DIR=test/api/endpoints/runners
           python3 -m pytest $TEST_DIR/pre_deployment/ \
-            --confcutdir=$TEST_DIR -v
+            --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
 name: Ensuring the /v1/runners API endpoint exists and is properly configured
 on:
   workflow_call:

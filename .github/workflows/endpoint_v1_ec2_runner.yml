@@ -113,7 +113,7 @@ jobs:
         run: |
           python3 -m pytest test/api/endpoints/ec2_runner/post_deployment/e2e/ \
             --confcutdir=test/api/endpoints/ec2_runner \
-            -v
+            --verbose --pythonwarnings=error
   ensuring-endpoint-infrastructure-in-desired-state:
     name: Ensuring endpoint infrastructure is in desired state
     needs:
@@ -200,7 +200,7 @@ jobs:
         run: |
           TEST_DIR=test/api/endpoints/ec2_runner
           python3 -m pytest $TEST_DIR/post_deployment/integration/ \
-            --confcutdir=$TEST_DIR -v
+            --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -339,7 +339,7 @@ jobs:
         run: |
           python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/ \
             --confcutdir=test/api/endpoints/ec2_runner \
-            -v
+            --verbose --pythonwarnings=error
 name: Ensuring the /v1/ec2-runner API endpoint exists and is properly configured
 on:
   workflow_call:

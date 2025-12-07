@@ -47,14 +47,17 @@ jobs:
         name: Extract configuration values
         run: |
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' \
-            lib/terraform/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+            lib/terraform/modules/shared/outputs.tf | \
+            grep 'value' | cut -d'"' -f2)
           AWS_REGION=$(grep -A1 'output "aws_region"' \
-            lib/terraform/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+            lib/terraform/modules/shared/outputs.tf | \
+            grep 'value' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
             src/bootstrap/locals.tf | \
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep 'resource_prefix' \
-            lib/terraform/modules/shared/locals.tf | grep -v '\$' | cut -d'"' -f2)
+            lib/terraform/modules/shared/locals.tf | \
+            grep -v '\$' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' \
             src/api/endpoints/health/backend.tf | \
             cut -d'"' -f2 | sed 's/>= //')
@@ -135,7 +138,8 @@ jobs:
       - name: Run E2E tests
         run: |
           python3 -m pytest \
-            test/api/endpoints/health/post_deployment/e2e/ -v
+            test/api/endpoints/health/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -223,7 +227,8 @@ jobs:
       - name: Run integration tests
         run: |
           python3 -m pytest \
-            test/api/endpoints/health/post_deployment/integration/ -v
+            test/api/endpoints/health/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -366,7 +371,9 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest PyYAML boto3
       - name: Run unit tests
-        run: python3 -m pytest test/api/endpoints/health/pre_deployment/ -v
+        run: |
+          python3 -m pytest test/api/endpoints/health/pre_deployment/ \
+            --verbose --pythonwarnings=error
 name: Ensuring /health endpoint exists and is properly configured
 on:
   workflow_call:

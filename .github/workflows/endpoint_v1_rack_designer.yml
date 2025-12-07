@@ -147,7 +147,7 @@ jobs:
       - name: Run integration tests
         run: |
           TESTS="test/api/endpoints/rack_designer/post_deployment/integration/"
-          python3 -m pytest $TESTS -v
+          python3 -m pytest $TESTS --verbose --pythonwarnings=error
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis
@@ -226,7 +226,7 @@ jobs:
       - name: Run unit tests
         run: |
           TESTS="test/api/endpoints/rack_designer/pre_deployment/"
-          python3 -m pytest $TESTS -v
+          python3 -m pytest $TESTS --verbose --pythonwarnings=error
 name: Ensuring Rack Designer exists and is properly configured
 on:
   workflow_call:

@@ -295,11 +295,16 @@ def run_command(cmd_info, workflow_name):
 
     if result.returncode != 0:
         print(f"  FAILED (exit {result.returncode})")
+        print("  Full command:")
+        for line in script.split('\n'):
+            print(f"    {line}")
         if result.stdout:
-            for out_line in result.stdout.strip().split('\n')[-15:]:
+            print("  Stdout:")
+            for out_line in result.stdout.strip().split('\n'):
                 print(f"    {out_line}")
         if result.stderr:
-            for err_line in result.stderr.strip().split('\n')[-10:]:
+            print("  Stderr:")
+            for err_line in result.stderr.strip().split('\n'):
                 print(f"    {err_line}")
         return False
 

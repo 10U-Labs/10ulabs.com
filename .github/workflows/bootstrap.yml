@@ -128,7 +128,9 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 dnspython
       - name: Run E2E tests
-        run: python3 -m pytest test/bootstrap/post_deployment/e2e/ -v
+        run: |
+          python3 -m pytest test/bootstrap/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
@@ -229,7 +231,9 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3
       - name: Run integration tests
-        run: python3 -m pytest test/bootstrap/post_deployment/integration/ -v
+        run: |
+          python3 -m pytest test/bootstrap/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
     needs:
@@ -358,7 +362,9 @@ jobs:
         name: Install Python dependencies
         run: python3 -m pip install pytest boto3 python-hcl2
       - name: Run unit tests
-        run: python3 -m pytest test/bootstrap/pre_deployment/ -v
+        run: |
+          python3 -m pytest test/bootstrap/pre_deployment/ \
+            --verbose --pythonwarnings=error
 name: Ensuring bootstrap infrastructure exists and is properly configured
 on:
   workflow_call:
