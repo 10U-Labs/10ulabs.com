@@ -1,5 +1,4 @@
 """Integration test fixtures for EC2 runner AMI."""
-# pylint: disable=duplicate-code,missing-function-docstring,line-too-long,import-error
 import os
 import time
 from ec2_helpers import launch_instance, wait_for_instance_ready, terminate_instance_safely

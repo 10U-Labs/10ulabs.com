@@ -1,5 +1,4 @@
 """Lambda handler for ECS runner endpoint."""
-# pylint: disable=wrong-import-position
 import os
 import sys
 

@@ -1,5 +1,4 @@
 """Unit tests for setup script syntax validation."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 import subprocess
 
 

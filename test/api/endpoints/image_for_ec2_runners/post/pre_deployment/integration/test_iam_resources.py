@@ -1,5 +1,4 @@
 """Integration tests for IAM resources required for AMI building."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 from botocore.exceptions import ClientError
 
 

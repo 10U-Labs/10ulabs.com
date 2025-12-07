@@ -1,5 +1,4 @@
 """End-to-end tests for EC2 runner endpoint."""
-# pylint: disable=duplicate-code
 import time
 
 import boto3

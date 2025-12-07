@@ -1,5 +1,4 @@
 """Helper functions for EC2 instance management in tests."""
-# pylint: disable=missing-function-docstring,import-error
 import time
 from botocore.exceptions import ClientError
 from ec2_fleet.ec2_fleet import (

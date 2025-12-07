@@ -1,16 +1,23 @@
 """Pytest fixtures for www index tests."""
-import sys
+import importlib.util
 from pathlib import Path
 from typing import Dict
 
 import pytest
 import requests
 
-# Import shared parsing function to avoid duplication
-# pylint: disable=import-error,wrong-import-position
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from shared.conftest import parse_shared_module_outputs  # noqa: E402
-# pylint: enable=import-error,wrong-import-position
+
+def _load_shared_conftest():
+    """Load shared conftest module dynamically to avoid import order issues."""
+    shared_path = Path(__file__).parent.parent.parent / "shared" / "conftest.py"
+    spec = importlib.util.spec_from_file_location("shared_conftest", shared_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_shared = _load_shared_conftest()
+parse_shared_module_outputs = _shared.parse_shared_module_outputs
 
 
 @pytest.fixture(name="config", scope="module")

@@ -1,5 +1,4 @@
 """E2E tests for ECS runner registration with GitHub."""
-# pylint: disable=duplicate-code
 import subprocess
 import time
 from ..conftest import login_to_ecr

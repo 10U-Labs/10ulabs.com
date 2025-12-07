@@ -1,5 +1,4 @@
 """E2E tests for ECS runner label configuration."""
-# pylint: disable=duplicate-code
 import time
 from ..conftest import login_to_ecr
 from .conftest import (

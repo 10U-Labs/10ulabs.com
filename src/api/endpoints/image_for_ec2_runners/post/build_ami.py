@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Build AMI using EC2 Fleet spot instances for GitHub Actions runners."""
-# pylint: disable=import-error
 import argparse
 import logging
 import sys

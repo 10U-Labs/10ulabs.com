@@ -1,5 +1,4 @@
 """Shared pytest fixtures and utilities for runners endpoint tests."""
-# pylint: disable=duplicate-code
 import re
 from pathlib import Path
 from typing import Any, Dict, List

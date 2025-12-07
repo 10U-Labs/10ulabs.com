@@ -1,5 +1,4 @@
 """Shared fixtures and utilities for ECS runner post-deployment tests."""
-# pylint: disable=duplicate-code
 import os
 import time
 import boto3

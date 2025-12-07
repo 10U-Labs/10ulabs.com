@@ -1,5 +1,4 @@
 """Integration tests for subnet configuration."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 import pytest
 from botocore.exceptions import ClientError
 

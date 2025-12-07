@@ -1,5 +1,4 @@
 """Pytest fixtures for pre-deployment unit tests."""
-# pylint: disable=missing-function-docstring
 from pathlib import Path
 import pytest
 import yaml

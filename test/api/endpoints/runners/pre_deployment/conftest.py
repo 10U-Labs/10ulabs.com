@@ -1,5 +1,4 @@
 """Shared fixtures for runners pre-deployment unit tests."""
-# pylint: disable=duplicate-code
 import importlib.util
 import json
 import re

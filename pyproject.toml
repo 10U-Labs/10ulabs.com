@@ -1,0 +1,26 @@
+[tool.pylint.messages_control]
+# Global pylint configuration - suppresses specific warnings project-wide
+# duplicate-code: Test fixtures share similar boilerplate
+# missing-function-docstring: Test methods are self-documenting via names
+# missing-class-docstring: Test classes are self-documenting via names
+# import-error: Dynamic imports in test environments
+# wrong-import-position: Necessary for sys.path modifications
+# redefined-outer-name: Pytest fixtures intentionally shadow outer names
+# too-many-locals: Complex functions sometimes need many locals
+# protected-access: Tests may need to access private members
+# line-too-long: Some URLs and strings exceed line limits
+disable = [
+    "duplicate-code",
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "import-error",
+    "wrong-import-position",
+    "redefined-outer-name",
+    "too-many-locals",
+    "protected-access",
+    "line-too-long",
+]
+
+[tool.pylint.SIMILARITIES]
+# Minimum lines for duplicate code detection (default is 4)
+min-similarity-lines = 10

@@ -1,5 +1,4 @@
 """Integration tests for SSM agent installation on EC2 runner AMI."""
-# pylint: disable=missing-function-docstring
 import pytest
 
 

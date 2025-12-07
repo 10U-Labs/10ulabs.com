@@ -90,7 +90,7 @@ def rerun_github_job(github_token: str, github_repo: str, job_id: str) -> bool:
     return result
 
 
-def handle_ecs_task_stopped(event: dict) -> dict:  # pylint: disable=too-many-locals
+def handle_ecs_task_stopped(event: dict) -> dict:
     """Handle ECS task stopped event for spot interruption."""
     detail = event.get('detail', {})
     stop_code = detail.get('stopCode', '')

@@ -1,5 +1,4 @@
 """Unit tests for setup script function definitions."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 
 
 class TestSetupScriptMainFunction:

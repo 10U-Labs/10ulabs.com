@@ -1,5 +1,4 @@
 """E2E test fixtures for EC2 runner AMI."""
-# pylint: disable=duplicate-code,import-error
 import base64
 import json
 import os

@@ -1,5 +1,4 @@
 """EC2 Fleet management utilities for launching spot instances."""
-# pylint: disable=missing-function-docstring,missing-class-docstring,line-too-long
 import logging
 import time
 import uuid

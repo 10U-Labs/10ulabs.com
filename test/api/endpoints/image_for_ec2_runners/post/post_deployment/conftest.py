@@ -1,5 +1,4 @@
 """Pytest fixtures for post-deployment tests."""
-# pylint: disable=missing-function-docstring
 import os
 import sys
 import time

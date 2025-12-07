@@ -1,5 +1,4 @@
 """Lambda handler for GitHub webhook routing to runner endpoints."""
-# pylint: disable=wrong-import-position
 import os
 import sys
 

@@ -1,5 +1,4 @@
 """Unit tests for runner configuration validation."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 
 
 class TestConfigRunnerVersion:

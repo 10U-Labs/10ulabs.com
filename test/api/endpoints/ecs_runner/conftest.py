@@ -1,5 +1,4 @@
 """Shared pytest fixtures and utilities for ECS runner tests."""
-# pylint: disable=duplicate-code
 import json
 import os
 import re

@@ -1,5 +1,4 @@
 """Integration tests for GitHub runner files on EC2 AMI."""
-# pylint: disable=missing-function-docstring,missing-class-docstring,line-too-long
 import pytest
 
 

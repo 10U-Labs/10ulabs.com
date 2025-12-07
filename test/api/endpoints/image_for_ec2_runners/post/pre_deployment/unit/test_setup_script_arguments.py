@@ -1,5 +1,4 @@
 """Unit tests for setup script command line arguments."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 
 
 class TestSetupScriptRunnerVersionArgument:

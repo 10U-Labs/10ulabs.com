@@ -1,5 +1,4 @@
 """Unit tests for test stale runner cleanup."""
-# pylint: disable=protected-access
 import time
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock

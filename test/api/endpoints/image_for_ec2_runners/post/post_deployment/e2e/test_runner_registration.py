@@ -1,5 +1,4 @@
 """End-to-end tests for GitHub runner registration on EC2."""
-# pylint: disable=import-error
 import time
 from botocore.exceptions import ClientError
 import pytest

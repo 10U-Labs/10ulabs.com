@@ -1,5 +1,4 @@
 """Pytest fixtures for EC2 runner pre-deployment tests."""
-# pylint: disable=duplicate-code
 import importlib.util
 import json
 from typing import Any, Callable, Dict

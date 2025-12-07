@@ -8,7 +8,7 @@ import pytest
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "scripts"))
 
-from compute_root_workflows import (  # pylint: disable=wrong-import-position
+from compute_root_workflows import (
     compute_root_workflows,
     file_matches_patterns,
     get_affected_workflows,

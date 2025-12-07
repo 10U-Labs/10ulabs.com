@@ -1,5 +1,4 @@
 """Pytest fixtures for pre-deployment integration tests."""
-# pylint: disable=missing-function-docstring,line-too-long
 import json
 import subprocess
 from pathlib import Path
@@ -47,17 +46,17 @@ def terraform_initialized():
 
 
 @pytest.fixture(scope="session")
-def ec2_client(aws_region):  # pylint: disable=redefined-outer-name
+def ec2_client(aws_region):
     return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def iam_client(aws_region):  # pylint: disable=redefined-outer-name
+def iam_client(aws_region):
     return boto3.client("iam", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def terraform_outputs(terraform_initialized):  # pylint: disable=redefined-outer-name
+def terraform_outputs(terraform_initialized):
     result = {}
     if terraform_initialized:
         result = {
@@ -72,19 +71,19 @@ def terraform_outputs(terraform_initialized):  # pylint: disable=redefined-outer
 
 
 @pytest.fixture(scope="session")
-def security_group_id(terraform_outputs):  # pylint: disable=redefined-outer-name
+def security_group_id(terraform_outputs):
     return terraform_outputs.get("runner_security_group_id", "")
 
 
 @pytest.fixture(scope="session")
-def subnet_ids(terraform_outputs):  # pylint: disable=redefined-outer-name
+def subnet_ids(terraform_outputs):
     raw = terraform_outputs.get("vpc_public_subnet_ids", "")
     result = [s.strip() for s in raw.split(",") if s.strip()]
     return result
 
 
 @pytest.fixture(scope="session")
-def instance_types(terraform_outputs):  # pylint: disable=redefined-outer-name
+def instance_types(terraform_outputs):
     raw = terraform_outputs.get("ec2_instance_types", "[]")
     result = []
     if raw:
@@ -96,7 +95,7 @@ def instance_types(terraform_outputs):  # pylint: disable=redefined-outer-name
 
 
 @pytest.fixture(scope="session")
-def source_ami_pattern(config):  # pylint: disable=redefined-outer-name
+def source_ami_pattern(config):
     result = {
         "os_family": config.get("os_family", ""),
         "os_version": config.get("os_version", ""),

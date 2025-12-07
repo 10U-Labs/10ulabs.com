@@ -1,5 +1,4 @@
 """E2E tests for ECS runner status verification."""
-# pylint: disable=duplicate-code
 import time
 from ..conftest import login_to_ecr
 from .conftest import start_runner_container, get_runner_and_cleanup

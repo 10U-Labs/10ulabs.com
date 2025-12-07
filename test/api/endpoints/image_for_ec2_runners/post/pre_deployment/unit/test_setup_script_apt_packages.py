@@ -1,5 +1,4 @@
 """Unit tests for APT package installations in setup script."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 
 
 class TestSetupScriptDockerPackages:

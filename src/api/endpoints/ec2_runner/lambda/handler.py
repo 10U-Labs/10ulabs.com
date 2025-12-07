@@ -1,5 +1,4 @@
 """Lambda handler for EC2 runner API endpoint."""
-# pylint: disable=wrong-import-position
 import os
 import sys
 

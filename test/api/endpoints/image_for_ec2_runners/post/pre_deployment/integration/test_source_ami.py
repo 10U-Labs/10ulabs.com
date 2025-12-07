@@ -1,5 +1,4 @@
 """Integration tests for source AMI availability."""
-# pylint: disable=missing-function-docstring,missing-class-docstring
 from botocore.exceptions import ClientError
 
 
