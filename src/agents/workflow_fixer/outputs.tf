@@ -5,7 +5,7 @@ output "ecr_repository_url" {
 
 output "agent_runtime_arn" {
   description = "The ARN of the AgentCore Runtime"
-  value       = aws_bedrockagentcore_agent_runtime.workflow_fixer.arn
+  value       = aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn
 }
 
 output "webhook_lambda_function_arn" {

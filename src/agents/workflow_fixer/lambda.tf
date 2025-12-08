@@ -18,7 +18,7 @@ resource "aws_lambda_function" "webhook" {
 
   environment {
     variables = {
-      AGENT_RUNTIME_ARN = aws_bedrockagentcore_agent_runtime.workflow_fixer.arn
+      AGENT_RUNTIME_ARN = aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn
       SSM_GITHUB_PAT    = local.ssm_github_pat
       AWS_REGION_NAME   = local.aws_region
       GITHUB_ORG        = "10U-Labs-LLC"
