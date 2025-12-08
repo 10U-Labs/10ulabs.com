@@ -196,7 +196,10 @@ resource "aws_iam_role_policy" "webhook_lambda_agentcore" {
       Action = [
         "bedrock-agentcore:InvokeAgentRuntime"
       ]
-      Resource = aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn
+      Resource = [
+        aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn,
+        "${aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn}/*"
+      ]
     }]
   })
 }
