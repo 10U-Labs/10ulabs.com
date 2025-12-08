@@ -25,10 +25,10 @@ def test_base_docker_image_exists_on_docker_hub():
     )
 
 
-def test_base_docker_image_has_amd64_architecture():
-    """Verify the base Docker image has an amd64 architecture variant.
+def test_base_docker_image_has_arm64_architecture():
+    """Verify the base Docker image has an arm64 architecture variant.
 
-    ECS runners typically use amd64 architecture, so we need to ensure
+    ECS runners use arm64 architecture, so we need to ensure
     the image supports it.
     """
     url = f"https://hub.docker.com/v2/repositories/library/{BASE_IMAGE}/tags/{BASE_TAG}"
@@ -36,10 +36,10 @@ def test_base_docker_image_has_amd64_architecture():
     assert response.status_code == 200
     data = response.json()
 
-    # Check that images array exists and contains amd64
+    # Check that images array exists and contains arm64
     images = data.get("images", [])
     architectures = [img.get("architecture") for img in images]
-    assert "amd64" in architectures, (
-        f"Base image {BASE_IMAGE}:{BASE_TAG} does not support amd64 architecture. "
+    assert "arm64" in architectures, (
+        f"Base image {BASE_IMAGE}:{BASE_TAG} does not support arm64 architecture. "
         f"Available architectures: {architectures}"
     )
