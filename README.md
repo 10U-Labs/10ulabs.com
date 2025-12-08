@@ -40,18 +40,18 @@ When the orchestrator dispatches workflows, they execute in this order:
 
 ```
 01. bootstrap
-02. agents_workflow_fixer       ┐
-03. agents_agent_creator        ├── Agent deployments (parallel)
-04. agents_test_auditor         ┘
+02. agents_workflow_fixer
+03. agents_agent_creator
+04. agents_test_auditor
 05. www_shared
 06. api_backend
 07. endpoint_health
-08. endpoint_v1_image_for_ec2_runners_post  ┐
-09. endpoint_v1_image_for_ec2_runners       ├── EC2 runner chain
-10. endpoint_v1_ec2_runner                  ┘
-11. api_shared_ecr                          ┐
-12. endpoint_v1_image_for_ecs_runners       ├── ECS runner chain
-13. endpoint_v1_ecs_runner                  ┘
+08. endpoint_v1_image_for_ec2_runners_post
+09. endpoint_v1_image_for_ec2_runners
+10. endpoint_v1_ec2_runner
+11. api_shared_ecr
+12. endpoint_v1_image_for_ecs_runners
+13. endpoint_v1_ecs_runner
 14. endpoint_v1_runners
 15. endpoint_v1_echo
 16. endpoint_v1_contact
