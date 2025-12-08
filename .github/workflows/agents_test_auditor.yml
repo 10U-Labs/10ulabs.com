@@ -1,0 +1,296 @@
+---
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow_ref }}-${{ github.ref }}
+jobs:
+  checking-oidc-availability:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Checking OIDC availability
+    needs: declaring-common-variables
+    outputs:
+      oidc_available: ${{ steps.oidc.outcome == 'success' }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - continue-on-error: true
+        id: oidc
+        name: Test OIDC authentication
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          retry-max-attempts: 1
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+  declaring-common-variables:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Declaring common variables
+    outputs:
+      aws_region: ${{ steps.config.outputs.aws_region }}
+      github_actions_role_arn: >-
+        ${{ steps.config.outputs.github_actions_role_arn }}
+      terraform_version: ${{ steps.config.outputs.terraform_version }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - id: config
+        name: Extract configuration values
+        run: |
+          TF="lib/terraform/modules/shared/outputs.tf"
+          TF_LOCALS="lib/terraform/modules/shared/locals.tf"
+          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $TF \
+            | grep 'value' | cut -d'"' -f2)
+          AWS_REGION=$(grep -A1 'output "aws_region"' $TF \
+            | grep 'value' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
+            src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          TERRAFORM_VERSION=$(grep 'required_version' \
+            src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+  ensuring-infrastructure-in-desired-state:
+    defaults:
+      run:
+        working-directory: src/agents/test_auditor
+    name: Ensuring infrastructure is in desired state
+    needs:
+      - checking-oidc-availability
+      - declaring-common-variables
+      - performing-static-analysis
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
+        name: Configure AWS credentials via static keys
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+  integration-testing:
+    name: Integration testing
+    needs:
+      - checking-oidc-availability
+      - declaring-common-variables
+      - ensuring-infrastructure-in-desired-state
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
+        name: Configure AWS credentials via static keys
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install pytest boto3
+      - name: Run integration tests
+        run: |
+          python3 -m pytest test/agents/test_auditor/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+  performing-static-analysis:
+    name: Performing static analysis
+    needs:
+      - checking-oidc-availability
+      - declaring-common-variables
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
+        name: Configure AWS credentials via static keys
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install linting dependencies
+        run: |
+          python3 -m pip install \
+            pylint mypy yamllint pytest boto3 boto3-stubs
+      - name: Terraform Format Check
+        run: cd src/agents/test_auditor && terraform fmt -diff -check -recursive
+      - name: Terraform Init
+        run: cd src/agents/test_auditor && terraform init
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        name: Run tflint
+        run: cd src/agents/test_auditor && tflint --init && tflint
+      - name: Terraform Plan
+        run: cd src/agents/test_auditor && terraform plan
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/agents_test_auditor.yml
+      - name: Run pylint
+        run: |
+          python3 -m pylint \
+            src/agents/test_auditor/lambdas/ \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - name: Run mypy
+        run: |
+          python3 -m mypy \
+            src/agents/test_auditor/lambdas/
+name: Deploying Test Auditor Agent
+on:
+  workflow_call:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+permissions:
+  contents: read
+  id-token: write

@@ -9,6 +9,14 @@
 #   - name: The display name (must match the 'name:' field in the workflow)
 #   - paths: File patterns that trigger this workflow
 #   - depends_on: List of workflows (by key) that must complete before this
+agents_test_auditor:
+  depends_on:
+    - bootstrap
+  name: Deploying Test Auditor Agent
+  paths:
+    - '.github/workflows/agents_test_auditor.yml'
+    - 'src/agents/test_auditor/**'
+    - 'test/agents/test_auditor/**'
 api_backend:
   depends_on:
     - www_shared
