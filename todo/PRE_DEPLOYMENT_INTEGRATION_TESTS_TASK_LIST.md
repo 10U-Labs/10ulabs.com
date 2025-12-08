@@ -26,24 +26,24 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** bootstrap
 
-- [ ] Create directory structure:
-  - [ ] `test/www/shared/pre_deployment/unit/`
-  - [ ] `test/www/shared/pre_deployment/integration/`
-- [ ] Move existing tests from `test/www/shared/pre_deployment/` to `test/www/shared/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/www/shared/pre_deployment/conftest.py`
-  - [ ] `test/www/shared/pre_deployment/unit/conftest.py`
-  - [ ] `test/www/shared/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] Bootstrap S3 state bucket exists and is accessible
-  - [ ] Bootstrap IAM roles exist
-  - [ ] Route53 hosted zone exists
-  - [ ] Bootstrap terraform outputs are readable
-- [ ] Update `.github/workflows/www_shared.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies (infrastructure job needs pre-deployment integration)
+- [x] Create directory structure:
+  - [x] `test/www/shared/pre_deployment/unit/`
+  - [x] `test/www/shared/pre_deployment/integration/`
+- [x] Move existing tests from `test/www/shared/pre_deployment/` to `test/www/shared/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/www/shared/pre_deployment/conftest.py`
+  - [x] `test/www/shared/pre_deployment/unit/conftest.py`
+  - [x] `test/www/shared/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] Bootstrap S3 state bucket exists and is accessible
+  - [x] Bootstrap IAM roles exist
+  - [x] Route53 hosted zone exists
+  - [x] Bootstrap terraform outputs are readable
+- [x] Update `.github/workflows/www_shared.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies (infrastructure job needs pre-deployment integration)
 
 ---
 
@@ -51,23 +51,23 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** www_shared
 
-- [ ] Create directory structure:
-  - [ ] `test/api/backend/pre_deployment/unit/`
-  - [ ] `test/api/backend/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/backend/pre_deployment/` to `test/api/backend/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/backend/pre_deployment/conftest.py`
-  - [ ] `test/api/backend/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/backend/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] www_shared CloudFront distribution exists
-  - [ ] www_shared ACM certificate exists and is valid
-  - [ ] www_shared S3 bucket exists
-  - [ ] www_shared terraform outputs are readable
-- [ ] Update `.github/workflows/api_backend.yml`:
+- [x] Create directory structure:
+  - [x] `test/api/backend/pre_deployment/unit/`
+  - [x] `test/api/backend/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/backend/pre_deployment/` to `test/api/backend/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/backend/pre_deployment/conftest.py`
+  - [x] `test/api/backend/pre_deployment/unit/conftest.py`
+  - [x] `test/api/backend/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] www_shared CloudFront distribution exists
+  - [x] www_shared ACM certificate exists and is valid
+  - [x] www_shared S3 bucket exists
+  - [x] www_shared terraform outputs are readable
+- [x] Update `.github/workflows/api_backend.yml`:
   - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
   - [ ] Update job dependencies
 
 ---
@@ -76,22 +76,22 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** api_backend
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/health/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/health/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/health/pre_deployment/` to `test/api/endpoints/health/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/health/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/health/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/health/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] api_backend API Gateway exists
-  - [ ] api_backend Lambda execution role exists
-  - [ ] api_backend terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_health.yml`:
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/health/pre_deployment/unit/`
+  - [x] `test/api/endpoints/health/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/health/pre_deployment/` to `test/api/endpoints/health/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/health/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/health/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/health/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] api_backend API Gateway exists
+  - [x] api_backend Lambda execution role exists
+  - [x] api_backend terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_health.yml`:
   - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
   - [ ] Update job dependencies
 
 ---
@@ -100,22 +100,22 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_health
 
-- [ ] Create directory structure:
-  - [ ] `test/api/shared/ecr/pre_deployment/unit/`
-  - [ ] `test/api/shared/ecr/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/shared/ecr/pre_deployment/` to `test/api/shared/ecr/pre_deployment/unit/` (if any exist)
-- [ ] Create conftest files:
-  - [ ] `test/api/shared/ecr/pre_deployment/conftest.py`
-  - [ ] `test/api/shared/ecr/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/shared/ecr/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] endpoint_health Lambda is functional (returns 200)
+- [x] Create directory structure:
+  - [x] `test/api/shared/ecr/pre_deployment/unit/`
+  - [x] `test/api/shared/ecr/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/shared/ecr/pre_deployment/` to `test/api/shared/ecr/pre_deployment/unit/` (if any exist)
+- [x] Create conftest files:
+  - [x] `test/api/shared/ecr/pre_deployment/conftest.py`
+  - [x] `test/api/shared/ecr/pre_deployment/unit/conftest.py`
+  - [x] `test/api/shared/ecr/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] endpoint_health Lambda is functional (returns 200)
   - [ ] IAM permissions for ECR operations exist
-  - [ ] endpoint_health terraform outputs are readable
-- [ ] Update `.github/workflows/api_shared_ecr.yml`:
+  - [x] endpoint_health terraform outputs are readable
+- [x] Update `.github/workflows/api_shared_ecr.yml`:
   - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
   - [ ] Update job dependencies
 
 ---
