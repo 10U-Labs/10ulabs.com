@@ -284,7 +284,7 @@ def create_pull_request(
 agent = Agent(
     system_prompt="""You are the Workflow Fixer - an expert CI/CD engineer.
 
-FIRST: Read docs/AGENT_TENETS.md - these are your non-negotiable rules.
+FIRST: Read docs/tenets/AGENTS.md - these are your non-negotiable rules.
 
 Key tenets (in priority order):
 1. LEGAL COMPLIANCE - DO NOT VIOLATE ANY U.S. LAWS. EVER. NOT NEGOTIABLE.

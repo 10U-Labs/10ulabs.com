@@ -1,38 +1,41 @@
-"""Pytest fixtures for workflow_fixer agent integration tests."""
+"""Pytest fixtures for workflow_fixer agent integration tests.
+
+Shared fixtures (aws_region, ssm_github_pat_name, etc.) are inherited
+from test/conftest.py which parses values from the shared Terraform module.
+"""
 
 import boto3
 import pytest
 
 
-AWS_REGION = "us-east-2"
+# Agent-specific constants derived from shared config
 AGENT_RUNTIME_NAME = "TenULabs_workflow_fixer"
 LAMBDA_NAME = "TenULabsWorkflowFixerWebhook"
 ECR_REPO_NAME = "tenulabs-workflow-fixer-agent"
-SSM_GITHUB_PAT = "/TenULabs/github_pat"
 
 
 @pytest.fixture(scope="session")
-def agentcore_control_client():
+def agentcore_control_client(aws_region):
     """Create a Bedrock AgentCore Control Plane client for managing runtimes."""
-    return boto3.client("bedrock-agentcore-control", region_name=AWS_REGION)
+    return boto3.client("bedrock-agentcore-control", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def agentcore_data_client():
+def agentcore_data_client(aws_region):
     """Create a Bedrock AgentCore Data Plane client for invoking agents."""
-    return boto3.client("bedrock-agentcore", region_name=AWS_REGION)
+    return boto3.client("bedrock-agentcore", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def lambda_client():
+def lambda_client(aws_region):
     """Create a Lambda client."""
-    return boto3.client("lambda", region_name=AWS_REGION)
+    return boto3.client("lambda", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
-def ecr_client():
+def ecr_client(aws_region):
     """Create an ECR client."""
-    return boto3.client("ecr", region_name=AWS_REGION)
+    return boto3.client("ecr", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
@@ -51,12 +54,6 @@ def lambda_function_name():
 def ecr_repo_name():
     """Provide the ECR repository name."""
     return ECR_REPO_NAME
-
-
-@pytest.fixture(scope="session")
-def ssm_github_pat_name():
-    """Provide the SSM parameter name for GitHub PAT."""
-    return SSM_GITHUB_PAT
 
 
 @pytest.fixture(scope="session")

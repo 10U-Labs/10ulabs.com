@@ -2,65 +2,50 @@
 import re
 from pathlib import Path
 from typing import Dict
+
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
 
-def parse_shared_module_outputs() -> Dict[str, str]:
-    """Parse shared module outputs from Terraform."""
-    outputs_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
-    config = {}
-    with open(outputs_path, encoding="utf-8") as f:
-        content = f.read()
-    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
-    matches = re.findall(pattern, content)
-    for key, value in matches:
-        config[key] = value
-    return config
-
-
-def parse_website_locals() -> Dict[str, str]:
+def _parse_website_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse website locals from Terraform."""
     locals_path = REPO_ROOT / "src" / "www" / "shared" / "locals.tf"
-    shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if '=' in line and not line.startswith('#') and not line.startswith('locals'):
-                match = re.match(r'(\w+)\s*=\s*(.+)', line)
-                if match:
+                if match := re.match(r'(\w+)\s*=\s*(.+)', line):
                     key, value = match.groups()
                     value = value.strip()
                     if value.startswith('"') and value.endswith('"'):
                         config[key] = value[1:-1]
                     elif 'module.shared.' in value:
                         ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared.get(ref, '')
-    config['www_fqdn'] = f"www.{shared.get('domain_name', '')}"
-    config['apex_fqdn'] = shared.get('domain_name', '')
-    domain_name = shared.get('domain_name', '')
+                        config[key] = shared_config.get(ref, '')
+    config['www_fqdn'] = f"www.{shared_config.get('domain_name', '')}"
+    config['apex_fqdn'] = shared_config.get('domain_name', '')
+    domain_name = shared_config.get('domain_name', '')
     config['website_bucket_name'] = f"www-{domain_name.replace('.', '-')}"
-    github_org = shared.get('github_org', '')
-    github_repo = shared.get('name_for_github_repo', '')
+    github_org = shared_config.get('github_org', '')
+    github_repo = shared_config.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{github_repo}"
     return config
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture() -> Dict[str, str]:
+def config_fixture(shared_config) -> Dict[str, str]:
     """Provide website configuration for tests."""
-    shared = parse_shared_module_outputs()
-    website_locals = parse_website_locals()
+    website_locals = _parse_website_locals(shared_config)
     result = {}
     result['aws_region'] = website_locals.get('aws_region', '')
     result['aws_account_id'] = website_locals.get('aws_account_id', '')
-    result['central_logs_bucket'] = shared.get('name_for_central_logs_bucket', '')
+    result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
     result['website_fqdn'] = website_locals.get('www_fqdn', '')
     result['website_bucket_name'] = website_locals.get('website_bucket_name', '')
     result['apex_fqdn'] = website_locals.get('apex_fqdn', '')
-    result['github_org'] = shared.get('github_org', '')
+    result['github_org'] = shared_config.get('github_org', '')
     result['github_repo'] = website_locals.get('github_repo_full', '')
     result['resource_prefix'] = website_locals.get('resource_prefix', '')
     return result

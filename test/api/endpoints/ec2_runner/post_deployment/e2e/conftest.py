@@ -1,20 +1,20 @@
 """Pytest fixtures for EC2 runner end-to-end tests."""
 import os
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
+
+from test.api.conftest import get_runner_labels
 
 import pytest
 
-from ...conftest import parse_api_locals
+from ...conftest import _parse_api_locals
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture():
+def config_fixture(shared_config):
     """Provide configuration for EC2 runner tests."""
-    shared = parse_shared_module_outputs()
-    api_locals = parse_api_locals()
+    api_locals = _parse_api_locals(shared_config)
     runner_labels = get_runner_labels()
-    github_org = shared.get('github_org', '')
-    github_repo_name = shared.get('name_for_github_repo', '')
+    github_org = shared_config.get('github_org', '')
+    github_repo_name = shared_config.get('name_for_github_repo', '')
     result = {
         'github_repo': f"{github_org}/{github_repo_name}",
         'ec2_runner_ami_purpose_tag': api_locals.get('ec2_runner_ami_purpose_tag', 'Purpose'),
@@ -22,7 +22,7 @@ def config_fixture():
             'ec2_runner_ami_purpose_value', 'GitHub self-hosted EC2 runner'
         ),
         'ec2_runner_ami_stable_tag': api_locals.get('ec2_runner_ami_stable_tag', 'Stable'),
-        'resource_prefix': shared.get('resource_prefix', ''),
+        'resource_prefix': shared_config.get('resource_prefix', ''),
     }
     result.update(runner_labels)
     return result

@@ -1,9 +1,11 @@
 """Pytest fixtures for EC2 runner tests."""
+import importlib
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict
 
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
+from test.api.conftest import get_runner_labels
 from test.api.endpoints.conftest import parse_locals_file, parse_tfvars
 
 import boto3
@@ -12,24 +14,40 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 
+# Add lib/python to path for unit tests that use --confcutdir
+LIB_DIR = REPO_ROOT / "lib" / "python"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
-def parse_api_locals() -> Dict[str, str]:
+
+def _get_shared_config() -> Dict[str, str]:
+    """Load and return shared config using dynamic import."""
+    terraform_config = importlib.import_module("terraform_config")
+    return terraform_config.get_shared_config()
+
+
+@pytest.fixture(name="shared_config", scope="module")
+def shared_config_fixture() -> Dict[str, str]:
+    """Provide shared config for tests using --confcutdir."""
+    return _get_shared_config()
+
+
+def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse API and EC2 runner locals files into a config dict."""
-    shared = parse_shared_module_outputs()
     api_locals_path = REPO_ROOT / "src" / "api" / "backend" / "locals.tf"
     ec2_locals_path = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner" / "locals.tf"
-    config = parse_locals_file(api_locals_path, shared)
-    ec2_runner_locals = parse_locals_file(ec2_locals_path, shared)
+    config = parse_locals_file(api_locals_path, shared_config)
+    ec2_runner_locals = parse_locals_file(ec2_locals_path, shared_config)
     config.update(ec2_runner_locals)
-    config['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
-    github_org = shared.get('github_org', '')
-    repo_name = shared.get('name_for_github_repo', '')
+    config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
+    github_org = shared_config.get('github_org', '')
+    repo_name = shared_config.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{repo_name}"
     return config
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture() -> Dict[str, Any]:
+def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide configuration for EC2 runner tests."""
     api_tfvars_path = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
     ec2_tfvars_path = (
@@ -38,7 +56,7 @@ def config_fixture() -> Dict[str, Any]:
     result = parse_tfvars(api_tfvars_path)
     ec2_runner_vars = parse_tfvars(ec2_tfvars_path)
     result.update(ec2_runner_vars)
-    api_locals = parse_api_locals()
+    api_locals = _parse_api_locals(shared_config)
     result['aws_region'] = api_locals.get('aws_region', '')
     result['api_fqdn'] = api_locals.get('api_fqdn', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')

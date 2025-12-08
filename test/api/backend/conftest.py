@@ -1,8 +1,9 @@
 """Pytest fixtures and configuration for API backend tests."""
 import re
 from pathlib import Path
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 from typing import Any, Dict, List
+
+from test.api.conftest import get_runner_labels
 
 import boto3
 import pytest
@@ -40,11 +41,10 @@ def parse_health_tfvars() -> Dict[str, str]:
     return config
 
 
-def parse_api_locals() -> Dict[str, str]:
+def _parse_api_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse API backend locals.tf file for configuration values."""
     base = Path(__file__).parent.parent.parent.parent
     locals_path = base / "src" / "api" / "backend" / "locals.tf"
-    shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
@@ -58,10 +58,10 @@ def parse_api_locals() -> Dict[str, str]:
                         config[key] = value[1:-1]
                     elif 'module.shared.' in value:
                         ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared.get(ref, '')
-    config['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
-    github_org = shared.get('github_org', '')
-    github_repo = shared.get('name_for_github_repo', '')
+                        config[key] = shared_config.get(ref, '')
+    config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
+    github_org = shared_config.get('github_org', '')
+    github_repo = shared_config.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{github_repo}"
     return config
 
@@ -87,7 +87,7 @@ def _add_derived_config(result: Dict[str, str]) -> None:
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture() -> Dict[str, str]:
+def config_fixture(shared_config) -> Dict[str, str]:
     """Provide merged configuration from terraform files."""
     base = Path(__file__).parent.parent.parent.parent
     tfvars_path = base / "src" / "api" / "backend" / "terraform.tfvars"
@@ -100,13 +100,12 @@ def config_fixture() -> Dict[str, str]:
                 if match:
                     key, value = match.groups()
                     result[key] = value.strip('"')
-    shared = parse_shared_module_outputs()
-    api_locals = parse_api_locals()
+    api_locals = _parse_api_locals(shared_config)
     result['aws_region'] = api_locals.get('aws_region', '')
     result['aws_account_id'] = api_locals.get('aws_account_id', '')
-    result['central_logs_bucket'] = shared.get('name_for_central_logs_bucket', '')
+    result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
     result['api_fqdn'] = api_locals.get('api_fqdn', '')
-    result['github_org'] = shared.get('github_org', '')
+    result['github_org'] = shared_config.get('github_org', '')
     result['github_repo'] = api_locals.get('github_repo_full', '')
     result['resource_prefix'] = api_locals.get('resource_prefix', '')
     ssm_param = parse_bootstrap_tfvar('ssm_parameter_name_for_github_pat')
@@ -115,7 +114,7 @@ def config_fixture() -> Dict[str, str]:
     result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
     result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
     result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
-    result['ecr_repository_name'] = shared.get('ecr_repository_name', '')
+    result['ecr_repository_name'] = shared_config.get('ecr_repository_name', '')
     result.update(get_runner_labels())
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')

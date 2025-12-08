@@ -1,9 +1,11 @@
 """Shared pytest fixtures and utilities for runners endpoint tests."""
+import importlib
 import re
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
+from test.api.conftest import get_runner_labels
 
 import boto3
 import pytest
@@ -11,6 +13,23 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
+
+# Add lib/python to path for unit tests that use --confcutdir
+LIB_DIR = REPO_ROOT / "lib" / "python"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+
+def _get_shared_config() -> Dict[str, str]:
+    """Load and return shared config using dynamic import."""
+    terraform_config = importlib.import_module("terraform_config")
+    return terraform_config.get_shared_config()
+
+
+@pytest.fixture(name="shared_config", scope="module")
+def shared_config_fixture() -> Dict[str, str]:
+    """Provide shared config for tests using --confcutdir."""
+    return _get_shared_config()
 
 
 def parse_bootstrap_tfvar(var_name: str) -> str:
@@ -28,10 +47,9 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
     return ""
 
 
-def parse_runners_locals() -> Dict[str, str]:
+def _parse_runners_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
     """Parse runners locals.tf file to extract configuration values."""
     locals_path = RUNNERS_SRC_PATH / "locals.tf"
-    shared = parse_shared_module_outputs()
     config = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
@@ -45,16 +63,16 @@ def parse_runners_locals() -> Dict[str, str]:
                         config[key] = value[1:-1]
                     elif 'module.shared.' in value:
                         ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared.get(ref, '')
-    config['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
-    github_org = shared.get('github_org', '')
-    github_repo = shared.get('name_for_github_repo', '')
+                        config[key] = shared_config.get(ref, '')
+    config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
+    github_org = shared_config.get('github_org', '')
+    github_repo = shared_config.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{github_repo}"
     return config
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture() -> Dict[str, str]:
+def config_fixture(shared_config) -> Dict[str, str]:
     """Provide configuration dictionary from Terraform files."""
     tfvars_path = RUNNERS_SRC_PATH / "terraform.tfvars"
     result = {}
@@ -66,20 +84,19 @@ def config_fixture() -> Dict[str, str]:
                 if match:
                     key, value = match.groups()
                     result[key] = value.strip('"')
-    shared = parse_shared_module_outputs()
-    runners_locals = parse_runners_locals()
+    runners_locals = _parse_runners_locals(shared_config)
     result['aws_region'] = runners_locals.get(
-        'aws_region', shared.get('aws_region', '')
+        'aws_region', shared_config.get('aws_region', '')
     )
     result['aws_account_id'] = runners_locals.get(
-        'aws_account_id', shared.get('aws_account_id', '')
+        'aws_account_id', shared_config.get('aws_account_id', '')
     )
-    result['central_logs_bucket'] = shared.get('name_for_central_logs_bucket', '')
+    result['central_logs_bucket'] = shared_config.get('name_for_central_logs_bucket', '')
     result['api_fqdn'] = runners_locals.get('api_fqdn', '')
-    result['github_org'] = shared.get('github_org', '')
+    result['github_org'] = shared_config.get('github_org', '')
     result['github_repo'] = runners_locals.get('github_repo_full', '')
     result['resource_prefix'] = runners_locals.get(
-        'resource_prefix', shared.get('resource_prefix', '')
+        'resource_prefix', shared_config.get('resource_prefix', '')
     )
     result['ssm_parameter_name_for_github_pat'] = parse_bootstrap_tfvar(
         'ssm_parameter_name_for_github_pat'

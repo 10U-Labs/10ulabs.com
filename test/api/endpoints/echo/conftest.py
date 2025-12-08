@@ -3,8 +3,6 @@ import re
 from pathlib import Path
 from typing import Dict
 
-from test.api.conftest import parse_shared_module_outputs
-
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
@@ -12,7 +10,7 @@ ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture() -> Dict[str, str]:
+def config_fixture(shared_config) -> Dict[str, str]:
     """Load configuration from terraform.tfvars and shared outputs."""
     tfvars_path = ECHO_SRC / "terraform.tfvars"
     result = {}
@@ -24,7 +22,6 @@ def config_fixture() -> Dict[str, str]:
                 if match:
                     key, value = match.groups()
                     result[key] = value.strip('"')
-    shared = parse_shared_module_outputs()
-    result['aws_region'] = shared.get('aws_region', 'us-east-1')
-    result['api_fqdn'] = f"api.{shared.get('domain_name', '')}"
+    result['aws_region'] = shared_config.get('aws_region', 'us-east-1')
+    result['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
     return result

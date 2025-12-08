@@ -1,0 +1,93 @@
+"""Shared pytest fixtures for all tests.
+
+Fixtures here are available to all test modules automatically.
+Configuration values are parsed from the shared Terraform module.
+"""
+
+import sys
+from pathlib import Path
+
+# Add lib/python to path for imports - must be before other imports
+REPO_ROOT = Path(__file__).parent.parent
+LIB_DIR = REPO_ROOT / "lib" / "python"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+import boto3
+import pytest
+from terraform_config import get_shared_config
+
+
+@pytest.fixture(scope="session")
+def shared_config():
+    """Provide parsed configuration from the shared Terraform module."""
+    return get_shared_config()
+
+
+@pytest.fixture(scope="session")
+def aws_region(shared_config):
+    """Provide the AWS region from shared config."""
+    return shared_config["aws_region"]
+
+
+@pytest.fixture(scope="session")
+def ssm_github_pat_name(shared_config):
+    """Provide the SSM parameter name for GitHub PAT."""
+    return shared_config["ssm_github_pat_name"]
+
+
+@pytest.fixture(scope="session")
+def state_bucket_name(shared_config):
+    """Provide the Terraform state bucket name."""
+    return shared_config["name_for_terraform_state_bucket"]
+
+
+@pytest.fixture(scope="session")
+def sts_client(aws_region):
+    """Create an STS client."""
+    return boto3.client("sts", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def iam_client(aws_region):
+    """Create an IAM client."""
+    return boto3.client("iam", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def s3_client(aws_region):
+    """Create an S3 client."""
+    return boto3.client("s3", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def ssm_client(aws_region):
+    """Create an SSM client."""
+    return boto3.client("ssm", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def caller_identity(sts_client):
+    """Get the current caller identity."""
+    return sts_client.get_caller_identity()
+
+
+@pytest.fixture(scope="session")
+def current_role_arn(caller_identity):
+    """Extract the role ARN from caller identity."""
+    arn = caller_identity.get("Arn", "")
+    # Convert assumed-role ARN to role ARN
+    # arn:aws:sts::123:assumed-role/role-name/session -> arn:aws:iam::123:role/role-name
+    if ":assumed-role/" in arn:
+        account = caller_identity.get("Account", "")
+        role_name = arn.split("/")[1]
+        return f"arn:aws:iam::{account}:role/{role_name}"
+    return arn
+
+
+@pytest.fixture(scope="session")
+def current_role_name(current_role_arn):
+    """Extract the role name from the role ARN."""
+    if not current_role_arn:
+        return ""
+    return current_role_arn.split("/")[-1]

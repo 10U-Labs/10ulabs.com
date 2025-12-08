@@ -153,7 +153,7 @@ def aws_lambda_invoke(function_name: str, payload: str, region: str) -> str:
 agent = Agent(
     system_prompt="""You are the Agent Creator. You create new agents.
 
-FIRST: Read docs/AGENT_TENETS.md - these are your non-negotiable rules.
+FIRST: Read docs/tenets/AGENTS.md - these are your non-negotiable rules.
 
 Key tenets (in priority order):
 1. LEGAL COMPLIANCE - DO NOT VIOLATE ANY U.S. LAWS. EVER. NOT NEGOTIABLE.

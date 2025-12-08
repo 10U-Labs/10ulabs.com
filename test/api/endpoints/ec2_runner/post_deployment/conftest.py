@@ -1,7 +1,6 @@
 """Pytest fixtures for EC2 runner post-deployment tests."""
 import random
 
-from test.api.conftest import parse_shared_module_outputs
 from test.api.endpoints.conftest import parse_tfvars
 
 import boto3
@@ -11,10 +10,10 @@ import requests
 from ..conftest import REPO_ROOT
 
 
-def get_api_url():
-    """Get the API URL from shared module outputs."""
-    shared = parse_shared_module_outputs()
-    domain = shared.get('domain_name', '')
+@pytest.fixture(name="api_url", scope="module")
+def api_url_fixture(shared_config):
+    """Provide the API URL for tests."""
+    domain = shared_config.get('domain_name', '')
     return f"https://api.{domain}"
 
 
@@ -45,12 +44,6 @@ def make_authenticated_post(url, api_key, timeout=30, **kwargs):
     headers = kwargs.pop('headers', {})
     headers['x-api-key'] = api_key
     return requests.post(url, headers=headers, timeout=timeout, **kwargs)
-
-
-@pytest.fixture(name="api_url", scope="module")
-def api_url_fixture():
-    """Provide the API URL for tests."""
-    return get_api_url()
 
 
 @pytest.fixture(name="api_key", scope="module")
