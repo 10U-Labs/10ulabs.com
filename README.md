@@ -17,11 +17,11 @@ endpoint_health.yml
     │       ↓
     │    endpoint_v1_ec2_runner.yml ─────────────────────┐
     │                                                    │
-    └──→ api_shared_ecr.yml ─────────────────────────────┤
-                                                         ↓
-                              endpoint_v1_image_for_ecs_runners.yml
-                                                         ↓
-                              endpoint_v1_ecs_runner.yml
+    └──→ api_shared_ecr.yml                              │
+            ↓                                            │
+         endpoint_v1_image_for_ecs_runners.yml           │
+            ↓                                            │
+         endpoint_v1_ecs_runner.yml ─────────────────────┤
                                                          ↓
                               endpoint_v1_runners.yml
                                                          ↓
