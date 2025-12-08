@@ -1,6 +1,8 @@
 """Unit tests for test lambda terraform."""
 import re
 
+from test.api.endpoints.conftest import assert_archive_includes_file
+
 
 def test_lambda_terraform_file_exists(runners_src_path):
     """Test lambda terraform file exists."""
@@ -139,3 +141,14 @@ def test_stale_runner_cleanup_ec2_tag_references_ec2_runner_output(runners_src_p
     stale_section = content[stale_start:stale_end]
     ec2_managed_by_tag = 'data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag'
     assert ec2_managed_by_tag in stale_section
+
+
+def test_runners_handler_archive_includes_runner_labels(runners_src_path):
+    """Test runners handler archive includes runner_labels.py shared module.
+
+    This is a regression test to ensure the Lambda package includes the
+    runner_labels module. Without this module, the Lambda will fail at runtime
+    with a ModuleNotFoundError when processing webhook events.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    assert_archive_includes_file(lambda_file, "runners_handler", "runner_labels.py")
