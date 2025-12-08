@@ -37,7 +37,14 @@ data "terraform_remote_state" "ecr" {
 }
 
 data "archive_file" "lambda" {
-  type        = "zip"
-  source_dir  = "${path.module}/lambda"
+  type = "zip"
+  source {
+    content  = file("${path.module}/lambda/handler.py")
+    filename = "handler.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
   output_path = "${path.module}/.terraform/lambda.zip"
 }

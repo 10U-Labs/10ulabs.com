@@ -5,7 +5,7 @@ data "archive_file" "runners_handler" {
     filename = "webhook_router.py"
   }
   source {
-    content  = file("${path.module}/lambdas/runner_labels.py")
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"

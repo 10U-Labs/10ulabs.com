@@ -1,6 +1,13 @@
 data "archive_file" "handler" {
-  type        = "zip"
-  source_file = "${path.module}/lambda/handler.py"
+  type = "zip"
+  source {
+    content  = file("${path.module}/lambda/handler.py")
+    filename = "handler.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
   output_path = "${path.module}/.terraform/lambda_packages/handler.zip"
 }
 
