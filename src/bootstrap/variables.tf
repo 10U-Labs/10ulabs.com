@@ -20,6 +20,3 @@ variable "github_pat" {
   }
 }
 
-variable "ssm_parameter_name_for_github_pat" {
-  type = string
-}

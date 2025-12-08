@@ -1,5 +1,5 @@
 resource "aws_ssm_parameter" "github_pat" {
-  name  = var.ssm_parameter_name_for_github_pat
+  name  = module.shared.ssm_github_pat_name
   type  = "SecureString"
   value = var.github_pat
 
