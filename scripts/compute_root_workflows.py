@@ -139,6 +139,45 @@ def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
     return result
 
 
+def topological_sort_levels(
+    workflows: set[str], graph: dict[str, Any]
+) -> list[list[str]]:
+    """
+    Sort workflows into execution levels for parallel execution.
+
+    Returns a list of levels, where each level contains workflows that
+    can run in parallel (all their dependencies are in earlier levels).
+    """
+    # Build in-degree map (only for workflows in our set)
+    in_degree: dict[str, int] = {wf: 0 for wf in workflows}
+    for wf in workflows:
+        for dep in graph.get(wf, {}).get("depends_on", []):
+            if dep in workflows:
+                in_degree[wf] += 1
+
+    levels: list[list[str]] = []
+    remaining = set(workflows)
+
+    while remaining:
+        # Find all workflows with no remaining dependencies
+        current_level = sorted([wf for wf in remaining if in_degree[wf] == 0])
+
+        if not current_level:
+            # Cycle detected or error
+            break
+
+        levels.append(current_level)
+
+        # Remove current level from remaining and update in-degrees
+        for wf in current_level:
+            remaining.remove(wf)
+            for other in remaining:
+                if wf in graph.get(other, {}).get("depends_on", []):
+                    in_degree[other] -= 1
+
+    return levels
+
+
 def compute_execution_plan(roots: list[str], graph: dict[str, Any]) -> list[str]:
     """
     Compute the full execution plan starting from root workflows.
@@ -155,6 +194,26 @@ def compute_execution_plan(roots: list[str], graph: dict[str, Any]) -> list[str]
 
     # Sort in topological order
     return topological_sort(all_workflows, graph)
+
+
+def compute_execution_plan_levels(
+    roots: list[str], graph: dict[str, Any]
+) -> list[list[str]]:
+    """
+    Compute the full execution plan as levels for parallel execution.
+
+    Returns levels of workflows where each level can run in parallel,
+    and all levels must complete before the next level starts.
+    """
+    # Collect all workflows to run (roots + their descendants)
+    all_workflows: set[str] = set(roots)
+    descendant_cache: dict[str, set[str]] = {}
+
+    for root in roots:
+        all_workflows.update(get_all_descendants(root, graph, descendant_cache))
+
+    # Sort into levels
+    return topological_sort_levels(all_workflows, graph)
 
 
 def file_matches_patterns(filepath: str, patterns: list[str]) -> bool:
@@ -273,6 +332,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Output as indexed objects [{idx, name}, ...] for GitHub Actions matrix",
     )
+    parser.add_argument(
+        "--levels",
+        action="store_true",
+        help="Output execution plan as levels for parallel execution",
+    )
     return parser.parse_args()
 
 
@@ -330,17 +394,18 @@ def main() -> None:
         roots = compute_root_workflows(changed_files, graph)
 
     # Compute execution plan if requested
-    output = (
-        compute_execution_plan(roots, graph)
-        if args.execution_plan or args.slots > 0
-        else roots
-    )
-
-    # Output results
-    if args.slots > 0:
+    if args.levels:
+        levels = compute_execution_plan_levels(roots, graph)
+        # Output as array of arrays for parallel execution
+        print(json.dumps(levels))
+    elif args.slots > 0:
+        output = compute_execution_plan(roots, graph)
         _output_slots(output, args.slots)
-    else:
+    elif args.execution_plan:
+        output = compute_execution_plan(roots, graph)
         _output_results(output, args.output_format, args.indexed)
+    else:
+        _output_results(roots, args.output_format, args.indexed)
 
 
 if __name__ == "__main__":

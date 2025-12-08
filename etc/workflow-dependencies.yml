@@ -21,7 +21,7 @@ api_backend:
     - 'test/api/conftest.py'
 api_shared_ecr:
   depends_on:
-    - endpoint_v1_ec2_runner
+    - endpoint_health
   name: Ensuring ECR repository exists and is properly configured
   paths:
     - '.github/workflows/api_shared_ecr.yml'
@@ -60,7 +60,7 @@ endpoint_v1_contact:
     - 'test/api/endpoints/contact/**'
 endpoint_v1_ec2_runner:
   depends_on:
-    - endpoint_v1_runners
+    - endpoint_v1_image_for_ec2_runners
   name: >-
     Ensuring the /v1/ec2-runner API endpoint exists and is properly configured
   paths:
@@ -105,7 +105,6 @@ endpoint_v1_image_for_ec2_runners_post:
     - 'test/api/endpoints/image_for_ec2_runners/post/**'
 endpoint_v1_image_for_ecs_runners:
   depends_on:
-    - endpoint_v1_ec2_runner
     - api_shared_ecr
   name: Building Docker image for ECS runners
   paths:
@@ -123,7 +122,8 @@ endpoint_v1_rack_designer:
     - 'test/api/endpoints/rack_designer/**'
 endpoint_v1_runners:
   depends_on:
-    - endpoint_v1_image_for_ec2_runners_post
+    - endpoint_v1_ec2_runner
+    - endpoint_v1_ecs_runner
   name: >-
     Ensuring the /v1/runners API endpoint exists and is properly configured
   paths:

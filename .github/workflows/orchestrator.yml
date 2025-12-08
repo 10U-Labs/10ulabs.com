@@ -191,7 +191,7 @@ jobs:
       needs.unit-testing.result != 'failure' &&
       needs.plan-workflows.outputs.count != '0' &&
       !contains(github.event.head_commit.message, '[skip ci]')
-    name: ${{ matrix.workflow.idx }}. ${{ matrix.workflow.name }}
+    name: Dispatching workflows
     needs:
       - concluded-workflows-should-be-dispatched
       - plan-workflows
@@ -199,30 +199,35 @@ jobs:
       - unit-testing
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: python3 -m pip install pyyaml
       - if: >-
           inputs.dry_run == true ||
           contains(github.event.head_commit.message, '[dry run]')
         name: Dry run
-        run: echo "Would dispatch ${{ matrix.workflow.name }}"
+        run: |
+          echo "Would dispatch workflows with levels:"
+          echo '${{ needs.plan-workflows.outputs.execution_plan }}' | jq .
       - if: >-
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
-        name: Dispatch and wait
+        name: Execute workflow plan with parallel levels
         run: |
-          WORKFLOW="${{ matrix.workflow.name }}.yml"
-          gh workflow run ".github/workflows/$WORKFLOW" \
-            --repo ${{ github.repository }}
-          sleep 5
-          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
-            --repo ${{ github.repository }} --limit 1 \
-            --json databaseId --jq '.[0].databaseId')
-          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
-          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
-    strategy:
-      fail-fast: true
-      matrix:
-        workflow: ${{ fromJSON(needs.plan-workflows.outputs.execution_plan) }}
-      max-parallel: 1
+          PLAN='${{ needs.plan-workflows.outputs.execution_plan }}'
+          GITHUB_HOSTED="${{ inputs.github_hosted }}"
+          if [ "$GITHUB_HOSTED" = "true" ]; then
+            python3 scripts/execute_workflow_plan.py \
+              --plan "$PLAN" --levels --github-hosted
+          else
+            python3 scripts/execute_workflow_plan.py \
+              --plan "$PLAN" --levels
+          fi
   plan-workflows:
     if: >-
       always() &&
@@ -274,17 +279,20 @@ jobs:
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
             PLAN=$(python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --start-from "$START_FROM" \
-              --execution-plan --indexed)
+              --graph $GRAPH --start-from "$START_FROM" --levels)
           else
             CHANGED="${{ steps.files.outputs.changed }}"
             PLAN=$(echo "$CHANGED" | python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --execution-plan --indexed)
+              --graph $GRAPH --levels)
           fi
-          echo "Execution plan: $PLAN"
+          echo "Execution plan (levels): $PLAN"
           echo "execution_plan=$PLAN" >> "$GITHUB_OUTPUT"
-          COUNT=$(echo "$PLAN" | jq 'length')
+          # Count total workflows across all levels
+          COUNT=$(echo "$PLAN" | jq '[.[] | length] | add // 0')
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          # Count number of levels
+          LEVELS=$(echo "$PLAN" | jq 'length')
+          echo "levels=$LEVELS" >> "$GITHUB_OUTPUT"
   static-analysis:
     if: |
       github.ref == 'refs/heads/main' &&
