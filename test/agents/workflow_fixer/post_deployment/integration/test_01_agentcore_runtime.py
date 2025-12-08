@@ -11,36 +11,36 @@ import pytest
 
 
 class TestAgentCoreAuthorization:
-    """Layer 2: Verify we can call AgentCore APIs."""
+    """Layer 2: Verify we can call AgentCore Control Plane APIs."""
 
-    def test_01_can_call_list_agent_runtimes_api(self, agentcore_client):
+    def test_01_can_call_list_agent_runtimes_api(self, agentcore_control_client):
         """Verify we have permission to list agent runtimes."""
         try:
-            agentcore_client.list_agent_runtimes(maxResults=1)
+            agentcore_control_client.list_agent_runtimes(maxResults=1)
         except ClientError as err:
             if err.response["Error"]["Code"] == "AccessDeniedException":
                 pytest.fail(
                     "No permission to call ListAgentRuntimes. "
-                    "Check IAM permissions for bedrock-agentcore:ListAgentRuntimes."
+                    "Check IAM permissions for bedrock-agentcore-control:ListAgentRuntimes."
                 )
             raise
 
-    def test_02_list_runtimes_returns_valid_response(self, agentcore_client):
+    def test_02_list_runtimes_returns_valid_response(self, agentcore_control_client):
         """Verify ListAgentRuntimes returns expected structure."""
-        response = agentcore_client.list_agent_runtimes(maxResults=10)
-        assert "agentRuntimeSummaries" in response, (
-            "ListAgentRuntimes response missing 'agentRuntimeSummaries' key"
+        response = agentcore_control_client.list_agent_runtimes(maxResults=10)
+        assert "agentRuntimes" in response, (
+            "ListAgentRuntimes response missing 'agentRuntimes' key"
         )
 
 
 class TestAgentCoreRuntimeExistence:
     """Layer 3: Verify the AgentCore Runtime exists."""
 
-    def test_01_runtime_exists(self, agentcore_client, agent_runtime_name):
+    def test_01_runtime_exists(self, agentcore_control_client, agent_runtime_name):
         """Verify the Workflow Fixer agent runtime exists."""
         try:
-            response = agentcore_client.list_agent_runtimes(maxResults=100)
-            runtimes = response.get("agentRuntimeSummaries", [])
+            response = agentcore_control_client.list_agent_runtimes(maxResults=100)
+            runtimes = response.get("agentRuntimes", [])
             runtime_names = [r["agentRuntimeName"] for r in runtimes]
             assert agent_runtime_name in runtime_names, (
                 f"Agent runtime '{agent_runtime_name}' not found. "
@@ -55,18 +55,18 @@ class TestAgentCoreRuntimeExistence:
                 )
             raise
 
-    def test_02_runtime_has_active_status(self, agentcore_client, agent_runtime_name):
-        """Verify the agent runtime has ACTIVE status."""
-        response = agentcore_client.list_agent_runtimes(maxResults=100)
-        runtimes = response.get("agentRuntimeSummaries", [])
+    def test_02_runtime_has_ready_status(self, agentcore_control_client, agent_runtime_name):
+        """Verify the agent runtime has READY status."""
+        response = agentcore_control_client.list_agent_runtimes(maxResults=100)
+        runtimes = response.get("agentRuntimes", [])
         runtime = next(
             (r for r in runtimes if r["agentRuntimeName"] == agent_runtime_name), None
         )
         if not runtime:
             pytest.skip(f"Agent runtime '{agent_runtime_name}' not found")
         status = runtime.get("status")
-        assert status == "ACTIVE", (
-            f"Agent runtime status is '{status}', expected 'ACTIVE'"
+        assert status == "READY", (
+            f"Agent runtime status is '{status}', expected 'READY'"
         )
 
 

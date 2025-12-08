@@ -119,10 +119,12 @@ def invoke_agent(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _parse_webhook_payload(event: dict[str, Any]) -> dict[str, Any]:
     """Parse the webhook payload from the event."""
-    body = event.get("body", "{}")
+    body = event.get("body")
+    if body is None or body == "":
+        return {}
     if isinstance(body, str):
         return json.loads(body)
-    return body
+    return body if body else {}
 
 
 def _should_skip_event(payload: dict[str, Any]) -> tuple[bool, str]:

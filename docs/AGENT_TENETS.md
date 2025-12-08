@@ -41,6 +41,14 @@ Every agent action should ultimately contribute to profitability or operational 
 - CloudWatch logs are mandatory
 - If it can't be observed, it shouldn't exist
 
+## 6. U.S. Soil Infrastructure
+
+- All IT infrastructure must be hosted on U.S. soil
+- Exceptions: DNS and CDN services (which are inherently distributed globally)
+- AWS regions must be US-based (us-east-1, us-east-2, us-west-1, us-west-2)
+- Data storage, compute, and processing must remain in the United States
+- This ensures compliance with U.S. jurisdiction and data sovereignty
+
 ## Business Entity
 
 - **Legal Entity**: 10U Labs, LLC
@@ -64,5 +72,6 @@ When making decisions, prioritize in this order:
 3. Affordability (resource efficiency)
 4. Atomicity (architectural quality)
 5. Observability (operational visibility)
+6. U.S. Soil Infrastructure (data sovereignty)
 
 If any action would violate tenet #1, **DO NOT PROCEED**.
