@@ -66,9 +66,9 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
   - [x] www_shared S3 bucket exists
   - [x] www_shared terraform outputs are readable
 - [x] Update `.github/workflows/api_backend.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
+  - [x] Add `integration-testing-pre-deployment` job
   - [x] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+  - [x] Update job dependencies
 
 ---
 
@@ -90,9 +90,9 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
   - [x] api_backend Lambda execution role exists
   - [x] api_backend terraform outputs are readable
 - [x] Update `.github/workflows/endpoint_health.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
+  - [x] Add `integration-testing-pre-deployment` job
   - [x] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+  - [x] Update job dependencies
 
 ---
 
@@ -114,9 +114,9 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
   - [ ] IAM permissions for ECR operations exist
   - [x] endpoint_health terraform outputs are readable
 - [x] Update `.github/workflows/api_shared_ecr.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
+  - [x] Add `integration-testing-pre-deployment` job
   - [x] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+  - [x] Update job dependencies
 
 ---
 
@@ -124,24 +124,24 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** api_shared_ecr
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/image_for_ecs_runners/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/image_for_ecs_runners/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/image_for_ecs_runners/pre_deployment/` to `test/api/endpoints/image_for_ecs_runners/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/image_for_ecs_runners/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/image_for_ecs_runners/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/image_for_ecs_runners/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] ECR repository exists and is accessible
-  - [ ] ECR push permissions are valid
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/image_for_ecs_runners/pre_deployment/unit/`
+  - [x] `test/api/endpoints/image_for_ecs_runners/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/image_for_ecs_runners/pre_deployment/` to `test/api/endpoints/image_for_ecs_runners/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/image_for_ecs_runners/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/image_for_ecs_runners/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/image_for_ecs_runners/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] ECR repository exists and is accessible
+  - [x] ECR push permissions are valid
   - [ ] Base Docker image is pullable
-  - [ ] api_shared_ecr terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_image_for_ecs_runners.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+  - [x] api_shared_ecr terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_image_for_ecs_runners.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
@@ -402,12 +402,12 @@ Each workflow's existing "Integration testing" job runs post-deployment tests bu
 
 For each workflow, update:
 - [ ] `www_shared.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `api_backend.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_health.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `api_shared_ecr.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_image_for_ecs_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `api_backend.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_health.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `api_shared_ecr.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_image_for_ecs_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [ ] `endpoint_v1_image_for_ec2_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_image_for_ec2_runners_post.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_image_for_ec2_runners_post.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [ ] `endpoint_v1_ecs_runner.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [ ] `endpoint_v1_ec2_runner.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [ ] `endpoint_v1_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
