@@ -36,6 +36,7 @@ resource "aws_bedrockagentcore_gateway" "test_auditor" {
   description     = "Gateway for Test Auditor Agent"
   protocol_type   = "MCP"
   authorizer_type = "AWS_IAM"
+  role_arn        = aws_iam_role.agentcore_gateway.arn
 
   protocol_configuration {
     mcp {

@@ -3,6 +3,70 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
+  building-agent-container:
+    defaults:
+      run:
+        working-directory: src/agents/workflow_fixer/agent-code
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Building agent container
+    needs:
+      - checking-oidc-availability
+      - declaring-common-variables
+      - performing-static-analysis
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
+        name: Configure AWS credentials via static keys
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - id: ecr-login
+        name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: meta
+        name: Extract metadata for Docker
+        uses: docker/metadata-action@v5
+        with:
+          images: >-
+            ${{ needs.declaring-common-variables.outputs.ecr_repository_url }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/agents/workflow_fixer/agent-code
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
   checking-oidc-availability:
     if: >-
       github.ref == 'refs/heads/main' &&
@@ -38,6 +102,7 @@ jobs:
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
+      ecr_repository_url: ${{ steps.config.outputs.ecr_repository_url }}
       github_actions_role_arn: >-
         ${{ steps.config.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
@@ -72,16 +137,20 @@ jobs:
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
+          ECR_REPO_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          ECR_REPO_URL="${ECR_REPO_URL}/tenulabs-workflow-fixer-agent"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
             >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
   ensuring-infrastructure-in-desired-state:
     defaults:
       run:
-        working-directory: src/agents/test_auditor
+        working-directory: src/agents/workflow_fixer
     name: Ensuring infrastructure is in desired state
     needs:
+      - building-agent-container
       - checking-oidc-availability
       - declaring-common-variables
       - performing-static-analysis
@@ -175,7 +244,7 @@ jobs:
       - name: Run integration tests
         run: |
           python3 -m pytest \
-            test/agents/test_auditor/post_deployment/integration/ \
+            test/agents/workflow_fixer/post_deployment/integration/ \
             --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
@@ -239,15 +308,16 @@ jobs:
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs
       - name: Terraform Format Check
-        run: cd src/agents/test_auditor && terraform fmt -diff -check -recursive
+        run: >-
+          cd src/agents/workflow_fixer && terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/agents/test_auditor && terraform init
+        run: cd src/agents/workflow_fixer && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/agents/test_auditor && tflint --init && tflint
+        run: cd src/agents/workflow_fixer && tflint --init && tflint
       - name: Terraform Plan
-        run: cd src/agents/test_auditor && terraform plan
+        run: cd src/agents/workflow_fixer && terraform plan
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -257,18 +327,18 @@ jobs:
           RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/agents_test_auditor.yml
+            .github/workflows/agents_workflow_fixer.yml
       - name: Run pylint
         run: |
           python3 -m pylint \
-            src/agents/test_auditor/lambdas/ \
+            src/agents/workflow_fixer/webhook-lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
           python3 -m mypy \
-            src/agents/test_auditor/lambdas/
-name: Deploying Test Auditor Agent
+            src/agents/workflow_fixer/webhook-lambda/
+name: Deploying Workflow Fixer Agent
 on:
   workflow_call:
     inputs:

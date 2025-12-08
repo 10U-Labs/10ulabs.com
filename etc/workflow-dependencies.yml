@@ -11,12 +11,20 @@
 #   - depends_on: List of workflows (by key) that must complete before this
 agents_test_auditor:
   depends_on:
-    - bootstrap
+    - agents_workflow_fixer
   name: Deploying Test Auditor Agent
   paths:
     - '.github/workflows/agents_test_auditor.yml'
     - 'src/agents/test_auditor/**'
     - 'test/agents/test_auditor/**'
+agents_workflow_fixer:
+  depends_on:
+    - bootstrap
+  name: Deploying Workflow Fixer Agent
+  paths:
+    - '.github/workflows/agents_workflow_fixer.yml'
+    - 'src/agents/workflow_fixer/**'
+    - 'test/agents/workflow_fixer/**'
 api_backend:
   depends_on:
     - www_shared
