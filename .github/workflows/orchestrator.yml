@@ -191,7 +191,7 @@ jobs:
       needs.unit-testing.result != 'failure' &&
       needs.plan-workflows.outputs.count != '0' &&
       !contains(github.event.head_commit.message, '[skip ci]')
-    name: L${{ matrix.workflow.level }}-${{ matrix.workflow.idx }}. ${{ matrix.workflow.name }}
+    name: ${{ matrix.workflow.name }}
     needs:
       - concluded-workflows-should-be-dispatched
       - plan-workflows
