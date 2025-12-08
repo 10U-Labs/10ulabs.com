@@ -111,7 +111,7 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 - [x] Create `__init__.py` files in new directories
 - [x] Create pre-deployment integration tests to validate:
   - [x] endpoint_health Lambda is functional (returns 200)
-  - [ ] IAM permissions for ECR operations exist
+  - [x] IAM permissions for ECR operations exist
   - [x] endpoint_health terraform outputs are readable
 - [x] Update `.github/workflows/api_shared_ecr.yml`:
   - [x] Add `integration-testing-pre-deployment` job
@@ -136,7 +136,7 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 - [x] Create pre-deployment integration tests to validate:
   - [x] ECR repository exists and is accessible
   - [x] ECR push permissions are valid
-  - [ ] Base Docker image is pullable
+  - [x] Base Docker image is pullable
   - [x] api_shared_ecr terraform outputs are readable
 - [x] Update `.github/workflows/endpoint_v1_image_for_ecs_runners.yml`:
   - [x] Add `integration-testing-pre-deployment` job

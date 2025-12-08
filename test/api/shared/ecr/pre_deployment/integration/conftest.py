@@ -42,6 +42,13 @@ def aws_region():
 
 
 @pytest.fixture(scope="session")
+def ecr_client(request):
+    """Create an ECR client."""
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("ecr", region_name=region)
+
+
+@pytest.fixture(scope="session")
 def iam_client(request):
     """Create an IAM client."""
     region = request.getfixturevalue("aws_region")
