@@ -3,7 +3,7 @@ import io
 import re
 import zipfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import boto3
 
@@ -127,3 +127,59 @@ def assert_lambda_package_includes_file(
         f"'{required_filename}' not found in Lambda '{function_name}' package. "
         f"Found files: {files}"
     )
+
+
+def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
+    """Parse a Terraform tfvars file into a dict.
+
+    Args:
+        tfvars_path: Path to the tfvars file.
+
+    Returns:
+        Dict mapping variable names to values (strings or lists).
+    """
+    result: Dict[str, Any] = {}
+    with open(tfvars_path, encoding="utf-8") as f:
+        content = f.read()
+    list_pattern = r'(\w+)\s*=\s*\[([^\]]*)\]'
+    for match in re.finditer(list_pattern, content, re.DOTALL):
+        key = match.group(1)
+        values_str = match.group(2)
+        values = [v.strip().strip('"') for v in values_str.split(',') if v.strip()]
+        result[key] = values
+    for line in content.split('\n'):
+        line = line.strip()
+        if line and not line.startswith("#") and '=' in line and '[' not in line:
+            line_match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+            if line_match:
+                key, value = line_match.groups()
+                if key not in result:
+                    result[key] = value.strip('"')
+    return result
+
+
+def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
+    """Parse a Terraform locals file and resolve shared module references.
+
+    Args:
+        locals_path: Path to the locals.tf file.
+        shared: Dict of shared module outputs for resolving references.
+
+    Returns:
+        Dict mapping local names to resolved values.
+    """
+    config: Dict[str, str] = {}
+    with open(locals_path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
+                match = re.match(r'(\w+)\s*=\s*(.+)', line)
+                if match:
+                    key, value = match.groups()
+                    value = value.strip()
+                    if value.startswith('"') and value.endswith('"'):
+                        config[key] = value[1:-1]
+                    elif 'module.shared.' in value:
+                        ref = value.replace('module.shared.', '').strip()
+                        config[key] = shared.get(ref, '')
+    return config

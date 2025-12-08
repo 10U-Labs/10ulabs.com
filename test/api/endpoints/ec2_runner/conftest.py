@@ -1,34 +1,16 @@
 """Pytest fixtures for EC2 runner tests."""
 import os
-import re
 from pathlib import Path
-from test.api.conftest import get_runner_labels, parse_shared_module_outputs
 from typing import Any, Dict
+
+from test.api.conftest import get_runner_labels, parse_shared_module_outputs
+from test.api.endpoints.conftest import parse_locals_file, parse_tfvars
 
 import boto3
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
-
-
-def parse_locals_file(locals_path: Path, shared: Dict[str, str]) -> Dict[str, str]:
-    """Parse a Terraform locals file and resolve shared module references."""
-    config: Dict[str, str] = {}
-    with open(locals_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
-                match = re.match(r'(\w+)\s*=\s*(.+)', line)
-                if match:
-                    key, value = match.groups()
-                    value = value.strip()
-                    if value.startswith('"') and value.endswith('"'):
-                        config[key] = value[1:-1]
-                    elif 'module.shared.' in value:
-                        ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared.get(ref, '')
-    return config
 
 
 def parse_api_locals() -> Dict[str, str]:
@@ -44,28 +26,6 @@ def parse_api_locals() -> Dict[str, str]:
     repo_name = shared.get('name_for_github_repo', '')
     config['github_repo_full'] = f"{github_org}/{repo_name}"
     return config
-
-
-def parse_tfvars(tfvars_path: Path) -> Dict[str, Any]:
-    """Parse a Terraform tfvars file into a dict."""
-    result: Dict[str, Any] = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        content = f.read()
-    list_pattern = r'(\w+)\s*=\s*\[([^\]]*)\]'
-    for match in re.finditer(list_pattern, content, re.DOTALL):
-        key = match.group(1)
-        values_str = match.group(2)
-        values = [v.strip().strip('"') for v in values_str.split(',') if v.strip()]
-        result[key] = values
-    for line in content.split('\n'):
-        line = line.strip()
-        if line and not line.startswith("#") and '=' in line and '[' not in line:
-            line_match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-            if line_match:
-                key, value = line_match.groups()
-                if key not in result:
-                    result[key] = value.strip('"')
-    return result
 
 
 @pytest.fixture(name="config", scope="module")

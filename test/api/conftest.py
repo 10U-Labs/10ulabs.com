@@ -3,6 +3,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, List
+from unittest.mock import Mock
 
 import pytest
 import requests
@@ -122,3 +123,9 @@ def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET"):
     """Skip test if the specified endpoint is not deployed."""
     if not endpoint_is_deployed(api_url, path, method):
         pytest.skip(f"Endpoint {path} not deployed (managed by separate workflow)")
+
+
+@pytest.fixture
+def lambda_context():
+    """Provide a mock Lambda context object."""
+    return Mock()

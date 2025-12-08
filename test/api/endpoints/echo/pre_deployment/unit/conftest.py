@@ -3,33 +3,26 @@ import importlib.util
 import json
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Dict
-from unittest.mock import Mock
 
 import pytest
 
+from lambda_response import (
+    parse_response_body,
+    assert_response_status,
+    assert_json_content_type,
+    assert_cors_headers,
+)
+
+# Re-export for backward compatibility
+__all__ = [
+    'parse_response_body',
+    'assert_response_status',
+    'assert_json_content_type',
+    'assert_cors_headers',
+]
+
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
-
-
-def parse_response_body(response: Dict[str, Any]) -> Any:
-    """Parse JSON response body from Lambda response."""
-    return json.loads(response['body'])
-
-
-def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
-    """Assert that response has expected HTTP status code."""
-    assert response['statusCode'] == expected_code
-
-
-def assert_json_content_type(response: Dict[str, Any]) -> None:
-    """Assert that response has JSON content type header."""
-    assert response['headers']['Content-Type'].startswith('application/json')
-
-
-def assert_cors_headers(response: Dict[str, Any]) -> None:
-    """Assert that response includes CORS headers."""
-    assert 'Access-Control-Allow-Origin' in response['headers']
 
 
 def load_echo_handler_module() -> ModuleType:
@@ -47,12 +40,6 @@ def load_echo_handler_module() -> ModuleType:
 def echo_handler() -> ModuleType:
     """Load and return the echo handler module."""
     return load_echo_handler_module()
-
-
-@pytest.fixture
-def lambda_context():
-    """Create a mock Lambda context object."""
-    return Mock()
 
 
 @pytest.fixture

@@ -7,7 +7,21 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from lambda_response import (
+    parse_response_body,
+    assert_response_status,
+    assert_json_content_type,
+)
+from urllib_mocks import create_mock_urllib_response
+
 from ...conftest import ECS_RUNNER_SRC
+
+# Re-export for backward compatibility
+__all__ = [
+    'parse_response_body',
+    'assert_response_status',
+    'assert_json_content_type',
+]
 
 
 def load_handler_module() -> ModuleType:
@@ -51,12 +65,6 @@ def ecs_runner_handler(config: Dict[str, str]) -> Any:
 
 
 @pytest.fixture
-def lambda_context():
-    """Provide a mock Lambda context object."""
-    return Mock()
-
-
-@pytest.fixture
 def ecs_runner_post_event_factory():
     """Factory to create ECS runner POST event payloads."""
     def _create_event(job_id=123, job_labels=None, github_repo='test/repo'):
@@ -77,29 +85,10 @@ def ecs_runner_post_event_factory():
 @pytest.fixture
 def mock_urllib_response_factory():
     """Factory to create mock urllib response objects."""
-    def _create_response(read_value=b'', status=200, json_data=None):
-        mock_response = Mock()
-        if json_data is not None:
-            mock_response.read.return_value = json.dumps(json_data).encode()
-        else:
-            mock_response.read.return_value = read_value
-        mock_response.status = status
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        return mock_response
-    return _create_response
+    return create_mock_urllib_response
 
 
-def parse_response_body(response: Dict[str, Any]) -> Any:
-    """Parse the body of an API response as JSON."""
-    return json.loads(response['body'])
-
-
-def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
-    """Assert that a response has the expected status code."""
-    assert response['statusCode'] == expected_code
-
-
-def assert_json_content_type(response: Dict[str, Any]) -> None:
-    """Assert that a response has JSON content type."""
-    assert response['headers']['Content-Type'].startswith('application/json')
+@pytest.fixture
+def lambda_context():
+    """Provide a mock Lambda context object."""
+    return Mock()

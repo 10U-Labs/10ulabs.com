@@ -1,11 +1,14 @@
 """Pytest fixtures for EC2 runner post-deployment tests."""
 import random
 
+from test.api.conftest import parse_shared_module_outputs
+from test.api.endpoints.conftest import parse_tfvars
+
 import boto3
 import pytest
 import requests
 
-from ..conftest import parse_shared_module_outputs, parse_tfvars, REPO_ROOT
+from ..conftest import REPO_ROOT
 
 
 def get_api_url():

@@ -2,13 +2,57 @@
 import importlib.util
 import json
 import re
-import time
 from pathlib import Path
-from typing import Any, Dict, Callable
+from typing import Any
 from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
-from botocore.exceptions import ClientError
+
 import pytest
+
+from lambda_response import (
+    parse_response_body,
+    assert_response_status,
+    assert_json_content_type,
+    assert_cors_headers,
+)
+from boto_mocks import (
+    create_client_error,
+    create_multi_client_mock,
+    create_boto_client_mock,
+    create_mock_lambda_list_mappings_error,
+    create_mock_lambda_put_concurrency_error,
+    create_mock_sns_publish_error,
+    create_mock_lambda_with_mappings,
+    create_mock_lambda_with_disabled_mappings,
+    create_mock_lambda_delete_concurrency_error,
+)
+from event_factories import (
+    create_workflow_job_event,
+    create_sqs_event,
+    create_dlq_message,
+    create_circuit_breaker_closed_state,
+    create_circuit_breaker_open_state,
+)
+from urllib_mocks import create_mock_urllib_response
+from module_utils import reset_module_state
+
+# Re-export for backward compatibility with existing tests
+__all__ = [
+    'parse_response_body',
+    'assert_response_status',
+    'assert_json_content_type',
+    'assert_cors_headers',
+    'create_client_error',
+    'create_multi_client_mock',
+    'create_boto_client_mock',
+    'create_mock_lambda_list_mappings_error',
+    'create_mock_lambda_put_concurrency_error',
+    'create_mock_sns_publish_error',
+    'create_mock_lambda_with_mappings',
+    'create_mock_lambda_with_disabled_mappings',
+    'create_mock_lambda_delete_concurrency_error',
+    'reset_module_state',
+]
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
@@ -18,49 +62,6 @@ RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 def runners_src_path() -> Path:
     """Provide path to runners source directory."""
     return RUNNERS_SRC_PATH
-
-
-def parse_response_body(response: Dict[str, Any]) -> Any:
-    """Parse JSON body from Lambda response."""
-    return json.loads(response['body'])
-
-
-def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
-    """Assert response has expected status code."""
-    assert response['statusCode'] == expected_code
-
-
-def assert_json_content_type(response: Dict[str, Any]) -> None:
-    """Assert response has JSON content type."""
-    assert response['headers']['Content-Type'].startswith('application/json')
-
-
-def assert_cors_headers(response: Dict[str, Any]) -> None:
-    """Assert response has CORS headers."""
-    assert 'Access-Control-Allow-Origin' in response['headers']
-
-
-def create_client_error(
-    error_code: str,
-    operation_name: str = 'TestOperation'
-) -> ClientError:
-    """Create a ClientError for testing error handling."""
-    return ClientError(
-        {
-            'Error': {
-                'Code': error_code,
-                'Message': f'Test error: {error_code}'
-            },
-            'ResponseMetadata': {
-                'RequestId': 'test-request-id',
-                'HTTPStatusCode': 400,
-                'HTTPHeaders': {},
-                'RetryAttempts': 0,
-                'HostId': ''
-            }
-        },
-        operation_name
-    )
 
 
 def get_lambda_path(filename: str) -> Path:
@@ -247,120 +248,39 @@ def mock_cloudwatch():
 
 
 @pytest.fixture
-def lambda_context():
-    """Provide mock Lambda context."""
-    return Mock()
-
-
-@pytest.fixture
 def workflow_job_event_factory():
     """Factory for creating workflow_job webhook events."""
-    def _create_event(action='queued', job_id=123, labels=None, repo='test/repo', run_id=456):
-        if labels is None:
-            labels = ['self-hosted', 'linux']
-        return {
-            'path': '/v1/runners',
-            'httpMethod': 'POST',
-            'headers': {
-                'X-GitHub-Event': 'workflow_job',
-                'X-Hub-Signature-256': 'sha256=test'
-            },
-            'body': json.dumps({
-                'action': action,
-                'workflow_job': {
-                    'id': job_id,
-                    'run_id': run_id,
-                    'labels': labels,
-                    'status': 'queued' if action == 'queued' else 'completed'
-                },
-                'repository': {
-                    'full_name': repo
-                }
-            })
-        }
-    return _create_event
+    return create_workflow_job_event
 
 
 @pytest.fixture
 def sqs_event_factory():
     """Factory for creating SQS trigger events."""
-    def _create_event(records=None):
-        if records is None:
-            records = [{
-                'messageId': 'test-message-id',
-                'body': json.dumps({'job_id': 123, 'action': 'test'}),
-                'attributes': {},
-                'messageAttributes': {}
-            }]
-        return {
-            'Records': records
-        }
-    return _create_event
+    return create_sqs_event
 
 
 @pytest.fixture
 def dlq_message_factory():
     """Factory for creating DLQ message events."""
-    def _create_event(body=None, receipt_handle='test-receipt', attributes=None):
-        if body is None:
-            body = {'job_id': 123, 'action': 'test'}
-        if attributes is None:
-            attributes = {'ApproximateReceiveCount': '1'}
-        return {
-            'MessageId': 'test-message-id',
-            'ReceiptHandle': receipt_handle,
-            'Body': json.dumps(body),
-            'Attributes': attributes,
-            'MessageAttributes': {}
-        }
-    return _create_event
+    return create_dlq_message
 
 
 @pytest.fixture
 def circuit_breaker_closed_state():
     """Provide closed circuit breaker state."""
-    return {
-        'state': 'closed',
-        'failure_count': 0,
-        'last_failure_time': None
-    }
+    return create_circuit_breaker_closed_state()
 
 
 @pytest.fixture
 def circuit_breaker_open_state():
     """Provide open circuit breaker state."""
-    return {
-        'state': 'open',
-        'failure_count': 5,
-        'last_failure_time': time.time()
-    }
+    return create_circuit_breaker_open_state()
 
 
 @pytest.fixture
 def mock_urllib_response_factory():
     """Factory for creating mock urllib responses."""
-    def _create_response(read_value=b'', status=200, json_data=None):
-        mock_response = Mock()
-        if json_data is not None:
-            mock_response.read.return_value = json.dumps(json_data).encode()
-        else:
-            mock_response.read.return_value = read_value
-        mock_response.status = status
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        return mock_response
-    return _create_response
-
-
-def create_multi_client_mock(ec2_mock: Any, ssm_mock: Any) -> Callable:
-    """Create a boto3 client mock that returns different mocks per service."""
-    def mock_client(service_name: str) -> Any:
-        if service_name == 'ec2':
-            return ec2_mock
-        if service_name == 'ssm':
-            return ssm_mock
-        return MagicMock()
-    return mock_client
+    return create_mock_urllib_response
 
 
 def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
@@ -406,73 +326,7 @@ ENV_VAR_PRESETS = {
 }
 
 
-def create_boto_client_mock(**service_mocks: Any) -> Callable:
-    """Create boto3 client mock with specified service mocks."""
-    def mock_client(service_name: str) -> Any:
-        return service_mocks.get(service_name, MagicMock())
-    return mock_client
-
-
-def reset_module_state(module: ModuleType, **state_vars: Any) -> None:
-    """Reset module state variables to default values."""
-    for var_name, default_value in state_vars.items():
-        if hasattr(module, var_name):
-            setattr(module, var_name, default_value)
-
-
-def create_mock_lambda_list_mappings_error():
-    """Create Lambda mock that errors on list_event_source_mappings."""
-    mock_lambda = MagicMock()
-    mock_lambda.list_event_source_mappings.side_effect = ClientError(
-        {'Error': {'Code': 'ServiceUnavailable'}},
-        'ListEventSourceMappings'
-    )
-    return mock_lambda
-
-
-def create_mock_lambda_put_concurrency_error():
-    """Create Lambda mock that errors on put_function_concurrency."""
-    mock_lambda = MagicMock()
-    mock_lambda.put_function_concurrency.side_effect = ClientError(
-        {'Error': {'Code': 'ServiceUnavailable'}},
-        'PutFunctionConcurrency'
-    )
-    return mock_lambda
-
-
-def create_mock_sns_publish_error():
-    """Create SNS mock that errors on publish."""
-    mock_sns = MagicMock()
-    mock_sns.publish.side_effect = ClientError(
-        {'Error': {'Code': 'ServiceUnavailable'}},
-        'Publish'
-    )
-    return mock_sns
-
-
-def create_mock_lambda_with_mappings():
-    """Create Lambda mock with enabled event source mappings."""
-    mock_lambda = MagicMock()
-    mock_lambda.list_event_source_mappings.return_value = {
-        'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Enabled'}]
-    }
-    return mock_lambda
-
-
-def create_mock_lambda_with_disabled_mappings():
-    """Create Lambda mock with disabled event source mappings."""
-    mock_lambda = MagicMock()
-    mock_lambda.list_event_source_mappings.return_value = {
-        'EventSourceMappings': [{'UUID': 'test-uuid', 'State': 'Disabled'}]
-    }
-    return mock_lambda
-
-
-def create_mock_lambda_delete_concurrency_error():
-    """Create Lambda mock that errors on delete_function_concurrency."""
-    mock_lambda = MagicMock()
-    mock_lambda.delete_function_concurrency.side_effect = ClientError(
-        {'Error': {'Code': 'ServiceUnavailable'}},
-        'DeleteFunctionConcurrency'
-    )
-    return mock_lambda
+@pytest.fixture
+def lambda_context():
+    """Provide a mock Lambda context object."""
+    return Mock()

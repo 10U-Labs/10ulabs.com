@@ -1,14 +1,29 @@
 """Pytest fixtures for EC2 runner pre-deployment unit tests."""
 import importlib.util
 import json
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from botocore.exceptions import ClientError
+
+from lambda_response import (
+    parse_response_body,
+    assert_response_status,
+    assert_json_content_type,
+)
+from boto_mocks import create_client_error, create_multi_client_mock
 
 from ...conftest import EC2_RUNNER_SRC
+
+# Re-export for backward compatibility
+__all__ = [
+    'parse_response_body',
+    'assert_response_status',
+    'assert_json_content_type',
+    'create_client_error',
+    'create_multi_client_mock',
+]
 
 
 def load_handler_module() -> ModuleType:
@@ -58,12 +73,6 @@ def ec2_runner_handler(config: Dict[str, str]) -> Any:
 
 
 @pytest.fixture
-def lambda_context():
-    """Provide a mock Lambda context."""
-    return Mock()
-
-
-@pytest.fixture
 def ec2_runner_post_event_factory():
     """Provide a factory for creating EC2 runner POST events."""
     def _create_event(
@@ -96,56 +105,6 @@ def ec2_runner_get_event():
         'httpMethod': 'GET',
         'headers': {}
     }
-
-
-def create_client_error(error_code: str, operation_name: str = 'TestOperation') -> ClientError:
-    """Create a ClientError for testing error handling."""
-    return ClientError(
-        {
-            'Error': {
-                'Code': error_code,
-                'Message': f'Test error: {error_code}'
-            },
-            'ResponseMetadata': {
-                'RequestId': 'test-request-id',
-                'HTTPStatusCode': 400,
-                'HTTPHeaders': {},
-                'RetryAttempts': 0,
-                'HostId': ''
-            }
-        },
-        operation_name
-    )
-
-
-def parse_response_body(response: Dict[str, Any]) -> Any:
-    """Parse the JSON body from a Lambda response."""
-    return json.loads(response['body'])
-
-
-def assert_response_status(response: Dict[str, Any], expected_code: int) -> None:
-    """Assert that a response has the expected status code."""
-    assert response['statusCode'] == expected_code
-
-
-def assert_json_content_type(response: Dict[str, Any]) -> None:
-    """Assert that a response has JSON content type."""
-    assert response['headers']['Content-Type'].startswith('application/json')
-
-
-def create_multi_client_mock(
-    ec2_mock: Any, ssm_mock: Any, dynamodb_mock: Any = None
-) -> Callable:
-    """Create a mock boto3.client function that returns service-specific mocks."""
-    def mock_client(service_name: str) -> Any:
-        if service_name == 'ec2':
-            return ec2_mock
-        if service_name == 'ssm':
-            return ssm_mock
-        if service_name == 'dynamodb':
-            return dynamodb_mock if dynamodb_mock else MagicMock()
-        return MagicMock()
-    return mock_client
 
 
 @pytest.fixture
@@ -190,6 +149,12 @@ def mock_boto_client():
 
     with patch(
         'boto3.client',
-        side_effect=create_multi_client_mock(mock_ec2, mock_ssm, mock_dynamodb)
+        side_effect=create_multi_client_mock(mock_ec2, mock_ssm, dynamodb=mock_dynamodb)
     ):
         yield {'ec2': mock_ec2, 'ssm': mock_ssm, 'dynamodb': mock_dynamodb}
+
+
+@pytest.fixture
+def lambda_context():
+    """Provide a mock Lambda context object."""
+    return Mock()

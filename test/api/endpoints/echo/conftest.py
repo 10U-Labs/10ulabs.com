@@ -2,23 +2,13 @@
 import re
 from pathlib import Path
 from typing import Dict
+
+from test.api.conftest import parse_shared_module_outputs
+
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 ECHO_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "echo"
-
-
-def parse_shared_module_outputs() -> Dict[str, str]:
-    """Parse shared Terraform outputs for configuration values."""
-    outputs_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
-    config = {}
-    with open(outputs_path, encoding="utf-8") as f:
-        content = f.read()
-    pattern = r'output\s+"([^"]+)"\s*\{\s*value\s*=\s*"([^"]+)"'
-    matches = re.findall(pattern, content)
-    for key, value in matches:
-        config[key] = value
-    return config
 
 
 @pytest.fixture(name="config", scope="module")
