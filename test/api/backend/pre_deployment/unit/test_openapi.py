@@ -4,7 +4,7 @@ from pathlib import Path
 
 def _get_openapi_path() -> Path:
     """Get the path to openapi.yml file."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     return base / "src" / "www" / "api" / "openapi.yml"
 
 

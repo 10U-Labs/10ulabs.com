@@ -1,5 +1,5 @@
 """Unit tests for health endpoint handler."""
-from test.api.endpoints.health.pre_deployment.conftest import (
+from .conftest import (
     parse_response_body,
     assert_response_status,
     assert_json_content_type,

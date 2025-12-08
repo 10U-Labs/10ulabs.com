@@ -5,7 +5,7 @@ from pathlib import Path
 
 def test_config_file_exists_in_correct_location():
     """Verify that terraform.tfvars file exists."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     config_path = base / "src" / "api" / "backend" / "terraform.tfvars"
     file_exists = config_path.exists()
     assert file_exists
@@ -25,7 +25,7 @@ def test_config_has_aws_region(config):
 
 def test_shared_module_has_github_org():
     """Verify that shared module outputs.tf has github_org."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     outputs_path = base / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -35,7 +35,7 @@ def test_shared_module_has_github_org():
 
 def test_shared_module_has_github_repo():
     """Verify that shared module outputs.tf has github_repo."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     outputs_path = base / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
     with open(outputs_path, encoding="utf-8") as f:
         content = f.read()
@@ -45,7 +45,7 @@ def test_shared_module_has_github_repo():
 
 def test_locals_tf_has_api_fqdn():
     """Verify that locals.tf has api_fqdn."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     locals_path = base / "src" / "api" / "backend" / "locals.tf"
     with open(locals_path, encoding="utf-8") as f:
         content = f.read()
@@ -55,7 +55,7 @@ def test_locals_tf_has_api_fqdn():
 
 def test_cloudfront_health_endpoint_path_pattern_exists():
     """Verify that CloudFront has health endpoint path pattern."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     cloudfront_file = base / "src" / "api" / "backend" / "cloudfront_s3.tf"
     with open(cloudfront_file, encoding="utf-8") as f:
         content = f.read()
@@ -65,7 +65,7 @@ def test_cloudfront_health_endpoint_path_pattern_exists():
 
 def test_cloudfront_health_endpoint_allows_options():
     """Verify that CloudFront health endpoint allows OPTIONS."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     cloudfront_file = base / "src" / "api" / "backend" / "cloudfront_s3.tf"
     with open(cloudfront_file, encoding="utf-8") as f:
         content = f.read()

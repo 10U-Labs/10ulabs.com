@@ -300,7 +300,7 @@ jobs:
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/shared/ecr/pre_deployment/ \
+          python3 -m pytest test/api/shared/ecr/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
 name: Ensuring ECR repository exists and is properly configured
 on:

@@ -84,7 +84,7 @@ jobs:
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
-      - unit-testing
+      - integration-testing-pre-deployment
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -159,8 +159,8 @@ jobs:
             --fqdn "${{ env.WEBSITE_FQDN }}" \
             --region "$REGION" \
             --paths "/*"
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state
@@ -195,6 +195,62 @@ jobs:
         run: |
           python3 -m pytest \
             test/www/shared/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+  integration-testing-pre-deployment:
+    name: Pre-deployment integration testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install boto3 botocore pytest
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest test/www/shared/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
@@ -303,7 +359,7 @@ jobs:
         run: python3 -m pip install pytest 'boto3>=1.35.76'
       - name: Run unit tests
         run: |
-          python3 -m pytest test/www/shared/pre_deployment/ \
+          python3 -m pytest test/www/shared/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
 name: Ensuring www_shared infrastructure exists and is properly configured
 on:

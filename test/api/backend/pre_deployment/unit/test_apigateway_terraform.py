@@ -4,7 +4,7 @@ from pathlib import Path
 
 def _get_apigateway_tf_path() -> Path:
     """Get the path to apigateway.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     return base / "src" / "api" / "backend" / "apigateway.tf"
 
 

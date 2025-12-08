@@ -396,7 +396,7 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.pat_param }}
         name: Run unit tests
         run: |
-          python3 -m pytest test/api/backend/pre_deployment/ \
+          python3 -m pytest test/api/backend/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
 name: Ensuring API backend exists and is properly configured
 on:

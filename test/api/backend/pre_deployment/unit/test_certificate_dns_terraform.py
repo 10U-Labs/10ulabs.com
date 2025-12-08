@@ -5,7 +5,7 @@ from pathlib import Path
 
 def _get_terraform_path() -> Path:
     """Get the path to certificate_dns.tf file."""
-    base = Path(__file__).parent.parent.parent.parent.parent
+    base = Path(__file__).parent.parent.parent.parent.parent.parent
     return base / "src" / "api" / "backend" / "certificate_dns.tf"
 
 
