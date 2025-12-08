@@ -51,7 +51,9 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build and push Docker image
+      - env:
+          DOCKER_BUILD_NO_SUMMARY: true
+        name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: src/agents/workflow_fixer/agent-code
