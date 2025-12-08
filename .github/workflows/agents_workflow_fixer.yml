@@ -14,7 +14,7 @@ jobs:
     needs:
       - checking-oidc-availability
       - declaring-common-variables
-      - ensuring-infrastructure-in-desired-state
+      - ensuring-backend-is-in-desired-state
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
     runs-on: >-
@@ -144,14 +144,62 @@ jobs:
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
             >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-  ensuring-infrastructure-in-desired-state:
+  ensuring-agent-is-in-desired-state:
     defaults:
       run:
         working-directory: src/agents/workflow_fixer
     if: >-
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
-    name: Ensuring infrastructure is in desired state
+    name: Ensuring agent is in desired state
+    needs:
+      - building-agent-container
+      - checking-oidc-availability
+      - declaring-common-variables
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
+        name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
+        name: Configure AWS credentials via static keys
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+      - name: Terraform Init
+        run: terraform init
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+  ensuring-backend-is-in-desired-state:
+    defaults:
+      run:
+        working-directory: src/agents/workflow_fixer
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Ensuring backend is in desired state
     needs:
       - checking-oidc-availability
       - declaring-common-variables
@@ -190,14 +238,17 @@ jobs:
             ${{ needs.declaring-common-variables.outputs.terraform_version }}
       - name: Terraform Init
         run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
+      - name: Terraform Apply (backend only)
+        run: >-
+          terraform apply -auto-approve
+          -target=aws_ecr_repository.agent
+          -target=aws_ecr_lifecycle_policy.agent
   integration-testing:
     name: Integration testing
     needs:
-      - building-agent-container
       - checking-oidc-availability
       - declaring-common-variables
+      - ensuring-agent-is-in-desired-state
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
