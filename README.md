@@ -36,8 +36,6 @@ endpoint_health.yml
                               └──→ endpoint_v1_simulation_soc.yml
 ```
 
----
-
 ## Deployment Status
 
 - [x] `bootstrap.yml`
