@@ -14,7 +14,7 @@ jobs:
     needs:
       - checking-oidc-availability
       - declaring-common-variables
-      - performing-static-analysis
+      - ensuring-infrastructure-in-desired-state
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
     runs-on: >-
@@ -148,9 +148,11 @@ jobs:
     defaults:
       run:
         working-directory: src/agents/workflow_fixer
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
     name: Ensuring infrastructure is in desired state
     needs:
-      - building-agent-container
       - checking-oidc-availability
       - declaring-common-variables
       - performing-static-analysis
@@ -193,9 +195,9 @@ jobs:
   integration-testing:
     name: Integration testing
     needs:
+      - building-agent-container
       - checking-oidc-availability
       - declaring-common-variables
-      - ensuring-infrastructure-in-desired-state
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
