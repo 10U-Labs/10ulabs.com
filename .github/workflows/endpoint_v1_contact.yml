@@ -118,8 +118,8 @@ jobs:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Apply
         run: terraform apply -auto-approve
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state

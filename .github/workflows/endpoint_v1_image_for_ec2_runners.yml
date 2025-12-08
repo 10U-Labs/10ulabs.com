@@ -45,6 +45,7 @@ jobs:
     name: Ensuring endpoint infrastructure is in desired state
     needs:
       - common-vars
+      - integration-testing-pre-deployment
       - unit-testing
     permissions:
       contents: read
@@ -82,8 +83,8 @@ jobs:
         run: |
           cd src/api/endpoints/image_for_ec2_runners
           terraform apply -auto-approve
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - common-vars
       - ensuring-endpoint-infrastructure-in-desired-state
@@ -129,6 +130,64 @@ jobs:
         run: |
           ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
           pytest $ENDPOINT/post_deployment/integration/ \
+            --confcutdir=$ENDPOINT --verbose --pythonwarnings=error
+  integration-testing-pre-deployment:
+    name: Pre-deployment integration testing
+    needs:
+      - common-vars
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.common-vars.outputs.aws_region }}
+          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install boto3 botocore pytest
+      - name: Run pre-deployment integration tests
+        run: |
+          ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
+          pytest $ENDPOINT/pre_deployment/integration/ \
             --confcutdir=$ENDPOINT --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
@@ -269,7 +328,7 @@ jobs:
       - name: Run unit tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ec2_runners/endpoint"
-          pytest $ENDPOINT/pre_deployment/ --confcutdir=$ENDPOINT \
+          pytest $ENDPOINT/pre_deployment/unit/ --confcutdir=$ENDPOINT \
             --verbose --pythonwarnings=error
 name: Ensuring /v1/image-for-ec2-runners exists and is properly configured
 on:

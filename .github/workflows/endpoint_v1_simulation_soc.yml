@@ -165,8 +165,8 @@ jobs:
             --region "$REGION" \
             --paths "/simulations/soc/*"
         working-directory: src/api/endpoints/simulation_soc
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - declaring-common-variables
       - ensuring-infrastructure-in-desired-state

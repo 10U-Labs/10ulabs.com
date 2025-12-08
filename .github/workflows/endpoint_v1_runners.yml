@@ -101,8 +101,8 @@ jobs:
         run: cd src/api/endpoints/runners && terraform init
       - name: Terraform Apply
         run: cd src/api/endpoints/runners && terraform apply -auto-approve
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - declaring-common-variables
       - ensuring-endpoint-infrastructure-in-desired-state

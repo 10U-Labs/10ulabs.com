@@ -126,8 +126,8 @@ jobs:
             --region ${{ needs.common-vars.outputs.aws_region }} \
             --paths "/rack-designer/*"
         working-directory: src/api/endpoints/rack_designer
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - common-vars
       - ensuring-infrastructure-in-desired-state

@@ -150,8 +150,8 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 **Depends on:** endpoint_health
 
 - [x] Already has pre-deployment integration tests (reference implementation)
-- [ ] Verify conftest files exist at all levels:
-  - [ ] `test/api/endpoints/image_for_ec2_runners/post/pre_deployment/conftest.py` (MISSING - create empty)
+- [x] Verify conftest files exist at all levels:
+  - [x] `test/api/endpoints/image_for_ec2_runners/post/pre_deployment/conftest.py`
   - [x] `test/api/endpoints/image_for_ec2_runners/post/pre_deployment/unit/conftest.py`
   - [x] `test/api/endpoints/image_for_ec2_runners/post/pre_deployment/integration/conftest.py`
 
@@ -161,23 +161,23 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_v1_image_for_ec2_runners_post
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/` to `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] At least one stable AMI exists
-  - [ ] AMI is in available state
-  - [ ] endpoint_v1_image_for_ec2_runners_post terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_image_for_ec2_runners.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/`
+  - [x] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/` to `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] At least one stable AMI exists
+  - [x] AMI is in available state
+  - [x] api_backend terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_image_for_ec2_runners.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
@@ -401,21 +401,21 @@ Each workflow's existing "Integration testing" job runs post-deployment tests bu
 ```
 
 For each workflow, update:
-- [ ] `www_shared.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `www_shared.yml` - already renamed `integration-testing` to `integration-testing-post-deployment`
 - [x] `api_backend.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [x] `endpoint_health.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [x] `api_shared_ecr.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [x] `endpoint_v1_image_for_ecs_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_image_for_ec2_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_image_for_ec2_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 - [x] `endpoint_v1_image_for_ec2_runners_post.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_ecs_runner.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_ec2_runner.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_echo.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_contact.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_rack_designer.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `endpoint_v1_simulation_soc.yml` - rename `integration-testing` to `integration-testing-post-deployment`
-- [ ] `www_index.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_ecs_runner.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_ec2_runner.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_runners.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_echo.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_contact.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_rack_designer.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `endpoint_v1_simulation_soc.yml` - rename `integration-testing` to `integration-testing-post-deployment`
+- [x] `www_index.yml` - rename `integration-testing` to `integration-testing-post-deployment`
 
 Also update any `needs:` references to this job in dependent jobs (e.g., `e2e-testing`).
 

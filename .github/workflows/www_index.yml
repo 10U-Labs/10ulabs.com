@@ -158,8 +158,8 @@ jobs:
           BASE_URL: https://10ulabs.com
         name: Run E2E tests
         run: npm run test:e2e --prefix src/www/paths/index
-  integration-testing:
-    name: Integration testing
+  integration-testing-post-deployment:
+    name: Post-deployment integration testing
     needs:
       - declaring-common-variables
       - deploying-home-page
