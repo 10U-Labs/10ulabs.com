@@ -21,7 +21,7 @@ api_backend:
     - 'test/api/conftest.py'
 api_shared_ecr:
   depends_on:
-    - endpoint_health
+    - endpoint_v1_ec2_runner
   name: Ensuring ECR repository exists and is properly configured
   paths:
     - '.github/workflows/api_shared_ecr.yml'
@@ -52,7 +52,7 @@ endpoint_health:
     - 'test/api/endpoints/health/**'
 endpoint_v1_contact:
   depends_on:
-    - endpoint_v1_ecs_runner
+    - endpoint_v1_echo
   name: Ensuring contact endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_contact.yml'
@@ -70,7 +70,7 @@ endpoint_v1_ec2_runner:
     - 'test/api/endpoints/ec2_runner/**'
 endpoint_v1_echo:
   depends_on:
-    - endpoint_v1_ecs_runner
+    - endpoint_v1_runners
   name: Ensuring echo endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_echo.yml'
@@ -113,7 +113,7 @@ endpoint_v1_image_for_ecs_runners:
     - 'test/api/endpoints/image_for_ecs_runners/**'
 endpoint_v1_rack_designer:
   depends_on:
-    - endpoint_v1_ecs_runner
+    - www_index
   name: Ensuring Rack Designer exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_rack_designer.yml'
@@ -133,7 +133,7 @@ endpoint_v1_runners:
     - 'test/api/endpoints/runners/**'
 endpoint_v1_simulation_soc:
   depends_on:
-    - endpoint_v1_ecs_runner
+    - endpoint_v1_rack_designer
   name: >-
     Ensuring the /v1/simulation-soc API endpoint exists and is properly
     configured

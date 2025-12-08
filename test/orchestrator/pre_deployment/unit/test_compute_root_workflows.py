@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "scri
 
 from compute_root_workflows import (
     _insert_sorted,
+    _output_levels_indexed,
     _output_results,
     _output_slots,
     compute_execution_plan,
@@ -627,5 +628,40 @@ class TestOutputResults:
         """Test output with empty list."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             _output_results([], "json")
+            output = mock_stdout.getvalue().strip()
+        assert output == "[]"
+
+
+class TestOutputLevelsIndexed:
+    """Tests for _output_levels_indexed function."""
+
+    def test_single_level(self) -> None:
+        """Test output with single level."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_levels_indexed([["a", "b"]])
+            output = mock_stdout.getvalue().strip()
+        expected = (
+            '[{"idx": "01", "level": 1, "name": "a"}, '
+            '{"idx": "02", "level": 1, "name": "b"}]'
+        )
+        assert output == expected
+
+    def test_multiple_levels(self) -> None:
+        """Test output with multiple levels."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_levels_indexed([["a"], ["b", "c"], ["d"]])
+            output = mock_stdout.getvalue().strip()
+        expected = (
+            '[{"idx": "01", "level": 1, "name": "a"}, '
+            '{"idx": "02", "level": 2, "name": "b"}, '
+            '{"idx": "03", "level": 2, "name": "c"}, '
+            '{"idx": "04", "level": 3, "name": "d"}]'
+        )
+        assert output == expected
+
+    def test_empty_levels(self) -> None:
+        """Test output with empty levels list."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_levels_indexed([])
             output = mock_stdout.getvalue().strip()
         assert output == "[]"

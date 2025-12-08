@@ -139,6 +139,12 @@ def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
     return result
 
 
+def _sort_key(workflow: str, graph: dict[str, Any]) -> tuple[int, str]:
+    """Return sort key for a workflow: (display_order, name)."""
+    display_order = graph.get(workflow, {}).get("display_order", 999)
+    return (display_order, workflow)
+
+
 def topological_sort_levels(
     workflows: set[str], graph: dict[str, Any]
 ) -> list[list[str]]:
@@ -147,6 +153,7 @@ def topological_sort_levels(
 
     Returns a list of levels, where each level contains workflows that
     can run in parallel (all their dependencies are in earlier levels).
+    Workflows within each level are sorted by display_order, then alphabetically.
     """
     # Build in-degree map (only for workflows in our set)
     in_degree: dict[str, int] = {wf: 0 for wf in workflows}
@@ -160,7 +167,11 @@ def topological_sort_levels(
 
     while remaining:
         # Find all workflows with no remaining dependencies
-        current_level = sorted([wf for wf in remaining if in_degree[wf] == 0])
+        # Sort by display_order first, then alphabetically
+        current_level = sorted(
+            [wf for wf in remaining if in_degree[wf] == 0],
+            key=lambda wf: _sort_key(wf, graph)
+        )
 
         if not current_level:
             # Cycle detected or error
@@ -365,6 +376,21 @@ def _output_results(
             print(item)
 
 
+def _output_levels_indexed(levels: list[list[str]]) -> None:
+    """Output levels as indexed objects for GitHub Actions matrix visualization."""
+    indexed_output = []
+    idx = 1
+    for level_num, level_workflows in enumerate(levels, 1):
+        for name in level_workflows:
+            indexed_output.append({
+                "idx": f"{idx:02d}",
+                "level": level_num,
+                "name": name
+            })
+            idx += 1
+    print(json.dumps(indexed_output))
+
+
 def main() -> None:
     """Main entry point."""
     args = _parse_args()
@@ -396,8 +422,12 @@ def main() -> None:
     # Compute execution plan if requested
     if args.levels:
         levels = compute_execution_plan_levels(roots, graph)
-        # Output as array of arrays for parallel execution
-        print(json.dumps(levels))
+        if args.indexed:
+            # Output as indexed objects for matrix visualization
+            _output_levels_indexed(levels)
+        else:
+            # Output as array of arrays for parallel execution
+            print(json.dumps(levels))
     elif args.slots > 0:
         output = compute_execution_plan(roots, graph)
         _output_slots(output, args.slots)
