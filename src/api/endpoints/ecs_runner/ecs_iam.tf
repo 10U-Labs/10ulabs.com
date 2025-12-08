@@ -75,7 +75,7 @@ resource "aws_iam_role_policy" "ecs_execution_ssm_access" {
         "ssm:GetParameters"
       ]
       Resource = [
-        data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter
+        module.shared.ssm_github_pat_arn
       ]
     }]
   })

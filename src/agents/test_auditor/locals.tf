@@ -1,14 +1,18 @@
 locals {
-  aws_region      = "us-east-2"
-  aws_account_id  = "781581267945"
-  resource_prefix = "TenULabs"
-  github_org      = "10U-Labs-LLC"
-  github_repo     = "10ulabs.com"
+  # Common values from shared module
+  aws_region      = module.shared.aws_region
+  aws_account_id  = module.shared.aws_account_id
+  resource_prefix = module.shared.resource_prefix
+  github_org      = module.shared.github_org
+  github_repo     = module.shared.name_for_github_repo
 
   agent_name     = "${local.resource_prefix}TestAuditorAgent"
   lambda_name    = "${local.resource_prefix}TestAuditorActionGroup"
   log_group_name = "/aws/lambda/${local.lambda_name}"
-  ssm_github_pat = "/${local.resource_prefix}/github_pat"
+
+  # SSM parameters
+  ssm_github_pat     = module.shared.ssm_github_pat_name
+  ssm_github_pat_arn = module.shared.ssm_github_pat_arn
 
   common_tags = {
     Project     = "10ulabs"

@@ -56,7 +56,7 @@ resource "aws_iam_role_policy" "ssm_access" {
           "ssm:GetParameter"
         ]
         Resource = [
-          data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
+          module.shared.ssm_github_pat_arn,
           "arn:aws:ssm:${local.aws_region}:${module.shared.aws_account_id}:parameter/github-runner/*"
         ]
       }

@@ -146,7 +146,7 @@ resource "aws_iam_role_policy" "ssm_access" {
         "ssm:GetParameter"
       ]
       Resource = compact([
-        data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
+        module.shared.ssm_github_pat_arn,
         data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
       ])
     }]

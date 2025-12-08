@@ -27,7 +27,7 @@ output "workflow_runners_table_arn" {
 }
 
 output "github_token_secret_name" {
-  value = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+  value = module.shared.ssm_github_pat_name
 }
 
 output "webhook_parameter_name" {

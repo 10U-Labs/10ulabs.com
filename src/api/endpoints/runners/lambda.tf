@@ -30,7 +30,7 @@ resource "aws_lambda_function" "runners_handler" {
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
       JOB_QUEUE_URL            = aws_sqs_queue.job_queue.url
       WEBHOOK_SECRET_NAME      = aws_ssm_parameter.webhook_secret.name
@@ -159,7 +159,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
       JOB_DLQ_URL                 = aws_sqs_queue.job_queue_dlq.url
       JOB_QUEUE_URL               = aws_sqs_queue.job_queue.url
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
-      GITHUB_TOKEN_PARAMETER_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name
     }
   }
 
@@ -259,7 +259,7 @@ resource "aws_lambda_function" "drift_recovery" {
   environment {
     variables = {
       GITHUB_REPO                 = local.github_repo_full
-      GITHUB_TOKEN_PARAMETER_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
       MANAGED_VPC_ID              = aws_vpc.runner_vpc.id
     }
@@ -319,7 +319,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
     }
   }
@@ -371,7 +371,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
       EC2_MANAGED_BY_TAG       = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
     }
   }

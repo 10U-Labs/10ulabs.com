@@ -19,7 +19,7 @@ resource "aws_lambda_function" "handler" {
     variables = {
       ECR_REPOSITORY           = local.ecr_repository_name
       GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.bootstrap.outputs.ssm_parameter_name_for_github_pat
+      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
     }
   }
 

@@ -121,7 +121,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ssm_github_pat" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["ssm:GetParameter"]
-      Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+      Resource = [module.shared.ssm_github_pat_arn]
     }]
   })
 }
@@ -290,7 +290,7 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
         Action = [
           "ssm:GetParameter"
         ]
-        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+        Resource = [module.shared.ssm_github_pat_arn]
       }
     ]
   })
@@ -398,7 +398,7 @@ resource "aws_iam_role_policy" "drift_recovery_permissions" {
         Action = [
           "ssm:GetParameter"
         ]
-        Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+        Resource = [module.shared.ssm_github_pat_arn]
       },
       {
         Effect = "Allow"
@@ -467,7 +467,7 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
             "ssm:GetParameter"
           ]
           Resource = [
-            data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter,
+            module.shared.ssm_github_pat_arn,
             data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn
           ]
         },
@@ -543,7 +543,7 @@ resource "aws_iam_role_policy" "stale_runner_cleanup_permissions" {
           Action = [
             "ssm:GetParameter"
           ]
-          Resource = [data.terraform_remote_state.bootstrap.outputs.arn_for_github_pat_parameter]
+          Resource = [module.shared.ssm_github_pat_arn]
         },
         {
           Effect = "Allow"
