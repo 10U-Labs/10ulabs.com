@@ -160,7 +160,7 @@ www_index:
     - 'test/www/paths/index/**'
 www_shared:
   depends_on:
-    - bootstrap
+    - agents_test_auditor
   name: Ensuring www shared infrastructure exists and is properly configured
   paths:
     - '.github/workflows/www_shared.yml'

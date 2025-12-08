@@ -4,9 +4,8 @@
 
 ```
 bootstrap.yml
-    │
-    ├──→ agents_test_auditor.yml
-    │
+    ↓
+agents_test_auditor.yml
     ↓
 www_shared.yml
     ↓
