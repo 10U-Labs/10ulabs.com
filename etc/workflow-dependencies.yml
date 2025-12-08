@@ -9,8 +9,17 @@
 #   - name: The display name (must match the 'name:' field in the workflow)
 #   - paths: File patterns that trigger this workflow
 #   - depends_on: List of workflows (by key) that must complete before this
+agents_agent_creator:
+  depends_on:
+    - bootstrap
+  name: Deploying Agent Creator
+  paths:
+    - '.github/workflows/agents_agent_creator.yml'
+    - 'src/agents/agent_creator/**'
+    - 'test/agents/agent_creator/**'
 agents_test_auditor:
   depends_on:
+    - agents_agent_creator
     - agents_workflow_fixer
   name: Deploying Test Auditor Agent
   paths:
