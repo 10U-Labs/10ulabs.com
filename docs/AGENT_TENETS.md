@@ -48,8 +48,12 @@ Every agent action should ultimately contribute to profitability or operational 
 - **Location**: Boca Raton, FL (unincorporated Palm Beach County)
 - **EIN**: GitHub secret `EIN`
 - **Banking**: Has credit card and bank account
-  - Account number: GitHub secret `BANK_ACCOUNT_NUMBER`
-  - Routing number: GitHub secret `BANK_ROUTING_NUMBER`
+  - Bank account number: GitHub secret `BANK_ACCOUNT_NUMBER`
+  - Bank routing number: GitHub secret `BANK_ROUTING_NUMBER`
+  - Credit card number: GitHub secret `CREDIT_CARD_NUMBER`
+  - Credit card CVV: GitHub secret `CREDIT_CARD_CVV`
+  - Credit card expiration: GitHub secret `CREDIT_CARD_EXPIRATION_DATE`
+  - Credit card name: GitHub secret `CREDIT_CARD_NAME`
   - **RESTRICTION**: Agents must NOT engage in financial activities without explicit human permission
 
 ## For Agents
