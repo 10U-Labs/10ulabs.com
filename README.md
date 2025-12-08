@@ -44,12 +44,13 @@ endpoint_health.yml
 - [x] `endpoint_health.yml`
 - [x] `endpoint_v1_image_for_ec2_runners_post.yml`
 - [x] `endpoint_v1_image_for_ec2_runners.yml`
-- [ ] `endpoint_v1_runners.yml`
 - [ ] `endpoint_v1_ec2_runner.yml`
 - [x] `api_shared_ecr.yml`
 - [ ] `endpoint_v1_image_for_ecs_runners.yml`
 - [ ] `endpoint_v1_ecs_runner.yml`
+- [ ] `endpoint_v1_runners.yml`
 - [ ] `endpoint_v1_contact.yml`
+- [ ] `www_index.yml`
 - [ ] `endpoint_v1_echo.yml`
 - [ ] `endpoint_v1_rack_designer.yml`
-- [ ] `www_index.yml`
+- [ ] `endpoint_v1_simulation_soc.yml`
