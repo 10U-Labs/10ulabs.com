@@ -1,7 +1,8 @@
 locals {
-  aws_region      = "us-east-2"
-  aws_account_id  = "781581267945"
-  resource_prefix = "TenULabs"
+  # Common values from shared module
+  aws_region      = module.shared.aws_region
+  aws_account_id  = module.shared.aws_account_id
+  resource_prefix = module.shared.resource_prefix
 
   # Agent naming
   agent_name    = "workflow-fixer"
@@ -14,7 +15,8 @@ locals {
   log_group_name = "/aws/lambda/${local.lambda_name}"
 
   # SSM parameters
-  ssm_github_pat = "/${local.resource_prefix}/github_pat"
+  ssm_github_pat     = module.shared.ssm_github_pat_name
+  ssm_github_pat_arn = module.shared.ssm_github_pat_arn
 
   common_tags = {
     Project     = "10ulabs"

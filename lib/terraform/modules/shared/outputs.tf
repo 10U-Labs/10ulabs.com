@@ -3,11 +3,11 @@ output "admin_iam_user" {
 }
 
 output "aws_account_id" {
-  value = "781581267945"
+  value = local.aws_account_id
 }
 
 output "aws_region" {
-  value = "us-east-2"
+  value = local.aws_region
 }
 
 output "domain_name" {
@@ -40,4 +40,12 @@ output "resource_prefix" {
 
 output "lambda_handler_names" {
   value = local.lambda_handler_names
+}
+
+output "ssm_github_pat_name" {
+  value = local.ssm_github_pat_name
+}
+
+output "ssm_github_pat_arn" {
+  value = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.ssm_github_pat_name}"
 }
