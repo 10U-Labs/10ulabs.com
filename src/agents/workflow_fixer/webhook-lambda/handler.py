@@ -1,11 +1,17 @@
 """
 Webhook Lambda - Receives GitHub workflow_run events and invokes AgentCore agent.
+
+Supports two modes:
+1. Webhook mode: Triggered by GitHub workflow_run events (failures)
+2. Scheduled mode: Scans for unresolved failed workflows on a schedule
 """
 
 import json
 import logging
 import os
 import traceback
+import urllib.request
+import urllib.error
 from typing import Any
 
 import boto3
@@ -14,6 +20,9 @@ from botocore.exceptions import ClientError
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+GITHUB_ORG = os.environ.get("GITHUB_ORG", "10U-Labs-LLC")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "10ulabs.com")
+
 
 def get_github_pat() -> str:
     """Retrieve GitHub PAT from SSM Parameter Store."""
@@ -21,6 +30,63 @@ def get_github_pat() -> str:
     param_name = os.environ.get("SSM_GITHUB_PAT", "/TenULabs/github_pat")
     response = ssm.get_parameter(Name=param_name, WithDecryption=True)
     return response["Parameter"]["Value"]
+
+
+def _github_api_request(
+    endpoint: str, token: str, method: str = "GET"
+) -> dict[str, Any]:
+    """Make a request to the GitHub API."""
+    url = f"https://api.github.com{endpoint}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "WorkflowFixerAgent/1.0",
+    }
+
+    req = urllib.request.Request(url, headers=headers, method=method)
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as err:
+        error_body = err.read().decode("utf-8") if err.fp else ""
+        raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
+
+
+def _get_unresolved_failures(token: str) -> list[dict[str, Any]]:
+    """Find workflow runs that failed and haven't been successfully re-run."""
+    endpoint = f"/repos/{GITHUB_ORG}/{GITHUB_REPO}/actions/runs?status=failure&per_page=50"
+    response = _github_api_request(endpoint, token)
+
+    unresolved = []
+    for run in response.get("workflow_runs", []):
+        workflow_id = run["workflow_id"]
+        head_branch = run["head_branch"]
+
+        # Check if there's a more recent successful run for this workflow+branch
+        check_endpoint = (
+            f"/repos/{GITHUB_ORG}/{GITHUB_REPO}/actions/workflows/{workflow_id}/runs"
+            f"?branch={head_branch}&status=success&per_page=1"
+        )
+        try:
+            success_response = _github_api_request(check_endpoint, token)
+            success_runs = success_response.get("workflow_runs", [])
+
+            if success_runs:
+                latest_success = success_runs[0]
+                if latest_success["created_at"] > run["created_at"]:
+                    continue  # Already fixed
+
+            # Skip workflow-fixer workflows to avoid loops
+            if "workflow-fixer" in run.get("name", "").lower():
+                continue
+
+            unresolved.append(run)
+        except RuntimeError:
+            continue  # Skip if we can't check
+
+    return unresolved
 
 
 def invoke_agent(payload: dict[str, Any]) -> dict[str, Any]:
@@ -97,10 +163,48 @@ def _build_agent_payload(
     }
 
 
-def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Main Lambda handler for GitHub webhook events."""
-    logger.info("Received event: %s", json.dumps(event))
+def _build_agent_payload_from_run(
+    run: dict[str, Any], github_token: str
+) -> dict[str, Any]:
+    """Build agent payload from a workflow run object."""
+    return {
+        "github_token": github_token,
+        "owner": GITHUB_ORG,
+        "repo": GITHUB_REPO,
+        "run_id": run.get("id"),
+        "workflow_name": run.get("name"),
+        "workflow_path": run.get("path", ""),
+        "head_sha": run.get("head_sha"),
+        "head_branch": run.get("head_branch"),
+    }
 
+
+def _handle_scheduled_scan(github_token: str) -> dict[str, Any]:
+    """Handle scheduled scan for unresolved failures."""
+    logger.info("Running scheduled scan for unresolved workflow failures")
+
+    unresolved = _get_unresolved_failures(github_token)
+    logger.info("Found %d unresolved failures", len(unresolved))
+
+    results = []
+    for run in unresolved:
+        logger.info("Processing unresolved failure: %s (run %s)", run["name"], run["id"])
+        try:
+            agent_payload = _build_agent_payload_from_run(run, github_token)
+            result = invoke_agent(agent_payload)
+            results.append({"run_id": run["id"], "status": "processed", "result": result})
+        except (ClientError, ValueError) as err:
+            logger.error("Error processing run %s: %s", run["id"], err)
+            results.append({"run_id": run["id"], "status": "error", "error": str(err)})
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"mode": "scheduled", "processed": len(results), "results": results}),
+    }
+
+
+def _handle_webhook_event(event: dict[str, Any], github_token: str) -> dict[str, Any]:
+    """Handle webhook event for a new failure."""
     payload = _parse_webhook_payload(event)
     should_skip, reason = _should_skip_event(payload)
 
@@ -117,18 +221,31 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         repo.get("name"),
     )
 
+    agent_payload = _build_agent_payload(payload, github_token)
+    result = invoke_agent(agent_payload)
+    logger.info("Agent result: %s", json.dumps(result, indent=2))
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"mode": "webhook", "message": "Agent invoked", "result": result}),
+    }
+
+
+def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
+    """Main Lambda handler - supports webhook and scheduled modes."""
+    logger.info("Received event: %s", json.dumps(event))
+
     try:
         github_token = get_github_pat()
-        agent_payload = _build_agent_payload(payload, github_token)
-        result = invoke_agent(agent_payload)
-        logger.info("Agent result: %s", json.dumps(result, indent=2))
 
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"message": "Agent invoked", "result": result}),
-        }
+        # Check if this is a scheduled event (EventBridge/CloudWatch)
+        if event.get("source") == "aws.events" or event.get("detail-type"):
+            return _handle_scheduled_scan(github_token)
 
-    except (ClientError, ValueError, json.JSONDecodeError) as err:
-        logger.error("Error processing workflow failure: %s", err)
+        # Otherwise, treat as webhook event
+        return _handle_webhook_event(event, github_token)
+
+    except (ClientError, ValueError, json.JSONDecodeError, RuntimeError) as err:
+        logger.error("Error in lambda_handler: %s", err)
         traceback.print_exc()
         return {"statusCode": 500, "body": json.dumps({"error": str(err)})}

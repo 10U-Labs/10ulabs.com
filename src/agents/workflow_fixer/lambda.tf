@@ -21,6 +21,8 @@ resource "aws_lambda_function" "webhook" {
       AGENT_RUNTIME_ARN = aws_bedrockagentcore_agent_runtime.workflow_fixer.arn
       SSM_GITHUB_PAT    = local.ssm_github_pat
       AWS_REGION_NAME   = local.aws_region
+      GITHUB_ORG        = "10U-Labs-LLC"
+      GITHUB_REPO       = "10ulabs.com"
     }
   }
 
@@ -47,4 +49,27 @@ resource "aws_cloudwatch_log_group" "webhook_lambda" {
 resource "aws_lambda_function_url" "webhook" {
   function_name      = aws_lambda_function.webhook.function_name
   authorization_type = "NONE"
+}
+
+# EventBridge rule to scan for unresolved failures every 15 minutes
+resource "aws_cloudwatch_event_rule" "scheduled_scan" {
+  name                = "${local.lambda_name}-scheduled-scan"
+  description         = "Trigger workflow fixer to scan for unresolved failures"
+  schedule_expression = "rate(15 minutes)"
+
+  tags = local.common_tags
+}
+
+resource "aws_cloudwatch_event_target" "scheduled_scan" {
+  rule      = aws_cloudwatch_event_rule.scheduled_scan.name
+  target_id = "WorkflowFixerLambda"
+  arn       = aws_lambda_function.webhook.arn
+}
+
+resource "aws_lambda_permission" "scheduled_scan" {
+  statement_id  = "AllowEventBridgeInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.webhook.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.scheduled_scan.arn
 }
