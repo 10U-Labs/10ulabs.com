@@ -233,6 +233,20 @@ def _handle_webhook_event(event: dict[str, Any], github_token: str) -> dict[str,
     }
 
 
+def _is_scheduled_event(event: dict[str, Any]) -> bool:
+    """Check if event is a scheduled EventBridge event."""
+    # Direct EventBridge invocation
+    if event.get("source") == "aws.events" or event.get("detail-type"):
+        return True
+
+    # EventBridge event via Lambda function URL (wrapped in HTTP body)
+    body = _parse_webhook_payload(event)
+    if body.get("source") == "aws.events" or body.get("detail-type"):
+        return True
+
+    return False
+
+
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Main Lambda handler - supports webhook and scheduled modes."""
     logger.info("Received event: %s", json.dumps(event))
@@ -241,7 +255,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         github_token = get_github_pat()
 
         # Check if this is a scheduled event (EventBridge/CloudWatch)
-        if event.get("source") == "aws.events" or event.get("detail-type"):
+        if _is_scheduled_event(event):
             return _handle_scheduled_scan(github_token)
 
         # Otherwise, treat as webhook event

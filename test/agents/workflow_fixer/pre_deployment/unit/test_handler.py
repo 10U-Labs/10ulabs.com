@@ -32,6 +32,7 @@ _should_skip_event = handler._should_skip_event
 _parse_webhook_payload = handler._parse_webhook_payload
 _build_agent_payload = handler._build_agent_payload
 _build_agent_payload_from_run = handler._build_agent_payload_from_run
+_is_scheduled_event = handler._is_scheduled_event
 
 
 class TestShouldSkipEvent:
@@ -249,6 +250,59 @@ class TestBuildAgentPayloadFromRun:
         assert result["workflow_path"] == ""
 
 
+class TestIsScheduledEvent:
+    """Tests for _is_scheduled_event function."""
+
+    def test_detects_direct_eventbridge_by_source(self):
+        """Should detect direct EventBridge invocation by source."""
+        event = {"source": "aws.events"}
+        assert _is_scheduled_event(event) is True
+
+    def test_detects_direct_eventbridge_by_detail_type(self):
+        """Should detect direct EventBridge invocation by detail-type."""
+        event = {"detail-type": "Scheduled Event"}
+        assert _is_scheduled_event(event) is True
+
+    def test_detects_eventbridge_via_http_body_source(self):
+        """Should detect EventBridge event in HTTP body by source."""
+        event = {"body": json.dumps({"source": "aws.events"})}
+        assert _is_scheduled_event(event) is True
+
+    def test_detects_eventbridge_via_http_body_detail_type(self):
+        """Should detect EventBridge event in HTTP body by detail-type."""
+        event = {"body": json.dumps({"detail-type": "Scheduled Event"})}
+        assert _is_scheduled_event(event) is True
+
+    def test_detects_eventbridge_via_http_body_both_fields(self):
+        """Should detect EventBridge event in HTTP body with both fields."""
+        event = {
+            "body": json.dumps({
+                "source": "aws.events",
+                "detail-type": "Scheduled Event",
+            })
+        }
+        assert _is_scheduled_event(event) is True
+
+    def test_returns_false_for_webhook_event(self):
+        """Should return False for GitHub webhook events."""
+        event = {
+            "body": json.dumps({
+                "action": "completed",
+                "workflow_run": {"conclusion": "failure"},
+            })
+        }
+        assert _is_scheduled_event(event) is False
+
+    def test_returns_false_for_empty_event(self):
+        """Should return False for empty event."""
+        assert _is_scheduled_event({}) is False
+
+    def test_returns_false_for_empty_body(self):
+        """Should return False for empty body."""
+        event = {"body": ""}
+        assert _is_scheduled_event(event) is False
+
+
 class TestLambdaHandlerModes:
     """Tests for lambda_handler mode detection."""
 
@@ -276,6 +330,20 @@ class TestLambdaHandlerModes:
         mock_scan.return_value = {"statusCode": 200, "body": "{}"}
 
         event = {"detail-type": "Scheduled Event"}
+        lambda_handler(event, None)
+
+        mock_scan.assert_called_once_with("ghp_test")
+
+    @patch("handler.get_github_pat")
+    @patch("handler._handle_scheduled_scan")
+    def test_detects_scheduled_event_via_http_body(self, mock_scan, mock_pat):
+        """Should detect scheduled event via HTTP body (Lambda function URL)."""
+        from handler import lambda_handler
+
+        mock_pat.return_value = "ghp_test"
+        mock_scan.return_value = {"statusCode": 200, "body": "{}"}
+
+        event = {"body": json.dumps({"source": "aws.events", "detail-type": "Scheduled Event"})}
         lambda_handler(event, None)
 
         mock_scan.assert_called_once_with("ghp_test")
