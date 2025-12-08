@@ -6,12 +6,12 @@
 # workflows to trigger when files change.
 #
 # For each workflow:
+#   - depends_on: List of workflows (by key) that must complete before this
 #   - name: The display name (must match the 'name:' field in the workflow)
 #   - paths: File patterns that trigger this workflow
-#   - depends_on: List of workflows (by key) that must complete before this
 agents_agent_creator:
   depends_on:
-    - bootstrap
+    - agents_workflow_fixer
   name: Deploying Agent Creator
   paths:
     - '.github/workflows/agents_agent_creator.yml'
@@ -20,7 +20,6 @@ agents_agent_creator:
 agents_test_auditor:
   depends_on:
     - agents_agent_creator
-    - agents_workflow_fixer
   name: Deploying Test Auditor Agent
   paths:
     - '.github/workflows/agents_test_auditor.yml'
@@ -60,13 +59,6 @@ bootstrap:
     - '.github/workflows/bootstrap.yml'
     - 'src/bootstrap/**'
     - 'test/bootstrap/**'
-claude:
-  depends_on: []
-  name: Testing Claude Code hooks
-  paths:
-    - '.claude/**'
-    - '.github/workflows/claude.yml'
-    - 'test/claude/**'
 endpoint_health:
   depends_on:
     - api_backend
@@ -147,7 +139,6 @@ endpoint_v1_rack_designer:
     - 'test/api/endpoints/rack_designer/**'
 endpoint_v1_runners:
   depends_on:
-    - endpoint_v1_ec2_runner
     - endpoint_v1_ecs_runner
   name: >-
     Ensuring the /v1/runners API endpoint exists and is properly configured
