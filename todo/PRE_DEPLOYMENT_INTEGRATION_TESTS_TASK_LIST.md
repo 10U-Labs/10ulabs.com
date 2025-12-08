@@ -235,25 +235,25 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_v1_ec2_runner, endpoint_v1_ecs_runner
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/runners/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/runners/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/runners/pre_deployment/` to `test/api/endpoints/runners/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/runners/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/runners/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/runners/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] EC2 runner endpoint exists and returns 200
-  - [ ] ECS runner endpoint exists and returns 200
-  - [ ] SQS queues exist
-  - [ ] DynamoDB tables exist
-  - [ ] Both runner endpoint terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_runners.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/runners/pre_deployment/unit/`
+  - [x] `test/api/endpoints/runners/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/runners/pre_deployment/` to `test/api/endpoints/runners/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/runners/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/runners/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/runners/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] EC2 runner endpoint exists and returns 200
+  - [x] ECS runner endpoint exists and returns 200
+  - [x] SQS queues exist
+  - [x] DynamoDB tables exist
+  - [x] Both runner endpoint terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_runners.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
@@ -261,24 +261,24 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_v1_ecs_runner
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/echo/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/echo/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/echo/pre_deployment/` to `test/api/endpoints/echo/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/echo/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/echo/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/echo/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] ECS runner infrastructure exists
-  - [ ] API Gateway exists
-  - [ ] Lambda execution role exists
-  - [ ] endpoint_v1_ecs_runner terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_echo.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/echo/pre_deployment/unit/`
+  - [x] `test/api/endpoints/echo/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/echo/pre_deployment/` to `test/api/endpoints/echo/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/echo/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/echo/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/echo/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] ECS runner infrastructure exists
+  - [x] API Gateway exists
+  - [x] Lambda execution role exists
+  - [x] endpoint_v1_ecs_runner terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_echo.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
@@ -286,24 +286,24 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_v1_ecs_runner
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/contact/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/contact/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/contact/pre_deployment/` to `test/api/endpoints/contact/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/contact/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/contact/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/contact/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] ECS runner infrastructure exists
-  - [ ] API Gateway exists
-  - [ ] SES is configured
-  - [ ] endpoint_v1_ecs_runner terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_contact.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/contact/pre_deployment/unit/`
+  - [x] `test/api/endpoints/contact/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/contact/pre_deployment/` to `test/api/endpoints/contact/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/contact/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/contact/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/contact/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] ECS runner infrastructure exists
+  - [x] API Gateway exists
+  - [x] SES is configured
+  - [x] endpoint_v1_ecs_runner terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_contact.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
@@ -311,24 +311,24 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_v1_ecs_runner
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/rack_designer/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/rack_designer/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/rack_designer/pre_deployment/` to `test/api/endpoints/rack_designer/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/rack_designer/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/rack_designer/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/rack_designer/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] ECS runner infrastructure exists
-  - [ ] API Gateway exists
-  - [ ] S3 bucket for designs exists
-  - [ ] endpoint_v1_ecs_runner terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_rack_designer.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/rack_designer/pre_deployment/unit/`
+  - [x] `test/api/endpoints/rack_designer/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/rack_designer/pre_deployment/` to `test/api/endpoints/rack_designer/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/rack_designer/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/rack_designer/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/rack_designer/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] ECS runner infrastructure exists
+  - [x] API Gateway exists
+  - [x] S3 bucket for designs exists
+  - [x] endpoint_v1_ecs_runner terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_rack_designer.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
@@ -336,48 +336,43 @@ The `endpoint_v1_image_for_ec2_runners_post` workflow already implements this pa
 
 **Depends on:** endpoint_v1_ecs_runner
 
-- [ ] Create directory structure:
-  - [ ] `test/api/endpoints/simulation_soc/pre_deployment/unit/`
-  - [ ] `test/api/endpoints/simulation_soc/pre_deployment/integration/`
-- [ ] Move existing tests from `test/api/endpoints/simulation_soc/pre_deployment/` to `test/api/endpoints/simulation_soc/pre_deployment/unit/`
-- [ ] Create conftest files:
-  - [ ] `test/api/endpoints/simulation_soc/pre_deployment/conftest.py`
-  - [ ] `test/api/endpoints/simulation_soc/pre_deployment/unit/conftest.py`
-  - [ ] `test/api/endpoints/simulation_soc/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] ECS runner infrastructure exists
-  - [ ] API Gateway exists
-  - [ ] endpoint_v1_ecs_runner terraform outputs are readable
-- [ ] Update `.github/workflows/endpoint_v1_simulation_soc.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/api/endpoints/simulation_soc/pre_deployment/unit/`
+  - [x] `test/api/endpoints/simulation_soc/pre_deployment/integration/`
+- [x] Move existing tests from `test/api/endpoints/simulation_soc/pre_deployment/` to `test/api/endpoints/simulation_soc/pre_deployment/unit/`
+- [x] Create conftest files:
+  - [x] `test/api/endpoints/simulation_soc/pre_deployment/conftest.py`
+  - [x] `test/api/endpoints/simulation_soc/pre_deployment/unit/conftest.py`
+  - [x] `test/api/endpoints/simulation_soc/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] ECS runner infrastructure exists
+  - [x] API Gateway exists
+  - [x] endpoint_v1_ecs_runner terraform outputs are readable
+- [x] Update `.github/workflows/endpoint_v1_simulation_soc.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update `unit-testing` job to run `pre_deployment/unit/`
+  - [x] Update job dependencies
 
 ---
 
 ### 15. www_index
 
-**Depends on:** endpoint_v1_contact
+**Depends on:** www_shared
 
-- [ ] Create directory structure:
-  - [ ] `test/www/paths/index/pre_deployment/unit/`
-  - [ ] `test/www/paths/index/pre_deployment/integration/`
-- [ ] Move existing tests from `test/www/paths/index/pre_deployment/` to `test/www/paths/index/pre_deployment/unit/` (if any exist)
-- [ ] Create conftest files:
-  - [ ] `test/www/paths/index/pre_deployment/conftest.py`
-  - [ ] `test/www/paths/index/pre_deployment/unit/conftest.py`
-  - [ ] `test/www/paths/index/pre_deployment/integration/conftest.py`
-- [ ] Create `__init__.py` files in new directories
-- [ ] Create pre-deployment integration tests to validate:
-  - [ ] Contact endpoint exists and is functional
-  - [ ] S3 bucket for static files exists
-  - [ ] CloudFront distribution exists
-  - [ ] endpoint_v1_contact terraform outputs are readable
-- [ ] Update `.github/workflows/www_index.yml`:
-  - [ ] Add `integration-testing-pre-deployment` job
-  - [ ] Update `unit-testing` job to run `pre_deployment/unit/`
-  - [ ] Update job dependencies
+- [x] Create directory structure:
+  - [x] `test/www/index/pre_deployment/integration/`
+- [x] Create conftest files:
+  - [x] `test/www/index/pre_deployment/conftest.py`
+  - [x] `test/www/index/pre_deployment/integration/conftest.py`
+- [x] Create `__init__.py` files in new directories
+- [x] Create pre-deployment integration tests to validate:
+  - [x] S3 bucket for static files exists
+  - [x] CloudFront distribution exists
+  - [x] www_shared terraform outputs are readable
+- [x] Update `.github/workflows/www_index.yml`:
+  - [x] Add `integration-testing-pre-deployment` job
+  - [x] Update job dependencies
 
 ---
 

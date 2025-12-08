@@ -60,6 +60,7 @@ jobs:
     name: Deploying home page
     needs:
       - declaring-common-variables
+      - integration-testing-pre-deployment
       - unit-testing
     runs-on:
       - ecs
@@ -141,7 +142,7 @@ jobs:
     name: E2E testing
     needs:
       - declaring-common-variables
-      - integration-testing
+      - integration-testing-post-deployment
     runs-on:
       - ecs
       - fargate
@@ -177,6 +178,38 @@ jobs:
           BASE_URL: https://10ulabs.com
         name: Run integration tests
         run: npm run test:integration --prefix src/www/paths/index
+  integration-testing-pre-deployment:
+    name: Pre-deployment integration testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on:
+      - ecs
+      - fargate
+      - on-demand
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/www/index/pre_deployment/integration/ \
+            --verbose --pythonwarnings=error
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
     name: Performing static analysis

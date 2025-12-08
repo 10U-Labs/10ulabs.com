@@ -71,6 +71,7 @@ jobs:
     name: Ensuring infrastructure is in desired state
     needs:
       - declaring-common-variables
+      - integration-testing-pre-deployment
       - unit-testing
     runs-on:
       - ecs
@@ -115,6 +116,40 @@ jobs:
         run: |
           python3 -m pytest \
             test/api/endpoints/echo/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+  integration-testing-pre-deployment:
+    name: Pre-deployment integration testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on:
+      - ecs
+      - fargate
+      - on-demand
+      - runner-${{ github.run_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_wrapper: false
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
+            }}
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/api/endpoints/echo/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
   performing-static-analysis:
     if: github.ref == 'refs/heads/main'
@@ -191,7 +226,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/endpoints/echo/pre_deployment/ \
+          python3 -m pytest test/api/endpoints/echo/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
 name: Ensuring echo endpoint exists and is properly configured
 on:
