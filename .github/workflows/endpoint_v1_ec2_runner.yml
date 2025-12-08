@@ -33,6 +33,7 @@ jobs:
     outputs:
       aws_region: ${{ steps.shared.outputs.aws_region }}
       role_arn: ${{ steps.shared.outputs.role_arn }}
+      tf_version: ${{ steps.shared.outputs.tf_version }}
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -51,6 +52,7 @@ jobs:
           OUTPUTS=lib/terraform/modules/shared/outputs.tf
           SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
           LOCALS=src/bootstrap/locals.tf
+          BACKEND=src/api/endpoints/ec2_runner/backend.tf
           AWS_REGION=$(grep -A1 'output "aws_region"' $OUTPUTS \
             | grep 'value' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $OUTPUTS \
@@ -61,13 +63,16 @@ jobs:
             | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/"
           ROLE_ARN="${ROLE_ARN}${RESOURCE_PREFIX}${ROLE_SUFFIX}"
+          TF_VERSION=$(grep 'required_version' $BACKEND \
+            | cut -d'"' -f2 | sed 's/>= //')
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "tf_version=$TF_VERSION" >> $GITHUB_OUTPUT
   e2e-testing:
     name: E2E testing
     needs:
       - declaring-common-variables
-      - integration-testing
+      - integration-testing-post-deployment
     permissions:
       contents: read
       id-token: write
@@ -118,6 +123,7 @@ jobs:
     name: Ensuring endpoint infrastructure is in desired state
     needs:
       - declaring-common-variables
+      - integration-testing-pre-deployment
       - unit-testing
     permissions:
       contents: read
@@ -148,6 +154,9 @@ jobs:
             '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
       - name: Terraform Init
         run: cd src/api/endpoints/ec2_runner && terraform init
       - name: Terraform Apply
@@ -201,6 +210,62 @@ jobs:
           TEST_DIR=test/api/endpoints/ec2_runner
           python3 -m pytest $TEST_DIR/post_deployment/integration/ \
             --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
+  integration-testing-pre-deployment:
+    name: Pre-deployment integration testing
+    needs:
+      - declaring-common-variables
+      - unit-testing
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
+            contains(github.event.workflow_run.head_commit.message,
+              '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: >-
+            ${{ needs.declaring-common-variables.outputs.aws_region }}
+          role-to-assume: >-
+            ${{ needs.declaring-common-variables.outputs.role_arn }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
+          terraform_wrapper: false
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
+          contains(github.event.workflow_run.head_commit.message,
+            '[github-hosted]')
+        name: Install Python dependencies
+        run: python3 -m pip install boto3 botocore pytest pyyaml requests
+      - name: Run pre-deployment integration tests
+        run: |
+          TEST_DIR=test/api/endpoints/ec2_runner
+          python3 -m pytest $TEST_DIR/pre_deployment/integration/ \
+            --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
   performing-static-analysis:
     name: Performing static analysis
     needs: declaring-common-variables
@@ -234,6 +299,9 @@ jobs:
             '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: >-
+            ${{ needs.declaring-common-variables.outputs.tf_version }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -337,7 +405,7 @@ jobs:
         run: python3 -m pip install pytest boto3 PyYAML requests
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/ \
+          python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/unit/ \
             --confcutdir=test/api/endpoints/ec2_runner \
             --verbose --pythonwarnings=error
 name: Ensuring the /v1/ec2-runner API endpoint exists and is properly configured

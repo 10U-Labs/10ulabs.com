@@ -1,7 +1,7 @@
 """Unit tests for ECS runner Lambda Terraform configuration."""
 from test.api.endpoints.conftest import assert_archive_includes_file
 
-from ..conftest import ECS_RUNNER_SRC
+from ...conftest import ECS_RUNNER_SRC
 
 
 def test_lambda_terraform_file_exists():

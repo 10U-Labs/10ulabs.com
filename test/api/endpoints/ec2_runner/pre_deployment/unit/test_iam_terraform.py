@@ -1,10 +1,7 @@
 """Unit tests for EC2 runner IAM Terraform configuration."""
-from pathlib import Path
+from ...conftest import EC2_RUNNER_SRC
 
-IAM_FILE = (
-    Path(__file__).parent.parent.parent.parent.parent.parent
-    / "src" / "api" / "endpoints" / "ec2_runner" / "iam.tf"
-)
+IAM_FILE = EC2_RUNNER_SRC / "iam.tf"
 
 
 def test_iam_terraform_file_exists():

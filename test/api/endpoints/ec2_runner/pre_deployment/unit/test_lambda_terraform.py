@@ -1,7 +1,7 @@
 """Unit tests for EC2 runner Lambda Terraform configuration."""
 from test.api.endpoints.conftest import assert_archive_includes_file
 
-from ..conftest import EC2_RUNNER_SRC
+from ...conftest import EC2_RUNNER_SRC
 
 
 def test_lambda_terraform_file_exists():
