@@ -115,7 +115,13 @@ def dispatch_and_wait_single(
     Returns (workflow_key, success, conclusion).
     """
     if ecs_on_demand is None:
-        ecs_on_demand = {"contact", "echo", "rack_designer", "www_index"}
+        ecs_on_demand = {
+            "endpoint_v1_contact",
+            "endpoint_v1_echo",
+            "endpoint_v1_rack_designer",
+            "endpoint_v1_simulation_soc",
+            "www_index",
+        }
 
     workflow_file = f".github/workflows/{workflow_key}.yml"
     workflow_name = graph[workflow_key]["name"]
@@ -164,7 +170,13 @@ def execute_level(
 
     Returns a list of failed workflow keys.
     """
-    ecs_on_demand = {"contact", "echo", "rack_designer", "www_index"}
+    ecs_on_demand = {
+        "endpoint_v1_contact",
+        "endpoint_v1_echo",
+        "endpoint_v1_rack_designer",
+        "endpoint_v1_simulation_soc",
+        "www_index",
+    }
     failed_workflows: list[str] = []
 
     if len(level_workflows) == 1:
@@ -241,7 +253,13 @@ def execute_plan(
     Returns a list of failed workflow keys.
     """
     # ECS on-demand workflows (no github_hosted support)
-    ecs_on_demand = {"contact", "echo", "rack_designer", "www_index"}
+    ecs_on_demand = {
+        "endpoint_v1_contact",
+        "endpoint_v1_echo",
+        "endpoint_v1_rack_designer",
+        "endpoint_v1_simulation_soc",
+        "www_index",
+    }
 
     print(f"Executing {len(plan)} workflows in sequence:")
     for i, wf in enumerate(plan, 1):

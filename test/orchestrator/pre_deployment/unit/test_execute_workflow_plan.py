@@ -306,7 +306,7 @@ class TestDispatchAndWaitSingle:
     def test_dispatch_ecs_on_demand_no_github_hosted(self) -> None:
         """Test ECS on-demand workflows don't get github_hosted flag."""
         ecs_graph = {
-            "contact": {
+            "endpoint_v1_contact": {
                 "name": "Contact",
                 "depends_on": [],
             },
@@ -324,7 +324,7 @@ class TestDispatchAndWaitSingle:
                         mock_wait.return_value = (True, "success")
 
                         dispatch_and_wait_single(
-                            "contact", ecs_graph, github_hosted=True
+                            "endpoint_v1_contact", ecs_graph, github_hosted=True
                         )
 
                         # Verify --field github_hosted=true was NOT passed
