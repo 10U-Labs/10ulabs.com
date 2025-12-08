@@ -5,19 +5,53 @@ import pytest
 
 
 BOOTSTRAP_DIR = Path(__file__).parent.parent.parent / "src" / "bootstrap"
+SHARED_MODULE_DIR = Path(__file__).parent.parent.parent / "lib" / "terraform" / "modules" / "shared"
 LOCALS_TF_PATH = BOOTSTRAP_DIR / "locals.tf"
 
-SHARED_MODULE_VALUES = {
-    'admin_iam_user': 'jdrowne',
-    'aws_account_id': '781581267945',
-    'aws_region': 'us-east-2',
-    'domain_name': '10ulabs.com',
-    'github_org': '10U-Labs-LLC',
-    'name_for_central_logs_bucket': '10ulabs-central-logs-us-east-2',
-    'name_for_github_repo': '10ulabs.com',
-    'name_for_terraform_state_bucket': '10ulabs-terraform-state-us-east-2',
-    'resource_prefix': 'TenULabs',
-}
+
+def _parse_shared_module_locals() -> dict:
+    """Parse locals from the shared Terraform module."""
+    locals_path = SHARED_MODULE_DIR / "locals.tf"
+    with open(locals_path, encoding='utf-8') as f:
+        content = f.read()
+
+    values = {}
+    # Match simple string assignments: key = "value"
+    for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
+        values[match.group(1)] = match.group(2)
+    return values
+
+
+def _parse_shared_module_outputs(locals_dict: dict) -> dict:
+    """Parse outputs from the shared Terraform module, resolving local references."""
+    outputs_path = SHARED_MODULE_DIR / "outputs.tf"
+    with open(outputs_path, encoding='utf-8') as f:
+        content = f.read()
+
+    values = {}
+    # Match output blocks: output "name" { value = "string" } or { value = local.X }
+    for match in re.finditer(
+        r'output\s+"(\w+)"\s*\{\s*value\s*=\s*(?:"([^"]*)"|local\.(\w+))\s*\}',
+        content
+    ):
+        output_name = match.group(1)
+        if match.group(2) is not None:
+            values[output_name] = match.group(2)
+        elif match.group(3):
+            local_ref = match.group(3)
+            if local_ref in locals_dict:
+                values[output_name] = locals_dict[local_ref]
+    return values
+
+
+def _get_shared_module_values() -> dict:
+    """Get all values from the shared Terraform module."""
+    locals_dict = _parse_shared_module_locals()
+    outputs_dict = _parse_shared_module_outputs(locals_dict)
+    return outputs_dict
+
+
+SHARED_MODULE_VALUES = _get_shared_module_values()
 
 
 def _extract_role_suffix(local_name: str) -> str:
@@ -40,6 +74,7 @@ LOCALS_DERIVED_VALUES = {
     'name_for_cloudtrail_iam_role': f"{_PREFIX}{_CT_SUFFIX}",
     'name_for_cloudtrail_log_group': f"/aws/cloudtrail/{_PREFIX}",
     'name_for_github_actions_role': f"{_PREFIX}{_GH_SUFFIX}",
+    'ssm_parameter_name_for_github_pat': SHARED_MODULE_VALUES.get('ssm_github_pat_name', ''),
 }
 
 
