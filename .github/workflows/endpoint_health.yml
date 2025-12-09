@@ -149,7 +149,7 @@ jobs:
           python3 scripts/dispatch_descendants.py \
             --workflow endpoint_health \
             --repo ${{ github.repository }}
-name: Ensuring health endpoint exists and is properly configured
+name: Ensuring /health endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
