@@ -135,42 +135,59 @@ jobs:
           python3 -m pytest test/orchestrator/ \
             --verbose --pythonwarnings=error
       - id: plan
-        name: Compute root workflow
+        name: Compute root workflows
         run: |
           GRAPH="etc/workflow-dependencies.yml"
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
-            ROOT="$START_FROM"
+            ROOTS="$START_FROM"
           else
             CHANGED="${{ steps.files.outputs.changed }}"
-            ROOT=$(echo "$CHANGED" | python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --levels --indexed | jq -r '.[0].name // empty')
+            # Get all level-1 workflows (independent roots)
+            JQ='[.[] | select(.level == 1) | .name] | join("\n")'
+            ROOTS=$(echo "$CHANGED" | \
+              python3 scripts/compute_root_workflows.py \
+              --graph $GRAPH --levels --indexed | jq -r "$JQ")
           fi
-          echo "Root workflow: $ROOT"
-          echo "root_workflow=$ROOT" >> "$GITHUB_OUTPUT"
-      - if: steps.plan.outputs.root_workflow == ''
+          echo "Root workflows:"
+          echo "$ROOTS"
+          EOF_MARKER=$(openssl rand -hex 8)
+          {
+            echo "root_workflows<<$EOF_MARKER"
+            echo "$ROOTS"
+            echo "$EOF_MARKER"
+          } >> "$GITHUB_OUTPUT"
+      - if: steps.plan.outputs.root_workflows == ''
         name: No workflows to dispatch
         run: echo "No workflow-related files changed"
       - if: >-
-          steps.plan.outputs.root_workflow != '' &&
+          steps.plan.outputs.root_workflows != '' &&
           (inputs.dry_run == true ||
            contains(github.event.head_commit.message, '[dry run]'))
         name: Dry run
         run: |
-          echo "Would dispatch: ${{ steps.plan.outputs.root_workflow }}.yml"
+          echo "Would dispatch the following workflows:"
+          ROOTS="${{ steps.plan.outputs.root_workflows }}"
+          echo "$ROOTS" | while read -r WORKFLOW; do
+            [ -n "$WORKFLOW" ] && echo "  - ${WORKFLOW}.yml"
+          done
       - if: >-
-          steps.plan.outputs.root_workflow != '' &&
+          steps.plan.outputs.root_workflows != '' &&
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
-        name: Dispatch root workflow (fire-and-forget)
+        name: Dispatch root workflows (fire-and-forget)
         run: |
-          WORKFLOW="${{ steps.plan.outputs.root_workflow }}"
-          echo "Dispatching ${WORKFLOW}.yml..."
-          gh workflow run ".github/workflows/${WORKFLOW}.yml" \
-            --repo ${{ github.repository }}
-          echo "Root workflow dispatched (fire-and-forget)"
-          echo "Descendants will be triggered by the workflow's dispatch step"
+          ROOTS="${{ steps.plan.outputs.root_workflows }}"
+          echo "$ROOTS" | while read -r WORKFLOW; do
+            if [ -n "$WORKFLOW" ]; then
+              echo "Dispatching ${WORKFLOW}.yml..."
+              gh workflow run ".github/workflows/${WORKFLOW}.yml" \
+                --repo ${{ github.repository }}
+            fi
+          done
+          echo "Root workflows dispatched (fire-and-forget)"
+          echo "Descendants triggered by each workflow's dispatch step"
 name: Workflow Orchestrator
 on:
   push:
