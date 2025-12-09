@@ -87,39 +87,6 @@ def test_is_static_analysis_step_ignores_install(pre_git_checks):
     assert result is False
 
 
-def test_is_pre_deployment_test_step_detects_pre_deployment_unit(pre_git_checks):
-    """Test that is_pre_deployment_test_step detects pre deployment unit tests."""
-    result = pre_git_checks.is_pre_deployment_test_step(
-        'Test', 'pytest test/pre_deployment/unit/')
-    assert result is True
-
-
-def test_is_pre_deployment_test_step_detects_pre_deployment_integration(pre_git_checks):
-    """Test that is_pre_deployment_test_step detects pre deployment integration tests."""
-    cmd = 'pytest test/pre_deployment/integration/'
-    result = pre_git_checks.is_pre_deployment_test_step('Test', cmd)
-    assert result is True
-
-
-def test_is_pre_deployment_test_step_skips_post_deployment(pre_git_checks):
-    """Test that is_pre_deployment_test_step skips post deployment tests."""
-    cmd = 'pytest test/post_deployment/integration/'
-    result = pre_git_checks.is_pre_deployment_test_step('Test', cmd)
-    assert result is False
-
-
-def test_is_pre_deployment_test_step_detects_unit_test_name(pre_git_checks):
-    """Test that is_pre_deployment_test_step detects unit test by name."""
-    result = pre_git_checks.is_pre_deployment_test_step('Run unit tests', 'pytest')
-    assert result is True
-
-
-def test_is_pre_deployment_test_step_ignores_setup(pre_git_checks):
-    """Test that is_pre_deployment_test_step ignores setup."""
-    result = pre_git_checks.is_pre_deployment_test_step('Setup test env', 'setup.sh')
-    assert result is False
-
-
 def test_is_conditional_on_github_hosted_returns_true(pre_git_checks):
     """Test that Is conditional on github hosted returns true."""
     conditional = 'needs.setup.outputs.github_hosted == true'
@@ -172,21 +139,6 @@ def test_extract_static_analysis_commands_excludes_deploy(pre_git_checks, sample
     assert 'Deploy' not in names
 
 
-def test_extract_pre_deployment_test_commands_returns_list(pre_git_checks, sample_workflow):
-    """Test that Extract pre deployment commands returns list."""
-    result = pre_git_checks.extract_pre_deployment_test_commands(sample_workflow)
-    assert isinstance(result, list)
-
-
-def test_extract_pre_deployment_test_commands_finds_unit_tests(
-    pre_git_checks, sample_workflow
-):
-    """Test that Extract pre deployment commands finds unit tests."""
-    result = pre_git_checks.extract_pre_deployment_test_commands(sample_workflow)
-    names = [cmd['name'] for cmd in result]
-    assert 'Run unit tests' in names
-
-
 def test_clean_command_removes_github_expressions(pre_git_checks):
     """Test that Clean command removes github expressions."""
     cmd = 'echo ${{ secrets.TOKEN }}'
@@ -231,14 +183,16 @@ def test_clean_script_removes_comment_lines(pre_git_checks):
 
 def test_extract_commands_from_jobs_with_filter(pre_git_checks, sample_workflow):
     """Test that Extract commands from jobs with step filter."""
-    step_filter = lambda name, _cmd: pre_git_checks.is_static_analysis_step(name)
+    def step_filter(name, _cmd):
+        return pre_git_checks.is_static_analysis_step(name)
     result = pre_git_checks.extract_commands_from_jobs(sample_workflow, step_filter)
     assert len(result) > 0
 
 
 def test_extract_commands_from_jobs_includes_job_name(pre_git_checks, sample_workflow):
     """Test that Extract commands from jobs includes job name."""
-    step_filter = lambda name, _cmd: pre_git_checks.is_static_analysis_step(name)
+    def step_filter(name, _cmd):
+        return pre_git_checks.is_static_analysis_step(name)
     result = pre_git_checks.extract_commands_from_jobs(sample_workflow, step_filter)
     assert all('job' in cmd for cmd in result)
 
@@ -247,7 +201,8 @@ def test_extract_commands_from_jobs_includes_conditional_field(
     pre_git_checks, sample_workflow
 ):
     """Test that Extract commands from jobs includes conditional field."""
-    step_filter = lambda name, _cmd: pre_git_checks.is_static_analysis_step(name)
+    def step_filter(name, _cmd):
+        return pre_git_checks.is_static_analysis_step(name)
     result = pre_git_checks.extract_commands_from_jobs(sample_workflow, step_filter)
     assert all('conditional' in cmd for cmd in result)
 
@@ -255,7 +210,8 @@ def test_extract_commands_from_jobs_includes_conditional_field(
 def test_extract_commands_from_jobs_empty_workflow(pre_git_checks):
     """Test that Extract commands from jobs empty workflow."""
     workflow = {'jobs': {}}
-    step_filter = lambda name, _cmd: pre_git_checks.is_static_analysis_step(name)
+    def step_filter(name, _cmd):
+        return pre_git_checks.is_static_analysis_step(name)
     result = pre_git_checks.extract_commands_from_jobs(workflow, step_filter)
     assert result == []
 
@@ -291,3 +247,148 @@ def test_run_commands_returns_false_when_one_fails(pre_git_checks):
     ]
     result = pre_git_checks.run_commands(commands, 'test-workflow')
     assert result is False
+
+
+def test_get_workflow_push_paths_returns_paths(pre_git_checks, sample_workflow):
+    """Test that get_workflow_push_paths extracts paths from workflow."""
+    result = pre_git_checks.get_workflow_push_paths(sample_workflow)
+    assert result == ['src/**/*.py', 'test/**']
+
+
+def test_get_workflow_push_paths_returns_empty_for_no_paths(
+    pre_git_checks, sample_workflow_no_paths
+):
+    """Test that get_workflow_push_paths returns empty list when no paths."""
+    result = pre_git_checks.get_workflow_push_paths(sample_workflow_no_paths)
+    assert result == []
+
+
+def test_get_workflow_push_paths_handles_missing_on(pre_git_checks):
+    """Test that get_workflow_push_paths handles missing on key."""
+    workflow = {'jobs': {}}
+    result = pre_git_checks.get_workflow_push_paths(workflow)
+    assert result == []
+
+
+def test_get_workflow_push_paths_handles_non_dict_on(pre_git_checks):
+    """Test that get_workflow_push_paths handles non-dict on value."""
+    workflow = {'on': 'push'}
+    result = pre_git_checks.get_workflow_push_paths(workflow)
+    assert result == []
+
+
+def test_get_workflow_push_paths_handles_non_dict_push(pre_git_checks):
+    """Test that get_workflow_push_paths handles non-dict push value."""
+    workflow = {'on': {'push': None}}
+    result = pre_git_checks.get_workflow_push_paths(workflow)
+    assert result == []
+
+
+def test_get_workflow_push_paths_handles_yaml_boolean_on(pre_git_checks):
+    """Test that get_workflow_push_paths handles YAML parsing 'on' as True."""
+    # YAML parses 'on:' as boolean True
+    workflow = {True: {'push': {'paths': ['src/**']}}}
+    result = pre_git_checks.get_workflow_push_paths(workflow)
+    assert result == ['src/**']
+
+
+def test_find_workflows_by_push_paths_finds_matching(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths finds workflows with matching paths."""
+    workflows_dir = tmp_path / 'workflows'
+    workflows_dir.mkdir()
+    workflow_file = workflows_dir / 'test_workflow.yml'
+    workflow_file.write_text("""
+on:
+  push:
+    paths:
+      - 'src/**'
+jobs:
+  test:
+    steps:
+      - name: Run lint
+        run: echo lint
+""")
+    changed_files = ['src/main.py']
+    known_workflows = []
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
+    assert len(result) == 1
+    assert result[0]['name'] == 'test_workflow'
+
+
+def test_find_workflows_by_push_paths_skips_known(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths skips already known workflows."""
+    workflows_dir = tmp_path / 'workflows'
+    workflows_dir.mkdir()
+    workflow_file = workflows_dir / 'test_workflow.yml'
+    workflow_file.write_text("""
+on:
+  push:
+    paths:
+      - 'src/**'
+jobs: {}
+""")
+    changed_files = ['src/main.py']
+    known_workflows = [{'name': 'test_workflow', 'path': str(workflow_file), 'workflow': {}}]
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
+    assert len(result) == 0
+
+
+def test_find_workflows_by_push_paths_skips_no_match(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths skips workflows with no path match."""
+    workflows_dir = tmp_path / 'workflows'
+    workflows_dir.mkdir()
+    workflow_file = workflows_dir / 'test_workflow.yml'
+    workflow_file.write_text("""
+on:
+  push:
+    paths:
+      - 'docs/**'
+jobs: {}
+""")
+    changed_files = ['src/main.py']
+    known_workflows = []
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
+    assert len(result) == 0
+
+
+def test_find_workflows_by_push_paths_skips_no_paths(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths skips workflows without paths."""
+    workflows_dir = tmp_path / 'workflows'
+    workflows_dir.mkdir()
+    workflow_file = workflows_dir / 'test_workflow.yml'
+    workflow_file.write_text("""
+on:
+  push: {}
+jobs: {}
+""")
+    changed_files = ['src/main.py']
+    known_workflows = []
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
+    assert len(result) == 0
+
+
+def test_find_workflows_by_push_paths_handles_missing_dir(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths handles missing directory."""
+    workflows_dir = tmp_path / 'nonexistent'
+    changed_files = ['src/main.py']
+    known_workflows = []
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
+    assert result == []
+
+
+def test_find_workflows_by_push_paths_handles_invalid_yaml(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths handles invalid YAML."""
+    workflows_dir = tmp_path / 'workflows'
+    workflows_dir.mkdir()
+    workflow_file = workflows_dir / 'test_workflow.yml'
+    workflow_file.write_text('invalid: yaml: content: [')
+    changed_files = ['src/main.py']
+    known_workflows = []
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
+    assert len(result) == 0

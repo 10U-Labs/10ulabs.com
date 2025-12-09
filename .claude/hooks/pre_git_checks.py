@@ -179,12 +179,75 @@ def extract_static_analysis_commands(workflow):
         workflow, lambda name, _cmd: is_static_analysis_step(name))
 
 
-def find_matching_workflows(changed_files, workflows_dir, project_dir):
-    """Find workflows whose path patterns match any of the changed files.
+def get_workflow_push_paths(workflow):
+    """Extract on.push.paths from a workflow file.
 
-    Uses etc/workflow-dependencies.yml for path mappings instead of
-    on.push.paths in workflow files (since orchestrator handles push triggers).
+    Note: YAML parses 'on' as boolean True, so we check both keys.
     """
+    # YAML parses 'on' as boolean True, so check both
+    on_trigger = workflow.get('on') or workflow.get(True, {})
+    if isinstance(on_trigger, dict):
+        push_config = on_trigger.get('push', {})
+        if isinstance(push_config, dict):
+            return push_config.get('paths', [])
+    return []
+
+
+def find_workflows_by_push_paths(changed_files, workflows_dir, known_workflows):
+    """Find workflows whose on.push.paths match changed files.
+
+    This is a fallback for workflows not in workflow-dependencies.yml.
+    """
+    known_names = {w['name'] for w in known_workflows}
+    matching = []
+    workflows_path = Path(workflows_dir)
+
+    if not workflows_path.exists():
+        return []
+
+    for wf_file in workflows_path.glob('*.yml'):
+        workflow_name = wf_file.stem
+        if workflow_name in known_names:
+            continue
+
+        try:
+            with open(wf_file, encoding='utf-8') as f:
+                workflow = yaml.safe_load(f)
+        except yaml.YAMLError:
+            continue
+
+        if not workflow:
+            continue
+
+        paths = get_workflow_push_paths(workflow)
+        if not paths:
+            continue
+
+        for changed_file in changed_files:
+            if file_matches_workflow_paths(changed_file, paths):
+                matching.append({
+                    'name': workflow_name,
+                    'path': str(wf_file),
+                    'workflow': workflow
+                })
+                break
+
+    return matching
+
+
+def dedupe_workflows(workflows):
+    """Remove duplicate workflows by name, preserving order."""
+    seen = set()
+    unique = []
+    for wf in workflows:
+        if wf['name'] not in seen:
+            seen.add(wf['name'])
+            unique.append(wf)
+    return unique
+
+
+def find_workflows_from_dependencies(changed_files, workflows_dir, project_dir):
+    """Find workflows from workflow-dependencies.yml that match changed files."""
     matching = []
     deps = load_workflow_dependencies(project_dir)
 
@@ -210,13 +273,25 @@ def find_matching_workflows(changed_files, workflows_dir, project_dir):
                     })
                 break
 
-    seen = set()
-    unique = []
-    for m in matching:
-        if m['name'] not in seen:
-            seen.add(m['name'])
-            unique.append(m)
-    return unique
+    return matching
+
+
+def find_matching_workflows(changed_files, workflows_dir, project_dir):
+    """Find workflows whose path patterns match any of the changed files.
+
+    First checks etc/workflow-dependencies.yml for orchestrated workflows,
+    then falls back to on.push.paths in workflow files for non-orchestrated
+    workflows (like claude.yml).
+    """
+    from_deps = find_workflows_from_dependencies(
+        changed_files, workflows_dir, project_dir)
+    unique = dedupe_workflows(from_deps)
+
+    # Fallback: check on.push.paths in workflow files not in workflow-dependencies
+    from_push_paths = find_workflows_by_push_paths(
+        changed_files, workflows_dir, unique)
+
+    return dedupe_workflows(unique + from_push_paths)
 
 
 def clean_command(cmd):
