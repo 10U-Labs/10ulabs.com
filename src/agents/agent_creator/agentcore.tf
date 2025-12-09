@@ -5,7 +5,7 @@ resource "aws_bedrockagentcore_agent_runtime" "agent_creator" {
 
   agent_runtime_artifact {
     container_configuration {
-      container_uri = "${data.terraform_remote_state.bootstrap.outputs.ecr_repository_url}:${local.image_tag}"
+      container_uri = "${data.terraform_remote_state.agents_shared.outputs.ecr_repository_url}:${local.image_tag}"
     }
   }
 

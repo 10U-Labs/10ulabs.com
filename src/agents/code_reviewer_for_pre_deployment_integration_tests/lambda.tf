@@ -14,7 +14,7 @@ resource "aws_lambda_function" "action_group" {
   timeout          = 300
   memory_size      = 512
   description      = "Action group for Test Auditor Agent - GitHub operations"
-  layers           = [data.terraform_remote_state.bootstrap.outputs.lambda_layer_github_auth_arn]
+  layers           = [data.terraform_remote_state.agents_shared.outputs.lambda_layer_github_auth_arn]
 
   environment {
     variables = {

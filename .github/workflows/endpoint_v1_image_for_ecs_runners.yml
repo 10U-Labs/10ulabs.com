@@ -29,7 +29,7 @@ jobs:
             | grep -v '\$' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          ECR_REPOSITORY_NAME=$(grep -A1 'output "ecr_repository_name"' \
+          ECR_REPOSITORY_NAME=$(grep -A1 'output "ecr_repository_name_runners"' \
             lib/terraform/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
           FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' \
             src/api/endpoints/ecs_runner/terraform.tfvars | \
