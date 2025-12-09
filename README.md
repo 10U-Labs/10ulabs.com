@@ -5,7 +5,7 @@
 ```
 bootstrap
     │
-    └── agents_workflow_fixer
+    └── agents_troubleshooter_of_workflows
             │
             ├── agents_agent_creator
             ├── agents_agent_deleter
@@ -35,19 +35,19 @@ bootstrap
                             │
                             └── endpoint_health
                                     │
-                                    ├── api_shared_runners
-                                    │       │
-                                    │       └── endpoint_v1_image_for_ec2_runners_post
-                                    │               │
-                                    │               └── endpoint_v1_image_for_ec2_runners
-                                    │                       │
-                                    │                       └── endpoint_v1_ec2_runner ────────┐
+                                    ├── api_shared_runners ───────────────────────────────────┐
+                                    │       │                                                  │
+                                    │       └── endpoint_v1_image_for_ec2_runners_post         │
+                                    │               │                                          │
+                                    │               └── endpoint_v1_image_for_ec2_runners      │
+                                    │                       │                                  │
+                                    │                       └── endpoint_v1_ec2_runner ────────┤
                                     │                                                          │
-                                    └── api_shared_ecs_runner                                  │
-                                            │                                                  │
-                                            └── endpoint_v1_image_for_ecs_runners              │
-                                                    │                                          │
-                                                    └── endpoint_v1_ecs_runner ────────────────┤
+                                    └── api_shared_ecs_runner ─────────────────────────────────┤
+                                                                                               │
+                                                                  endpoint_v1_image_for_ecs_runners
+                                                                               │
+                                                                  endpoint_v1_ecs_runner ──────┤
                                                                                                │
                                                                                     endpoint_v1_runners
                                                                                                │
@@ -83,7 +83,7 @@ bootstrap
 - [ ] `agents_workflow_creator.yml`
 - [ ] `agents_workflow_deleter.yml`
 - [ ] `agents_workflow_evaluator.yml`
-- [ ] `agents_workflow_fixer.yml`
+- [ ] `agents_troubleshooter_of_workflows.yml`
 - [ ] `agents_workflow_modifier.yml`
 - [x] `www_shared.yml`
 - [x] `api_backend.yml`
