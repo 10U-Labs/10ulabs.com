@@ -14,12 +14,15 @@ resource "aws_lambda_function" "invoke" {
   timeout          = 300
   memory_size      = 256
   description      = "Invocation handler for Agent Creator"
+  layers           = [data.terraform_remote_state.bootstrap.outputs.lambda_layer_github_auth_arn]
 
   environment {
     variables = {
-      AGENT_RUNTIME_ARN = aws_bedrockagentcore_agent_runtime.agent_creator.arn
-      SSM_GITHUB_PAT    = local.ssm_github_pat
-      AWS_REGION_NAME   = local.aws_region
+      AGENT_RUNTIME_ARN          = aws_bedrockagentcore_agent_runtime.agent_creator.arn
+      AWS_REGION_NAME            = local.aws_region
+      SSM_GITHUB_APP_ID          = local.github_app_ssm.id
+      SSM_GITHUB_APP_INSTALL_ID  = local.github_app_ssm.installation_id
+      SSM_GITHUB_APP_PRIVATE_KEY = local.github_app_ssm.private_key
     }
   }
 

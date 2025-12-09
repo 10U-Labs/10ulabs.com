@@ -63,9 +63,8 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs requests
-          python3 -m pip install \
-            -r src/agents/workflow_fixer/webhook_lambda/requirements.txt
+            pylint mypy yamllint pytest boto3 boto3-stubs requests \
+            PyJWT cryptography
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:

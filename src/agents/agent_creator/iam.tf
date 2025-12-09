@@ -139,10 +139,14 @@ resource "aws_iam_role_policy" "lambda" {
         Resource = "${aws_cloudwatch_log_group.lambda.arn}:*"
       },
       {
-        Sid      = "SSMAccess"
-        Effect   = "Allow"
-        Action   = ["ssm:GetParameter", "ssm:GetParameters"]
-        Resource = local.ssm_github_pat_arn
+        Sid    = "SSMAccess"
+        Effect = "Allow"
+        Action = ["ssm:GetParameter", "ssm:GetParameters"]
+        Resource = [
+          local.github_app_ssm_arns.id,
+          local.github_app_ssm_arns.installation_id,
+          local.github_app_ssm_arns.private_key,
+        ]
       },
       {
         Sid      = "AgentCoreInvoke"

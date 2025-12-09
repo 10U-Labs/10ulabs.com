@@ -11,16 +11,10 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
+from github_auth import get_github_token
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-
-def get_github_pat() -> str:
-    """Retrieve GitHub PAT from SSM Parameter Store."""
-    ssm = boto3.client("ssm", region_name=os.environ.get("AWS_REGION_NAME", "us-east-2"))
-    param_name = os.environ.get("SSM_GITHUB_PAT", "/TenULabs/github_pat")
-    response = ssm.get_parameter(Name=param_name, WithDecryption=True)
-    return response["Parameter"]["Value"]
 
 
 def invoke_agent(payload: dict[str, Any]) -> dict[str, Any]:

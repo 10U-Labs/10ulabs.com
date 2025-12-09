@@ -14,13 +14,16 @@ resource "aws_lambda_function" "action_group" {
   timeout          = 300
   memory_size      = 512
   description      = "Action group for Test Auditor Agent - GitHub operations"
+  layers           = [data.terraform_remote_state.bootstrap.outputs.lambda_layer_github_auth_arn]
 
   environment {
     variables = {
-      GITHUB_ORG     = local.github_org
-      GITHUB_REPO    = local.github_repo
-      SSM_GITHUB_PAT = local.ssm_github_pat
-      DOCS_APPROACH  = "docs/APPROACH_TO_PRE_DEPLOYMENT_INTEGRATION_TESTS.md"
+      GITHUB_ORG                 = local.github_org
+      GITHUB_REPO                = local.github_repo
+      SSM_GITHUB_APP_ID          = local.github_app_ssm.id
+      SSM_GITHUB_APP_INSTALL_ID  = local.github_app_ssm.installation_id
+      SSM_GITHUB_APP_PRIVATE_KEY = local.github_app_ssm.private_key
+      DOCS_APPROACH              = "docs/APPROACH_TO_PRE_DEPLOYMENT_INTEGRATION_TESTS.md"
     }
   }
 
