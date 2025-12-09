@@ -180,7 +180,11 @@ resource "aws_iam_role_policy" "webhook_lambda_ssm" {
         "ssm:GetParameter",
         "ssm:GetParameters"
       ]
-      Resource = local.ssm_github_pat_arn
+      Resource = [
+        local.github_app_ssm_arns.id,
+        local.github_app_ssm_arns.installation_id,
+        local.github_app_ssm_arns.private_key,
+      ]
     }]
   })
 }
