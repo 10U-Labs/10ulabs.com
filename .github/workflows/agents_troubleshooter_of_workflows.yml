@@ -157,6 +157,11 @@ jobs:
           TEST_PATH=test/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/post_deployment/integration/ \
             --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          TEST_PATH=test/agents/troubleshooter_of_workflows
+          python3 -m pytest $TEST_PATH/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: github.event_name == 'workflow_dispatch'

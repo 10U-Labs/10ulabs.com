@@ -1,8 +1,7 @@
-"""Integration tests for Troubleshooter of Workflows Agent Invocation.
+"""E2E tests for Troubleshooter of Workflows Agent Invocation.
 
-Five-layer testing model:
-- Layer 2: Authorization - Can we call the invoke API?
-- Layer 5: Capability - Can we invoke the agent and get a response?
+These tests invoke the actual AgentCore agent to verify the full
+request/response cycle through the deployed agent container.
 
 Note: These tests invoke the agent with test payloads that should not trigger
 actual workflow fixes (invalid/missing run IDs).
@@ -15,7 +14,7 @@ import pytest
 
 
 class TestAgentInvocationAuthorization:
-    """Layer 2: Verify we can call the AgentCore invoke API."""
+    """Verify we can call the AgentCore invoke API."""
 
     def test_01_can_call_invoke_api(self, agentcore_data_client, agent_runtime_arn):
         """Verify we have permission to call invoke_agent_runtime."""
@@ -48,7 +47,7 @@ class TestAgentInvocationAuthorization:
 
 
 class TestAgentInvocationCapability:
-    """Layer 5: Verify we can invoke the agent and get responses."""
+    """Verify we can invoke the agent and get responses."""
 
     def test_01_agent_handles_empty_payload(self, agentcore_data_client, agent_runtime_arn):
         """Verify agent handles empty/minimal payload gracefully."""
