@@ -1,7 +1,7 @@
 """Integration tests for VPC configuration."""
 
 
-def test_vpc_exists(ec2_client, _config):
+def test_vpc_exists(ec2_client):
     """Test that the VPC exists with the expected CIDR block."""
     response = ec2_client.describe_vpcs(
         Filters=[
@@ -12,7 +12,7 @@ def test_vpc_exists(ec2_client, _config):
     assert len(response['Vpcs']) >= 1
 
 
-def test_vpc_has_dns_hostnames_enabled(ec2_client, _config):
+def test_vpc_has_dns_hostnames_enabled(ec2_client):
     """Test that the VPC has DNS hostnames enabled."""
     response = ec2_client.describe_vpcs(
         Filters=[
@@ -29,7 +29,7 @@ def test_vpc_has_dns_hostnames_enabled(ec2_client, _config):
     assert attrs['EnableDnsHostnames']['Value'] is True
 
 
-def test_vpc_has_dns_support_enabled(ec2_client, _config):
+def test_vpc_has_dns_support_enabled(ec2_client):
     """Test that the VPC has DNS support enabled."""
     response = ec2_client.describe_vpcs(
         Filters=[
@@ -46,7 +46,7 @@ def test_vpc_has_dns_support_enabled(ec2_client, _config):
     assert attrs['EnableDnsSupport']['Value'] is True
 
 
-def test_public_subnets_exist(ec2_client, _config):
+def test_public_subnets_exist(ec2_client):
     """Test that public subnets exist in the VPC."""
     # First get the VPC ID
     vpc_response = ec2_client.describe_vpcs(
@@ -67,7 +67,7 @@ def test_public_subnets_exist(ec2_client, _config):
     assert len(subnet_response['Subnets']) >= 1
 
 
-def test_internet_gateway_exists(ec2_client, _config):
+def test_internet_gateway_exists(ec2_client):
     """Test that an internet gateway is attached to the VPC."""
     # First get the VPC ID
     vpc_response = ec2_client.describe_vpcs(
@@ -87,7 +87,7 @@ def test_internet_gateway_exists(ec2_client, _config):
     assert len(igw_response['InternetGateways']) >= 1
 
 
-def test_runner_security_group_exists(ec2_client, _config):
+def test_runner_security_group_exists(ec2_client):
     """Test that the runner security group exists."""
     # First get the VPC ID
     vpc_response = ec2_client.describe_vpcs(
@@ -108,7 +108,7 @@ def test_runner_security_group_exists(ec2_client, _config):
     assert len(sg_response['SecurityGroups']) == 1
 
 
-def test_runner_security_group_has_egress_rule(ec2_client, _config):
+def test_runner_security_group_has_egress_rule(ec2_client):
     """Test that the runner security group has egress to anywhere."""
     # First get the VPC ID
     vpc_response = ec2_client.describe_vpcs(
@@ -137,7 +137,7 @@ def test_runner_security_group_has_egress_rule(ec2_client, _config):
     assert has_all_egress
 
 
-def test_runner_security_group_has_no_ingress_rules(ec2_client, _config):
+def test_runner_security_group_has_no_ingress_rules(ec2_client):
     """Test that the runner security group has no ingress rules."""
     # First get the VPC ID
     vpc_response = ec2_client.describe_vpcs(
