@@ -305,10 +305,10 @@ jobs:
             --repository "$REPO" \
             --image-tag "$TAG" \
             --region "$REGION"
-      - if: github.event_name == 'workflow_dispatch'
-        name: Dispatch descendant workflows
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
           python3 scripts/dispatch_descendants.py \
