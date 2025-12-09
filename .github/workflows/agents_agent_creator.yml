@@ -75,16 +75,16 @@ jobs:
           tflint_version: latest
       - name: Terraform Format Check
         run: |
-          cd src/agents/agent_creator
+          cd src/api/agents/agent_creator
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/agents/agent_creator && terraform init
+        run: cd src/api/agents/agent_creator && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/agents/agent_creator && tflint --init && tflint
+        run: cd src/api/agents/agent_creator && tflint --init && tflint
       - name: Terraform Plan
-        run: cd src/agents/agent_creator && terraform plan
+        run: cd src/api/agents/agent_creator && terraform plan
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -98,20 +98,20 @@ jobs:
       - name: Run pylint
         run: |
           python3 -m pylint \
-            src/agents/agent_creator/webhook_lambda/ \
+            src/api/agents/agent_creator/webhook_lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy src/agents/agent_creator/webhook_lambda/
+        run: python3 -m mypy src/api/agents/agent_creator/webhook_lambda/
       - name: Run unit tests
         run: |
           python3 -m pytest \
-            test/agents/agent_creator/pre_deployment/unit/ \
+            test/api/agents/agent_creator/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/agents/agent_creator/pre_deployment/integration/ \
+            test/api/agents/agent_creator/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -132,16 +132,16 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: src/agents/agent_creator/agent_code
+          context: src/api/agents/agent_creator/agent_code
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
       - name: Terraform Apply
-        run: cd src/agents/agent_creator && terraform apply -auto-approve
+        run: cd src/api/agents/agent_creator && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
-            test/agents/agent_creator/post_deployment/integration/ \
+            test/api/agents/agent_creator/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

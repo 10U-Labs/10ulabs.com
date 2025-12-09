@@ -15,184 +15,184 @@ agents_agent_creator:
   name: Deploying Agent Creator
   paths:
     - '.github/workflows/agents_agent_creator.yml'
-    - 'src/agents/agent_creator/**'
-    - 'test/agents/agent_creator/**'
+    - 'src/api/agents/agent_creator/**'
+    - 'test/api/agents/agent_creator/**'
 agents_agent_deleter:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Agent Deleter
   paths:
     - '.github/workflows/agents_agent_deleter.yml'
-    - 'src/agents/agent_deleter/**'
-    - 'test/agents/agent_deleter/**'
+    - 'src/api/agents/agent_deleter/**'
+    - 'test/api/agents/agent_deleter/**'
 agents_agent_evaluator:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Agent Evaluator
   paths:
     - '.github/workflows/agents_agent_evaluator.yml'
-    - 'src/agents/agent_evaluator/**'
-    - 'test/agents/agent_evaluator/**'
+    - 'src/api/agents/agent_evaluator/**'
+    - 'test/api/agents/agent_evaluator/**'
 agents_agent_modifier:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Agent Modifier
   paths:
     - '.github/workflows/agents_agent_modifier.yml'
-    - 'src/agents/agent_modifier/**'
-    - 'test/agents/agent_modifier/**'
+    - 'src/api/agents/agent_modifier/**'
+    - 'test/api/agents/agent_modifier/**'
 agents_code_reviewer_for_pre_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Code Reviewer for Pre-Deployment Integration Tests
   paths:
     - '.github/workflows/agents_code_reviewer_for_pre_deployment_integration_tests.yml'
-    - 'src/agents/code_reviewer_for_pre_deployment_integration_tests/**'
-    - 'test/agents/code_reviewer_for_pre_deployment_integration_tests/**'
+    - 'src/api/agents/code_reviewer_for_pre_deployment_integration_tests/**'
+    - 'test/api/agents/code_reviewer_for_pre_deployment_integration_tests/**'
 agents_creator_of_e2e_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Creator of E2E Tests Agent
   paths:
     - '.github/workflows/agents_creator_of_e2e_tests.yml'
-    - 'src/agents/creator_of_e2e_tests/**'
-    - 'test/agents/creator_of_e2e_tests/**'
+    - 'src/api/agents/creator_of_e2e_tests/**'
+    - 'test/api/agents/creator_of_e2e_tests/**'
 agents_creator_of_post_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Creator of Post-Deployment Integration Tests Agent
   paths:
     - '.github/workflows/agents_creator_of_post_deployment_integration_tests.yml'
-    - 'src/agents/creator_of_post_deployment_integration_tests/**'
-    - 'test/agents/creator_of_post_deployment_integration_tests/**'
+    - 'src/api/agents/creator_of_post_deployment_integration_tests/**'
+    - 'test/api/agents/creator_of_post_deployment_integration_tests/**'
 agents_creator_of_pre_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Creator of Pre-Deployment Integration Tests Agent
   paths:
     - '.github/workflows/agents_creator_of_pre_deployment_integration_tests.yml'
-    - 'src/agents/creator_of_pre_deployment_integration_tests/**'
-    - 'test/agents/creator_of_pre_deployment_integration_tests/**'
+    - 'src/api/agents/creator_of_pre_deployment_integration_tests/**'
+    - 'test/api/agents/creator_of_pre_deployment_integration_tests/**'
 agents_creator_of_unit_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Creator of Unit Tests Agent
   paths:
     - '.github/workflows/agents_creator_of_unit_tests.yml'
-    - 'src/agents/creator_of_unit_tests/**'
-    - 'test/agents/creator_of_unit_tests/**'
+    - 'src/api/agents/creator_of_unit_tests/**'
+    - 'test/api/agents/creator_of_unit_tests/**'
 agents_deleter_of_e2e_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Deleter of E2E Tests Agent
   paths:
     - '.github/workflows/agents_deleter_of_e2e_tests.yml'
-    - 'src/agents/deleter_of_e2e_tests/**'
-    - 'test/agents/deleter_of_e2e_tests/**'
+    - 'src/api/agents/deleter_of_e2e_tests/**'
+    - 'test/api/agents/deleter_of_e2e_tests/**'
 agents_deleter_of_post_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Deleter of Post-Deployment Integration Tests Agent
   paths:
     - '.github/workflows/agents_deleter_of_post_deployment_integration_tests.yml'
-    - 'src/agents/deleter_of_post_deployment_integration_tests/**'
-    - 'test/agents/deleter_of_post_deployment_integration_tests/**'
+    - 'src/api/agents/deleter_of_post_deployment_integration_tests/**'
+    - 'test/api/agents/deleter_of_post_deployment_integration_tests/**'
 agents_deleter_of_pre_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Deleter of Pre-Deployment Integration Tests Agent
   paths:
     - '.github/workflows/agents_deleter_of_pre_deployment_integration_tests.yml'
-    - 'src/agents/deleter_of_pre_deployment_integration_tests/**'
-    - 'test/agents/deleter_of_pre_deployment_integration_tests/**'
+    - 'src/api/agents/deleter_of_pre_deployment_integration_tests/**'
+    - 'test/api/agents/deleter_of_pre_deployment_integration_tests/**'
 agents_deleter_of_unit_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Deleter of Unit Tests Agent
   paths:
     - '.github/workflows/agents_deleter_of_unit_tests.yml'
-    - 'src/agents/deleter_of_unit_tests/**'
-    - 'test/agents/deleter_of_unit_tests/**'
+    - 'src/api/agents/deleter_of_unit_tests/**'
+    - 'test/api/agents/deleter_of_unit_tests/**'
 agents_modifier_of_e2e_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Modifier of E2E Tests Agent
   paths:
     - '.github/workflows/agents_modifier_of_e2e_tests.yml'
-    - 'src/agents/modifier_of_e2e_tests/**'
-    - 'test/agents/modifier_of_e2e_tests/**'
+    - 'src/api/agents/modifier_of_e2e_tests/**'
+    - 'test/api/agents/modifier_of_e2e_tests/**'
 agents_modifier_of_post_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Modifier of Post-Deployment Integration Tests Agent
   paths:
     - '.github/workflows/agents_modifier_of_post_deployment_integration_tests.yml'
-    - 'src/agents/modifier_of_post_deployment_integration_tests/**'
-    - 'test/agents/modifier_of_post_deployment_integration_tests/**'
+    - 'src/api/agents/modifier_of_post_deployment_integration_tests/**'
+    - 'test/api/agents/modifier_of_post_deployment_integration_tests/**'
 agents_modifier_of_pre_deployment_integration_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Modifier of Pre-Deployment Integration Tests Agent
   paths:
     - '.github/workflows/agents_modifier_of_pre_deployment_integration_tests.yml'
-    - 'src/agents/modifier_of_pre_deployment_integration_tests/**'
-    - 'test/agents/modifier_of_pre_deployment_integration_tests/**'
+    - 'src/api/agents/modifier_of_pre_deployment_integration_tests/**'
+    - 'test/api/agents/modifier_of_pre_deployment_integration_tests/**'
 agents_modifier_of_unit_tests:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Modifier of Unit Tests Agent
   paths:
     - '.github/workflows/agents_modifier_of_unit_tests.yml'
-    - 'src/agents/modifier_of_unit_tests/**'
-    - 'test/agents/modifier_of_unit_tests/**'
+    - 'src/api/agents/modifier_of_unit_tests/**'
+    - 'test/api/agents/modifier_of_unit_tests/**'
 agents_shared:
   depends_on:
-    - bootstrap
+    - endpoint_v1_runners
   name: Deploying Agents Shared Infrastructure
   paths:
     - '.github/workflows/agents_shared.yml'
-    - 'src/agents/shared/**'
-    - 'test/agents/shared/**'
+    - 'src/api/agents/shared/**'
+    - 'test/api/agents/shared/**'
 agents_troubleshooter_of_workflows:
   depends_on:
     - agents_shared
   name: Deploying Troubleshooter of Workflows Agent
   paths:
     - '.github/workflows/agents_troubleshooter_of_workflows.yml'
-    - 'src/agents/troubleshooter_of_workflows/**'
-    - 'test/agents/troubleshooter_of_workflows/**'
+    - 'src/api/agents/troubleshooter_of_workflows/**'
+    - 'test/api/agents/troubleshooter_of_workflows/**'
 agents_workflow_creator:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Workflow Creator Agent
   paths:
     - '.github/workflows/agents_workflow_creator.yml'
-    - 'src/agents/workflow_creator/**'
-    - 'test/agents/workflow_creator/**'
+    - 'src/api/agents/workflow_creator/**'
+    - 'test/api/agents/workflow_creator/**'
 agents_workflow_deleter:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Workflow Deleter Agent
   paths:
     - '.github/workflows/agents_workflow_deleter.yml'
-    - 'src/agents/workflow_deleter/**'
-    - 'test/agents/workflow_deleter/**'
+    - 'src/api/agents/workflow_deleter/**'
+    - 'test/api/agents/workflow_deleter/**'
 agents_workflow_evaluator:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Workflow Evaluator Agent
   paths:
     - '.github/workflows/agents_workflow_evaluator.yml'
-    - 'src/agents/workflow_evaluator/**'
-    - 'test/agents/workflow_evaluator/**'
+    - 'src/api/agents/workflow_evaluator/**'
+    - 'test/api/agents/workflow_evaluator/**'
 agents_workflow_modifier:
   depends_on:
     - agents_troubleshooter_of_workflows
   name: Deploying Workflow Modifier Agent
   paths:
     - '.github/workflows/agents_workflow_modifier.yml'
-    - 'src/agents/workflow_modifier/**'
-    - 'test/agents/workflow_modifier/**'
+    - 'src/api/agents/workflow_modifier/**'
+    - 'test/api/agents/workflow_modifier/**'
 api_backend:
   depends_on:
     - www_shared
@@ -338,7 +338,7 @@ www_index:
     - 'test/www/paths/index/**'
 www_shared:
   depends_on:
-    - agents_troubleshooter_of_workflows
+    - bootstrap
   name: Ensuring www shared infrastructure exists and is properly configured
   paths:
     - '.github/workflows/www_shared.yml'
