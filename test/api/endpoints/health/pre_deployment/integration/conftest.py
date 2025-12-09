@@ -36,16 +36,9 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def aws_region():
-    """Provide the AWS region."""
-    return "us-east-1"
-
-
-@pytest.fixture(scope="session")
-def apigateway_client(request):
+def apigateway_client(aws_region):
     """Create an API Gateway client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("apigateway", region_name=region)
+    return boto3.client("apigateway", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
