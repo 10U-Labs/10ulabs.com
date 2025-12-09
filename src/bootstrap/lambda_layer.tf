@@ -21,6 +21,7 @@ locals {
 resource "null_resource" "github_auth_layer_build" {
   triggers = {
     content_hash = local.github_auth_content_hash
+    output_path  = local.github_auth_zip
   }
 
   provisioner "local-exec" {
