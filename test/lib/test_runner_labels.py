@@ -53,27 +53,22 @@ class TestParseLabelsValidInput:
         result = parse_labels(["ecs", "fargate", "spot", "runner-12345"])
         assert result.runner_id == "runner-12345"
 
-    def test_parses_valid_ec2_c8i_on_demand_labels(self) -> None:
-        """parse_labels extracts correct values for EC2 c8i On-Demand."""
-        result = parse_labels(["ec2", "c8i", "on-demand", "runner-99999"])
+    def test_parses_valid_ec2_r8i_on_demand_labels(self) -> None:
+        """parse_labels extracts correct values for EC2 r8i On-Demand."""
+        result = parse_labels(["ec2", "r8i", "on-demand", "runner-99999"])
         assert result.platform == "ec2"
 
-    def test_parses_valid_ec2_c8i_on_demand_compute(self) -> None:
-        """parse_labels extracts correct compute for EC2 c8i On-Demand."""
-        result = parse_labels(["ec2", "c8i", "on-demand", "runner-99999"])
-        assert result.compute == "c8i"
-
-    def test_parses_valid_ec2_c8i_on_demand_pricing(self) -> None:
-        """parse_labels extracts correct pricing for EC2 c8i On-Demand."""
-        result = parse_labels(["ec2", "c8i", "on-demand", "runner-99999"])
-        assert result.pricing == "on-demand"
-
-    def test_parses_valid_ec2_r8i_labels(self) -> None:
-        """parse_labels extracts correct compute for EC2 r8i."""
-        result = parse_labels(["ec2", "r8i", "on-demand", "runner-1"])
+    def test_parses_valid_ec2_r8i_on_demand_compute(self) -> None:
+        """parse_labels extracts correct compute for EC2 r8i On-Demand."""
+        result = parse_labels(["ec2", "r8i", "on-demand", "runner-99999"])
         assert result.compute == "r8i"
 
-    def test_parses_valid_ec2_g6e_labels(self) -> None:
+    def test_parses_valid_ec2_r8i_on_demand_pricing(self) -> None:
+        """parse_labels extracts correct pricing for EC2 r8i On-Demand."""
+        result = parse_labels(["ec2", "r8i", "on-demand", "runner-99999"])
+        assert result.pricing == "on-demand"
+
+    def test_parses_valid_ec2_g6e_compute(self) -> None:
         """parse_labels extracts correct compute for EC2 g6e."""
         result = parse_labels(["ec2", "g6e", "on-demand", "runner-1"])
         assert result.compute == "g6e"
@@ -135,7 +130,7 @@ class TestParseLabelsInvalidInput:
     def test_raises_on_multiple_compute_types(self) -> None:
         """parse_labels raises LabelParseError with multiple compute types."""
         with pytest.raises(LabelParseError, match="Multiple compute"):
-            parse_labels(["ec2", "c8i", "r8i", "spot", "runner-1"])
+            parse_labels(["ec2", "r8i", "g6e", "spot", "runner-1"])
 
     def test_raises_on_multiple_pricing_models(self) -> None:
         """parse_labels raises LabelParseError with multiple pricing models."""
@@ -156,16 +151,6 @@ class TestValidateLabels:
         parsed = ParsedLabels("ecs", "fargate", "on-demand", "runner-1")
         validate_labels(parsed)  # Should not raise
 
-    def test_accepts_ec2_c8i_on_demand(self) -> None:
-        """validate_labels accepts ec2 + c8i + on-demand."""
-        parsed = ParsedLabels("ec2", "c8i", "on-demand", "runner-1")
-        validate_labels(parsed)  # Should not raise
-
-    def test_accepts_ec2_c8i_spot(self) -> None:
-        """validate_labels accepts ec2 + c8i + spot."""
-        parsed = ParsedLabels("ec2", "c8i", "spot", "runner-1")
-        validate_labels(parsed)  # Should not raise
-
     def test_accepts_ec2_r8i_on_demand(self) -> None:
         """validate_labels accepts ec2 + r8i + on-demand."""
         parsed = ParsedLabels("ec2", "r8i", "on-demand", "runner-1")
@@ -175,12 +160,6 @@ class TestValidateLabels:
         """validate_labels accepts ec2 + g6e + on-demand."""
         parsed = ParsedLabels("ec2", "g6e", "on-demand", "runner-1")
         validate_labels(parsed)  # Should not raise
-
-    def test_rejects_ecs_with_c8i(self) -> None:
-        """validate_labels rejects ecs + c8i (invalid combination)."""
-        parsed = ParsedLabels("ecs", "c8i", "spot", "runner-1")
-        with pytest.raises(LabelValidationError, match="ECS platform only"):
-            validate_labels(parsed)
 
     def test_rejects_ecs_with_r8i(self) -> None:
         """validate_labels rejects ecs + r8i (invalid combination)."""
@@ -204,20 +183,15 @@ class TestValidateLabels:
 class TestGetInstanceType:
     """Tests for get_instance_type function."""
 
-    def test_returns_c8i_4xlarge_for_c8i(self) -> None:
-        """get_instance_type returns c8i.4xlarge for c8i compute."""
-        parsed = ParsedLabels("ec2", "c8i", "on-demand", "runner-1")
-        assert get_instance_type(parsed) == "c8i.4xlarge"
-
     def test_returns_r8i_4xlarge_for_r8i(self) -> None:
         """get_instance_type returns r8i.4xlarge for r8i compute."""
         parsed = ParsedLabels("ec2", "r8i", "on-demand", "runner-1")
         assert get_instance_type(parsed) == "r8i.4xlarge"
 
-    def test_returns_g6e_xlarge_for_g6e(self) -> None:
-        """get_instance_type returns g6e.xlarge for g6e compute."""
+    def test_returns_g6e_2xlarge_for_g6e(self) -> None:
+        """get_instance_type returns g6e.2xlarge for g6e compute."""
         parsed = ParsedLabels("ec2", "g6e", "on-demand", "runner-1")
-        assert get_instance_type(parsed) == "g6e.xlarge"
+        assert get_instance_type(parsed) == "g6e.2xlarge"
 
     def test_returns_none_for_ecs_fargate(self) -> None:
         """get_instance_type returns None for ECS Fargate."""
@@ -226,7 +200,6 @@ class TestGetInstanceType:
 
     def test_instance_types_dict_has_all_ec2_compute(self) -> None:
         """INSTANCE_TYPES dict contains all EC2 compute types."""
-        assert "c8i" in INSTANCE_TYPES
         assert "r8i" in INSTANCE_TYPES
         assert "g6e" in INSTANCE_TYPES
 
@@ -252,11 +225,11 @@ class TestGetEcsConfig:
         parsed = ParsedLabels("ecs", "fargate", "spot", "runner-1")
         config = get_ecs_config(parsed)
         assert config is not None
-        assert config["memory"] == "8192"
+        assert config["memory"] == "16384"
 
     def test_returns_none_for_ec2(self) -> None:
         """get_ecs_config returns None for EC2 platform."""
-        parsed = ParsedLabels("ec2", "c8i", "on-demand", "runner-1")
+        parsed = ParsedLabels("ec2", "r8i", "on-demand", "runner-1")
         assert get_ecs_config(parsed) is None
 
     def test_returns_copy_not_reference(self) -> None:
@@ -283,12 +256,12 @@ class TestIsSpot:
 
     def test_returns_true_for_ec2_spot(self) -> None:
         """is_spot returns True for EC2 with spot pricing."""
-        parsed = ParsedLabels("ec2", "c8i", "spot", "runner-1")
+        parsed = ParsedLabels("ec2", "r8i", "spot", "runner-1")
         assert is_spot(parsed) is True
 
     def test_returns_false_for_ec2_on_demand(self) -> None:
         """is_spot returns False for EC2 with on-demand pricing."""
-        parsed = ParsedLabels("ec2", "c8i", "on-demand", "runner-1")
+        parsed = ParsedLabels("ec2", "r8i", "on-demand", "runner-1")
         assert is_spot(parsed) is False
 
 
@@ -337,5 +310,5 @@ class TestParsedLabelsDataclass:
     def test_instances_are_not_equal_with_different_values(self) -> None:
         """ParsedLabels instances with different values are not equal."""
         parsed1 = ParsedLabels("ecs", "fargate", "spot", "runner-1")
-        parsed2 = ParsedLabels("ec2", "c8i", "on-demand", "runner-2")
+        parsed2 = ParsedLabels("ec2", "r8i", "on-demand", "runner-2")
         assert parsed1 != parsed2

@@ -5,13 +5,13 @@ This module provides functions to parse, validate, and interpret the composable
 runner label system. Labels combine to select the appropriate runner:
 
     Platform:     ecs | ec2
-    Compute:      fargate | c8i | r8i | g6e
+    Compute:      fargate | r8i | g6e
     Pricing:      spot | on-demand
     Workflow ID:  runner-{github.run_id}
 
 Example label combinations:
     ["ecs", "fargate", "spot", "runner-12345"] -> ECS Fargate Spot
-    ["ec2", "c8i", "on-demand", "runner-12345"] -> EC2 c8i.4xlarge On-Demand
+    ["ec2", "r8i", "on-demand", "runner-12345"] -> EC2 r8i.4xlarge On-Demand
 """
 
 import re
@@ -21,26 +21,27 @@ from typing import Dict, List, Optional
 
 # Valid label values
 PLATFORMS = frozenset({"ecs", "ec2"})
-COMPUTE_TYPES = frozenset({"fargate", "c8i", "r8i", "g6e"})
 PRICING_MODELS = frozenset({"spot", "on-demand"})
 
 # ECS compute types
 ECS_COMPUTE = frozenset({"fargate"})
 
 # EC2 compute types
-EC2_COMPUTE = frozenset({"c8i", "r8i", "g6e"})
+EC2_COMPUTE = frozenset({"r8i", "g6e"})
+
+# All compute types (derived)
+COMPUTE_TYPES = ECS_COMPUTE | EC2_COMPUTE
 
 # Instance type mapping for EC2 compute labels
 INSTANCE_TYPES = {
-    "c8i": "c8i.4xlarge",
     "r8i": "r8i.4xlarge",
-    "g6e": "g6e.xlarge",
+    "g6e": "g6e.2xlarge",
 }
 
 # ECS Fargate configuration
 ECS_FARGATE_CONFIG = {
     "cpu": "4096",
-    "memory": "8192",
+    "memory": "16384",
 }
 
 # Runner ID pattern
