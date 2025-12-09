@@ -14,8 +14,12 @@ output "domain_name" {
   value = "10ulabs.com"
 }
 
-output "ecr_repository_name" {
-  value = "10ulabs"
+output "ecr_repository_name_agents" {
+  value = "agents"
+}
+
+output "ecr_repository_name_runners" {
+  value = "runners"
 }
 
 output "github_org" {

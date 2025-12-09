@@ -261,7 +261,7 @@ resource "aws_lambda_function" "drift_recovery" {
       GITHUB_REPO                 = local.github_repo_full
       GITHUB_TOKEN_PARAMETER_NAME = module.shared.ssm_github_pat_name
       SNS_TOPIC_ARN               = aws_sns_topic.circuit_breaker_alerts.arn
-      MANAGED_VPC_ID              = data.terraform_remote_state.bootstrap.outputs.vpc_id
+      MANAGED_VPC_ID              = data.terraform_remote_state.api_shared_runners.outputs.vpc_id
     }
   }
 

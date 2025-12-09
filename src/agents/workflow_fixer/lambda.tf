@@ -18,7 +18,7 @@ resource "aws_lambda_function" "webhook" {
   timeout          = 300
   memory_size      = 256
   description      = "Webhook handler for Workflow Fixer Agent"
-  layers           = [data.terraform_remote_state.bootstrap.outputs.lambda_layer_github_auth_arn]
+  layers           = [data.terraform_remote_state.agents_shared.outputs.lambda_layer_github_auth_arn]
 
   environment {
     variables = {

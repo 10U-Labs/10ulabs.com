@@ -11,14 +11,14 @@ resource "aws_lambda_function" "handler" {
   environment {
     variables = {
       CONTAINER_NAME           = var.container_name
-      ECR_REPOSITORY           = data.terraform_remote_state.bootstrap.outputs.ecr_repository_name
+      ECR_REPOSITORY           = data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_name
       ECS_CLUSTER              = aws_ecs_cluster.runner.name
       GITHUB_TOKEN_SECRET_NAME = data.terraform_remote_state.runners.outputs.github_token_secret_name
       IMAGE_API_ENDPOINT       = data.terraform_remote_state.runners.outputs.api_endpoint
-      SECURITY_GROUPS          = data.terraform_remote_state.bootstrap.outputs.runner_security_group_id
-      SUBNETS                  = data.terraform_remote_state.bootstrap.outputs.vpc_public_subnet_ids
+      SECURITY_GROUPS          = data.terraform_remote_state.api_shared_runners.outputs.runner_security_group_id
+      SUBNETS                  = data.terraform_remote_state.api_shared_runners.outputs.vpc_public_subnet_ids
       TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
-      VPC_ID                   = data.terraform_remote_state.bootstrap.outputs.vpc_id
+      VPC_ID                   = data.terraform_remote_state.api_shared_runners.outputs.vpc_id
       WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.runners.outputs.workflow_runners_table_name
     }
   }

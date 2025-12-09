@@ -37,7 +37,7 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           ECR_REPO_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          ECR_REPO_URL="${ECR_REPO_URL}/10ulabs"
+          ECR_REPO_URL="${ECR_REPO_URL}/agents"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
           GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"

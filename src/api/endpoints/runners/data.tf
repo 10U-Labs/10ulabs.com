@@ -8,6 +8,26 @@ data "terraform_remote_state" "bootstrap" {
   }
 }
 
+data "terraform_remote_state" "api_shared_runners" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/shared/runners/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+}
+
+data "terraform_remote_state" "api_shared_ecs_runner" {
+  backend = "s3"
+
+  config = {
+    bucket = module.shared.name_for_terraform_state_bucket
+    key    = "api/shared/ecs_runner/terraform.tfstate"
+    region = module.shared.aws_region
+  }
+}
+
 data "terraform_remote_state" "ec2_runner" {
   backend = "s3"
 
