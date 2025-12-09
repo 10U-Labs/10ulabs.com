@@ -1,30 +1,10 @@
 # Webhook Lambda - receives GitHub webhook and invokes AgentCore agent
-# Package Lambda with dependencies
-resource "null_resource" "webhook_lambda_deps" {
-  triggers = {
-    requirements = filemd5("${path.module}/webhook_lambda/requirements.txt")
-    handler      = filemd5("${path.module}/webhook_lambda/handler.py")
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      rm -rf ${path.module}/.terraform/lambda_build
-      mkdir -p ${path.module}/.terraform/lambda_build
-      pip install -r ${path.module}/webhook_lambda/requirements.txt \
-        -t ${path.module}/.terraform/lambda_build \
-        --platform manylinux2014_x86_64 \
-        --only-binary=:all: \
-        --quiet
-      cp ${path.module}/webhook_lambda/handler.py ${path.module}/.terraform/lambda_build/
-    EOT
-  }
-}
+# Dependencies (PyJWT, cryptography) come from the shared github_auth layer in bootstrap
 
 data "archive_file" "webhook_lambda" {
   type        = "zip"
-  source_dir  = "${path.module}/.terraform/lambda_build"
+  source_file = "${path.module}/webhook_lambda/handler.py"
   output_path = "${path.module}/.terraform/lambda_packages/webhook.zip"
-  depends_on  = [null_resource.webhook_lambda_deps]
 }
 
 resource "aws_lambda_function" "webhook" {
@@ -38,6 +18,7 @@ resource "aws_lambda_function" "webhook" {
   timeout          = 300
   memory_size      = 256
   description      = "Webhook handler for Workflow Fixer Agent"
+  layers           = [data.terraform_remote_state.bootstrap.outputs.lambda_layer_github_auth_arn]
 
   environment {
     variables = {

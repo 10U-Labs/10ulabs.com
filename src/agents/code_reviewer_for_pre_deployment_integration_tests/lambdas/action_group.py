@@ -15,15 +15,7 @@ from typing import Any
 from urllib import request
 from urllib.error import HTTPError
 
-import boto3
-
-
-def get_github_token() -> str:
-    """Retrieve GitHub PAT from SSM Parameter Store."""
-    ssm = boto3.client("ssm")
-    param_name = os.environ.get("SSM_GITHUB_PAT", "/TenULabs/github_pat")
-    response = ssm.get_parameter(Name=param_name, WithDecryption=True)
-    return response["Parameter"]["Value"]
+from github_auth import get_github_token
 
 
 def github_api(
