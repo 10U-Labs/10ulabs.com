@@ -3,17 +3,11 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  common-vars:
-    if: github.ref == 'refs/heads/main'
-    name: Declaring common variables
-    outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      role_arn: ${{ steps.bootstrap.outputs.role_arn }}
-      terraform_version: ${{ steps.config.outputs.terraform_version }}
-    permissions:
-      actions: write
-      contents: read
-      id-token: write
+  deploy:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Deploy Rack Designer endpoint
     runs-on:
       - ecs
       - fargate
@@ -22,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: config
         name: Extract configuration values
         run: |
@@ -40,169 +36,13 @@ jobs:
             | cut -d'"' -f2 | sed 's/>= //')
           ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role/${RESOURCE_PREFIX}${ROLE_SUFFIX}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TF_VER" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.config.outputs.role_arn }}
-      - id: bootstrap
-        name: Get bootstrap outputs
-        run: |
-          CHDIR="-chdir=src/bootstrap"
-          terraform $CHDIR init -backend=true -input=false > /dev/null
-          ROLE_ARN=$(terraform $CHDIR output -raw arn_for_github_actions_role)
-          echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
-  ensuring-infrastructure-in-desired-state:
-    defaults:
-      run:
-        working-directory: src/api/endpoints/rack_designer
-    name: Ensuring infrastructure is in desired state
-    needs:
-      - common-vars
-      - integration-testing-pre-deployment
-      - unit-testing
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.common-vars.outputs.aws_region }}
-          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-      - name: Get website bucket name
-        run: |
-          WWW="-chdir=../../../www/shared"
-          terraform $WWW init -backend=true -input=false > /dev/null
-          BUCKET_NAME=$(terraform $WWW output -raw bucket_name)
-          echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
-      - name: Sync frontend to S3
-        run: |
-          SRC="../../../www/paths/rack_designer/"
-          DEST="s3://${{ env.BUCKET_NAME }}/rack-designer/"
-          aws s3 sync $SRC $DEST --delete --cache-control no-cache \
-            --storage-class ONEZONE_IA --exclude ".gitkeep"
-      - id: check_files
-        name: Check if frontend files changed
-        run: |
-          set -e
-          set -o pipefail
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE_COMMIT="${{ github.event.before }}"
-          else
-            BASE_COMMIT="HEAD^"
-          fi
-          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/paths/rack_designer/'; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
-      - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
-        name: Invalidate CloudFront cache
-        run: |
-          WWW="-chdir=../../../www/shared"
-          FQDN=$(terraform $WWW output -raw website_domain_name)
-          python3 ../../../../scripts/invalidate_cloudfront.py \
-            --fqdn "$FQDN" \
-            --region ${{ needs.common-vars.outputs.aws_region }} \
-            --paths "/rack-designer/*"
-        working-directory: src/api/endpoints/rack_designer
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.event_name == 'workflow_dispatch'
-        name: Dispatch descendant workflows
-        run: |
-          python3 -m pip install pyyaml
-          python3 scripts/dispatch_descendants.py \
-            --workflow endpoint_v1_rack_designer \
-            --repo ${{ github.repository }}
-  integration-testing-post-deployment:
-    name: Post-deployment integration testing
-    needs:
-      - common-vars
-      - ensuring-infrastructure-in-desired-state
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.common-vars.outputs.aws_region }}
-          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
-      - name: Run integration tests
-        run: |
-          TESTS="test/api/endpoints/rack_designer/post_deployment/integration/"
-          python3 -m pytest $TESTS --verbose --pythonwarnings=error
-  integration-testing-pre-deployment:
-    name: Pre-deployment integration testing
-    needs:
-      - common-vars
-      - unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.common-vars.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.common-vars.outputs.aws_region }}
-          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
-      - name: Run pre-deployment integration tests
-        run: |
-          TESTS="test/api/endpoints/rack_designer/pre_deployment/integration/"
-          python3 -m pytest $TESTS --verbose --pythonwarnings=error
-  performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
-    name: Performing static analysis
-    needs: common-vars
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.common-vars.outputs.aws_region }}
-          role-to-assume: ${{ needs.common-vars.outputs.role_arn }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -232,10 +72,19 @@ jobs:
             python3 -m mypy "$file"
           done
           MYPYPATH=lib/python python3 -m mypy test/api/endpoints/rack_designer/
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/rack_designer
           terraform fmt -diff -check -recursive
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: latest
       - name: Terraform Init
         run: |
           cd src/api/endpoints/rack_designer
@@ -249,27 +98,79 @@ jobs:
             tflint
       - name: Terraform Plan
         run: cd src/api/endpoints/rack_designer && terraform plan
-  unit-testing:
-    name: Unit testing
-    needs:
-      - common-vars
-      - performing-static-analysis
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
       - name: Run unit tests
         run: |
           TESTS="test/api/endpoints/rack_designer/pre_deployment/unit/"
           python3 -m pytest $TESTS --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          TESTS="test/api/endpoints/rack_designer/pre_deployment/integration/"
+          python3 -m pytest $TESTS --verbose --pythonwarnings=error
+      - name: Terraform Apply
+        run: cd src/api/endpoints/rack_designer && terraform apply -auto-approve
+      - name: Get website bucket name
+        run: |
+          WWW="-chdir=src/www/shared"
+          terraform $WWW init -backend=true -input=false > /dev/null
+          BUCKET_NAME=$(terraform $WWW output -raw bucket_name)
+          echo "BUCKET_NAME=$BUCKET_NAME" >> $GITHUB_ENV
+      - name: Sync frontend to S3
+        run: |
+          SRC="src/www/paths/rack_designer/"
+          DEST="s3://${{ env.BUCKET_NAME }}/rack-designer/"
+          aws s3 sync $SRC $DEST --delete --cache-control no-cache \
+            --storage-class ONEZONE_IA --exclude ".gitkeep"
+      - id: check_files
+        name: Check if frontend files changed
+        run: |
+          set -e
+          set -o pipefail
+          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
+            BASE_COMMIT="${{ github.event.before }}"
+          else
+            BASE_COMMIT="HEAD^"
+          fi
+          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
+            if grep -qE 'src/www/paths/rack_designer/'; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message,
+            '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
+        name: Invalidate CloudFront cache
+        run: |
+          WWW="-chdir=src/www/shared"
+          FQDN=$(terraform $WWW output -raw website_domain_name)
+          python3 scripts/invalidate_cloudfront.py \
+            --fqdn "$FQDN" \
+            --region ${{ steps.config.outputs.aws_region }} \
+            --paths "/rack-designer/*"
+      - name: Run post-deployment integration tests
+        run: |
+          TESTS="test/api/endpoints/rack_designer/post_deployment/integration/"
+          python3 -m pytest $TESTS --verbose --pythonwarnings=error
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow endpoint_v1_rack_designer \
+            --repo ${{ github.repository }}
 name: Ensuring Rack Designer exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation

@@ -11,8 +11,6 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
-from github_auth import get_github_token
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 

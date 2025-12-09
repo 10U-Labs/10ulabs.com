@@ -15,7 +15,7 @@ jobs:
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+          fromJSON(format('["ecs", "fargate", "on-demand", "runner-{0}"]',
             github.run_id)) }}
     steps:
       - name: Checkout code
@@ -134,10 +134,10 @@ jobs:
           TEST_DIR=test/api/endpoints/runners
           python3 -m pytest $TEST_DIR/post_deployment/integration/ \
             --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
-      - if: github.event_name == 'workflow_dispatch'
-        name: Dispatch descendant workflows
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
           python3 scripts/dispatch_descendants.py \

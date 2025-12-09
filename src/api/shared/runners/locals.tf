@@ -1,7 +1,6 @@
 locals {
   # Common values from shared module
   aws_region      = module.shared.aws_region
-  aws_account_id  = module.shared.aws_account_id
   resource_prefix = module.shared.resource_prefix
 
   # VPC configuration
