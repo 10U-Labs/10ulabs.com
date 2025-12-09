@@ -20,7 +20,7 @@ HANDLER_PATH = (
     / "src"
     / "agents"
     / "agent_creator"
-    / "webhook-lambda"
+    / "webhook_lambda"
     / "handler.py"
 )
 spec = importlib.util.spec_from_file_location("handler", HANDLER_PATH)

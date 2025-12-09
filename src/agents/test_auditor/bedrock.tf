@@ -1,15 +1,3 @@
-# ECR Repository for the agent container
-resource "aws_ecr_repository" "test_auditor" {
-  name                 = "10ulabs/test-auditor-agent"
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = local.common_tags
-}
-
 # AgentCore Runtime - the containerized agent
 resource "aws_bedrockagentcore_agent_runtime" "test_auditor" {
   agent_runtime_name = local.agent_name
@@ -17,7 +5,7 @@ resource "aws_bedrockagentcore_agent_runtime" "test_auditor" {
 
   agent_runtime_artifact {
     container_configuration {
-      container_uri = "${aws_ecr_repository.test_auditor.repository_url}:latest"
+      container_uri = "${data.terraform_remote_state.bootstrap.outputs.ecr_agents_repository_url}:${local.image_tag}"
     }
   }
 

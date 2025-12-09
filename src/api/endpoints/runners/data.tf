@@ -1,9 +1,9 @@
-data "terraform_remote_state" "ecr" {
+data "terraform_remote_state" "bootstrap" {
   backend = "s3"
 
   config = {
     bucket = module.shared.name_for_terraform_state_bucket
-    key    = "ecr/terraform.tfstate"
+    key    = "bootstrap/terraform.tfstate"
     region = module.shared.aws_region
   }
 }
@@ -68,8 +68,4 @@ data "terraform_remote_state" "ecs_runner" {
 data "aws_ssm_parameter" "github_pat" {
   name            = module.shared.ssm_github_pat_name
   with_decryption = true
-}
-
-data "aws_availability_zones" "available" {
-  state = "available"
 }

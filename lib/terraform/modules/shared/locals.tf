@@ -1,7 +1,7 @@
 locals {
-  aws_region         = "us-east-2"
-  aws_account_id     = "781581267945"
-  resource_prefix    = "TenULabs"
+  aws_region          = "us-east-2"
+  aws_account_id      = "781581267945"
+  resource_prefix     = "TenULabs"
   ssm_github_pat_name = "/github/pat"
 
   # GitHub App configuration

@@ -57,7 +57,7 @@ resource "aws_iam_role_policy" "agent_execution" {
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchCheckLayerAvailability"
         ]
-        Resource = aws_ecr_repository.agent.arn
+        Resource = data.terraform_remote_state.bootstrap.outputs.ecr_agents_repository_arn
       },
       {
         Sid      = "ECRTokenAccess"

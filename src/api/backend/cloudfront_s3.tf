@@ -1,48 +1,19 @@
-resource "aws_s3_bucket" "docs" {
-  bucket        = local.api_fqdn
-  force_destroy = true
+module "docs_bucket" {
+  source = "../../../lib/terraform/modules/s3_bucket"
+
+  bucket_name         = local.api_fqdn
+  force_destroy       = true
+  versioning_enabled  = false
+  central_logs_bucket = local.name_for_central_logs
+  log_prefix          = "s3-access/api-docs/"
 
   tags = merge(local.common_tags, {
     Name = "${local.api_fqdn}-docs"
   })
 }
 
-resource "aws_s3_bucket_versioning" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  versioning_configuration {
-    status = "Disabled"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_logging" "docs" {
-  bucket = aws_s3_bucket.docs.id
-
-  target_bucket = local.name_for_central_logs
-  target_prefix = "s3-access/api-docs/"
-}
-
 resource "aws_s3_object" "index_html" {
-  bucket       = aws_s3_bucket.docs.id
+  bucket       = module.docs_bucket.bucket_id
   key          = "index.html"
   source       = "${path.module}/../../www/api/index.html"
   content_type = "text/html"
@@ -50,7 +21,7 @@ resource "aws_s3_object" "index_html" {
 }
 
 resource "aws_s3_object" "not_found_html" {
-  bucket       = aws_s3_bucket.docs.id
+  bucket       = module.docs_bucket.bucket_id
   key          = "404.html"
   source       = "${path.module}/../../www/api/404.html"
   content_type = "text/html"
@@ -58,7 +29,7 @@ resource "aws_s3_object" "not_found_html" {
 }
 
 resource "aws_s3_object" "openapi_yml" {
-  bucket       = aws_s3_bucket.docs.id
+  bucket       = module.docs_bucket.bucket_id
   key          = "openapi.yml"
   source       = "${path.module}/../../www/api/openapi.yml"
   content_type = "application/x-yaml"
@@ -87,7 +58,7 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
     ]
 
     resources = [
-      "${aws_s3_bucket.docs.arn}/*"
+      "${module.docs_bucket.bucket_arn}/*"
     ]
 
     condition {
@@ -99,25 +70,20 @@ data "aws_iam_policy_document" "s3_bucket_policy" {
 }
 
 resource "aws_s3_bucket_policy" "docs" {
-  bucket = aws_s3_bucket.docs.id
+  bucket = module.docs_bucket.bucket_id
   policy = data.aws_iam_policy_document.s3_bucket_policy.json
 }
 
-resource "aws_wafv2_web_acl" "api" {
-  provider = aws.us-east-1
+module "api_waf" {
+  source = "../../../lib/terraform/modules/cloudfront_waf"
 
-  name  = "ApiWafWebAcl"
-  scope = "CLOUDFRONT"
-
-  default_action {
-    allow {}
+  providers = {
+    aws.us-east-1 = aws.us-east-1
   }
 
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "ApiWafMetrics"
-    sampled_requests_enabled   = true
-  }
+  name             = "ApiWafWebAcl"
+  metric_name      = "ApiWafMetrics"
+  log_group_suffix = "api"
 
   tags = merge(local.common_tags, {
     Name = "ApiWafWebAcl"
@@ -168,7 +134,7 @@ resource "aws_cloudfront_distribution" "main" {
   is_ipv6_enabled     = true
   default_root_object = ""
   aliases             = [local.api_fqdn]
-  web_acl_id          = aws_wafv2_web_acl.api.arn
+  web_acl_id          = module.api_waf.web_acl_arn
 
   logging_config {
     include_cookies = false
@@ -192,7 +158,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   origin {
-    domain_name              = aws_s3_bucket.docs.bucket_regional_domain_name
+    domain_name              = module.docs_bucket.bucket_regional_domain_name
     origin_id                = "s3-docs"
     origin_access_control_id = aws_cloudfront_origin_access_control.s3.id
   }
@@ -302,22 +268,4 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host_header" {
 
 data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
   name = "Managed-CORS-S3Origin"
-}
-
-resource "aws_cloudwatch_log_group" "waf" {
-  provider = aws.us-east-1
-
-  name              = "aws-waf-logs-api"
-  retention_in_days = 30
-
-  tags = merge(local.common_tags, {
-    Name = "aws-waf-logs-api"
-  })
-}
-
-resource "aws_wafv2_web_acl_logging_configuration" "api" {
-  provider = aws.us-east-1
-
-  log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
-  resource_arn            = aws_wafv2_web_acl.api.arn
 }

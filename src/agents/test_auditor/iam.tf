@@ -37,7 +37,7 @@ resource "aws_iam_role_policy" "agentcore_runtime_ecr" {
           "ecr:BatchGetImage",
           "ecr:BatchCheckLayerAvailability"
         ]
-        Resource = aws_ecr_repository.test_auditor.arn
+        Resource = data.terraform_remote_state.bootstrap.outputs.ecr_agents_repository_arn
       },
       {
         Effect   = "Allow"

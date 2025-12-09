@@ -1,5 +1,5 @@
 module "github_oidc" {
-  source = "./modules/github-oidc"
+  source = "./modules/github_oidc"
 
   github_org                   = local.github_org
   github_repo                  = local.name_for_github_repo

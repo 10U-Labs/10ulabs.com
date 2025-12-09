@@ -4,10 +4,9 @@ locals {
   resource_prefix = module.shared.resource_prefix
 
   # Agent naming
-  agent_name    = "workflow-fixer"
-  stack_name    = "${local.resource_prefix}-${local.agent_name}"
-  ecr_repo_name = "${lower(local.resource_prefix)}-${local.agent_name}-agent"
-  image_tag     = "latest"
+  agent_name = "workflow-fixer"
+  stack_name = "${local.resource_prefix}-${local.agent_name}"
+  image_tag  = "${local.agent_name}-latest"
 
   # Lambda naming
   lambda_name    = "${local.resource_prefix}WorkflowFixerWebhook"

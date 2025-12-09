@@ -2,20 +2,20 @@
 # Package Lambda with dependencies
 resource "null_resource" "webhook_lambda_deps" {
   triggers = {
-    requirements = filemd5("${path.module}/webhook-lambda/requirements.txt")
-    handler      = filemd5("${path.module}/webhook-lambda/handler.py")
+    requirements = filemd5("${path.module}/webhook_lambda/requirements.txt")
+    handler      = filemd5("${path.module}/webhook_lambda/handler.py")
   }
 
   provisioner "local-exec" {
     command = <<-EOT
       rm -rf ${path.module}/.terraform/lambda_build
       mkdir -p ${path.module}/.terraform/lambda_build
-      pip install -r ${path.module}/webhook-lambda/requirements.txt \
+      pip install -r ${path.module}/webhook_lambda/requirements.txt \
         -t ${path.module}/.terraform/lambda_build \
         --platform manylinux2014_x86_64 \
         --only-binary=:all: \
         --quiet
-      cp ${path.module}/webhook-lambda/handler.py ${path.module}/.terraform/lambda_build/
+      cp ${path.module}/webhook_lambda/handler.py ${path.module}/.terraform/lambda_build/
     EOT
   }
 }

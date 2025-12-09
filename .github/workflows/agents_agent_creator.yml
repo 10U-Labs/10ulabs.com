@@ -41,7 +41,7 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           ECR_REPO_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          ECR_REPO_URL="${ECR_REPO_URL}/tenulabs-agent-creator-agent"
+          ECR_REPO_URL="${ECR_REPO_URL}/10ulabs-agents"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
@@ -103,11 +103,11 @@ jobs:
       - name: Run pylint
         run: |
           python3 -m pylint \
-            src/agents/agent_creator/webhook-lambda/ \
+            src/agents/agent_creator/webhook_lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy src/agents/agent_creator/webhook-lambda/
+        run: python3 -m mypy src/agents/agent_creator/webhook_lambda/
       - name: Run unit tests
         run: |
           python3 -m pytest \
@@ -118,12 +118,6 @@ jobs:
           python3 -m pytest \
             test/agents/agent_creator/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - name: Terraform Apply (backend only)
-        run: |
-          cd src/agents/agent_creator && \
-            terraform apply -auto-approve \
-            -target=aws_ecr_repository.agent \
-            -target=aws_ecr_lifecycle_policy.agent
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - id: meta
@@ -132,8 +126,8 @@ jobs:
         with:
           images: ${{ steps.config.outputs.ecr_repository_url }}
           tags: |
-            type=sha,prefix=
-            type=raw,value=latest
+            type=sha,prefix=agent-creator-
+            type=raw,value=agent-creator-latest
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -143,7 +137,7 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: src/agents/agent_creator/agent-code
+          context: src/agents/agent_creator/agent_code
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
