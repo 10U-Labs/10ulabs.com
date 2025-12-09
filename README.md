@@ -12,6 +12,18 @@ bootstrap
     │       ├── agents_agent_evaluator
     │       ├── agents_agent_modifier
     │       ├── agents_code_reviewer_for_pre_deployment_integration_tests
+    │       ├── agents_creator_of_e2e_tests
+    │       ├── agents_creator_of_post_deployment_integration_tests
+    │       ├── agents_creator_of_pre_deployment_integration_tests
+    │       ├── agents_creator_of_unit_tests
+    │       ├── agents_deleter_of_e2e_tests
+    │       ├── agents_deleter_of_post_deployment_integration_tests
+    │       ├── agents_deleter_of_pre_deployment_integration_tests
+    │       ├── agents_deleter_of_unit_tests
+    │       ├── agents_modifier_of_e2e_tests
+    │       ├── agents_modifier_of_post_deployment_integration_tests
+    │       ├── agents_modifier_of_pre_deployment_integration_tests
+    │       ├── agents_modifier_of_unit_tests
     │       ├── agents_workflow_creator
     │       ├── agents_workflow_deleter
     │       ├── agents_workflow_evaluator
@@ -50,6 +62,18 @@ bootstrap
 - [ ] `agents_agent_evaluator.yml`
 - [ ] `agents_agent_modifier.yml`
 - [ ] `agents_code_reviewer_for_pre_deployment_integration_tests.yml`
+- [ ] `agents_creator_of_e2e_tests.yml`
+- [ ] `agents_creator_of_post_deployment_integration_tests.yml`
+- [ ] `agents_creator_of_pre_deployment_integration_tests.yml`
+- [ ] `agents_creator_of_unit_tests.yml`
+- [ ] `agents_deleter_of_e2e_tests.yml`
+- [ ] `agents_deleter_of_post_deployment_integration_tests.yml`
+- [ ] `agents_deleter_of_pre_deployment_integration_tests.yml`
+- [ ] `agents_deleter_of_unit_tests.yml`
+- [ ] `agents_modifier_of_e2e_tests.yml`
+- [ ] `agents_modifier_of_post_deployment_integration_tests.yml`
+- [ ] `agents_modifier_of_pre_deployment_integration_tests.yml`
+- [ ] `agents_modifier_of_unit_tests.yml`
 - [ ] `agents_workflow_creator.yml`
 - [ ] `agents_workflow_deleter.yml`
 - [ ] `agents_workflow_evaluator.yml`
