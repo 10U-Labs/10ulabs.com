@@ -97,3 +97,9 @@ def current_role_name(current_role_arn):
 def ecr_client(aws_region):
     """Create an ECR client."""
     return boto3.client("ecr", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def ecr_repository_name(shared_config):
+    """Provide the ECR repository name for agents."""
+    return shared_config["ecr_repository_name_agents"]

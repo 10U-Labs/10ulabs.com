@@ -164,14 +164,18 @@ class TestWebhookLambdaConfiguration:
             "arn:aws:bedrock-agentcore:"
         ), "AGENT_RUNTIME_ARN should be a valid AgentCore ARN"
 
-    def test_03_lambda_has_ssm_github_pat_env_var(
+    def test_03_lambda_has_github_app_env_vars(
         self, lambda_client, lambda_function_name
     ):
-        """Verify the Lambda has SSM_GITHUB_PAT environment variable."""
+        """Verify the Lambda has GitHub App SSM environment variables."""
         response = lambda_client.get_function(FunctionName=lambda_function_name)
         env_vars = response["Configuration"].get("Environment", {}).get(
             "Variables", {}
         )
-        assert "SSM_GITHUB_PAT" in env_vars, (
-            "Lambda missing SSM_GITHUB_PAT environment variable"
-        )
+        required_vars = [
+            "SSM_GITHUB_APP_ID",
+            "SSM_GITHUB_APP_INSTALL_ID",
+            "SSM_GITHUB_APP_PRIVATE_KEY",
+        ]
+        for var in required_vars:
+            assert var in env_vars, f"Lambda missing {var} environment variable"
