@@ -23,12 +23,6 @@ def ssm_client_fixture(aws_region):
     return boto3.client("ssm", region_name=aws_region)
 
 
-@pytest.fixture(name="ecr_client", scope="module")
-def ecr_client_fixture(aws_region):
-    """Provide ECR client for the configured region."""
-    return boto3.client("ecr", region_name=aws_region)
-
-
 @pytest.fixture(name="dynamodb_client", scope="module")
 def dynamodb_client_fixture(aws_region):
     """Provide DynamoDB client for the configured region."""
