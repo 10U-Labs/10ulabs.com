@@ -56,21 +56,78 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
+          set -euo pipefail
+          
           TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+          BOOTSTRAP_LOCALS="src/bootstrap/locals.tf"
+          BOOTSTRAP_PROVIDERS="src/bootstrap/providers.tf"
+          
+          # Validate required files exist
+          for file in "$TF_SHARED_LOCALS" "$BOOTSTRAP_LOCALS" "$BOOTSTRAP_PROVIDERS"; do
+            if [[ ! -f "$file" ]]; then
+              echo "Error: Required file $file not found"
+              exit 1
+            fi
+          done
+          
+          # Extract values from shared locals
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' "$TF_SHARED_LOCALS" \
             | grep -v '\$' | cut -d'"' -f2)
-          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
+          AWS_REGION=$(grep 'aws_region' "$TF_SHARED_LOCALS" \
             | grep -v '\$' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
-            src/bootstrap/locals.tf | \
-            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
+          RESOURCE_PREFIX=$(grep 'resource_prefix' "$TF_SHARED_LOCALS" \
             | grep -v '\$' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          
+          # Extract GitHub Actions role suffix from bootstrap locals
+          # The pattern looks for: name_for_github_actions_role = "${local.resource_prefix}GitHubActionsRole"
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' "$BOOTSTRAP_LOCALS" \
+            | sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          
+          # Extract Terraform version
+          TERRAFORM_VERSION=$(grep 'required_version' "$BOOTSTRAP_PROVIDERS" \
+            | cut -d'"' -f2 | sed 's/>= //')
+          
+          # Validate extracted values
+          if [[ -z "$AWS_ACCOUNT_ID" ]]; then
+            echo "Error: Could not extract AWS_ACCOUNT_ID"
+            exit 1
+          fi
+          
+          if [[ -z "$AWS_REGION" ]]; then
+            echo "Error: Could not extract AWS_REGION"
+            exit 1
+          fi
+          
+          if [[ -z "$RESOURCE_PREFIX" ]]; then
+            echo "Error: Could not extract RESOURCE_PREFIX"
+            exit 1
+          fi
+          
+          if [[ -z "$GITHUB_ACTIONS_ROLE_SUFFIX" ]]; then
+            echo "Error: Could not extract GITHUB_ACTIONS_ROLE_SUFFIX"
+            exit 1
+          fi
+          
+          if [[ -z "$TERRAFORM_VERSION" ]]; then
+            echo "Error: Could not extract TERRAFORM_VERSION"
+            exit 1
+          fi
+          
+          # Build role ARN
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
+          
+          # Output values for debugging
+          echo "Extracted configuration:"
+          echo "  AWS_ACCOUNT_ID: $AWS_ACCOUNT_ID"
+          echo "  AWS_REGION: $AWS_REGION"
+          echo "  RESOURCE_PREFIX: $RESOURCE_PREFIX"
+          echo "  GITHUB_ACTIONS_ROLE_SUFFIX: $GITHUB_ACTIONS_ROLE_SUFFIX"
+          echo "  TERRAFORM_VERSION: $TERRAFORM_VERSION"
+          echo "  GITHUB_ACTIONS_ROLE_ARN: $GITHUB_ACTIONS_ROLE_ARN"
+          
+          # Set outputs
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
             >> $GITHUB_OUTPUT
@@ -366,7 +423,7 @@ jobs:
         run: |
           python3 -m pytest test/bootstrap/pre_deployment/ \
             --verbose --pythonwarnings=error
-name: Ensuring bootstrap infrastructure exists and is properly configured
+name: Ensuring bootstrap infrastructure exists and properly configured
 on:
   workflow_call:
     inputs:
