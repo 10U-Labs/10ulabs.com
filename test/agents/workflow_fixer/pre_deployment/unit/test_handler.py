@@ -330,7 +330,7 @@ class TestIsScheduledEvent:
 class TestLambdaHandlerModes:
     """Tests for lambda_handler mode detection."""
 
-    @patch("handler.get_github_pat")
+    @patch("handler.get_github_token")
     @patch("handler._handle_scheduled_scan")
     def test_detects_scheduled_event_by_source(self, mock_scan, mock_pat):
         """Should detect scheduled event by aws.events source."""
@@ -344,7 +344,7 @@ class TestLambdaHandlerModes:
 
         mock_scan.assert_called_once_with("ghp_test", test_mode=False)
 
-    @patch("handler.get_github_pat")
+    @patch("handler.get_github_token")
     @patch("handler._handle_scheduled_scan")
     def test_detects_scheduled_event_by_detail_type(self, mock_scan, mock_pat):
         """Should detect scheduled event by detail-type."""
@@ -358,7 +358,7 @@ class TestLambdaHandlerModes:
 
         mock_scan.assert_called_once_with("ghp_test", test_mode=False)
 
-    @patch("handler.get_github_pat")
+    @patch("handler.get_github_token")
     @patch("handler._handle_scheduled_scan")
     def test_detects_scheduled_event_via_http_body(self, mock_scan, mock_pat):
         """Should detect scheduled event via HTTP body (Lambda function URL)."""
@@ -372,7 +372,7 @@ class TestLambdaHandlerModes:
 
         mock_scan.assert_called_once_with("ghp_test", test_mode=False)
 
-    @patch("handler.get_github_pat")
+    @patch("handler.get_github_token")
     @patch("handler._handle_scheduled_scan")
     def test_passes_test_mode_from_body(self, mock_scan, mock_pat):
         """Should pass test_mode=True from HTTP body to scheduled scan."""
@@ -390,7 +390,7 @@ class TestLambdaHandlerModes:
 
         mock_scan.assert_called_once_with("ghp_test", test_mode=True)
 
-    @patch("handler.get_github_pat")
+    @patch("handler.get_github_token")
     @patch("handler._handle_scheduled_scan")
     def test_passes_test_mode_from_event(self, mock_scan, mock_pat):
         """Should pass test_mode=True from event directly."""
@@ -404,7 +404,7 @@ class TestLambdaHandlerModes:
 
         mock_scan.assert_called_once_with("ghp_test", test_mode=True)
 
-    @patch("handler.get_github_pat")
+    @patch("handler.get_github_token")
     @patch("handler._handle_webhook_event")
     def test_defaults_to_webhook_mode(self, mock_webhook, mock_pat):
         """Should default to webhook mode for regular events."""
