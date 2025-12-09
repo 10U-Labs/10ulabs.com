@@ -13,12 +13,13 @@ import pytest
 
 
 # Import the handler module directly from its file path
-# Path: test/api/agents/agent_creator/pre_deployment/unit/test_handler.py
-# parents[6] = repo root (10ulabs.com)
+# Path: test/api/endpoints/agents/agent_creator/pre_deployment/unit/test_handler.py
+# parents[7] = repo root (10ulabs.com)
 HANDLER_PATH = (
-    Path(__file__).resolve().parents[6]
+    Path(__file__).resolve().parents[7]
     / "src"
     / "api"
+    / "endpoints"
     / "agents"
     / "agent_creator"
     / "webhook_lambda"

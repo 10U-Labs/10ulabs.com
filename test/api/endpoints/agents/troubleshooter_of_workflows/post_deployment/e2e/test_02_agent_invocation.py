@@ -40,7 +40,7 @@ class TestAgentInvocationAuthorization:
             if code == "ResourceNotFoundException":
                 pytest.fail(
                     f"Agent runtime not found: {agent_runtime_arn}. "
-                    "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                    "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
                 )
             # Other errors might be expected for test payloads
             raise

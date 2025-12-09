@@ -49,13 +49,6 @@ def apigateway_client(request):
 
 
 @pytest.fixture(scope="session")
-def iam_client(request):
-    """Create an IAM client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("iam", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def terraform_initialized():
     """Initialize terraform for api_backend state access."""
     return _terraform_init(API_BACKEND_DIR)
@@ -67,8 +60,7 @@ def api_backend_outputs(request):
     if not request.getfixturevalue("terraform_initialized"):
         pytest.skip("Terraform init failed for api_backend")
     return {
-        "api_gateway_id": _terraform_output(API_BACKEND_DIR, "api_gateway_id"),
-        "lambda_execution_role_arn": _terraform_output(
-            API_BACKEND_DIR, "lambda_execution_role_arn"
+        "api_gateway_rest_api_id": _terraform_output(
+            API_BACKEND_DIR, "api_gateway_rest_api_id"
         ),
     }
