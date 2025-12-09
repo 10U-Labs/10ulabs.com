@@ -11,8 +11,7 @@ jobs:
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "on-demand", "runner-{0}"]',
-            github.run_id)) }}
+          format('runner-{0}', github.run_id) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,19 +65,11 @@ jobs:
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
+      - name: Install Python dependencies
         run: |
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs botocore \
