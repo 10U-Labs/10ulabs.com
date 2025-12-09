@@ -3,7 +3,7 @@
 #
 # This workflow responds to push events on main, calculates which root workflow
 # needs to run based on changed files, and dispatches it (fire-and-forget).
-# Descendant workflows are triggered automatically via workflow_run events.
+# Descendant workflows are triggered via dispatch_descendants.py script.
 concurrency:
   cancel-in-progress: true
   group: orchestrator-${{ github.ref }}
@@ -170,7 +170,7 @@ jobs:
           gh workflow run ".github/workflows/${WORKFLOW}.yml" \
             --repo ${{ github.repository }}
           echo "Root workflow dispatched (fire-and-forget)"
-          echo "Descendants will trigger automatically via workflow_run"
+          echo "Descendants will be triggered by the workflow's dispatch step"
 name: Workflow Orchestrator
 on:
   push:

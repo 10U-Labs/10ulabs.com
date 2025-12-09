@@ -3,81 +3,69 @@
 ## Workflow Dependency Graph
 
 ```
-bootstrap.yml
+bootstrap
     │
-    ├──→ agents_workflow_fixer.yml ──┐
-    │                                ↓
-    └──→ agents_agent_creator.yml ──→ agents_test_auditor.yml
-                                        ↓
-                                     www_shared.yml
-                                        ↓
-                                     api_backend.yml
-                                        ↓
-                                     endpoint_health.yml
-                                        │
-    ┌───────────────────────────────────┴───────────────────────────────────────┐
-    │                                                                           │
-    ↓                                                                           ↓
-endpoint_v1_image_for_ec2_runners_post.yml                              api_shared_ecr.yml
-    ↓                                                                           ↓
-endpoint_v1_image_for_ec2_runners.yml                            endpoint_v1_image_for_ecs_runners.yml
-    ↓                                                                           ↓
-endpoint_v1_ec2_runner.yml ─────────────────────────────────────→ endpoint_v1_ecs_runner.yml
-                                            │
-                                            ↓
-                                   endpoint_v1_runners.yml
-                                            │
-    ┌───────────────────────────────────────┼───────────────────────────────────┐
-    ↓                                       ↓                                   ↓
-endpoint_v1_echo.yml              endpoint_v1_contact.yml         endpoint_v1_rack_designer.yml
-                                            ↓                                   ↓
-                                       www_index.yml              endpoint_v1_simulation_soc.yml
-```
-
-## Execution Sequence
-
-When the orchestrator dispatches workflows, they execute in this order:
-
-```
-01. bootstrap
-02. agents_workflow_fixer
-03. agents_agent_creator
-04. agents_test_auditor
-05. www_shared
-06. api_backend
-07. endpoint_health
-08. endpoint_v1_image_for_ec2_runners_post
-09. endpoint_v1_image_for_ec2_runners
-10. endpoint_v1_ec2_runner
-11. api_shared_ecr
-12. endpoint_v1_image_for_ecs_runners
-13. endpoint_v1_ecs_runner
-14. endpoint_v1_runners
-15. endpoint_v1_echo
-16. endpoint_v1_contact
-17. www_index
-18. endpoint_v1_rack_designer
-19. endpoint_v1_simulation_soc
+    ├── agents_workflow_fixer
+    │       │
+    │       ├── agents_agent_creator
+    │       ├── agents_agent_deleter
+    │       ├── agents_agent_evaluator
+    │       ├── agents_agent_modifier
+    │       ├── agents_code_reviewer_for_pre_deployment_integration_tests
+    │       ├── agents_workflow_creator
+    │       ├── agents_workflow_deleter
+    │       ├── agents_workflow_evaluator
+    │       └── agents_workflow_modifier
+    │
+    └── www_shared
+            │
+            └── api_backend
+                    │
+                    └── endpoint_health
+                            │
+                            ├── endpoint_v1_image_for_ec2_runners_post
+                            │       │
+                            │       └── endpoint_v1_image_for_ec2_runners
+                            │               │
+                            │               └── endpoint_v1_ec2_runner ────────┐
+                            │                                                  │
+                            └── endpoint_v1_image_for_ecs_runners              │
+                                    │                                          │
+                                    └── endpoint_v1_ecs_runner ────────────────┤
+                                                                               │
+                                                                    endpoint_v1_runners
+                                                                               │
+                                                        ┌──────────────────────┼──────────────────────┐
+                                                        │                      │                      │
+                                                endpoint_v1_echo       endpoint_v1_contact   endpoint_v1_rack_designer
+                                                                               │                      │
+                                                                          www_index       endpoint_v1_simulation_soc
 ```
 
 ## Deployment Status
 
 - [x] `bootstrap.yml`
-- [ ] `agents_workflow_fixer.yml`
 - [ ] `agents_agent_creator.yml`
-- [ ] `agents_test_auditor.yml`
+- [ ] `agents_agent_deleter.yml`
+- [ ] `agents_agent_evaluator.yml`
+- [ ] `agents_agent_modifier.yml`
+- [ ] `agents_code_reviewer_for_pre_deployment_integration_tests.yml`
+- [ ] `agents_workflow_creator.yml`
+- [ ] `agents_workflow_deleter.yml`
+- [ ] `agents_workflow_evaluator.yml`
+- [ ] `agents_workflow_fixer.yml`
+- [ ] `agents_workflow_modifier.yml`
 - [x] `www_shared.yml`
 - [x] `api_backend.yml`
 - [x] `endpoint_health.yml`
 - [x] `endpoint_v1_image_for_ec2_runners_post.yml`
 - [x] `endpoint_v1_image_for_ec2_runners.yml`
 - [ ] `endpoint_v1_ec2_runner.yml`
-- [x] `api_shared_ecr.yml`
 - [ ] `endpoint_v1_image_for_ecs_runners.yml`
 - [ ] `endpoint_v1_ecs_runner.yml`
 - [ ] `endpoint_v1_runners.yml`
+- [ ] `endpoint_v1_echo.yml`
 - [ ] `endpoint_v1_contact.yml`
 - [ ] `www_index.yml`
-- [ ] `endpoint_v1_echo.yml`
 - [ ] `endpoint_v1_rack_designer.yml`
 - [ ] `endpoint_v1_simulation_soc.yml`

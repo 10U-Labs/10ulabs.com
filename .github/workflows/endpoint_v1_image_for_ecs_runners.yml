@@ -4,39 +4,17 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   deploy:
-    if: |
-      github.ref == 'refs/heads/main' &&
-      (
-        github.event_name == 'workflow_run' &&
-          github.event.workflow_run.conclusion == 'success' ||
-        github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.dry_run != 'true' ||
-        github.event_name == 'workflow_call' && !inputs.dry_run ||
-        github.event_name == 'push' &&
-        !contains(github.event.head_commit.message, '[dry run]') &&
-        !contains(toJSON(github.event.commits),
-          '.github/workflows/api_shared_ecr.yml') &&
-        !contains(toJSON(github.event.commits), 'src/api/shared/ecr/') &&
-        !contains(toJSON(github.event.commits), 'lib/terraform/') &&
-        !contains(toJSON(github.event.commits), 'test/api/shared/ecr/') &&
-        !contains(toJSON(github.event.commits),
-          '.github/workflows/endpoint_v1_runners.yml') &&
-        !contains(toJSON(github.event.commits),
-          'src/api/endpoints/runners/') &&
-        !contains(toJSON(github.event.commits),
-          'test/api/endpoints/runners/')
-      )
+    if: github.ref == 'refs/heads/main'
     name: Build and deploy Docker image for ECS runners
     permissions:
+      actions: write
       contents: read
       id-token: write
     runs-on: >-
       ${{
         (vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]'))
+          contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
         || fromJSON(format('["ec2", "runner-%s"]', github.run_id))
       }}
@@ -77,9 +55,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -93,17 +69,13 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup tflint
         uses: terraform-linters/setup-tflint@v4
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -111,9 +83,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
           pip install pylint mypy yamllint pytest boto3 \
@@ -159,9 +129,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install hadolint
         run: |
           HADOLINT_VERSION=$(curl -fsSL \
@@ -209,9 +177,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install yq
         run: |
           sudo wget -qO /usr/local/bin/yq \
@@ -234,26 +200,20 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - id: build
         if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Build and push Docker image (QEMU)
         run: |
           cd src/api/endpoints/image_for_ecs_runners/files
@@ -284,9 +244,7 @@ jobs:
         if: >-
           vars.USE_GITHUB_HOSTED != 'true' &&
           github.event.inputs.github_hosted != 'true' &&
-          !contains(github.event.head_commit.message, '[github-hosted]') &&
-          !contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          !contains(github.event.head_commit.message, '[github-hosted]')
         name: Build and push Docker image (EC2)
         run: |
           cd src/api/endpoints/image_for_ecs_runners/files
@@ -346,6 +304,15 @@ jobs:
             --repository "$REPO" \
             --image-tag "$TAG" \
             --region "$REGION"
+      - if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow endpoint_v1_image_for_ecs_runners \
+            --repo ${{ github.repository }}
 name: Building Docker image for ECS runners
 on:
   workflow_dispatch:
@@ -359,13 +326,7 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Ensuring ECR repository exists and is properly configured
 permissions:
+  actions: write
   contents: read
   id-token: write

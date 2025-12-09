@@ -4,6 +4,12 @@ locals {
   resource_prefix     = "TenULabs"
   ssm_github_pat_name = "/github/pat"
 
+  # AgentCore shared infrastructure
+  agentcore = {
+    execution_role_name = "${local.resource_prefix}AgentCoreExecutionRole"
+    execution_role_arn  = "arn:aws:iam::${local.aws_account_id}:role/${local.resource_prefix}AgentCoreExecutionRole"
+  }
+
   # GitHub App configuration
   github_app = {
     id              = "2436221"
