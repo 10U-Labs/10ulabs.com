@@ -38,19 +38,6 @@ output "ssm_parameter_name_for_github_pat" {
   value = aws_ssm_parameter.github_pat.name
 }
 
-# ECR Outputs
-output "ecr_repository_arn" {
-  value = aws_ecr_repository.main.arn
-}
-
-output "ecr_repository_name" {
-  value = aws_ecr_repository.main.name
-}
-
-output "ecr_repository_url" {
-  value = aws_ecr_repository.main.repository_url
-}
-
 # VPC Outputs
 output "vpc_id" {
   value = aws_vpc.main.id
