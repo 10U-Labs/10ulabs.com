@@ -26,12 +26,11 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' \
-            lib/terraform/modules/shared/outputs.tf | \
-            grep 'value' | cut -d'"' -f2)
-          AWS_REGION=$(grep -A1 'output "aws_region"' \
-            lib/terraform/modules/shared/outputs.tf | \
-            grep 'value' | cut -d'"' -f2)
+          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
             src/bootstrap/locals.tf | \
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
