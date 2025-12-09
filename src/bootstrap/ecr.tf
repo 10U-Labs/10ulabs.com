@@ -2,7 +2,7 @@
 #
 # Single ECR repository for all container images:
 # - Runners: latest, stable tags
-# - Agents: prefixed tags (agent-creator-*, workflow-fixer-*, test-auditor-*)
+# - Agents: prefixed tags (agent-creator-*, troubleshooter-of-workflows-*, test-auditor-*)
 
 resource "aws_ecr_repository" "main" {
   name                 = "10ulabs"
@@ -66,10 +66,10 @@ resource "aws_ecr_lifecycle_policy" "main" {
       },
       {
         rulePriority = 4
-        description  = "Keep last 5 workflow-fixer images"
+        description  = "Keep last 5 troubleshooter-of-workflows images"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["workflow-fixer-"]
+          tagPrefixList = ["troubleshooter-of-workflows-"]
           countType     = "imageCountMoreThan"
           countNumber   = 5
         }

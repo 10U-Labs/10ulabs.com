@@ -119,16 +119,16 @@ def test_agents_ecr_lifecycle_policy_has_agent_creator_rule(ecr_client):
     assert has_agent_creator_rule
 
 
-def test_agents_ecr_lifecycle_policy_has_workflow_fixer_rule(ecr_client):
-    """Test that the lifecycle policy has a rule for workflow-fixer."""
+def test_agents_ecr_lifecycle_policy_has_troubleshooter_of_workflows_rule(ecr_client):
+    """Test that the lifecycle policy has a rule for troubleshooter-of-workflows."""
     expected_name = _get_expected_ecr_name()
     response = ecr_client.get_lifecycle_policy(repositoryName=expected_name)
     policy = json.loads(response["lifecyclePolicyText"])
-    has_workflow_fixer_rule = any(
-        "workflow-fixer-" in str(rule.get("selection", {}).get("tagPrefixList", []))
+    has_troubleshooter_of_workflows_rule = any(
+        "troubleshooter-of-workflows-" in str(rule.get("selection", {}).get("tagPrefixList", []))
         for rule in policy["rules"]
     )
-    assert has_workflow_fixer_rule
+    assert has_troubleshooter_of_workflows_rule
 
 
 def test_agents_ecr_lifecycle_policy_has_test_auditor_rule(ecr_client):

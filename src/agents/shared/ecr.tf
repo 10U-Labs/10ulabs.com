@@ -1,7 +1,7 @@
 # ECR Repository for Agent Container Images
 #
 # This repository stores container images for all Bedrock AgentCore agents:
-# - workflow-fixer
+# - troubleshooter-of-workflows
 # - agent-creator
 # - test-auditor (code-reviewer)
 
@@ -65,10 +65,10 @@ resource "aws_ecr_lifecycle_policy" "agents" {
       },
       {
         rulePriority = 2
-        description  = "Keep last 5 workflow-fixer images"
+        description  = "Keep last 5 troubleshooter-of-workflows images"
         selection = {
           tagStatus     = "tagged"
-          tagPrefixList = ["workflow-fixer-"]
+          tagPrefixList = ["troubleshooter-of-workflows-"]
           countType     = "imageCountMoreThan"
           countNumber   = 5
         }
