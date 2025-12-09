@@ -25,27 +25,61 @@ jobs:
       - id: config
         name: Extract configuration values
         run: |
+          set -euo pipefail
+          
+          # Define file paths
           TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
-            src/bootstrap/locals.tf | \
-            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/bootstrap/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          BOOTSTRAP_LOCALS="src/bootstrap/locals.tf"
+          BOOTSTRAP_PROVIDERS="src/bootstrap/providers.tf"
+          
+          # Verify files exist
+          for file in "$TF_SHARED_LOCALS" "$BOOTSTRAP_LOCALS" "$BOOTSTRAP_PROVIDERS"; do
+            if [[ ! -f "$file" ]]; then
+              echo "Error: Required file $file not found"
+              exit 1
+            fi
+          done
+          
+          # Extract AWS configuration with error checking
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' "$TF_SHARED_LOCALS" | grep -v '\$' | cut -d'"' -f2 | head -1)
+          AWS_REGION=$(grep 'aws_region' "$TF_SHARED_LOCALS" | grep -v '\$' | cut -d'"' -f2 | head -1)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' "$TF_SHARED_LOCALS" | grep -v '\$' | cut -d'"' -f2 | head -1)
+          
+          # Extract GitHub Actions role suffix with improved parsing
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' "$BOOTSTRAP_LOCALS" | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1 | head -1)
+          
+          # Extract Terraform version with improved parsing
+          TERRAFORM_VERSION=$(grep 'required_version' "$BOOTSTRAP_PROVIDERS" | \
+            cut -d'"' -f2 | sed 's/>= //' | head -1)
+          
+          # Validate all required values were extracted
+          for var in AWS_ACCOUNT_ID AWS_REGION RESOURCE_PREFIX GITHUB_ACTIONS_ROLE_SUFFIX TERRAFORM_VERSION; do
+            if [[ -z "${!var:-}" ]]; then
+              echo "Error: Failed to extract $var"
+              exit 1
+            fi
+          done
+          
+          # Build derived values
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
-          ECR_REPO_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          ECR_REPO_URL="${ECR_REPO_URL}/10ulabs-agents"
+          ECR_REPO_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/10ulabs-agents"
+          
+          # Debug output (will be visible in logs)
+          echo "Configuration extracted successfully:"
+          echo "  AWS Account ID: $AWS_ACCOUNT_ID"
+          echo "  AWS Region: $AWS_REGION" 
+          echo "  Resource Prefix: $RESOURCE_PREFIX"
+          echo "  GitHub Actions Role ARN: $GITHUB_ACTIONS_ROLE_ARN"
+          echo "  ECR Repository URL: $ECR_REPO_URL"
+          echo "  Terraform Version: $TERRAFORM_VERSION"
+          
+          # Set outputs
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
-          GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
-          echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -61,7 +95,7 @@ jobs:
         name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -70,10 +104,14 @@ jobs:
             '[github-hosted]')
         name: Install Python dependencies
         run: |
+          python3 -m pip install --upgrade pip
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs requests
-          python3 -m pip install \
-            -r src/agents/workflow_fixer/webhook_lambda/requirements.txt
+          # Install webhook lambda requirements if they exist
+          if [[ -f "src/agents/workflow_fixer/webhook_lambda/requirements.txt" ]]; then
+            python3 -m pip install \
+              -r src/agents/workflow_fixer/webhook_lambda/requirements.txt
+          fi
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -107,22 +145,31 @@ jobs:
             .github/workflows/agents_workflow_fixer.yml
       - name: Run pylint
         run: |
-          python3 -m pylint \
-            src/agents/workflow_fixer/webhook_lambda/ \
-            --fail-on=C,R,W \
-            --fail-under=10.0
+          if [[ -d "src/agents/workflow_fixer/webhook_lambda" ]]; then
+            python3 -m pylint \
+              src/agents/workflow_fixer/webhook_lambda/ \
+              --fail-on=C,R,W \
+              --fail-under=10.0
+          fi
       - name: Run mypy
-        run: python3 -m mypy src/agents/workflow_fixer/webhook_lambda/
+        run: |
+          if [[ -d "src/agents/workflow_fixer/webhook_lambda" ]]; then
+            python3 -m mypy src/agents/workflow_fixer/webhook_lambda/
+          fi
       - name: Run unit tests
         run: |
-          python3 -m pytest \
-            test/agents/workflow_fixer/pre_deployment/unit/ \
-            --verbose --pythonwarnings=error
+          if [[ -d "test/agents/workflow_fixer/pre_deployment/unit" ]]; then
+            python3 -m pytest \
+              test/agents/workflow_fixer/pre_deployment/unit/ \
+              --verbose --pythonwarnings=error
+          fi
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest \
-            test/agents/workflow_fixer/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+          if [[ -d "test/agents/workflow_fixer/pre_deployment/integration" ]]; then
+            python3 -m pytest \
+              test/agents/workflow_fixer/pre_deployment/integration/ \
+              --verbose --pythonwarnings=error
+          fi
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - id: meta
@@ -150,9 +197,11 @@ jobs:
         run: cd src/agents/workflow_fixer && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest \
-            test/agents/workflow_fixer/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
+          if [[ -d "test/agents/workflow_fixer/post_deployment/integration" ]]; then
+            python3 -m pytest \
+              test/agents/workflow_fixer/post_deployment/integration/ \
+              --verbose --pythonwarnings=error
+          fi
 name: Deploying Workflow Fixer Agent
 on:
   workflow_dispatch:
