@@ -338,7 +338,15 @@ When creating PRs, include:
 - Clear explanation of what failed
 - Root cause analysis
 - What the fix does and why it works
-- Any caveats or manual verification needed""",
+- Any caveats or manual verification needed
+- Footer: "Created by: 10ulabs-workflow-fixer-agent"
+
+When creating commits, use this format for commit messages:
+<title>
+
+<body>
+
+Created by: 10ulabs-workflow-fixer-agent""",
     tools=[
         get_workflow_logs,
         get_file_content,
