@@ -280,6 +280,32 @@ def create_pull_request(
     return _github_api_request(endpoint, github_token, method="POST", data=data)
 
 
+@tool
+def merge_pull_request(
+    owner: str,
+    repo: str,
+    pull_number: int,
+    merge_method: str,
+    github_token: str,
+) -> dict[str, Any]:
+    """
+    Merge a pull request in a GitHub repository.
+
+    Args:
+        owner: The GitHub organization or user that owns the repository
+        repo: The repository name
+        pull_number: The pull request number
+        merge_method: The merge method to use (merge, squash, or rebase)
+        github_token: GitHub Personal Access Token
+
+    Returns:
+        The merge result including SHA and message
+    """
+    endpoint = f"/repos/{owner}/{repo}/pulls/{pull_number}/merge"
+    data = {"merge_method": merge_method}
+    return _github_api_request(endpoint, github_token, method="PUT", data=data)
+
+
 # Create the agent with tools
 agent = Agent(
     system_prompt="""You are the Workflow Fixer - an expert CI/CD engineer.
@@ -293,7 +319,7 @@ Key tenets (in priority order):
 4. ATOMICITY - each agent does ONE thing well
 5. OBSERVABILITY - all actions must be logged, no rogue agents
 
-Your task is to analyze workflow failures and create fixes. When given information about a failed workflow:
+Your task is to analyze workflow failures, create fixes, and merge them. When given information about a failed workflow:
 
 1. Use get_workflow_logs to fetch the failure logs
 2. Analyze the error messages to understand what failed and why
@@ -303,9 +329,10 @@ Your task is to analyze workflow failures and create fixes. When given informati
 6. Create a fix branch using create_branch
 7. Commit the fix using commit_file
 8. Create a pull request using create_pull_request
+9. Merge the pull request using merge_pull_request (use "squash" as merge_method)
 
 Be methodical and thorough. Always read the relevant files before proposing changes.
-Only create PRs when you are confident the fix is correct.
+Only create and merge PRs when you are confident the fix is correct.
 
 When creating PRs, include:
 - Clear explanation of what failed
@@ -319,6 +346,7 @@ When creating PRs, include:
         create_branch,
         commit_file,
         create_pull_request,
+        merge_pull_request,
     ],
 )
 
