@@ -2,12 +2,11 @@
 import subprocess
 from pathlib import Path
 
-import boto3
 import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
-API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecr"
+API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
 
 
 def _terraform_init(directory: Path) -> bool:
@@ -36,19 +35,6 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def aws_region():
-    """Provide the AWS region."""
-    return "us-east-1"
-
-
-@pytest.fixture(scope="session")
-def ecr_client(request):
-    """Create an ECR client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ecr", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def terraform_initialized():
     """Initialize terraform for api_shared_ecr state access."""
     return _terraform_init(API_SHARED_ECR_DIR)
@@ -60,7 +46,7 @@ def api_shared_ecr_outputs(request):
     if not request.getfixturevalue("terraform_initialized"):
         pytest.skip("Terraform init failed for api_shared_ecr")
     return {
-        "repository_name": _terraform_output(API_SHARED_ECR_DIR, "repository_name"),
-        "repository_url": _terraform_output(API_SHARED_ECR_DIR, "repository_url"),
-        "repository_arn": _terraform_output(API_SHARED_ECR_DIR, "repository_arn"),
+        "repository_name": _terraform_output(API_SHARED_ECR_DIR, "ecr_repository_name"),
+        "repository_url": _terraform_output(API_SHARED_ECR_DIR, "ecr_repository_url"),
+        "repository_arn": _terraform_output(API_SHARED_ECR_DIR, "ecr_repository_arn"),
     }
