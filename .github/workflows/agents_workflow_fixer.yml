@@ -106,6 +106,7 @@ jobs:
             --fail-under=10.0
       - env:
           PYTHONPATH: src/bootstrap/lambda_layer
+          MYPYPATH: src/bootstrap/lambda_layer
         name: Run mypy
         run: python3 -m mypy src/agents/workflow_fixer/webhook_lambda/
       - env:
