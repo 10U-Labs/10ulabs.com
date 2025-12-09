@@ -145,9 +145,17 @@ agents_modifier_of_unit_tests:
     - '.github/workflows/agents_modifier_of_unit_tests.yml'
     - 'src/agents/modifier_of_unit_tests/**'
     - 'test/agents/modifier_of_unit_tests/**'
-agents_troubleshooter_of_workflows:
+agents_shared:
   depends_on:
     - bootstrap
+  name: Deploying Agents Shared Infrastructure
+  paths:
+    - '.github/workflows/agents_shared.yml'
+    - 'src/agents/shared/**'
+    - 'test/agents/shared/**'
+agents_troubleshooter_of_workflows:
+  depends_on:
+    - agents_shared
   name: Deploying Troubleshooter of Workflows Agent
   paths:
     - '.github/workflows/agents_troubleshooter_of_workflows.yml'
