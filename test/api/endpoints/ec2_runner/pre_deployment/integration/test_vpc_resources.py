@@ -1,5 +1,4 @@
 """Tests to validate VPC resources exist for EC2 runners."""
-import json
 
 
 def test_runners_terraform_outputs_readable(runners_outputs):
@@ -29,7 +28,7 @@ def test_subnets_exist(ec2_client, runners_outputs):
     subnet_ids_str = runners_outputs.get("vpc_public_subnet_ids")
     assert subnet_ids_str, "vpc_public_subnet_ids output not found"
 
-    subnet_ids = json.loads(subnet_ids_str)
+    subnet_ids = subnet_ids_str.split(",")
     assert len(subnet_ids) > 0, "No subnet IDs found"
 
     response = ec2_client.describe_subnets(SubnetIds=subnet_ids)

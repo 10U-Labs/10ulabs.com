@@ -53,15 +53,15 @@ def api_key_fixture():
 
 
 @pytest.fixture(scope="module")
-def ec2_client():
+def ec2_client(aws_region):
     """Provide an EC2 client."""
-    return boto3.client('ec2', region_name='us-east-1')
+    return boto3.client('ec2', region_name=aws_region)
 
 
 @pytest.fixture(scope="module")
-def dynamodb_client():
+def dynamodb_client(aws_region):
     """Provide a DynamoDB client."""
-    return boto3.client('dynamodb', region_name='us-east-1')
+    return boto3.client('dynamodb', region_name=aws_region)
 
 
 def create_runner_job_payload(github_repo, job_labels, run_id=None):

@@ -37,16 +37,9 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def aws_region():
-    """Provide the AWS region."""
-    return "us-east-1"
-
-
-@pytest.fixture(scope="session")
-def ec2_client(request):
+def ec2_client(aws_region):
     """Create an EC2 client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ec2", region_name=region)
+    return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
