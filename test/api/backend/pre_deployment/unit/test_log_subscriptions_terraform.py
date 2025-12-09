@@ -104,12 +104,12 @@ def test_waf_subscription_has_name():
     assert has_name
 
 
-def test_waf_subscription_uses_waf_log_group():
-    """Verify that WAF subscription uses WAF log group."""
+def test_waf_subscription_uses_waf_module_log_group():
+    """Verify that WAF subscription uses WAF module log group output."""
     with open(_get_terraform_path(), encoding="utf-8") as f:
         content = f.read()
-    uses_waf_log_group = 'aws_cloudwatch_log_group.waf.name' in content
-    assert uses_waf_log_group
+    uses_module_log_group = 'module.api_waf.log_group_name' in content
+    assert uses_module_log_group
 
 
 def test_waf_subscription_uses_firehose_destination():

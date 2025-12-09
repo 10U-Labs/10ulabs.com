@@ -114,3 +114,8 @@ def test_web_acl_id_output_exists(outputs_tf_content):
 def test_log_group_arn_output_exists(outputs_tf_content):
     """Test that log_group_arn output exists."""
     assert 'output "log_group_arn"' in outputs_tf_content
+
+
+def test_log_group_name_output_exists(outputs_tf_content):
+    """Test that log_group_name output exists."""
+    assert 'output "log_group_name"' in outputs_tf_content
