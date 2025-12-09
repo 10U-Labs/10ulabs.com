@@ -260,18 +260,19 @@ jobs:
         run: npm test --prefix src/www/paths/index
 name: Ensuring www index (home page) exists and is properly configured
 on:
-  workflow_call:
-    inputs:
-      invalidate_cloudfront:
-        default: false
-        description: Force CloudFront cache invalidation
-        type: boolean
   workflow_dispatch:
     inputs:
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - Ensuring contact endpoint exists and is properly configured
 permissions:
   contents: read
   id-token: write

@@ -1,230 +1,27 @@
 ---
 # Workflow Orchestrator
 #
-# This is the ONLY workflow that responds to push events on main.
-# It analyzes changed files and triggers the appropriate root workflows.
-#
-# Root workflows are those whose files changed but have no ancestors that
-# also changed. The orchestrator executes all workflows sequentially.
+# This workflow responds to push events on main, calculates which root workflow
+# needs to run based on changed files, and dispatches it (fire-and-forget).
+# Descendant workflows are triggered automatically via workflow_run events.
 concurrency:
   cancel-in-progress: true
   group: orchestrator-${{ github.ref }}
 jobs:
-  check-static-analysis:
-    if: github.ref == 'refs/heads/main'
-    name: Determining if static analysis should be performed
-    outputs:
-      should_perform: ${{ steps.check.outputs.should_perform }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: check
-        name: Check if static analysis files changed
-        run: |
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE="${{ github.event.before }}"
-          else
-            BASE="HEAD~1"
-          fi
-          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}")
-          echo "Changed files:"
-          echo "$CHANGED"
-          PATTERNS=(
-            ".github/workflows/orchestrator.yml"
-            "etc/workflow-dependencies.yml"
-            "scripts/compute_root_workflows.py"
-            "scripts/execute_workflow_plan.py"
-          )
-          SHOULD_PERFORM="false"
-          for pattern in "${PATTERNS[@]}"; do
-            if echo "$CHANGED" | grep -qE "^${pattern}$"; then
-              SHOULD_PERFORM="true"
-              break
-            fi
-          done
-          echo "should_perform=$SHOULD_PERFORM" >> "$GITHUB_OUTPUT"
-          echo "Should perform static analysis: $SHOULD_PERFORM"
-  check-unit-testing:
-    if: >-
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.static-analysis.result != 'failure'
-    name: Determining if unit testing should be performed
-    needs:
-      - concluded-no-sa-should-be-performed
-      - static-analysis
-    outputs:
-      should_perform: ${{ steps.check.outputs.should_perform }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: check
-        name: Check if unit testing files changed
-        run: |
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE="${{ github.event.before }}"
-          else
-            BASE="HEAD~1"
-          fi
-          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}")
-          echo "Changed files:"
-          echo "$CHANGED"
-          PATTERNS=(
-            "scripts/compute_root_workflows.py"
-            "scripts/execute_workflow_plan.py"
-            "test/orchestrator/"
-          )
-          SHOULD_PERFORM="false"
-          for pattern in "${PATTERNS[@]}"; do
-            if echo "$CHANGED" | grep -qE "^${pattern}"; then
-              SHOULD_PERFORM="true"
-              break
-            fi
-          done
-          echo "should_perform=$SHOULD_PERFORM" >> "$GITHUB_OUTPUT"
-          echo "Should perform unit testing: $SHOULD_PERFORM"
-  concluded-no-sa-should-be-performed:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event_name != 'workflow_dispatch' &&
-      needs.check-static-analysis.outputs.should_perform != 'true'
-    name: Concluding no static analysis should be performed
-    needs: check-static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: No static analysis will be performed
-        run: echo "No static analysis should be performed."
-  concluded-no-ut-should-be-performed:
-    if: >-
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.static-analysis.result != 'failure' &&
-      github.event_name != 'workflow_dispatch' &&
-      needs.check-unit-testing.outputs.should_perform != 'true'
-    name: Concluding no unit testing should be performed
-    needs:
-      - check-unit-testing
-      - static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: No unit testing will be performed
-        run: echo "No unit testing should be performed."
-  concluded-no-workflows-should-be-dispatched:
-    if: >-
-      always() &&
-      needs.plan-workflows.result == 'success' &&
-      needs.static-analysis.result != 'failure' &&
-      needs.unit-testing.result != 'failure' &&
-      (needs.plan-workflows.outputs.count == '0' ||
-       contains(github.event.head_commit.message, '[skip ci]'))
-    name: Concluding no workflows should be dispatched
-    needs:
-      - plan-workflows
-      - static-analysis
-      - unit-testing
-    runs-on: ubuntu-latest
-    steps:
-      - name: No workflows to trigger
-        run: |
-          echo "No root workflows to trigger for this commit."
-          echo "Either:"
-          echo "  - No workflow-related files were changed"
-          echo "  - Commit message contains [skip ci]"
-  concluded-sa-should-be-performed:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' ||
-       needs.check-static-analysis.outputs.should_perform == 'true')
-    name: Concluding static analysis should be performed
-    needs: check-static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Static analysis will be performed
-        run: echo "Static analysis should be performed."
-  concluded-ut-should-be-performed:
-    if: >-
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.static-analysis.result != 'failure' &&
-      (github.event_name == 'workflow_dispatch' ||
-       needs.check-unit-testing.outputs.should_perform == 'true')
-    name: Concluding unit testing should be performed
-    needs:
-      - check-unit-testing
-      - static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Unit testing will be performed
-        run: echo "Unit testing should be performed."
-  dispatching:
+  orchestrate:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     if: >-
-      always() &&
-      needs.plan-workflows.result == 'success' &&
-      needs.static-analysis.result != 'failure' &&
-      needs.unit-testing.result != 'failure' &&
-      needs.plan-workflows.outputs.count != '0' &&
-      !contains(github.event.head_commit.message, '[skip ci]')
-    name: ${{ matrix.workflow.name }}
-    needs:
-      - plan-workflows
-      - static-analysis
-      - unit-testing
-    runs-on: ubuntu-latest
-    steps:
-      - if: >-
-          inputs.dry_run == true ||
-          contains(github.event.head_commit.message, '[dry run]')
-        name: Dry run
-        run: echo "Would dispatch ${{ matrix.workflow.name }}"
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Dispatch and wait
-        run: |
-          WORKFLOW="${{ matrix.workflow.name }}.yml"
-          GITHUB_HOSTED="${{ inputs.github_hosted }}"
-          if [ "$GITHUB_HOSTED" = "true" ]; then
-            gh workflow run ".github/workflows/$WORKFLOW" \
-              --repo ${{ github.repository }} \
-              --field github_hosted=true
-          else
-            gh workflow run ".github/workflows/$WORKFLOW" \
-              --repo ${{ github.repository }}
-          fi
-          sleep 5
-          RUN_ID=$(gh run list --workflow "$WORKFLOW" \
-            --repo ${{ github.repository }} --limit 1 \
-            --json databaseId --jq '.[0].databaseId')
-          echo "Waiting for $WORKFLOW (run $RUN_ID)..."
-          gh run watch "$RUN_ID" --repo ${{ github.repository }} --exit-status
-    strategy:
-      fail-fast: true
-      matrix:
-        workflow: ${{ fromJSON(needs.plan-workflows.outputs.execution_plan) }}
-      max-parallel: 1
-  plan-workflows:
-    if: >-
-      always() &&
       github.ref == 'refs/heads/main' &&
-      needs.static-analysis.result != 'failure' &&
-      needs.unit-testing.result != 'failure'
-    name: Determining which workflows should be dispatched
-    needs:
-      - concluded-no-ut-should-be-performed
-      - static-analysis
-      - unit-testing
-    outputs:
-      count: ${{ steps.plan.outputs.count }}
-      execution_plan: ${{ steps.plan.outputs.execution_plan }}
-    runs-on: ubuntu-latest
+      !contains(github.event.head_commit.message, '[skip ci]')
+    name: Orchestrating workflows
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -254,131 +51,42 @@ jobs:
       - name: Install dependencies
         run: python3 -m pip install pyyaml
       - id: plan
-        name: Compute execution plan
+        name: Compute root workflow
         run: |
           GRAPH="etc/workflow-dependencies.yml"
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
-            PLAN=$(python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --start-from "$START_FROM" --levels --indexed)
+            ROOT="$START_FROM"
           else
             CHANGED="${{ steps.files.outputs.changed }}"
-            PLAN=$(echo "$CHANGED" | python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --levels --indexed)
+            ROOT=$(echo "$CHANGED" | python3 scripts/compute_root_workflows.py \
+              --graph $GRAPH --levels --indexed | jq -r '.[0].name // empty')
           fi
-          echo "Execution plan: $PLAN"
-          echo "execution_plan=$PLAN" >> "$GITHUB_OUTPUT"
-          COUNT=$(echo "$PLAN" | jq 'length')
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-  static-analysis:
-    if: |
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_dispatch' ||
-       needs.check-static-analysis.outputs.should_perform == 'true')
-    name: Performing static analysis
-    needs:
-      - check-static-analysis
-      - concluded-sa-should-be-performed
-    runs-on: ubuntu-latest
-    steps:
+          echo "Root workflow: $ROOT"
+          echo "root_workflow=$ROOT" >> "$GITHUB_OUTPUT"
+      - if: steps.plan.outputs.root_workflow == ''
+        name: No workflows to dispatch
+        run: echo "No workflow-related files changed"
       - if: >-
-          inputs.dry_run == true ||
-          contains(github.event.head_commit.message, '[dry run]')
+          steps.plan.outputs.root_workflow != '' &&
+          (inputs.dry_run == true ||
+           contains(github.event.head_commit.message, '[dry run]'))
         name: Dry run
-        run: echo "Dry run - skipping static analysis"
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Install linting dependencies
-        run: python3 -m pip install pylint mypy yamllint pyyaml types-PyYAML
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Linting YAML files
         run: |
-          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          KEY_ORDERING='key-ordering: enable'
-          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
-          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
-          yamllint --strict \
-            --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/orchestrator.yml \
-            etc/workflow-dependencies.yml
+          echo "Would dispatch: ${{ steps.plan.outputs.root_workflow }}.yml"
       - if: >-
+          steps.plan.outputs.root_workflow != '' &&
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
-        name: Run pylint
+        name: Dispatch root workflow (fire-and-forget)
         run: |
-          python3 -m pylint \
-            scripts/compute_root_workflows.py \
-            scripts/execute_workflow_plan.py \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Run mypy
-        run: |
-          python3 -m mypy \
-            scripts/compute_root_workflows.py \
-            scripts/execute_workflow_plan.py
-  unit-testing:
-    if: |
-      always() &&
-      github.ref == 'refs/heads/main' &&
-      needs.static-analysis.result != 'failure' &&
-      (github.event_name == 'workflow_dispatch' ||
-       needs.check-unit-testing.outputs.should_perform == 'true')
-    name: Unit testing
-    needs:
-      - check-unit-testing
-      - concluded-ut-should-be-performed
-      - static-analysis
-    runs-on: ubuntu-latest
-    steps:
-      - if: >-
-          inputs.dry_run == true ||
-          contains(github.event.head_commit.message, '[dry run]')
-        name: Dry run
-        run: echo "Dry run - skipping unit tests"
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Install test dependencies
-        run: python3 -m pip install pytest pyyaml boto3
-      - if: >-
-          inputs.dry_run != true &&
-          !contains(github.event.head_commit.message, '[dry run]')
-        name: Run unit tests
-        run: |
-          python3 -m pytest test/orchestrator/ \
-            --verbose --pythonwarnings=error
+          WORKFLOW="${{ steps.plan.outputs.root_workflow }}"
+          echo "Dispatching ${WORKFLOW}.yml..."
+          gh workflow run ".github/workflows/${WORKFLOW}.yml" \
+            --repo ${{ github.repository }}
+          echo "Root workflow dispatched (fire-and-forget)"
+          echo "Descendants will trigger automatically via workflow_run"
 name: Workflow Orchestrator
 on:
   push:

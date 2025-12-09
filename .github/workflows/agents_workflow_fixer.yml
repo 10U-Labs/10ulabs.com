@@ -3,74 +3,13 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  building-agent-container:
-    defaults:
-      run:
-        working-directory: src/agents/workflow_fixer/agent-code
+  deploy:
     if: >-
       github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
-    name: Building agent container
-    needs:
-      - declaring-common-variables
-      - ensuring-backend-is-in-desired-state
-    outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - id: ecr-login
-        name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-      - id: meta
-        name: Extract metadata for Docker
-        uses: docker/metadata-action@v5
-        with:
-          images: >-
-            ${{ needs.declaring-common-variables.outputs.ecr_repository_url }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - env:
-          DOCKER_BUILD_SUMMARY: false
-        name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: src/agents/workflow_fixer/agent-code
-          platforms: linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-  declaring-common-variables:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
-    name: Declaring common variables
-    outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      ecr_repository_url: ${{ steps.config.outputs.ecr_repository_url }}
-      github_actions_role_arn: >-
-        ${{ steps.config.outputs.github_actions_role_arn }}
-      terraform_version: ${{ steps.config.outputs.terraform_version }}
+      github.event.inputs.dry_run != 'true' &&
+      (github.event_name != 'workflow_run' ||
+       github.event.workflow_run.conclusion == 'success')
+    name: Deploy Workflow Fixer Agent
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -105,115 +44,13 @@ jobs:
           ECR_REPO_URL="${ECR_REPO_URL}/tenulabs-workflow-fixer-agent"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-  ensuring-agent-is-in-desired-state:
-    defaults:
-      run:
-        working-directory: src/agents/workflow_fixer
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
-    name: Ensuring agent is in desired state
-    needs:
-      - building-agent-container
-      - declaring-common-variables
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-  ensuring-backend-is-in-desired-state:
-    defaults:
-      run:
-        working-directory: src/agents/workflow_fixer
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
-    name: Ensuring backend is in desired state
-    needs:
-      - declaring-common-variables
-      - integration-testing-pre-deployment
-      - unit-testing
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply (backend only)
-        run: >-
-          terraform apply -auto-approve
-          -target=aws_ecr_repository.agent
-          -target=aws_ecr_lifecycle_policy.agent
-  integration-testing-post-deployment:
-    name: Post-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - ensuring-agent-is-in-desired-state
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -231,125 +68,22 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3 requests
-      - name: Run integration tests
         run: |
-          python3 -m pytest \
-            test/agents/workflow_fixer/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
-  integration-testing-pre-deployment:
-    name: Pre-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
+          python3 -m pip install \
+            pylint mypy yamllint pytest boto3 boto3-stubs requests
+          python3 -m pip install \
+            -r src/agents/workflow_fixer/webhook-lambda/requirements.txt
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
           terraform_wrapper: false
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - name: Run pre-deployment integration tests
-        run: |
-          python3 -m pytest \
-            test/agents/workflow_fixer/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
-  performing-static-analysis:
-    name: Performing static analysis
-    needs:
-      - declaring-common-variables
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install linting dependencies
-        run: |
-          python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs
-          python3 -m pip install \
-            -r src/agents/workflow_fixer/webhook-lambda/requirements.txt
       - name: Terraform Format Check
-        run: >-
-          cd src/agents/workflow_fixer && terraform fmt -diff -check -recursive
+        run: cd src/agents/workflow_fixer && terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/agents/workflow_fixer && terraform init
       - env:
@@ -375,62 +109,55 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: |
-          python3 -m mypy \
-            src/agents/workflow_fixer/webhook-lambda/
-  unit-testing:
-    name: Unit testing
-    needs:
-      - declaring-common-variables
-      - performing-static-analysis
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
+        run: python3 -m mypy src/agents/workflow_fixer/webhook-lambda/
       - name: Run unit tests
         run: |
           python3 -m pytest \
             test/agents/workflow_fixer/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/agents/workflow_fixer/pre_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Terraform Apply (backend only)
+        run: |
+          cd src/agents/workflow_fixer && \
+            terraform apply -auto-approve \
+            -target=aws_ecr_repository.agent \
+            -target=aws_ecr_lifecycle_policy.agent
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+      - id: meta
+        name: Extract metadata for Docker
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.config.outputs.ecr_repository_url }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - env:
+          DOCKER_BUILD_SUMMARY: false
+        name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/agents/workflow_fixer/agent-code
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+      - name: Terraform Apply
+        run: cd src/agents/workflow_fixer && terraform apply -auto-approve
+      - name: Run post-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/agents/workflow_fixer/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
 name: Deploying Workflow Fixer Agent
 on:
-  workflow_call:
-    inputs:
-      dry_run:
-        default: false
-        description: Dry run mode (show structure without executing)
-        required: false
-        type: boolean
-      github_hosted:
-        default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
-        type: boolean
   workflow_dispatch:
     inputs:
       dry_run:
@@ -442,6 +169,13 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - Ensuring bootstrap infrastructure exists and is properly configured
 permissions:
   contents: read
   id-token: write
