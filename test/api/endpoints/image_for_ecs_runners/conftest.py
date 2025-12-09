@@ -2,11 +2,16 @@
 import os
 import re
 import subprocess
+
+import boto3
 import pytest
 
 
 SHARED_MODULE_PATH = os.path.join(
     os.path.dirname(__file__), '../../../../lib/terraform/modules/shared/outputs.tf'
+)
+SHARED_LOCALS_PATH = os.path.join(
+    os.path.dirname(__file__), '../../../../lib/terraform/modules/shared/locals.tf'
 )
 BASE_DIR = os.path.join(
     os.path.dirname(__file__), '../../../../src/api/endpoints/image_for_ecs_runners'
@@ -30,12 +35,23 @@ def _get_terraform_output_value(output_name):
     return None
 
 
+def _get_terraform_local_value(local_name):
+    """Extract a value from terraform locals.tf file."""
+    with open(SHARED_LOCALS_PATH, 'r', encoding='utf-8') as f:
+        content = f.read()
+    pattern = rf'{local_name}\s*=\s*"([^"]+)"'
+    match = re.search(pattern, content)
+    if match:
+        return match.group(1)
+    return None
+
+
 def get_aws_region():
-    """Get AWS region from environment or terraform outputs."""
+    """Get AWS region from environment or terraform locals."""
     try:
         region = os.environ["AWS_REGION"]
     except KeyError:
-        region = _get_terraform_output_value("aws_region")
+        region = _get_terraform_local_value("aws_region")
     return region
 
 
@@ -112,3 +128,9 @@ def github_repo():
 def github_pat():
     """Fixture providing the GitHub PAT."""
     return get_github_pat()
+
+
+@pytest.fixture(scope="module")
+def ecr_client():
+    """Create an ECR client."""
+    return boto3.client("ecr", region_name=get_aws_region())
