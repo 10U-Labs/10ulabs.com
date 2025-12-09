@@ -141,30 +141,6 @@ def is_static_analysis_step(step_name):
     return any(kw in step_lower for kw in static_keywords)
 
 
-def is_pre_deployment_test_step(step_name, run_cmd):
-    """Determine if a workflow step is a pre-deployment unit test."""
-    step_lower = step_name.lower()
-    # Skip setup/install steps - they're not actual checks
-    skip_keywords = ['install', 'setup', 'checkout', 'configure', 'set up']
-    if any(kw in step_lower for kw in skip_keywords):
-        return False
-    # Skip post-deployment tests - they require deployed infrastructure
-    if 'post_deployment' in run_cmd or 'post-deployment' in run_cmd or \
-       'post_deployment' in step_lower or 'post-deployment' in step_lower:
-        return False
-    # Skip pre-deployment integration tests - they require AWS infrastructure
-    if 'pre_deployment/integration' in run_cmd or 'pre-deployment/integration' in run_cmd:
-        return False
-    if 'integration' in step_lower and 'pre-deployment' in step_lower:
-        return False
-    # Run only pre-deployment unit tests
-    if 'pre_deployment/unit' in run_cmd or 'pre-deployment/unit' in run_cmd:
-        return True
-    if 'unit test' in step_lower:
-        return True
-    return False
-
-
 def is_conditional_on_github_hosted(condition):
     """Check if a step condition depends on github-hosted runner."""
     if not condition:
@@ -201,11 +177,6 @@ def extract_static_analysis_commands(workflow):
     """Extract static analysis commands from a workflow."""
     return extract_commands_from_jobs(
         workflow, lambda name, _cmd: is_static_analysis_step(name))
-
-
-def extract_pre_deployment_test_commands(workflow):
-    """Extract pre-deployment test commands from a workflow."""
-    return extract_commands_from_jobs(workflow, is_pre_deployment_test_step)
 
 
 def find_matching_workflows(changed_files, workflows_dir, project_dir):
@@ -473,18 +444,6 @@ def main():
         print("="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing", file=sys.stderr)
         sys.exit(2)
-
-    # Skip pre-deployment tests in local pre-commit hook
-    # Tests require AWS infrastructure and proper environment setup
-    # They will run in CI/CD where the environment is properly configured
-    # tests_ok = run_phase(
-    #     matching_workflows, "PRE-DEPLOYMENT TESTS", extract_pre_deployment_test_commands)
-    # if not tests_ok:
-    #     print("\n" + "="*60)
-    #     print("PRE-DEPLOYMENT TESTS FAILED - Fix issues before committing")
-    #     print("="*60)
-    #     print("PRE-DEPLOYMENT TESTS FAILED - Fix issues before committing", file=sys.stderr)
-    #     sys.exit(2)
 
     print("\n" + "="*60)
     print("ALL CHECKS PASSED")
