@@ -40,8 +40,9 @@ for pyfile in "$LAYER_SRC_DIR"/*.py; do
     fi
 done
 
-# Create output directory if needed
+# Create output directory if needed and resolve to absolute path
 mkdir -p "$(dirname "$OUTPUT_PATH")"
+OUTPUT_PATH="$(cd "$(dirname "$OUTPUT_PATH")" && pwd)/$(basename "$OUTPUT_PATH")"
 
 # Create the zip
 cd "$BUILD_DIR"
