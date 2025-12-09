@@ -3,44 +3,13 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  checking-oidc-availability:
+  deploy:
     if: >-
       github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
-    name: Checking OIDC availability
-    needs: declaring-common-variables
-    outputs:
-      oidc_available: ${{ steps.oidc.outcome == 'success' }}
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - continue-on-error: true
-        id: oidc
-        name: Test OIDC authentication
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          retry-max-attempts: 1
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-  declaring-common-variables:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true'
-    name: Declaring common variables
-    outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: >-
-        ${{ steps.config.outputs.github_actions_role_arn }}
-      terraform_version: ${{ steps.config.outputs.terraform_version }}
+      github.event.inputs.dry_run != 'true' &&
+      (github.event_name != 'workflow_run' ||
+       github.event.workflow_run.conclusion == 'success')
+    name: Deploy Test Auditor Agent
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -73,86 +42,22 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-  ensuring-infrastructure-in-desired-state:
-    defaults:
-      run:
-        working-directory: src/agents/test_auditor
-    name: Ensuring infrastructure is in desired state
-    needs:
-      - checking-oidc-availability
-      - declaring-common-variables
-      - performing-static-analysis
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
-        name: Configure AWS credentials via OIDC
+      - continue-on-error: true
+        id: oidc
+        name: Test OIDC authentication
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          retry-max-attempts: 1
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - if: steps.oidc.outcome != 'success'
         name: Configure AWS credentials via static keys
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-  integration-testing:
-    name: Integration testing
-    needs:
-      - checking-oidc-availability
-      - declaring-common-variables
-      - ensuring-infrastructure-in-desired-state
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
-        name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
-        name: Configure AWS credentials via static keys
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -171,73 +76,17 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install pytest boto3
-      - name: Run integration tests
         run: |
-          python3 -m pytest \
-            test/agents/test_auditor/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
-  performing-static-analysis:
-    name: Performing static analysis
-    needs:
-      - checking-oidc-availability
-      - declaring-common-variables
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
+          python3 -m pip install \
+            pylint mypy yamllint pytest boto3 boto3-stubs
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-      - if: needs.checking-oidc-availability.outputs.oidc_available == 'true'
-        name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: needs.checking-oidc-availability.outputs.oidc_available != 'true'
-        name: Configure AWS credentials via static keys
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install linting dependencies
-        run: |
-          python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs
       - name: Terraform Format Check
         run: cd src/agents/test_auditor && terraform fmt -diff -check -recursive
       - name: Terraform Init
@@ -265,22 +114,16 @@ jobs:
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
+        run: python3 -m mypy src/agents/test_auditor/lambdas/
+      - name: Terraform Apply
+        run: cd src/agents/test_auditor && terraform apply -auto-approve
+      - name: Run integration tests
         run: |
-          python3 -m mypy \
-            src/agents/test_auditor/lambdas/
+          python3 -m pytest \
+            test/agents/test_auditor/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
 name: Deploying Test Auditor Agent
 on:
-  workflow_call:
-    inputs:
-      dry_run:
-        default: false
-        description: Dry run mode (show structure without executing)
-        required: false
-        type: boolean
-      github_hosted:
-        default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
-        type: boolean
   workflow_dispatch:
     inputs:
       dry_run:
@@ -292,6 +135,13 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - Deploying Agent Creator
 permissions:
   contents: read
   id-token: write

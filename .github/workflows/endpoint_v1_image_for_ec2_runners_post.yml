@@ -3,187 +3,7 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  building-ami:
-    name: Building AMI
-    needs:
-      - declaring-common-variables
-      - integration-testing-pre-deployment
-    outputs:
-      ami_id: ${{ steps.build.outputs.ami_id }}
-      ami_stable_tag: ${{ steps.terraform.outputs.ami_stable_tag }}
-      security_group_id: ${{ steps.terraform.outputs.security_group_id }}
-      subnet_ids: ${{ steps.terraform.outputs.subnet_ids }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version
-            }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{
-            needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - id: terraform
-        name: Get infrastructure info from Terraform state
-        run: |
-          cd src/api/backend
-          terraform init -backend=true -input=false
-          AMI_PURPOSE_VALUE=$(terraform output -raw \
-            ec2_runner_ami_purpose_value)
-          AMI_STABLE_TAG=$(terraform output -raw \
-            ec2_runner_ami_stable_tag)
-          SECURITY_GROUP_ID=$(terraform output -raw \
-            runner_security_group_id)
-          SUBNET_IDS=$(terraform output -raw \
-            vpc_public_subnet_ids)
-          echo "ami_purpose_value=$AMI_PURPOSE_VALUE" \
-            >> $GITHUB_OUTPUT
-          echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
-          echo "security_group_id=$SECURITY_GROUP_ID" \
-            >> $GITHUB_OUTPUT
-          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install paramiko
-        run: python3 -m pip install paramiko
-      - env:
-          OS_ARCH: >-
-            ${{ needs.declaring-common-variables.outputs.os_architecture
-            }}
-          OS_FAMILY: >-
-            ${{ needs.declaring-common-variables.outputs.os_family }}
-          OS_VERSION: >-
-            ${{ needs.declaring-common-variables.outputs.os_version }}
-          PYTHONPATH: lib/python
-        id: build
-        name: Build AMI with EC2 Fleet
-        run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          BASE="ami-github-ec2-runner"
-          AMI_NAME="${BASE}-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}"
-          AMI_NAME="${AMI_NAME}-${TIMESTAMP}"
-          SCRIPT=src/api/endpoints/image_for_ec2_runners/post
-          SCRIPT="${SCRIPT}/build_ami.py"
-          INST="${{ needs.declaring-common-variables.outputs.instance_types }}"
-          REG="${{ needs.declaring-common-variables.outputs.aws_region }}"
-          USR="${{ needs.declaring-common-variables.outputs.runner_user }}"
-          RVER="${{ needs.declaring-common-variables.outputs.runner_version }}"
-          SAMI="${{ needs.declaring-common-variables.outputs.source_ami }}"
-          SNET="${{ steps.terraform.outputs.subnet_ids }}"
-          YQVER="${{ needs.declaring-common-variables.outputs.yq_version }}"
-          TAG="${{ steps.terraform.outputs.ami_stable_tag }}"
-          PURP="${{ steps.terraform.outputs.ami_purpose_value }}"
-          python3 $SCRIPT \
-            --ami-name "$AMI_NAME" \
-            --instance-types "$INST" \
-            --region "$REG" \
-            --runner-user "$USR" \
-            --runner-version "$RVER" \
-            --source-ami "$SAMI" \
-            --subnet-ids "$SNET" \
-            --yq-version "$YQVER" \
-            --tag "${TAG}=false" \
-            --tag "BuildDate=${TIMESTAMP}" \
-            --tag "ManagedBy=GitHubActions" \
-            --tag "Name=${AMI_NAME}" \
-            --tag "OSArchitecture=${OS_ARCH}" \
-            --tag "OSFamily=${OS_FAMILY^}" \
-            --tag "OSVersion=${OS_VERSION}" \
-            --tag "Purpose=${PURP}" \
-            --tag "Repository=${{ github.repository }}" \
-            --tag "RunId=${{ github.run_id }}" \
-            --tag "Workflow=${{ github.workflow }}" \
-            | tee build.log
-          BUILD_EXIT_CODE=${PIPESTATUS[0]}
-          if [ $BUILD_EXIT_CODE -ne 0 ]; then
-            exit $BUILD_EXIT_CODE
-          fi
-          AMI_ID=$(grep '^AMI_ID=' build.log | cut -d= -f2)
-          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
-  cleaning-up:
-    name: Cleaning up
-    needs:
-      - declaring-common-variables
-      - promoting-ami
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{
-            needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install boto3 pyyaml
-      - name: Clean up old AMIs
-        run: |
-          BASE=src/api/endpoints/image_for_ec2_runners/post
-          REGION="${{ needs.declaring-common-variables.outputs.aws_region }}"
-          SSM="${{ needs.promoting-ami.outputs.ami_ssm_parameter }}"
-          python3 $BASE/cleanup.py \
-            --config $BASE/config.yml \
-            --region "$REGION" \
-            --ssm-parameter-name "$SSM"
-  declaring-common-variables:
+  deploy:
     if: |
       github.ref == 'refs/heads/main' &&
       (github.event_name != 'workflow_run' ||
@@ -191,28 +11,17 @@ jobs:
         (github.event_name == 'push' &&
          !contains(github.event.head_commit.message, '[dry run]')) ||
         (github.event_name == 'workflow_dispatch' &&
-         github.event.inputs.dry_run != 'true')
+         github.event.inputs.dry_run != 'true') ||
+        github.event_name == 'workflow_run'
       )
-    name: Declaring common variables
-    outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: >-
-        ${{ steps.config.outputs.github_actions_role_arn }}
-      instance_types: ${{ steps.config.outputs.instance_types }}
-      os_architecture: ${{ steps.config.outputs.os_architecture }}
-      os_family: ${{ steps.config.outputs.os_family }}
-      os_version: ${{ steps.config.outputs.os_version }}
-      runner_user: ${{ steps.config.outputs.runner_user }}
-      runner_version: ${{ steps.config.outputs.runner_version }}
-      source_ami: ${{ steps.config.outputs.source_ami }}
-      terraform_version: >-
-        ${{ steps.config.outputs.terraform_version }}
-      yq_version: ${{ steps.config.outputs.yq_version }}
+    name: Build and deploy AMI for EC2 self-hosted runners
+    permissions:
+      contents: read
+      id-token: write
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
+            contains(github.event.head_commit.message, '[github-hosted]') ||
             contains(github.event.workflow_run.head_commit.message,
               '[github-hosted]') ) &&
           'ubuntu-latest' ||
@@ -253,10 +62,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: >-
-            ${{ steps.shared.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ steps.shared.outputs.github_actions_role_arn }}
+          aws-region: ${{ steps.shared.outputs.aws_region }}
+          role-to-assume: ${{ steps.shared.outputs.github_actions_role_arn }}
       - id: api
         name: Get API terraform outputs
         run: |
@@ -264,7 +71,22 @@ jobs:
           terraform init -backend=true -input=false
           INSTANCE_TYPES=$(terraform output -json \
             ec2_instance_types | tr -d '[]" ')
+          AMI_PURPOSE_VALUE=$(terraform output -raw \
+            ec2_runner_ami_purpose_value)
+          AMI_STABLE_TAG=$(terraform output -raw \
+            ec2_runner_ami_stable_tag)
+          SECURITY_GROUP_ID=$(terraform output -raw \
+            runner_security_group_id)
+          SUBNET_IDS=$(terraform output -raw \
+            vpc_public_subnet_ids)
+          SSM_PARAM=$(terraform output -raw \
+            ssm_parameter_name_for_latest_ami)
           echo "instance_types=$INSTANCE_TYPES" >> $GITHUB_OUTPUT
+          echo "ami_purpose_value=$AMI_PURPOSE_VALUE" >> $GITHUB_OUTPUT
+          echo "ami_stable_tag=$AMI_STABLE_TAG" >> $GITHUB_OUTPUT
+          echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
+          echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
+          echo "ssm_param=$SSM_PARAM" >> $GITHUB_OUTPUT
       - name: Install yq
         run: |
           ARCH=$(dpkg --print-architecture)
@@ -284,55 +106,17 @@ jobs:
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
           OS_ARCH=$(echo "$SOURCE_AMI" | cut -d'-' -f3)
-          REGION="${{ steps.shared.outputs.aws_region }}"
-          ROLE_ARN="${{ steps.shared.outputs.github_actions_role_arn }}"
-          ARCH="$OS_ARCH"
-          TYPES="${{ steps.api.outputs.instance_types }}"
-          TF_VER="${{ steps.shared.outputs.terraform_version }}"
-          echo "aws_region=$REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "os_architecture=$ARCH" >> $GITHUB_OUTPUT
+          echo "os_architecture=$OS_ARCH" >> $GITHUB_OUTPUT
           echo "os_family=$OS_FAMILY" >> $GITHUB_OUTPUT
           echo "os_version=$OS_VERSION" >> $GITHUB_OUTPUT
           echo "runner_user=$RUNNER_USER" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "source_ami=$SOURCE_AMI" >> $GITHUB_OUTPUT
-          echo "instance_types=$TYPES" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TF_VER" >> $GITHUB_OUTPUT
           echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
-  e2e-testing:
-    name: E2E testing
-    needs:
-      - building-ami
-      - declaring-common-variables
-      - integration-testing-post-deployment
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{
-            needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Set up Python
@@ -342,208 +126,13 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install dependencies
-        run: python3 -m pip install boto3 pytest pyyaml
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version
-            }}
-          terraform_wrapper: false
-      - name: Get GitHub PAT from Parameter Store
-        run: |
-          terraform -chdir=src/bootstrap init -backend=true \
-            -input=false > /dev/null
-          GITHUB_TOKEN_SECRET_NAME=$(terraform \
-            -chdir=src/bootstrap output -raw \
-            ssm_parameter_name_for_github_pat)
-          GITHUB_PAT=$(aws ssm get-parameter \
-            --name "$GITHUB_TOKEN_SECRET_NAME" \
-            --with-decryption --query 'Parameter.Value' \
-            --output text)
-          echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
-      - env:
-          INSTANCE_TYPES: >-
-            ${{ needs.declaring-common-variables.outputs.instance_types }}
-          PYTHONPATH: >-
-            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
-          TEST_AMI_ID: >-
-            ${{ needs.building-ami.outputs.ami_id }}
-          TEST_SECURITY_GROUP_ID: >-
-            ${{ needs.building-ami.outputs.security_group_id }}
-          TEST_SUBNET_IDS: >-
-            ${{ needs.building-ami.outputs.subnet_ids }}
-        name: Run E2E tests
-        run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/post_deployment/e2e/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
-  integration-testing-post-deployment:
-    name: Post-deployment integration testing
-    needs:
-      - building-ami
-      - declaring-common-variables
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{
-            needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
+          contains(github.event.head_commit.message, '[github-hosted]') ||
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install boto3 pytest pyyaml
-      - env:
-          INSTANCE_TYPES: >-
-            ${{ needs.declaring-common-variables.outputs.instance_types }}
-          PYTHONPATH: >-
-            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
-          TEST_AMI_ID: >-
-            ${{ needs.building-ami.outputs.ami_id }}
-          TEST_SECURITY_GROUP_ID: >-
-            ${{ needs.building-ami.outputs.security_group_id }}
-          TEST_SUBNET_IDS: >-
-            ${{ needs.building-ami.outputs.subnet_ids }}
-        name: Run pytest integration tests
         run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/post_deployment/integration/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
-  integration-testing-pre-deployment:
-    name: Pre-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version
-            }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{
-            needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install boto3 botocore pytest pyyaml
-      - name: Run pre-deployment integration tests
-        run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/pre_deployment/integration/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
-  performing-static-analysis:
-    name: Performing static analysis
-    needs: declaring-common-variables
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
+          python3 -m pip install boto3 boto3-stubs mypy paramiko \
+            pylint pytest pyyaml types-paramiko types-PyYAML botocore
       - name: Linting YAML files
         run: |
           WF=.github/workflows/endpoint_v1_image_for_ec2_runners_post.yml
@@ -557,17 +146,6 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             $WF $CONF
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python linting dependencies
-        run: |
-          python3 -m pip install boto3 boto3-stubs mypy paramiko \
-            pylint pytest types-paramiko types-PyYAML
       - env:
           PYTHONPATH: >-
             lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
@@ -586,144 +164,128 @@ jobs:
           MYPYPATH=lib/python python3 -m mypy $SRC/*.py
           MYPYPATH=lib/python:$TEST/post_deployment python3 -m mypy \
             --explicit-package-bases lib/python/ec2_fleet/ $TEST/
-  promoting-ami:
-    name: Promoting AMI
-    needs:
-      - building-ami
-      - declaring-common-variables
-      - e2e-testing
-    outputs:
-      ami_ssm_parameter: ${{ steps.config.outputs.ami_ssm_parameter }}
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version
-            }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{
-            needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - id: config
-        name: Get SSM parameter name from Terraform
+      - name: Run unit tests
         run: |
-          cd src/api/backend
-          terraform init -backend=true -input=false
-          AMI_SSM_PARAMETER=$(terraform output -raw \
-            ssm_parameter_name_for_latest_ami)
-          echo "ami_ssm_parameter=$AMI_SSM_PARAMETER" \
-            >> $GITHUB_OUTPUT
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install boto3
+          BASE=test/api/endpoints/image_for_ec2_runners/post
+          python3 -m pytest $BASE/pre_deployment/unit/ \
+            --confcutdir=$BASE --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          BASE=test/api/endpoints/image_for_ec2_runners/post
+          python3 -m pytest $BASE/pre_deployment/integration/ \
+            --confcutdir=$BASE --verbose --pythonwarnings=error
+      - env:
+          OS_ARCH: ${{ steps.config.outputs.os_architecture }}
+          OS_FAMILY: ${{ steps.config.outputs.os_family }}
+          OS_VERSION: ${{ steps.config.outputs.os_version }}
+          PYTHONPATH: lib/python
+        id: build
+        name: Build AMI with EC2 Fleet
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BASE="ami-github-ec2-runner"
+          AMI_NAME="${BASE}-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}"
+          AMI_NAME="${AMI_NAME}-${TIMESTAMP}"
+          SCRIPT=src/api/endpoints/image_for_ec2_runners/post
+          SCRIPT="${SCRIPT}/build_ami.py"
+          INST="${{ steps.api.outputs.instance_types }}"
+          REG="${{ steps.shared.outputs.aws_region }}"
+          USR="${{ steps.config.outputs.runner_user }}"
+          RVER="${{ steps.config.outputs.runner_version }}"
+          SAMI="${{ steps.config.outputs.source_ami }}"
+          SNET="${{ steps.api.outputs.subnet_ids }}"
+          YQVER="${{ steps.config.outputs.yq_version }}"
+          TAG="${{ steps.api.outputs.ami_stable_tag }}"
+          PURP="${{ steps.api.outputs.ami_purpose_value }}"
+          python3 $SCRIPT \
+            --ami-name "$AMI_NAME" \
+            --instance-types "$INST" \
+            --region "$REG" \
+            --runner-user "$USR" \
+            --runner-version "$RVER" \
+            --source-ami "$SAMI" \
+            --subnet-ids "$SNET" \
+            --yq-version "$YQVER" \
+            --tag "${TAG}=false" \
+            --tag "BuildDate=${TIMESTAMP}" \
+            --tag "ManagedBy=GitHubActions" \
+            --tag "Name=${AMI_NAME}" \
+            --tag "OSArchitecture=${OS_ARCH}" \
+            --tag "OSFamily=${OS_FAMILY^}" \
+            --tag "OSVersion=${OS_VERSION}" \
+            --tag "Purpose=${PURP}" \
+            --tag "Repository=${{ github.repository }}" \
+            --tag "RunId=${{ github.run_id }}" \
+            --tag "Workflow=${{ github.workflow }}" \
+            | tee build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+          if [ $BUILD_EXIT_CODE -ne 0 ]; then
+            exit $BUILD_EXIT_CODE
+          fi
+          AMI_ID=$(grep '^AMI_ID=' build.log | cut -d= -f2)
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+      - env:
+          INSTANCE_TYPES: ${{ steps.api.outputs.instance_types }}
+          PYTHONPATH: >-
+            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
+          TEST_AMI_ID: ${{ steps.build.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ steps.api.outputs.security_group_id }}
+          TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
+        name: Run post-deployment integration tests
+        run: |
+          BASE=test/api/endpoints/image_for_ec2_runners/post
+          python3 -m pytest $BASE/post_deployment/integration/ \
+            --confcutdir=$BASE --verbose --pythonwarnings=error
+      - name: Get GitHub PAT from Parameter Store
+        run: |
+          terraform -chdir=src/bootstrap init -backend=true \
+            -input=false > /dev/null
+          GITHUB_TOKEN_SECRET_NAME=$(terraform \
+            -chdir=src/bootstrap output -raw \
+            ssm_parameter_name_for_github_pat)
+          GITHUB_PAT=$(aws ssm get-parameter \
+            --name "$GITHUB_TOKEN_SECRET_NAME" \
+            --with-decryption --query 'Parameter.Value' \
+            --output text)
+          echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
+      - env:
+          INSTANCE_TYPES: ${{ steps.api.outputs.instance_types }}
+          PYTHONPATH: >-
+            lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
+          TEST_AMI_ID: ${{ steps.build.outputs.ami_id }}
+          TEST_SECURITY_GROUP_ID: ${{ steps.api.outputs.security_group_id }}
+          TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
+        name: Run E2E tests
+        run: |
+          BASE=test/api/endpoints/image_for_ec2_runners/post
+          python3 -m pytest $BASE/post_deployment/e2e/ \
+            --confcutdir=$BASE --verbose --pythonwarnings=error
       - name: Promote AMI
         run: |
           SCRIPT=src/api/endpoints/image_for_ec2_runners/post
           SCRIPT="${SCRIPT}/promote_ami.py"
-          AMI_ID="${{ needs.building-ami.outputs.ami_id }}"
-          REGION="${{ needs.declaring-common-variables.outputs.aws_region }}"
+          AMI_ID="${{ steps.build.outputs.ami_id }}"
+          REGION="${{ steps.shared.outputs.aws_region }}"
           RUN_ID="${{ github.run_id }}"
-          SSM="${{ steps.config.outputs.ami_ssm_parameter }}"
-          TAG="${{ needs.building-ami.outputs.ami_stable_tag }}"
+          SSM="${{ steps.api.outputs.ssm_param }}"
+          TAG="${{ steps.api.outputs.ami_stable_tag }}"
           python3 $SCRIPT \
             --ami-id "$AMI_ID" \
             --region "$REGION" \
             --run-id "$RUN_ID" \
             --ssm-parameter-name "$SSM" \
             --tag-key "$TAG"
-  unit-testing:
-    name: Unit testing
-    needs: performing-static-analysis
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message,
-              '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message,
-            '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install boto3 botocore paramiko pytest pyyaml
-      - name: Run unit tests
+      - name: Clean up old AMIs
         run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/pre_deployment/unit/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
+          BASE=src/api/endpoints/image_for_ec2_runners/post
+          REGION="${{ steps.shared.outputs.aws_region }}"
+          SSM="${{ steps.api.outputs.ssm_param }}"
+          python3 $BASE/cleanup.py \
+            --config $BASE/config.yml \
+            --region "$REGION" \
+            --ssm-parameter-name "$SSM"
 name: Building AMI for EC2 self-hosted runners
 on:
-  workflow_call:
-    inputs:
-      dry_run:
-        default: false
-        description: Dry run mode (show structure without executing)
-        required: false
-        type: boolean
-      github_hosted:
-        default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
-        type: boolean
   workflow_dispatch:
     inputs:
       dry_run:
@@ -735,6 +297,13 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - Ensuring /health endpoint exists and is properly configured
 permissions:
   contents: read
   id-token: write

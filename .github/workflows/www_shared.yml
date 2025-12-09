@@ -3,20 +3,12 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  declaring-common-variables:
+  deploy:
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name != 'workflow_run' ||
        github.event.workflow_run.conclusion == 'success')
-    name: Declaring common variables
-    outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: >-
-        ${{ steps.bootstrap.outputs.github_actions_role_arn }}
-      terraform_version: ${{ steps.config.outputs.terraform_version }}
-    permissions:
-      contents: read
-      id-token: write
+    name: Deploy www_shared infrastructure
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -29,17 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ steps.config.outputs.terraform_version }}
-          terraform_wrapper: false
+          fetch-depth: 0
       - id: config
         name: Extract configuration values
         run: |
@@ -60,9 +43,13 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ steps.config.outputs.terraform_version }}
+          terraform_wrapper: false
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -75,161 +62,12 @@ jobs:
             -backend=true -input=false > /dev/null
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
             output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
-  ensuring-infrastructure-in-desired-state:
-    defaults:
-      run:
-        working-directory: src/www/shared
-    name: Ensuring infrastructure is in desired state
-    needs:
-      - declaring-common-variables
-      - integration-testing-pre-deployment
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Configure AWS credentials via OIDC
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+      - name: Re-configure AWS credentials with bootstrap role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Terraform Init
-        run: terraform init
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-      - id: check_files
-        name: Check if CloudFront config changed
-        run: |
-          set -e
-          set -o pipefail
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE_COMMIT="${{ github.event.before }}"
-          else
-            BASE_COMMIT="HEAD^"
-          fi
-          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/shared/cloudfront_s3\.tf'; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
-      - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
-        name: Get website domain from Terraform output
-        run: |
-          WEBSITE_FQDN=$(terraform output -raw website_domain_name)
-          echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
-      - if: >-
-          github.event.inputs.invalidate_cloudfront == 'true' ||
-          contains(github.event.head_commit.message,
-            '[invalidate cloudfront]') ||
-          steps.check_files.outputs.changed == 'true'
-        name: Invalidate CloudFront cache
-        run: |
-          REGION=${{ needs.declaring-common-variables.outputs.aws_region }}
-          python3 ../../../scripts/invalidate_cloudfront.py \
-            --fqdn "${{ env.WEBSITE_FQDN }}" \
-            --region "$REGION" \
-            --paths "/*"
-  integration-testing-post-deployment:
-    name: Post-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - ensuring-infrastructure-in-desired-state
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install pytest 'boto3>=1.35.76' requests
-      - name: Run integration tests
-        run: |
-          python3 -m pytest \
-            test/www/shared/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
-  integration-testing-pre-deployment:
-    name: Pre-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: >-
-            ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.bootstrap.outputs.github_actions_role_arn }}
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -247,57 +85,10 @@ jobs:
           contains(github.event.workflow_run.head_commit.message,
             '[github-hosted]')
         name: Install Python dependencies
-        run: python3 -m pip install boto3 botocore pytest
-      - name: Run pre-deployment integration tests
-        run: |
-          python3 -m pytest test/www/shared/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
-  performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
-    name: Performing static analysis
-    needs: declaring-common-variables
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
         run: |
           python3 -m pip install \
             pylint mypy yamllint pytest 'boto3>=1.35.76' boto3-stubs \
-            types-requests
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: >-
-            ${{ needs.declaring-common-variables.outputs.terraform_version }}
-          terraform_wrapper: false
+            types-requests requests botocore
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
@@ -326,53 +117,62 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: |
-          cd src/www/shared && \
-            tflint --init && \
-            tflint
+        run: cd src/www/shared && tflint --init && tflint
       - name: Terraform Plan
         run: cd src/www/shared && terraform plan
-  unit-testing:
-    name: Unit testing
-    needs:
-      - declaring-common-variables
-      - performing-static-analysis
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install pytest 'boto3>=1.35.76'
       - name: Run unit tests
         run: |
           python3 -m pytest test/www/shared/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest test/www/shared/pre_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Terraform Apply
+        run: cd src/www/shared && terraform apply -auto-approve
+      - id: check_files
+        name: Check if CloudFront config changed
+        run: |
+          set -e
+          set -o pipefail
+          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
+            BASE_COMMIT="${{ github.event.before }}"
+          else
+            BASE_COMMIT="HEAD^"
+          fi
+          git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
+            if grep -qE 'src/www/shared/cloudfront_s3\.tf'; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message,
+            '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
+        name: Get website domain from Terraform output
+        run: |
+          WEBSITE_FQDN=$(cd src/www/shared && terraform output -raw website_domain_name)
+          echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
+      - if: >-
+          github.event.inputs.invalidate_cloudfront == 'true' ||
+          contains(github.event.head_commit.message,
+            '[invalidate cloudfront]') ||
+          steps.check_files.outputs.changed == 'true'
+        name: Invalidate CloudFront cache
+        run: |
+          python3 scripts/invalidate_cloudfront.py \
+            --fqdn "${{ env.WEBSITE_FQDN }}" \
+            --region "${{ steps.config.outputs.aws_region }}" \
+            --paths "/*"
+      - name: Run post-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/www/shared/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
 name: Ensuring www_shared infrastructure exists and is properly configured
 on:
-  workflow_call:
-    inputs:
-      github_hosted:
-        default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
-        type: boolean
-      invalidate_cloudfront:
-        default: false
-        description: Force CloudFront cache invalidation
-        type: boolean
   workflow_dispatch:
     inputs:
       github_hosted:
@@ -383,6 +183,13 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
+  workflow_run:
+    branches:
+      - main
+    types:
+      - completed
+    workflows:
+      - Deploying Test Auditor Agent
 permissions:
   contents: read
   id-token: write
