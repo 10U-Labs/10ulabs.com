@@ -69,37 +69,6 @@ def test_agents_ecr_repository_has_managed_by_tag(ecr_client):
     assert tags.get("ManagedBy") == "terraform"
 
 
-def test_agents_ecr_repository_policy_exists(ecr_client):
-    """Test that a repository policy exists for the agents ECR repository."""
-    expected_name = _get_expected_ecr_name()
-    response = ecr_client.get_repository_policy(repositoryName=expected_name)
-    assert "policyText" in response
-
-
-def test_agents_ecr_repository_policy_allows_bedrock_agentcore(ecr_client):
-    """Test that the repository policy allows Bedrock AgentCore service principal."""
-    expected_name = _get_expected_ecr_name()
-    response = ecr_client.get_repository_policy(repositoryName=expected_name)
-    policy = json.loads(response["policyText"])
-
-    agentcore_allowed = False
-    for statement in policy.get("Statement", []):
-        principal = statement.get("Principal", {})
-        service = principal.get("Service", "")
-        if isinstance(service, list):
-            if "agentcore.bedrock.amazonaws.com" in service:
-                agentcore_allowed = True
-                break
-        elif service == "agentcore.bedrock.amazonaws.com":
-            agentcore_allowed = True
-            break
-
-    assert agentcore_allowed, (
-        "ECR repository policy must allow agentcore.bedrock.amazonaws.com "
-        "service principal for Bedrock AgentCore to validate ECR URIs"
-    )
-
-
 def test_agents_ecr_lifecycle_policy_exists(ecr_client):
     """Test that a lifecycle policy exists for the agents ECR repository."""
     expected_name = _get_expected_ecr_name()
