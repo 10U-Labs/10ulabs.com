@@ -22,15 +22,15 @@ jobs:
         name: Extract configuration values
         run: |
           TF=lib/terraform/modules/shared/outputs.tf
-          TF_LOCALS=lib/terraform/modules/shared/locals.tf
-          AWS_ACCOUNT_ID=$(grep -A1 'output "aws_account_id"' $TF \
-            | grep 'value' | cut -d'"' -f2)
-          AWS_REGION=$(grep -A1 'output "aws_region"' $TF \
-            | grep 'value' | cut -d'"' -f2)
+          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
             src/bootstrap/locals.tf | \
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_LOCALS \
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' \
             src/www/shared/backend.tf | cut -d'"' -f2 | sed 's/>= //')
