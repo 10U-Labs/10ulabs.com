@@ -54,9 +54,4 @@ def config(shared_config, bootstrap_dir):
                 key = key.strip()
                 value = value.strip().strip('"')
                 config_dict[key] = value
-    # Add ECR repository names for tests
-    config_dict['ecr_runners_repository_name'] = shared_config.get(
-        'ecr_repository_name', '10ulabs')
-    config_dict['ecr_agents_repository_name'] = shared_config.get(
-        'ecr_agents_repository_name', '10ulabs-agents')
     return config_dict

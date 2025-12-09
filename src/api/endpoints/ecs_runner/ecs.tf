@@ -43,7 +43,7 @@ resource "aws_ecs_task_definition" "runner" {
 
   container_definitions = jsonencode([{
     name      = var.container_name
-    image     = "${data.terraform_remote_state.bootstrap.outputs.ecr_runners_repository_url}:latest"
+    image     = "${data.terraform_remote_state.bootstrap.outputs.ecr_repository_url}:latest"
     essential = true
 
     logConfiguration = {

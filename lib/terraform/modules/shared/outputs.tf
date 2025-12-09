@@ -18,10 +18,6 @@ output "ecr_repository_name" {
   value = "10ulabs"
 }
 
-output "ecr_agents_repository_name" {
-  value = "10ulabs-agents"
-}
-
 output "github_org" {
   value = "10U-Labs-LLC"
 }
