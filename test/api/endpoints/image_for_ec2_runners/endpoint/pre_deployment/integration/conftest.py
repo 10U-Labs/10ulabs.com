@@ -6,7 +6,7 @@ import boto3
 import pytest
 
 
-REPO_ROOT = Path(__file__).resolve().parents[8]
+REPO_ROOT = Path(__file__).resolve().parents[7]
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 
 
