@@ -6,31 +6,29 @@ def test_cloudfront_s3_terraform_file_exists(website_src_path):
     assert (website_src_path / "cloudfront_s3.tf").exists()
 
 
-def test_s3_bucket_website_exists(cloudfront_s3_tf_content):
-    """Test that S3 bucket resource for website exists."""
-    assert 'resource "aws_s3_bucket" "website"' in cloudfront_s3_tf_content
+def test_website_bucket_module_used(cloudfront_s3_tf_content):
+    """Test that website_bucket module is used."""
+    assert 'module "website_bucket"' in cloudfront_s3_tf_content
 
 
-def test_s3_bucket_versioning_resource_exists(cloudfront_s3_tf_content):
-    """Test that S3 bucket versioning resource exists."""
-    assert 'aws_s3_bucket_versioning' in cloudfront_s3_tf_content
+def test_website_bucket_module_source(cloudfront_s3_tf_content):
+    """Test that website_bucket module uses correct source."""
+    assert 'source = "../../../lib/terraform/modules/s3_bucket"' in cloudfront_s3_tf_content
 
 
-def test_s3_bucket_versioning_disabled(cloudfront_s3_tf_content):
-    """Test that S3 bucket versioning is disabled."""
-    assert 'Disabled' in cloudfront_s3_tf_content
+def test_website_bucket_versioning_disabled(cloudfront_s3_tf_content):
+    """Test that website bucket versioning is disabled."""
+    assert 'versioning_enabled  = false' in cloudfront_s3_tf_content
 
 
-def test_s3_bucket_public_access_block_exists(cloudfront_s3_tf_content):
-    """Test that S3 bucket public access block exists."""
-    resource = 'resource "aws_s3_bucket_public_access_block" "website"'
-    assert resource in cloudfront_s3_tf_content
+def test_website_waf_module_used(cloudfront_s3_tf_content):
+    """Test that website_waf module is used."""
+    assert 'module "website_waf"' in cloudfront_s3_tf_content
 
 
-def test_s3_bucket_encryption_exists(cloudfront_s3_tf_content):
-    """Test that S3 bucket encryption configuration exists."""
-    resource = 'resource "aws_s3_bucket_server_side_encryption_configuration"'
-    assert resource in cloudfront_s3_tf_content
+def test_website_waf_module_source(cloudfront_s3_tf_content):
+    """Test that website_waf module uses correct source."""
+    assert 'source = "../../../lib/terraform/modules/cloudfront_waf"' in cloudfront_s3_tf_content
 
 
 def test_cloudfront_origin_access_control_exists(cloudfront_s3_tf_content):
@@ -42,11 +40,6 @@ def test_cloudfront_origin_access_control_exists(cloudfront_s3_tf_content):
 def test_s3_bucket_policy_exists(cloudfront_s3_tf_content):
     """Test that S3 bucket policy exists."""
     assert 'resource "aws_s3_bucket_policy" "website"' in cloudfront_s3_tf_content
-
-
-def test_wafv2_web_acl_exists(cloudfront_s3_tf_content):
-    """Test that WAFv2 web ACL exists."""
-    assert 'resource "aws_wafv2_web_acl" "website"' in cloudfront_s3_tf_content
 
 
 def test_cloudfront_cache_policy_exists(cloudfront_s3_tf_content):
@@ -104,48 +97,6 @@ def test_cloudfront_logging_excludes_cookies(cloudfront_s3_tf_content):
 def test_cloudfront_logging_bucket_uses_s3_domain(cloudfront_s3_tf_content):
     """Test that CloudFront logging bucket uses S3 domain."""
     assert '.s3.amazonaws.com' in cloudfront_s3_tf_content
-
-
-def test_waf_cloudwatch_log_group_exists(cloudfront_s3_tf_content):
-    """Test that WAF CloudWatch log group exists."""
-    assert 'resource "aws_cloudwatch_log_group" "waf"' in cloudfront_s3_tf_content
-
-
-def test_waf_log_group_has_correct_name_prefix(cloudfront_s3_tf_content):
-    """Test that WAF log group has correct name prefix."""
-    assert 'aws-waf-logs-' in cloudfront_s3_tf_content
-
-
-def test_waf_log_group_retention_is_30_days(cloudfront_s3_tf_content):
-    """Test that WAF log group retention is 30 days."""
-    assert 'retention_in_days = 30' in cloudfront_s3_tf_content
-
-
-def test_waf_log_group_uses_us_east_1_provider(cloudfront_s3_tf_content):
-    """Test that WAF log group uses us-east-1 provider."""
-    assert 'provider = aws.us-east-1' in cloudfront_s3_tf_content
-
-
-def test_waf_logging_configuration_exists(cloudfront_s3_tf_content):
-    """Test that WAF logging configuration exists."""
-    resource = 'resource "aws_wafv2_web_acl_logging_configuration" "website"'
-    assert resource in cloudfront_s3_tf_content
-
-
-def test_waf_logging_uses_log_group(cloudfront_s3_tf_content):
-    """Test that WAF logging uses CloudWatch log group."""
-    assert 'aws_cloudwatch_log_group.waf.arn' in cloudfront_s3_tf_content
-
-
-def test_waf_logging_uses_web_acl_arn(cloudfront_s3_tf_content):
-    """Test that WAF logging uses web ACL ARN."""
-    expected = 'resource_arn            = aws_wafv2_web_acl.website.arn'
-    assert expected in cloudfront_s3_tf_content
-
-
-def test_waf_logging_has_log_destination_configs(cloudfront_s3_tf_content):
-    """Test that WAF logging has log destination configs."""
-    assert 'log_destination_configs' in cloudfront_s3_tf_content
 
 
 def test_cloudfront_custom_error_response_403(cloudfront_s3_tf_content):
