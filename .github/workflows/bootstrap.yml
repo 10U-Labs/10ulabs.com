@@ -130,10 +130,10 @@ jobs:
         run: |
           python3 -m pytest test/bootstrap/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
-      - if: github.event_name == 'workflow_dispatch'
-        name: Dispatch descendant workflows
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
           python3 scripts/dispatch_descendants.py \
