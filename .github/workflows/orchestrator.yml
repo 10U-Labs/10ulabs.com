@@ -48,8 +48,92 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - id: check-sa
+        name: Check if static analysis should run
+        run: |
+          CHANGED="${{ steps.files.outputs.changed }}"
+          PATTERNS=(
+            ".github/workflows/orchestrator.yml"
+            "etc/workflow-dependencies.yml"
+            "scripts/compute_root_workflows.py"
+            "scripts/execute_workflow_plan.py"
+          )
+          SHOULD_RUN="false"
+          for pattern in "${PATTERNS[@]}"; do
+            if echo "$CHANGED" | grep -qE "^${pattern}$"; then
+              SHOULD_RUN="true"
+              break
+            fi
+          done
+          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+          echo "Should run static analysis: $SHOULD_RUN"
+      - id: check-ut
+        name: Check if unit testing should run
+        run: |
+          CHANGED="${{ steps.files.outputs.changed }}"
+          PATTERNS=(
+            "scripts/compute_root_workflows.py"
+            "scripts/execute_workflow_plan.py"
+            "test/orchestrator/"
+          )
+          SHOULD_RUN="false"
+          for pattern in "${PATTERNS[@]}"; do
+            if echo "$CHANGED" | grep -qE "^${pattern}"; then
+              SHOULD_RUN="true"
+              break
+            fi
+          done
+          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+          echo "Should run unit testing: $SHOULD_RUN"
       - name: Install dependencies
-        run: python3 -m pip install pyyaml
+        run: >-
+          python3 -m pip install
+          boto3
+          mypy
+          pylint
+          pytest
+          pyyaml
+          types-PyYAML
+          yamllint
+      - if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check-sa.outputs.should_run == 'true'
+        name: Lint YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/orchestrator.yml \
+            etc/workflow-dependencies.yml
+      - if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check-sa.outputs.should_run == 'true'
+        name: Run pylint
+        run: |
+          python3 -m pylint \
+            scripts/compute_root_workflows.py \
+            scripts/execute_workflow_plan.py \
+            --fail-on=C,R,W \
+            --fail-under=10.0
+      - if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check-sa.outputs.should_run == 'true'
+        name: Run mypy
+        run: |
+          python3 -m mypy \
+            scripts/compute_root_workflows.py \
+            scripts/execute_workflow_plan.py
+      - if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check-ut.outputs.should_run == 'true'
+        name: Run unit tests
+        run: |
+          python3 -m pytest test/orchestrator/ \
+            --verbose --pythonwarnings=error
       - id: plan
         name: Compute root workflow
         run: |
