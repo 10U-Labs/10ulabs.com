@@ -124,24 +124,38 @@ def load_workflow_dependencies(project_dir):
         return yaml.safe_load(f) or {}
 
 
-def is_pre_push_check_step(step_name, run_cmd):
-    """Determine if a workflow step is a pre-push check (linting, testing, etc.)."""
+def is_static_analysis_step(step_name):
+    """Determine if a workflow step is a static analysis check."""
+    step_lower = step_name.lower()
+    # Skip setup/install steps - they're not actual checks
+    skip_keywords = ['install', 'setup', 'checkout', 'configure', 'set up',
+                     'cloudfront', 'invalidate', 'cache', 'deploy', 'apply']
+    if any(kw in step_lower for kw in skip_keywords):
+        return False
+    # Look for specific linting/type-checking tool names and patterns
+    static_keywords = [
+        'lint', 'pylint', 'mypy', 'type check', 'static analysis',
+        'format check', 'fmt check', 'hadolint', 'tflint',
+        'yamllint', 'jsonlint', 'terraform format'
+    ]
+    return any(kw in step_lower for kw in static_keywords)
+
+
+def is_pre_deployment_test_step(step_name, run_cmd):
+    """Determine if a workflow step is a pre-deployment test (unit or integration)."""
     step_lower = step_name.lower()
     # Skip setup/install steps - they're not actual checks
     skip_keywords = ['install', 'setup', 'checkout', 'configure', 'set up']
     if any(kw in step_lower for kw in skip_keywords):
         return False
-    static_keywords = [
-        'lint', 'pylint', 'mypy', 'type check', 'static',
-        'format check', 'fmt', 'validate', 'hadolint', 'tflint',
-        'yamllint', 'jsonlint'
-    ]
-    if any(kw in step_lower for kw in static_keywords):
+    # Skip post-deployment tests - they require deployed infrastructure
+    if 'post_deployment' in run_cmd or 'post-deployment' in run_cmd or \
+       'post_deployment' in step_lower or 'post-deployment' in step_lower:
+        return False
+    # Run all pre-deployment tests (both unit and integration)
+    if 'pre_deployment/' in run_cmd or 'pre-deployment/' in run_cmd:
         return True
-    # Only run unit tests locally, skip integration tests (they require AWS resources)
-    if 'pre_deployment/unit' in run_cmd or 'pre-deployment/unit' in run_cmd:
-        return True
-    if 'unit test' in step_lower:
+    if 'unit test' in step_lower or 'pre-deployment' in step_lower:
         return True
     return False
 
@@ -153,32 +167,18 @@ def is_conditional_on_github_hosted(condition):
     return 'github_hosted' in condition or 'github-hosted' in condition
 
 
-def is_static_analysis_job(job_name):
-    """Check if a job name indicates a static analysis job."""
-    job_lower = job_name.lower().replace('-', '_').replace(' ', '_')
-    return 'static' in job_lower or 'analysis' in job_lower or 'lint' in job_lower
-
-
-def is_test_job(job_name):
-    """Check if a job name indicates a test job."""
-    job_lower = job_name.lower().replace('-', '_').replace(' ', '_')
-    return 'test' in job_lower or 'unit' in job_lower or 'integration' in job_lower
-
-
-def extract_commands_from_jobs(workflow, job_filter):
-    """Extract run commands from workflow jobs that match the filter."""
+def extract_commands_from_jobs(workflow, step_filter):
+    """Extract run commands from workflow jobs that match the step filter."""
     commands = []
     jobs = workflow.get('jobs', {})
     for job_name, job in jobs.items():
-        if not job_filter(job_name):
-            continue
         steps = job.get('steps', [])
         for step in steps:
             step_name = step.get('name', '')
             run_cmd = step.get('run', '')
             if not run_cmd:
                 continue
-            if not is_pre_push_check_step(step_name, run_cmd):
+            if not step_filter(step_name, run_cmd):
                 continue
             condition = step.get('if', '')
             step_env = step.get('env', {})
@@ -194,12 +194,13 @@ def extract_commands_from_jobs(workflow, job_filter):
 
 def extract_static_analysis_commands(workflow):
     """Extract static analysis commands from a workflow."""
-    return extract_commands_from_jobs(workflow, is_static_analysis_job)
+    return extract_commands_from_jobs(
+        workflow, lambda name, _cmd: is_static_analysis_step(name))
 
 
 def extract_pre_deployment_test_commands(workflow):
     """Extract pre-deployment test commands from a workflow."""
-    return extract_commands_from_jobs(workflow, is_test_job)
+    return extract_commands_from_jobs(workflow, is_pre_deployment_test_step)
 
 
 def find_matching_workflows(changed_files, workflows_dir, project_dir):
