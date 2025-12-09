@@ -114,7 +114,6 @@ def config_fixture(shared_config) -> Dict[str, str]:
     result['ec2_runner_ami_purpose_tag'] = api_locals.get('ec2_runner_ami_purpose_tag', '')
     result['ec2_runner_ami_purpose_value'] = api_locals.get('ec2_runner_ami_purpose_value', '')
     result['ec2_runner_ami_stable_tag'] = api_locals.get('ec2_runner_ami_stable_tag', '')
-    result['ecr_repository_name'] = shared_config.get('ecr_repository_name', '')
     result.update(get_runner_labels())
     health_config = parse_health_tfvars()
     result['health_handler_function_name'] = health_config.get('health_handler_function_name', '')
