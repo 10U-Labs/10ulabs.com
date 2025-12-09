@@ -177,7 +177,8 @@ jobs:
         run: |
           terraform apply \
             -auto-approve \
-            -var="github_pat=${{ secrets.GH_PAT }}"
+            -var="github_pat=${{ secrets.GH_PAT }}" \
+            -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
   integration-testing:
     name: Integration testing
     needs:
@@ -306,7 +307,8 @@ jobs:
         run: |
           cd src/bootstrap && \
             terraform plan \
-            -var="github_pat=${{ secrets.GH_PAT }}"
+            -var="github_pat=${{ secrets.GH_PAT }}" \
+            -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
