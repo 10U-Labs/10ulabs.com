@@ -11,7 +11,7 @@ jobs:
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+          fromJSON(format('["ecs", "fargate", "on-demand", "runner-{0}"]',
             github.run_id)) }}
     steps:
       - name: Checkout code

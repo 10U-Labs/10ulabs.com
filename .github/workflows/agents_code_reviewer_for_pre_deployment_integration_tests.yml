@@ -13,7 +13,7 @@ jobs:
             github.event.inputs.github_hosted == 'true' ||
             contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
+          fromJSON(format('["ecs", "fargate", "on-demand", "runner-{0}"]',
             github.run_id)) }}
     steps:
       - name: Checkout code
@@ -101,22 +101,24 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           WF=".github/workflows"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             $WF/agents_code_reviewer_for_pre_deployment_integration_tests.yml
       - name: Run pylint
         run: |
-          python3 -m pylint \
+          PYTHONPATH=src/agents/shared/lambda_layer python3 -m pylint \
             src/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          python3 -m mypy \
+          MYPYPATH=src/agents/shared/lambda_layer python3 -m mypy \
             src/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/
       - name: Terraform Apply
         run: |
@@ -127,10 +129,10 @@ jobs:
           python3 -m pytest \
             test/agents/code_reviewer_for_pre_deployment_integration_tests/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - if: github.event_name == 'workflow_dispatch'
-        name: Dispatch descendant workflows
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
           python3 scripts/dispatch_descendants.py \

@@ -3,64 +3,11 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  declaring-common-variables:
-    if: github.ref == 'refs/heads/main'
-    name: Declaring common variables
-    outputs:
-      aws_region: ${{ steps.config.outputs.aws_region }}
-      github_actions_role_arn: >-
-        ${{ steps.bootstrap.outputs.github_actions_role_arn }}
-    permissions:
-      actions: write
-      contents: read
-      id-token: write
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - id: config
-        name: Extract configuration values
-        run: |
-          TF_SHARED_LOCALS=lib/terraform/modules/shared/locals.tf
-          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
-            | grep -v '\$' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
-            src/bootstrap/locals.tf | \
-            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
-          RESOURCE_PREFIX=$(grep 'resource_prefix' \
-            lib/terraform/modules/shared/locals.tf | grep -v '\$' | cut -d'"' -f2)
-          GITHUB_ACTIONS_ROLE_ARN="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
-          GITHUB_ACTIONS_ROLE_ARN+="/${RESOURCE_PREFIX}"
-          GITHUB_ACTIONS_ROLE_ARN+="${GITHUB_ACTIONS_ROLE_SUFFIX}"
-          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ steps.config.outputs.aws_region }}
-          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
-      - id: bootstrap
-        name: Get bootstrap outputs
-        run: |
-          terraform -chdir=src/bootstrap init \
-            -backend=true -input=false > /dev/null
-          GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
-            output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
-            >> $GITHUB_OUTPUT
-  deploying-home-page:
-    name: Deploying home page
-    needs:
-      - declaring-common-variables
-      - integration-testing-pre-deployment
-      - unit-testing
+  deploy:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Deploy home page
     runs-on:
       - ecs
       - fargate
@@ -71,13 +18,55 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - id: config
+        name: Extract configuration values
+        run: |
+          TF_SHARED_LOCALS="lib/terraform/modules/shared/locals.tf"
+          AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          AWS_REGION=$(grep 'aws_region' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          GITHUB_ACTIONS_ROLE_SUFFIX=$(grep 'name_for_github_actions_role' \
+            src/bootstrap/locals.tf | \
+            sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
+          RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
+            | grep -v '\$' | cut -d'"' -f2)
+          ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
+          ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
+          GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
+          aws-region: ${{ steps.config.outputs.aws_region }}
+          role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          LINE_LENGTH='line-length: disable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
+          python3 -m yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/www_index.yml
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - name: Install npm dependencies
+        run: npm ci --prefix src/www/paths/index
+      - name: Run unit tests
+        run: npm test --prefix src/www/paths/index
+      - name: Run pre-deployment integration tests
+        run: |
+          python3 -m pytest \
+            test/www/index/pre_deployment/integration/ \
+            --verbose --pythonwarnings=error
       - name: Get bucket name from shared Terraform
         run: |
           terraform -chdir=src/www/shared init \
@@ -134,9 +123,18 @@ jobs:
         run: |
           python3 scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.WEBSITE_FQDN }}" \
-            --region \
-            ${{ needs.declaring-common-variables.outputs.aws_region }} \
+            --region ${{ steps.config.outputs.aws_region }} \
             --paths "/*"
+      - name: Install Playwright browsers
+        run: npx --prefix src/www/paths/index playwright install chromium
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run post-deployment integration tests
+        run: npm run test:integration --prefix src/www/paths/index
+      - env:
+          BASE_URL: https://10ulabs.com
+        name: Run E2E tests
+        run: npm run test:e2e --prefix src/www/paths/index
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: github.event_name == 'workflow_dispatch'
@@ -146,130 +144,15 @@ jobs:
           python3 scripts/dispatch_descendants.py \
             --workflow www_index \
             --repo ${{ github.repository }}
-  e2e-testing:
-    name: E2E testing
-    needs:
-      - declaring-common-variables
-      - integration-testing-post-deployment
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install dependencies
-        run: npm ci --prefix src/www/paths/index
-      - name: Install Playwright browsers
-        run: npx --prefix src/www/paths/index playwright install chromium
-      - env:
-          BASE_URL: https://10ulabs.com
-        name: Run E2E tests
-        run: npm run test:e2e --prefix src/www/paths/index
-  integration-testing-post-deployment:
-    name: Post-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - deploying-home-page
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install dependencies
-        run: npm ci --prefix src/www/paths/index
-      - env:
-          BASE_URL: https://10ulabs.com
-        name: Run integration tests
-        run: npm run test:integration --prefix src/www/paths/index
-  integration-testing-pre-deployment:
-    name: Pre-deployment integration testing
-    needs:
-      - declaring-common-variables
-      - unit-testing
-    permissions:
-      contents: read
-      id-token: write
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - name: Run pre-deployment integration tests
-        run: |
-          python3 -m pytest \
-            test/www/index/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
-  performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
-    name: Performing static analysis
-    needs: declaring-common-variables
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ needs.declaring-common-variables.outputs.aws_region }}
-          role-to-assume: >-
-            ${{ needs.declaring-common-variables.outputs.github_actions_role_arn
-            }}
-      - name: Linting YAML files
-        run: |
-          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
-          KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: disable'
-          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
-          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
-          RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
-          python3 -m yamllint --strict \
-            --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/www_index.yml
-  unit-testing:
-    name: Unit testing
-    needs:
-      - declaring-common-variables
-      - performing-static-analysis
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install dependencies
-        run: npm ci --prefix src/www/paths/index
-      - name: Run unit tests
-        run: npm test --prefix src/www/paths/index
 name: Ensuring www index (home page) exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
+      dry_run:
+        default: false
+        description: Dry run mode (show structure without executing)
+        required: false
+        type: boolean
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation

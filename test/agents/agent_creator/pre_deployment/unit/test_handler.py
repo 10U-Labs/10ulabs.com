@@ -33,8 +33,7 @@ class TestLambdaHandler:
     """Tests for lambda_handler function."""
 
     @patch("handler.invoke_agent")
-    @patch("handler.get_github_pat")
-    def test_handles_direct_invocation(self, mock_pat, mock_invoke):
+    def test_handles_direct_invocation(self, mock_invoke):
         """Should handle direct Lambda invocation with request in event."""
         from handler import lambda_handler
 
@@ -49,8 +48,7 @@ class TestLambdaHandler:
         mock_invoke.assert_called_once_with({"request": "Create a new agent"})
 
     @patch("handler.invoke_agent")
-    @patch("handler.get_github_pat")
-    def test_handles_http_invocation(self, mock_pat, mock_invoke):
+    def test_handles_http_invocation(self, mock_invoke):
         """Should handle HTTP invocation with request in body."""
         from handler import lambda_handler
 
@@ -64,8 +62,7 @@ class TestLambdaHandler:
         assert body["result"]["status"] == "success"
 
     @patch("handler.invoke_agent")
-    @patch("handler.get_github_pat")
-    def test_handles_http_with_dict_body(self, mock_pat, mock_invoke):
+    def test_handles_http_with_dict_body(self, mock_invoke):
         """Should handle HTTP invocation with dict body (API Gateway v2)."""
         from handler import lambda_handler
 
