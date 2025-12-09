@@ -49,3 +49,15 @@ output "ssm_github_pat_name" {
 output "ssm_github_pat_arn" {
   value = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.ssm_github_pat_name}"
 }
+
+output "github_app" {
+  value = local.github_app
+}
+
+output "github_app_ssm_arns" {
+  value = {
+    id              = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/id"
+    installation_id = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/installation_id"
+    private_key     = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/private_key"
+  }
+}

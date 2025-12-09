@@ -1,8 +1,30 @@
 # Webhook Lambda - receives GitHub webhook and invokes AgentCore agent
+# Package Lambda with dependencies
+resource "null_resource" "webhook_lambda_deps" {
+  triggers = {
+    requirements = filemd5("${path.module}/webhook-lambda/requirements.txt")
+    handler      = filemd5("${path.module}/webhook-lambda/handler.py")
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      rm -rf ${path.module}/.terraform/lambda_build
+      mkdir -p ${path.module}/.terraform/lambda_build
+      pip install -r ${path.module}/webhook-lambda/requirements.txt \
+        -t ${path.module}/.terraform/lambda_build \
+        --platform manylinux2014_x86_64 \
+        --only-binary=:all: \
+        --quiet
+      cp ${path.module}/webhook-lambda/handler.py ${path.module}/.terraform/lambda_build/
+    EOT
+  }
+}
+
 data "archive_file" "webhook_lambda" {
   type        = "zip"
-  source_file = "${path.module}/webhook-lambda/handler.py"
+  source_dir  = "${path.module}/.terraform/lambda_build"
   output_path = "${path.module}/.terraform/lambda_packages/webhook.zip"
+  depends_on  = [null_resource.webhook_lambda_deps]
 }
 
 resource "aws_lambda_function" "webhook" {
@@ -12,17 +34,20 @@ resource "aws_lambda_function" "webhook" {
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.webhook_lambda.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["x86_64"]
   timeout          = 300
   memory_size      = 256
   description      = "Webhook handler for Workflow Fixer Agent"
 
   environment {
     variables = {
-      AGENT_RUNTIME_ARN = aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn
-      SSM_GITHUB_PAT    = local.ssm_github_pat
-      AWS_REGION_NAME   = local.aws_region
-      GITHUB_ORG        = "10U-Labs-LLC"
-      GITHUB_REPO       = "10ulabs.com"
+      AGENT_RUNTIME_ARN          = aws_bedrockagentcore_agent_runtime.workflow_fixer.agent_runtime_arn
+      AWS_REGION_NAME            = local.aws_region
+      GITHUB_ORG                 = "10U-Labs-LLC"
+      GITHUB_REPO                = "10ulabs.com"
+      SSM_GITHUB_APP_ID          = local.github_app_ssm.id
+      SSM_GITHUB_APP_INSTALL_ID  = local.github_app_ssm.installation_id
+      SSM_GITHUB_APP_PRIVATE_KEY = local.github_app_ssm.private_key
     }
   }
 

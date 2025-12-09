@@ -20,3 +20,13 @@ variable "github_pat" {
   }
 }
 
+variable "github_app_private_key" {
+  type      = string
+  sensitive = true
+
+  validation {
+    condition     = length(var.github_app_private_key) > 0
+    error_message = "GitHub App private key must not be empty."
+  }
+}
+
