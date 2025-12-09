@@ -43,7 +43,8 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -62,7 +63,8 @@ jobs:
             -backend=true -input=false > /dev/null
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
             output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          GH_ROLE="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$GH_ROLE" >> $GITHUB_OUTPUT
       - name: Re-configure AWS credentials with bootstrap role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -153,7 +155,8 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Get website domain from Terraform output
         run: |
-          WEBSITE_FQDN=$(cd src/www/shared && terraform output -raw website_domain_name)
+          WEBSITE_FQDN=$(cd src/www/shared && \
+            terraform output -raw website_domain_name)
           echo "WEBSITE_FQDN=$WEBSITE_FQDN" >> $GITHUB_ENV
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||

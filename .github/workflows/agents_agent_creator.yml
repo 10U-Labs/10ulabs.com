@@ -44,7 +44,8 @@ jobs:
           ECR_REPO_URL="${ECR_REPO_URL}/10ulabs-agents"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -81,7 +82,9 @@ jobs:
         with:
           tflint_version: latest
       - name: Terraform Format Check
-        run: cd src/agents/agent_creator && terraform fmt -diff -check -recursive
+        run: |
+          cd src/agents/agent_creator
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/agents/agent_creator && terraform init
       - env:
