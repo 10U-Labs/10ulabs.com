@@ -32,7 +32,7 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
-          python3 -m pip install pylint mypy yamllint pytest
+          python3 -m pip install pylint mypy yamllint pytest types-PyYAML
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
