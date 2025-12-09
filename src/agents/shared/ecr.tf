@@ -24,28 +24,6 @@ resource "aws_ecr_repository" "agents" {
   })
 }
 
-# Repository policy to allow Bedrock AgentCore to pull images
-# Required for AgentCore to validate ECR URIs during CreateAgentRuntime/UpdateAgentRuntime
-resource "aws_ecr_repository_policy" "agents" {
-  repository = aws_ecr_repository.agents.name
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Sid    = "AllowBedrockAgentCore"
-      Effect = "Allow"
-      Principal = {
-        Service = "agentcore.bedrock.amazonaws.com"
-      }
-      Action = [
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:BatchGetImage",
-        "ecr:BatchCheckLayerAvailability"
-      ]
-    }]
-  })
-}
-
 # Lifecycle policy for agent images
 resource "aws_ecr_lifecycle_policy" "agents" {
   repository = aws_ecr_repository.agents.name
