@@ -31,6 +31,13 @@ def test_ecr_repository_has_scan_on_push(api_shared_ecs_runner_dir):
     assert "scan_on_push = true" in content
 
 
+def test_ecr_repository_has_aes256_encryption(api_shared_ecs_runner_dir):
+    """Test that ECR repository uses AES256 encryption."""
+    ecr_tf = api_shared_ecs_runner_dir / "ecr.tf"
+    content = ecr_tf.read_text()
+    assert 'encryption_type = "AES256"' in content
+
+
 def test_ecr_lifecycle_policy_defined(api_shared_ecs_runner_dir):
     """Test that ECR lifecycle policy is defined."""
     ecr_tf = api_shared_ecs_runner_dir / "ecr.tf"

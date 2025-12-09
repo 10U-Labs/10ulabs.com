@@ -69,6 +69,13 @@ def test_ecr_repository_policy_has_required_actions(agents_shared_dir):
         )
 
 
+def test_ecr_repository_has_aes256_encryption(agents_shared_dir):
+    """Test that ECR repository uses AES256 encryption."""
+    ecr_tf = agents_shared_dir / "ecr.tf"
+    content = ecr_tf.read_text()
+    assert 'encryption_type = "AES256"' in content
+
+
 def test_ecr_lifecycle_policy_defined(agents_shared_dir):
     """Test that ECR lifecycle policy is defined."""
     ecr_tf = agents_shared_dir / "ecr.tf"
