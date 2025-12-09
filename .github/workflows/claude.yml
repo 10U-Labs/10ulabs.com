@@ -8,14 +8,31 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
     name: Test Claude Code hooks
-    runs-on:
-      - ecs
-      - fargate
-      - on-demand
-      - runner-${{ github.run_id }}
+    runs-on: >-
+      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
+            github.event.inputs.github_hosted == 'true' ||
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
+          'ubuntu-latest' ||
+          fromJSON(format('["ecs", "fargate", "on-demand", "runner-{0}"]',
+            github.run_id)) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install pylint mypy yamllint pytest
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -62,6 +79,10 @@ on:
         default: false
         description: Dry run mode (show structure without executing)
         required: false
+        type: boolean
+      github_hosted:
+        default: false
+        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
 permissions:
   contents: read
