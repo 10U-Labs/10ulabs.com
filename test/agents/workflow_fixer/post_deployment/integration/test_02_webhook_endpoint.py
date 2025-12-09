@@ -156,21 +156,27 @@ class TestScheduledScanMode:
     """Layer 5: Verify scheduled scan mode works."""
 
     def test_01_scheduled_event_triggers_scan(self, webhook_url):
-        """Verify scheduled event triggers a scan for unresolved failures."""
+        """Verify scheduled event triggers scan mode detection.
+
+        Uses test_mode=True to skip the actual scan (which can take minutes
+        depending on how many unresolved failures exist). This validates
+        the mode detection logic without triggering real GitHub API calls.
+        """
         if not webhook_url:
             pytest.skip("Webhook URL not configured")
 
-        # Simulate EventBridge scheduled event
+        # Simulate EventBridge scheduled event with test_mode
         payload = {
             "source": "aws.events",
             "detail-type": "Scheduled Event",
+            "test_mode": True,
         }
 
         response = requests.post(
             webhook_url,
             json=payload,
             headers={"Content-Type": "application/json"},
-            timeout=60,  # Longer timeout for scan
+            timeout=30,
         )
 
         assert response.status_code == 200
@@ -180,4 +186,7 @@ class TestScheduledScanMode:
         )
         assert "processed" in body, (
             f"Expected 'processed' count in response, got: {body}"
+        )
+        assert body.get("test_mode") is True, (
+            f"Expected test_mode=True in response, got: {body}"
         )

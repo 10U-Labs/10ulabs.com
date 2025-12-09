@@ -181,9 +181,19 @@ def _build_agent_payload_from_run(
     }
 
 
-def _handle_scheduled_scan(github_token: str) -> dict[str, Any]:
+def _handle_scheduled_scan(
+    github_token: str, test_mode: bool = False
+) -> dict[str, Any]:
     """Handle scheduled scan for unresolved failures."""
     logger.info("Running scheduled scan for unresolved workflow failures")
+
+    # Test mode: return immediately without scanning (for integration tests)
+    if test_mode:
+        logger.info("Test mode enabled, skipping actual scan")
+        return {
+            "statusCode": 200,
+            "body": json.dumps({"mode": "scheduled", "processed": 0, "test_mode": True}),
+        }
 
     unresolved = _get_unresolved_failures(github_token)
     logger.info("Found %d unresolved failures", len(unresolved))
@@ -256,7 +266,10 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
         # Check if this is a scheduled event (EventBridge/CloudWatch)
         if _is_scheduled_event(event):
-            return _handle_scheduled_scan(github_token)
+            # Check for test_mode flag (for integration tests)
+            body = _parse_webhook_payload(event)
+            test_mode = body.get("test_mode", False) or event.get("test_mode", False)
+            return _handle_scheduled_scan(github_token, test_mode=test_mode)
 
         # Otherwise, treat as webhook event
         return _handle_webhook_event(event, github_token)

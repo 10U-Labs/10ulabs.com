@@ -33,6 +33,30 @@ _parse_webhook_payload = handler._parse_webhook_payload
 _build_agent_payload = handler._build_agent_payload
 _build_agent_payload_from_run = handler._build_agent_payload_from_run
 _is_scheduled_event = handler._is_scheduled_event
+_handle_scheduled_scan = handler._handle_scheduled_scan
+
+
+class TestHandleScheduledScanTestMode:
+    """Tests for _handle_scheduled_scan test_mode functionality."""
+
+    def test_test_mode_returns_immediately(self):
+        """Should return immediately without scanning when test_mode=True."""
+        result = _handle_scheduled_scan("fake_token", test_mode=True)
+
+        assert result["statusCode"] == 200
+        body = json.loads(result["body"])
+        assert body["mode"] == "scheduled"
+        assert body["processed"] == 0
+        assert body["test_mode"] is True
+
+    def test_test_mode_does_not_call_github_api(self):
+        """Should not make any GitHub API calls when test_mode=True."""
+        # If this tried to use the fake token with GitHub API, it would fail
+        result = _handle_scheduled_scan("invalid_token_that_would_fail", test_mode=True)
+
+        assert result["statusCode"] == 200
+        body = json.loads(result["body"])
+        assert body["test_mode"] is True
 
 
 class TestShouldSkipEvent:
@@ -318,7 +342,7 @@ class TestLambdaHandlerModes:
         event = {"source": "aws.events"}
         lambda_handler(event, None)
 
-        mock_scan.assert_called_once_with("ghp_test")
+        mock_scan.assert_called_once_with("ghp_test", test_mode=False)
 
     @patch("handler.get_github_pat")
     @patch("handler._handle_scheduled_scan")
@@ -332,7 +356,7 @@ class TestLambdaHandlerModes:
         event = {"detail-type": "Scheduled Event"}
         lambda_handler(event, None)
 
-        mock_scan.assert_called_once_with("ghp_test")
+        mock_scan.assert_called_once_with("ghp_test", test_mode=False)
 
     @patch("handler.get_github_pat")
     @patch("handler._handle_scheduled_scan")
@@ -346,7 +370,39 @@ class TestLambdaHandlerModes:
         event = {"body": json.dumps({"source": "aws.events", "detail-type": "Scheduled Event"})}
         lambda_handler(event, None)
 
-        mock_scan.assert_called_once_with("ghp_test")
+        mock_scan.assert_called_once_with("ghp_test", test_mode=False)
+
+    @patch("handler.get_github_pat")
+    @patch("handler._handle_scheduled_scan")
+    def test_passes_test_mode_from_body(self, mock_scan, mock_pat):
+        """Should pass test_mode=True from HTTP body to scheduled scan."""
+        from handler import lambda_handler
+
+        mock_pat.return_value = "ghp_test"
+        mock_scan.return_value = {"statusCode": 200, "body": "{}"}
+
+        event = {"body": json.dumps({
+            "source": "aws.events",
+            "detail-type": "Scheduled Event",
+            "test_mode": True,
+        })}
+        lambda_handler(event, None)
+
+        mock_scan.assert_called_once_with("ghp_test", test_mode=True)
+
+    @patch("handler.get_github_pat")
+    @patch("handler._handle_scheduled_scan")
+    def test_passes_test_mode_from_event(self, mock_scan, mock_pat):
+        """Should pass test_mode=True from event directly."""
+        from handler import lambda_handler
+
+        mock_pat.return_value = "ghp_test"
+        mock_scan.return_value = {"statusCode": 200, "body": "{}"}
+
+        event = {"source": "aws.events", "test_mode": True}
+        lambda_handler(event, None)
+
+        mock_scan.assert_called_once_with("ghp_test", test_mode=True)
 
     @patch("handler.get_github_pat")
     @patch("handler._handle_webhook_event")
