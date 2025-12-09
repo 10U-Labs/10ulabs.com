@@ -57,7 +57,7 @@ class TestLambdaExistence:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":
                 pytest.fail(
                     f"Lambda function '{lambda_function_name}' does not exist. "
-                    "Run terraform apply in src/api/agents/test_auditor/"
+                    "Run terraform apply in src/api/endpoints/agents/test_auditor/"
                 )
             raise
 

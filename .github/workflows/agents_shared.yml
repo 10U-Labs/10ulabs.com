@@ -31,8 +31,9 @@ jobs:
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
+          TF_PROVIDERS="src/api/endpoints/agents/shared/providers.tf"
           TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/agents/shared/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+            $TF_PROVIDERS | cut -d'"' -f2 | sed 's/>= //')
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
@@ -75,17 +76,19 @@ jobs:
           terraform_version: ${{ steps.config.outputs.terraform_version }}
           terraform_wrapper: false
       - name: Terraform Format Check
-        run: cd src/api/agents/shared && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/endpoints/agents/shared
+          terraform fmt -diff -check -recursive
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
           tflint_version: latest
       - name: Terraform Init
-        run: cd src/api/agents/shared && terraform init
+        run: cd src/api/endpoints/agents/shared && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/agents/shared && tflint --init && tflint
+        run: cd src/api/endpoints/agents/shared && tflint --init && tflint
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -97,27 +100,29 @@ jobs:
       - name: Run pylint
         run: |
           python3 -m pylint \
-            src/api/agents/shared/lambda_layer/github_auth.py \
+            src/api/endpoints/agents/shared/lambda_layer/github_auth.py \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy src/api/agents/shared/lambda_layer/
+        run: python3 -m mypy src/api/endpoints/agents/shared/lambda_layer/
       - name: Terraform Plan
-        run: cd src/api/agents/shared && terraform plan
+        run: cd src/api/endpoints/agents/shared && terraform plan
       - name: Run pre-deployment unit tests
         run: |
-          python3 -m pytest test/api/agents/shared/pre_deployment/unit/ \
+          python3 -m pytest \
+            test/api/endpoints/agents/shared/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest test/api/agents/shared/pre_deployment/integration/ \
+          python3 -m pytest \
+            test/api/endpoints/agents/shared/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/agents/shared && terraform apply -auto-approve
+        run: cd src/api/endpoints/agents/shared && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/agents/shared/post_deployment/integration/ \
+            test/api/endpoints/agents/shared/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

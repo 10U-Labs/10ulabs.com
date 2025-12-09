@@ -30,7 +30,7 @@ class TestLambdaRoleExistence:
             if err.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(
                     f"Lambda role '{LAMBDA_ROLE_NAME}' does not exist. "
-                    "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                    "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
                 )
             raise
 
@@ -49,7 +49,7 @@ class TestLambdaRoleConfiguration:
             if err.response["Error"]["Code"] == "NoSuchEntity":
                 pytest.fail(
                     f"AgentCore policy '{AGENTCORE_POLICY_NAME}' not found on role "
-                    f"'{LAMBDA_ROLE_NAME}'. Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                    f"'{LAMBDA_ROLE_NAME}'. Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
                 )
             raise
 

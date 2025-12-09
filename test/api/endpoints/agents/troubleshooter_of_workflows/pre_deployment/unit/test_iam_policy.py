@@ -10,12 +10,13 @@ from pathlib import Path
 import pytest
 
 
-# Path: test/api/agents/troubleshooter_of_workflows/pre_deployment/unit/test_iam_policy.py
-# parents[6] = repo root (10ulabs.com)
+# Path: test/api/endpoints/agents/troubleshooter_of_workflows/pre_deployment/unit/test_iam_policy.py
+# parents[7] = repo root (10ulabs.com)
 IAM_TF_PATH = (
-    Path(__file__).resolve().parents[6]
+    Path(__file__).resolve().parents[7]
     / "src"
     / "api"
+    / "endpoints"
     / "agents"
     / "troubleshooter_of_workflows"
     / "iam.tf"

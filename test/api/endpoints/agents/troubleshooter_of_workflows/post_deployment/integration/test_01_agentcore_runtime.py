@@ -45,13 +45,13 @@ class TestAgentCoreRuntimeExistence:
             assert agent_runtime_name in runtime_names, (
                 f"Agent runtime '{agent_runtime_name}' not found. "
                 f"Available runtimes: {runtime_names}. "
-                "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
             )
         except ClientError as err:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":
                 pytest.fail(
                     f"Agent runtime '{agent_runtime_name}' does not exist. "
-                    "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                    "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
                 )
             raise
 
@@ -85,7 +85,7 @@ class TestECRRepositoryExistence:
             if err.response["Error"]["Code"] == "RepositoryNotFoundException":
                 pytest.fail(
                     f"ECR repository '{ecr_repo_name}' does not exist. "
-                    "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                    "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
                 )
             raise
 
@@ -116,7 +116,7 @@ class TestWebhookLambdaExistence:
             if err.response["Error"]["Code"] == "ResourceNotFoundException":
                 pytest.fail(
                     f"Lambda function '{lambda_function_name}' does not exist. "
-                    "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+                    "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
                 )
             raise
 

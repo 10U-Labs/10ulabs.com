@@ -15,7 +15,7 @@ class TestWebhookEndpointExistence:
         """Verify the Lambda has a function URL configured."""
         assert webhook_url is not None, (
             "Lambda function URL not configured. "
-            "Run terraform apply in src/api/agents/troubleshooter_of_workflows/"
+            "Run terraform apply in src/api/endpoints/agents/troubleshooter_of_workflows/"
         )
 
     def test_02_webhook_url_is_https(self, webhook_url):

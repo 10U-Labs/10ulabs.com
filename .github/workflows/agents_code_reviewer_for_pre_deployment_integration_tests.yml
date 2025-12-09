@@ -81,21 +81,21 @@ jobs:
           tflint_version: latest
       - name: Terraform Format Check
         run: |
-          cd src/api/agents/code_reviewer_for_pre_deployment_integration_tests
+          cd src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests
           terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: |
-          cd src/api/agents/code_reviewer_for_pre_deployment_integration_tests
+          cd src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests
           terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api/agents/code_reviewer_for_pre_deployment_integration_tests
+          cd src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests
           tflint --init && tflint
       - name: Terraform Plan
         run: |
-          cd src/api/agents/code_reviewer_for_pre_deployment_integration_tests
+          cd src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests
           terraform plan
       - name: Linting YAML files
         run: |
@@ -112,22 +112,22 @@ jobs:
             $WF/agents_code_reviewer_for_pre_deployment_integration_tests.yml
       - name: Run pylint
         run: |
-          PYTHONPATH=src/api/agents/shared/lambda_layer python3 -m pylint \
-            src/api/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/ \
+          PYTHONPATH=src/api/endpoints/agents/shared/lambda_layer python3 -m pylint \
+            src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
         run: |
-          MYPYPATH=src/api/agents/shared/lambda_layer python3 -m mypy \
-            src/api/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/
+          MYPYPATH=src/api/endpoints/agents/shared/lambda_layer python3 -m mypy \
+            src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/
       - name: Terraform Apply
         run: |
-          cd src/api/agents/code_reviewer_for_pre_deployment_integration_tests
+          cd src/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests
           terraform apply -auto-approve
       - name: Run integration tests
         run: |
           python3 -m pytest \
-            test/api/agents/code_reviewer_for_pre_deployment_integration_tests/post_deployment/integration/ \
+            test/api/endpoints/agents/code_reviewer_for_pre_deployment_integration_tests/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
