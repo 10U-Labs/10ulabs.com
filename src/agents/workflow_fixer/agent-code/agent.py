@@ -339,14 +339,14 @@ When creating PRs, include:
 - Root cause analysis
 - What the fix does and why it works
 - Any caveats or manual verification needed
-- Footer: "Created by: 10ulabs-workflow-fixer-agent"
+- Footer: "Created by: agents.10ulabs.com/workflow-fixer"
 
 When creating commits, use this format for commit messages:
 <title>
 
 <body>
 
-Created by: 10ulabs-workflow-fixer-agent""",
+Created by: agents.10ulabs.com/workflow-fixer""",
     tools=[
         get_workflow_logs,
         get_file_content,
