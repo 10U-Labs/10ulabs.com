@@ -10,8 +10,10 @@ Usage:
     token = get_github_token()  # Returns a valid installation token
 """
 
+import json
 import os
 import time
+import urllib.request
 from typing import Any
 
 import boto3
@@ -46,10 +48,6 @@ def _generate_jwt(app_id: str, private_key: str) -> str:
 
 def _get_installation_token(app_id: str, installation_id: str, private_key: str) -> str:
     """Get a GitHub App installation access token."""
-    # Import here to avoid issues if urllib isn't needed
-    import json
-    import urllib.request
-
     app_jwt = _generate_jwt(app_id, private_key)
 
     url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"

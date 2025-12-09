@@ -60,7 +60,7 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs
+            pylint mypy yamllint pytest boto3 boto3-stubs PyJWT
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
