@@ -345,6 +345,8 @@ jobs:
         run: |
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs
+          python3 -m pip install \
+            -r src/agents/workflow_fixer/webhook-lambda/requirements.txt
       - name: Terraform Format Check
         run: >-
           cd src/agents/workflow_fixer && terraform fmt -diff -check -recursive
