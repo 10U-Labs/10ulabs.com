@@ -76,18 +76,18 @@ jobs:
           tflint_version: latest
       - name: Terraform Format Check
         run: |
-          cd src/agents/troubleshooter_of_workflows
+          cd src/api/agents/troubleshooter_of_workflows
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/agents/troubleshooter_of_workflows && terraform init
+        run: cd src/api/agents/troubleshooter_of_workflows && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/agents/troubleshooter_of_workflows
+          cd src/api/agents/troubleshooter_of_workflows
           tflint --init && tflint
       - name: Terraform Plan
-        run: cd src/agents/troubleshooter_of_workflows && terraform plan
+        run: cd src/api/agents/troubleshooter_of_workflows && terraform plan
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -103,7 +103,7 @@ jobs:
         name: Run pylint
         run: |
           python3 -m pylint \
-            src/agents/troubleshooter_of_workflows/webhook_lambda/ \
+            src/api/agents/troubleshooter_of_workflows/webhook_lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - env:
@@ -112,17 +112,17 @@ jobs:
         name: Run mypy
         run: |
           python3 -m mypy \
-            src/agents/troubleshooter_of_workflows/webhook_lambda/
+            src/api/agents/troubleshooter_of_workflows/webhook_lambda/
       - env:
           PYTHONPATH: src/bootstrap/lambda_layer
         name: Run unit tests
         run: |
           python3 -m pytest \
-            test/agents/troubleshooter_of_workflows/pre_deployment/unit/ \
+            test/api/agents/troubleshooter_of_workflows/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TEST_PATH=test/agents/troubleshooter_of_workflows
+          TEST_PATH=test/api/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Login to Amazon ECR
@@ -144,22 +144,22 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: src/agents/troubleshooter_of_workflows/agent_code
+          context: src/api/agents/troubleshooter_of_workflows/agent_code
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
       - name: Terraform Apply
         run: |
-          cd src/agents/troubleshooter_of_workflows
+          cd src/api/agents/troubleshooter_of_workflows
           terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          TEST_PATH=test/agents/troubleshooter_of_workflows
+          TEST_PATH=test/api/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
-          TEST_PATH=test/agents/troubleshooter_of_workflows
+          TEST_PATH=test/api/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
