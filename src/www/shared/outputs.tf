@@ -1,5 +1,5 @@
 output "bucket_name" {
-  value = aws_s3_bucket.website.id
+  value = module.website_bucket.bucket_id
 }
 
 output "cloudfront_distribution_id" {
