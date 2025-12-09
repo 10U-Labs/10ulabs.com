@@ -1,12 +1,12 @@
-# Shared Lambda Layers
-# These layers are built by Terraform and deployed here for use by agent Lambdas
+# Shared Lambda Layer
+# Built by Terraform and deployed here for use by agent Lambdas
 
 locals {
-  lambda_layers_dir  = "${path.module}/.terraform/lambda_layers"
-  github_auth_script = "${path.module}/lambda_layers/build.sh"
-  github_auth_reqs   = "${path.module}/lambda_layers/github_auth/requirements.txt"
-  github_auth_module = "${path.module}/lambda_layers/github_auth/github_auth.py"
-  github_auth_zip    = "${local.lambda_layers_dir}/github_auth.zip"
+  lambda_layer_dir   = "${path.module}/.terraform/lambda_layer"
+  github_auth_script = "${path.module}/lambda_layer/build.sh"
+  github_auth_reqs   = "${path.module}/lambda_layer/requirements.txt"
+  github_auth_module = "${path.module}/lambda_layer/github_auth.py"
+  github_auth_zip    = "${local.lambda_layer_dir}/github_auth.zip"
 
   # Hash of source files - used for layer versioning and computed during plan
   # (the actual zip doesn't exist until apply, but source files do)
