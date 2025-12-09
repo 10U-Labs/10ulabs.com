@@ -176,6 +176,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '.claude/**'
+      - '.github/workflows/claude.yml'
+      - 'test/claude/**'
   workflow_dispatch:
     inputs:
       dry_run:
