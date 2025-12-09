@@ -197,6 +197,10 @@ jobs:
         run: |
           python3 -m pytest test/api/backend/post_deployment/integration/ \
             --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          python3 -m pytest test/api/backend/post_deployment/e2e/ \
+            --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: github.event_name == 'workflow_dispatch'
