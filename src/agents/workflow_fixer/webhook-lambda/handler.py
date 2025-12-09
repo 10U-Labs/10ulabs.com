@@ -17,7 +17,7 @@ from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
-import jwt  # type: ignore[import-not-found]  # pylint: disable=import-error
+import jwt
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
