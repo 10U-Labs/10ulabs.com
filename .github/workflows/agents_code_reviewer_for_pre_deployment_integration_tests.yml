@@ -6,16 +6,12 @@ jobs:
   deploy:
     if: >-
       github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success')
-    name: Deploy Test Auditor Agent
+      github.event.inputs.dry_run != 'true'
+    name: Deploy Code Reviewer Agent
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
             github.run_id)) }}
@@ -63,9 +59,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -73,9 +67,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
           python3 -m pip install \
@@ -89,15 +81,23 @@ jobs:
         with:
           tflint_version: latest
       - name: Terraform Format Check
-        run: cd src/agents/test_auditor && terraform fmt -diff -check -recursive
+        run: |
+          cd src/agents/code_reviewer_for_pre_deployment_integration_tests
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/agents/test_auditor && terraform init
+        run: |
+          cd src/agents/code_reviewer_for_pre_deployment_integration_tests
+          terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/agents/test_auditor && tflint --init && tflint
+        run: |
+          cd src/agents/code_reviewer_for_pre_deployment_integration_tests
+          tflint --init && tflint
       - name: Terraform Plan
-        run: cd src/agents/test_auditor && terraform plan
+        run: |
+          cd src/agents/code_reviewer_for_pre_deployment_integration_tests
+          terraform plan
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -105,25 +105,39 @@ jobs:
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          WF=".github/workflows"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/agents_test_auditor.yml
+            $WF/agents_code_reviewer_for_pre_deployment_integration_tests.yml
       - name: Run pylint
         run: |
           python3 -m pylint \
-            src/agents/test_auditor/lambdas/ \
+            src/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy src/agents/test_auditor/lambdas/
+        run: |
+          python3 -m mypy \
+            src/agents/code_reviewer_for_pre_deployment_integration_tests/lambdas/
       - name: Terraform Apply
-        run: cd src/agents/test_auditor && terraform apply -auto-approve
+        run: |
+          cd src/agents/code_reviewer_for_pre_deployment_integration_tests
+          terraform apply -auto-approve
       - name: Run integration tests
         run: |
           python3 -m pytest \
-            test/agents/test_auditor/post_deployment/integration/ \
+            test/agents/code_reviewer_for_pre_deployment_integration_tests/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-name: Deploying Test Auditor Agent
+      - if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow agents_code_reviewer_for_pre_deployment_integration_tests \
+            --repo ${{ github.repository }}
+name: Deploying Code Reviewer for Pre-Deployment Integration Tests
 on:
   workflow_dispatch:
     inputs:
@@ -136,13 +150,7 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Deploying Agent Creator
 permissions:
+  actions: write
   contents: read
   id-token: write

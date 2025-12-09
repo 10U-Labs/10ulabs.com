@@ -4,26 +4,16 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   deploy:
-    if: |
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success') && (
-        (github.event_name == 'push' &&
-         !contains(github.event.head_commit.message, '[dry run]')) ||
-        (github.event_name == 'workflow_dispatch' &&
-         github.event.inputs.dry_run != 'true') ||
-        github.event_name == 'workflow_run'
-      )
+    if: github.ref == 'refs/heads/main'
     name: Build and deploy AMI for EC2 self-hosted runners
     permissions:
+      actions: write
       contents: read
       id-token: write
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
             github.run_id)) }}
@@ -116,9 +106,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -126,9 +114,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
           python3 -m pip install boto3 boto3-stubs mypy paramiko \
@@ -284,6 +270,15 @@ jobs:
             --config $BASE/config.yml \
             --region "$REGION" \
             --ssm-parameter-name "$SSM"
+      - if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow endpoint_v1_image_for_ec2_runners_post \
+            --repo ${{ github.repository }}
 name: Building AMI for EC2 self-hosted runners
 on:
   workflow_dispatch:
@@ -297,13 +292,7 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Ensuring /health endpoint exists and is properly configured
 permissions:
+  actions: write
   contents: read
   id-token: write

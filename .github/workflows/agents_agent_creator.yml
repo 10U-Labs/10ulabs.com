@@ -6,16 +6,12 @@ jobs:
   deploy:
     if: >-
       github.ref == 'refs/heads/main' &&
-      github.event.inputs.dry_run != 'true' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success')
+      github.event.inputs.dry_run != 'true'
     name: Deploy Agent Creator
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
             github.run_id)) }}
@@ -55,9 +51,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -65,9 +59,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
           python3 -m pip install \
@@ -151,6 +143,15 @@ jobs:
           python3 -m pytest \
             test/agents/agent_creator/post_deployment/integration/ \
             --verbose --pythonwarnings=error
+      - if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow agents_agent_creator \
+            --repo ${{ github.repository }}
 name: Deploying Agent Creator
 on:
   workflow_dispatch:
@@ -164,13 +165,7 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Deploying Workflow Fixer Agent
 permissions:
+  actions: write
   contents: read
   id-token: write

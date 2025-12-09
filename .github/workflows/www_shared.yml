@@ -4,17 +4,12 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   deploy:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success')
+    if: github.ref == 'refs/heads/main'
     name: Deploy www_shared infrastructure
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
             github.run_id)) }}
@@ -73,9 +68,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -83,9 +76,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
           python3 -m pip install \
@@ -174,7 +165,16 @@ jobs:
           python3 -m pytest \
             test/www/shared/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-name: Ensuring www_shared infrastructure exists and is properly configured
+      - if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow www_shared \
+            --repo ${{ github.repository }}
+name: Ensuring www shared infrastructure exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
@@ -186,13 +186,7 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Deploying Test Auditor Agent
 permissions:
+  actions: write
   contents: read
   id-token: write

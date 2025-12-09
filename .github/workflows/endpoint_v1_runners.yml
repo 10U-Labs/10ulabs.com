@@ -4,32 +4,16 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   deploy:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' ||
-       github.event_name == 'workflow_dispatch' ||
-       github.event_name == 'workflow_call' ||
-       github.event_name == 'push' &&
-       !contains(toJSON(github.event.commits),
-         '.github/workflows/api_backend.yml') &&
-       !contains(toJSON(github.event.commits), 'src/api/backend/') &&
-       !contains(toJSON(github.event.commits), 'src/www/api/') &&
-       !contains(toJSON(github.event.commits), 'test/api/backend/') &&
-       !contains(toJSON(github.event.commits),
-         '.github/workflows/api_shared_ecr.yml') &&
-       !contains(toJSON(github.event.commits), 'src/api/shared/ecr/') &&
-       !contains(toJSON(github.event.commits), 'lib/terraform/'))
+    if: github.ref == 'refs/heads/main'
     name: Deploy /v1/runners endpoint
     permissions:
+      actions: write
       contents: read
       id-token: write
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ||
-            contains(github.event.workflow_run.head_commit.message,
-              '[github-hosted]') ) &&
+            contains(github.event.head_commit.message, '[github-hosted]') ) &&
           'ubuntu-latest' ||
           fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
             github.run_id)) }}
@@ -61,9 +45,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -77,9 +59,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup TFLint
         uses: terraform-linters/setup-tflint@v6
         with:
@@ -87,9 +67,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -97,9 +75,7 @@ jobs:
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]') ||
-          contains(github.event.workflow_run.head_commit.message,
-            '[github-hosted]')
+          contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
           python3 -m pip install pylint mypy yamllint pytest boto3 \
@@ -159,6 +135,15 @@ jobs:
           TEST_DIR=test/api/endpoints/runners
           python3 -m pytest $TEST_DIR/post_deployment/integration/ \
             --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
+      - if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow endpoint_v1_runners \
+            --repo ${{ github.repository }}
 name: Ensuring the /v1/runners API endpoint exists and is properly configured
 on:
   workflow_dispatch:
@@ -167,13 +152,7 @@ on:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Ensuring the /v1/ecs-runner API endpoint exists and is properly configured
 permissions:
+  actions: write
   contents: read
   id-token: write

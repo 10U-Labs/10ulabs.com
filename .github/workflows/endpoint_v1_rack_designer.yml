@@ -4,16 +4,14 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   common-vars:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success')
+    if: github.ref == 'refs/heads/main'
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
       role_arn: ${{ steps.bootstrap.outputs.role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     permissions:
+      actions: write
       contents: read
       id-token: write
     runs-on:
@@ -127,6 +125,15 @@ jobs:
             --region ${{ needs.common-vars.outputs.aws_region }} \
             --paths "/rack-designer/*"
         working-directory: src/api/endpoints/rack_designer
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow endpoint_v1_rack_designer \
+            --repo ${{ github.repository }}
   integration-testing-post-deployment:
     name: Post-deployment integration testing
     needs:
@@ -268,13 +275,7 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-  workflow_run:
-    branches:
-      - main
-    types:
-      - completed
-    workflows:
-      - Ensuring www index (home page) exists and is properly configured
 permissions:
+  actions: write
   contents: read
   id-token: write

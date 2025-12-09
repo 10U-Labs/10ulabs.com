@@ -4,10 +4,7 @@ concurrency:
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
   declaring-common-variables:
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      (github.event_name != 'workflow_run' ||
-       github.event.workflow_run.conclusion == 'success')
+    if: github.ref == 'refs/heads/main'
     name: Declaring common variables
     outputs:
       aws_region: ${{ steps.config.outputs.aws_region }}
@@ -15,6 +12,7 @@ jobs:
         ${{ steps.bootstrap.outputs.github_actions_role_arn }}
       terraform_version: ${{ steps.config.outputs.terraform_version }}
     permissions:
+      actions: write
       contents: read
       id-token: write
     runs-on:
@@ -119,6 +117,15 @@ jobs:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Apply
         run: terraform apply -auto-approve
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
+        run: |
+          python3 -m pip install pyyaml
+          python3 scripts/dispatch_descendants.py \
+            --workflow endpoint_v1_contact \
+            --repo ${{ github.repository }}
   integration-testing-post-deployment:
     name: Post-deployment integration testing
     needs:
@@ -262,5 +269,6 @@ on:
   workflow_call:
   workflow_dispatch:
 permissions:
+  actions: write
   contents: read
   id-token: write

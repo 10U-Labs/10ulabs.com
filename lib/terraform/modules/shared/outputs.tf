@@ -61,3 +61,7 @@ output "github_app_ssm_arns" {
     private_key     = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.github_app.ssm_prefix}/private_key"
   }
 }
+
+output "agentcore" {
+  value = local.agentcore
+}

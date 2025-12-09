@@ -17,14 +17,62 @@ agents_agent_creator:
     - '.github/workflows/agents_agent_creator.yml'
     - 'src/agents/agent_creator/**'
     - 'test/agents/agent_creator/**'
-agents_test_auditor:
+agents_agent_deleter:
   depends_on:
-    - agents_agent_creator
-  name: Deploying Test Auditor Agent
+    - agents_workflow_fixer
+  name: Deploying Agent Deleter
   paths:
-    - '.github/workflows/agents_test_auditor.yml'
-    - 'src/agents/test_auditor/**'
-    - 'test/agents/test_auditor/**'
+    - '.github/workflows/agents_agent_deleter.yml'
+    - 'src/agents/agent_deleter/**'
+    - 'test/agents/agent_deleter/**'
+agents_agent_evaluator:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Agent Evaluator
+  paths:
+    - '.github/workflows/agents_agent_evaluator.yml'
+    - 'src/agents/agent_evaluator/**'
+    - 'test/agents/agent_evaluator/**'
+agents_agent_modifier:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Agent Modifier
+  paths:
+    - '.github/workflows/agents_agent_modifier.yml'
+    - 'src/agents/agent_modifier/**'
+    - 'test/agents/agent_modifier/**'
+agents_code_reviewer_for_pre_deployment_integration_tests:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Code Reviewer for Pre-Deployment Integration Tests
+  paths:
+    - '.github/workflows/agents_code_reviewer_for_pre_deployment_integration_tests.yml'
+    - 'src/agents/code_reviewer_for_pre_deployment_integration_tests/**'
+    - 'test/agents/code_reviewer_for_pre_deployment_integration_tests/**'
+agents_workflow_creator:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Workflow Creator Agent
+  paths:
+    - '.github/workflows/agents_workflow_creator.yml'
+    - 'src/agents/workflow_creator/**'
+    - 'test/agents/workflow_creator/**'
+agents_workflow_deleter:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Workflow Deleter Agent
+  paths:
+    - '.github/workflows/agents_workflow_deleter.yml'
+    - 'src/agents/workflow_deleter/**'
+    - 'test/agents/workflow_deleter/**'
+agents_workflow_evaluator:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Workflow Evaluator Agent
+  paths:
+    - '.github/workflows/agents_workflow_evaluator.yml'
+    - 'src/agents/workflow_evaluator/**'
+    - 'test/agents/workflow_evaluator/**'
 agents_workflow_fixer:
   depends_on:
     - bootstrap
@@ -33,6 +81,14 @@ agents_workflow_fixer:
     - '.github/workflows/agents_workflow_fixer.yml'
     - 'src/agents/workflow_fixer/**'
     - 'test/agents/workflow_fixer/**'
+agents_workflow_modifier:
+  depends_on:
+    - agents_workflow_fixer
+  name: Deploying Workflow Modifier Agent
+  paths:
+    - '.github/workflows/agents_workflow_modifier.yml'
+    - 'src/agents/workflow_modifier/**'
+    - 'test/agents/workflow_modifier/**'
 api_backend:
   depends_on:
     - www_shared
@@ -61,7 +117,7 @@ endpoint_health:
     - 'test/api/endpoints/health/**'
 endpoint_v1_contact:
   depends_on:
-    - endpoint_v1_echo
+    - endpoint_v1_runners
   name: Ensuring contact endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_contact.yml'
@@ -114,7 +170,7 @@ endpoint_v1_image_for_ec2_runners_post:
     - 'test/api/endpoints/image_for_ec2_runners/post/**'
 endpoint_v1_image_for_ecs_runners:
   depends_on:
-    - endpoint_v1_ec2_runner
+    - endpoint_health
   name: Building Docker image for ECS runners
   paths:
     - '.github/workflows/endpoint_v1_image_for_ecs_runners.yml'
@@ -122,7 +178,7 @@ endpoint_v1_image_for_ecs_runners:
     - 'test/api/endpoints/image_for_ecs_runners/**'
 endpoint_v1_rack_designer:
   depends_on:
-    - www_index
+    - endpoint_v1_runners
   name: Ensuring Rack Designer exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_rack_designer.yml'
@@ -131,6 +187,7 @@ endpoint_v1_rack_designer:
     - 'test/api/endpoints/rack_designer/**'
 endpoint_v1_runners:
   depends_on:
+    - endpoint_v1_ec2_runner
     - endpoint_v1_ecs_runner
   name: >-
     Ensuring the /v1/runners API endpoint exists and is properly configured
@@ -160,7 +217,7 @@ www_index:
     - 'test/www/paths/index/**'
 www_shared:
   depends_on:
-    - agents_test_auditor
+    - bootstrap
   name: Ensuring www shared infrastructure exists and is properly configured
   paths:
     - '.github/workflows/www_shared.yml'
