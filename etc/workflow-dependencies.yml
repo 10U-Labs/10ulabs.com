@@ -43,20 +43,12 @@ api_backend:
     - 'src/www/api/**'
     - 'test/api/backend/**'
     - 'test/api/conftest.py'
-api_shared_ecr:
-  depends_on:
-    - endpoint_v1_ec2_runner
-  name: Ensuring ECR repository exists and is properly configured
-  paths:
-    - '.github/workflows/api_shared_ecr.yml'
-    - 'lib/terraform/**'
-    - 'src/api/shared/ecr/**'
-    - 'test/api/shared/ecr/**'
 bootstrap:
   depends_on: []
   name: Ensuring bootstrap infrastructure exists and is properly configured
   paths:
     - '.github/workflows/bootstrap.yml'
+    - 'lib/terraform/**'
     - 'src/bootstrap/**'
     - 'test/bootstrap/**'
 endpoint_health:
@@ -122,7 +114,7 @@ endpoint_v1_image_for_ec2_runners_post:
     - 'test/api/endpoints/image_for_ec2_runners/post/**'
 endpoint_v1_image_for_ecs_runners:
   depends_on:
-    - api_shared_ecr
+    - endpoint_v1_ec2_runner
   name: Building Docker image for ECS runners
   paths:
     - '.github/workflows/endpoint_v1_image_for_ecs_runners.yml'

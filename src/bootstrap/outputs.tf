@@ -37,3 +37,43 @@ output "name_for_cloudtrail" {
 output "ssm_parameter_name_for_github_pat" {
   value = aws_ssm_parameter.github_pat.name
 }
+
+# ECR Outputs - Runners Repository
+output "ecr_runners_repository_arn" {
+  value = aws_ecr_repository.runners.arn
+}
+
+output "ecr_runners_repository_name" {
+  value = aws_ecr_repository.runners.name
+}
+
+output "ecr_runners_repository_url" {
+  value = aws_ecr_repository.runners.repository_url
+}
+
+# ECR Outputs - Agents Repository
+output "ecr_agents_repository_arn" {
+  value = aws_ecr_repository.agents.arn
+}
+
+output "ecr_agents_repository_name" {
+  value = aws_ecr_repository.agents.name
+}
+
+output "ecr_agents_repository_url" {
+  value = aws_ecr_repository.agents.repository_url
+}
+
+# VPC Outputs
+output "vpc_id" {
+  value = aws_vpc.main.id
+}
+
+output "vpc_public_subnet_ids" {
+  value = join(",", aws_subnet.public[*].id)
+}
+
+# Security Group Outputs
+output "runner_security_group_id" {
+  value = aws_security_group.runner.id
+}

@@ -7,7 +7,7 @@ import pytest
 AWS_REGION = "us-east-2"
 AGENT_NAME = "TenULabsTestAuditorAgent"
 LAMBDA_NAME = "TenULabsTestAuditorActionGroup"
-ECR_REPO_NAME = "10ulabs/test-auditor-agent"
+ECR_REPO_NAME = "10ulabs/test_auditor-agent"
 
 
 @pytest.fixture(scope="session")

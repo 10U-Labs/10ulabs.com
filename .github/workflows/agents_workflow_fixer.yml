@@ -41,7 +41,7 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           ECR_REPO_URL="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          ECR_REPO_URL="${ECR_REPO_URL}/tenulabs-workflow-fixer-agent"
+          ECR_REPO_URL="${ECR_REPO_URL}/10ulabs-agents"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "ecr_repository_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
           echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
@@ -72,7 +72,7 @@ jobs:
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs requests
           python3 -m pip install \
-            -r src/agents/workflow_fixer/webhook-lambda/requirements.txt
+            -r src/agents/workflow_fixer/webhook_lambda/requirements.txt
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -105,11 +105,11 @@ jobs:
       - name: Run pylint
         run: |
           python3 -m pylint \
-            src/agents/workflow_fixer/webhook-lambda/ \
+            src/agents/workflow_fixer/webhook_lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy src/agents/workflow_fixer/webhook-lambda/
+        run: python3 -m mypy src/agents/workflow_fixer/webhook_lambda/
       - name: Run unit tests
         run: |
           python3 -m pytest \
@@ -120,12 +120,6 @@ jobs:
           python3 -m pytest \
             test/agents/workflow_fixer/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - name: Terraform Apply (backend only)
-        run: |
-          cd src/agents/workflow_fixer && \
-            terraform apply -auto-approve \
-            -target=aws_ecr_repository.agent \
-            -target=aws_ecr_lifecycle_policy.agent
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - id: meta
@@ -134,8 +128,8 @@ jobs:
         with:
           images: ${{ steps.config.outputs.ecr_repository_url }}
           tags: |
-            type=sha,prefix=
-            type=raw,value=latest
+            type=sha,prefix=workflow-fixer-
+            type=raw,value=workflow-fixer-latest
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -145,7 +139,7 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: src/agents/workflow_fixer/agent-code
+          context: src/agents/workflow_fixer/agent_code
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

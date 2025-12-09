@@ -3,10 +3,9 @@ locals {
   aws_region      = module.shared.aws_region
   resource_prefix = module.shared.resource_prefix
 
-  agent_name    = "agent-creator"
-  stack_name    = "${local.resource_prefix}-${local.agent_name}"
-  ecr_repo_name = "${lower(local.resource_prefix)}-${local.agent_name}-agent"
-  image_tag     = "latest"
+  agent_name = "agent-creator"
+  stack_name = "${local.resource_prefix}-${local.agent_name}"
+  image_tag  = "${local.agent_name}-latest"
 
   lambda_name    = "${local.resource_prefix}AgentCreator"
   log_group_name = "/aws/lambda/${local.lambda_name}"

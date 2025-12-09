@@ -7,15 +7,15 @@ output "lambda_function_name" {
 }
 
 output "vpc_id" {
-  value = aws_vpc.runner_vpc.id
+  value = data.terraform_remote_state.bootstrap.outputs.vpc_id
 }
 
 output "vpc_public_subnet_ids" {
-  value = join(",", aws_subnet.public[*].id)
+  value = data.terraform_remote_state.bootstrap.outputs.vpc_public_subnet_ids
 }
 
 output "runner_security_group_id" {
-  value = aws_security_group.runner_sg.id
+  value = data.terraform_remote_state.bootstrap.outputs.runner_security_group_id
 }
 
 output "workflow_runners_table_name" {
@@ -39,15 +39,15 @@ output "webhook_parameter_arn" {
 }
 
 output "ecr_repository_arn" {
-  value = data.terraform_remote_state.ecr.outputs.repository_arn
+  value = data.terraform_remote_state.bootstrap.outputs.ecr_runners_repository_arn
 }
 
 output "ecr_repository_name" {
-  value = data.terraform_remote_state.ecr.outputs.repository_name
+  value = data.terraform_remote_state.bootstrap.outputs.ecr_runners_repository_name
 }
 
 output "ecr_repository_uri" {
-  value = data.terraform_remote_state.ecr.outputs.repository_url
+  value = data.terraform_remote_state.bootstrap.outputs.ecr_runners_repository_url
 }
 
 output "ec2_instance_profile_name" {

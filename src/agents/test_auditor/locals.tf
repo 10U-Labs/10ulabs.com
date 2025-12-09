@@ -7,6 +7,7 @@ locals {
   github_repo     = module.shared.name_for_github_repo
 
   agent_name     = "${local.resource_prefix}TestAuditorAgent"
+  image_tag      = "test_auditor-latest"
   lambda_name    = "${local.resource_prefix}TestAuditorActionGroup"
   log_group_name = "/aws/lambda/${local.lambda_name}"
 
@@ -19,7 +20,7 @@ locals {
     Environment = "production"
     ManagedBy   = "terraform"
     Component   = "agents"
-    Agent       = "test-auditor"
+    Agent       = "test_auditor"
   }
 
   agent_instruction = <<-EOT

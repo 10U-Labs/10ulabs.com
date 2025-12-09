@@ -1,44 +1,15 @@
-resource "aws_s3_bucket" "website" {
-  bucket        = local.website_bucket_name
-  force_destroy = false
+module "website_bucket" {
+  source = "../../../lib/terraform/modules/s3_bucket"
+
+  bucket_name         = local.website_bucket_name
+  force_destroy       = false
+  versioning_enabled  = false
+  central_logs_bucket = local.name_for_central_logs
+  log_prefix          = "s3-access/website/"
 
   tags = merge(local.common_tags, {
     Name = "${local.www_fqdn}-website"
   })
-}
-
-resource "aws_s3_bucket_versioning" "website" {
-  bucket = aws_s3_bucket.website.id
-
-  versioning_configuration {
-    status = "Disabled"
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "website" {
-  bucket = aws_s3_bucket.website.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "website" {
-  bucket = aws_s3_bucket.website.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_logging" "website" {
-  bucket = aws_s3_bucket.website.id
-
-  target_bucket = local.name_for_central_logs
-  target_prefix = "s3-access/website/"
 }
 
 resource "aws_cloudfront_origin_access_control" "website" {
@@ -63,7 +34,7 @@ data "aws_iam_policy_document" "website_bucket_policy" {
     ]
 
     resources = [
-      "${aws_s3_bucket.website.arn}/*"
+      "${module.website_bucket.bucket_arn}/*"
     ]
 
     condition {
@@ -75,25 +46,20 @@ data "aws_iam_policy_document" "website_bucket_policy" {
 }
 
 resource "aws_s3_bucket_policy" "website" {
-  bucket = aws_s3_bucket.website.id
+  bucket = module.website_bucket.bucket_id
   policy = data.aws_iam_policy_document.website_bucket_policy.json
 }
 
-resource "aws_wafv2_web_acl" "website" {
-  provider = aws.us-east-1
+module "website_waf" {
+  source = "../../../lib/terraform/modules/cloudfront_waf"
 
-  name  = "${local.resource_prefix}WafWebAcl"
-  scope = "CLOUDFRONT"
-
-  default_action {
-    allow {}
+  providers = {
+    aws.us-east-1 = aws.us-east-1
   }
 
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${local.resource_prefix}WafMetrics"
-    sampled_requests_enabled   = true
-  }
+  name             = "${local.resource_prefix}WafWebAcl"
+  metric_name      = "${local.resource_prefix}WafMetrics"
+  log_group_suffix = local.resource_prefix
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}WafWebAcl"
@@ -207,7 +173,7 @@ resource "aws_cloudfront_distribution" "website" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
   aliases             = [local.www_fqdn, local.apex_fqdn]
-  web_acl_id          = aws_wafv2_web_acl.website.arn
+  web_acl_id          = module.website_waf.web_acl_arn
 
   logging_config {
     include_cookies = false
@@ -216,7 +182,7 @@ resource "aws_cloudfront_distribution" "website" {
   }
 
   origin {
-    domain_name              = aws_s3_bucket.website.bucket_regional_domain_name
+    domain_name              = module.website_bucket.bucket_regional_domain_name
     origin_id                = "s3-website"
     origin_access_control_id = aws_cloudfront_origin_access_control.website.id
   }
@@ -271,22 +237,4 @@ resource "aws_cloudfront_distribution" "website" {
 
 data "aws_cloudfront_origin_request_policy" "cors_s3_origin" {
   name = "Managed-CORS-S3Origin"
-}
-
-resource "aws_cloudwatch_log_group" "waf" {
-  provider = aws.us-east-1
-
-  name              = "aws-waf-logs-${local.resource_prefix}"
-  retention_in_days = 30
-
-  tags = merge(local.common_tags, {
-    Name = "aws-waf-logs-${local.resource_prefix}"
-  })
-}
-
-resource "aws_wafv2_web_acl_logging_configuration" "website" {
-  provider = aws.us-east-1
-
-  log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
-  resource_arn            = aws_wafv2_web_acl.website.arn
 }
