@@ -371,7 +371,7 @@ jobs:
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
         name: Install test dependencies
-        run: python3 -m pip install pytest pyyaml
+        run: python3 -m pip install pytest pyyaml boto3
       - if: >-
           inputs.dry_run != true &&
           !contains(github.event.head_commit.message, '[dry run]')
