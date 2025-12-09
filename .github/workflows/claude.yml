@@ -3,35 +3,19 @@ concurrency:
   cancel-in-progress: true
   group: ${{ github.workflow_ref }}-${{ github.ref }}
 jobs:
-  performing-static-analysis:
-    if: github.ref == 'refs/heads/main'
-    name: Performing static analysis
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
+  test:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.inputs.dry_run != 'true'
+    name: Test Claude Code hooks
+    runs-on:
+      - ecs
+      - fargate
+      - on-demand
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install linting dependencies
-        run: |
-          python3 -m pip install \
-            pylint mypy pytest PyYAML types-PyYAML yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -60,35 +44,6 @@ jobs:
             python3 -m mypy "$file"
           done
           python3 -m mypy test/claude/
-  unit-testing:
-    if: github.ref == 'refs/heads/main'
-    name: Unit testing
-    needs:
-      - performing-static-analysis
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "spot", "runner-{0}"]',
-            github.run_id)) }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: python3 -m pip install pytest PyYAML
       - name: Run unit tests
         run: |
           python3 -m pytest test/claude/ --verbose --pythonwarnings=error
@@ -96,9 +51,10 @@ name: Testing Claude Code hooks
 on:
   workflow_dispatch:
     inputs:
-      github_hosted:
+      dry_run:
         default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        description: Dry run mode (show structure without executing)
+        required: false
         type: boolean
 permissions:
   contents: read
