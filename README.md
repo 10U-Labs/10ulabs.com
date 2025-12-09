@@ -5,35 +5,33 @@
 ```
 bootstrap
     │
-    ├── www_shared
-    │       │
-    │       └── api_backend
-    │               │
-    │               └── endpoint_health
-    │                       │
-    │                       ├── api_shared_runners ─────────────────────────────────┐
-    │                       │       │                                                │
-    │                       │       └── endpoint_v1_image_for_ec2_runners_post       │
-    │                       │               │                                        │
-    │                       │               └── endpoint_v1_image_for_ec2_runners    │
-    │                       │                       │                                │
-    │                       │                       └── endpoint_v1_ec2_runner ──────┤
-    │                       │                                                        │
-    │                       └── api_shared_ecs_runner ───────────────────────────────┤
-    │                                                                                │
-    │                                               endpoint_v1_image_for_ecs_runners
-    │                                                            │
-    │                                               endpoint_v1_ecs_runner ──────────┤
-    │                                                                                │
-    │                                                                     endpoint_v1_runners
-    │                                                                                │
-    │                                 ┌───────────────────────────┬──────────────────┼──────────────────────┐
-    │                                 │                           │                  │                      │
-    │                         endpoint_v1_echo           endpoint_v1_contact         │         endpoint_v1_rack_designer
-    │                                                             │                  │                      │
-    │                                                        www_index               │         endpoint_v1_simulation_soc
-    │                                                                                │
-    └────────────────────────────────────────────────────────────────────────────────┤
+    └── www_shared
+            │
+            └── api_backend
+                    │
+                    └── endpoint_health
+                            │
+                            ├── api_shared_runners ─────────────────────────────────┐
+                            │       │                                                │
+                            │       └── endpoint_v1_image_for_ec2_runners_post       │
+                            │               │                                        │
+                            │               └── endpoint_v1_image_for_ec2_runners    │
+                            │                       │                                │
+                            │                       └── endpoint_v1_ec2_runner ──────┤
+                            │                                                        │
+                            └── api_shared_ecs_runner ───────────────────────────────┤
+                                                                                     │
+                                                        endpoint_v1_image_for_ecs_runners
+                                                                     │
+                                                        endpoint_v1_ecs_runner ──────┤
+                                                                                     │
+                                                                          endpoint_v1_runners
+                                                                                     │
+                              ┌──────────────────────────┬───────────────────────────┼───────────────────────────┐
+                              │                          │                           │                           │
+                      endpoint_v1_echo          endpoint_v1_contact                  │              endpoint_v1_rack_designer
+                                                         │                           │                           │
+                                                    www_index                        │              endpoint_v1_simulation_soc
                                                                                      │
                                                                               agents_shared
                                                                                      │
