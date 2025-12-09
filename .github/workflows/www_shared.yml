@@ -165,10 +165,10 @@ jobs:
           python3 -m pytest \
             test/www/shared/post_deployment/integration/ \
             --verbose --pythonwarnings=error
-      - if: github.event_name == 'workflow_dispatch'
-        name: Dispatch descendant workflows
-        env:
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: github.event_name == 'workflow_dispatch'
+        name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
           python3 scripts/dispatch_descendants.py \
