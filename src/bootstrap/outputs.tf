@@ -38,30 +38,17 @@ output "ssm_parameter_name_for_github_pat" {
   value = aws_ssm_parameter.github_pat.name
 }
 
-# ECR Outputs - Runners Repository
-output "ecr_runners_repository_arn" {
-  value = aws_ecr_repository.runners.arn
+# ECR Outputs
+output "ecr_repository_arn" {
+  value = aws_ecr_repository.main.arn
 }
 
-output "ecr_runners_repository_name" {
-  value = aws_ecr_repository.runners.name
+output "ecr_repository_name" {
+  value = aws_ecr_repository.main.name
 }
 
-output "ecr_runners_repository_url" {
-  value = aws_ecr_repository.runners.repository_url
-}
-
-# ECR Outputs - Agents Repository
-output "ecr_agents_repository_arn" {
-  value = aws_ecr_repository.agents.arn
-}
-
-output "ecr_agents_repository_name" {
-  value = aws_ecr_repository.agents.name
-}
-
-output "ecr_agents_repository_url" {
-  value = aws_ecr_repository.agents.repository_url
+output "ecr_repository_url" {
+  value = aws_ecr_repository.main.repository_url
 }
 
 # VPC Outputs

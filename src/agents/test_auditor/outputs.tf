@@ -1,6 +1,6 @@
 output "ecr_repository_url" {
   description = "The URL of the ECR repository for the agent container"
-  value       = data.terraform_remote_state.bootstrap.outputs.ecr_agents_repository_url
+  value       = data.terraform_remote_state.bootstrap.outputs.ecr_repository_url
 }
 
 output "agent_runtime_id" {
