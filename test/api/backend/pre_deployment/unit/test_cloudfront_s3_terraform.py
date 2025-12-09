@@ -19,35 +19,34 @@ def test_cloudfront_s3_terraform_file_exists():
     assert _get_cloudfront_s3_tf_path().exists()
 
 
-def test_s3_bucket_docs_exists():
-    """Verify S3 bucket for docs exists."""
+def test_docs_bucket_module_exists():
+    """Verify docs_bucket module is used for S3 bucket configuration."""
     content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_s3_bucket" "docs"' in content
+    assert 'module "docs_bucket"' in content
 
 
-def test_s3_bucket_versioning_resource_exists():
-    """Verify S3 bucket versioning resource exists."""
+def test_docs_bucket_module_uses_s3_bucket_source():
+    """Verify docs_bucket module uses s3_bucket module source."""
     content = _read_cloudfront_s3_tf()
-    assert 'aws_s3_bucket_versioning' in content
+    assert 'source = "../../../lib/terraform/modules/s3_bucket"' in content
 
 
-def test_s3_bucket_versioning_disabled():
-    """Verify S3 bucket versioning is disabled."""
+def test_docs_bucket_module_versioning_disabled():
+    """Verify docs_bucket module has versioning disabled."""
     content = _read_cloudfront_s3_tf()
-    assert 'Disabled' in content
+    assert 'versioning_enabled  = false' in content
 
 
-def test_s3_bucket_public_access_block_exists():
-    """Verify S3 bucket public access block exists."""
+def test_docs_bucket_module_has_force_destroy():
+    """Verify docs_bucket module has force_destroy enabled."""
     content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_s3_bucket_public_access_block" "docs"' in content
+    assert 'force_destroy       = true' in content
 
 
-def test_s3_bucket_encryption_exists():
-    """Verify S3 bucket encryption resource exists."""
+def test_docs_bucket_module_has_central_logs_bucket():
+    """Verify docs_bucket module has central_logs_bucket configured."""
     content = _read_cloudfront_s3_tf()
-    enc_resource = 'resource "aws_s3_bucket_server_side_encryption_configuration"'
-    assert enc_resource in content
+    assert 'central_logs_bucket = local.name_for_central_logs' in content
 
 
 def test_s3_object_index_html_exists():
@@ -80,10 +79,10 @@ def test_s3_bucket_policy_exists():
     assert 'resource "aws_s3_bucket_policy" "docs"' in content
 
 
-def test_wafv2_web_acl_exists():
-    """Verify WAFv2 Web ACL exists."""
+def test_api_waf_module_exists():
+    """Verify api_waf module is used for WAF configuration."""
     content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_wafv2_web_acl" "api"' in content
+    assert 'module "api_waf"' in content
 
 
 def test_cloudfront_cache_policy_exists():
@@ -158,67 +157,31 @@ def test_cloudfront_logging_bucket_uses_s3_domain():
     assert '.s3.amazonaws.com' in content
 
 
-def test_waf_cloudwatch_log_group_exists():
-    """Verify WAF CloudWatch log group exists."""
+def test_api_waf_module_uses_cloudfront_waf_source():
+    """Verify api_waf module uses cloudfront_waf module source."""
     content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_cloudwatch_log_group" "waf"' in content
+    assert 'source = "../../../lib/terraform/modules/cloudfront_waf"' in content
 
 
-def test_waf_log_group_has_correct_name_prefix():
-    """Verify WAF log group has correct name prefix."""
+def test_api_waf_module_uses_us_east_1_provider():
+    """Verify api_waf module uses us-east-1 provider."""
     content = _read_cloudfront_s3_tf()
-    assert 'aws-waf-logs-' in content
+    assert 'aws.us-east-1 = aws.us-east-1' in content
 
 
-def test_waf_log_group_name_is_aws_waf_logs_api():
-    """Verify WAF log group name is aws-waf-logs-api."""
+def test_api_waf_module_has_name():
+    """Verify api_waf module has name configured."""
     content = _read_cloudfront_s3_tf()
-    assert 'name              = "aws-waf-logs-api"' in content
+    assert 'name             = "ApiWafWebAcl"' in content
 
 
-def test_waf_log_group_retention_is_30_days():
-    """Verify WAF log group retention is 30 days."""
+def test_api_waf_module_has_metric_name():
+    """Verify api_waf module has metric_name configured."""
     content = _read_cloudfront_s3_tf()
-    assert 'retention_in_days = 30' in content
+    assert 'metric_name      = "ApiWafMetrics"' in content
 
 
-def test_waf_log_group_uses_us_east_1_provider():
-    """Verify WAF log group uses us-east-1 provider."""
+def test_api_waf_module_has_log_group_suffix():
+    """Verify api_waf module has log_group_suffix configured."""
     content = _read_cloudfront_s3_tf()
-    assert 'provider = aws.us-east-1' in content
-
-
-def test_waf_log_group_has_name_tag():
-    """Verify WAF log group has Name tag."""
-    content = _read_cloudfront_s3_tf()
-    assert 'Name = "aws-waf-logs-api"' in content
-
-
-def test_waf_logging_configuration_exists():
-    """Verify WAF logging configuration exists."""
-    content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_wafv2_web_acl_logging_configuration" "api"' in content
-
-
-def test_waf_logging_configuration_uses_us_east_1_provider():
-    """Verify WAF logging configuration uses us-east-1 provider."""
-    content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_wafv2_web_acl_logging_configuration" "api"' in content
-
-
-def test_waf_logging_uses_log_group():
-    """Verify WAF logging uses log group."""
-    content = _read_cloudfront_s3_tf()
-    assert 'aws_cloudwatch_log_group.waf.arn' in content
-
-
-def test_waf_logging_uses_web_acl_arn():
-    """Verify WAF logging uses Web ACL ARN."""
-    content = _read_cloudfront_s3_tf()
-    assert 'resource_arn            = aws_wafv2_web_acl.api.arn' in content
-
-
-def test_waf_logging_has_log_destination_configs():
-    """Verify WAF logging has log destination configs."""
-    content = _read_cloudfront_s3_tf()
-    assert 'log_destination_configs' in content
+    assert 'log_group_suffix = "api"' in content

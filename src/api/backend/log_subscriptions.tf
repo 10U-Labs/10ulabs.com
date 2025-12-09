@@ -19,7 +19,7 @@ resource "aws_cloudwatch_log_subscription_filter" "api_gateway" {
 resource "aws_cloudwatch_log_subscription_filter" "waf" {
   provider        = aws.us-east-1
   name            = "waf-to-firehose"
-  log_group_name  = aws_cloudwatch_log_group.waf.name
+  log_group_name  = module.api_waf.log_group_name
   filter_pattern  = ""
   destination_arn = aws_kinesis_firehose_delivery_stream.waf_logs.arn
   role_arn        = aws_iam_role.cloudwatch_logs_firehose_waf.arn
