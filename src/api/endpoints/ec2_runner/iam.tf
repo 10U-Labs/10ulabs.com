@@ -65,7 +65,7 @@ resource "aws_iam_instance_profile" "ec2_runner" {
 }
 
 resource "aws_iam_role" "lambda" {
-  name = "${local.resource_prefix}-EC2RunnerLambda-Role"
+  name = local.lambda_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -79,7 +79,7 @@ resource "aws_iam_role" "lambda" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-EC2RunnerLambda-Role"
+    Name = local.lambda_role_name
   })
 }
 

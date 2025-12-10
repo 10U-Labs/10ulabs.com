@@ -6,7 +6,7 @@ locals {
   ec2_runner_ami_stable_tag    = "Stable"
   ec2_runner_managed_by_tag    = "api-ec2-runner"
   github_repo_full             = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
-  resource_prefix              = module.shared.resource_prefix
+  lambda_role_name             = "${module.shared.resource_prefix}EC2RunnerLambdaRole"
 
   common_tags = {
     ManagedBy = "terraform"
