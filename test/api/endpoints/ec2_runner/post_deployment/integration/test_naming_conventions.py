@@ -6,8 +6,8 @@ Names must use PascalCase (no dashes, underscores, or other separators).
 from naming_conventions import validate_name
 
 
-class TestDeployedIAMRoleNamingConventions:
-    """Tests for deployed IAM role naming conventions."""
+class TestDeployedNamingConventions:
+    """Tests for deployed resource naming conventions."""
 
     def test_ec2_runner_lambda_role_name_is_pascalcase(
         self, iam_client, lambda_role_name
@@ -31,10 +31,6 @@ class TestDeployedIAMRoleNamingConventions:
             f"Deployed IAM role has invalid name '{actual_name}': {error}"
         )
 
-
-class TestDeployedLambdaFunctionNamingConventions:
-    """Tests for deployed Lambda function naming conventions."""
-
     def test_ec2_runner_handler_function_name_is_pascalcase(
         self, lambda_client, lambda_function_name
     ):
@@ -44,14 +40,4 @@ class TestDeployedLambdaFunctionNamingConventions:
         error = validate_name(actual_name)
         assert error is None, (
             f"Deployed Lambda function has invalid name '{actual_name}': {error}"
-        )
-
-    def test_ec2_runner_handler_function_name_has_no_dashes(
-        self, lambda_client, lambda_function_name
-    ):
-        """Verify EC2RunnerHandler Lambda function name has no dashes."""
-        response = lambda_client.get_function(FunctionName=lambda_function_name)
-        actual_name = response['Configuration']['FunctionName']
-        assert '-' not in actual_name, (
-            f"Deployed Lambda function has dashes in name '{actual_name}'"
         )
