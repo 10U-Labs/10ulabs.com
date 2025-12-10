@@ -156,7 +156,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_health \
             --repo ${{ github.repository }}
-name: Ensuring /health API endpoint exists and is properly configured
+name: Ensuring the /health API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

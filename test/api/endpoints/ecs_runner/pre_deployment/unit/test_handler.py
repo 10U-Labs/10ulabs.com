@@ -367,17 +367,51 @@ def test_launch_fargate_runner_ecs_run_task_success(mock_boto_client, ecs_runner
 
 
 @patch('boto3.client')
-def test_launch_fargate_runner_uses_fargate(mock_boto_client, ecs_runner_handler):
-    """Test launch fargate runner uses fargate."""
+def test_launch_fargate_runner_uses_spot_when_configured(mock_boto_client, ecs_runner_handler):
+    """Test launch fargate runner uses FARGATE_SPOT when USE_SPOT=true."""
     env = {
         'ECS_CLUSTER': 'test-cluster',
         'TASK_DEFINITION': 'test-task',
         'SUBNETS': 'subnet-1',
         'SECURITY_GROUPS': 'sg-1',
         'CONTAINER_NAME': 'test-container',
-        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
+        'GITHUB_TOKEN_SECRET_NAME': '/test/token',
+        'USE_SPOT': 'true'
     }
-    with patch.dict('os.environ', env):
+    with patch.dict('os.environ', env, clear=False):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+        mock_boto_client.side_effect = mock_client
+        reg_token_patch = patch.object(
+            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
+        )
+        with reg_token_patch:
+            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            call_args = mock_ecs.run_task.call_args
+            assert call_args[1]['capacityProviderStrategy'][0]['capacityProvider'] == 'FARGATE_SPOT'
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_uses_on_demand_when_configured(mock_boto_client, ecs_runner_handler):
+    """Test launch fargate runner uses FARGATE when USE_SPOT=false."""
+    env = {
+        'ECS_CLUSTER': 'test-cluster',
+        'TASK_DEFINITION': 'test-task',
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'CONTAINER_NAME': 'test-container',
+        'GITHUB_TOKEN_SECRET_NAME': '/test/token',
+        'USE_SPOT': 'false'
+    }
+    with patch.dict('os.environ', env, clear=False):
         mock_ecs = MagicMock()
         mock_ssm = MagicMock()
         mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
@@ -521,11 +555,19 @@ def test_wait_for_fargate_task_provisioned_returns_success_when_running(ecs_runn
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['success'] is True
+
+
+def test_wait_for_fargate_task_provisioned_not_spot_interrupted_when_running(ecs_runner_handler):
+    """Test wait for fargate task provisioned is not spot interrupted when running."""
+    task_status = {'status': 'RUNNING', 'stopped_reason': '', 'started_at': '2024-01-01'}
+    with patch.object(ecs_runner_handler, 'get_fargate_task_status', return_value=task_status):
+        task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
+        result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is False
 
 
-def test_wait_for_fargate_task_provisioned_detects_spot_interruption(ecs_runner_handler):
-    """Test wait for fargate task provisioned detects spot interruption."""
+def test_wait_for_fargate_task_provisioned_returns_failure_on_spot_interruption(ecs_runner_handler):
+    """Test wait for fargate task provisioned returns failure on spot interruption."""
     task_status = {
         'status': 'STOPPED',
         'stopped_reason': 'Your Spot Task was interrupted.',
@@ -535,6 +577,18 @@ def test_wait_for_fargate_task_provisioned_detects_spot_interruption(ecs_runner_
         task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
         result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['success'] is False
+
+
+def test_wait_for_fargate_task_provisioned_sets_spot_interrupted_flag(ecs_runner_handler):
+    """Test wait for fargate task provisioned sets spot interrupted flag."""
+    task_status = {
+        'status': 'STOPPED',
+        'stopped_reason': 'Your Spot Task was interrupted.',
+        'started_at': None
+    }
+    with patch.object(ecs_runner_handler, 'get_fargate_task_status', return_value=task_status):
+        task_arn = 'arn:aws:ecs:us-east-1:123:task/test'
+        result = ecs_runner_handler.wait_for_fargate_task_provisioned('test-cluster', task_arn)
         assert result['spot_interrupted'] is True
 
 

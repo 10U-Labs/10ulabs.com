@@ -1,0 +1,11 @@
+# Runner configuration for GitHub Actions self-hosted runners
+#
+# This file is the source of truth for runner infrastructure settings.
+# Terraform reads this and passes values to Lambda as environment variables.
+
+fargate:
+  use_spot: true
+
+ec2:
+  use_spot: true
+  instance_size: medium  # small, medium, large, xlarge

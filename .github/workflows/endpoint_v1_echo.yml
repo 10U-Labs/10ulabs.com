@@ -126,7 +126,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_v1_echo \
             --repo ${{ github.repository }}
-name: Ensuring /v1/echo API endpoint exists and is properly configured
+name: Ensuring the /v1/echo API endpoint exists and is properly configured
 on:
   workflow_call:
   workflow_dispatch:

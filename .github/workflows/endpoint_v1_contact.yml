@@ -135,7 +135,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_v1_contact \
             --repo ${{ github.repository }}
-name: Ensuring /v1/contact API endpoint exists and is properly configured
+name: Ensuring the /v1/contact API endpoint exists and is properly configured
 on:
   workflow_call:
   workflow_dispatch:

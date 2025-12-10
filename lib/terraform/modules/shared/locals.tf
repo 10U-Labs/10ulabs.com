@@ -4,6 +4,9 @@ locals {
   resource_prefix     = "TenULabs"
   ssm_github_pat_name = "/github/pat"
 
+  # Runner configuration for self-hosted GitHub Actions runners
+  runners_config = yamldecode(file("${path.module}/../../../../etc/runners.yml"))
+
   # AgentCore shared infrastructure
   agentcore = {
     execution_role_name = "${local.resource_prefix}AgentCoreExecutionRole"
