@@ -1,0 +1,33 @@
+"""Layer 4: Configuration - Verify terraform outputs are properly configured."""
+
+
+class TestTerraformOutputsConfiguration:
+    """Layer 4: Verify terraform outputs are accessible and valid."""
+
+    def test_01_ami_purpose_output_exists(self, api_backend_outputs):
+        """Verify ec2_runner_ami_purpose_value output is accessible."""
+        assert api_backend_outputs.get("ec2_runner_ami_purpose_value"), (
+            "Missing ec2_runner_ami_purpose_value output from api_backend. "
+            "Run terraform apply in src/api/backend/"
+        )
+
+    def test_02_ami_stable_tag_output_exists(self, api_backend_outputs):
+        """Verify ec2_runner_ami_stable_tag output is accessible."""
+        assert api_backend_outputs.get("ec2_runner_ami_stable_tag"), (
+            "Missing ec2_runner_ami_stable_tag output from api_backend. "
+            "Run terraform apply in src/api/backend/"
+        )
+
+    def test_03_ami_purpose_value_is_valid(self, ami_purpose_value):
+        """Verify the AMI purpose tag value is configured."""
+        assert ami_purpose_value, (
+            "AMI purpose value is empty. "
+            "Check ec2_runner_ami_purpose_value in api_backend terraform."
+        )
+
+    def test_04_ami_stable_tag_is_valid(self, ami_stable_tag):
+        """Verify the AMI stable tag name is configured."""
+        assert ami_stable_tag, (
+            "AMI stable tag is empty. "
+            "Check ec2_runner_ami_stable_tag in api_backend terraform."
+        )

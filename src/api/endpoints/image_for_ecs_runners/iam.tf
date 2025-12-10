@@ -75,7 +75,7 @@ resource "aws_iam_role_policy" "kms_access" {
         "kms:Decrypt",
         "kms:DescribeKey"
       ]
-      Resource = local.kms_lambda_alias
+      Resource = module.shared.kms_lambda_key_arn
     }]
   })
 }
