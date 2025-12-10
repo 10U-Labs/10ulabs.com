@@ -57,9 +57,9 @@ def test_fargate_task_fixture(test_context, ecr_image_count, ecs_context, config
         print("Skipping ECS runner test: ecr_image_count is 0")
         yield None
         return
-    runner_label = config['fargate_e2e_test']
+    runner_labels = config['fargate_e2e_test']
     job_id, payload = create_runner_job_payload(
-        test_context["github_repo"], [runner_label], test_context["github_run_id"]
+        test_context["github_repo"], runner_labels, test_context["github_run_id"]
     )
     response = make_e2e_post(
         f"{test_context['api_credentials']['url']}/v1/ecs-runner",
