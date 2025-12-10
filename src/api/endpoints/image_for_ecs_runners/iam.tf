@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda" {
-  name = "${local.resource_prefix}-ImageForDockerRunnersLambda-Role"
+  name = local.lambda_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ImageForDockerRunnersLambda-Role"
+    Name = local.lambda_role_name
   })
 }
 
@@ -60,5 +60,22 @@ resource "aws_iam_role_policy" "ssm_access" {
         Resource = [module.shared.ssm_github_pat_arn]
       }
     ]
+  })
+}
+
+resource "aws_iam_role_policy" "kms_access" {
+  name = "KMSDecryptPermissions"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = local.kms_lambda_alias
+    }]
   })
 }
