@@ -238,7 +238,7 @@ endpoint_health:
 endpoint_v1_contact:
   depends_on:
     - endpoint_v1_runners
-  name: Ensuring contact endpoint exists and is properly configured
+  name: Ensuring /v1/contact API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_contact.yml'
     - 'src/api/endpoints/contact/**'
@@ -256,7 +256,7 @@ endpoint_v1_ec2_runner:
 endpoint_v1_echo:
   depends_on:
     - endpoint_v1_runners
-  name: Ensuring echo endpoint exists and is properly configured
+  name: Ensuring /v1/echo API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_echo.yml'
     - 'src/api/endpoints/echo/**'
@@ -274,7 +274,7 @@ endpoint_v1_ecs_runner:
 endpoint_v1_image_for_ec2_runners:
   depends_on:
     - endpoint_v1_image_for_ec2_runners_post
-  name: Deploying image_for_ec2_runners endpoint
+  name: Ensuring /v1/image-for-ec2-runners API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_image_for_ec2_runners.yml'
     - 'src/api/endpoints/image_for_ec2_runners/endpoint/**'
@@ -291,7 +291,7 @@ endpoint_v1_image_for_ec2_runners_post:
 endpoint_v1_image_for_ecs_runners:
   depends_on:
     - endpoint_v1_image_for_ecs_runners_post
-  name: Ensuring /v1/image-for-ecs-runners exists and is properly configured
+  name: Ensuring /v1/image-for-ecs-runners API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_image_for_ecs_runners.yml'
     - 'src/api/endpoints/image_for_ecs_runners/lambda/**'
@@ -308,7 +308,7 @@ endpoint_v1_image_for_ecs_runners_post:
 endpoint_v1_rack_designer:
   depends_on:
     - endpoint_v1_runners
-  name: Ensuring Rack Designer exists and is properly configured
+  name: Ensuring /v1/rack-designer API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_rack_designer.yml'
     - 'src/api/endpoints/rack_designer/**'
