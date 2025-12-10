@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Pre-git checks hook that runs static analysis before git commit/push operations."""
+import ast
 import fnmatch
 import json
 import os
@@ -93,6 +94,101 @@ def run_lint_disable_check(changed_files):
         print("LINT DISABLE CHECK FAILED", file=sys.stderr)
         return False
     print("No lint disable patterns found in changed files.")
+    return True
+
+
+class AssertCounter(ast.NodeVisitor):
+    """AST visitor that counts assert statements in a function."""
+
+    def __init__(self):
+        self.count = 0
+
+    def visit_Assert(self, node):  # pylint: disable=invalid-name
+        """Count assert statements."""
+        self.count += 1
+        self.generic_visit(node)
+
+
+def count_asserts_in_function(func_node):
+    """Count the number of assert statements in a function node."""
+    counter = AssertCounter()
+    counter.visit(func_node)
+    return counter.count
+
+
+def check_file_for_single_assert(file_path):
+    """Check a test file for functions with multiple asserts.
+
+    Returns list of violations: (file_path, line_num, function_name, assert_count)
+    """
+    if not file_path.endswith('.py'):
+        return []
+
+    # Only check test files
+    if not (file_path.startswith('test/') or '/test_' in file_path
+            or file_path.startswith('tests/')):
+        return []
+
+    if not os.path.isfile(file_path):
+        return []
+
+    try:
+        with open(file_path, encoding='utf-8') as f:
+            source = f.read()
+    except (OSError, IOError):
+        return []
+
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+
+    violations = []
+
+    for node in ast.walk(tree):
+        # Check functions and methods
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Only check test functions
+            if not node.name.startswith('test_'):
+                continue
+
+            assert_count = count_asserts_in_function(node)
+
+            if assert_count > 1:
+                violations.append((
+                    file_path,
+                    node.lineno,
+                    node.name,
+                    assert_count
+                ))
+
+    return violations
+
+
+def run_single_assert_check(changed_files):
+    """Run single-assert-per-test check. Returns True if passed, False if failed."""
+    print("\n" + "="*60)
+    print("PHASE: SINGLE ASSERT CHECK")
+    print("="*60)
+
+    all_violations = []
+    for file_path in changed_files:
+        violations = check_file_for_single_assert(file_path)
+        all_violations.extend(violations)
+
+    if all_violations:
+        print("\nSINGLE ASSERT VIOLATIONS FOUND:")
+        for file_path, line_num, func_name, count in all_violations:
+            print(f"  {file_path}:{line_num} - {func_name}() has {count} asserts (should be 1)")
+        print("\n" + "="*60)
+        print("SINGLE ASSERT CHECK FAILED")
+        print("Each test function should have exactly one assert.")
+        print("Split tests with multiple asserts into separate test functions.")
+        print("="*60)
+        print("SINGLE ASSERT CHECK FAILED", file=sys.stderr)
+        return False
+
+    print("All test functions have single asserts.")
     return True
 
 
@@ -552,6 +648,9 @@ def main():
         print(f"  - {f}")
 
     if not run_lint_disable_check(changed_files):
+        sys.exit(2)
+
+    if not run_single_assert_check(changed_files):
         sys.exit(2)
 
     if not run_workflow_yaml_lint(changed_files):

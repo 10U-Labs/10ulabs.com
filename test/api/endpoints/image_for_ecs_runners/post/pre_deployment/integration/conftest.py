@@ -43,8 +43,9 @@ def terraform_initialized():
 @pytest.fixture(scope="session")
 def api_shared_ecr_outputs(request):
     """Get api_shared_ecr terraform outputs."""
-    if not request.getfixturevalue("terraform_initialized"):
-        pytest.skip("Terraform init failed for api_shared_ecr")
+    assert request.getfixturevalue("terraform_initialized"), (
+        "Terraform init failed for api_shared_ecr"
+    )
     return {
         "repository_name": _terraform_output(API_SHARED_ECR_DIR, "ecr_repository_name"),
         "repository_url": _terraform_output(API_SHARED_ECR_DIR, "ecr_repository_url"),
