@@ -73,3 +73,7 @@ output "agentcore" {
 output "runners_config" {
   value = local.runners_config
 }
+
+output "kms_lambda_key_arn" {
+  value = "arn:aws:kms:${local.aws_region}:${local.aws_account_id}:alias/aws/lambda"
+}

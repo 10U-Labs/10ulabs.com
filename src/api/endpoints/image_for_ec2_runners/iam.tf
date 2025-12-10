@@ -63,3 +63,20 @@ resource "aws_iam_role_policy" "ssm_access" {
     ]
   })
 }
+
+resource "aws_iam_role_policy" "kms_decrypt" {
+  name = "KMSDecryptPermissions"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = module.shared.kms_lambda_key_arn
+    }]
+  })
+}
