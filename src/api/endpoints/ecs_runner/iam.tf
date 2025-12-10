@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_execution" {
-  name = "${module.shared.resource_prefix}ecs-runner-lambda-role"
+  name = local.lambda_execution_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -16,7 +16,7 @@ resource "aws_iam_role" "lambda_execution" {
 }
 
 resource "aws_iam_role_policy" "lambda_execution" {
-  name = "${module.shared.resource_prefix}ecs-runner-lambda-policy"
+  name = "${module.shared.resource_prefix}EcsRunnerHandlerPolicy"
   role = aws_iam_role.lambda_execution.id
 
   policy = jsonencode({
