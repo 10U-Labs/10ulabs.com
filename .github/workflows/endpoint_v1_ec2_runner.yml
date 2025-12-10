@@ -117,26 +117,24 @@ jobs:
       - name: Run unit tests
         run: |
           python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/unit/ \
-            --confcutdir=test/api/endpoints/ec2_runner \
+            --confcutdir=test \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TEST_DIR=test/api/endpoints/ec2_runner
-          python3 -m pytest $TEST_DIR/pre_deployment/integration/ \
-            --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
+          python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/ec2_runner && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          TEST_DIR=test/api/endpoints/ec2_runner
-          python3 -m pytest $TEST_DIR/post_deployment/integration/ \
-            --confcutdir=$TEST_DIR --verbose --pythonwarnings=error
+          python3 -m pytest test/api/endpoints/ec2_runner/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         name: Run E2E tests
         run: |
           python3 -m pytest test/api/endpoints/ec2_runner/post_deployment/e2e/ \
-            --confcutdir=test/api/endpoints/ec2_runner \
+            --confcutdir=test \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
