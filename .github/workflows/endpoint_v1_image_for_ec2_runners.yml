@@ -147,7 +147,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_v1_image_for_ec2_runners \
             --repo ${{ github.repository }}
-name: Ensuring /v1/image-for-ec2-runners API endpoint exists and is properly configured
+name: Ensuring the /v1/image-for-ec2-runners API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:

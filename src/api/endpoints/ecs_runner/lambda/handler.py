@@ -535,6 +535,12 @@ FARGATE_SPOT_POLL_INTERVAL = 2
 FARGATE_SPOT_MAX_POLL_ATTEMPTS = 10
 
 
+def get_default_capacity_provider() -> str:
+    """Get the default capacity provider from config."""
+    use_spot = os.environ.get('USE_SPOT', 'true').lower() == 'true'
+    return 'FARGATE_SPOT' if use_spot else 'FARGATE'
+
+
 def get_fargate_task_status(cluster: str, task_arn: str) -> Dict[str, Any]:
     """Get the current status of a Fargate task."""
     try:
@@ -591,9 +597,10 @@ def _get_capacity_provider(job_labels: List[str]) -> str:
             return 'FARGATE_SPOT'
         return 'FARGATE'
     except (LabelParseError, LabelValidationError) as e:
-        # If labels can't be parsed (legacy format), default to FARGATE_SPOT
-        logger.warning("Could not parse labels, defaulting to FARGATE_SPOT: %s", e)
-        return 'FARGATE_SPOT'
+        # If labels can't be parsed (legacy format), use config default
+        default = get_default_capacity_provider()
+        logger.warning("Could not parse labels, defaulting to %s: %s", default, e)
+        return default
 
 
 def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:

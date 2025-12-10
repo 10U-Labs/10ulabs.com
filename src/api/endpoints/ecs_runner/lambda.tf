@@ -19,6 +19,7 @@ resource "aws_lambda_function" "handler" {
       SECURITY_GROUPS          = data.terraform_remote_state.api_shared_runners.outputs.runner_security_group_id
       SUBNETS                  = data.terraform_remote_state.api_shared_runners.outputs.vpc_public_subnet_ids
       TASK_DEFINITION          = aws_ecs_task_definition.runner.arn
+      USE_SPOT                 = tostring(module.shared.runners_config.fargate.use_spot)
       VPC_ID                   = data.terraform_remote_state.api_shared_runners.outputs.vpc_id
       WORKFLOW_RUNNERS_TABLE   = data.terraform_remote_state.runners.outputs.workflow_runners_table_name
     }

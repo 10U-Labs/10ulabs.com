@@ -69,3 +69,7 @@ output "github_app_ssm_arns" {
 output "agentcore" {
   value = local.agentcore
 }
+
+output "runners_config" {
+  value = local.runners_config
+}
