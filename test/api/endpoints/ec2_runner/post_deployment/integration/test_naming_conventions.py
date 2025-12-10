@@ -54,3 +54,15 @@ class TestDeployedLambdaFunctionNamingConventions:
             )
         except lambda_client.exceptions.ResourceNotFoundException:
             pytest.skip(f"Lambda function '{function_name}' not deployed")
+
+    def test_ec2_runner_handler_function_name_has_no_dashes(self, lambda_client, config):
+        """Verify EC2RunnerHandler Lambda function name has no dashes."""
+        function_name = config.get('ec2_runner_handler_function_name', 'TenULabsEC2RunnerHandler')
+        try:
+            response = lambda_client.get_function(FunctionName=function_name)
+            actual_name = response['Configuration']['FunctionName']
+            assert '-' not in actual_name, (
+                f"Deployed Lambda function has dashes in name '{actual_name}'"
+            )
+        except lambda_client.exceptions.ResourceNotFoundException:
+            pytest.skip(f"Lambda function '{function_name}' not deployed")
