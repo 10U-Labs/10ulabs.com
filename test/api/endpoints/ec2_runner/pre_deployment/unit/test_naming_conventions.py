@@ -25,6 +25,21 @@ def get_resource_prefix() -> str:
     return match.group(1) if match else "TenULabs"
 
 
+def get_local_values(tf_dir: Path) -> dict:
+    """Extract local values from locals.tf in the given directory."""
+    locals_file = tf_dir / "locals.tf"
+    if not locals_file.exists():
+        return {}
+    with open(locals_file, encoding="utf-8") as f:
+        content = f.read()
+    locals_dict = {}
+    prefix = get_resource_prefix()
+    for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
+        value = match.group(2).replace("${module.shared.resource_prefix}", prefix)
+        locals_dict[match.group(1)] = value
+    return locals_dict
+
+
 def _find_block_end(content: str, start_pos: int) -> int:
     """Find the end position of a brace-delimited block."""
     brace_count = 0
@@ -46,6 +61,7 @@ def extract_iam_role_names(tf_file: Path) -> list:
         content = f.read()
 
     prefix = get_resource_prefix()
+    local_values = get_local_values(tf_file.parent)
     roles = []
 
     for match in re.finditer(r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{', content):
@@ -54,6 +70,10 @@ def extract_iam_role_names(tf_file: Path) -> list:
         if name_match:
             resolved = name_match.group(1).replace("${local.resource_prefix}", prefix)
             roles.append((match.group(1), resolved))
+        else:
+            local_match = re.search(r'^\s*name\s*=\s*local\.(\w+)', block_content, re.MULTILINE)
+            if local_match and local_match.group(1) in local_values:
+                roles.append((match.group(1), local_values[local_match.group(1)]))
 
     return roles
 

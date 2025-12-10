@@ -2,6 +2,7 @@
 import boto3
 import pytest
 
+from ...conftest import EC2_RUNNER_SRC, terraform_output
 from ..conftest import (
     api_key_fixture,
     api_url_fixture,
@@ -25,19 +26,19 @@ def lambda_client(aws_region):
 
 @pytest.fixture(scope="session")
 def lambda_role_name():
-    """Get the Lambda execution role name."""
-    return "TenULabs-EC2RunnerLambda-Role"
+    """Get the Lambda execution role name from terraform outputs."""
+    return terraform_output(EC2_RUNNER_SRC, "lambda_role_name")
 
 
 @pytest.fixture(scope="session")
 def lambda_function_name():
-    """Get the Lambda function name."""
-    return "TenULabsEC2RunnerHandler"
+    """Get the Lambda function name from terraform outputs."""
+    return terraform_output(EC2_RUNNER_SRC, "lambda_function_name")
 
 
 @pytest.fixture(scope="session")
 def lambda_role_arn(shared_config):
     """Get the full ARN for the Lambda execution role."""
     account_id = shared_config.get("aws_account_id", "")
-    role_name = "TenULabs-EC2RunnerLambda-Role"
+    role_name = terraform_output(EC2_RUNNER_SRC, "lambda_role_name")
     return f"arn:aws:iam::{account_id}:role/{role_name}"

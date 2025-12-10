@@ -5,6 +5,8 @@ from pathlib import Path
 import boto3
 import pytest
 
+from ...conftest import terraform_output
+
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
 IMAGE_FOR_EC2_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
@@ -21,19 +23,6 @@ def _terraform_init(directory: Path) -> bool:
         check=False
     )
     return result.returncode == 0
-
-
-def _terraform_output(directory: Path, name: str) -> str:
-    """Get a terraform output value."""
-    cmd = ["terraform", "output", "-raw", name]
-    result = subprocess.run(
-        cmd,
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
 
 
 @pytest.fixture(scope="session")
@@ -60,13 +49,13 @@ def image_for_ec2_runners_outputs(request):
     if not request.getfixturevalue("image_for_ec2_runners_terraform_initialized"):
         pytest.skip("Terraform init failed for image_for_ec2_runners")
     return {
-        "lambda_function_arn": _terraform_output(
+        "lambda_function_arn": terraform_output(
             IMAGE_FOR_EC2_RUNNERS_DIR, "lambda_function_arn"
         ),
-        "lambda_function_name": _terraform_output(
+        "lambda_function_name": terraform_output(
             IMAGE_FOR_EC2_RUNNERS_DIR, "lambda_function_name"
         ),
-        "lambda_invoke_arn": _terraform_output(
+        "lambda_invoke_arn": terraform_output(
             IMAGE_FOR_EC2_RUNNERS_DIR, "lambda_invoke_arn"
         ),
     }
@@ -78,11 +67,11 @@ def runners_outputs(request):
     if not request.getfixturevalue("runners_terraform_initialized"):
         pytest.skip("Terraform init failed for runners")
     return {
-        "vpc_id": _terraform_output(RUNNERS_DIR, "vpc_id"),
-        "vpc_public_subnet_ids": _terraform_output(
+        "vpc_id": terraform_output(RUNNERS_DIR, "vpc_id"),
+        "vpc_public_subnet_ids": terraform_output(
             RUNNERS_DIR, "vpc_public_subnet_ids"
         ),
-        "runner_security_group_id": _terraform_output(
+        "runner_security_group_id": terraform_output(
             RUNNERS_DIR, "runner_security_group_id"
         ),
     }

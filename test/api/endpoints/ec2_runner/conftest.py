@@ -1,6 +1,7 @@
 """Pytest fixtures for EC2 runner tests."""
 import importlib
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -13,6 +14,18 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
+
+
+def terraform_output(directory: Path, name: str) -> str:
+    """Get a terraform output value from the specified directory."""
+    result = subprocess.run(
+        ["terraform", "output", "-raw", name],
+        cwd=str(directory),
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 # Add lib/python to path for unit tests that use --confcutdir
 LIB_DIR = REPO_ROOT / "lib" / "python"
