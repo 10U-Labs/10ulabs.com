@@ -42,3 +42,9 @@ def lambda_role_arn(shared_config):
     account_id = shared_config.get("aws_account_id", "")
     role_name = terraform_output(EC2_RUNNER_SRC, "lambda_role_name")
     return f"arn:aws:iam::{account_id}:role/{role_name}"
+
+
+@pytest.fixture(scope="session")
+def ec2_runner_role_name():
+    """Get the EC2 runner IAM role name from terraform outputs."""
+    return terraform_output(EC2_RUNNER_SRC, "ec2_runner_role_name")
