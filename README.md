@@ -35,45 +35,45 @@ bootstrap
                                                          │                           │                           │
                                                     www_index                        │              endpoint_v1_simulation_soc
                                                                                      │
-                                                                              agents_shared
+                                                                        endpoint_v1_agents_shared
                                                                                      │
-                                                              agents_troubleshooter_of_workflows
+                                                              endpoint_v1_agents_troubleshooter_of_workflows
                                                                                      │
                     ┌────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┐
                     │                                                                │                                                                │
-            agents_agent_*                                                   agents_workflow_*                                               agents_*_of_*_tests
-    (agent_creator, agent_deleter,                                   (workflow_creator, workflow_deleter,                            (creator_of_unit_tests, etc.)
-     agent_evaluator, agent_modifier)                                 workflow_evaluator, workflow_modifier)
+    endpoint_v1_agents_*_of_agents                            endpoint_v1_agents_*_of_workflows                            endpoint_v1_agents_*_of_*_tests
+    (creator_of_agents, deleter_of_agents,                    (creator_of_workflows, deleter_of_workflows,                 (creator_of_unit_tests, etc.)
+     evaluator_of_agents, modifier_of_agents)                  evaluator_of_workflows, modifier_of_workflows)
 ```
 
 ## Deployment Status
 
 - [x] `bootstrap.yml`
-- [ ] `agents_shared.yml`
+- [ ] `endpoint_v1_agents_shared.yml`
 - [ ] `api_shared_runners.yml`
 - [ ] `api_shared_ecs_runner.yml`
-- [ ] `agents_agent_creator.yml`
-- [ ] `agents_agent_deleter.yml`
-- [ ] `agents_agent_evaluator.yml`
-- [ ] `agents_agent_modifier.yml`
-- [ ] `agents_code_reviewer_for_pre_deployment_integration_tests.yml`
-- [ ] `agents_creator_of_e2e_tests.yml`
-- [ ] `agents_creator_of_post_deployment_integration_tests.yml`
-- [ ] `agents_creator_of_pre_deployment_integration_tests.yml`
-- [ ] `agents_creator_of_unit_tests.yml`
-- [ ] `agents_deleter_of_e2e_tests.yml`
-- [ ] `agents_deleter_of_post_deployment_integration_tests.yml`
-- [ ] `agents_deleter_of_pre_deployment_integration_tests.yml`
-- [ ] `agents_deleter_of_unit_tests.yml`
-- [ ] `agents_modifier_of_e2e_tests.yml`
-- [ ] `agents_modifier_of_post_deployment_integration_tests.yml`
-- [ ] `agents_modifier_of_pre_deployment_integration_tests.yml`
-- [ ] `agents_modifier_of_unit_tests.yml`
-- [ ] `agents_workflow_creator.yml`
-- [ ] `agents_workflow_deleter.yml`
-- [ ] `agents_workflow_evaluator.yml`
-- [ ] `agents_troubleshooter_of_workflows.yml`
-- [ ] `agents_workflow_modifier.yml`
+- [ ] `endpoint_v1_agents_creator_of_agents.yml`
+- [ ] `endpoint_v1_agents_deleter_of_agents.yml`
+- [ ] `endpoint_v1_agents_evaluator_of_agents.yml`
+- [ ] `endpoint_v1_agents_modifier_of_agents.yml`
+- [ ] `endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_creator_of_e2e_tests.yml`
+- [ ] `endpoint_v1_agents_creator_of_post_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_creator_of_pre_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_creator_of_unit_tests.yml`
+- [ ] `endpoint_v1_agents_deleter_of_e2e_tests.yml`
+- [ ] `endpoint_v1_agents_deleter_of_post_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_deleter_of_pre_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_deleter_of_unit_tests.yml`
+- [ ] `endpoint_v1_agents_modifier_of_e2e_tests.yml`
+- [ ] `endpoint_v1_agents_modifier_of_post_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_modifier_of_pre_deployment_integration_tests.yml`
+- [ ] `endpoint_v1_agents_modifier_of_unit_tests.yml`
+- [ ] `endpoint_v1_agents_creator_of_workflows.yml`
+- [ ] `endpoint_v1_agents_deleter_of_workflows.yml`
+- [ ] `endpoint_v1_agents_evaluator_of_workflows.yml`
+- [ ] `endpoint_v1_agents_troubleshooter_of_workflows.yml`
+- [ ] `endpoint_v1_agents_modifier_of_workflows.yml`
 - [x] `www_shared.yml`
 - [x] `api_backend.yml`
 - [x] `endpoint_health.yml`

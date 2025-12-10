@@ -7,7 +7,7 @@ jobs:
     if: >-
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
-    name: Deploy Agent Creator
+    name: Deploy Troubleshooter of Workflows Agent
     runs-on: >-
       ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
             github.event.inputs.github_hosted == 'true' ||
@@ -63,7 +63,8 @@ jobs:
         name: Install Python dependencies
         run: |
           python3 -m pip install \
-            pylint mypy yamllint pytest boto3 boto3-stubs requests
+            pylint mypy yamllint pytest boto3 boto3-stubs requests \
+            PyJWT cryptography
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -75,20 +76,22 @@ jobs:
           tflint_version: latest
       - name: Terraform Format Check
         run: |
-          cd src/api/endpoints/agents/agent_creator
+          cd src/api/endpoints/agents/troubleshooter_of_workflows
           terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: |
-          cd src/api/endpoints/agents/agent_creator && terraform init
+          cd src/api/endpoints/agents/troubleshooter_of_workflows
+          terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: |
-          cd src/api/endpoints/agents/agent_creator
+          cd src/api/endpoints/agents/troubleshooter_of_workflows
           tflint --init && tflint
       - name: Terraform Plan
         run: |
-          cd src/api/endpoints/agents/agent_creator && terraform plan
+          cd src/api/endpoints/agents/troubleshooter_of_workflows
+          terraform plan
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -98,25 +101,32 @@ jobs:
           RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/agents_agent_creator.yml
-      - name: Run pylint
+            .github/workflows/endpoint_v1_agents_troubleshooter_of_workflows.yml
+      - env:
+          PYTHONPATH: src/bootstrap/lambda_layer
+        name: Run pylint
         run: |
-          python3 -m pylint \
-            src/api/endpoints/agents/agent_creator/webhook_lambda/ \
+          SRC=src/api/endpoints/agents/troubleshooter_of_workflows
+          python3 -m pylint $SRC/webhook_lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
-      - name: Run mypy
+      - env:
+          MYPYPATH: src/bootstrap/lambda_layer
+          PYTHONPATH: src/bootstrap/lambda_layer
+        name: Run mypy
         run: |
           python3 -m mypy \
-            src/api/endpoints/agents/agent_creator/webhook_lambda/
-      - name: Run unit tests
+            src/api/endpoints/agents/troubleshooter_of_workflows/webhook_lambda/
+      - env:
+          PYTHONPATH: src/bootstrap/lambda_layer
+        name: Run unit tests
         run: |
-          python3 -m pytest \
-            test/api/endpoints/agents/agent_creator/pre_deployment/unit/ \
+          TEST_PATH=test/api/endpoints/agents/troubleshooter_of_workflows
+          python3 -m pytest $TEST_PATH/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          TEST_PATH=test/api/endpoints/agents/agent_creator
+          TEST_PATH=test/api/endpoints/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/pre_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Login to Amazon ECR
@@ -127,8 +137,8 @@ jobs:
         with:
           images: ${{ steps.config.outputs.ecr_repository_url }}
           tags: |
-            type=sha,prefix=agent-creator-
-            type=raw,value=agent-creator-latest
+            type=sha,prefix=troubleshooter-of-workflows-
+            type=raw,value=troubleshooter-of-workflows-latest
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -138,18 +148,24 @@ jobs:
         name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: src/api/endpoints/agents/agent_creator/agent_code
+          context: >-
+            src/api/endpoints/agents/troubleshooter_of_workflows/agent_code
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
       - name: Terraform Apply
         run: |
-          cd src/api/endpoints/agents/agent_creator
+          cd src/api/endpoints/agents/troubleshooter_of_workflows
           terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          TEST_PATH=test/api/endpoints/agents/agent_creator
+          TEST_PATH=test/api/endpoints/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/post_deployment/integration/ \
+            --verbose --pythonwarnings=error
+      - name: Run E2E tests
+        run: |
+          TEST_PATH=test/api/endpoints/agents/troubleshooter_of_workflows
+          python3 -m pytest $TEST_PATH/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -165,9 +181,9 @@ jobs:
           if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
           python3 scripts/dispatch_descendants.py \
             $SKIP_FLAG \
-            --workflow agents_agent_creator \
+            --workflow endpoint_v1_agents_troubleshooter_of_workflows \
             --repo ${{ github.repository }}
-name: Deploying Agent Creator
+name: Deploying Troubleshooter of Workflows Agent
 on:
   workflow_dispatch:
     inputs:
