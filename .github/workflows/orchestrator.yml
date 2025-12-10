@@ -46,7 +46,6 @@ jobs:
           echo "Getting changed files..."
           echo "Event before: ${{ github.event.before }}"
           echo "Current SHA: ${{ github.sha }}"
-          
           # More robust base commit detection
           if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
             # Initial commit or force push
@@ -60,7 +59,6 @@ jobs:
             BASE="HEAD~1"
             echo "Fallback to HEAD~1 due to missing commit"
           fi
-          
           # Get changed files with error handling
           if CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}" 2>/dev/null); then
             echo "Successfully got changed files using git diff"
@@ -68,10 +66,8 @@ jobs:
             echo "Warning: git diff failed, using git show for current commit"
             CHANGED=$(git show --name-only --format="" "${{ github.sha }}" || echo "")
           fi
-          
           echo "Changed files:"
           echo "$CHANGED"
-          
           # Use a more secure EOF marker
           EOF_MARKER=$(openssl rand -hex 8)
           {
@@ -89,7 +85,6 @@ jobs:
           CHANGED="${{ steps.files.outputs.changed }}"
           echo "Checking if static analysis should run..."
           echo "Changed files: $CHANGED"
-          
           PATTERNS=(
             ".github/workflows/orchestrator.yml"
             "etc/workflow-dependencies.yml"
@@ -112,7 +107,6 @@ jobs:
           CHANGED="${{ steps.files.outputs.changed }}"
           echo "Checking if unit testing should run..."
           echo "Changed files: $CHANGED"
-          
           PATTERNS=(
             "scripts/compute_root_workflows.py"
             "scripts/execute_workflow_plan.py"
@@ -196,7 +190,6 @@ jobs:
           echo "Computing root workflows..."
           GRAPH="etc/workflow-dependencies.yml"
           START_FROM="${{ inputs.start_from }}"
-          
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
             # Support comma-separated workflows (trim spaces, convert to newlines)
@@ -205,17 +198,14 @@ jobs:
             CHANGED="${{ steps.files.outputs.changed }}"
             echo "Changed files for workflow computation:"
             echo "$CHANGED"
-            
             # Get all level-1 workflows (independent roots)
             JQ='[.[] | select(.level == 1) | .name] | join("\n")'
             ROOTS=$(echo "$CHANGED" | \
               python3 scripts/compute_root_workflows.py \
               --graph $GRAPH --levels --indexed | jq -r "$JQ" || echo "")
           fi
-          
           echo "Root workflows computed:"
           echo "$ROOTS"
-          
           # Use a more secure EOF marker
           EOF_MARKER=$(openssl rand -hex 8)
           {
@@ -245,32 +235,27 @@ jobs:
         run: |
           echo "Dispatching root workflows..."
           ROOTS="${{ steps.plan.outputs.root_workflows }}"
-          
           # Check if gh CLI is available and authenticated
           if ! command -v gh >/dev/null 2>&1; then
             echo "Error: gh CLI not found"
             exit 1
           fi
-          
           # Verify authentication
           if ! gh auth status >/dev/null 2>&1; then
             echo "Error: gh CLI not authenticated"
             echo "GH_TOKEN length: ${#GH_TOKEN}"
             exit 1
           fi
-          
           DISPATCH_COUNT=0
           echo "$ROOTS" | while read -r WORKFLOW; do
             if [ -n "$WORKFLOW" ]; then
               echo "Dispatching ${WORKFLOW}.yml..."
               WORKFLOW_FILE=".github/workflows/${WORKFLOW}.yml"
-              
               # Verify workflow file exists
               if [ ! -f "$WORKFLOW_FILE" ]; then
                 echo "Warning: Workflow file $WORKFLOW_FILE not found, skipping"
                 continue
               fi
-              
               # Dispatch with error handling
               if gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }}; then
                 echo "  ✓ Successfully dispatched ${WORKFLOW}.yml"
@@ -280,7 +265,6 @@ jobs:
               fi
             fi
           done
-          
           echo "Workflow dispatch completed"
           echo "Successfully dispatched $DISPATCH_COUNT workflow(s)"
           echo "Descendants will be triggered by each workflow's dispatch step"
