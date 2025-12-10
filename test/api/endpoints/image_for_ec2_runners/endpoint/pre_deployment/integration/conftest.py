@@ -2,7 +2,6 @@
 import subprocess
 from pathlib import Path
 
-import boto3
 import pytest
 
 
@@ -33,12 +32,6 @@ def _terraform_output(directory: Path, name: str) -> str:
         check=False
     )
     return result.stdout.strip() if result.returncode == 0 else ""
-
-
-@pytest.fixture(scope="session")
-def ec2_client(aws_region):
-    """Create an EC2 client."""
-    return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
