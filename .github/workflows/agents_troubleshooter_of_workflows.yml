@@ -169,11 +169,17 @@ jobs:
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.event_name == 'workflow_dispatch'
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.skip_descendants != 'true'
         name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
+          SKIP_FLAG=""
+          SKIP_INPUT="${{ github.event.inputs.skip_descendants }}"
+          if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
           python3 scripts/dispatch_descendants.py \
+            $SKIP_FLAG \
             --workflow agents_troubleshooter_of_workflows \
             --repo ${{ github.repository }}
 name: Deploying Troubleshooter of Workflows Agent
@@ -188,6 +194,10 @@ on:
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
+        type: boolean
+      skip_descendants:
+        default: false
+        description: Skip dispatching descendant workflows
         type: boolean
 permissions:
   actions: write

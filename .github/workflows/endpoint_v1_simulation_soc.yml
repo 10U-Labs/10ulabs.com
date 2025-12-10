@@ -170,11 +170,17 @@ jobs:
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.event_name == 'workflow_dispatch'
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.skip_descendants != 'true'
         name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
+          SKIP_FLAG=""
+          SKIP_INPUT="${{ github.event.inputs.skip_descendants }}"
+          if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
           python3 scripts/dispatch_descendants.py \
+            $SKIP_FLAG \
             --workflow endpoint_v1_simulation_soc \
             --repo ${{ github.repository }}
 name: >-
@@ -190,6 +196,10 @@ on:
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation
+        type: boolean
+      skip_descendants:
+        default: false
+        description: Skip dispatching descendant workflows
         type: boolean
 permissions:
   actions: write
