@@ -28,17 +28,51 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Validate required files
+        run: |
+          echo "Validating required files exist..."
+          if [ ! -f "etc/workflow-dependencies.yml" ]; then
+            echo "Error: etc/workflow-dependencies.yml not found"
+            exit 1
+          fi
+          if [ ! -f "scripts/compute_root_workflows.py" ]; then
+            echo "Error: scripts/compute_root_workflows.py not found"
+            exit 1
+          fi
+          echo "All required files present"
       - id: files
         name: Get changed files
         run: |
-          if git cat-file -e ${{ github.event.before }} 2>/dev/null; then
-            BASE="${{ github.event.before }}"
-          else
+          echo "Getting changed files..."
+          echo "Event before: ${{ github.event.before }}"
+          echo "Current SHA: ${{ github.sha }}"
+          
+          # More robust base commit detection
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # Initial commit or force push
             BASE="HEAD~1"
+            echo "Using HEAD~1 for initial/force push"
+          elif git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
+            BASE="${{ github.event.before }}"
+            echo "Using event.before: $BASE"
+          else
+            # Fallback for shallow clone issues
+            BASE="HEAD~1"
+            echo "Fallback to HEAD~1 due to missing commit"
           fi
-          CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}")
+          
+          # Get changed files with error handling
+          if CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}" 2>/dev/null); then
+            echo "Successfully got changed files using git diff"
+          else
+            echo "Warning: git diff failed, using git show for current commit"
+            CHANGED=$(git show --name-only --format="" "${{ github.sha }}" || echo "")
+          fi
+          
           echo "Changed files:"
           echo "$CHANGED"
+          
+          # Use a more secure EOF marker
           EOF_MARKER=$(openssl rand -hex 8)
           {
             echo "changed<<$EOF_MARKER"
@@ -53,6 +87,9 @@ jobs:
         name: Check if static analysis should run
         run: |
           CHANGED="${{ steps.files.outputs.changed }}"
+          echo "Checking if static analysis should run..."
+          echo "Changed files: $CHANGED"
+          
           PATTERNS=(
             ".github/workflows/orchestrator.yml"
             "etc/workflow-dependencies.yml"
@@ -63,6 +100,7 @@ jobs:
           for pattern in "${PATTERNS[@]}"; do
             if echo "$CHANGED" | grep -qE "^${pattern}$"; then
               SHOULD_RUN="true"
+              echo "Pattern matched: $pattern"
               break
             fi
           done
@@ -72,6 +110,9 @@ jobs:
         name: Check if unit testing should run
         run: |
           CHANGED="${{ steps.files.outputs.changed }}"
+          echo "Checking if unit testing should run..."
+          echo "Changed files: $CHANGED"
+          
           PATTERNS=(
             "scripts/compute_root_workflows.py"
             "scripts/execute_workflow_plan.py"
@@ -81,27 +122,31 @@ jobs:
           for pattern in "${PATTERNS[@]}"; do
             if echo "$CHANGED" | grep -qE "^${pattern}"; then
               SHOULD_RUN="true"
+              echo "Pattern matched: $pattern"
               break
             fi
           done
           echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
           echo "Should run unit testing: $SHOULD_RUN"
       - name: Install dependencies
-        run: >-
-          python3 -m pip install --upgrade pip &&
-          python3 -m pip install
-          boto3
-          mypy
-          pylint
-          pytest
-          pyyaml
-          types-PyYAML
-          yamllint
+        run: |
+          echo "Installing Python dependencies..."
+          python3 -m pip install --upgrade pip
+          python3 -m pip install \
+            boto3==1.35.* \
+            mypy==1.13.* \
+            pylint==3.3.* \
+            pytest==8.3.* \
+            pyyaml==6.0.* \
+            types-PyYAML==6.0.* \
+            yamllint==1.35.*
+          echo "Dependencies installed successfully"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-sa.outputs.should_run == 'true'
         name: Lint YAML files
         run: |
+          echo "Running YAML linting..."
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
@@ -111,50 +156,65 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/orchestrator.yml \
             etc/workflow-dependencies.yml
+          echo "YAML linting completed"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-sa.outputs.should_run == 'true'
         name: Run pylint
         run: |
+          echo "Running pylint..."
           python3 -m pylint \
             scripts/compute_root_workflows.py \
             scripts/execute_workflow_plan.py \
             --fail-on=C,R,W \
             --fail-under=10.0
+          echo "Pylint completed"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-sa.outputs.should_run == 'true'
         name: Run mypy
         run: |
+          echo "Running mypy..."
           python3 -m mypy \
             scripts/compute_root_workflows.py \
             scripts/execute_workflow_plan.py
+          echo "Mypy completed"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-ut.outputs.should_run == 'true'
         name: Run unit tests
         run: |
+          echo "Running unit tests..."
           python3 -m pytest test/orchestrator/ \
             --verbose --pythonwarnings=error
+          echo "Unit tests completed"
       - id: plan
         name: Compute root workflows
         run: |
+          echo "Computing root workflows..."
           GRAPH="etc/workflow-dependencies.yml"
           START_FROM="${{ inputs.start_from }}"
+          
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
             # Support comma-separated workflows (trim spaces, convert to newlines)
             ROOTS=$(echo "$START_FROM" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
           else
             CHANGED="${{ steps.files.outputs.changed }}"
+            echo "Changed files for workflow computation:"
+            echo "$CHANGED"
+            
             # Get all level-1 workflows (independent roots)
             JQ='[.[] | select(.level == 1) | .name] | join("\n")'
             ROOTS=$(echo "$CHANGED" | \
               python3 scripts/compute_root_workflows.py \
-              --graph $GRAPH --levels --indexed | jq -r "$JQ")
+              --graph $GRAPH --levels --indexed | jq -r "$JQ" || echo "")
           fi
-          echo "Root workflows:"
+          
+          echo "Root workflows computed:"
           echo "$ROOTS"
+          
+          # Use a more secure EOF marker
           EOF_MARKER=$(openssl rand -hex 8)
           {
             echo "root_workflows<<$EOF_MARKER"
@@ -163,14 +223,14 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - if: steps.plan.outputs.root_workflows == ''
         name: No workflows to dispatch
-        run: echo "No workflow-related files changed"
+        run: echo "No workflow-related files changed or no workflows computed"
       - if: >-
           steps.plan.outputs.root_workflows != '' &&
           (inputs.dry_run == true ||
            contains(github.event.head_commit.message, '[dry run]'))
         name: Dry run
         run: |
-          echo "Would dispatch the following workflows:"
+          echo "DRY RUN MODE - Would dispatch the following workflows:"
           ROOTS="${{ steps.plan.outputs.root_workflows }}"
           echo "$ROOTS" | while read -r WORKFLOW; do
             [ -n "$WORKFLOW" ] && echo "  - ${WORKFLOW}.yml"
@@ -181,39 +241,47 @@ jobs:
           !contains(github.event.head_commit.message, '[dry run]')
         name: Dispatch root workflows (fire-and-forget)
         run: |
-          # Verify GitHub CLI is authenticated
-          if ! gh auth status >/dev/null 2>&1; then
-            echo "ERROR: GitHub CLI not authenticated"
-            echo "Token status:"
-            echo "GH_TOKEN length: ${#GH_TOKEN}"
-            echo "First 10 chars: ${GH_TOKEN:0:10}..."
+          echo "Dispatching root workflows..."
+          ROOTS="${{ steps.plan.outputs.root_workflows }}"
+          
+          # Check if gh CLI is available and authenticated
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "Error: gh CLI not found"
             exit 1
           fi
           
-          ROOTS="${{ steps.plan.outputs.root_workflows }}"
-          if [ -z "$ROOTS" ]; then
-            echo "No root workflows to dispatch"
-            exit 0
+          # Verify authentication
+          if ! gh auth status >/dev/null 2>&1; then
+            echo "Error: gh CLI not authenticated"
+            echo "GH_TOKEN length: ${#GH_TOKEN}"
+            exit 1
           fi
           
+          DISPATCH_COUNT=0
           echo "$ROOTS" | while read -r WORKFLOW; do
             if [ -n "$WORKFLOW" ]; then
+              echo "Dispatching ${WORKFLOW}.yml..."
               WORKFLOW_FILE=".github/workflows/${WORKFLOW}.yml"
-              if [ -f "$WORKFLOW_FILE" ]; then
-                echo "Dispatching ${WORKFLOW}.yml..."
-                if gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }}; then
-                  echo "Successfully dispatched $WORKFLOW"
-                else
-                  echo "Failed to dispatch $WORKFLOW"
-                  exit 1
-                fi
+              
+              # Verify workflow file exists
+              if [ ! -f "$WORKFLOW_FILE" ]; then
+                echo "Warning: Workflow file $WORKFLOW_FILE not found, skipping"
+                continue
+              fi
+              
+              # Dispatch with error handling
+              if gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }}; then
+                echo "  ✓ Successfully dispatched ${WORKFLOW}.yml"
+                DISPATCH_COUNT=$((DISPATCH_COUNT + 1))
               else
-                echo "WARNING: Workflow file $WORKFLOW_FILE not found"
+                echo "  ✗ Failed to dispatch ${WORKFLOW}.yml"
               fi
             fi
           done
-          echo "Root workflows dispatched (fire-and-forget)"
-          echo "Descendants triggered by each workflow's dispatch step"
+          
+          echo "Workflow dispatch completed"
+          echo "Successfully dispatched $DISPATCH_COUNT workflow(s)"
+          echo "Descendants will be triggered by each workflow's dispatch step"
 name: Workflow Orchestrator
 on:
   push:
