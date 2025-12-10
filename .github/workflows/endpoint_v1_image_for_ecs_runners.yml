@@ -165,7 +165,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_v1_image_for_ecs_runners \
             --repo ${{ github.repository }}
-name: Ensuring /v1/image-for-ecs-runners exists and is properly configured
+name: Ensuring /v1/image-for-ecs-runners API endpoint exists and is properly configured
 on:
   workflow_dispatch:
     inputs:
