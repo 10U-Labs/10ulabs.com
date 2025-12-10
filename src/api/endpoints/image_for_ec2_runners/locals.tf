@@ -6,6 +6,7 @@ locals {
   ami_purpose_tag   = "Purpose"
   ami_purpose_value = "GitHub self-hosted EC2 runner"
   ami_stable_tag    = "Stable"
+  lambda_role_name  = "${local.resource_prefix}ImageForEC2RunnersHandlerServiceRole"
 
   common_tags = {
     ManagedBy = "terraform"
