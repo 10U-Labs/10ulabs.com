@@ -28,6 +28,22 @@ class TestDeployedIAMRoleNamingConventions:
         except iam_client.exceptions.NoSuchEntityException:
             pytest.skip(f"IAM role '{role_name}' not deployed")
 
+    def test_image_for_ecs_runners_handler_role_has_no_dashes(self, iam_client, config):
+        """Verify ImageForEcsRunnersHandler IAM role name contains no dashes."""
+        function_name = config.get(
+            'image_for_ecs_runners_handler_function_name',
+            'TenULabsImageForEcsRunnersHandler'
+        )
+        role_name = f"{function_name}ServiceRole"
+        try:
+            response = iam_client.get_role(RoleName=role_name)
+            actual_name = response['Role']['RoleName']
+            assert '-' not in actual_name, (
+                f"Deployed IAM role '{actual_name}' contains dashes"
+            )
+        except iam_client.exceptions.NoSuchEntityException:
+            pytest.skip(f"IAM role '{role_name}' not deployed")
+
 
 class TestDeployedLambdaFunctionNamingConventions:
     """Tests for deployed Lambda function naming conventions."""
@@ -44,6 +60,21 @@ class TestDeployedLambdaFunctionNamingConventions:
             error = validate_name(actual_name)
             assert error is None, (
                 f"Deployed Lambda function has invalid name '{actual_name}': {error}"
+            )
+        except lambda_client.exceptions.ResourceNotFoundException:
+            pytest.skip(f"Lambda function '{function_name}' not deployed")
+
+    def test_image_for_ecs_runners_handler_function_has_no_dashes(self, lambda_client, config):
+        """Verify ImageForEcsRunnersHandler Lambda function name contains no dashes."""
+        function_name = config.get(
+            'image_for_ecs_runners_handler_function_name',
+            'TenULabsImageForEcsRunnersHandler'
+        )
+        try:
+            response = lambda_client.get_function(FunctionName=function_name)
+            actual_name = response['Configuration']['FunctionName']
+            assert '-' not in actual_name, (
+                f"Deployed Lambda function '{actual_name}' contains dashes"
             )
         except lambda_client.exceptions.ResourceNotFoundException:
             pytest.skip(f"Lambda function '{function_name}' not deployed")
