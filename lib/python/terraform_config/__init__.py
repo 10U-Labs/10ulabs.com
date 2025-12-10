@@ -30,6 +30,42 @@ REPO_ROOT = _find_repo_root()
 SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 
 
+def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:
+    """Parse a map/object block from Terraform HCL content.
+
+    Args:
+        content: The full file content.
+        map_name: Name of the map variable to parse.
+
+    Returns:
+        Dict mapping keys to their string values within the map block.
+    """
+    pattern = rf'{map_name}\s*=\s*\{{'
+    match = re.search(pattern, content)
+    if not match:
+        return {}
+
+    start_pos = match.end() - 1
+    brace_count = 0
+    end_pos = start_pos
+    for i, char in enumerate(content[start_pos:]):
+        if char == '{':
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                end_pos = start_pos + i + 1
+                break
+
+    block_content = content[start_pos:end_pos]
+    values = {}
+    entry_pattern = r'(\w+)\s*=\s*"([^"]+)"'
+    for entry_match in re.finditer(entry_pattern, block_content):
+        key, value = entry_match.groups()
+        values[key] = value
+    return values
+
+
 def parse_locals() -> Dict[str, str]:
     """Parse locals from the shared Terraform module's locals.tf file.
 
@@ -47,6 +83,28 @@ def parse_locals() -> Dict[str, str]:
         key, value = match.groups()
         values[key] = value
     return values
+
+
+def parse_lambda_handler_names() -> Dict[str, str]:
+    """Parse lambda_handler_names map from shared Terraform module.
+
+    Returns:
+        Dict mapping handler keys (e.g., 'ecs_runner') to function names.
+    """
+    locals_path = SHARED_MODULE_DIR / "locals.tf"
+    with open(locals_path, encoding="utf-8") as f:
+        content = f.read()
+
+    raw_values = _parse_map_block(content, "lambda_handler_names")
+
+    # Resolve ${local.resource_prefix} references
+    locals_dict = parse_locals()
+    resource_prefix = locals_dict.get("resource_prefix", "")
+
+    resolved = {}
+    for key, value in raw_values.items():
+        resolved[key] = value.replace("${local.resource_prefix}", resource_prefix)
+    return resolved
 
 
 def parse_outputs() -> Dict[str, str]:
@@ -91,4 +149,5 @@ def get_shared_config() -> Dict[str, str]:
     """
     config = parse_locals()
     config.update(parse_outputs())
+    config["lambda_handler_names"] = parse_lambda_handler_names()
     return config

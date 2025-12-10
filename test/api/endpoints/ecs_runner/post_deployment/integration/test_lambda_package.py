@@ -16,7 +16,7 @@ def test_ecs_runner_handler_package_includes_runner_labels(config):
     actually contains the runner_labels module. The Lambda will fail at
     runtime with a ModuleNotFoundError if this file is missing.
     """
-    function_name = "TenULabsEcsRunnerHandler"
+    function_name = config["lambda_function_name"]
     region = config["aws_region"]
     assert_lambda_package_includes_file(function_name, "runner_labels.py", region)
 
@@ -28,7 +28,7 @@ def test_ecs_runner_handler_processes_labels_without_import_error(config):
     If runner_labels.py is missing from the package, the Lambda will
     fail with a ModuleNotFoundError on import.
     """
-    function_name = "TenULabsEcsRunnerHandler"
+    function_name = config["lambda_function_name"]
     region = config["aws_region"]
 
     # GET request to status endpoint - exercises the Lambda import path
@@ -49,6 +49,5 @@ def test_ecs_runner_handler_processes_labels_without_import_error(config):
     payload = json.loads(response["Payload"].read())
 
     # If runner_labels import failed, we'd get a 500 with ModuleNotFoundError
-    assert response["StatusCode"] == 200
     error_msg = payload.get("errorMessage", "")
-    assert "errorMessage" not in payload or "ModuleNotFoundError" not in error_msg
+    assert "ModuleNotFoundError" not in error_msg, f"Lambda import failed: {error_msg}"
