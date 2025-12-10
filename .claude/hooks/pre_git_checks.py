@@ -96,6 +96,57 @@ def run_lint_disable_check(changed_files):
     return True
 
 
+def run_workflow_yaml_lint(changed_files):
+    """Run yamllint on changed workflow files. Returns True if passed."""
+    workflow_files = [
+        f for f in changed_files
+        if f.startswith('.github/workflows/') and f.endswith('.yml')
+    ]
+
+    if not workflow_files:
+        return True
+
+    print("\n" + "="*60)
+    print("PHASE: WORKFLOW YAML LINT")
+    print("="*60)
+    print(f"Checking {len(workflow_files)} workflow file(s):")
+    for f in workflow_files:
+        print(f"  - {f}")
+
+    # Use consistent yamllint config matching workflow standards
+    config = (
+        "{extends: default, rules: {"
+        "empty-lines: {max: 0, max-start: 0, max-end: 1}, "
+        "key-ordering: enable, "
+        "line-length: disable, "
+        "new-line-at-end-of-file: enable, "
+        "truthy: {allowed-values: ['true', 'false', 'on']}}}"
+    )
+
+    result = subprocess.run(
+        ['yamllint', '--strict', '--config-data', config] + workflow_files,
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+    if result.returncode != 0:
+        print("\nYAMLLINT ERRORS:")
+        if result.stdout:
+            for line in result.stdout.strip().split('\n'):
+                print(f"  {line}")
+        if result.stderr:
+            for line in result.stderr.strip().split('\n'):
+                print(f"  {line}")
+        print("\n" + "="*60)
+        print("WORKFLOW YAML LINT FAILED")
+        print("="*60)
+        return False
+
+    print("All workflow files passed yamllint.")
+    return True
+
+
 def path_matches_pattern(file_path, pattern):
     """Check if a file path matches a glob pattern."""
     if pattern.endswith('/**'):
@@ -501,6 +552,9 @@ def main():
         print(f"  - {f}")
 
     if not run_lint_disable_check(changed_files):
+        sys.exit(2)
+
+    if not run_workflow_yaml_lint(changed_files):
         sys.exit(2)
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
