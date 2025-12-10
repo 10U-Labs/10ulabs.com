@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from naming_conventions import is_pascalcase, validate_name
+from naming_conventions import validate_name
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
@@ -25,6 +25,19 @@ def get_resource_prefix() -> str:
     return match.group(1) if match else "TenULabs"
 
 
+def _find_block_end(content: str, start_pos: int) -> int:
+    """Find the end position of a brace-delimited block."""
+    brace_count = 0
+    for i, char in enumerate(content[start_pos:]):
+        if char == '{':
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                return start_pos + i + 1
+    return start_pos
+
+
 def extract_iam_role_names(tf_file: Path) -> list:
     """Extract IAM role names from a Terraform file."""
     if not tf_file.exists():
@@ -34,33 +47,17 @@ def extract_iam_role_names(tf_file: Path) -> list:
 
     prefix = get_resource_prefix()
     roles = []
-
-    # Find all aws_iam_role resource blocks
     role_pattern = r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{'
+
     for match in re.finditer(role_pattern, content):
         resource_name = match.group(1)
         start_pos = match.end() - 1
-
-        # Find matching closing brace
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-
+        end_pos = _find_block_end(content, start_pos)
         block_content = content[start_pos:end_pos]
-
-        # Extract the name attribute
         name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
-            role_name = name_match.group(1)
-            resolved = role_name.replace("${local.resource_prefix}", prefix)
-            roles.append((resource_name, resolved))
+            role_name = name_match.group(1).replace("${local.resource_prefix}", prefix)
+            roles.append((resource_name, role_name))
 
     return roles
 
@@ -74,33 +71,17 @@ def extract_lambda_function_names(tf_file: Path) -> list:
 
     prefix = get_resource_prefix()
     functions = []
-
-    # Find all aws_lambda_function resource blocks
     func_pattern = r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{'
+
     for match in re.finditer(func_pattern, content):
         resource_name = match.group(1)
         start_pos = match.end() - 1
-
-        # Find matching closing brace
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-
+        end_pos = _find_block_end(content, start_pos)
         block_content = content[start_pos:end_pos]
-
-        # Extract the function_name attribute
         name_match = re.search(r'^\s*function_name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
-            function_name = name_match.group(1)
-            resolved = function_name.replace("${local.resource_prefix}", prefix)
-            functions.append((resource_name, resolved))
+            func_name = name_match.group(1).replace("${local.resource_prefix}", prefix)
+            functions.append((resource_name, func_name))
 
     return functions
 

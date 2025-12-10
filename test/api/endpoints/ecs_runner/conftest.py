@@ -62,7 +62,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     )
     api_key_param = result.get('ssm_parameter_name_for_api_key', '/api/key')
     result['ssm_parameter_name_for_api_key'] = api_key_param
-    result['ecr_repository_name'] = shared_config.get('ecr_repository_name', '10ulabs')
+    result['ecr_repository_name'] = shared_config['ecr_repository_name_runners']
     resource_prefix = shared_config.get('resource_prefix', 'TenULabs')
     result['workflow_runners_table_name'] = f"{resource_prefix}-workflow-runners"
     ecs_runner_tfvars = parse_tfvars(ECS_RUNNER_SRC / "terraform.tfvars")

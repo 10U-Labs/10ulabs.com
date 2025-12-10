@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from naming_conventions import is_pascalcase, validate_name
+from naming_conventions import validate_name
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
