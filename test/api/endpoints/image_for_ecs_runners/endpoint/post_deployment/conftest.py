@@ -8,8 +8,6 @@ from test.api.endpoints.image_for_ecs_runners.endpoint.helpers import (
     make_api_request,
 )
 
-import os
-
 import boto3
 import pytest
 
@@ -39,10 +37,18 @@ def ecr_client(request):
     return boto3.client("ecr", region_name=region)
 
 
-@pytest.fixture(scope="session")
-def api_key():
-    """Provide the API key from environment."""
-    return os.environ.get("API_KEY", "")
+@pytest.fixture(name="ssm_client", scope="session")
+def ssm_client_fixture(request):
+    """Create an SSM client for the test session."""
+    region = request.getfixturevalue('aws_region')
+    return boto3.client("ssm", region_name=region)
+
+
+@pytest.fixture(name="api_key", scope="session")
+def api_key_fixture(ssm_client):
+    """Retrieve the API key from SSM Parameter Store."""
+    param_response = ssm_client.get_parameter(Name='/api/key', WithDecryption=True)
+    return param_response['Parameter']['Value']
 
 
 def create_api_request_fixture(test_mode_param=False):
