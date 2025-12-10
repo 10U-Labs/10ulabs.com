@@ -83,3 +83,10 @@ def skip_if_endpoint_not_deployed(api_url: str, path: str, method: str = "GET"):
 def lambda_context():
     """Provide a mock Lambda context object."""
     return Mock()
+
+
+@pytest.fixture(scope="session")
+def lambda_client(aws_region):
+    """Provide a Lambda client for the configured AWS region."""
+    import boto3
+    return boto3.client("lambda", region_name=aws_region)
