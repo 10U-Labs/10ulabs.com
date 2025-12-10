@@ -122,39 +122,39 @@ def config_fixture(shared_config) -> Dict[str, str]:
 
 
 @pytest.fixture
-def sns_client():
-    """Provide SNS client for us-east-1."""
-    return boto3.client('sns', region_name='us-east-1')
+def sns_client(aws_region):
+    """Provide SNS client for the configured AWS region."""
+    return boto3.client('sns', region_name=aws_region)
 
 
 @pytest.fixture
-def dynamodb_client():
-    """Provide DynamoDB client for us-east-1."""
-    return boto3.client('dynamodb', region_name='us-east-1')
+def dynamodb_client(aws_region):
+    """Provide DynamoDB client for the configured AWS region."""
+    return boto3.client('dynamodb', region_name=aws_region)
 
 
 @pytest.fixture
-def lambda_client():
-    """Provide Lambda client for us-east-1."""
-    return boto3.client('lambda', region_name='us-east-1')
+def lambda_client(aws_region):
+    """Provide Lambda client for the configured AWS region."""
+    return boto3.client('lambda', region_name=aws_region)
 
 
 @pytest.fixture
-def cloudwatch_client():
-    """Provide CloudWatch client for us-east-1."""
-    return boto3.client('cloudwatch', region_name='us-east-1')
+def cloudwatch_client(aws_region):
+    """Provide CloudWatch client for the configured AWS region."""
+    return boto3.client('cloudwatch', region_name=aws_region)
 
 
 @pytest.fixture
-def events_client():
-    """Provide EventBridge client for us-east-1."""
-    return boto3.client('events', region_name='us-east-1')
+def events_client(aws_region):
+    """Provide EventBridge client for the configured AWS region."""
+    return boto3.client('events', region_name=aws_region)
 
 
 @pytest.fixture
-def logs_client():
-    """Provide CloudWatch Logs client for us-east-1."""
-    return boto3.client('logs', region_name='us-east-1')
+def logs_client(aws_region):
+    """Provide CloudWatch Logs client for the configured AWS region."""
+    return boto3.client('logs', region_name=aws_region)
 
 
 def find_sns_topic_arns(client: Any, topic_name: str) -> List[str]:

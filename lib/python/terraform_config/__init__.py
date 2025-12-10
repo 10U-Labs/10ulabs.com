@@ -5,16 +5,19 @@ This module provides functions to parse values from the shared Terraform module,
 providing a single source of truth for configuration values across tests and tools.
 
 Example usage:
-    from terraform_config import get_shared_config
+    from terraform_config import get_shared_config, TEST_AWS_REGION
 
     config = get_shared_config()
     region = config['aws_region']
     bucket = config['name_for_terraform_state_bucket']
+
+    # For unit test mock data (fake ARNs, URLs, etc.):
+    mock_arn = f'arn:aws:sns:{TEST_AWS_REGION}:123456789012:test-topic'
 """
 
 import re
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 
 def _find_repo_root() -> Path:
@@ -138,7 +141,7 @@ def parse_outputs() -> Dict[str, str]:
     return values
 
 
-def get_shared_config() -> Dict[str, str]:
+def get_shared_config() -> Dict[str, Any]:
     """Get all configuration values from the shared Terraform module.
 
     Combines locals and outputs into a single dict. Output values take
@@ -147,7 +150,13 @@ def get_shared_config() -> Dict[str, str]:
     Returns:
         Dict with all configuration values from the shared module.
     """
-    config = parse_locals()
+    config: Dict[str, Any] = parse_locals()
     config.update(parse_outputs())
     config["lambda_handler_names"] = parse_lambda_handler_names()
     return config
+
+
+# Single source of truth for AWS region - derived from Terraform shared module.
+# Use this constant in unit tests for mock data (fake ARNs, URLs, etc.)
+# instead of hardcoding region strings.
+TEST_AWS_REGION = parse_locals().get("aws_region", "us-east-2")

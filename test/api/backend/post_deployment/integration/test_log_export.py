@@ -4,9 +4,9 @@ from datetime import UTC, datetime, timedelta
 import boto3
 
 
-def test_firehose_delivery_stream_has_recent_incoming_records(config):
+def test_firehose_delivery_stream_has_recent_incoming_records(config, aws_region):
     """Verify Firehose delivery stream receives incoming records."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
     stream_name = config['firehose_delivery_stream_name']
@@ -22,9 +22,9 @@ def test_firehose_delivery_stream_has_recent_incoming_records(config):
     assert 'Datapoints' in response
 
 
-def test_firehose_delivery_to_s3_is_successful(config):
+def test_firehose_delivery_to_s3_is_successful(config, aws_region):
     """Verify Firehose successfully delivers to S3."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
     stream_name = config['firehose_delivery_stream_name']
@@ -40,9 +40,9 @@ def test_firehose_delivery_to_s3_is_successful(config):
     assert 'Datapoints' in response
 
 
-def test_s3_cloudwatch_logs_prefix_can_be_listed(config):
+def test_s3_cloudwatch_logs_prefix_can_be_listed(config, aws_region):
     """Verify S3 cloudwatch-logs prefix is accessible."""
-    s3 = boto3.client('s3', region_name='us-east-1')
+    s3 = boto3.client('s3', region_name=aws_region)
     response = s3.list_objects_v2(
         Bucket=config['central_logs_bucket'],
         Prefix='cloudwatch-logs/api/',
@@ -51,9 +51,9 @@ def test_s3_cloudwatch_logs_prefix_can_be_listed(config):
     assert 'Contents' in response or 'KeyCount' in response
 
 
-def test_s3_cloudfront_logs_prefix_can_be_listed(config):
+def test_s3_cloudfront_logs_prefix_can_be_listed(config, aws_region):
     """Verify S3 cloudfront-logs prefix is accessible."""
-    s3 = boto3.client('s3', region_name='us-east-1')
+    s3 = boto3.client('s3', region_name=aws_region)
     response = s3.list_objects_v2(
         Bucket=config['central_logs_bucket'],
         Prefix='cloudfront-logs/api/',
@@ -63,7 +63,10 @@ def test_s3_cloudfront_logs_prefix_can_be_listed(config):
 
 
 def test_waf_metrics_are_being_collected():
-    """Verify WAF metrics are being collected in CloudWatch."""
+    """Verify WAF metrics are being collected in CloudWatch.
+
+    Note: CloudFront WAF must be in us-east-1, so metrics are queried there.
+    """
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
@@ -84,7 +87,10 @@ def test_waf_metrics_are_being_collected():
 
 
 def test_cloudfront_requests_metric_available():
-    """Verify CloudFront requests metric is available."""
+    """Verify CloudFront requests metric is available.
+
+    Note: CloudFront metrics must be queried from us-east-1.
+    """
     cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=24)
@@ -100,9 +106,9 @@ def test_cloudfront_requests_metric_available():
     assert 'Datapoints' in response
 
 
-def test_dynamodb_streams_consumed_records_metric(config):
+def test_dynamodb_streams_consumed_records_metric(config, aws_region):
     """Verify DynamoDB consumed capacity metrics are available."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     table_name = config['circuit_breaker_state_table_name']
     response = cloudwatch.list_metrics(
         Namespace='AWS/DynamoDB',

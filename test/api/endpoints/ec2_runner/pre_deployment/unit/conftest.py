@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from terraform_config import TEST_AWS_REGION
 from lambda_response import (
     parse_response_body,
     assert_response_status,
@@ -136,7 +137,7 @@ def mock_boto_client():
                 'InstanceId': 'i-test123',
                 'InstanceType': 't3.medium',
                 'State': {'Name': 'running'},
-                'Placement': {'AvailabilityZone': 'us-east-1a'}
+                'Placement': {'AvailabilityZone': f'{TEST_AWS_REGION}a'}
             }]
         }]
     }

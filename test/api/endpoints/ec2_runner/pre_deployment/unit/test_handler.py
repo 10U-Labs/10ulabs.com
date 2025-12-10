@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from botocore.exceptions import ClientError
 
+from terraform_config import TEST_AWS_REGION
 from .conftest import (
     assert_json_content_type,
     assert_response_status,
@@ -131,7 +132,7 @@ def test_handle_ec2_runner_get_returns_json_content_type(
 
 def test_create_ec2_user_data_formatting(ec2_runner_handler):
     """Test that user data formatting includes token."""
-    with patch.dict('os.environ', {'AWS_REGION': 'us-east-1'}):
+    with patch.dict('os.environ', {'AWS_REGION': TEST_AWS_REGION}):
         create_ec2_user_data = getattr(ec2_runner_handler, 'create_ec2_user_data')
         result = create_ec2_user_data(
             'test-token', ['label1', 'label2'], 'test/repo', 'test-runner'
@@ -297,7 +298,7 @@ def test_launch_ec2_runner_failed_registration(mock_boto_client, ec2_runner_hand
 def test_create_ec2_user_data_includes_region(ec2_runner_handler):
     """Test that user data includes AWS region."""
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
-    region = os.environ.get('AWS_REGION', 'us-east-1')
+    region = os.environ.get('AWS_REGION', TEST_AWS_REGION)
     contains_region = region in result
     assert contains_region
 
