@@ -246,6 +246,13 @@ jobs:
             echo "GH_TOKEN length: ${#GH_TOKEN}"
             exit 1
           fi
+          # Check for [skip descendants] in commit message
+          SKIP_DESCENDANTS=""
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if echo "$COMMIT_MSG" | grep -qi '\[skip descendants\]'; then
+            echo "Found [skip descendants] in commit message"
+            SKIP_DESCENDANTS="-f skip_descendants=true"
+          fi
           DISPATCH_COUNT=0
           echo "$ROOTS" | while read -r WORKFLOW; do
             if [ -n "$WORKFLOW" ]; then
@@ -256,8 +263,13 @@ jobs:
                 echo "Warning: Workflow file $WORKFLOW_FILE not found, skipping"
                 continue
               fi
-              # Dispatch with error handling
-              if gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }}; then
+              # Dispatch with error handling (include skip flag if set)
+              if [ -n "$SKIP_DESCENDANTS" ]; then
+                gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }} -f skip_descendants=true && RESULT=0 || RESULT=1
+              else
+                gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }} && RESULT=0 || RESULT=1
+              fi
+              if [ "$RESULT" -eq 0 ]; then
                 echo "  ✓ Successfully dispatched ${WORKFLOW}.yml"
                 DISPATCH_COUNT=$((DISPATCH_COUNT + 1))
               else
@@ -267,7 +279,11 @@ jobs:
           done
           echo "Workflow dispatch completed"
           echo "Successfully dispatched $DISPATCH_COUNT workflow(s)"
-          echo "Descendants will be triggered by each workflow's dispatch step"
+          if [ -n "$SKIP_DESCENDANTS" ]; then
+            echo "Note: Descendants will be skipped due to [skip descendants]"
+          else
+            echo "Descendants will be triggered by each workflow's dispatch step"
+          fi
 name: Workflow Orchestrator
 on:
   push:

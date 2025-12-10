@@ -10,7 +10,6 @@ Usage:
     python3 scripts/dispatch_descendants.py --workflow bootstrap --repo owner/repo
 """
 import argparse
-import json
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -48,6 +47,11 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=24,
         help="Hours to look back for successful dependency runs (default: 24)"
+    )
+    parser.add_argument(
+        "--skip-descendants",
+        action="store_true",
+        help="Pass skip_descendants=true to dispatched workflows"
     )
     return parser.parse_args()
 
@@ -123,16 +127,25 @@ def all_dependencies_met(
     return len(missing) == 0, missing
 
 
-def dispatch_workflow(workflow: str, repo: str, dry_run: bool) -> bool:
+def dispatch_workflow(
+    workflow: str,
+    repo: str,
+    dry_run: bool,
+    skip_descendants: bool = False
+) -> bool:
     """Dispatch a single workflow. Returns True on success."""
     workflow_file = f".github/workflows/{workflow}.yml"
     if dry_run:
-        print(f"  [DRY RUN] Would dispatch: {workflow_file}")
+        skip_flag = " (with skip_descendants=true)" if skip_descendants else ""
+        print(f"  [DRY RUN] Would dispatch: {workflow_file}{skip_flag}")
         return True
 
     print(f"  Dispatching: {workflow_file}")
+    cmd = ["gh", "workflow", "run", workflow_file, "--repo", repo]
+    if skip_descendants:
+        cmd.extend(["-f", "skip_descendants=true"])
     result = subprocess.run(
-        ["gh", "workflow", "run", workflow_file, "--repo", repo],
+        cmd,
         capture_output=True,
         text=True,
         check=False
@@ -169,7 +182,9 @@ def main() -> int:
         if len(deps) == 1:
             # Single dependency - dispatch immediately
             print(f"{descendant}: single dependency, dispatching...")
-            if dispatch_workflow(descendant, args.repo, args.dry_run):
+            if dispatch_workflow(
+                descendant, args.repo, args.dry_run, args.skip_descendants
+            ):
                 dispatched += 1
         else:
             # Multiple dependencies - check if all are met
@@ -178,8 +193,10 @@ def main() -> int:
                 graph, descendant, args.workflow, args.repo, args.lookback_hours
             )
             if all_met:
-                print(f"  All dependencies met, dispatching...")
-                if dispatch_workflow(descendant, args.repo, args.dry_run):
+                print("  All dependencies met, dispatching...")
+                if dispatch_workflow(
+                    descendant, args.repo, args.dry_run, args.skip_descendants
+                ):
                     dispatched += 1
             else:
                 print(f"  Waiting for: {', '.join(missing)}")

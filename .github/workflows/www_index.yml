@@ -137,11 +137,17 @@ jobs:
         run: npm run test:e2e --prefix src/www/paths/index
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: github.event_name == 'workflow_dispatch'
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          github.event.inputs.skip_descendants != 'true'
         name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
+          SKIP_FLAG=""
+          SKIP_INPUT="${{ github.event.inputs.skip_descendants }}"
+          if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
           python3 scripts/dispatch_descendants.py \
+            $SKIP_FLAG \
             --workflow www_index \
             --repo ${{ github.repository }}
 name: Ensuring www index (home page) exists and is properly configured
@@ -156,6 +162,10 @@ on:
       invalidate_cloudfront:
         default: false
         description: Force CloudFront cache invalidation
+        type: boolean
+      skip_descendants:
+        default: false
+        description: Skip dispatching descendant workflows
         type: boolean
 permissions:
   actions: write
