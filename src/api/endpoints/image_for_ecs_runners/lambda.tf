@@ -6,11 +6,12 @@ data "archive_file" "handler" {
 
 resource "aws_lambda_function" "handler" {
   filename         = data.archive_file.handler.output_path
-  function_name    = "${local.resource_prefix}-ImageForEcsRunnersHandler"
+  function_name    = local.lambda_function_name
   role             = aws_iam_role.lambda.arn
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.handler.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 10
   memory_size      = 128
   description      = "Handler for /v1/image-for-ecs-runners API endpoints"
@@ -29,16 +30,16 @@ resource "aws_lambda_function" "handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ImageForEcsRunnersHandler"
+    Name = local.lambda_function_name
   })
 }
 
 resource "aws_cloudwatch_log_group" "handler" {
-  name              = "/aws/lambda/${local.resource_prefix}-ImageForEcsRunnersHandler"
+  name              = "/aws/lambda/${local.lambda_function_name}"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ImageForEcsRunnersHandler-logs"
+    Name = "${local.lambda_function_name}Logs"
   })
 }
 

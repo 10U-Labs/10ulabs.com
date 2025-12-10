@@ -14,11 +14,11 @@ resource "aws_ecs_cluster" "runner" {
 resource "aws_ecs_cluster_capacity_providers" "runner" {
   cluster_name = aws_ecs_cluster.runner.name
 
-  capacity_providers = ["FARGATE"]
+  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
 
   default_capacity_provider_strategy {
     base              = 0
-    capacity_provider = "FARGATE"
+    capacity_provider = "FARGATE_SPOT"
     weight            = 100
   }
 }
@@ -75,6 +75,6 @@ resource "aws_cloudwatch_log_group" "ecs_runner" {
   retention_in_days = 7
 
   tags = {
-    Name = "${var.task_family}-logs"
+    Name = "${var.task_family}Logs"
   }
 }

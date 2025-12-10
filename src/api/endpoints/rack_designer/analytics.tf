@@ -166,6 +166,7 @@ resource "aws_lambda_function" "export" {
   role             = aws_iam_role.export_lambda.arn
   handler          = "export_handler.lambda_handler"
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   filename         = data.archive_file.export_lambda.output_path
   source_code_hash = data.archive_file.export_lambda.output_base64sha256
   timeout          = 30
@@ -295,6 +296,7 @@ resource "aws_lambda_function" "crawler_trigger" {
   role             = aws_iam_role.crawler_trigger.arn
   handler          = "crawler_trigger.lambda_handler"
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   filename         = data.archive_file.crawler_trigger.output_path
   source_code_hash = data.archive_file.crawler_trigger.output_base64sha256
   timeout          = 30

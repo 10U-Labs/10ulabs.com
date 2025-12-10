@@ -11,7 +11,7 @@ jobs:
     runs-on:
       - ecs
       - fargate
-      - on-demand
+      - spot
       - runner-${{ github.run_id }}
     steps:
       - name: Checkout code

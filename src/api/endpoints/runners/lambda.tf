@@ -18,6 +18,7 @@ resource "aws_lambda_function" "runners_handler" {
   handler                        = "webhook_router.lambda_handler"
   source_code_hash               = data.archive_file.runners_handler.output_base64sha256
   runtime                        = "python3.13"
+  architectures                  = ["arm64"]
   timeout                        = var.lambda_timeout_seconds
   memory_size                    = var.lambda_memory_mb
   reserved_concurrent_executions = -1
@@ -73,7 +74,7 @@ resource "aws_cloudwatch_log_group" "runners_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.webhook_handler_function_name}-logs"
+    Name = "${var.webhook_handler_function_name}Logs"
   })
 }
 
@@ -97,6 +98,7 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
   handler          = "circuit_breaker_remediation.lambda_handler"
   source_code_hash = data.archive_file.circuit_breaker_remediation.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
   description      = "Automatic remediation for circuit breaker alarms"
@@ -131,7 +133,7 @@ resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CircuitBreakerRemediation-logs"
+    Name = "${local.resource_prefix}CircuitBreakerRemediationLogs"
   })
 }
 
@@ -148,6 +150,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
   handler          = "dlq_reprocessor.handler"
   source_code_hash = data.archive_file.dlq_reprocessor.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 256
   description      = "Reprocesses messages from DLQs"
@@ -183,7 +186,7 @@ resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-DLQReprocessor-logs"
+    Name = "${local.resource_prefix}DLQReprocessorLogs"
   })
 }
 
@@ -200,6 +203,7 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
   handler          = "circuit_breaker_recovery.lambda_handler"
   source_code_hash = data.archive_file.circuit_breaker_recovery.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
   description      = "Automatic self-healing recovery for circuit breaker"
@@ -234,7 +238,7 @@ resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CircuitBreakerRecovery-logs"
+    Name = "${local.resource_prefix}CircuitBreakerRecoveryLogs"
   })
 }
 
@@ -251,6 +255,7 @@ resource "aws_lambda_function" "drift_recovery" {
   handler          = "drift_recovery.lambda_handler"
   source_code_hash = data.archive_file.drift_recovery.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 30
   memory_size      = 256
   description      = "Triggers API workflow when infrastructure drift is detected"
@@ -285,7 +290,7 @@ resource "aws_cloudwatch_log_group" "drift_recovery" {
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-DriftRecovery-logs"
+    Name = "${local.resource_prefix}DriftRecoveryLogs"
   })
 }
 
@@ -308,6 +313,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
   handler          = "spot_interruption_handler.lambda_handler"
   source_code_hash = data.archive_file.spot_interruption_handler.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
   description      = "Handles spot interruption events and launches replacement runners"
@@ -344,7 +350,7 @@ resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-SpotInterruptionHandler-logs"
+    Name = "${local.resource_prefix}SpotInterruptionHandlerLogs"
   })
 }
 
@@ -361,6 +367,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
   handler          = "stale_runner_cleanup.lambda_handler"
   source_code_hash = data.archive_file.stale_runner_cleanup.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 256
   description      = "Cleans up stale runners from completed or failed workflows"
@@ -396,7 +403,7 @@ resource "aws_cloudwatch_log_group" "stale_runner_cleanup" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-StaleRunnerCleanup-logs"
+    Name = "${local.resource_prefix}StaleRunnerCleanupLogs"
   })
 }
 

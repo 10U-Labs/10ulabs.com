@@ -54,7 +54,7 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
-    Name = "${var.api_gateway_name}-logs"
+    Name = "${var.api_gateway_name}Logs"
   })
 }
 

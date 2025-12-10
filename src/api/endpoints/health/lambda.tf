@@ -11,6 +11,7 @@ resource "aws_lambda_function" "health_handler" {
   handler          = "handler.handler"
   source_code_hash = data.archive_file.health_handler.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 10
   description      = "Health check endpoint for API"
 
@@ -37,7 +38,7 @@ resource "aws_cloudwatch_log_group" "health_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.health_handler_function_name}-logs"
+    Name = "${var.health_handler_function_name}Logs"
   })
 }
 

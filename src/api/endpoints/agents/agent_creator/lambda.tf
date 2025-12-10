@@ -11,6 +11,7 @@ resource "aws_lambda_function" "invoke" {
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.lambda.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 256
   description      = "Invocation handler for Agent Creator"
@@ -41,7 +42,7 @@ resource "aws_cloudwatch_log_group" "lambda" {
   retention_in_days = 14
 
   tags = merge(local.common_tags, {
-    Name = "${local.lambda_name}-logs"
+    Name = "${local.lambda_name}Logs"
   })
 }
 

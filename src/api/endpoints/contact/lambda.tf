@@ -11,6 +11,7 @@ resource "aws_lambda_function" "contact_handler" {
   handler          = "handler.handler"
   source_code_hash = data.archive_file.contact_handler.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 10
   description      = "Contact form handler for 10U Labs website"
 
@@ -36,7 +37,7 @@ resource "aws_cloudwatch_log_group" "contact_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.contact_handler_function_name}-logs"
+    Name = "${var.contact_handler_function_name}Logs"
   })
 }
 
