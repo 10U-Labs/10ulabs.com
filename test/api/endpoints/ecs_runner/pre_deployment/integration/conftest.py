@@ -21,6 +21,10 @@ def _terraform_init(directory: Path) -> bool:
         text=True,
         check=False
     )
+    if result.returncode != 0:
+        print(f"terraform init failed in {directory}")
+        print(f"stdout: {result.stdout}")
+        print(f"stderr: {result.stderr}")
     return result.returncode == 0
 
 
@@ -34,6 +38,10 @@ def _terraform_output(directory: Path, name: str) -> str:
         text=True,
         check=False
     )
+    if result.returncode != 0:
+        print(f"terraform output {name} failed in {directory}")
+        print(f"stdout: {result.stdout}")
+        print(f"stderr: {result.stderr}")
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
