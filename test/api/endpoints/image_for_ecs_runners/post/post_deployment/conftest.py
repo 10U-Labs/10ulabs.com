@@ -62,7 +62,7 @@ def docker_image(aws_region, aws_account_id, ecr_repository):
     login_to_ecr(aws_region)
 
     pull_result = subprocess.run(
-        ["docker", "pull", ecr_uri],
+        ["docker", "pull", "--platform", "linux/arm64", ecr_uri],
         check=False,
         capture_output=True,
         text=True,
