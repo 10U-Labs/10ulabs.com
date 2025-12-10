@@ -27,7 +27,7 @@ def _get_shared_config() -> Dict[str, str]:
     return terraform_config.get_shared_config()
 
 
-@pytest.fixture(name="shared_config", scope="module")
+@pytest.fixture(name="shared_config", scope="session")
 def shared_config_fixture() -> Dict[str, str]:
     """Provide shared config for tests using --confcutdir."""
     return _get_shared_config()

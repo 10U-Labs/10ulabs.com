@@ -290,13 +290,21 @@ endpoint_v1_image_for_ec2_runners_post:
     - 'test/api/endpoints/image_for_ec2_runners/post/**'
 endpoint_v1_image_for_ecs_runners:
   depends_on:
-    - api_shared_ecs_runner
-    - api_shared_runners
-  name: Building Docker image for ECS runners
+    - endpoint_v1_image_for_ecs_runners_post
+  name: Ensuring /v1/image-for-ecs-runners exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_image_for_ecs_runners.yml'
-    - 'src/api/endpoints/image_for_ecs_runners/**'
-    - 'test/api/endpoints/image_for_ecs_runners/**'
+    - 'src/api/endpoints/image_for_ecs_runners/lambda/**'
+    - 'src/api/endpoints/image_for_ecs_runners/*.tf'
+    - 'test/api/endpoints/image_for_ecs_runners/endpoint/**'
+endpoint_v1_image_for_ecs_runners_post:
+  depends_on:
+    - api_shared_ecs_runner
+  name: Building Docker image for ECS runners
+  paths:
+    - '.github/workflows/endpoint_v1_image_for_ecs_runners_post.yml'
+    - 'src/api/endpoints/image_for_ecs_runners/post/**'
+    - 'test/api/endpoints/image_for_ecs_runners/post/**'
 endpoint_v1_rack_designer:
   depends_on:
     - endpoint_v1_runners
