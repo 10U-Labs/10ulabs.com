@@ -221,3 +221,192 @@ def test_openapi_spec_simulation_soc_has_post_method(openapi_spec):
 def test_openapi_spec_simulation_soc_has_options_method(openapi_spec):
     """Verify /v1/simulation-soc has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/simulation-soc']
+
+
+def test_openapi_spec_has_health_dependencies_endpoint(openapi_spec):
+    """Verify spec has /health/dependencies endpoint."""
+    assert '/health/dependencies' in openapi_spec['paths']
+
+
+def test_openapi_spec_health_dependencies_has_get_method(openapi_spec):
+    """Verify /health/dependencies has GET method."""
+    assert 'get' in openapi_spec['paths']['/health/dependencies']
+
+
+def test_openapi_spec_health_dependencies_has_options_method(openapi_spec):
+    """Verify /health/dependencies has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/health/dependencies']
+
+
+def test_openapi_spec_health_dependencies_has_security(openapi_spec):
+    """Verify /health/dependencies GET has security defined."""
+    get_method = openapi_spec['paths']['/health/dependencies']['get']
+    assert 'security' in get_method
+
+
+def test_openapi_spec_health_dependencies_requires_api_key(openapi_spec):
+    """Verify /health/dependencies GET requires API key."""
+    security = openapi_spec['paths']['/health/dependencies']['get']['security']
+    assert any('api_key' in s for s in security)
+
+
+def test_openapi_spec_has_ecs_image_base_endpoint(openapi_spec):
+    """Verify spec has /v1/image-for-ecs-runners endpoint."""
+    assert '/v1/image-for-ecs-runners' in openapi_spec['paths']
+
+
+def test_openapi_spec_ecs_image_has_get_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners has GET method."""
+    assert 'get' in openapi_spec['paths']['/v1/image-for-ecs-runners']
+
+
+def test_openapi_spec_ecs_image_has_post_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/image-for-ecs-runners']
+
+
+def test_openapi_spec_ecs_image_has_options_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/image-for-ecs-runners']
+
+
+def test_openapi_spec_has_ecs_image_latest_endpoint(openapi_spec):
+    """Verify spec has /v1/image-for-ecs-runners/latest endpoint."""
+    assert '/v1/image-for-ecs-runners/latest' in openapi_spec['paths']
+
+
+def test_openapi_spec_ecs_image_latest_has_get_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners/latest has GET method."""
+    assert 'get' in openapi_spec['paths']['/v1/image-for-ecs-runners/latest']
+
+
+def test_openapi_spec_ecs_image_latest_has_options_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners/latest has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/image-for-ecs-runners/latest']
+
+
+def test_openapi_spec_has_ecs_image_digest_endpoint(openapi_spec):
+    """Verify spec has /v1/image-for-ecs-runners/{digest} endpoint."""
+    assert '/v1/image-for-ecs-runners/{digest}' in openapi_spec['paths']
+
+
+def test_openapi_spec_ecs_image_digest_has_get_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners/{digest} has GET method."""
+    assert 'get' in openapi_spec['paths']['/v1/image-for-ecs-runners/{digest}']
+
+
+def test_openapi_spec_ecs_image_digest_has_delete_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners/{digest} has DELETE method."""
+    assert 'delete' in openapi_spec['paths']['/v1/image-for-ecs-runners/{digest}']
+
+
+def test_openapi_spec_ecs_image_digest_has_options_method(openapi_spec):
+    """Verify /v1/image-for-ecs-runners/{digest} has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/image-for-ecs-runners/{digest}']
+
+
+def test_openapi_spec_ec2_runner_has_get_method(openapi_spec):
+    """Verify /v1/ec2-runner has GET method."""
+    assert 'get' in openapi_spec['paths']['/v1/ec2-runner']
+
+
+def test_openapi_spec_ec2_runner_has_options_method(openapi_spec):
+    """Verify /v1/ec2-runner has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/ec2-runner']
+
+
+def test_openapi_spec_has_contact_endpoint(openapi_spec):
+    """Verify spec has /v1/contact endpoint."""
+    assert '/v1/contact' in openapi_spec['paths']
+
+
+def test_openapi_spec_contact_has_post_method(openapi_spec):
+    """Verify /v1/contact has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/contact']
+
+
+def test_openapi_spec_contact_has_options_method(openapi_spec):
+    """Verify /v1/contact has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/contact']
+
+
+def test_openapi_spec_has_rack_designer_configurations_endpoint(openapi_spec):
+    """Verify spec has /v1/rack-designer/configurations endpoint."""
+    assert '/v1/rack-designer/configurations' in openapi_spec['paths']
+
+
+def test_openapi_spec_rack_designer_configurations_has_post_method(openapi_spec):
+    """Verify /v1/rack-designer/configurations has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/rack-designer/configurations']
+
+
+def test_openapi_spec_rack_designer_configurations_has_options_method(openapi_spec):
+    """Verify /v1/rack-designer/configurations has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/rack-designer/configurations']
+
+
+def test_openapi_spec_has_rack_designer_configuration_hash_endpoint(openapi_spec):
+    """Verify spec has /v1/rack-designer/configurations/{config_hash} endpoint."""
+    assert '/v1/rack-designer/configurations/{config_hash}' in openapi_spec['paths']
+
+
+def test_openapi_spec_rack_designer_configuration_hash_has_get_method(openapi_spec):
+    """Verify /v1/rack-designer/configurations/{config_hash} has GET method."""
+    path = '/v1/rack-designer/configurations/{config_hash}'
+    assert 'get' in openapi_spec['paths'][path]
+
+
+def test_openapi_spec_rack_designer_configuration_hash_has_options_method(openapi_spec):
+    """Verify /v1/rack-designer/configurations/{config_hash} has OPTIONS method."""
+    path = '/v1/rack-designer/configurations/{config_hash}'
+    assert 'options' in openapi_spec['paths'][path]
+
+
+def test_openapi_spec_has_rack_designer_events_endpoint(openapi_spec):
+    """Verify spec has /v1/rack-designer/events endpoint."""
+    assert '/v1/rack-designer/events' in openapi_spec['paths']
+
+
+def test_openapi_spec_rack_designer_events_has_post_method(openapi_spec):
+    """Verify /v1/rack-designer/events has POST method."""
+    assert 'post' in openapi_spec['paths']['/v1/rack-designer/events']
+
+
+def test_openapi_spec_rack_designer_events_has_options_method(openapi_spec):
+    """Verify /v1/rack-designer/events has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/rack-designer/events']
+
+
+def test_openapi_spec_echo_has_options_method(openapi_spec):
+    """Verify /v1/echo has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/echo']
+
+
+def test_openapi_spec_runners_has_options_method(openapi_spec):
+    """Verify /v1/runners has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/runners']
+
+
+def test_openapi_spec_runners_health_has_options_method(openapi_spec):
+    """Verify /v1/runners/health has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/runners/health']
+
+
+def test_openapi_spec_ec2_ami_base_has_options_method(openapi_spec):
+    """Verify /v1/image-for-ec2-runners has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/image-for-ec2-runners']
+
+
+def test_openapi_spec_ec2_ami_latest_has_options_method(openapi_spec):
+    """Verify /v1/image-for-ec2-runners/latest has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/image-for-ec2-runners/latest']
+
+
+def test_openapi_spec_ec2_ami_delete_has_options_method(openapi_spec):
+    """Verify /v1/image-for-ec2-runners/{ami_id} has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/image-for-ec2-runners/{ami_id}']
+
+
+def test_openapi_spec_ecs_runner_has_options_method(openapi_spec):
+    """Verify /v1/ecs-runner has OPTIONS method."""
+    assert 'options' in openapi_spec['paths']['/v1/ecs-runner']
