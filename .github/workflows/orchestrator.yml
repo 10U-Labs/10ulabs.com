@@ -141,7 +141,8 @@ jobs:
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
-            ROOTS="$START_FROM"
+            # Support comma-separated workflows (trim spaces, convert to newlines)
+            ROOTS=$(echo "$START_FROM" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
           else
             CHANGED="${{ steps.files.outputs.changed }}"
             # Get all level-1 workflows (independent roots)
@@ -208,7 +209,7 @@ on:
         description: Use GitHub-hosted runners
         type: boolean
       start_from:
-        description: 'Workflow to start from (e.g., "health", "bootstrap")'
+        description: 'Workflow(s) to start from, comma-separated (e.g., "health, bootstrap")'
         type: string
 permissions:
   actions: write
