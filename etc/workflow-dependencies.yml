@@ -277,7 +277,8 @@ endpoint_v1_image_for_ec2_runners:
   name: Ensuring /v1/image-for-ec2-runners API endpoint exists and is properly configured
   paths:
     - '.github/workflows/endpoint_v1_image_for_ec2_runners.yml'
-    - 'src/api/endpoints/image_for_ec2_runners/endpoint/**'
+    - 'src/api/endpoints/image_for_ec2_runners/*.tf'
+    - 'src/api/endpoints/image_for_ec2_runners/lambda/**'
     - 'test/api/endpoints/image_for_ec2_runners/endpoint/**'
 endpoint_v1_image_for_ec2_runners_post:
   depends_on:
