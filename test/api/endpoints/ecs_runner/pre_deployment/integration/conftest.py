@@ -8,8 +8,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[6]
 IMAGE_FOR_ECS_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners"
-API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecr"
-RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+API_SHARED_ECR_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
+RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
 
 
 def _terraform_init(directory: Path) -> bool:
@@ -38,23 +38,9 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def aws_region():
-    """Provide the AWS region."""
-    return "us-east-1"
-
-
-@pytest.fixture(scope="session")
-def ecr_client(request):
-    """Create an ECR client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ecr", region_name=region)
-
-
-@pytest.fixture(scope="session")
-def ec2_client(request):
+def ec2_client(aws_region):
     """Create an EC2 client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("ec2", region_name=region)
+    return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
@@ -99,9 +85,15 @@ def api_shared_ecr_outputs(request):
     if not request.getfixturevalue("api_shared_ecr_terraform_initialized"):
         pytest.skip("Terraform init failed for api_shared_ecr")
     return {
-        "repository_name": _terraform_output(API_SHARED_ECR_DIR, "repository_name"),
-        "repository_url": _terraform_output(API_SHARED_ECR_DIR, "repository_url"),
-        "repository_arn": _terraform_output(API_SHARED_ECR_DIR, "repository_arn"),
+        "repository_name": _terraform_output(
+            API_SHARED_ECR_DIR, "ecr_repository_name"
+        ),
+        "repository_url": _terraform_output(
+            API_SHARED_ECR_DIR, "ecr_repository_url"
+        ),
+        "repository_arn": _terraform_output(
+            API_SHARED_ECR_DIR, "ecr_repository_arn"
+        ),
     }
 
 
