@@ -1,5 +1,5 @@
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.task_family}-TaskRole"
+  name = local.ecs_task_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 
   tags = {
-    Name = "${var.task_family}-TaskRole"
+    Name = local.ecs_task_role_name
   }
 }
 
@@ -39,7 +39,7 @@ resource "aws_iam_role_policy" "ecs_task_cloudwatch_logs" {
 }
 
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.task_family}-ExecutionRole"
+  name = local.ecs_execution_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -53,7 +53,7 @@ resource "aws_iam_role" "ecs_execution_role" {
   })
 
   tags = {
-    Name = "${var.task_family}-ExecutionRole"
+    Name = local.ecs_execution_role_name
   }
 }
 

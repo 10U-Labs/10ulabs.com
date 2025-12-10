@@ -167,6 +167,13 @@ def get_resource_prefix() -> str:
     return parse_locals().get("resource_prefix", "TenULabs")
 
 
+def _resolve_prefix_refs(value: str, prefix: str) -> str:
+    """Resolve resource_prefix references in a Terraform string value."""
+    value = value.replace("${module.shared.resource_prefix}", prefix)
+    value = value.replace("${local.resource_prefix}", prefix)
+    return value
+
+
 def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     """Extract local values from locals.tf in the given endpoint directory.
 
@@ -187,10 +194,7 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     locals_dict = {}
     prefix = get_resource_prefix()
     for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
-        value = match.group(2)
-        value = value.replace("${module.shared.resource_prefix}", prefix)
-        value = value.replace("${local.resource_prefix}", prefix)
-        locals_dict[match.group(1)] = value
+        locals_dict[match.group(1)] = _resolve_prefix_refs(match.group(2), prefix)
     return locals_dict
 
 
@@ -232,7 +236,7 @@ def extract_iam_role_names(tf_file: Path) -> list:
         block_content = _extract_block_content(content, match.end() - 1)
         name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
-            role_name = name_match.group(1).replace("${local.resource_prefix}", prefix)
+            role_name = _resolve_prefix_refs(name_match.group(1), prefix)
             roles.append((match.group(1), role_name))
         else:
             local_match = re.search(
@@ -272,7 +276,7 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
             r'^\s*function_name\s*=\s*"([^"]+)"', block_content, re.MULTILINE
         )
         if name_match:
-            func_name = name_match.group(1).replace("${local.resource_prefix}", prefix)
+            func_name = _resolve_prefix_refs(name_match.group(1), prefix)
             functions.append((match.group(1), func_name))
         else:
             local_match = re.search(
