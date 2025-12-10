@@ -32,6 +32,12 @@ def shared_config_fixture() -> Dict[str, str]:
     return _get_shared_config()
 
 
+@pytest.fixture(name="aws_region", scope="session")
+def aws_region_fixture(shared_config) -> str:
+    """Provide the AWS region from shared config."""
+    return shared_config["aws_region"]
+
+
 def parse_bootstrap_tfvar(var_name: str) -> str:
     """Parse a variable from bootstrap terraform.tfvars file."""
     tfvars_path = REPO_ROOT / "src" / "bootstrap" / "terraform.tfvars"
@@ -132,39 +138,39 @@ def config_fixture(shared_config) -> Dict[str, str]:
 
 
 @pytest.fixture
-def sns_client():
+def sns_client(aws_region):
     """Provide SNS client for tests."""
-    return boto3.client('sns', region_name='us-east-1')
+    return boto3.client('sns', region_name=aws_region)
 
 
 @pytest.fixture
-def dynamodb_client():
+def dynamodb_client(aws_region):
     """Provide DynamoDB client for tests."""
-    return boto3.client('dynamodb', region_name='us-east-1')
+    return boto3.client('dynamodb', region_name=aws_region)
 
 
 @pytest.fixture
-def lambda_client():
+def lambda_client(aws_region):
     """Provide Lambda client for tests."""
-    return boto3.client('lambda', region_name='us-east-1')
+    return boto3.client('lambda', region_name=aws_region)
 
 
 @pytest.fixture
-def cloudwatch_client():
+def cloudwatch_client(aws_region):
     """Provide CloudWatch client for tests."""
-    return boto3.client('cloudwatch', region_name='us-east-1')
+    return boto3.client('cloudwatch', region_name=aws_region)
 
 
 @pytest.fixture
-def events_client():
+def events_client(aws_region):
     """Provide EventBridge client for tests."""
-    return boto3.client('events', region_name='us-east-1')
+    return boto3.client('events', region_name=aws_region)
 
 
 @pytest.fixture
-def logs_client():
+def logs_client(aws_region):
     """Provide CloudWatch Logs client for tests."""
-    return boto3.client('logs', region_name='us-east-1')
+    return boto3.client('logs', region_name=aws_region)
 
 
 def find_sns_topic_arns(client: Any, topic_name: str) -> List[str]:

@@ -4,9 +4,9 @@ from datetime import UTC, datetime, timedelta
 import boto3
 
 
-def test_cloudwatch_metrics_published_for_circuit_breaker():
+def test_cloudwatch_metrics_published_for_circuit_breaker(aws_region):
     """Verify circuit breaker state metrics are published."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
@@ -21,9 +21,9 @@ def test_cloudwatch_metrics_published_for_circuit_breaker():
     assert 'Datapoints' in response
 
 
-def test_cloudwatch_metrics_published_for_queue_depth():
+def test_cloudwatch_metrics_published_for_queue_depth(aws_region):
     """Verify queue depth metrics are published."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
@@ -38,9 +38,9 @@ def test_cloudwatch_metrics_published_for_queue_depth():
     assert 'Datapoints' in response
 
 
-def test_cloudwatch_metrics_published_for_processing_time():
+def test_cloudwatch_metrics_published_for_processing_time(aws_region):
     """Verify processing time metrics are published."""
-    cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+    cloudwatch = boto3.client('cloudwatch', region_name=aws_region)
     end_time = datetime.now(UTC)
     start_time = end_time - timedelta(hours=1)
     response = cloudwatch.get_metric_statistics(
@@ -55,17 +55,17 @@ def test_cloudwatch_metrics_published_for_processing_time():
     assert 'Datapoints' in response
 
 
-def test_eventbridge_triggers_circuit_breaker_remediation():
+def test_eventbridge_triggers_circuit_breaker_remediation(aws_region):
     """Verify EventBridge rules exist for circuit breaker."""
-    events = boto3.client('events', region_name='us-east-1')
+    events = boto3.client('events', region_name=aws_region)
     rules = events.list_rules()
     rule_names = [r['Name'] for r in rules['Rules']]
     assert len(rule_names) > 0
 
 
-def test_eventbridge_triggers_dlq_reprocessor():
+def test_eventbridge_triggers_dlq_reprocessor(aws_region):
     """Verify scheduled EventBridge rules exist for DLQ reprocessing."""
-    events = boto3.client('events', region_name='us-east-1')
+    events = boto3.client('events', region_name=aws_region)
     rules = events.list_rules()
     scheduled_rules = [r for r in rules['Rules'] if r.get('ScheduleExpression')]
     assert len(scheduled_rules) > 0

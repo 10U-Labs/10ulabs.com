@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from terraform_config import TEST_AWS_REGION
 from lambda_response import (
     parse_response_body,
     assert_response_status,
@@ -161,7 +162,7 @@ def drift_recovery(config):
         'AWS_REGION': config['aws_region'],
         'GITHUB_REPO': config['github_repo'],
         'GITHUB_TOKEN_PARAMETER_NAME': config['ssm_parameter_name_for_github_pat'],
-        'SNS_TOPIC_ARN': 'arn:aws:sns:us-east-1:123456789012:test-topic',
+        'SNS_TOPIC_ARN': f'arn:aws:sns:{TEST_AWS_REGION}:123456789012:test-topic',
         'MANAGED_VPC_ID': 'vpc-managed123'
     }
     with patch.dict('os.environ', env_vars):
@@ -293,7 +294,7 @@ def assert_no_hardcoded_env_defaults(lambda_path: Path) -> None:
 
 
 TEST_CONSTANTS = {
-    'queue_url': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue',
+    'queue_url': f'https://sqs.{TEST_AWS_REGION}.amazonaws.com/123456789012/test-queue',
     'dynamodb_table': 'test-table',
     'lambda_function': 'test-function',
     'instance_id': 'i-test123',
@@ -304,24 +305,24 @@ TEST_CONSTANTS = {
     'ecr_digest': 'sha256:test',
     'ecr_digest_2': 'sha256:abc123',
     'task_arn': 'test-task',
-    'task_arn_full': 'arn:aws:ecs:us-east-1:123456789012:task/test',
+    'task_arn_full': f'arn:aws:ecs:{TEST_AWS_REGION}:123456789012:task/test',
     'test_timestamp': '2024-01-01T00:00:00',
     'aws_account_id': '123456789012',
-    'aws_region': 'us-east-1',
+    'aws_region': TEST_AWS_REGION,
 }
 
 
 ENV_VAR_PRESETS = {
     'base': {
-        'AWS_REGION': 'us-east-1',
+        'AWS_REGION': TEST_AWS_REGION,
     },
     'webhook_router': {
-        'AWS_REGION': 'us-east-1',
+        'AWS_REGION': TEST_AWS_REGION,
         'API_KEY_PARAMETER_NAME': 'test-api-key-param',
         'WEBHOOK_SECRET_NAME': 'test-webhook-secret',
         'API_BASE_URL': 'https://api.test.com/v1',
         'IDEMPOTENCY_TABLE_NAME': 'test-table',
-        'JOB_QUEUE_URL': 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue',
+        'JOB_QUEUE_URL': f'https://sqs.{TEST_AWS_REGION}.amazonaws.com/123456789012/test-queue',
     },
 }
 
