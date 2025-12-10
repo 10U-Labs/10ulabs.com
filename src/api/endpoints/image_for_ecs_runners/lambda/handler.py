@@ -304,7 +304,7 @@ def delete_ecr_image(image_digest: str) -> Dict[str, Any]:
 def trigger_ecs_image_build(_config: Dict[str, Any]) -> Dict[str, Any]:
     """Trigger the ECS image build workflow."""
     payload = {'ref': 'main', 'inputs': {}}
-    result = trigger_github_workflow('endpoint_v1_image_for_ecs_runners.yml', payload)
+    result = trigger_github_workflow('endpoint_v1_image_for_ecs_runners_post.yml', payload)
     return result
 
 

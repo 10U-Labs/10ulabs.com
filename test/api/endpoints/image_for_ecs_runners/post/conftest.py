@@ -1,0 +1,119 @@
+"""Pytest fixtures for image_for_ecs_runners post (Docker build) tests."""
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any, Dict
+
+import boto3
+import pytest
+
+
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
+POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners" / "post"
+CONFIG_PATH = POST_DIR / "config.yml"
+DOCKERFILE_PATH = POST_DIR / "Dockerfile"
+
+# Add lib/python to path for imports
+LIB_DIR = REPO_ROOT / "lib" / "python"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+
+
+def _get_terraform_output_value(output_name: str) -> str:
+    """Extract a value from terraform outputs.tf file."""
+    shared_outputs = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
+    with open(shared_outputs, 'r', encoding='utf-8') as f:
+        content = f.read()
+    pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
+    match = re.search(pattern, content)
+    result = match.group(1) if match else ''
+    return result
+
+
+def _get_terraform_local_value(local_name: str) -> str:
+    """Extract a value from terraform locals.tf file."""
+    shared_locals = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
+    with open(shared_locals, 'r', encoding='utf-8') as f:
+        content = f.read()
+    pattern = rf'{local_name}\s*=\s*"([^"]+)"'
+    match = re.search(pattern, content)
+    result = match.group(1) if match else ''
+    return result
+
+
+def get_aws_region() -> str:
+    """Get AWS region from environment or terraform locals."""
+    try:
+        region = os.environ["AWS_REGION"]
+    except KeyError:
+        region = _get_terraform_local_value("aws_region")
+    return region
+
+
+def get_aws_account_id() -> str:
+    """Get AWS account ID using the AWS CLI."""
+    result = subprocess.run(
+        ["aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"],
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    return result.stdout.strip()
+
+
+def get_ecr_repository() -> str:
+    """Get ECR repository name from terraform outputs."""
+    return _get_terraform_output_value("ecr_repository_name_runners")
+
+
+def get_github_repo() -> str:
+    """Get GitHub repository name from terraform outputs."""
+    org = _get_terraform_output_value("github_org")
+    repo = _get_terraform_output_value("name_for_github_repo")
+    return f"{org}/{repo}"
+
+
+@pytest.fixture(scope="module")
+def aws_region() -> str:
+    """Fixture providing the AWS region."""
+    return get_aws_region()
+
+
+@pytest.fixture(scope="module")
+def aws_account_id() -> str:
+    """Fixture providing the AWS account ID."""
+    return get_aws_account_id()
+
+
+@pytest.fixture(scope="module")
+def ecr_repository() -> str:
+    """Fixture providing the ECR repository name."""
+    return get_ecr_repository()
+
+
+@pytest.fixture(scope="module")
+def github_repo() -> str:
+    """Fixture providing the GitHub repository name."""
+    return get_github_repo()
+
+
+@pytest.fixture(scope="module")
+def config() -> Dict[str, Any]:
+    """Return the test configuration dictionary."""
+    return {
+        'aws_region': get_aws_region(),
+        'aws_account_id': get_aws_account_id(),
+        'ecr_repository': get_ecr_repository(),
+        'github_repo': get_github_repo(),
+        'post_dir': str(POST_DIR),
+        'config_path': str(CONFIG_PATH),
+        'dockerfile_path': str(DOCKERFILE_PATH),
+    }
+
+
+@pytest.fixture(scope="session")
+def ecr_client():
+    """Create an ECR client."""
+    return boto3.client("ecr", region_name=get_aws_region())

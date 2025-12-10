@@ -21,6 +21,8 @@ bootstrap
                             │                                                        │
                             └── api_shared_ecs_runner ───────────────────────────────┤
                                                                                      │
+                                                        endpoint_v1_image_for_ecs_runners_post
+                                                                     │
                                                         endpoint_v1_image_for_ecs_runners
                                                                      │
                                                         endpoint_v1_ecs_runner ──────┤
@@ -78,6 +80,7 @@ bootstrap
 - [x] `endpoint_v1_image_for_ec2_runners_post.yml`
 - [x] `endpoint_v1_image_for_ec2_runners.yml`
 - [ ] `endpoint_v1_ec2_runner.yml`
+- [ ] `endpoint_v1_image_for_ecs_runners_post.yml`
 - [ ] `endpoint_v1_image_for_ecs_runners.yml`
 - [ ] `endpoint_v1_ecs_runner.yml`
 - [ ] `endpoint_v1_runners.yml`

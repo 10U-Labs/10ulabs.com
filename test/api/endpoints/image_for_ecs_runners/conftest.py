@@ -16,9 +16,10 @@ SHARED_LOCALS_PATH = os.path.join(
 BASE_DIR = os.path.join(
     os.path.dirname(__file__), '../../../../src/api/endpoints/image_for_ecs_runners'
 )
-FILES_DIR = os.path.join(BASE_DIR, 'files')
-CONFIG_PATH = os.path.join(FILES_DIR, 'config.yml')
-DOCKERFILE_PATH = os.path.join(FILES_DIR, 'Dockerfile')
+POST_DIR = os.path.join(BASE_DIR, 'post')
+FILES_DIR = POST_DIR  # Backwards compatibility alias
+CONFIG_PATH = os.path.join(POST_DIR, 'config.yml')
+DOCKERFILE_PATH = os.path.join(POST_DIR, 'Dockerfile')
 TFVARS_PATH = os.path.join(
     os.path.dirname(__file__), '../../../../src/api/endpoints/ecs_runner/terraform.tfvars'
 )
@@ -68,7 +69,7 @@ def get_aws_account_id():
 
 def get_ecr_repository():
     """Get ECR repository name from terraform outputs."""
-    return _get_terraform_output_value("ecr_repository_name")
+    return _get_terraform_output_value("ecr_repository_name_runners")
 
 
 def get_github_repo():
