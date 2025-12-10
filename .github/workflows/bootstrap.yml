@@ -105,12 +105,12 @@ jobs:
             .github/workflows/bootstrap.yml
       - name: Run pylint
         run: |
-          python3 -m pylint \
+          PYTHONPATH=lib/python python3 -m pylint \
             test/bootstrap/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy test/bootstrap/
+        run: MYPYPATH=lib/python python3 -m mypy test/bootstrap/
       - name: Run unit tests
         run: |
           python3 -m pytest test/bootstrap/pre_deployment/ \
