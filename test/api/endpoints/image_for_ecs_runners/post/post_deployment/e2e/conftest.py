@@ -65,12 +65,16 @@ def wait_for_process_with_backoff(process, max_attempts=7):
         wait_time = 2 ** attempt
         returncode = process.poll()
         if returncode is not None:
+            process.stdout.close()
+            process.stderr.close()
             return
         time.sleep(wait_time)
         total_wait = total_wait + wait_time
         attempt = attempt + 1
     process.kill()
     process.wait()
+    process.stdout.close()
+    process.stderr.close()
     raise subprocess.TimeoutExpired(process.args, total_wait)
 
 

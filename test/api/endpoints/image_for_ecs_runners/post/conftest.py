@@ -100,6 +100,12 @@ def github_repo() -> str:
 
 
 @pytest.fixture(scope="module")
+def github_pat() -> str:
+    """Fixture providing the GitHub PAT from environment variable."""
+    return os.environ.get("GITHUB_PAT", "")
+
+
+@pytest.fixture(scope="module")
 def config() -> Dict[str, Any]:
     """Return the test configuration dictionary."""
     return {
