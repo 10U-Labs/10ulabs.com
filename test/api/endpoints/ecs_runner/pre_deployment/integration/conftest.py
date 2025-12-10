@@ -38,9 +38,9 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def ec2_client(aws_region):
+def ec2_client(shared_config):
     """Create an EC2 client."""
-    return boto3.client("ec2", region_name=aws_region)
+    return boto3.client("ec2", region_name=shared_config["aws_region"])
 
 
 @pytest.fixture(scope="session")
