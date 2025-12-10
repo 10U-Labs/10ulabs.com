@@ -72,6 +72,8 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     runner_labels = get_runner_labels()
     result.update(runner_labels)
     result['api_version'] = 'v1'
+    lambda_names = shared_config.get('lambda_handler_names', {})
+    result['lambda_function_name'] = lambda_names.get('ecs_runner', '')
     return result
 
 
