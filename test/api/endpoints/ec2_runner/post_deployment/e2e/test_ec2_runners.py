@@ -87,9 +87,9 @@ def test_ec2_runner_instance_fixture(test_context, latest_ami_exists, ec2_client
     if not latest_ami_exists:
         yield None
         return
-    runner_label = config['ec2_e2e_test']
+    runner_labels = config['ec2_e2e_test']
     job_id, payload = create_runner_job_payload(
-        test_context["github_repo"], [runner_label], test_context["github_run_id"]
+        test_context["github_repo"], runner_labels, test_context["github_run_id"]
     )
     response = make_authenticated_post(
         f"{test_context['api_credentials']['url']}/v1/ec2-runner",
