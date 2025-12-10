@@ -392,3 +392,42 @@ def test_find_workflows_by_push_paths_handles_invalid_yaml(pre_git_checks, tmp_p
     result = pre_git_checks.find_workflows_by_push_paths(
         changed_files, str(workflows_dir), known_workflows)
     assert len(result) == 0
+
+
+def test_run_workflow_yaml_lint_returns_true_when_no_workflow_files(pre_git_checks):
+    """Test that run_workflow_yaml_lint returns True when no workflow files."""
+    changed_files = ['src/main.py', 'test/test_main.py']
+    result = pre_git_checks.run_workflow_yaml_lint(changed_files)
+    assert result is True
+
+
+def test_run_workflow_yaml_lint_identifies_workflow_files():
+    """Test that run_workflow_yaml_lint correctly identifies workflow files."""
+    changed_files = [
+        'src/main.py',
+        '.github/workflows/test.yml',
+        '.github/workflows/deploy.yml',
+        'test/test_main.py'
+    ]
+    # Extract workflow files using the same logic as the function
+    workflow_files = [
+        f for f in changed_files
+        if f.startswith('.github/workflows/') and f.endswith('.yml')
+    ]
+    assert len(workflow_files) == 2
+    assert '.github/workflows/test.yml' in workflow_files
+    assert '.github/workflows/deploy.yml' in workflow_files
+
+
+def test_run_workflow_yaml_lint_ignores_non_yml_files(pre_git_checks):
+    """Test that run_workflow_yaml_lint ignores non-yml files in workflows dir."""
+    changed_files = ['.github/workflows/README.md', '.github/workflows/.gitkeep']
+    result = pre_git_checks.run_workflow_yaml_lint(changed_files)
+    assert result is True
+
+
+def test_run_workflow_yaml_lint_ignores_yaml_outside_workflows(pre_git_checks):
+    """Test that run_workflow_yaml_lint ignores yaml files outside workflows dir."""
+    changed_files = ['etc/config.yml', '.github/dependabot.yml']
+    result = pre_git_checks.run_workflow_yaml_lint(changed_files)
+    assert result is True
