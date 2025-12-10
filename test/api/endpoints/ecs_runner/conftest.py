@@ -76,18 +76,18 @@ def config_fixture(shared_config) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def ecs_client():
+def ecs_client(shared_config):
     """Provide ECS client for tests."""
-    return boto3.client('ecs', region_name='us-east-1')
+    return boto3.client('ecs', region_name=shared_config['aws_region'])
 
 
 @pytest.fixture
-def ecr_client():
+def ecr_client(shared_config):
     """Provide ECR client for tests."""
-    return boto3.client('ecr', region_name='us-east-1')
+    return boto3.client('ecr', region_name=shared_config['aws_region'])
 
 
 @pytest.fixture
-def dynamodb_client():
+def dynamodb_client(shared_config):
     """Provide DynamoDB client for tests."""
-    return boto3.client('dynamodb', region_name='us-east-1')
+    return boto3.client('dynamodb', region_name=shared_config['aws_region'])
