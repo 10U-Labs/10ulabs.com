@@ -94,7 +94,7 @@ jobs:
             .github/workflows/endpoint_v1_image_for_ecs_runners.yml
       - name: Linting Python files
         run: |
-          pylint \
+          PYTHONPATH=lib/python pylint \
             src/api/endpoints/image_for_ecs_runners/lambda/handler.py \
             test/api/endpoints/image_for_ecs_runners/endpoint/ \
             --fail-on=C,R,W \
