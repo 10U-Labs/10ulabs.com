@@ -246,12 +246,17 @@ jobs:
             echo "GH_TOKEN length: ${#GH_TOKEN}"
             exit 1
           fi
-          # Check for [skip descendants] in commit message
+          # Check for skip_descendants input or [skip descendants] in commit message
           SKIP_DESCENDANTS=""
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          if echo "$COMMIT_MSG" | grep -qi '\[skip descendants\]'; then
-            echo "Found [skip descendants] in commit message"
+          if [ "${{ inputs.skip_descendants }}" = "true" ]; then
+            echo "skip_descendants input is true"
             SKIP_DESCENDANTS="-f skip_descendants=true"
+          else
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if echo "$COMMIT_MSG" | grep -qi '\[skip descendants\]'; then
+              echo "Found [skip descendants] in commit message"
+              SKIP_DESCENDANTS="-f skip_descendants=true"
+            fi
           fi
           DISPATCH_COUNT=0
           echo "$ROOTS" | while read -r WORKFLOW; do
@@ -302,6 +307,10 @@ on:
       github_hosted:
         default: false
         description: Use GitHub-hosted runners
+        type: boolean
+      skip_descendants:
+        default: false
+        description: Skip dispatching descendant workflows
         type: boolean
       start_from:
         description: 'Workflow(s) to start from, comma-separated (e.g., "health, bootstrap")'
