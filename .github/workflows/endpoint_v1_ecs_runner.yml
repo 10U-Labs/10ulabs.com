@@ -150,7 +150,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
           github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.skip_descendants != 'true'
+          github.event.inputs.skip_descendants != 'true' &&
+          !contains(github.event.head_commit.message, '[skip descendants]')
         name: Dispatch descendant workflows
         run: |
           python3 -m pip install pyyaml
