@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from naming_conventions import validate_name
+from terraform_config import parse_lambda_handler_names
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
@@ -86,6 +87,7 @@ def extract_lambda_function_names(tf_file: Path) -> list:
         content = f.read()
 
     prefix = get_resource_prefix()
+    handler_names = parse_lambda_handler_names()
     functions = []
 
     for match in re.finditer(r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{', content):
@@ -94,6 +96,13 @@ def extract_lambda_function_names(tf_file: Path) -> list:
         if name_match:
             resolved = name_match.group(1).replace("${local.resource_prefix}", prefix)
             functions.append((match.group(1), resolved))
+        else:
+            module_match = re.search(
+                r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
+                block_content, re.MULTILINE
+            )
+            if module_match and module_match.group(1) in handler_names:
+                functions.append((match.group(1), handler_names[module_match.group(1)]))
 
     return functions
 
@@ -108,12 +117,10 @@ class TestIAMRoleNamingConventions:
     @pytest.mark.parametrize(
         "resource_name,role_name",
         IAM_ROLES,
-        ids=[f"iam_role_{r[0]}" for r in IAM_ROLES] if IAM_ROLES else ["no_roles"],
+        ids=[f"iam_role_{r[0]}" for r in IAM_ROLES],
     )
     def test_iam_role_name_is_pascalcase(self, resource_name, role_name):
         """Verify IAM role name uses PascalCase (no dashes or underscores)."""
-        if not IAM_ROLES:
-            pytest.skip("No IAM roles found in iam.tf")
         error = validate_name(role_name)
         assert error is None, (
             f"IAM role '{resource_name}' has invalid name '{role_name}': {error}"
@@ -134,12 +141,10 @@ class TestLambdaFunctionNamingConventions:
     @pytest.mark.parametrize(
         "resource_name,function_name",
         LAMBDA_FUNCTIONS,
-        ids=[f"lambda_{f[0]}" for f in LAMBDA_FUNCTIONS] if LAMBDA_FUNCTIONS else ["no_functions"],
+        ids=[f"lambda_{f[0]}" for f in LAMBDA_FUNCTIONS],
     )
     def test_lambda_function_name_is_pascalcase(self, resource_name, function_name):
         """Verify Lambda function name uses PascalCase (no dashes or underscores)."""
-        if not LAMBDA_FUNCTIONS:
-            pytest.skip("No Lambda functions found in lambda.tf")
         error = validate_name(function_name)
         assert error is None, (
             f"Lambda function '{resource_name}' has invalid name '{function_name}': {error}"
