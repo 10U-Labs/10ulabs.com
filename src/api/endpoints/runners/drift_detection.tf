@@ -1,5 +1,5 @@
 resource "aws_iam_role" "config_recorder" {
-  name = "${local.resource_prefix}-ConfigRecorder-Role"
+  name = "${local.resource_prefix}ConfigRecorderRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "config_recorder" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-ConfigRecorder-Role"
+    Name = self.name
   })
 }
 
