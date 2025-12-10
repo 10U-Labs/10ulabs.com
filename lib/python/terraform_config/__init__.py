@@ -160,3 +160,132 @@ def get_shared_config() -> Dict[str, Any]:
 # Use this constant in unit tests for mock data (fake ARNs, URLs, etc.)
 # instead of hardcoding region strings.
 TEST_AWS_REGION = parse_locals().get("aws_region", "us-east-2")
+
+
+def get_resource_prefix() -> str:
+    """Get the resource prefix from shared Terraform module."""
+    return parse_locals().get("resource_prefix", "TenULabs")
+
+
+def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
+    """Extract local values from locals.tf in the given endpoint directory.
+
+    Resolves ${module.shared.resource_prefix} and ${local.resource_prefix}
+    references using the shared module's resource_prefix.
+
+    Args:
+        tf_dir: Path to the endpoint's Terraform directory (e.g., src/api/endpoints/foo)
+
+    Returns:
+        Dict mapping local variable names to their resolved string values.
+    """
+    locals_file = tf_dir / "locals.tf"
+    if not locals_file.exists():
+        return {}
+    with open(locals_file, encoding="utf-8") as f:
+        content = f.read()
+    locals_dict = {}
+    prefix = get_resource_prefix()
+    for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
+        value = match.group(2)
+        value = value.replace("${module.shared.resource_prefix}", prefix)
+        value = value.replace("${local.resource_prefix}", prefix)
+        locals_dict[match.group(1)] = value
+    return locals_dict
+
+
+def _extract_block_content(content: str, start_pos: int) -> str:
+    """Extract content of a Terraform block starting at the given brace position."""
+    brace_count = 0
+    for i, char in enumerate(content[start_pos:]):
+        if char == '{':
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                return content[start_pos:start_pos + i + 1]
+    return content[start_pos:]
+
+
+def extract_iam_role_names(tf_file: Path) -> list:
+    """Extract IAM role names from a Terraform file.
+
+    Handles both quoted strings (name = "Value") and local references
+    (name = local.var_name).
+
+    Args:
+        tf_file: Path to the Terraform file (typically iam.tf)
+
+    Returns:
+        List of (resource_name, resolved_role_name) tuples.
+    """
+    if not tf_file.exists():
+        return []
+    with open(tf_file, encoding="utf-8") as f:
+        content = f.read()
+
+    prefix = get_resource_prefix()
+    local_values = get_endpoint_local_values(tf_file.parent)
+    roles = []
+
+    for match in re.finditer(r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{', content):
+        block_content = _extract_block_content(content, match.end() - 1)
+        name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
+        if name_match:
+            role_name = name_match.group(1).replace("${local.resource_prefix}", prefix)
+            roles.append((match.group(1), role_name))
+        else:
+            local_match = re.search(
+                r'^\s*name\s*=\s*local\.(\w+)', block_content, re.MULTILINE
+            )
+            if local_match and local_match.group(1) in local_values:
+                roles.append((match.group(1), local_values[local_match.group(1)]))
+
+    return roles
+
+
+def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False) -> list:
+    """Extract Lambda function names from a Terraform file.
+
+    Handles quoted strings, local references, and optionally module.shared references.
+
+    Args:
+        tf_file: Path to the Terraform file (typically lambda.tf)
+        use_handler_names: If True, also resolve module.shared.lambda_handler_names refs
+
+    Returns:
+        List of (resource_name, resolved_function_name) tuples.
+    """
+    if not tf_file.exists():
+        return []
+    with open(tf_file, encoding="utf-8") as f:
+        content = f.read()
+
+    prefix = get_resource_prefix()
+    local_values = get_endpoint_local_values(tf_file.parent)
+    handler_names = parse_lambda_handler_names() if use_handler_names else {}
+    functions = []
+
+    for match in re.finditer(r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{', content):
+        block_content = _extract_block_content(content, match.end() - 1)
+        name_match = re.search(
+            r'^\s*function_name\s*=\s*"([^"]+)"', block_content, re.MULTILINE
+        )
+        if name_match:
+            func_name = name_match.group(1).replace("${local.resource_prefix}", prefix)
+            functions.append((match.group(1), func_name))
+        else:
+            local_match = re.search(
+                r'^\s*function_name\s*=\s*local\.(\w+)', block_content, re.MULTILINE
+            )
+            if local_match and local_match.group(1) in local_values:
+                functions.append((match.group(1), local_values[local_match.group(1)]))
+            elif use_handler_names:
+                module_match = re.search(
+                    r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
+                    block_content, re.MULTILINE
+                )
+                if module_match and module_match.group(1) in handler_names:
+                    functions.append((match.group(1), handler_names[module_match.group(1)]))
+
+    return functions
