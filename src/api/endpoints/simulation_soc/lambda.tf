@@ -11,6 +11,7 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   handler          = "handler.handler"
   source_code_hash = data.archive_file.simulation_soc_handler.output_base64sha256
   runtime          = "python3.11"
+  architectures    = ["arm64"]
   timeout          = 10
   description      = "Tri-mode SoC simulation endpoint for API"
 
@@ -41,7 +42,7 @@ resource "aws_cloudwatch_log_group" "simulation_soc_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.simulation_soc_handler_function_name}-logs"
+    Name = "${var.simulation_soc_handler_function_name}Logs"
   })
 }
 

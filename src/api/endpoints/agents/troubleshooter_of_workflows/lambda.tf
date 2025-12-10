@@ -14,7 +14,7 @@ resource "aws_lambda_function" "webhook" {
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.webhook_lambda.output_base64sha256
   runtime          = "python3.13"
-  architectures    = ["x86_64"]
+  architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 256
   description      = "Webhook handler for Troubleshooter of Workflows Agent"
@@ -47,7 +47,7 @@ resource "aws_cloudwatch_log_group" "webhook_lambda" {
   retention_in_days = 14
 
   tags = merge(local.common_tags, {
-    Name = "${local.lambda_name}-logs"
+    Name = "${local.lambda_name}Logs"
   })
 }
 

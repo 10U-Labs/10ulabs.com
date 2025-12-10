@@ -4,6 +4,7 @@ resource "aws_lambda_function" "handler" {
   handler          = local.lambda_handler
   role             = aws_iam_role.lambda_execution.arn
   runtime          = local.lambda_runtime
+  architectures    = ["arm64"]
   source_code_hash = data.archive_file.lambda.output_base64sha256
   timeout          = local.lambda_timeout
   memory_size      = local.lambda_memory_size

@@ -18,6 +18,7 @@ resource "aws_lambda_function" "handler" {
   handler          = "handler.lambda_handler"
   source_code_hash = data.archive_file.handler.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
   description      = "Handler for /v1/ec2-runner API endpoints"
@@ -56,7 +57,7 @@ resource "aws_cloudwatch_log_group" "handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${module.shared.lambda_handler_names.ec2_runner}-logs"
+    Name = "${module.shared.lambda_handler_names.ec2_runner}Logs"
   })
 }
 

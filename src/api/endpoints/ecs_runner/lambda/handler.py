@@ -591,9 +591,9 @@ def _get_capacity_provider(job_labels: List[str]) -> str:
             return 'FARGATE_SPOT'
         return 'FARGATE'
     except (LabelParseError, LabelValidationError) as e:
-        # If labels can't be parsed (legacy format), default to FARGATE
-        logger.warning("Could not parse labels for capacity provider: %s", e)
-        return 'FARGATE'
+        # If labels can't be parsed (legacy format), default to FARGATE_SPOT
+        logger.warning("Could not parse labels, defaulting to FARGATE_SPOT: %s", e)
+        return 'FARGATE_SPOT'
 
 
 def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str, Any]:

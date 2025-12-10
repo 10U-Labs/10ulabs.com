@@ -22,11 +22,11 @@ echo "Output: $OUTPUT_PATH"
 # Lambda layers expect packages in python/ directory
 mkdir -p "$BUILD_DIR/python"
 
-# Install dependencies for Lambda's x86_64 Linux runtime
+# Install dependencies for Lambda's ARM64 Linux runtime
 pip install \
     -r "$REQUIREMENTS_PATH" \
     -t "$BUILD_DIR/python" \
-    --platform manylinux2014_x86_64 \
+    --platform manylinux2014_aarch64 \
     --implementation cp \
     --python-version 3.13 \
     --only-binary=:all: \

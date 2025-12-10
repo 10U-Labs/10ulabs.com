@@ -11,6 +11,7 @@ resource "aws_lambda_function" "action_group" {
   handler          = "action_group.handler"
   source_code_hash = data.archive_file.action_group.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 512
   description      = "Action group for Test Auditor Agent - GitHub operations"
@@ -42,6 +43,6 @@ resource "aws_cloudwatch_log_group" "action_group" {
   retention_in_days = 14
 
   tags = merge(local.common_tags, {
-    Name = "${local.lambda_name}-logs"
+    Name = "${local.lambda_name}Logs"
   })
 }

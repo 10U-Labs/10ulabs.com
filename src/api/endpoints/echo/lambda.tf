@@ -11,6 +11,7 @@ resource "aws_lambda_function" "echo_handler" {
   handler          = "handler.handler"
   source_code_hash = data.archive_file.echo_handler.output_base64sha256
   runtime          = "python3.13"
+  architectures    = ["arm64"]
   timeout          = 10
   description      = "Echo endpoint for API"
 
@@ -29,7 +30,7 @@ resource "aws_cloudwatch_log_group" "echo_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.echo_handler_function_name}-logs"
+    Name = "${var.echo_handler_function_name}Logs"
   })
 }
 

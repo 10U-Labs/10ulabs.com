@@ -573,8 +573,8 @@ def _is_spot_from_labels(job_labels: List[str]) -> bool:
         validate_labels(parsed)
         return is_spot(parsed)
     except (LabelParseError, LabelValidationError) as e:
-        logger.warning("Could not parse labels for pricing: %s", e)
-        return False
+        logger.warning("Could not parse labels for pricing, defaulting to spot: %s", e)
+        return True
 
 
 def wait_for_instance_describable(instance_id: str, max_attempts: int = 3) -> Dict[str, Any]:

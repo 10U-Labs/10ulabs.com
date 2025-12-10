@@ -33,10 +33,11 @@ resource "null_resource" "github_auth_layer_build" {
 
 # GitHub Auth layer - contains PyJWT and cryptography for GitHub App authentication
 resource "aws_lambda_layer_version" "github_auth" {
-  filename            = local.github_auth_zip
-  layer_name          = "${local.resource_prefix}GithubAuthLayer"
-  description         = "PyJWT and cryptography for GitHub App authentication"
-  compatible_runtimes = ["python3.13", "python3.12", "python3.11"]
+  filename                 = local.github_auth_zip
+  layer_name               = "${local.resource_prefix}GithubAuthLayer"
+  description              = "PyJWT and cryptography for GitHub App authentication"
+  compatible_runtimes      = ["python3.13", "python3.12", "python3.11"]
+  compatible_architectures = ["arm64"]
 
   # Use source file hash so plan works before zip exists
   source_code_hash = local.github_auth_content_hash
