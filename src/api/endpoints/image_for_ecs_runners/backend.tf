@@ -7,7 +7,7 @@ terraform {
     use_lockfile = true
   }
 
-  required_version = ">= 1.9"
+  required_version = ">= 1.14"
 
   required_providers {
     archive = {
