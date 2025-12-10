@@ -5,220 +5,116 @@ and can be invoked.
 """
 import json
 
-from botocore.exceptions import ClientError
 import pytest
+
+
+@pytest.fixture(name="lambda_function", scope="module")
+def lambda_function_fixture(lambda_client):
+    """Find and return the Lambda function matching ImageForEcsRunners."""
+    response = lambda_client.list_functions()
+    matching = [
+        f for f in response["Functions"]
+        if "ImageForEcsRunners" in f["FunctionName"]
+    ]
+    if not matching:
+        pytest.fail(
+            "No Lambda function found matching 'ImageForEcsRunners'. "
+            "Run terraform apply in src/api/endpoints/image_for_ecs_runners/"
+        )
+    return matching[0]
+
+
+@pytest.fixture(name="lambda_config", scope="module")
+def lambda_config_fixture(lambda_client, lambda_function):
+    """Get the Lambda function configuration."""
+    return lambda_client.get_function_configuration(
+        FunctionName=lambda_function["FunctionName"]
+    )
+
+
+@pytest.fixture(name="env_vars", scope="module")
+def env_vars_fixture(lambda_config):
+    """Get environment variables from Lambda config."""
+    return lambda_config.get("Environment", {}).get("Variables", {})
+
+
+@pytest.fixture(name="options_response", scope="module")
+def options_response_fixture(lambda_client, lambda_function):
+    """Invoke Lambda with OPTIONS request and return response."""
+    event = {
+        "httpMethod": "OPTIONS",
+        "path": "/v1/image-for-ecs-runners",
+        "headers": {}
+    }
+    response = lambda_client.invoke(
+        FunctionName=lambda_function["FunctionName"],
+        InvocationType="RequestResponse",
+        Payload=json.dumps(event)
+    )
+    return json.loads(response["Payload"].read())
 
 
 class TestLambdaFunctionExistence:
     """Verify the Lambda function exists and is configured."""
 
-    def test_01_lambda_function_exists(self, lambda_client):
+    def test_01_lambda_function_exists(self, lambda_function):
         """Verify the Lambda function exists."""
-        try:
-            # Look for a function with our expected name pattern
-            response = lambda_client.list_functions()
-            function_names = [f["FunctionName"] for f in response["Functions"]]
+        assert lambda_function is not None
 
-            matching_functions = [
-                name for name in function_names
-                if "ImageForEcsRunners" in name
-            ]
+    def test_02_lambda_uses_python_runtime(self, lambda_function):
+        """Verify the Lambda function uses Python runtime."""
+        assert lambda_function["Runtime"].startswith("python")
 
-            assert len(matching_functions) > 0, (
-                "No Lambda function found matching 'ImageForEcsRunners'. "
-                "Run terraform apply in src/api/endpoints/image_for_ecs_runners/"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to list Lambda functions: {e}")
-
-    def test_02_lambda_function_configured(self, lambda_client):
-        """Verify the Lambda function has correct configuration."""
-        try:
-            response = lambda_client.list_functions()
-            matching_functions = [
-                f for f in response["Functions"]
-                if "ImageForEcsRunners" in f["FunctionName"]
-            ]
-
-            if not matching_functions:
-                pytest.skip("Lambda function not found")
-
-            function = matching_functions[0]
-
-            # Verify runtime
-            assert function["Runtime"].startswith("python"), (
-                f"Expected Python runtime, got {function['Runtime']}"
-            )
-
-            # Verify handler
-            assert function["Handler"] == "handler.lambda_handler", (
-                f"Expected handler 'handler.lambda_handler', got {function['Handler']}"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to get Lambda function: {e}")
+    def test_03_lambda_has_correct_handler(self, lambda_function):
+        """Verify the Lambda function has correct handler."""
+        assert lambda_function["Handler"] == "handler.lambda_handler"
 
 
 class TestLambdaFunctionEnvironment:
     """Verify the Lambda function environment variables."""
 
-    def test_01_has_ecr_repository_env(self, lambda_client):
-        """Verify ECR_REPOSITORY environment variable is set."""
-        try:
-            response = lambda_client.list_functions()
-            matching_functions = [
-                f for f in response["Functions"]
-                if "ImageForEcsRunners" in f["FunctionName"]
-            ]
+    def test_01_ecr_repository_env_exists(self, env_vars):
+        """Verify ECR_REPOSITORY environment variable exists."""
+        assert "ECR_REPOSITORY" in env_vars
 
-            if not matching_functions:
-                pytest.skip("Lambda function not found")
+    def test_02_ecr_repository_env_not_empty(self, env_vars):
+        """Verify ECR_REPOSITORY environment variable is not empty."""
+        assert env_vars.get("ECR_REPOSITORY")
 
-            function_name = matching_functions[0]["FunctionName"]
-            config = lambda_client.get_function_configuration(
-                FunctionName=function_name
-            )
+    def test_03_github_repo_env_exists(self, env_vars):
+        """Verify GITHUB_REPO environment variable exists."""
+        assert "GITHUB_REPO" in env_vars
 
-            env_vars = config.get("Environment", {}).get("Variables", {})
-            assert "ECR_REPOSITORY" in env_vars, (
-                "ECR_REPOSITORY environment variable not set"
-            )
-            assert env_vars["ECR_REPOSITORY"], (
-                "ECR_REPOSITORY environment variable is empty"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to get Lambda function configuration: {e}")
+    def test_04_github_repo_env_not_empty(self, env_vars):
+        """Verify GITHUB_REPO environment variable is not empty."""
+        assert env_vars.get("GITHUB_REPO")
 
-    def test_02_has_github_repo_env(self, lambda_client):
-        """Verify GITHUB_REPO environment variable is set."""
-        try:
-            response = lambda_client.list_functions()
-            matching_functions = [
-                f for f in response["Functions"]
-                if "ImageForEcsRunners" in f["FunctionName"]
-            ]
+    def test_05_github_token_secret_name_env_exists(self, env_vars):
+        """Verify GITHUB_TOKEN_SECRET_NAME environment variable exists."""
+        assert "GITHUB_TOKEN_SECRET_NAME" in env_vars
 
-            if not matching_functions:
-                pytest.skip("Lambda function not found")
-
-            function_name = matching_functions[0]["FunctionName"]
-            config = lambda_client.get_function_configuration(
-                FunctionName=function_name
-            )
-
-            env_vars = config.get("Environment", {}).get("Variables", {})
-            assert "GITHUB_REPO" in env_vars, (
-                "GITHUB_REPO environment variable not set"
-            )
-            assert env_vars["GITHUB_REPO"], (
-                "GITHUB_REPO environment variable is empty"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to get Lambda function configuration: {e}")
-
-    def test_03_has_github_token_secret_name_env(self, lambda_client):
-        """Verify GITHUB_TOKEN_SECRET_NAME environment variable is set."""
-        try:
-            response = lambda_client.list_functions()
-            matching_functions = [
-                f for f in response["Functions"]
-                if "ImageForEcsRunners" in f["FunctionName"]
-            ]
-
-            if not matching_functions:
-                pytest.skip("Lambda function not found")
-
-            function_name = matching_functions[0]["FunctionName"]
-            config = lambda_client.get_function_configuration(
-                FunctionName=function_name
-            )
-
-            env_vars = config.get("Environment", {}).get("Variables", {})
-            assert "GITHUB_TOKEN_SECRET_NAME" in env_vars, (
-                "GITHUB_TOKEN_SECRET_NAME environment variable not set"
-            )
-            assert env_vars["GITHUB_TOKEN_SECRET_NAME"], (
-                "GITHUB_TOKEN_SECRET_NAME environment variable is empty"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to get Lambda function configuration: {e}")
+    def test_06_github_token_secret_name_env_not_empty(self, env_vars):
+        """Verify GITHUB_TOKEN_SECRET_NAME environment variable is not empty."""
+        assert env_vars.get("GITHUB_TOKEN_SECRET_NAME")
 
 
 class TestLambdaFunctionInvocation:
     """Verify the Lambda function can be invoked directly."""
 
-    def test_01_can_invoke_with_options(self, lambda_client):
-        """Verify the Lambda function handles OPTIONS requests."""
-        try:
-            response = lambda_client.list_functions()
-            matching_functions = [
-                f for f in response["Functions"]
-                if "ImageForEcsRunners" in f["FunctionName"]
-            ]
+    def test_01_options_returns_200(self, options_response):
+        """Verify OPTIONS request returns 200 status."""
+        assert options_response["statusCode"] == 200
 
-            if not matching_functions:
-                pytest.skip("Lambda function not found")
+    def test_02_options_has_cors_origin_header(self, options_response):
+        """Verify OPTIONS response has Access-Control-Allow-Origin header."""
+        assert "Access-Control-Allow-Origin" in options_response["headers"]
 
-            function_name = matching_functions[0]["FunctionName"]
+    def test_03_cors_origin_is_wildcard(self, options_response):
+        """Verify Access-Control-Allow-Origin is '*'."""
+        assert options_response["headers"]["Access-Control-Allow-Origin"] == "*"
 
-            # Invoke with OPTIONS request
-            event = {
-                "httpMethod": "OPTIONS",
-                "path": "/v1/image-for-ecs-runners",
-                "headers": {}
-            }
+    def test_04_cors_methods_includes_get(self, options_response):
+        """Verify Access-Control-Allow-Methods includes GET."""
+        methods = options_response["headers"].get("Access-Control-Allow-Methods", "")
 
-            response = lambda_client.invoke(
-                FunctionName=function_name,
-                InvocationType="RequestResponse",
-                Payload=json.dumps(event)
-            )
-
-            # Parse response
-            payload = json.loads(response["Payload"].read())
-
-            assert payload["statusCode"] == 200, (
-                f"Expected 200 status, got {payload['statusCode']}"
-            )
-            assert "Access-Control-Allow-Origin" in payload["headers"], (
-                "Missing CORS headers in response"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to invoke Lambda function: {e}")
-
-    def test_02_returns_cors_headers_for_options(self, lambda_client):
-        """Verify the Lambda function returns proper CORS headers."""
-        try:
-            response = lambda_client.list_functions()
-            matching_functions = [
-                f for f in response["Functions"]
-                if "ImageForEcsRunners" in f["FunctionName"]
-            ]
-
-            if not matching_functions:
-                pytest.skip("Lambda function not found")
-
-            function_name = matching_functions[0]["FunctionName"]
-
-            event = {
-                "httpMethod": "OPTIONS",
-                "path": "/v1/image-for-ecs-runners",
-                "headers": {}
-            }
-
-            response = lambda_client.invoke(
-                FunctionName=function_name,
-                InvocationType="RequestResponse",
-                Payload=json.dumps(event)
-            )
-
-            payload = json.loads(response["Payload"].read())
-            headers = payload.get("headers", {})
-
-            assert headers.get("Access-Control-Allow-Origin") == "*", (
-                "Expected '*' for Access-Control-Allow-Origin"
-            )
-            assert "GET" in headers.get("Access-Control-Allow-Methods", ""), (
-                "Expected 'GET' in Access-Control-Allow-Methods"
-            )
-        except ClientError as e:
-            pytest.fail(f"Failed to invoke Lambda function: {e}")
+        assert "GET" in methods

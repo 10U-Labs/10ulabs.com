@@ -3,137 +3,144 @@
 These tests verify the complete workflow of managing ECR images
 through the API endpoint.
 """
-from test.api.endpoints.image_for_ecs_runners.endpoint.test_data import (
-    IMAGE_RESPONSE_FIELDS,
-)
-
 import pytest
 
 
 class TestGetImageByDigestWorkflow:
     """E2E tests for getting image by digest."""
 
-    def test_get_image_by_valid_digest(self, api_request):
-        """Test getting an image by a valid digest."""
-        # First, get a valid digest from the list
-        list_response = api_request("/v1/image-for-ecs-runners", method="GET")
-
-        # Skip if API key required
-        if list_response["status_code"] == 403:
-            pytest.skip("API key required")
-
-        if list_response["status_code"] != 200:
-            pytest.skip("Failed to list images")
-
-        images = list_response["body"].get("images", [])
+    @pytest.fixture
+    def first_digest(self, api_request):
+        """Get first image digest from list response."""
+        response = api_request("/v1/image-for-ecs-runners", method="GET")
+        if response["status_code"] != 200:
+            pytest.fail(f"List images failed: {response['status_code']}")
+        images = response["body"].get("images", [])
         if not images:
-            pytest.skip("No images available")
+            pytest.skip("No images available in repository")
+        return images[0]["digest"]
 
-        # Get the first image's digest
-        digest = images[0]["digest"]
+    @pytest.fixture
+    def digest_response(self, api_request, first_digest):
+        """Get image by digest response."""
+        return api_request(f"/v1/image-for-ecs-runners/{first_digest}", method="GET")
 
-        # Now get the image by digest
-        response = api_request(f"/v1/image-for-ecs-runners/{digest}", method="GET")
+    def test_01_get_by_digest_returns_200(self, digest_response):
+        """Verify get by digest returns 200."""
+        assert digest_response["status_code"] == 200
 
-        assert response["status_code"] == 200
-        assert response["body"]["success"] is True
-        assert response["body"]["digest"] == digest
+    def test_02_get_by_digest_success_is_true(self, digest_response):
+        """Verify get by digest success is True."""
+        assert digest_response["body"]["success"] is True
 
-    def test_get_image_by_invalid_digest_returns_404(self, api_request):
-        """Test that getting an invalid digest returns 404."""
-        response = api_request(
+    def test_03_get_by_digest_returns_correct_digest(self, digest_response, first_digest):
+        """Verify returned digest matches requested digest."""
+        assert digest_response["body"]["digest"] == first_digest
+
+    def test_04_get_by_digest_has_tags(self, digest_response):
+        """Verify get by digest has tags field."""
+        assert "tags" in digest_response["body"]
+
+    def test_05_get_by_digest_has_pushed_at(self, digest_response):
+        """Verify get by digest has pushed_at field."""
+        assert "pushed_at" in digest_response["body"]
+
+    def test_06_get_by_digest_has_size_bytes(self, digest_response):
+        """Verify get by digest has size_bytes field."""
+        assert "size_bytes" in digest_response["body"]
+
+
+class TestGetImageByInvalidDigest:
+    """Tests for getting image with invalid digest."""
+
+    @pytest.fixture
+    def invalid_response(self, api_request):
+        """Get response for invalid digest request."""
+        return api_request(
             "/v1/image-for-ecs-runners/sha256:invaliddigestvalue123",
             method="GET"
         )
 
-        # Skip if API key required
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
+    def test_01_returns_404(self, invalid_response):
+        """Verify invalid digest returns 404."""
+        assert invalid_response["status_code"] == 404
 
-        assert response["status_code"] == 404
-        assert response["body"]["success"] is False
-
-    def test_get_image_returns_all_fields(self, api_request):
-        """Test that get image returns all required fields."""
-        # First, get a valid digest from the list
-        list_response = api_request("/v1/image-for-ecs-runners", method="GET")
-
-        # Skip if API key required
-        if list_response["status_code"] == 403:
-            pytest.skip("API key required")
-
-        if list_response["status_code"] != 200:
-            pytest.skip("Failed to list images")
-
-        images = list_response["body"].get("images", [])
-        if not images:
-            pytest.skip("No images available")
-
-        digest = images[0]["digest"]
-        response = api_request(f"/v1/image-for-ecs-runners/{digest}", method="GET")
-
-        assert response["status_code"] == 200
-        for field in IMAGE_RESPONSE_FIELDS:
-            assert field in response["body"], f"Missing field: {field}"
+    def test_02_success_is_false(self, invalid_response):
+        """Verify success is False for invalid digest."""
+        assert invalid_response["body"]["success"] is False
 
 
 class TestCORSWorkflow:
     """E2E tests for CORS support."""
 
-    def test_options_returns_cors_headers(self, api_request):
-        """Test that OPTIONS request returns CORS headers."""
+    def test_01_options_returns_200(self, api_request):
+        """Verify OPTIONS request returns 200."""
         response = api_request("/v1/image-for-ecs-runners", method="OPTIONS")
 
         assert response["status_code"] == 200
 
-    def test_get_response_includes_cors_headers(self, api_request):
-        """Test that GET response includes CORS headers."""
-        response = api_request("/v1/image-for-ecs-runners", method="GET")
+    @pytest.fixture
+    def get_response(self, api_request):
+        """Make GET request and return response."""
+        return api_request("/v1/image-for-ecs-runners", method="GET")
 
-        # Skip if API key required
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
+    def test_02_get_returns_200(self, get_response):
+        """Verify GET request returns 200."""
+        assert get_response["status_code"] == 200
 
-        # Check for CORS headers (case-insensitive)
-        headers_lower = {k.lower(): v for k, v in response["headers"].items()}
+    def test_03_get_has_cors_header(self, get_response):
+        """Verify GET response has CORS header."""
+        headers_lower = {k.lower(): v for k, v in get_response["headers"].items()}
 
-        # At least Access-Control-Allow-Origin should be present
-        assert "access-control-allow-origin" in headers_lower, (
-            "Missing Access-Control-Allow-Origin header"
-        )
+        assert "access-control-allow-origin" in headers_lower
 
 
 class TestTestModeWorkflow:
     """E2E tests for test mode functionality."""
 
-    def test_post_with_test_mode_returns_mock_response(self, api_request):
-        """Test that POST with x-test-mode header returns mock response."""
-        response = api_request(
+    @pytest.fixture
+    def test_mode_post_response(self, api_request):
+        """Make POST request with test mode and return response."""
+        return api_request(
             "/v1/image-for-ecs-runners",
             method="POST",
             body={},
             test_mode=True
         )
 
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
+    def test_01_post_test_mode_returns_200(self, test_mode_post_response):
+        """Verify POST with test mode returns 200."""
+        assert test_mode_post_response["status_code"] == 200
 
-        assert response["status_code"] == 200
-        assert response["body"]["success"] is True
-        assert response["body"].get("test_mode") is True
-        assert "message" in response["body"]
+    def test_02_post_test_mode_success_is_true(self, test_mode_post_response):
+        """Verify POST with test mode success is True."""
+        assert test_mode_post_response["body"]["success"] is True
 
-    def test_get_with_test_mode_returns_real_data(self, api_request):
-        """Test that GET requests return real data even with test mode header."""
-        response = api_request(
+    def test_03_post_test_mode_flag_is_true(self, test_mode_post_response):
+        """Verify POST response has test_mode flag True."""
+        assert test_mode_post_response["body"].get("test_mode") is True
+
+    def test_04_post_test_mode_has_message(self, test_mode_post_response):
+        """Verify POST with test mode has message field."""
+        assert "message" in test_mode_post_response["body"]
+
+    @pytest.fixture
+    def test_mode_get_response(self, api_request):
+        """Make GET request with test mode and return response."""
+        return api_request(
             "/v1/image-for-ecs-runners",
             method="GET",
             test_mode=True
         )
 
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
+    def test_05_get_test_mode_returns_200(self, test_mode_get_response):
+        """Verify GET with test mode returns 200."""
+        assert test_mode_get_response["status_code"] == 200
 
-        assert response["status_code"] == 200
-        assert "images" in response["body"]
-        assert "count" in response["body"]
+    def test_06_get_test_mode_has_images(self, test_mode_get_response):
+        """Verify GET with test mode has images field."""
+        assert "images" in test_mode_get_response["body"]
+
+    def test_07_get_test_mode_has_count(self, test_mode_get_response):
+        """Verify GET with test mode has count field."""
+        assert "count" in test_mode_get_response["body"]

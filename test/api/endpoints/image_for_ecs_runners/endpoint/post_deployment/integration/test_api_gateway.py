@@ -9,93 +9,66 @@ import pytest
 class TestApiGatewayEndpointAccessibility:
     """Verify API Gateway endpoints are accessible."""
 
-    def test_01_options_request_returns_cors_headers(self, api_request):
-        """Verify OPTIONS request returns CORS headers."""
+    def test_01_options_request_returns_200(self, api_request):
+        """Verify OPTIONS request returns 200 status."""
         response = api_request("/v1/image-for-ecs-runners", method="OPTIONS")
 
-        assert response["status_code"] == 200, (
-            f"Expected 200 status, got {response['status_code']}"
-        )
+        assert response["status_code"] == 200
 
-    def test_02_get_request_returns_success(self, api_request):
-        """Verify GET request returns success."""
+    def test_02_get_request_returns_200(self, api_request):
+        """Verify GET request returns 200 status."""
         response = api_request("/v1/image-for-ecs-runners", method="GET")
 
-        # Should return 200 (success) or 403 (API key required)
-        assert response["status_code"] in [200, 403], (
-            f"Expected 200 or 403 status, got {response['status_code']}"
-        )
+        assert response["status_code"] == 200
 
-    def test_03_get_latest_returns_response(self, api_request):
-        """Verify GET /latest returns a response."""
+    def test_03_get_latest_returns_valid_status(self, api_request):
+        """Verify GET /latest returns 200 or 500 (no stable image)."""
         response = api_request("/v1/image-for-ecs-runners/latest", method="GET")
 
-        # Should return 200 (success), 403 (API key required), or 500 (no stable image)
-        assert response["status_code"] in [200, 403, 500], (
-            f"Expected 200, 403, or 500 status, got {response['status_code']}"
-        )
+        assert response["status_code"] in [200, 500]
 
 
 class TestApiGatewayResponseFormat:
     """Verify API Gateway response format."""
 
-    def test_01_response_includes_content_type(self, api_request):
+    @pytest.fixture
+    def get_response(self, api_request):
+        """Make GET request and return response."""
+        return api_request("/v1/image-for-ecs-runners", method="GET")
+
+    def test_01_get_returns_200(self, get_response):
+        """Verify GET request returns 200 status."""
+        assert get_response["status_code"] == 200
+
+    def test_02_response_includes_content_type(self, get_response):
         """Verify response includes Content-Type header."""
-        response = api_request("/v1/image-for-ecs-runners", method="GET")
+        headers = get_response["headers"]
 
-        # Skip if we get 403 (API key required)
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
+        assert "Content-Type" in headers or "content-type" in headers
 
-        assert "Content-Type" in response["headers"] or "content-type" in response["headers"], (
-            "Missing Content-Type header"
-        )
+    def test_03_response_body_is_dict(self, get_response):
+        """Verify response body is a dict."""
+        assert isinstance(get_response["body"], dict)
 
-    def test_02_response_body_is_json(self, api_request):
-        """Verify response body is valid JSON."""
-        response = api_request("/v1/image-for-ecs-runners", method="GET")
-
-        # Skip if we get 403 (API key required)
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
-
-        assert isinstance(response["body"], dict), (
-            "Response body is not a valid JSON object"
-        )
-
-    def test_03_success_response_includes_success_field(self, api_request):
-        """Verify success response includes success field."""
-        response = api_request("/v1/image-for-ecs-runners", method="GET")
-
-        # Skip if we get 403 (API key required)
-        if response["status_code"] == 403:
-            pytest.skip("API key required")
-
-        assert "success" in response["body"], (
-            "Response body missing 'success' field"
-        )
+    def test_04_response_includes_success_field(self, get_response):
+        """Verify response includes success field."""
+        assert "success" in get_response["body"]
 
 
 class TestApiGatewayErrorHandling:
     """Verify API Gateway error handling."""
 
-    def test_01_returns_404_for_unknown_path(self, api_request):
-        """Verify 404 is returned for unknown path."""
+    def test_01_unknown_path_returns_404(self, api_request):
+        """Verify unknown path returns 404."""
         response = api_request("/v1/unknown-endpoint", method="GET")
 
-        # Should return 404 (not found) or 403 (API key required)
-        assert response["status_code"] in [404, 403], (
-            f"Expected 404 or 403 status, got {response['status_code']}"
-        )
+        assert response["status_code"] == 404
 
-    def test_02_returns_400_for_invalid_digest(self, api_request):
-        """Verify proper error for invalid digest."""
+    def test_02_invalid_digest_returns_404(self, api_request):
+        """Verify invalid digest returns 404."""
         response = api_request(
             "/v1/image-for-ecs-runners/invalid-digest",
             method="GET"
         )
 
-        # Should return 404 (not found), 400 (bad request), or 403 (API key required)
-        assert response["status_code"] in [400, 403, 404], (
-            f"Expected 400, 403, or 404 status, got {response['status_code']}"
-        )
+        assert response["status_code"] == 404
