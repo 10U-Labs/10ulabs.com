@@ -42,6 +42,8 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -69,9 +71,15 @@ jobs:
           contains(github.event.head_commit.message, '[github-hosted]')
         name: Install Python dependencies
         run: |
+          python3 -m pip install --upgrade pip
           python3 -m pip install \
             pylint mypy yamllint pytest boto3 boto3-stubs botocore \
             requests types-requests
+      - name: Verify AWS credentials
+        run: |
+          echo "Verifying AWS credentials..."
+          aws sts get-caller-identity
+          echo "AWS region: $(aws configure get region || echo 'using default')"
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -102,7 +110,11 @@ jobs:
           cd src/api/endpoints/image_for_ecs_runners
           terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/image_for_ecs_runners && terraform init
+        run: |
+          cd src/api/endpoints/image_for_ecs_runners
+          echo "Initializing Terraform..."
+          terraform version
+          terraform init -no-color
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
@@ -110,8 +122,14 @@ jobs:
           cd src/api/endpoints/image_for_ecs_runners && \
             tflint --init && \
             tflint
+      - name: Terraform Validate
+        run: |
+          cd src/api/endpoints/image_for_ecs_runners
+          terraform validate
       - name: Terraform Plan
-        run: cd src/api/endpoints/image_for_ecs_runners && terraform plan
+        run: |
+          cd src/api/endpoints/image_for_ecs_runners
+          terraform plan -no-color
       - name: Run unit tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
@@ -125,7 +143,7 @@ jobs:
       - name: Terraform Apply
         run: |
           cd src/api/endpoints/image_for_ecs_runners
-          terraform apply -auto-approve
+          terraform apply -auto-approve -no-color
       - name: Run post-deployment integration tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
