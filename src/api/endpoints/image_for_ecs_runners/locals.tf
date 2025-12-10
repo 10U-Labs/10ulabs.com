@@ -4,7 +4,9 @@ locals {
   ecr_repository_arn   = data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_arn
   ecr_repository_name  = data.terraform_remote_state.api_shared_ecs_runner.outputs.ecr_repository_name
   github_repo_full     = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
-  lambda_function_name = "${module.shared.resource_prefix}ImageForEcsRunnersHandler"
+  lambda_function_name = "${local.resource_prefix}ImageForEcsRunnersHandler"
+  lambda_role_name     = "${local.resource_prefix}ImageForEcsRunnersHandlerServiceRole"
+  kms_lambda_alias     = "arn:aws:kms:${local.aws_region}:${local.aws_account_id}:alias/aws/lambda"
   resource_prefix      = module.shared.resource_prefix
 
   common_tags = {

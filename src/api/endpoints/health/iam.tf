@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_health_handler" {
-  name = "HealthHandler-ServiceRole"
+  name = local.lambda_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda_health_handler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "HealthHandler-ServiceRole"
+    Name = local.lambda_role_name
   })
 }
 
@@ -36,6 +36,23 @@ resource "aws_iam_role_policy" "lambda_health_handler_ec2_describe" {
         "ec2:DescribeVpcs"
       ]
       Resource = "*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_health_handler_kms" {
+  name = "KMSDecryptPermissions"
+  role = aws_iam_role.lambda_health_handler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Decrypt",
+        "kms:DescribeKey"
+      ]
+      Resource = local.kms_lambda_alias
     }]
   })
 }
