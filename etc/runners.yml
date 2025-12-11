@@ -30,7 +30,7 @@ labels:
     # Defaults used in tests
     defaults:
       compute: fargate
-      architecture: x86
+      architecture: arm
 
   # EC2-specific labels
   ec2:
@@ -53,8 +53,8 @@ labels:
       - fpga
     # Defaults used in tests
     defaults:
-      compute: memory-optimized
-      architecture: intel
+      compute: general-purpose
+      architecture: arm
 
   # Default pricing and runner ID for tests
   defaults:
@@ -91,4 +91,3 @@ fargate:
 
 ec2:
   use_spot: true
-  instance_size: medium  # small, medium, large, xlarge

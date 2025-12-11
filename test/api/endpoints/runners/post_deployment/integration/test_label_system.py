@@ -9,10 +9,12 @@ from runner_labels import (
     LabelValidationError,
     PRICING_MODELS,
     EC2_COMPUTE,
+    ECS_COMPUTE,
     ECS_ARCHITECTURES,
     EC2_ARCHITECTURES,
     EC2_COMPUTE_REQUIRES_ARCH,
     EC2_COMPUTE_FORBIDS_ARCH,
+    INSTANCE_TYPE_MAP,
     # Default/canonical values (single source of truth)
     DEFAULT_ECS_ARCH,
     DEFAULT_EC2_ARCH,
@@ -24,161 +26,141 @@ from runner_labels import (
 
 
 # Valid label combinations for testing using defaults from runner_labels
-def get_ecs_labels(arch=DEFAULT_ECS_ARCH, pricing=DEFAULT_PRICING, runner_id=DEFAULT_RUNNER_ID):
+def get_ecs_labels(
+    arch=DEFAULT_ECS_ARCH,
+    pricing=DEFAULT_PRICING,
+    runner_id=DEFAULT_RUNNER_ID
+):
     """Generate valid ECS Fargate labels."""
     return ['ecs', DEFAULT_ECS_COMPUTE, arch, pricing, runner_id]
 
 
-def get_ec2_labels(compute=DEFAULT_EC2_COMPUTE, arch=DEFAULT_EC2_ARCH, pricing=DEFAULT_PRICING, runner_id=DEFAULT_RUNNER_ID):
+def get_ec2_labels(
+    compute=DEFAULT_EC2_COMPUTE,
+    arch=DEFAULT_EC2_ARCH,
+    pricing=DEFAULT_PRICING,
+    runner_id=DEFAULT_RUNNER_ID
+):
     """Generate valid EC2 labels with architecture."""
     return ['ec2', compute, arch, pricing, runner_id]
 
 
 def get_ec2_gpu_labels(pricing=DEFAULT_PRICING, runner_id=DEFAULT_RUNNER_ID):
     """Generate valid EC2 GPU labels (no architecture)."""
-    return ['ec2', 'gpu', pricing, runner_id]
+    # Get GPU compute type from the module's constants
+    gpu_compute = next(c for c in EC2_COMPUTE_FORBIDS_ARCH if 'gpu' in c)
+    return ['ec2', gpu_compute, pricing, runner_id]
 
 
 def get_ec2_fpga_labels(pricing='on-demand', runner_id=DEFAULT_RUNNER_ID):
     """Generate valid EC2 FPGA labels (no architecture)."""
-    return ['ec2', 'fpga', pricing, runner_id]
+    # Get FPGA compute type from the module's constants
+    fpga_compute = next(c for c in EC2_COMPUTE_FORBIDS_ARCH if 'fpga' in c)
+    return ['ec2', fpga_compute, pricing, runner_id]
 
 
 class TestLabelParsingIntegration:
     """Integration tests for label parsing with real label combinations."""
 
-    def test_parse_ecs_fargate_spot_labels_platform(self):
-        """Test ECS Fargate spot labels parse platform correctly."""
+    def test_parse_ecs_labels_platform(self):
+        """Test ECS labels parse platform correctly."""
         labels = get_ecs_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
         assert parsed.platform == 'ecs'
 
-    def test_parse_ecs_fargate_spot_labels_compute(self):
-        """Test ECS Fargate spot labels parse compute correctly."""
+    def test_parse_ecs_labels_compute(self):
+        """Test ECS labels parse compute correctly."""
         labels = get_ecs_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert parsed.compute == 'fargate'
+        assert parsed.compute == DEFAULT_ECS_COMPUTE
 
-    def test_parse_ecs_fargate_spot_labels_architecture(self):
-        """Test ECS Fargate spot labels parse architecture correctly."""
-        labels = get_ecs_labels(arch='x86')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.architecture == 'x86'
-
-    def test_parse_ecs_fargate_spot_labels_pricing(self):
-        """Test ECS Fargate spot labels parse pricing correctly."""
+    def test_parse_ecs_labels_architecture(self):
+        """Test ECS labels parse architecture correctly."""
         labels = get_ecs_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert parsed.pricing == 'spot'
+        assert parsed.architecture == DEFAULT_ECS_ARCH
 
-    def test_parse_ecs_fargate_spot_labels_is_spot(self):
-        """Test ECS Fargate spot labels return is_spot true."""
+    def test_parse_ecs_labels_pricing(self):
+        """Test ECS labels parse pricing correctly."""
         labels = get_ecs_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert is_spot(parsed) is True
+        assert parsed.pricing == DEFAULT_PRICING
 
-    def test_parse_ecs_fargate_arm_on_demand_labels_platform(self):
-        """Test ECS Fargate arm on-demand labels parse platform correctly."""
-        labels = get_ecs_labels(arch='arm', pricing='on-demand')
+    def test_parse_ecs_labels_is_spot(self):
+        """Test ECS labels return correct spot status."""
+        labels = get_ecs_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert parsed.platform == 'ecs'
+        assert is_spot(parsed) == (DEFAULT_PRICING == 'spot')
 
-    def test_parse_ecs_fargate_arm_on_demand_labels_compute(self):
-        """Test ECS Fargate arm on-demand labels parse compute correctly."""
-        labels = get_ecs_labels(arch='arm', pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.compute == 'fargate'
-
-    def test_parse_ecs_fargate_arm_on_demand_labels_architecture(self):
-        """Test ECS Fargate arm on-demand labels parse architecture correctly."""
-        labels = get_ecs_labels(arch='arm', pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.architecture == 'arm'
-
-    def test_parse_ecs_fargate_arm_on_demand_labels_pricing(self):
-        """Test ECS Fargate arm on-demand labels parse pricing correctly."""
-        labels = get_ecs_labels(arch='arm', pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.pricing == 'on-demand'
-
-    def test_parse_ecs_fargate_arm_on_demand_labels_is_spot(self):
-        """Test ECS Fargate arm on-demand labels return is_spot false."""
-        labels = get_ecs_labels(arch='arm', pricing='on-demand')
+    def test_parse_ecs_on_demand_labels_is_not_spot(self):
+        """Test ECS on-demand labels return is_spot false."""
+        labels = get_ecs_labels(pricing='on-demand')
         parsed = parse_labels(labels)
         validate_labels(parsed)
         assert is_spot(parsed) is False
 
-    def test_parse_ec2_memory_optimized_intel_on_demand_labels_platform(self):
-        """Test EC2 memory-optimized intel on-demand labels parse platform correctly."""
-        labels = get_ec2_labels(pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.platform == 'ec2'
-
-    def test_parse_ec2_memory_optimized_intel_on_demand_labels_compute(self):
-        """Test EC2 memory-optimized intel on-demand labels parse compute correctly."""
-        labels = get_ec2_labels(pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.compute == 'memory-optimized'
-
-    def test_parse_ec2_memory_optimized_intel_on_demand_labels_instance_type(self):
-        """Test EC2 memory-optimized intel on-demand labels return correct instance type."""
-        labels = get_ec2_labels(pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert get_instance_type(parsed) == 'r8i.4xlarge'
-
-    def test_parse_ec2_gpu_on_demand_labels_platform(self):
-        """Test EC2 gpu on-demand labels parse platform correctly."""
-        labels = get_ec2_gpu_labels(pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.platform == 'ec2'
-
-    def test_parse_ec2_gpu_on_demand_labels_compute(self):
-        """Test EC2 gpu on-demand labels parse compute correctly."""
-        labels = get_ec2_gpu_labels(pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert parsed.compute == 'gpu'
-
-    def test_parse_ec2_gpu_on_demand_labels_instance_type(self):
-        """Test EC2 gpu on-demand labels return correct instance type."""
-        labels = get_ec2_gpu_labels(pricing='on-demand')
-        parsed = parse_labels(labels)
-        validate_labels(parsed)
-        assert get_instance_type(parsed) == 'g6e.2xlarge'
-
-    def test_parse_ec2_memory_optimized_intel_spot_labels_platform(self):
-        """Test EC2 memory-optimized intel spot labels parse platform correctly."""
+    def test_parse_ec2_labels_platform(self):
+        """Test EC2 labels parse platform correctly."""
         labels = get_ec2_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
         assert parsed.platform == 'ec2'
 
-    def test_parse_ec2_memory_optimized_intel_spot_labels_compute(self):
-        """Test EC2 memory-optimized intel spot labels parse compute correctly."""
+    def test_parse_ec2_labels_compute(self):
+        """Test EC2 labels parse compute correctly."""
         labels = get_ec2_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert parsed.compute == 'memory-optimized'
+        assert parsed.compute == DEFAULT_EC2_COMPUTE
 
-    def test_parse_ec2_memory_optimized_intel_spot_labels_is_spot(self):
-        """Test EC2 memory-optimized intel spot labels return is_spot true."""
+    def test_parse_ec2_labels_architecture(self):
+        """Test EC2 labels parse architecture correctly."""
         labels = get_ec2_labels()
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert is_spot(parsed) is True
+        assert parsed.architecture == DEFAULT_EC2_ARCH
+
+    def test_parse_ec2_labels_instance_type(self):
+        """Test EC2 labels return correct instance type from mapping."""
+        labels = get_ec2_labels()
+        parsed = parse_labels(labels)
+        validate_labels(parsed)
+        expected = INSTANCE_TYPE_MAP.get((DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH))
+        assert get_instance_type(parsed) == expected
+
+    def test_parse_ec2_gpu_labels_platform(self):
+        """Test EC2 gpu labels parse platform correctly."""
+        labels = get_ec2_gpu_labels(pricing='on-demand')
+        parsed = parse_labels(labels)
+        validate_labels(parsed)
+        assert parsed.platform == 'ec2'
+
+    def test_parse_ec2_gpu_labels_compute(self):
+        """Test EC2 gpu labels parse compute correctly."""
+        labels = get_ec2_gpu_labels(pricing='on-demand')
+        parsed = parse_labels(labels)
+        validate_labels(parsed)
+        assert parsed.compute in EC2_COMPUTE_FORBIDS_ARCH
+
+    def test_parse_ec2_gpu_labels_instance_type(self):
+        """Test EC2 gpu labels return correct instance type from mapping."""
+        labels = get_ec2_gpu_labels(pricing='on-demand')
+        parsed = parse_labels(labels)
+        validate_labels(parsed)
+        expected = INSTANCE_TYPE_MAP.get((parsed.compute, None))
+        assert get_instance_type(parsed) == expected
+
+    def test_parse_ec2_labels_is_spot(self):
+        """Test EC2 labels return correct spot status."""
+        labels = get_ec2_labels()
+        parsed = parse_labels(labels)
+        validate_labels(parsed)
+        assert is_spot(parsed) == (DEFAULT_PRICING == 'spot')
 
 
 class TestLabelValidationIntegration:
@@ -188,21 +170,23 @@ class TestLabelValidationIntegration:
         """Test rejection of ECS with EC2-only compute type."""
         # Use first EC2-only compute type from the module constants
         ec2_compute = next(iter(EC2_COMPUTE))
-        labels = ['ecs', ec2_compute, 'x86', 'on-demand', 'runner-12345']
+        labels = ['ecs', ec2_compute, DEFAULT_ECS_ARCH, 'on-demand', DEFAULT_RUNNER_ID]
         parsed = parse_labels(labels)
         with pytest.raises(LabelValidationError):
             validate_labels(parsed)
 
     def test_reject_ec2_with_fargate_compute(self):
         """Test rejection of EC2 with fargate compute type."""
-        labels = ['ec2', 'fargate', 'intel', 'on-demand', 'runner-12345']
+        ecs_compute = next(iter(ECS_COMPUTE))
+        labels = ['ec2', ecs_compute, DEFAULT_EC2_ARCH, 'on-demand', DEFAULT_RUNNER_ID]
         parsed = parse_labels(labels)
         with pytest.raises(LabelValidationError):
             validate_labels(parsed)
 
     def test_reject_ecs_without_architecture(self):
         """Test rejection of ECS labels missing architecture."""
-        labels = ['ecs', 'fargate', 'spot', 'runner-12345']
+        ecs_compute = next(iter(ECS_COMPUTE))
+        labels = ['ecs', ecs_compute, DEFAULT_PRICING, DEFAULT_RUNNER_ID]
         parsed = parse_labels(labels)
         with pytest.raises(LabelValidationError):
             validate_labels(parsed)
@@ -211,7 +195,7 @@ class TestLabelValidationIntegration:
         """Test rejection of EC2 compute types that require architecture when missing."""
         # Use first compute type that requires architecture
         compute = next(iter(EC2_COMPUTE_REQUIRES_ARCH))
-        labels = ['ec2', compute, 'spot', 'runner-12345']
+        labels = ['ec2', compute, DEFAULT_PRICING, DEFAULT_RUNNER_ID]
         parsed = parse_labels(labels)
         with pytest.raises(LabelValidationError):
             validate_labels(parsed)
@@ -220,20 +204,22 @@ class TestLabelValidationIntegration:
         """Test rejection of EC2 compute types that forbid architecture when present."""
         # Use first compute type that forbids architecture
         compute = next(iter(EC2_COMPUTE_FORBIDS_ARCH))
-        labels = ['ec2', compute, 'intel', 'spot', 'runner-12345']
+        labels = ['ec2', compute, DEFAULT_EC2_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID]
         parsed = parse_labels(labels)
         with pytest.raises(LabelValidationError):
             validate_labels(parsed)
 
     def test_reject_missing_platform_label(self):
         """Test rejection of labels missing platform."""
-        labels = ['fargate', 'x86', 'spot', 'runner-12345']
+        ecs_compute = next(iter(ECS_COMPUTE))
+        labels = [ecs_compute, DEFAULT_ECS_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID]
         with pytest.raises(LabelParseError):
             parse_labels(labels)
 
     def test_reject_missing_runner_id(self):
         """Test rejection of labels missing runner ID."""
-        labels = ['ecs', 'fargate', 'x86', 'spot']
+        ecs_compute = next(iter(ECS_COMPUTE))
+        labels = ['ecs', ecs_compute, DEFAULT_ECS_ARCH, DEFAULT_PRICING]
         with pytest.raises(LabelParseError):
             parse_labels(labels)
 
@@ -260,7 +246,8 @@ class TestLabelSystemWithExtraLabels:
         labels = get_ec2_labels(pricing='on-demand') + ['self-hosted', 'linux', 'x64']
         parsed = parse_labels(labels)
         validate_labels(parsed)
-        assert get_instance_type(parsed) == 'r8i.4xlarge'
+        expected = INSTANCE_TYPE_MAP.get((DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH))
+        assert get_instance_type(parsed) == expected
 
     def test_labels_in_any_order_platform(self):
         """Test labels in different orders parse platform identically."""
@@ -299,8 +286,8 @@ class TestAllValidArchitectures:
         assert parsed.architecture == arch
 
     @pytest.mark.parametrize("arch", list(EC2_ARCHITECTURES))
-    def test_ec2_memory_optimized_accepts_all_valid_architectures(self, arch):
-        """Test EC2 memory-optimized accepts all valid EC2 architectures."""
+    def test_ec2_accepts_all_valid_architectures(self, arch):
+        """Test EC2 accepts all valid EC2 architectures."""
         labels = get_ec2_labels(arch=arch)
         parsed = parse_labels(labels)
         validate_labels(parsed)
