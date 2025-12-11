@@ -10,25 +10,7 @@ DEFAULT_REQUEST_TIMEOUT = 10
 ECS_RUNNER_REQUEST_TIMEOUT = 30
 
 
-@pytest.fixture(name="aws_region", scope="module")
-def aws_region_fixture(config):
-    """Provide the AWS region from config."""
-    return config["aws_region"]
-
-
-@pytest.fixture(name="ssm_client", scope="module")
-def ssm_client_fixture(aws_region):
-    """Provide an SSM client for the configured region."""
-    return boto3.client("ssm", region_name=aws_region)
-
-
-@pytest.fixture(name="ecr_client", scope="module")
-def ecr_client_fixture(aws_region):
-    """Provide an ECR client for the configured region."""
-    return boto3.client("ecr", region_name=aws_region)
-
-
-@pytest.fixture(name="ecs_client", scope="module")
+@pytest.fixture(name="ecs_client", scope="session")
 def ecs_client_fixture(aws_region):
     """Provide an ECS client for the configured region."""
     return boto3.client("ecs", region_name=aws_region)

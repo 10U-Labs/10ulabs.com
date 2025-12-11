@@ -5,13 +5,7 @@ import boto3
 import pytest
 import requests
 
-from ..helpers import get_api_fqdn, get_aws_region
-
-
-@pytest.fixture(name="aws_region", scope="module")
-def aws_region_fixture() -> str:
-    """Return the AWS region for tests."""
-    return get_aws_region()
+from ..helpers import get_api_fqdn
 
 
 @pytest.fixture(name="api_url", scope="module")
@@ -20,13 +14,7 @@ def api_url_fixture() -> str:
     return f"https://{get_api_fqdn()}"
 
 
-@pytest.fixture(name="ssm_client", scope="module")
-def ssm_client_fixture(aws_region: str) -> Any:
-    """Create an SSM client for the test module."""
-    return boto3.client("ssm", region_name=aws_region)
-
-
-@pytest.fixture(name="ec2_client", scope="module")
+@pytest.fixture(name="ec2_client", scope="session")
 def ec2_client_fixture(aws_region: str) -> Any:
     """Create an EC2 client for the test module."""
     return boto3.client("ec2", region_name=aws_region)
