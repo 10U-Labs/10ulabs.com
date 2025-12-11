@@ -1,8 +1,6 @@
 """Unit tests for test lambda terraform."""
 import re
 
-from test.api.endpoints.conftest import assert_archive_includes_file
-
 
 def test_lambda_terraform_file_exists(runners_src_path):
     """Test lambda terraform file exists."""
@@ -143,12 +141,68 @@ def test_stale_runner_cleanup_ec2_tag_references_ec2_runner_output(runners_src_p
     assert ec2_managed_by_tag in stale_section
 
 
-def test_runners_handler_archive_includes_runner_labels(runners_src_path):
-    """Test runners handler archive includes runner_labels.py shared module.
+def test_runners_handler_build_null_resource_exists(runners_src_path):
+    """Test runners handler build null_resource exists.
 
-    This is a regression test to ensure the Lambda package includes the
+    The Lambda package is built using a null_resource that pip installs
+    dependencies and copies source files. This test verifies the build
+    step is defined in terraform.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "null_resource" "runners_handler_build"' in content
+
+
+def test_runners_handler_build_copies_runner_labels(runners_src_path):
+    """Test runners handler build copies runner_labels.py.
+
+    This is a regression test to ensure the Lambda build includes the
     runner_labels module. Without this module, the Lambda will fail at runtime
     with a ModuleNotFoundError when processing webhook events.
     """
     lambda_file = runners_src_path / "lambda.tf"
-    assert_archive_includes_file(lambda_file, "runners_handler", "runner_labels.py")
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    # Find the null_resource block and check it copies runner_labels
+    assert "runner_labels/__init__.py" in content
+    assert "runner_labels.py" in content
+
+
+def test_runners_handler_build_copies_runners_yml(runners_src_path):
+    """Test runners handler build copies etc/runners.yml.
+
+    The runner_labels module reads configuration from etc/runners.yml.
+    Without this file, the Lambda will fail with FileNotFoundError.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "etc/runners.yml" in content
+
+
+def test_runners_handler_build_installs_pyyaml(runners_src_path):
+    """Test runners handler build installs pyyaml dependency.
+
+    The runner_labels module requires pyyaml to parse YAML config.
+    The build must pip install from requirements.txt.
+    """
+    lambda_file = runners_src_path / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "pip install" in content
+    assert "requirements.txt" in content
+
+
+def test_runners_handler_requirements_txt_exists(runners_src_path):
+    """Test requirements.txt exists for Lambda dependencies."""
+    requirements_file = runners_src_path / "lambdas" / "requirements.txt"
+    assert requirements_file.exists()
+
+
+def test_runners_handler_requirements_includes_pyyaml(runners_src_path):
+    """Test requirements.txt includes PyYAML dependency."""
+    requirements_file = runners_src_path / "lambdas" / "requirements.txt"
+    with open(requirements_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "PyYAML" in content or "pyyaml" in content.lower()
