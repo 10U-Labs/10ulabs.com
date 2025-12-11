@@ -462,7 +462,7 @@ def create_ec2_user_data(
 set -e
 
 INSTANCE_STORE=$(lsblk -dn -o NAME,TYPE | awk '$2=="disk" {{print "/dev/"$1}}' | while read dev; do
-    if [ -z "$(lsblk -n "$dev" -o CHILDREN 2>/dev/null | tr -d ' ')" ]; then
+    if [ -z "$(lsblk -n "$dev" -o MOUNTPOINT 2>/dev/null | tr -d ' ')" ]; then
         echo "$dev"
         break
     fi

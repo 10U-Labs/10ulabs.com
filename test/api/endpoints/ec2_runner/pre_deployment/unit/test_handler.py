@@ -324,6 +324,13 @@ def test_create_ec2_user_data_detects_instance_store_dynamically(ec2_runner_hand
     assert contains_lsblk
 
 
+def test_create_ec2_user_data_uses_mountpoint_detection(ec2_runner_handler):
+    """Test that user data detects instance store by checking unmounted disks."""
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    uses_mountpoint = 'MOUNTPOINT' in result
+    assert uses_mountpoint
+
+
 def test_lambda_handler_options_returns_200(ec2_runner_handler, lambda_context):
     """Test that OPTIONS request returns 200."""
     event = {'path': '/v1/ec2-runner', 'httpMethod': 'OPTIONS', 'headers': {}}
