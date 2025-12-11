@@ -178,7 +178,8 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     """Extract local values from locals.tf in the given endpoint directory.
 
     Resolves ${module.shared.resource_prefix} and ${local.resource_prefix}
-    references using the shared module's resource_prefix.
+    references using the shared module's resource_prefix. Also resolves
+    module.shared.lambda_handler_names.X references.
 
     Args:
         tf_dir: Path to the endpoint's Terraform directory (e.g., src/api/endpoints/foo)
@@ -193,8 +194,18 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
         content = f.read()
     locals_dict = {}
     prefix = get_resource_prefix()
+    handler_names = parse_lambda_handler_names()
+
+    # Parse quoted string values
     for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
         locals_dict[match.group(1)] = _resolve_prefix_refs(match.group(2), prefix)
+
+    # Parse module.shared.lambda_handler_names references
+    for match in re.finditer(r'(\w+)\s*=\s*module\.shared\.lambda_handler_names\.(\w+)', content):
+        local_name, handler_key = match.groups()
+        if handler_key in handler_names:
+            locals_dict[local_name] = handler_names[handler_key]
+
     return locals_dict
 
 

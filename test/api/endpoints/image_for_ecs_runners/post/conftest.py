@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-import boto3
 import pytest
 
 
@@ -117,9 +116,3 @@ def config() -> Dict[str, Any]:
         'config_path': str(CONFIG_PATH),
         'dockerfile_path': str(DOCKERFILE_PATH),
     }
-
-
-@pytest.fixture(scope="session")
-def ecr_client():
-    """Create an ECR client."""
-    return boto3.client("ecr", region_name=get_aws_region())

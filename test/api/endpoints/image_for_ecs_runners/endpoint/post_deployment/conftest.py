@@ -8,7 +8,6 @@ from test.api.endpoints.image_for_ecs_runners.endpoint.helpers import (
     make_api_request,
 )
 
-import boto3
 import pytest
 
 
@@ -28,20 +27,6 @@ def api_fqdn():
 def ecr_repository_name():
     """Provide the ECR repository name."""
     return get_ecr_repository()
-
-
-@pytest.fixture(scope="session")
-def ecr_client(request):
-    """Create an ECR client for the test session."""
-    region = request.getfixturevalue('aws_region')
-    return boto3.client("ecr", region_name=region)
-
-
-@pytest.fixture(name="ssm_client", scope="session")
-def ssm_client_fixture(request):
-    """Create an SSM client for the test session."""
-    region = request.getfixturevalue('aws_region')
-    return boto3.client("ssm", region_name=region)
 
 
 @pytest.fixture(name="api_key", scope="session")

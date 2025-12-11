@@ -1,6 +1,7 @@
 """Shared pytest fixtures and utilities for ECS runner tests."""
 import importlib
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -14,6 +15,18 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 ECS_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
+
+
+def terraform_output(directory: Path, name: str) -> str:
+    """Get a terraform output value from the specified directory."""
+    result = subprocess.run(
+        ["terraform", "output", "-raw", name],
+        cwd=str(directory),
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 # Add lib/python to path for unit tests that use --confcutdir
 LIB_DIR = REPO_ROOT / "lib" / "python"
@@ -77,19 +90,13 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     return result
 
 
-@pytest.fixture
-def ecs_client(shared_config):
+@pytest.fixture(scope="session")
+def ecs_client(aws_region):
     """Provide ECS client for tests."""
-    return boto3.client('ecs', region_name=shared_config['aws_region'])
+    return boto3.client('ecs', region_name=aws_region)
 
 
-@pytest.fixture
-def ecr_client(shared_config):
-    """Provide ECR client for tests."""
-    return boto3.client('ecr', region_name=shared_config['aws_region'])
-
-
-@pytest.fixture
-def dynamodb_client(shared_config):
+@pytest.fixture(scope="session")
+def dynamodb_client(aws_region):
     """Provide DynamoDB client for tests."""
-    return boto3.client('dynamodb', region_name=shared_config['aws_region'])
+    return boto3.client('dynamodb', region_name=aws_region)

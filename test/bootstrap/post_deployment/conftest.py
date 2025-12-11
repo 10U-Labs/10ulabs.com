@@ -58,12 +58,6 @@ def zone_nameservers(request, config):
 
 
 @pytest.fixture
-def ecr_client(config):
-    """Create ECR client for AWS region."""
-    return boto3.client('ecr', region_name=config['aws_region'])
-
-
-@pytest.fixture
 def ec2_client(config):
     """Create EC2 client for AWS region."""
     return boto3.client('ec2', region_name=config['aws_region'])

@@ -3,7 +3,6 @@ import os
 import re
 import subprocess
 
-import boto3
 import pytest
 
 
@@ -129,9 +128,3 @@ def github_repo():
 def github_pat():
     """Fixture providing the GitHub PAT."""
     return get_github_pat()
-
-
-@pytest.fixture(scope="module")
-def ecr_client():
-    """Create an ECR client."""
-    return boto3.client("ecr", region_name=get_aws_region())

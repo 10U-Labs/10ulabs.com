@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-import boto3
 import pytest
 
 from .helpers import get_aws_region, get_github_repo, get_ecr_repository
@@ -42,18 +41,6 @@ def config() -> Dict[str, Any]:
         'github_repo': get_github_repo(),
         'ecr_repository': get_ecr_repository(),
     }
-
-
-@pytest.fixture(scope="session")
-def ecr_client():
-    """Create an ECR client for the test session."""
-    return boto3.client("ecr", region_name=get_aws_region())
-
-
-@pytest.fixture(scope="session")
-def ssm_client():
-    """Create an SSM client for the test session."""
-    return boto3.client("ssm", region_name=get_aws_region())
 
 
 @pytest.fixture(scope="session")
