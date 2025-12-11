@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-git checks hook that runs static analysis before git commit/push operations."""
+"""Pre-git checks hook that runs static analysis before git commit."""
 import ast
 import fnmatch
 import json
@@ -542,74 +542,6 @@ def parse_command_from_stdin():
         return ''
 
 
-def get_current_branch():
-    """Get the current git branch name."""
-    result = subprocess.run(
-        ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
-        capture_output=True, text=True, check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else None
-
-
-def get_default_branch():
-    """Get the default branch (main or master)."""
-    for branch in ['main', 'master']:
-        result = subprocess.run(
-            ['git', 'rev-parse', '--verify', f'refs/heads/{branch}'],
-            capture_output=True, text=True, check=False
-        )
-        if result.returncode == 0:
-            return branch
-    return 'main'
-
-
-def count_commits_ahead_of_base(base_branch):
-    """Count how many commits current branch is ahead of base branch."""
-    current = get_current_branch()
-    if not current or current == base_branch:
-        return 0
-
-    result = subprocess.run(
-        ['git', 'rev-list', '--count', f'{base_branch}..HEAD'],
-        capture_output=True, text=True, check=False
-    )
-    if result.returncode != 0:
-        return 0
-    try:
-        return int(result.stdout.strip())
-    except ValueError:
-        return 0
-
-
-def check_squash_commit_required(command):
-    """Check if push has multiple commits and require squash. Returns True if OK."""
-    if not re.search(r'\bgit\s+push\b', command):
-        return True
-
-    current_branch = get_current_branch()
-    base_branch = get_default_branch()
-
-    if current_branch == base_branch:
-        return True
-
-    commits_ahead = count_commits_ahead_of_base(base_branch)
-
-    if commits_ahead > 1:
-        print("\n" + "="*60)
-        print("BLOCKED: SQUASH COMMITS REQUIRED")
-        print("="*60)
-        print(f"\nBranch '{current_branch}' has {commits_ahead} commits ahead of '{base_branch}'.")
-        print("You must squash to a single commit before pushing.")
-        print("\nTo squash commits, run:")
-        print(f"  git rebase -i {base_branch}")
-        print("  # Mark all commits except the first as 'squash' or 's'")
-        print(f"  # Or: git reset --soft $(git merge-base HEAD {base_branch}) && git commit")
-        print("="*60)
-        return False
-
-    return True
-
-
 def run_phase(matching_workflows, phase_name, extract_fn):
     """Run a phase of checks (static analysis or tests) on matching workflows."""
     print("\n" + "="*60)
@@ -628,13 +560,10 @@ def run_phase(matching_workflows, phase_name, extract_fn):
 def main():
     """Main entry point for the pre-git checks hook."""
     command = parse_command_from_stdin()
-    if not command or not re.search(r'\bgit\s+(commit|push)\b', command):
+    if not command or not re.search(r'\bgit\s+commit\b', command):
         sys.exit(0)
 
-    if not check_squash_commit_required(command):
-        sys.exit(2)
-
-    print("Running static analysis before git operation...")
+    print("Running static analysis before git commit...")
     project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '.')
     os.chdir(project_dir)
 
