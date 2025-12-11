@@ -169,7 +169,7 @@ jobs:
           python3 scripts/invalidate_cloudfront.py \
             --fqdn "${{ env.API_FQDN }}" \
             --region "${{ steps.config.outputs.aws_region }}" \
-            --paths "/,/index.html,/openapi.yml,/404.html"
+            --paths "/,/index.html,/openapi.json,/404.html"
       - env:
           PAT_PARAM: ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
           REGION: ${{ steps.config.outputs.aws_region }}

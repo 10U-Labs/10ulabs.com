@@ -1,13 +1,13 @@
-"""Tests for config.yml file."""
-from test.api.endpoints.image_for_ecs_runners.conftest import CONFIG_PATH
+"""Tests for config.json file."""
+import json
 
-import yaml
+from test.api.endpoints.image_for_ecs_runners.conftest import CONFIG_PATH
 
 
 def _read_config():
-    """Read and parse the config.yml file."""
+    """Read and parse the config.json file."""
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+        return json.load(f)
 
 
 def test_config_has_node_version():

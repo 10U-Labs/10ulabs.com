@@ -263,12 +263,12 @@ def file_matches_workflow_paths(file_path, paths):
 
 
 def load_workflow_dependencies(project_dir):
-    """Load workflow dependencies from etc/workflow-dependencies.yml."""
-    deps_file = os.path.join(project_dir, 'etc', 'workflow-dependencies.yml')
+    """Load workflow dependencies from etc/workflow-dependencies.json."""
+    deps_file = os.path.join(project_dir, 'etc', 'workflow-dependencies.json')
     if not os.path.exists(deps_file):
         return {}
     with open(deps_file, encoding='utf-8') as f:
-        return yaml.safe_load(f) or {}
+        return json.load(f) or {}
 
 
 def is_static_analysis_step(step_name):
@@ -343,7 +343,7 @@ def get_workflow_push_paths(workflow):
 def find_workflows_by_push_paths(changed_files, workflows_dir, known_workflows):
     """Find workflows whose on.push.paths match changed files.
 
-    This is a fallback for workflows not in workflow-dependencies.yml.
+    This is a fallback for workflows not in workflow-dependencies.json.
     """
     known_names = {w['name'] for w in known_workflows}
     matching = []
@@ -394,7 +394,7 @@ def dedupe_workflows(workflows):
 
 
 def find_workflows_from_dependencies(changed_files, workflows_dir, project_dir):
-    """Find workflows from workflow-dependencies.yml that match changed files."""
+    """Find workflows from workflow-dependencies.json that match changed files."""
     matching = []
     deps = load_workflow_dependencies(project_dir)
 
@@ -426,7 +426,7 @@ def find_workflows_from_dependencies(changed_files, workflows_dir, project_dir):
 def find_matching_workflows(changed_files, workflows_dir, project_dir):
     """Find workflows whose path patterns match any of the changed files.
 
-    First checks etc/workflow-dependencies.yml for orchestrated workflows,
+    First checks etc/workflow-dependencies.json for orchestrated workflows,
     then falls back to on.push.paths in workflow files for non-orchestrated
     workflows (like claude.yml).
     """

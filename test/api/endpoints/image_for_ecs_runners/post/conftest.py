@@ -11,7 +11,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners" / "post"
-CONFIG_PATH = POST_DIR / "config.yml"
+CONFIG_PATH = POST_DIR / "config.json"
 DOCKERFILE_PATH = POST_DIR / "Dockerfile"
 
 # Add lib/python to path for imports

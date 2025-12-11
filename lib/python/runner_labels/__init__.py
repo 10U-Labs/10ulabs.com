@@ -10,7 +10,7 @@ runner label system. Labels combine to select the appropriate runner:
     Pricing:      spot | on-demand
     Workflow ID:  runner-{github.run_id}
 
-Configuration is loaded from etc/runners.yml (single source of truth).
+Configuration is loaded from etc/runners.json (single source of truth).
 
 Example label combinations:
     ["ecs", "fargate", "x86", "spot", "runner-12345"] -> ECS Fargate X86_64 Spot
@@ -27,56 +27,56 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml
+import json
 
 
 def _find_config_file() -> Path:
-    """Find the runners.yml config file."""
+    """Find the runners.json config file."""
     # Try relative to this file (lib/python/runner_labels/__init__.py)
     module_dir = Path(__file__).parent
-    config_path = module_dir.parent.parent.parent / "etc" / "runners.yml"
+    config_path = module_dir.parent.parent.parent / "etc" / "runners.json"
     if config_path.exists():
         return config_path
 
     # Try from ETC_PATH environment variable (for Lambda deployment)
     etc_path = os.environ.get("ETC_PATH")
     if etc_path:
-        config_path = Path(etc_path) / "runners.yml"
+        config_path = Path(etc_path) / "runners.json"
         if config_path.exists():
             return config_path
 
     # Try current working directory
-    config_path = Path.cwd() / "etc" / "runners.yml"
+    config_path = Path.cwd() / "etc" / "runners.json"
     if config_path.exists():
         return config_path
 
     raise FileNotFoundError(
-        "Could not find etc/runners.yml. "
+        "Could not find etc/runners.json. "
         "Set ETC_PATH environment variable or run from repo root."
     )
 
 
 def _load_config() -> Dict[str, Any]:
-    """Load configuration from etc/runners.yml."""
+    """Load configuration from etc/runners.json."""
     config_path = _find_config_file()
     with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return json.load(f)
 
 
-# Load configuration from YAML (single source of truth)
+# Load configuration from JSON (single source of truth)
 _config = _load_config()
 _labels = _config.get("labels", {})
 
-# Valid label values from YAML
+# Valid label values from JSON
 PLATFORMS = frozenset(_labels.get("platforms", ["ecs", "ec2"]))
 PRICING_MODELS = frozenset(_labels.get("pricing_models", ["spot", "on-demand"]))
 
-# ECS labels from YAML
+# ECS labels from JSON
 _ecs_config = _labels.get("ecs", {})
 ECS_COMPUTE = frozenset(_ecs_config.get("compute_types", ["fargate"]))
 ECS_ARCHITECTURES = frozenset(_ecs_config.get("architectures", ["x86", "arm"]))
 
-# EC2 labels from YAML
+# EC2 labels from JSON
 _ec2_config = _labels.get("ec2", {})
 EC2_COMPUTE = frozenset(_ec2_config.get("compute_types", []))
 EC2_ARCHITECTURES = frozenset(_ec2_config.get("architectures", []))
@@ -89,7 +89,7 @@ COMPUTE_TYPES = ECS_COMPUTE | EC2_COMPUTE
 # All architecture labels
 ALL_ARCHITECTURES = ECS_ARCHITECTURES | EC2_ARCHITECTURES
 
-# Instance type mapping from YAML
+# Instance type mapping from JSON
 _instance_map = _labels.get("instance_type_map", {})
 INSTANCE_TYPE_MAP: Dict[tuple, str] = {}
 for compute, arch_map in _instance_map.items():
@@ -100,10 +100,10 @@ for compute, arch_map in _instance_map.items():
         # No architecture (gpu, fpga)
         INSTANCE_TYPE_MAP[(compute, None)] = arch_map
 
-# ECS task architecture mapping from YAML
+# ECS task architecture mapping from JSON
 ECS_TASK_ARCHITECTURE_MAP = _labels.get("ecs_task_architecture_map", {})
 
-# ECS Fargate configuration from YAML
+# ECS Fargate configuration from JSON
 _fargate_config = _config.get("fargate", {})
 ECS_FARGATE_CONFIG = {
     "cpu": _fargate_config.get("cpu", "4096"),
@@ -113,7 +113,7 @@ ECS_FARGATE_CONFIG = {
 # Runner ID pattern
 RUNNER_ID_PATTERN = re.compile(r"^runner-(\d+)$")
 
-# Default/canonical values for testing (from YAML - single source of truth)
+# Default/canonical values for testing (from JSON - single source of truth)
 _ecs_defaults = _ecs_config.get("defaults", {})
 _ec2_defaults = _ec2_config.get("defaults", {})
 _global_defaults = _labels.get("defaults", {})

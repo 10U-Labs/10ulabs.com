@@ -2,7 +2,7 @@
 """
 Compute root workflows and execution plans based on changed files.
 
-This script reads the workflow dependency graph from etc/workflow-dependencies.yml
+This script reads the workflow dependency graph from etc/workflow-dependencies.json
 and determines which workflows should be triggered for a given set of changed files.
 
 A "root" workflow is one whose files were modified but has no ancestors that were
@@ -27,13 +27,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
-
-
 def load_dependency_graph(graph_path: Path) -> dict[str, Any]:
-    """Load the workflow dependency graph from YAML file."""
+    """Load the workflow dependency graph from JSON file."""
     with open(graph_path, encoding="utf-8") as file:
-        return yaml.safe_load(file)
+        return json.load(file)
 
 
 def load_and_validate_graph(graph_arg: str) -> dict[str, Any]:
@@ -314,8 +311,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--graph",
-        default="etc/workflow-dependencies.yml",
-        help="Path to workflow dependency graph YAML file",
+        default="etc/workflow-dependencies.json",
+        help="Path to workflow dependency graph JSON file",
     )
     parser.add_argument(
         "--output-format",

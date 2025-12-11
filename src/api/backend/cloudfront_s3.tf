@@ -28,12 +28,12 @@ resource "aws_s3_object" "not_found_html" {
   etag         = filemd5("${path.module}/../../www/api/404.html")
 }
 
-resource "aws_s3_object" "openapi_yml" {
+resource "aws_s3_object" "openapi_json" {
   bucket       = module.docs_bucket.bucket_id
-  key          = "openapi.yml"
-  source       = "${path.module}/../../www/api/openapi.yml"
-  content_type = "application/x-yaml"
-  etag         = filemd5("${path.module}/../../www/api/openapi.yml")
+  key          = "openapi.json"
+  source       = "${path.module}/../../www/api/openapi.json"
+  content_type = "application/json"
+  etag         = filemd5("${path.module}/../../www/api/openapi.json")
 }
 
 resource "aws_cloudfront_origin_access_control" "s3" {
@@ -192,7 +192,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   ordered_cache_behavior {
-    path_pattern           = "/openapi.yml"
+    path_pattern           = "/openapi.json"
     target_origin_id       = "s3-docs"
     viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD"]

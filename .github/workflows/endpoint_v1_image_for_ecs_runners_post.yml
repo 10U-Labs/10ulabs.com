@@ -86,8 +86,8 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_v1_image_for_ecs_runners_post.yml \
-            src/api/endpoints/image_for_ecs_runners/post/config.yml
+            .github/workflows/endpoint_v1_image_for_ecs_runners_post.yml
+          jsonlint -q src/api/endpoints/image_for_ecs_runners/post/config.json
       - name: Run pylint
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post
@@ -156,11 +156,11 @@ jobs:
       - id: docker_config
         name: Load Docker build configuration
         run: |
-          CONFIG_FILE=src/api/endpoints/image_for_ecs_runners/post/config.yml
-          NODE_VERSION=$(yq '.node_version' $CONFIG_FILE)
-          RUNNER_VERSION=$(yq '.runner_version' $CONFIG_FILE)
-          TERRAFORM_VERSION=$(yq '.terraform_version' $CONFIG_FILE)
-          YQ_VERSION=$(yq '.yq_version' $CONFIG_FILE)
+          CONFIG_FILE=src/api/endpoints/image_for_ecs_runners/post/config.json
+          NODE_VERSION=$(jq -r '.node_version' $CONFIG_FILE)
+          RUNNER_VERSION=$(jq -r '.runner_version' $CONFIG_FILE)
+          TERRAFORM_VERSION=$(jq -r '.terraform_version' $CONFIG_FILE)
+          YQ_VERSION=$(jq -r '.yq_version' $CONFIG_FILE)
           echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT

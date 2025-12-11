@@ -1,16 +1,16 @@
 """Pytest fixtures for image_for_ec2_runners post tests."""
+import json
 import os
 import re
 import subprocess
 from pathlib import Path
 import pytest
-import yaml
 
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 POST_DIR = ENDPOINT_SRC / "post"
-CONFIG_PATH = POST_DIR / "config.yml"
+CONFIG_PATH = POST_DIR / "config.json"
 SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "outputs.tf"
 TFVARS_PATH = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
 
@@ -97,7 +97,7 @@ def post_dir():
 def config():
     """Config."""
     with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-        raw_config = yaml.safe_load(f)
+        raw_config = json.load(f)
     source_ami = raw_config.get("source_ami", "")
     parts = source_ami.split("-")
     result = {

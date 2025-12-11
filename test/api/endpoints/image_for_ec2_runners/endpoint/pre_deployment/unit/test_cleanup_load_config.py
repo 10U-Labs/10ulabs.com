@@ -1,44 +1,45 @@
 """Unit tests for load_config functionality."""
+import json
 
 
 class TestLoadConfigBasic:
     """Tests for load_config basic operations."""
 
-    def test_loads_yaml_file(self, cleanup, tmp_path):
-        """Test that load_config loads a YAML file."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("key: value")
+    def test_loads_json_file(self, cleanup, tmp_path):
+        """Test that load_config loads a JSON file."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"key": "value"}')
 
         result = cleanup.load_config(config_file)
 
         assert result == {"key": "value"}
 
-    def test_loads_nested_yaml(self, cleanup, tmp_path):
-        """Test that load_config loads nested YAML structures."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("parent:\n  child: value")
+    def test_loads_nested_json(self, cleanup, tmp_path):
+        """Test that load_config loads nested JSON structures."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"parent": {"child": "value"}}')
 
         result = cleanup.load_config(config_file)
 
         assert result == {"parent": {"child": "value"}}
 
-    def test_loads_yaml_list(self, cleanup, tmp_path):
-        """Test that load_config loads YAML lists."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("items:\n  - one\n  - two")
+    def test_loads_json_list(self, cleanup, tmp_path):
+        """Test that load_config loads JSON lists."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"items": ["one", "two"]}')
 
         result = cleanup.load_config(config_file)
 
         assert result == {"items": ["one", "two"]}
 
-    def test_loads_empty_file_as_none(self, cleanup, tmp_path):
-        """Test that load_config returns None for empty files."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("")
+    def test_loads_empty_object(self, cleanup, tmp_path):
+        """Test that load_config returns empty dict for empty object."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text("{}")
 
         result = cleanup.load_config(config_file)
 
-        assert result is None
+        assert result == {}
 
 
 class TestLoadConfigTags:
@@ -46,8 +47,8 @@ class TestLoadConfigTags:
 
     def test_loads_tags_dict(self, cleanup, tmp_path):
         """Test that load_config loads tags dictionary."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("tags:\n  Purpose: test")
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"tags": {"Purpose": "test"}}')
 
         result = cleanup.load_config(config_file)
 
@@ -55,8 +56,8 @@ class TestLoadConfigTags:
 
     def test_loads_multiple_tags(self, cleanup, tmp_path):
         """Test that load_config loads multiple tags."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("tags:\n  Purpose: test\n  Environment: dev")
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"tags": {"Purpose": "test", "Environment": "dev"}}')
 
         result = cleanup.load_config(config_file)
 
@@ -64,8 +65,8 @@ class TestLoadConfigTags:
 
     def test_loads_tag_value_from_multiple_tags(self, cleanup, tmp_path):
         """Test that load_config loads individual tag values from multiple tags."""
-        config_file = tmp_path / "config.yml"
-        config_file.write_text("tags:\n  Purpose: test\n  Environment: dev")
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"tags": {"Purpose": "test", "Environment": "dev"}}')
 
         result = cleanup.load_config(config_file)
 

@@ -7,8 +7,8 @@ class TestRtlSimConfig:
     """Tests for RTL simulation runner configuration."""
 
     def test_config_file_exists(self, config_dir: Path) -> None:
-        """Test that rtl-sim.yml config file exists."""
-        config_path = config_dir / "rtl-sim.yml"
+        """Test that rtl-sim.json config file exists."""
+        config_path = config_dir / "rtl-sim.json"
         assert config_path.exists(), f"Config file not found: {config_path}"
 
     def test_runner_section_exists(self, rtl_sim_config: dict) -> None:
@@ -64,8 +64,8 @@ class TestRtlSynthConfig:
     """Tests for RTL synthesis runner configuration."""
 
     def test_config_file_exists(self, config_dir: Path) -> None:
-        """Test that rtl-synth.yml config file exists."""
-        config_path = config_dir / "rtl-synth.yml"
+        """Test that rtl-synth.json config file exists."""
+        config_path = config_dir / "rtl-synth.json"
         assert config_path.exists(), f"Config file not found: {config_path}"
 
     def test_instance_type_is_r8i(self, rtl_synth_config: dict) -> None:
@@ -100,8 +100,8 @@ class TestRtlGpuConfig:
     """Tests for RTL GPU acceleration runner configuration."""
 
     def test_config_file_exists(self, config_dir: Path) -> None:
-        """Test that rtl-gpu.yml config file exists."""
-        config_path = config_dir / "rtl-gpu.yml"
+        """Test that rtl-gpu.json config file exists."""
+        config_path = config_dir / "rtl-gpu.json"
         assert config_path.exists(), f"Config file not found: {config_path}"
 
     def test_instance_type_is_g6e(self, rtl_gpu_config: dict) -> None:

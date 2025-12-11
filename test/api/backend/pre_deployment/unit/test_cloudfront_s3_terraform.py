@@ -61,10 +61,10 @@ def test_s3_object_not_found_html_exists():
     assert 'resource "aws_s3_object" "not_found_html"' in content
 
 
-def test_s3_object_openapi_yml_exists():
-    """Verify openapi.yml S3 object exists."""
+def test_s3_object_openapi_json_exists():
+    """Verify openapi.json S3 object exists."""
     content = _read_cloudfront_s3_tf()
-    assert 'resource "aws_s3_object" "openapi_yml"' in content
+    assert 'resource "aws_s3_object" "openapi_json"' in content
 
 
 def test_cloudfront_origin_access_control_exists():

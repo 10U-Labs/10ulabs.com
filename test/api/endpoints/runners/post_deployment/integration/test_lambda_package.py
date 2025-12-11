@@ -81,30 +81,12 @@ def test_webhook_handler_processes_runner_labels_without_import_error(config):
     assert "errorMessage" not in payload or "ModuleNotFoundError" not in error_msg
 
 
-def test_webhook_handler_package_includes_pyyaml(config):
-    """Verify deployed webhook handler Lambda includes pyyaml dependency.
+def test_webhook_handler_package_includes_runners_json(config):
+    """Verify deployed webhook handler Lambda includes etc/runners.json.
 
-    The runner_labels module requires pyyaml to parse etc/runners.yml.
-    Without this dependency, the Lambda will fail with:
-    'No module named yaml'
-    """
-    function_name = "TenULabsWebhookHandler"
-    region = config["aws_region"]
-    files = get_lambda_package_files(function_name, region)
-
-    # PyYAML installs as 'yaml' directory
-    yaml_files = [f for f in files if f.startswith("yaml/") or f == "yaml"]
-    assert yaml_files, (
-        f"PyYAML (yaml/) not found in Lambda package. Found: {files}"
-    )
-
-
-def test_webhook_handler_package_includes_runners_yml(config):
-    """Verify deployed webhook handler Lambda includes etc/runners.yml.
-
-    The runner_labels module reads configuration from etc/runners.yml.
+    The runner_labels module reads configuration from etc/runners.json.
     Without this file, the Lambda will fail with FileNotFoundError.
     """
     function_name = "TenULabsWebhookHandler"
     region = config["aws_region"]
-    assert_lambda_package_includes_file(function_name, "etc/runners.yml", region)
+    assert_lambda_package_includes_file(function_name, "etc/runners.json", region)

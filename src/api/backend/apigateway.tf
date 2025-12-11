@@ -33,7 +33,7 @@ locals {
   runners_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.runners}/invocations"
   simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
-  openapi_spec = templatefile("${path.module}/../../www/api/openapi.yml", {
+  openapi_spec = templatefile("${path.module}/../../www/api/openapi.json", {
     CatchAllHandlerArn           = local.catchall_integration_arn
     ContactHandlerArn            = local.contact_arn
     EcsRunnerHandlerArn          = local.ecs_runner_arn

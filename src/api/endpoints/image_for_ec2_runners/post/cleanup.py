@@ -6,7 +6,7 @@ import re
 import sys
 import boto3
 from botocore.exceptions import ClientError
-import yaml
+import json
 
 
 @dataclass
@@ -327,9 +327,9 @@ def run_cleanup(label, cleanup_fn):
 
 
 def load_config(config_path):
-    """Load configuration from a YAML file."""
+    """Load configuration from a JSON file."""
     with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return json.load(f)
 
 
 def print_header(args, resource_types_set, tags, exclude_tags):

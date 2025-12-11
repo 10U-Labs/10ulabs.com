@@ -14,13 +14,13 @@ def test_root_endpoint_responds(api_url):
 
 def test_openapi_spec_accessible(api_url):
     """Verify OpenAPI specification is accessible."""
-    response = requests.get(f"{api_url}/openapi.yml", headers=TEST_HEADERS, timeout=10)
+    response = requests.get(f"{api_url}/openapi.json", headers=TEST_HEADERS, timeout=10)
     assert response.status_code == 200
 
 
-def test_openapi_spec_is_yaml(api_url):
-    """Verify OpenAPI specification has correct YAML content type."""
-    response = requests.get(f"{api_url}/openapi.yml", headers=TEST_HEADERS, timeout=10)
+def test_openapi_spec_is_json(api_url):
+    """Verify OpenAPI specification has correct JSON content type."""
+    response = requests.get(f"{api_url}/openapi.json", headers=TEST_HEADERS, timeout=10)
     content_type = response.headers.get("Content-Type", "")
-    is_yaml = "application/x-yaml" in content_type or "text/yaml" in content_type
-    assert is_yaml
+    is_json = "application/json" in content_type
+    assert is_json

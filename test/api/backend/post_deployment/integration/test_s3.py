@@ -36,8 +36,8 @@ def test_index_html_in_s3(s3_client, config):
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200
 
 
-def test_openapi_yml_in_s3(s3_client, config):
-    """Verify that openapi.yml exists in S3 bucket."""
+def test_openapi_json_in_s3(s3_client, config):
+    """Verify that openapi.json exists in S3 bucket."""
     bucket_name = config["api_fqdn"]
-    response = s3_client.head_object(Bucket=bucket_name, Key="openapi.yml")
+    response = s3_client.head_object(Bucket=bucket_name, Key="openapi.json")
     assert response["ResponseMetadata"]["HTTPStatusCode"] == 200

@@ -134,17 +134,17 @@ def source_ami_pattern(config):
 
 @pytest.fixture(scope="session")
 def source_ami_id(request):
-    """Fetch the AMI ID for the source_ami specified in config.yml.
+    """Fetch the AMI ID for the source_ami specified in config.json.
 
     Uses the exact AMI name (e.g., debian-13-arm64-20251117-2299) from
-    config.yml to look up the corresponding AMI ID.
+    config.json to look up the corresponding AMI ID.
     """
     client = request.getfixturevalue("ec2_client")
     cfg = request.getfixturevalue("config")
     source_ami_name = cfg.get("source_ami", "")
 
     if not source_ami_name:
-        pytest.skip("source_ami not configured in config.yml")
+        pytest.skip("source_ami not configured in config.json")
 
     response = client.describe_images(
         Filters=[
