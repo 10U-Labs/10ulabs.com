@@ -41,6 +41,7 @@ class ScriptParams:
     key_material: str
     setup_script: Path
     runner_version: str
+    terraform_version: str
     yq_version: str
     runner_user: str
 
@@ -243,6 +244,7 @@ def run_script(params: ScriptParams):
     sftp.close()
     args_str = (
         f"--runner-version {params.runner_version} "
+        f"--terraform-version {params.terraform_version} "
         f"--yq-version {params.yq_version} "
         f"--runner-user {params.runner_user}"
     )
@@ -355,6 +357,7 @@ def run_build(ctx: BuildContext, state: BuildState):
             state.key_material,
             ctx.args.setup_script,
             ctx.args.runner_version,
+            ctx.args.terraform_version,
             ctx.args.yq_version,
             ctx.args.runner_user,
         )
@@ -407,6 +410,7 @@ def main():
     parser.add_argument("--subnet-ids", required=True, help="Comma-separated subnet IDs")
     parser.add_argument("--instance-types", required=True, help="Comma-separated instance types")
     parser.add_argument("--runner-version", required=True, help="GitHub runner version")
+    parser.add_argument("--terraform-version", required=True, help="Terraform version")
     parser.add_argument("--yq-version", required=True, help="yq version")
     parser.add_argument("--runner-user", required=True, help="Username for GitHub runner")
     parser.add_argument("--iam-instance-profile", help="IAM instance profile name")
