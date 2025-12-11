@@ -12,7 +12,7 @@ import pytest
 from naming_conventions import validate_name
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[6]
 RUNNERS_TF_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 
