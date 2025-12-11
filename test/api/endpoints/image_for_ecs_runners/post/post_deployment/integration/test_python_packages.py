@@ -64,7 +64,11 @@ def test_botocore_installed(docker_image):
 
 def test_boto3_stubs_installed(docker_image):
     """Test that boto3-stubs is installed."""
-    result = run_command_in_container(docker_image, "pip3 show boto3-stubs")
+    result = run_command_in_container(
+        docker_image,
+        "python3 -c \"import importlib.metadata; "
+        "importlib.metadata.version('boto3-stubs')\""
+    )
 
     assert result.returncode == 0
 
@@ -78,7 +82,11 @@ def test_dnspython_installed(docker_image):
 
 def test_types_pyyaml_installed(docker_image):
     """Test that types-PyYAML is installed."""
-    result = run_command_in_container(docker_image, "pip3 show types-PyYAML")
+    result = run_command_in_container(
+        docker_image,
+        "python3 -c \"import importlib.metadata; "
+        "importlib.metadata.version('types-PyYAML')\""
+    )
 
     assert result.returncode == 0
 
@@ -86,7 +94,9 @@ def test_types_pyyaml_installed(docker_image):
 def test_types_requests_installed(docker_image):
     """Test that types-requests is installed."""
     result = run_command_in_container(
-        docker_image, "pip3 show types-requests"
+        docker_image,
+        "python3 -c \"import importlib.metadata; "
+        "importlib.metadata.version('types-requests')\""
     )
 
     assert result.returncode == 0

@@ -13,15 +13,6 @@ def test_python3_installed(docker_image):
     assert result.returncode == 0
 
 
-def test_curl_installed(docker_image):
-    """
-    Test that curl is installed in the container.
-    """
-    result = run_command_in_container(docker_image, "which curl")
-
-    assert result.returncode == 0
-
-
 def test_git_installed(docker_image):
     """
     Test that git is installed in the container.
@@ -58,42 +49,6 @@ def test_tar_installed(docker_image):
     assert result.returncode == 0
 
 
-def test_unzip_installed(docker_image):
-    """
-    Test that unzip is installed in the container.
-    """
-    result = run_command_in_container(docker_image, "which unzip")
-
-    assert result.returncode == 0
-
-
-def test_wget_installed(docker_image):
-    """
-    Test that wget is installed in the container.
-    """
-    result = run_command_in_container(docker_image, "which wget")
-
-    assert result.returncode == 0
-
-
-def test_gnupg_installed(docker_image):
-    """
-    Test that GnuPG is installed in the container.
-    """
-    result = run_command_in_container(docker_image, "which gpg")
-
-    assert result.returncode == 0
-
-
-def test_python3_pip_installed(docker_image):
-    """
-    Test that pip3 is installed in the container.
-    """
-    result = run_command_in_container(docker_image, "which pip3")
-
-    assert result.returncode == 0
-
-
 def test_python3_venv_installed(docker_image):
     """
     Test that Python venv module is installed in the container.
@@ -111,15 +66,6 @@ def test_procps_installed(docker_image):
     Test that procps is installed in the container.
     """
     result = run_command_in_container(docker_image, "which ps")
-
-    assert result.returncode == 0
-
-
-def test_xz_utils_installed(docker_image):
-    """
-    Test that xz-utils is installed in the container.
-    """
-    result = run_command_in_container(docker_image, "which xz")
 
     assert result.returncode == 0
 
