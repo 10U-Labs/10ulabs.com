@@ -13,14 +13,14 @@ data "archive_file" "runners_handler" {
 
 resource "aws_lambda_function" "runners_handler" {
   filename                       = data.archive_file.runners_handler.output_path
-  function_name                  = var.webhook_handler_function_name
+  function_name                  = local.webhook_handler_function_name
   role                           = aws_iam_role.lambda_runners_handler.arn
   handler                        = "webhook_router.lambda_handler"
   source_code_hash               = data.archive_file.runners_handler.output_base64sha256
   runtime                        = "python3.13"
   architectures                  = ["arm64"]
-  timeout                        = var.lambda_timeout_seconds
-  memory_size                    = var.lambda_memory_mb
+  timeout                        = local.lambda_timeout_seconds
+  memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "GitHub webhook router for GitHub self-hosted runners"
 
@@ -53,7 +53,7 @@ resource "aws_lambda_function" "runners_handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = var.webhook_handler_function_name
+    Name = local.webhook_handler_function_name
   })
 
   depends_on = [
@@ -70,11 +70,11 @@ resource "aws_lambda_function" "runners_handler" {
 }
 
 resource "aws_cloudwatch_log_group" "runners_handler" {
-  name              = var.webhook_handler_log_group_name
+  name              = local.webhook_handler_log_group_name
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.webhook_handler_function_name}Logs"
+    Name = "${local.webhook_handler_function_name}Logs"
   })
 }
 

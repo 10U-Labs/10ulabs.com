@@ -39,6 +39,7 @@ def _handler_module_fixture() -> Generator[ModuleType, None, None]:
         'EC2_AMI_STABLE_TAG': 'Stable',
         'GITHUB_REPO': get_github_repo(),
         'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
+        'SSM_EC2_RUNNER_AMI_LATEST': '/ami/ec2-runner/latest',
         'SUBNETS': 'subnet-test1,subnet-test2',
         'VPC_ID': 'vpc-test',
     }
@@ -79,6 +80,7 @@ def _mock_env_vars_fixture() -> Generator[None, None, None]:
         'EC2_AMI_STABLE_TAG': 'Stable',
         'GITHUB_REPO': get_github_repo(),
         'GITHUB_TOKEN_SECRET_NAME': '/test/github-pat',
+        'SSM_EC2_RUNNER_AMI_LATEST': '/ami/ec2-runner/latest',
         'SUBNETS': 'subnet-test1,subnet-test2',
         'VPC_ID': 'vpc-test',
     }

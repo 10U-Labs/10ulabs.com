@@ -1,5 +1,5 @@
 resource "aws_ssm_parameter" "latest_ami" {
-  name  = var.ssm_parameter_name_for_latest_ami
+  name  = local.ssm_parameter_name_for_latest_ami
   type  = "String"
   value = "PLACEHOLDER_UPDATE_AFTER_AMI_BUILD"
   tier  = "Standard"
@@ -9,19 +9,19 @@ resource "aws_ssm_parameter" "latest_ami" {
   }
 
   tags = merge(local.common_tags, {
-    Name = var.ssm_parameter_name_for_latest_ami
+    Name = local.ssm_parameter_name_for_latest_ami
   })
 }
 
 resource "aws_ssm_parameter" "webhook_secret" {
-  name        = var.ssm_parameter_name_for_webhook_secret
+  name        = local.ssm_parameter_name_for_webhook_secret
   type        = "String"
   value       = random_password.webhook_secret.result
   description = "GitHub webhook secret for signature verification"
   tier        = "Standard"
 
   tags = merge(local.common_tags, {
-    Name = var.ssm_parameter_name_for_webhook_secret
+    Name = local.ssm_parameter_name_for_webhook_secret
   })
 }
 

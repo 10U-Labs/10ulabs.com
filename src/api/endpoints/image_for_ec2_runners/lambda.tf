@@ -18,13 +18,14 @@ resource "aws_lambda_function" "handler" {
 
   environment {
     variables = {
-      EC2_AMI_PURPOSE_TAG      = local.ami_purpose_tag
-      EC2_AMI_PURPOSE_VALUE    = local.ami_purpose_value
-      EC2_AMI_STABLE_TAG       = local.ami_stable_tag
-      GITHUB_REPO              = local.github_repo_full
-      GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
-      SUBNETS                  = data.terraform_remote_state.api_backend.outputs.vpc_public_subnet_ids
-      VPC_ID                   = data.terraform_remote_state.api_backend.outputs.vpc_id
+      EC2_AMI_PURPOSE_TAG       = local.ami_purpose_tag
+      EC2_AMI_PURPOSE_VALUE     = local.ami_purpose_value
+      EC2_AMI_STABLE_TAG        = local.ami_stable_tag
+      GITHUB_REPO               = local.github_repo_full
+      GITHUB_TOKEN_SECRET_NAME  = module.shared.ssm_github_pat_name
+      SSM_EC2_RUNNER_AMI_LATEST = module.shared.ssm_ec2_runner_ami_latest
+      SUBNETS                   = data.terraform_remote_state.api_backend.outputs.vpc_public_subnet_ids
+      VPC_ID                    = data.terraform_remote_state.api_backend.outputs.vpc_id
     }
   }
 

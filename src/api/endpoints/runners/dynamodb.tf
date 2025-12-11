@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "idempotency" {
-  name         = var.idempotency_table_name
+  name         = local.idempotency_table_name
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "request_id"
 
@@ -18,7 +18,7 @@ resource "aws_dynamodb_table" "idempotency" {
   }
 
   tags = merge(local.common_tags, {
-    Name = var.idempotency_table_name
+    Name = local.idempotency_table_name
   })
 }
 

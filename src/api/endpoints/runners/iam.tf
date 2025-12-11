@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_runners_handler" {
-  name = "${var.webhook_handler_function_name}-ServiceRole"
+  name = local.lambda_runners_handler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda_runners_handler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.lambda_runners_handler_role_name
   })
 }
 
@@ -161,7 +161,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ec2" {
 }
 
 resource "aws_iam_role" "circuit_breaker_remediation" {
-  name = "${local.resource_prefix}CircuitBreakerRemediationRole"
+  name = local.circuit_breaker_remediation_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -175,7 +175,7 @@ resource "aws_iam_role" "circuit_breaker_remediation" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.circuit_breaker_remediation_role_name
   })
 }
 
@@ -228,7 +228,7 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
 }
 
 resource "aws_iam_role" "dlq_reprocessor" {
-  name = "${local.resource_prefix}DLQReprocessorRole"
+  name = local.dlq_reprocessor_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -242,7 +242,7 @@ resource "aws_iam_role" "dlq_reprocessor" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.dlq_reprocessor_role_name
   })
 }
 
@@ -297,7 +297,7 @@ resource "aws_iam_role_policy" "dlq_reprocessor_permissions" {
 }
 
 resource "aws_iam_role" "circuit_breaker_recovery" {
-  name = "${local.resource_prefix}CircuitBreakerRecoveryRole"
+  name = local.circuit_breaker_recovery_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -311,7 +311,7 @@ resource "aws_iam_role" "circuit_breaker_recovery" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.circuit_breaker_recovery_role_name
   })
 }
 
@@ -363,7 +363,7 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
 }
 
 resource "aws_iam_role" "drift_recovery" {
-  name = "${local.resource_prefix}DriftRecoveryRole"
+  name = local.drift_recovery_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -377,7 +377,7 @@ resource "aws_iam_role" "drift_recovery" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.drift_recovery_role_name
   })
 }
 
@@ -430,7 +430,7 @@ resource "aws_iam_role_policy" "drift_recovery_permissions" {
 }
 
 resource "aws_iam_role" "spot_interruption_handler" {
-  name = "${local.resource_prefix}SpotInterruptionHandlerRole"
+  name = local.spot_interruption_handler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -444,7 +444,7 @@ resource "aws_iam_role" "spot_interruption_handler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.spot_interruption_handler_role_name
   })
 }
 
@@ -507,7 +507,7 @@ resource "aws_iam_role_policy" "spot_interruption_handler_permissions" {
 }
 
 resource "aws_iam_role" "stale_runner_cleanup" {
-  name = "${local.resource_prefix}StaleRunnerCleanupRole"
+  name = local.stale_runner_cleanup_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -521,7 +521,7 @@ resource "aws_iam_role" "stale_runner_cleanup" {
   })
 
   tags = merge(local.common_tags, {
-    Name = self.name
+    Name = local.stale_runner_cleanup_role_name
   })
 }
 

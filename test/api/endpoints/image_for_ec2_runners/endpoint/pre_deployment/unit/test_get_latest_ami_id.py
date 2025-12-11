@@ -10,7 +10,7 @@ class TestGetLatestAmiIdSuccess:
         mock_ssm = mock_ec2_client
         mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'ami-123456789'}}
 
-        result = cleanup.get_latest_ami_id(mock_ssm, '/github-runner/ami/latest')
+        result = cleanup.get_latest_ami_id(mock_ssm, '/ami/ec2-runner/latest')
 
         assert result == 'ami-123456789'
 
@@ -30,7 +30,7 @@ class TestGetLatestAmiIdSuccess:
             {'Error': {'Code': 'ParameterNotFound'}}, 'get_parameter'
         )
 
-        result = cleanup.get_latest_ami_id(mock_ssm, '/github-runner/ami/latest')
+        result = cleanup.get_latest_ami_id(mock_ssm, '/ami/ec2-runner/latest')
 
         assert result is None
 
@@ -41,6 +41,6 @@ class TestGetLatestAmiIdSuccess:
             {'Error': {'Code': 'AccessDenied'}}, 'get_parameter'
         )
 
-        result = cleanup.get_latest_ami_id(mock_ssm, '/github-runner/ami/latest')
+        result = cleanup.get_latest_ami_id(mock_ssm, '/ami/ec2-runner/latest')
 
         assert result is None
