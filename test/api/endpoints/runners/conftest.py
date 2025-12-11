@@ -95,9 +95,7 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['resource_prefix'] = runners_locals.get(
         'resource_prefix', shared_config.get('resource_prefix', '')
     )
-    result['ssm_parameter_name_for_github_pat'] = parse_bootstrap_tfvar(
-        'ssm_parameter_name_for_github_pat'
-    )
+    result['ssm_parameter_name_for_github_pat'] = shared_config['ssm_github_pat_name']
     result['ssm_parameter_name_for_api_key'] = result.get(
         'ssm_parameter_name_for_api_key', '/api/key'
     )
