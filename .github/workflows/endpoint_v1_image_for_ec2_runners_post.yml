@@ -91,6 +91,7 @@ jobs:
           RUNNER_USER=$(jq -r '.runner_user' "$CONF")
           RUNNER_VERSION=$(jq -r '.runner_version' "$CONF")
           SOURCE_AMI=$(jq -r '.source_ami' "$CONF")
+          TERRAFORM_VERSION=$(jq -r '.terraform_version' "$CONF")
           YQ_VERSION=$(jq -r '.yq_version' "$CONF")
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
@@ -101,6 +102,7 @@ jobs:
           echo "runner_user=$RUNNER_USER" >> $GITHUB_OUTPUT
           echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
           echo "source_ami=$SOURCE_AMI" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
           echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -179,6 +181,7 @@ jobs:
           RVER="${{ steps.config.outputs.runner_version }}"
           SAMI="${{ steps.config.outputs.source_ami }}"
           SNET="${{ steps.api.outputs.subnet_ids }}"
+          TFVER="${{ steps.config.outputs.terraform_version }}"
           YQVER="${{ steps.config.outputs.yq_version }}"
           TAG="${{ steps.api.outputs.ami_stable_tag }}"
           PURP="${{ steps.api.outputs.ami_purpose_value }}"
@@ -191,6 +194,7 @@ jobs:
             --setup-script "$SETUP" \
             --source-ami "$SAMI" \
             --subnet-ids "$SNET" \
+            --terraform-version "$TFVER" \
             --yq-version "$YQVER" \
             --tag "${TAG}=false" \
             --tag "BuildDate=${TIMESTAMP}" \

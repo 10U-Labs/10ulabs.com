@@ -140,6 +140,15 @@ def install_hadolint(arch: str) -> None:
     run("chmod +x /usr/local/bin/hadolint")
 
 
+def install_terraform(arch: str, version: str) -> None:
+    """Install Terraform."""
+    url = (f"https://releases.hashicorp.com/terraform/{version}/"
+           f"terraform_{version}_linux_{arch}.zip")
+    run(f"curl -sSL -o /tmp/terraform.zip {url}")
+    run("unzip -oq /tmp/terraform.zip -d /usr/local/bin")
+    run("rm /tmp/terraform.zip")
+
+
 def create_runner_user(username: str) -> None:
     """Create the GitHub runner user."""
     run(f"useradd -m -s /bin/bash {username}")
@@ -184,6 +193,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Setup EC2 runner AMI")
     parser.add_argument("--runner-user", required=True, help="GitHub runner username")
     parser.add_argument("--runner-version", required=True, help="GitHub runner version")
+    parser.add_argument("--terraform-version", required=True, help="Terraform version")
     parser.add_argument("--yq-version", required=True, help="yq version")
     args = parser.parse_args()
 
@@ -197,6 +207,7 @@ def main() -> None:
     install_yq(arch, args.yq_version)
     install_jsonlint()
     install_hadolint(arch)
+    install_terraform(arch, args.terraform_version)
     create_runner_user(args.runner_user)
     install_github_actions_runner(arch, args.runner_user, args.runner_version)
     install_ssm_agent(arch)
