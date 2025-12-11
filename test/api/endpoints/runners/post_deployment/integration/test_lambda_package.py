@@ -4,9 +4,14 @@ These tests verify that deployed Lambda packages contain required shared modules
 """
 import json
 
-from test.api.endpoints.conftest import assert_lambda_package_includes_file
+from test.api.endpoints.conftest import (
+    assert_lambda_package_includes_file,
+    get_lambda_package_files,
+)
 
 import boto3
+
+from runner_labels import DEFAULT_ECS_ARCH, DEFAULT_ECS_COMPUTE, DEFAULT_RUNNER_ID
 
 
 def test_webhook_handler_package_includes_runner_labels(config):
@@ -32,6 +37,7 @@ def test_webhook_handler_processes_runner_labels_without_import_error(config):
     region = config["aws_region"]
 
     # Event with runner labels that exercises runner_labels.parse_labels()
+    # Uses defaults from runner_labels module (single source of truth)
     event = {
         "httpMethod": "POST",
         "path": "/v1/runners",
@@ -45,7 +51,13 @@ def test_webhook_handler_processes_runner_labels_without_import_error(config):
                 "id": 999999,
                 "run_id": 888888,
                 "name": "test-job",
-                "labels": ["ecs", "fargate", "spot", "runner-12345"],
+                "labels": [
+                    "ecs",
+                    DEFAULT_ECS_COMPUTE,
+                    DEFAULT_ECS_ARCH,
+                    "spot",
+                    DEFAULT_RUNNER_ID,
+                ],
                 "status": "queued"
             },
             "repository": {"full_name": "test/repo"}
@@ -67,3 +79,32 @@ def test_webhook_handler_processes_runner_labels_without_import_error(config):
     assert response["StatusCode"] == 200
     error_msg = payload.get("errorMessage", "")
     assert "errorMessage" not in payload or "ModuleNotFoundError" not in error_msg
+
+
+def test_webhook_handler_package_includes_pyyaml(config):
+    """Verify deployed webhook handler Lambda includes pyyaml dependency.
+
+    The runner_labels module requires pyyaml to parse etc/runners.yml.
+    Without this dependency, the Lambda will fail with:
+    'No module named yaml'
+    """
+    function_name = "TenULabsWebhookHandler"
+    region = config["aws_region"]
+    files = get_lambda_package_files(function_name, region)
+
+    # PyYAML installs as 'yaml' directory
+    yaml_files = [f for f in files if f.startswith("yaml/") or f == "yaml"]
+    assert yaml_files, (
+        f"PyYAML (yaml/) not found in Lambda package. Found: {files}"
+    )
+
+
+def test_webhook_handler_package_includes_runners_yml(config):
+    """Verify deployed webhook handler Lambda includes etc/runners.yml.
+
+    The runner_labels module reads configuration from etc/runners.yml.
+    Without this file, the Lambda will fail with FileNotFoundError.
+    """
+    function_name = "TenULabsWebhookHandler"
+    region = config["aws_region"]
+    assert_lambda_package_includes_file(function_name, "etc/runners.yml", region)
