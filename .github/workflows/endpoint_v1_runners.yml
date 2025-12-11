@@ -132,7 +132,7 @@ jobs:
           python3 -m pytest test/api/endpoints/runners/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
-          GH_TOKEN: ${{ secrets.GITHUB_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         name: Disable USE_GITHUB_HOSTED variable
         run: |
           echo "Runners workflow completed successfully."
