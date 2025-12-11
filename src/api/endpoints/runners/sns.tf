@@ -9,5 +9,5 @@ resource "aws_sns_topic" "circuit_breaker_alerts" {
 resource "aws_sns_topic_subscription" "circuit_breaker_email" {
   topic_arn = aws_sns_topic.circuit_breaker_alerts.arn
   protocol  = "email"
-  endpoint  = var.circuit_breaker_alert_email
+  endpoint  = local.circuit_breaker_alert_email
 }

@@ -50,6 +50,10 @@ output "ssm_github_pat_name" {
   value = local.ssm_github_pat_name
 }
 
+output "ssm_ec2_runner_ami_latest" {
+  value = local.ssm_ec2_runner_ami_latest
+}
+
 output "ssm_github_pat_arn" {
   value = "arn:aws:ssm:${local.aws_region}:${local.aws_account_id}:parameter${local.ssm_github_pat_name}"
 }

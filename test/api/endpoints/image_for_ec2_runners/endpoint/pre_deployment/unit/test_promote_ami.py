@@ -50,7 +50,7 @@ class TestPromoteAmi:
         mock_ec2, _, side_effect = create_mock_boto_clients()
         with patch('boto3.client', side_effect=side_effect):
             promote_ami.promote_ami(
-                'ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable'
+                'ami-123', 'us-east-1', 'run-456', '/ami/ec2-runner/latest', 'stable'
             )
 
             mock_ec2.create_tags.assert_called_once_with(
@@ -63,11 +63,11 @@ class TestPromoteAmi:
         _, mock_ssm, side_effect = create_mock_boto_clients()
         with patch('boto3.client', side_effect=side_effect):
             promote_ami.promote_ami(
-                'ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable'
+                'ami-123', 'us-east-1', 'run-456', '/ami/ec2-runner/latest', 'stable'
             )
 
             mock_ssm.put_parameter.assert_called_once_with(
-                Name='/github-runner/ami/latest',
+                Name='/ami/ec2-runner/latest',
                 Value='ami-123',
                 Type='String',
                 Overwrite=True,
@@ -81,7 +81,7 @@ class TestPromoteAmi:
         _, _, side_effect = create_mock_boto_clients()
         with patch('boto3.client', side_effect=side_effect):
             result = promote_ami.promote_ami(
-                'ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable'
+                'ami-123', 'us-east-1', 'run-456', '/ami/ec2-runner/latest', 'stable'
             )
 
             assert result == 0
@@ -94,7 +94,7 @@ class TestPromoteAmi:
         )
         with patch('boto3.client', side_effect=side_effect):
             result = promote_ami.promote_ami(
-                'ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable'
+                'ami-123', 'us-east-1', 'run-456', '/ami/ec2-runner/latest', 'stable'
             )
 
             assert result == 1
@@ -107,7 +107,7 @@ class TestPromoteAmi:
         )
         with patch('boto3.client', side_effect=side_effect):
             result = promote_ami.promote_ami(
-                'ami-123', 'us-east-1', 'run-456', '/github-runner/ami/latest', 'stable'
+                'ami-123', 'us-east-1', 'run-456', '/ami/ec2-runner/latest', 'stable'
             )
 
             assert result == 1

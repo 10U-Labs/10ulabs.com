@@ -225,9 +225,10 @@ def get_latest_ami_details() -> Dict[str, Any]:
     ami_purpose_tag = os.environ['EC2_AMI_PURPOSE_TAG']
     ami_purpose_value = os.environ['EC2_AMI_PURPOSE_VALUE']
     ami_stable_tag = os.environ['EC2_AMI_STABLE_TAG']
+    ssm_param_name = os.environ['SSM_EC2_RUNNER_AMI_LATEST']
     try:
         try:
-            param_response = get_ssm_client().get_parameter(Name='/github-runner/ami/latest')
+            param_response = get_ssm_client().get_parameter(Name=ssm_param_name)
             ami_id = param_response['Parameter']['Value']
             logger.info("Retrieved latest AMI from SSM Parameter Store: %s", ami_id)
         except ClientError as ssm_error:

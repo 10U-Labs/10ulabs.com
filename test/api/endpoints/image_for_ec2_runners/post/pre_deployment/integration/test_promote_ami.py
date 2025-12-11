@@ -37,7 +37,7 @@ def test_can_create_tag_on_ami(ec2_client, source_ami_id):
 
 def test_can_update_ssm_parameter_with_ami_id(ssm_client, source_ami_id):
     """Test that SSM parameter can be updated with AMI ID."""
-    test_parameter_name = "/github-runner/ami/integration-test"
+    test_parameter_name = "/ami/ec2-runner/integration-test"
 
     try:
         ssm_client.delete_parameter(Name=test_parameter_name)
