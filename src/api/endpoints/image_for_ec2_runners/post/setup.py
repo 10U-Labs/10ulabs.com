@@ -132,6 +132,14 @@ def install_jsonlint() -> None:
     run("npm install -g jsonlint")
 
 
+def install_hadolint(arch: str) -> None:
+    """Install hadolint for Dockerfile linting."""
+    url = (f"https://github.com/hadolint/hadolint/releases/latest/download/"
+           f"hadolint-Linux-{arch}")
+    run(f"curl -sSL -o /usr/local/bin/hadolint {url}")
+    run("chmod +x /usr/local/bin/hadolint")
+
+
 def create_runner_user(username: str) -> None:
     """Create the GitHub runner user."""
     run(f"useradd -m -s /bin/bash {username}")
@@ -188,6 +196,7 @@ def main() -> None:
     install_python_packages()
     install_yq(arch, args.yq_version)
     install_jsonlint()
+    install_hadolint(arch)
     create_runner_user(args.runner_user)
     install_github_actions_runner(arch, args.runner_user, args.runner_version)
     install_ssm_agent(arch)
