@@ -1,10 +1,93 @@
 # Runner configuration for GitHub Actions self-hosted runners
 #
-# This file is the source of truth for runner infrastructure settings.
-# Terraform reads this and passes values to Lambda as environment variables.
+# This file is the single source of truth for runner labels and infrastructure.
+# Read by: Terraform (infra), Python (runtime/tests)
+
+# =============================================================================
+# LABEL SYSTEM CONFIGURATION
+# =============================================================================
+# The composable label format: [platform, compute, architecture?, pricing, runner-id]
+#
+# Example: ["ecs", "fargate", "x86", "spot", "runner-12345"]
+#          ["ec2", "memory-optimized", "intel", "on-demand", "runner-67890"]
+
+labels:
+  platforms:
+    - ecs
+    - ec2
+
+  pricing_models:
+    - spot
+    - on-demand
+
+  # ECS-specific labels
+  ecs:
+    compute_types:
+      - fargate
+    architectures:
+      - x86
+      - arm
+    # Defaults used in tests
+    defaults:
+      compute: fargate
+      architecture: x86
+
+  # EC2-specific labels
+  ec2:
+    compute_types:
+      - general-purpose
+      - memory-optimized
+      - gpu
+      - fpga
+    architectures:
+      - intel
+      - amd
+      - arm
+    # Compute types that REQUIRE architecture label
+    compute_requires_arch:
+      - general-purpose
+      - memory-optimized
+    # Compute types that FORBID architecture label
+    compute_forbids_arch:
+      - gpu
+      - fpga
+    # Defaults used in tests
+    defaults:
+      compute: memory-optimized
+      architecture: intel
+
+  # Default pricing and runner ID for tests
+  defaults:
+    pricing: spot
+    runner_id: runner-12345
+
+  # Instance type mapping: (compute, architecture) -> instance type
+  instance_type_map:
+    general-purpose:
+      intel: m8i.4xlarge
+      amd: m8a.4xlarge
+      arm: m8g.4xlarge
+    memory-optimized:
+      intel: r8i.4xlarge
+      amd: r8a.4xlarge
+      arm: r8g.4xlarge
+    gpu: g6e.2xlarge
+    fpga: f2.12xlarge
+
+  # ECS task architecture mapping (label -> task CPU architecture)
+  ecs_task_architecture_map:
+    x86: X86_64
+    arm: ARM64
+
+# =============================================================================
+# RUNTIME CONFIGURATION
+# =============================================================================
+# Infrastructure settings used at deployment/runtime
 
 fargate:
   use_spot: true
+  cpu: "4096"
+  memory: "16384"
 
 ec2:
   use_spot: true
