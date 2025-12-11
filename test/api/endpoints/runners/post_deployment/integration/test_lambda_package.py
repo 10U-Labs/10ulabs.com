@@ -4,10 +4,7 @@ These tests verify that deployed Lambda packages contain required shared modules
 """
 import json
 
-from test.api.endpoints.conftest import (
-    assert_lambda_package_includes_file,
-    get_lambda_package_files,
-)
+from test.api.endpoints.conftest import assert_lambda_package_includes_file
 
 import boto3
 
