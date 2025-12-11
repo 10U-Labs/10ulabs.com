@@ -6,13 +6,23 @@ import boto3
 import pytest
 import requests
 
+# Import canonical label values from runner_labels (single source of truth)
+from runner_labels import (
+    DEFAULT_ECS_ARCH,
+    DEFAULT_EC2_ARCH,
+    DEFAULT_ECS_COMPUTE,
+    DEFAULT_EC2_COMPUTE,
+    DEFAULT_PRICING,
+    DEFAULT_RUNNER_ID,
+)
+
 
 def get_composite_labels(
     platform: str = "ecs",
-    compute: str = "fargate",
+    compute: str = DEFAULT_ECS_COMPUTE,
     architecture: str | None = None,
-    pricing: str = "spot",
-    runner_id: str = "runner-12345"
+    pricing: str = DEFAULT_PRICING,
+    runner_id: str = DEFAULT_RUNNER_ID
 ) -> List[str]:
     """Generate composite runner labels for testing.
 
@@ -38,6 +48,8 @@ def get_composite_labels(
 def get_runner_labels() -> Dict[str, List[str]]:
     """Get runner labels as composite label lists for testing.
 
+    Uses canonical values from runner_labels module (single source of truth).
+
     Returns dict with keys mapping to composite label lists:
         - ec2: EC2 memory-optimized intel spot labels
         - fargate: ECS fargate x86 spot labels
@@ -45,10 +57,10 @@ def get_runner_labels() -> Dict[str, List[str]]:
         - fargate_e2e_test: ECS fargate x86 spot labels with e2e marker
     """
     return {
-        'ec2': ['ec2', 'memory-optimized', 'intel', 'spot', 'runner-12345'],
-        'fargate': ['ecs', 'fargate', 'x86', 'spot', 'runner-12345'],
-        'ec2_e2e_test': ['ec2', 'memory-optimized', 'intel', 'spot', 'runner-12345', 'e2e'],
-        'fargate_e2e_test': ['ecs', 'fargate', 'x86', 'spot', 'runner-12345', 'e2e'],
+        'ec2': ['ec2', DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID],
+        'fargate': ['ecs', DEFAULT_ECS_COMPUTE, DEFAULT_ECS_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID],
+        'ec2_e2e_test': ['ec2', DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID, 'e2e'],
+        'fargate_e2e_test': ['ecs', DEFAULT_ECS_COMPUTE, DEFAULT_ECS_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID, 'e2e'],
     }
 
 

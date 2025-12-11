@@ -7,34 +7,39 @@ from runner_labels import (
     is_spot,
     LabelParseError,
     LabelValidationError,
-    PLATFORMS,
     PRICING_MODELS,
-    ECS_COMPUTE,
     EC2_COMPUTE,
     ECS_ARCHITECTURES,
     EC2_ARCHITECTURES,
     EC2_COMPUTE_REQUIRES_ARCH,
     EC2_COMPUTE_FORBIDS_ARCH,
+    # Default/canonical values (single source of truth)
+    DEFAULT_ECS_ARCH,
+    DEFAULT_EC2_ARCH,
+    DEFAULT_ECS_COMPUTE,
+    DEFAULT_EC2_COMPUTE,
+    DEFAULT_PRICING,
+    DEFAULT_RUNNER_ID,
 )
 
 
-# Valid label combinations for testing (single source of truth)
-def get_ecs_labels(arch='x86', pricing='spot', runner_id='runner-12345'):
+# Valid label combinations for testing using defaults from runner_labels
+def get_ecs_labels(arch=DEFAULT_ECS_ARCH, pricing=DEFAULT_PRICING, runner_id=DEFAULT_RUNNER_ID):
     """Generate valid ECS Fargate labels."""
-    return ['ecs', 'fargate', arch, pricing, runner_id]
+    return ['ecs', DEFAULT_ECS_COMPUTE, arch, pricing, runner_id]
 
 
-def get_ec2_labels(compute='memory-optimized', arch='intel', pricing='spot', runner_id='runner-12345'):
+def get_ec2_labels(compute=DEFAULT_EC2_COMPUTE, arch=DEFAULT_EC2_ARCH, pricing=DEFAULT_PRICING, runner_id=DEFAULT_RUNNER_ID):
     """Generate valid EC2 labels with architecture."""
     return ['ec2', compute, arch, pricing, runner_id]
 
 
-def get_ec2_gpu_labels(pricing='spot', runner_id='runner-12345'):
+def get_ec2_gpu_labels(pricing=DEFAULT_PRICING, runner_id=DEFAULT_RUNNER_ID):
     """Generate valid EC2 GPU labels (no architecture)."""
     return ['ec2', 'gpu', pricing, runner_id]
 
 
-def get_ec2_fpga_labels(pricing='on-demand', runner_id='runner-12345'):
+def get_ec2_fpga_labels(pricing='on-demand', runner_id=DEFAULT_RUNNER_ID):
     """Generate valid EC2 FPGA labels (no architecture)."""
     return ['ec2', 'fpga', pricing, runner_id]
 

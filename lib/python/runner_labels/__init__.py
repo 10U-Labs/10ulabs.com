@@ -80,6 +80,15 @@ ECS_FARGATE_CONFIG = {
 # Runner ID pattern
 RUNNER_ID_PATTERN = re.compile(r"^runner-(\d+)$")
 
+# Default/canonical values for testing (single source of truth)
+# These are used when tests need a representative valid label
+DEFAULT_ECS_ARCH = "x86"
+DEFAULT_EC2_ARCH = "intel"
+DEFAULT_ECS_COMPUTE = "fargate"
+DEFAULT_EC2_COMPUTE = "memory-optimized"
+DEFAULT_PRICING = "spot"
+DEFAULT_RUNNER_ID = "runner-12345"
+
 
 @dataclass
 class ParsedLabels:
