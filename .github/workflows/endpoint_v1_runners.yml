@@ -132,6 +132,14 @@ jobs:
           python3 -m pytest test/api/endpoints/runners/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
+          GH_TOKEN: ${{ secrets.GITHUB_PAT }}
+        name: Disable USE_GITHUB_HOSTED variable
+        run: |
+          echo "Runners workflow completed successfully."
+          echo "Disabling USE_GITHUB_HOSTED to switch future workflows to ECS."
+          gh variable set USE_GITHUB_HOSTED --body "false" \
+            --repo ${{ github.repository }}
+      - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
           github.event_name == 'workflow_dispatch' &&
