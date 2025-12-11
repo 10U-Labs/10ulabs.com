@@ -21,7 +21,10 @@ RUN apt-get update && \
     curl -fsSL -o /tmp/tflint.zip "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_arm64.zip" && \
     unzip -oq /tmp/terraform.zip -d /tmp && unzip -oq /tmp/tflint.zip -d /tmp && \
     mkdir -p /tmp/node && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" | tar -xJ -C /tmp/node --strip-components=1 && \
-    curl -fsSL -o /tmp/runner.tar.gz "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz"
+    curl -fsSL -o /tmp/runner.tar.gz "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz" && \
+    GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
+    curl -fsSL -o /tmp/gh.tar.gz "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_arm64.tar.gz" && \
+    mkdir -p /tmp/gh && tar -xzf /tmp/gh.tar.gz -C /tmp/gh --strip-components=1
 
 # Runtime stage - minimal image with all tools
 FROM debian:stable-slim
@@ -29,7 +32,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /home/runner
 COPY --from=builder /tmp/aws /tmp/aws
 COPY --from=builder /tmp/amazon-cloudwatch-agent.deb /tmp/
-COPY --from=builder /tmp/yq /tmp/hadolint /tmp/terraform /tmp/tflint /usr/local/bin/
+COPY --from=builder /tmp/yq /tmp/hadolint /tmp/terraform /tmp/tflint /tmp/gh/bin/gh /usr/local/bin/
 COPY --from=builder /tmp/node /usr/local
 COPY --from=builder /tmp/runner.tar.gz /tmp/
 COPY entrypoint.py cloudwatch-agent-config.json /tmp/
