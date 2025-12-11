@@ -87,8 +87,9 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/endpoint_v1_image_for_ecs_runners_post.yml
-      - name: Lint JSON config
-        run: jsonlint src/api/endpoints/image_for_ecs_runners/post/config.json
+      # TODO: Re-enable after EC2 AMI has jsonlint
+      # - name: Lint JSON config
+      #   run: jsonlint src/api/endpoints/image_for_ecs_runners/post/config.json
       - name: Run pylint
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post
