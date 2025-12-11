@@ -5,15 +5,7 @@ from test.api.endpoints.image_for_ecs_runners.endpoint.helpers import (
     make_api_request,
 )
 
-import boto3
 import pytest
-
-
-@pytest.fixture(scope="session")
-def lambda_client(request):
-    """Create a Lambda client for the test session."""
-    region = request.getfixturevalue('aws_region')
-    return boto3.client("lambda", region_name=region)
 
 
 @pytest.fixture(scope="session")

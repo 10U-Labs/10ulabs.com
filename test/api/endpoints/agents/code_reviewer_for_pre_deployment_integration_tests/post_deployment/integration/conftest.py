@@ -21,12 +21,6 @@ def bedrock_agent_client(aws_region):
 
 
 @pytest.fixture(scope="session")
-def lambda_client(aws_region):
-    """Create a Lambda client."""
-    return boto3.client("lambda", region_name=aws_region)
-
-
-@pytest.fixture(scope="session")
 def agent_name():
     """Provide the agent runtime name."""
     return AGENT_NAME

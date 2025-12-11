@@ -43,13 +43,6 @@ def aws_region():
 
 
 @pytest.fixture(scope="session")
-def lambda_client(request):
-    """Create a Lambda client."""
-    region = request.getfixturevalue("aws_region")
-    return boto3.client("lambda", region_name=region)
-
-
-@pytest.fixture(scope="session")
 def sqs_client(request):
     """Create an SQS client."""
     region = request.getfixturevalue("aws_region")

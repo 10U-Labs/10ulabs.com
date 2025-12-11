@@ -129,10 +129,8 @@ jobs:
             --ignore DL3015 --ignore DL3016 $DOCKERFILE
       - name: Run unit tests
         run: |
-          pytest \
-            test/api/endpoints/image_for_ecs_runners/post/pre_deployment/unit/ \
-            --confcutdir=test/api/endpoints/image_for_ecs_runners/post \
-            --verbose --pythonwarnings=error
+          pytest test/api/endpoints/image_for_ecs_runners/post/pre_deployment/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -144,10 +142,8 @@ jobs:
           terraform_wrapper: false
       - name: Run pre-deployment integration tests
         run: |
-          pytest \
-            test/api/endpoints/image_for_ecs_runners/post/pre_deployment/integration/ \
-            --confcutdir=test/api/endpoints/image_for_ecs_runners/post \
-            --verbose --pythonwarnings=error
+          pytest test/api/endpoints/image_for_ecs_runners/post/pre_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -246,11 +242,8 @@ jobs:
           echo "ecr_repository=$REPO" >> $GITHUB_OUTPUT
       - name: Run post-deployment integration tests
         run: |
-          TEST_DIR=test/api/endpoints/image_for_ecs_runners/post
-          pytest \
-            $TEST_DIR/post_deployment/integration/ \
-            --confcutdir=$TEST_DIR \
-            --verbose --pythonwarnings=error
+          pytest test/api/endpoints/image_for_ecs_runners/post/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
         run: |
           terraform -chdir=src/bootstrap init -backend=true \
@@ -263,10 +256,8 @@ jobs:
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run E2E tests
         run: |
-          pytest \
-            test/api/endpoints/image_for_ecs_runners/post/post_deployment/e2e/ \
-            --confcutdir=test/api/endpoints/image_for_ecs_runners/post \
-            --verbose --pythonwarnings=error
+          pytest test/api/endpoints/image_for_ecs_runners/post/post_deployment/e2e/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Promote image
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post

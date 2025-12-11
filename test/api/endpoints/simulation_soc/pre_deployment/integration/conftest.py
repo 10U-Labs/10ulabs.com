@@ -37,12 +37,6 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def lambda_client(aws_region):
-    """Create a Lambda client."""
-    return boto3.client("lambda", region_name=aws_region)
-
-
-@pytest.fixture(scope="session")
 def apigateway_client(aws_region):
     """Create an API Gateway client."""
     return boto3.client("apigateway", region_name=aws_region)

@@ -19,12 +19,6 @@ def kms_client(aws_region):
 
 
 @pytest.fixture(scope="session")
-def lambda_client(aws_region):
-    """Create a Lambda client."""
-    return boto3.client("lambda", region_name=aws_region)
-
-
-@pytest.fixture(scope="session")
 def lambda_role_name():
     """Get the Lambda execution role name from terraform outputs."""
     return terraform_output(EC2_RUNNER_SRC, "lambda_role_name")
