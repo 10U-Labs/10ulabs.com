@@ -166,5 +166,3 @@ def test_runners_handler_archive_includes_runners_json(runners_src_path):
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
     assert "etc/runners.json" in content
-
-
