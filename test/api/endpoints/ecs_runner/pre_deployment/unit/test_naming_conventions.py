@@ -20,5 +20,8 @@ IAM_ROLES = (
 )
 LAMBDA_FUNCTIONS = extract_lambda_function_names(ECS_RUNNER_SRC / "lambda.tf")
 
+assert IAM_ROLES, "Failed to extract IAM roles from ecs_runner Terraform files"
+assert LAMBDA_FUNCTIONS, "Failed to extract Lambda functions from ecs_runner Terraform files"
+
 TestIAMRoleNamingConventions = create_iam_role_tests(IAM_ROLES)
 TestLambdaFunctionNamingConventions = create_lambda_function_tests(LAMBDA_FUNCTIONS)
