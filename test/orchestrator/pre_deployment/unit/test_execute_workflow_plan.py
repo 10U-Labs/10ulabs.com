@@ -1,5 +1,6 @@
 """Unit tests for execute_workflow_plan.py."""
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -8,7 +9,6 @@ from typing import Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-import yaml
 
 # Add scripts directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "scripts"))
@@ -211,11 +211,11 @@ class TestLoadDependencyGraph:
     """Tests for load_dependency_graph function."""
 
     def test_load_dependency_graph(self) -> None:
-        """Test loading dependency graph from YAML file."""
+        """Test loading dependency graph from JSON file."""
         with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".yml", delete=False
+            mode="w", suffix=".json", delete=False
         ) as tmp:
-            yaml.dump(SAMPLE_GRAPH, tmp)
+            json.dump(SAMPLE_GRAPH, tmp)
             tmp.flush()
 
             graph = load_dependency_graph(Path(tmp.name))
