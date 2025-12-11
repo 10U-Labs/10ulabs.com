@@ -52,14 +52,14 @@
     },
     "instance_type_map": {
       "general-purpose": {
-        "intel": "m8i.4xlarge",
-        "amd": "m8a.4xlarge",
-        "arm": "m8g.4xlarge"
+        "intel": "m7id.4xlarge",
+        "amd": "m7ad.4xlarge",
+        "arm": "m8gd.4xlarge"
       },
       "memory-optimized": {
-        "intel": "r8i.4xlarge",
-        "amd": "r8a.4xlarge",
-        "arm": "r8g.4xlarge"
+        "intel": "r7id.4xlarge",
+        "amd": "r7ad.4xlarge",
+        "arm": "r8gd.4xlarge"
       },
       "gpu": "g6e.2xlarge",
       "fpga": "f2.12xlarge"
