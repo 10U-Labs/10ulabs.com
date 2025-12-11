@@ -252,7 +252,12 @@ jobs:
             echo "skip_descendants input is true"
             SKIP_DESCENDANTS="-f skip_descendants=true"
           else
-            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            # Use heredoc with single-quoted delimiter to prevent bash interpretation
+            # of ${...} patterns that may appear in commit messages
+            COMMIT_MSG=$(cat <<'COMMIT_EOF'
+          ${{ github.event.head_commit.message }}
+          COMMIT_EOF
+            )
             if echo "$COMMIT_MSG" | grep -qi '\[skip descendants\]'; then
               echo "Found [skip descendants] in commit message"
               SKIP_DESCENDANTS="-f skip_descendants=true"
