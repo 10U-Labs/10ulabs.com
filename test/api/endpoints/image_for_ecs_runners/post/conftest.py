@@ -74,7 +74,7 @@ def get_github_repo() -> str:
     return f"{org}/{repo}"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def aws_region() -> str:
     """Fixture providing the AWS region."""
     return get_aws_region()
