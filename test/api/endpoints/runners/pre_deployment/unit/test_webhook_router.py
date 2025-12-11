@@ -117,7 +117,7 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
 @patch('urllib.request.urlopen')
 @patch('boto3.client')
 def test_lambda_handler_sqs_event_processes_successfully(
-    mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context
+    mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context, config
 ):
     """Test lambda handler sqs event processes successfully."""
     mock_ec2 = MagicMock()
@@ -136,7 +136,7 @@ def test_lambda_handler_sqs_event_processes_successfully(
 
     job_data = {
         'job_id': 123,
-        'job_labels': ['ec2', 'r8i', 'spot', 'runner-12345'],
+        'job_labels': config['ec2'],
         'github_repo': 'test-org/test-repo'
     }
     event = sqs_event_factory(records=[{

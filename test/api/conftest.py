@@ -2,6 +2,7 @@
 from typing import Dict, List
 from unittest.mock import Mock
 
+import boto3
 import pytest
 import requests
 
@@ -9,6 +10,7 @@ import requests
 def get_composite_labels(
     platform: str = "ecs",
     compute: str = "fargate",
+    architecture: str | None = None,
     pricing: str = "spot",
     runner_id: str = "runner-12345"
 ) -> List[str]:
@@ -16,30 +18,37 @@ def get_composite_labels(
 
     Args:
         platform: Platform type ('ecs' or 'ec2')
-        compute: Compute type ('fargate', 'r8i', 'g6e')
+        compute: Compute type (ECS: 'fargate'; EC2: 'general-purpose',
+                 'memory-optimized', 'gpu', 'fpga')
+        architecture: Architecture label (ECS: 'x86', 'arm';
+                      EC2: 'intel', 'amd', 'arm' - required for general-purpose
+                      and memory-optimized)
         pricing: Pricing model ('spot' or 'on-demand')
         runner_id: Runner ID label (e.g., 'runner-12345')
 
     Returns:
         List of composite labels.
     """
-    return [platform, compute, pricing, runner_id]
+    labels = [platform, compute, pricing, runner_id]
+    if architecture:
+        labels.insert(2, architecture)
+    return labels
 
 
 def get_runner_labels() -> Dict[str, List[str]]:
     """Get runner labels as composite label lists for testing.
 
     Returns dict with keys mapping to composite label lists:
-        - ec2: EC2 r8i spot labels
-        - fargate: ECS fargate spot labels
-        - ec2_e2e_test: EC2 r8i spot labels with e2e marker
-        - fargate_e2e_test: ECS fargate spot labels with e2e marker
+        - ec2: EC2 memory-optimized intel spot labels
+        - fargate: ECS fargate x86 spot labels
+        - ec2_e2e_test: EC2 memory-optimized intel spot labels with e2e marker
+        - fargate_e2e_test: ECS fargate x86 spot labels with e2e marker
     """
     return {
-        'ec2': ['ec2', 'r8i', 'spot', 'runner-12345'],
-        'fargate': ['ecs', 'fargate', 'spot', 'runner-12345'],
-        'ec2_e2e_test': ['ec2', 'r8i', 'spot', 'runner-12345', 'e2e'],
-        'fargate_e2e_test': ['ecs', 'fargate', 'spot', 'runner-12345', 'e2e'],
+        'ec2': ['ec2', 'memory-optimized', 'intel', 'spot', 'runner-12345'],
+        'fargate': ['ecs', 'fargate', 'x86', 'spot', 'runner-12345'],
+        'ec2_e2e_test': ['ec2', 'memory-optimized', 'intel', 'spot', 'runner-12345', 'e2e'],
+        'fargate_e2e_test': ['ecs', 'fargate', 'x86', 'spot', 'runner-12345', 'e2e'],
     }
 
 
@@ -88,5 +97,4 @@ def lambda_context():
 @pytest.fixture(scope="session")
 def lambda_client(aws_region):
     """Provide a Lambda client for the configured AWS region."""
-    import boto3
     return boto3.client("lambda", region_name=aws_region)
