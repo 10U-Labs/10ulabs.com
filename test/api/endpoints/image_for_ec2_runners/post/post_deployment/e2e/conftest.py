@@ -39,12 +39,21 @@ set -ex
 echo "=== User data script started at $(date) ==="
 echo "Instance ID: $(curl -s http://169.254.169.254/latest/meta-data/instance-id)"
 
+echo "=== Detecting NVMe instance store ==="
+INSTANCE_STORE=$(lsblk -dn -o NAME,TYPE | awk '$2=="disk" {{print "/dev/"$1}}' | while read dev; do
+    if [ -z "$(lsblk -n "$dev" -o MOUNTPOINT 2>/dev/null | tr -d ' ')" ]; then
+        echo "$dev"
+        break
+    fi
+done)
+echo "Found instance store: $INSTANCE_STORE"
+
 echo "=== Setting up NVMe instance store ==="
-mkfs.ext4 -F /dev/nvme1n1
-mount /dev/nvme1n1 /mnt
+mkfs.ext4 -F "$INSTANCE_STORE"
+mount "$INSTANCE_STORE" /mnt
 cp -a /home/github-runner/. /mnt/
 umount /mnt
-mount /dev/nvme1n1 /home/github-runner
+mount "$INSTANCE_STORE" /home/github-runner
 chown -R github-runner:github-runner /home/github-runner
 
 cd /home/github-runner/actions-runner
