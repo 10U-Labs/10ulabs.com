@@ -302,8 +302,11 @@ def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webho
         mock_record.assert_not_called()
 
 
-def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_router, config):
-    """Test route runner request 500 triggers circuit breaker failure."""
+def test_route_runner_request_500_does_not_trigger_circuit_breaker_failure(webhook_router, config):
+    """Test route runner request 500 does not trigger circuit breaker failure.
+
+    Any HTTP response means the service is alive, so don't trip the breaker.
+    """
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
     http_error = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
@@ -312,7 +315,7 @@ def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_route
          patch('time.sleep'), \
          patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
         webhook_router.route_runner_request(123, config['ec2'], 'test/repo')
-        mock_record.assert_called_once()
+        mock_record.assert_not_called()
 
 
 def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs, config):
@@ -958,19 +961,28 @@ def test_should_record_circuit_breaker_failure_returns_false_for_503(webhook_rou
     assert webhook_router.should_record_circuit_breaker_failure(503) is False
 
 
-def test_should_record_circuit_breaker_failure_returns_true_for_500(webhook_router):
-    """Test should record circuit breaker failure returns true for 500."""
-    assert webhook_router.should_record_circuit_breaker_failure(500) is True
+def test_should_record_circuit_breaker_failure_returns_false_for_500(webhook_router):
+    """Test should record circuit breaker failure returns false for 500.
+
+    Any HTTP response means the service is alive, so don't trip the breaker.
+    """
+    assert webhook_router.should_record_circuit_breaker_failure(500) is False
 
 
-def test_should_record_circuit_breaker_failure_returns_true_for_502(webhook_router):
-    """Test should record circuit breaker failure returns true for 502."""
-    assert webhook_router.should_record_circuit_breaker_failure(502) is True
+def test_should_record_circuit_breaker_failure_returns_false_for_502(webhook_router):
+    """Test should record circuit breaker failure returns false for 502.
+
+    Any HTTP response means the service is alive, so don't trip the breaker.
+    """
+    assert webhook_router.should_record_circuit_breaker_failure(502) is False
 
 
-def test_should_record_circuit_breaker_failure_returns_true_for_504(webhook_router):
-    """Test should record circuit breaker failure returns true for 504."""
-    assert webhook_router.should_record_circuit_breaker_failure(504) is True
+def test_should_record_circuit_breaker_failure_returns_false_for_504(webhook_router):
+    """Test should record circuit breaker failure returns false for 504.
+
+    Any HTTP response means the service is alive, so don't trip the breaker.
+    """
+    assert webhook_router.should_record_circuit_breaker_failure(504) is False
 
 
 def test_should_record_circuit_breaker_failure_returns_false_for_400(webhook_router):
