@@ -154,3 +154,36 @@ def test_yq_is_installed(ssm_client, test_instance, run_ssm_command):
     output = run_ssm_command(ssm_client, test_instance, "which yq")
 
     assert output["Status"] == "Success"
+
+
+def test_gh_cli_is_installed(ssm_client, test_instance, run_ssm_command):
+    """Gh cli is installed."""
+
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "which gh")
+
+    assert output["Status"] == "Success"
+
+
+def test_gh_cli_version_succeeds(ssm_client, test_instance, run_ssm_command):
+    """Gh cli version command succeeds."""
+
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "gh --version")
+
+    assert output["Status"] == "Success"
+
+
+def test_gh_cli_version_format(ssm_client, test_instance, run_ssm_command):
+    """Gh cli version returns expected format."""
+
+    if not test_instance:
+        pytest.fail("Test instance not created")
+
+    output = run_ssm_command(ssm_client, test_instance, "gh --version")
+
+    assert "gh version" in output["StandardOutputContent"]

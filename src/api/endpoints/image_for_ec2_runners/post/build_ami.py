@@ -21,8 +21,6 @@ from ec2_fleet import (
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
 
-SETUP_SCRIPT = "setup.sh"
-
 
 @dataclass
 class LaunchTemplateParams:
@@ -41,7 +39,7 @@ class ScriptParams:
 
     ip_addr: str
     key_material: str
-    script_path: str
+    setup_script: Path
     runner_version: str
     yq_version: str
     runner_user: str
@@ -239,8 +237,8 @@ def run_script(params: ScriptParams):
                 raise
             time.sleep(10)
     sftp = client.open_sftp()
-    remote_script = "/tmp/setup.sh"
-    sftp.put(params.script_path, remote_script)
+    remote_script = f"/tmp/{params.setup_script.name}"
+    sftp.put(str(params.setup_script), remote_script)
     sftp.chmod(remote_script, 0o755)
     sftp.close()
     args_str = (
@@ -253,7 +251,10 @@ def run_script(params: ScriptParams):
         "export TERM=dumb && export NO_COLOR=1 && "
         "echo quiet \\\"1\\\"\\; > /etc/apt/apt.conf.d/99quiet"
     )
-    full_cmd = f"sudo bash -c '{env_setup} && {remote_script} {args_str}'"
+    if params.setup_script.suffix == ".py":
+        full_cmd = f"sudo bash -c '{env_setup} && python3 {remote_script} {args_str}'"
+    else:
+        full_cmd = f"sudo bash -c '{env_setup} && {remote_script} {args_str}'"
     run_ssh_command(client, full_cmd)
     client.close()
 
@@ -347,13 +348,12 @@ def run_build(ctx: BuildContext, state: BuildState):
     logging.info("Instance launched: %s", state.instance_id)
     public_ip = wait_for_instance(ctx.ec2, state.instance_id)
     logging.info("Instance ready at %s", public_ip)
-    script_path = ctx.script_dir / SETUP_SCRIPT
-    if script_path.exists():
+    if ctx.args.setup_script.exists():
         logging.info("Running setup script...")
         script_params = ScriptParams(
             public_ip,
             state.key_material,
-            str(script_path),
+            ctx.args.setup_script,
             ctx.args.runner_version,
             ctx.args.yq_version,
             ctx.args.runner_user,
@@ -366,11 +366,10 @@ def run_build(ctx: BuildContext, state: BuildState):
 
 def cmd_build(args: argparse.Namespace):
     """Handle the build command with parsed arguments."""
-    script_dir = Path(__file__).parent
-    script_path = script_dir / SETUP_SCRIPT
     exit_code = 1
-    if not script_path.exists():
-        logging.error("Error: setup script not found: %s", script_path)
+    args.setup_script = Path(args.setup_script)
+    if not args.setup_script.exists():
+        logging.error("Error: setup script not found: %s", args.setup_script)
     else:
         unique_id = uuid.uuid4().hex[:8]
         ec2 = boto3.client("ec2", region_name=args.region)
@@ -380,6 +379,7 @@ def cmd_build(args: argparse.Namespace):
         ami_id = lookup_source_ami(ec2, args.source_ami)
         logging.info("Found AMI ID: %s", ami_id)
         args.source_ami = ami_id
+        script_dir = args.setup_script.parent
         ctx = BuildContext(ec2, args, script_dir, unique_id)
         state = BuildState()
         try:
@@ -402,6 +402,7 @@ def main():
     parser.add_argument("--ami-name", required=True, help="Name for the created AMI")
     parser.add_argument("--ami-description", help="Description for the created AMI")
     parser.add_argument("--region", required=True, help="AWS region")
+    parser.add_argument("--setup-script", required=True, help="Path to setup script")
     parser.add_argument("--source-ami", required=True, help="Source AMI name to look up")
     parser.add_argument("--subnet-ids", required=True, help="Comma-separated subnet IDs")
     parser.add_argument("--instance-types", required=True, help="Comma-separated instance types")

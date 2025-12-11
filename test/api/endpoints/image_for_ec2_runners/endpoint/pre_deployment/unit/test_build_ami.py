@@ -225,7 +225,7 @@ class TestRunScriptConnection:
                     params = build_ami_module.ScriptParams(
                         "192.168.1.100",
                         "key",
-                        str(script_file),
+                        script_file,
                         "1.0",
                         "1.0",
                         "test",
@@ -254,7 +254,7 @@ class TestRunScriptConnection:
                     params = build_ami_module.ScriptParams(
                         "1.2.3.4",
                         "key",
-                        str(script_file),
+                        script_file,
                         "1.0",
                         "1.0",
                         "test",
@@ -284,7 +284,7 @@ class TestRunScriptConnection:
                     params = build_ami_module.ScriptParams(
                         "1.2.3.4",
                         "key",
-                        str(script_file),
+                        script_file,
                         "1.0",
                         "1.0",
                         "test",
@@ -315,7 +315,7 @@ class TestRunScriptSftp:
                     params = build_ami_module.ScriptParams(
                         "1.2.3.4",
                         "key",
-                        str(script_file),
+                        script_file,
                         "1.0",
                         "1.0",
                         "test",
@@ -342,7 +342,7 @@ class TestRunScriptSftp:
                     params = build_ami_module.ScriptParams(
                         "1.2.3.4",
                         "key",
-                        str(script_file),
+                        script_file,
                         "1.0",
                         "1.0",
                         "test",
@@ -371,7 +371,7 @@ class TestRunScriptSftp:
                     params = build_ami_module.ScriptParams(
                         "1.2.3.4",
                         "key",
-                        str(script_file),
+                        script_file,
                         "1.0",
                         "1.0",
                         "test",
@@ -383,44 +383,50 @@ class TestRunScriptSftp:
 class TestScriptParamsDataclass:
     """Tests for ScriptParams dataclass."""
 
-    def test_stores_ip_addr(self, build_ami_module):
+    def test_stores_ip_addr(self, build_ami_module, tmp_path):
         """Test that ip_addr is stored correctly."""
+        script = tmp_path / "setup.py"
         params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", "/path/script.sh", "2.0", "4.0", "runner"
+            "1.2.3.4", "key", script, "2.0", "4.0", "runner"
         )
         assert params.ip_addr == "1.2.3.4"
 
-    def test_stores_key_material(self, build_ami_module):
+    def test_stores_key_material(self, build_ami_module, tmp_path):
         """Test that key_material is stored correctly."""
+        script = tmp_path / "setup.py"
         params = build_ami_module.ScriptParams(
-            "1.2.3.4", "my-key", "/path/script.sh", "2.0", "4.0", "runner"
+            "1.2.3.4", "my-key", script, "2.0", "4.0", "runner"
         )
         assert params.key_material == "my-key"
 
-    def test_stores_script_path(self, build_ami_module):
-        """Test that script_path is stored correctly."""
+    def test_stores_setup_script(self, build_ami_module, tmp_path):
+        """Test that setup_script is stored correctly."""
+        script = tmp_path / "setup.py"
         params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", "/path/to/setup.sh", "2.0", "4.0", "runner"
+            "1.2.3.4", "key", script, "2.0", "4.0", "runner"
         )
-        assert params.script_path == "/path/to/setup.sh"
+        assert params.setup_script == script
 
-    def test_stores_runner_version(self, build_ami_module):
+    def test_stores_runner_version(self, build_ami_module, tmp_path):
         """Test that runner_version is stored correctly."""
+        script = tmp_path / "setup.py"
         params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", "/path/script.sh", "2.330.0", "4.0", "runner"
+            "1.2.3.4", "key", script, "2.330.0", "4.0", "runner"
         )
         assert params.runner_version == "2.330.0"
 
-    def test_stores_yq_version(self, build_ami_module):
+    def test_stores_yq_version(self, build_ami_module, tmp_path):
         """Test that yq_version is stored correctly."""
+        script = tmp_path / "setup.py"
         params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", "/path/script.sh", "2.0", "4.44.1", "runner"
+            "1.2.3.4", "key", script, "2.0", "4.44.1", "runner"
         )
         assert params.yq_version == "4.44.1"
 
-    def test_stores_runner_user(self, build_ami_module):
+    def test_stores_runner_user(self, build_ami_module, tmp_path):
         """Test that runner_user is stored correctly."""
+        script = tmp_path / "setup.py"
         params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", "/path/script.sh", "2.0", "4.0", "github-runner"
+            "1.2.3.4", "key", script, "2.0", "4.0", "github-runner"
         )
         assert params.runner_user == "github-runner"

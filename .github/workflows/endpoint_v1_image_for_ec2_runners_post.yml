@@ -169,8 +169,9 @@ jobs:
           BASE="ami-github-ec2-runner"
           AMI_NAME="${BASE}-${OS_FAMILY}-${OS_VERSION}-${OS_ARCH}"
           AMI_NAME="${AMI_NAME}-${TIMESTAMP}"
-          SCRIPT=src/api/endpoints/image_for_ec2_runners/post
-          SCRIPT="${SCRIPT}/build_ami.py"
+          DIR=src/api/endpoints/image_for_ec2_runners/post
+          SCRIPT="${DIR}/build_ami.py"
+          SETUP="${DIR}/setup.py"
           INST="${{ steps.api.outputs.instance_types }}"
           REG="${{ steps.shared.outputs.aws_region }}"
           USR="${{ steps.config.outputs.runner_user }}"
@@ -186,6 +187,7 @@ jobs:
             --region "$REG" \
             --runner-user "$USR" \
             --runner-version "$RVER" \
+            --setup-script "$SETUP" \
             --source-ami "$SAMI" \
             --subnet-ids "$SNET" \
             --yq-version "$YQVER" \
