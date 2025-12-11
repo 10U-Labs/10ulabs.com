@@ -206,14 +206,12 @@ def record_circuit_breaker_failure():
 
 
 def should_record_circuit_breaker_failure(status_code: int | None) -> bool:
-    """Determine if status code should be recorded as circuit breaker failure."""
-    if status_code is None:
-        return True
-    if status_code == 503:
-        return False
-    if 500 <= status_code < 600:
-        return True
-    return False
+    """Determine if status code should be recorded as circuit breaker failure.
+
+    Only connection failures (no response) indicate a broken service.
+    Any HTTP response means the service is alive and responding.
+    """
+    return status_code is None
 
 
 def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
