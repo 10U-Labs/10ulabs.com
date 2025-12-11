@@ -421,6 +421,8 @@
     "name": "Ensuring the /v1/runners API endpoint exists and is properly configured",
     "paths": [
       ".github/workflows/endpoint_v1_runners.yml",
+      "etc/runners.json",
+      "lib/python/runner_labels/**",
       "src/api/endpoints/runners/**",
       "test/api/conftest.py",
       "test/api/endpoints/runners/**"
