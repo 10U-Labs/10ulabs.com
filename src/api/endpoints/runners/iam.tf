@@ -194,9 +194,9 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
       {
         Effect = "Allow"
         Action = [
-          "lambda:ListEventSourceMappings",
           "lambda:UpdateEventSourceMapping",
           "lambda:PutFunctionConcurrency",
+          "lambda:DeleteFunctionConcurrency",
           "lambda:GetFunction",
           "lambda:InvokeFunction"
         ]
@@ -204,6 +204,11 @@ resource "aws_iam_role_policy" "circuit_breaker_remediation_permissions" {
           aws_lambda_function.runners_handler.arn,
           "arn:aws:lambda:${local.aws_region}:${local.aws_account_id}:event-source-mapping:*"
         ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:ListEventSourceMappings"]
+        Resource = ["*"]
       },
       {
         Effect = "Allow"
@@ -330,7 +335,6 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
       {
         Effect = "Allow"
         Action = [
-          "lambda:ListEventSourceMappings",
           "lambda:UpdateEventSourceMapping",
           "lambda:PutFunctionConcurrency",
           "lambda:DeleteFunctionConcurrency",
@@ -341,6 +345,11 @@ resource "aws_iam_role_policy" "circuit_breaker_recovery_permissions" {
           aws_lambda_function.runners_handler.arn,
           "arn:aws:lambda:${local.aws_region}:${local.aws_account_id}:event-source-mapping:*"
         ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:ListEventSourceMappings"]
+        Resource = ["*"]
       },
       {
         Effect = "Allow"
