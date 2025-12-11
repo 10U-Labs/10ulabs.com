@@ -16,7 +16,7 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
-        || fromJSON(format('["ec2", "r8i", "spot", "runner-{0}"]', github.run_id))
+        || fromJSON(format('["ec2", "general-purpose", "arm", "spot", "runner-{0}"]', github.run_id))
       }}
     steps:
       - name: Checkout code

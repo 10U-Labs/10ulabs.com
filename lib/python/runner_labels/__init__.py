@@ -5,13 +5,18 @@ This module provides functions to parse, validate, and interpret the composable
 runner label system. Labels combine to select the appropriate runner:
 
     Platform:     ecs | ec2
-    Compute:      fargate | r8i | g6e
+    Compute:      fargate (ECS) | general-purpose | memory-optimized | gpu | fpga (EC2)
+    Architecture: x86 | arm (ECS) | intel | amd | arm (EC2, required for some compute)
     Pricing:      spot | on-demand
     Workflow ID:  runner-{github.run_id}
 
 Example label combinations:
-    ["ecs", "fargate", "spot", "runner-12345"] -> ECS Fargate Spot
-    ["ec2", "r8i", "on-demand", "runner-12345"] -> EC2 r8i.4xlarge On-Demand
+    ["ecs", "fargate", "x86", "spot", "runner-12345"] -> ECS Fargate X86_64 Spot
+    ["ecs", "fargate", "arm", "spot", "runner-12345"] -> ECS Fargate ARM64 Spot
+    ["ec2", "general-purpose", "intel", "spot", "runner-12345"] -> EC2 m8i.4xlarge Spot
+    ["ec2", "memory-optimized", "arm", "on-demand", "runner-12345"] -> EC2 r8g.4xlarge On-Demand
+    ["ec2", "gpu", "spot", "runner-12345"] -> EC2 g6e.2xlarge Spot (no arch)
+    ["ec2", "fpga", "on-demand", "runner-12345"] -> EC2 f2.12xlarge On-Demand (no arch)
 """
 
 import re
@@ -27,15 +32,43 @@ PRICING_MODELS = frozenset({"spot", "on-demand"})
 ECS_COMPUTE = frozenset({"fargate"})
 
 # EC2 compute types
-EC2_COMPUTE = frozenset({"r8i", "g6e"})
+EC2_COMPUTE = frozenset({"general-purpose", "memory-optimized", "gpu", "fpga"})
+
+# EC2 compute types that REQUIRE architecture label
+EC2_COMPUTE_REQUIRES_ARCH = frozenset({"general-purpose", "memory-optimized"})
+
+# EC2 compute types that FORBID architecture label
+EC2_COMPUTE_FORBIDS_ARCH = frozenset({"gpu", "fpga"})
 
 # All compute types (derived)
 COMPUTE_TYPES = ECS_COMPUTE | EC2_COMPUTE
 
-# Instance type mapping for EC2 compute labels
-INSTANCE_TYPES = {
-    "r8i": "r8i.4xlarge",
-    "g6e": "g6e.2xlarge",
+# Architecture labels for ECS (maps to task CPU architecture)
+ECS_ARCHITECTURES = frozenset({"x86", "arm"})
+
+# Architecture labels for EC2 (maps to instance type suffix)
+EC2_ARCHITECTURES = frozenset({"intel", "amd", "arm"})
+
+# All architecture labels
+ALL_ARCHITECTURES = ECS_ARCHITECTURES | EC2_ARCHITECTURES
+
+# Instance type mapping: (compute, architecture) -> instance type
+# For gpu/fpga, architecture is None
+INSTANCE_TYPE_MAP: Dict[tuple, str] = {
+    ("general-purpose", "intel"): "m8i.4xlarge",
+    ("general-purpose", "amd"): "m8a.4xlarge",
+    ("general-purpose", "arm"): "m8g.4xlarge",
+    ("memory-optimized", "intel"): "r8i.4xlarge",
+    ("memory-optimized", "amd"): "r8a.4xlarge",
+    ("memory-optimized", "arm"): "r8g.4xlarge",
+    ("gpu", None): "g6e.2xlarge",
+    ("fpga", None): "f2.12xlarge",
+}
+
+# ECS task architecture mapping
+ECS_TASK_ARCHITECTURE_MAP = {
+    "x86": "X86_64",
+    "arm": "ARM64",
 }
 
 # ECS Fargate configuration
@@ -56,6 +89,7 @@ class ParsedLabels:
     compute: str
     pricing: str
     runner_id: str
+    architecture: Optional[str] = None
 
 
 class LabelParseError(Exception):
@@ -74,7 +108,7 @@ def parse_labels(label_list: List[str]) -> ParsedLabels:
         label_list: List of label strings.
 
     Returns:
-        ParsedLabels with platform, compute, pricing, and runner_id.
+        ParsedLabels with platform, compute, pricing, runner_id, and architecture.
 
     Raises:
         LabelParseError: If required labels are missing or invalid.
@@ -108,6 +142,16 @@ def parse_labels(label_list: List[str]) -> ParsedLabels:
         )
     compute = compute_labels.pop()
 
+    # Extract architecture (may be None for gpu/fpga)
+    arch_labels = labels & ALL_ARCHITECTURES
+    architecture = None
+    if len(arch_labels) > 1:
+        raise LabelParseError(
+            f"Multiple architecture labels found: {sorted(arch_labels)}"
+        )
+    if arch_labels:
+        architecture = arch_labels.pop()
+
     # Extract pricing model
     pricing_labels = labels & PRICING_MODELS
     if not pricing_labels:
@@ -138,6 +182,7 @@ def parse_labels(label_list: List[str]) -> ParsedLabels:
         compute=compute,
         pricing=pricing,
         runner_id=runner_id,
+        architecture=architecture,
     )
 
 
@@ -151,19 +196,53 @@ def validate_labels(parsed: ParsedLabels) -> None:
     Raises:
         LabelValidationError: If the label combination is invalid.
     """
-    # ECS can only use Fargate
-    if parsed.platform == "ecs" and parsed.compute not in ECS_COMPUTE:
-        raise LabelValidationError(
-            f"ECS platform only supports compute types: {sorted(ECS_COMPUTE)}. "
-            f"Got: {parsed.compute}"
-        )
+    # ECS validation
+    if parsed.platform == "ecs":
+        if parsed.compute not in ECS_COMPUTE:
+            raise LabelValidationError(
+                f"ECS platform only supports compute types: {sorted(ECS_COMPUTE)}. "
+                f"Got: {parsed.compute}"
+            )
+        # ECS requires architecture
+        if parsed.architecture is None:
+            raise LabelValidationError(
+                f"ECS platform requires architecture label. "
+                f"Must be one of: {sorted(ECS_ARCHITECTURES)}"
+            )
+        # ECS architecture must be valid
+        if parsed.architecture not in ECS_ARCHITECTURES:
+            raise LabelValidationError(
+                f"ECS platform only supports architectures: {sorted(ECS_ARCHITECTURES)}. "
+                f"Got: {parsed.architecture}"
+            )
 
-    # EC2 cannot use Fargate
-    if parsed.platform == "ec2" and parsed.compute not in EC2_COMPUTE:
-        raise LabelValidationError(
-            f"EC2 platform only supports compute types: {sorted(EC2_COMPUTE)}. "
-            f"Got: {parsed.compute}"
-        )
+    # EC2 validation
+    if parsed.platform == "ec2":
+        if parsed.compute not in EC2_COMPUTE:
+            raise LabelValidationError(
+                f"EC2 platform only supports compute types: {sorted(EC2_COMPUTE)}. "
+                f"Got: {parsed.compute}"
+            )
+
+        # Check architecture requirements based on compute type
+        if parsed.compute in EC2_COMPUTE_REQUIRES_ARCH:
+            if parsed.architecture is None:
+                raise LabelValidationError(
+                    f"EC2 compute type '{parsed.compute}' requires architecture label. "
+                    f"Must be one of: {sorted(EC2_ARCHITECTURES)}"
+                )
+            if parsed.architecture not in EC2_ARCHITECTURES:
+                raise LabelValidationError(
+                    f"EC2 platform only supports architectures: "
+                    f"{sorted(EC2_ARCHITECTURES)}. Got: {parsed.architecture}"
+                )
+
+        if parsed.compute in EC2_COMPUTE_FORBIDS_ARCH:
+            if parsed.architecture is not None:
+                raise LabelValidationError(
+                    f"EC2 compute type '{parsed.compute}' does not support "
+                    f"architecture label. Got: {parsed.architecture}"
+                )
 
 
 def get_instance_type(parsed: ParsedLabels) -> Optional[str]:
@@ -174,12 +253,12 @@ def get_instance_type(parsed: ParsedLabels) -> Optional[str]:
         parsed: ParsedLabels to get instance type for.
 
     Returns:
-        Instance type string (e.g., "c8i.4xlarge") or None for ECS/Fargate.
+        Instance type string (e.g., "m8i.4xlarge") or None for ECS/Fargate.
     """
     if parsed.platform == "ecs":
         return None
 
-    return INSTANCE_TYPES.get(parsed.compute)
+    return INSTANCE_TYPE_MAP.get((parsed.compute, parsed.architecture))
 
 
 def get_ecs_config(parsed: ParsedLabels) -> Optional[Dict[str, str]]:
@@ -199,6 +278,25 @@ def get_ecs_config(parsed: ParsedLabels) -> Optional[Dict[str, str]]:
         return ECS_FARGATE_CONFIG.copy()
 
     return None
+
+
+def get_task_architecture(parsed: ParsedLabels) -> Optional[str]:
+    """
+    Get the ECS task CPU architecture for a parsed label set.
+
+    Args:
+        parsed: ParsedLabels to get task architecture for.
+
+    Returns:
+        Task architecture string (e.g., "X86_64", "ARM64") or None for EC2.
+    """
+    if parsed.platform != "ecs":
+        return None
+
+    if parsed.architecture is None:
+        return None
+
+    return ECS_TASK_ARCHITECTURE_MAP.get(parsed.architecture)
 
 
 def is_spot(parsed: ParsedLabels) -> bool:
