@@ -27,9 +27,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-import yaml
-
-
 def run_gh(*args: str) -> subprocess.CompletedProcess[str]:
     """Run a gh command and return the result."""
     result = subprocess.run(
@@ -98,9 +95,9 @@ def wait_for_completion(
 
 
 def load_dependency_graph(graph_path: Path) -> dict[str, Any]:
-    """Load the workflow dependency graph from YAML file."""
+    """Load the workflow dependency graph from JSON file."""
     with open(graph_path, encoding="utf-8") as file:
-        return yaml.safe_load(file)
+        return json.load(file)
 
 
 def dispatch_and_wait_single(
@@ -328,8 +325,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--graph",
-        default="etc/workflow-dependencies.yml",
-        help="Path to workflow dependency graph YAML file"
+        default="etc/workflow-dependencies.json",
+        help="Path to workflow dependency graph JSON file"
     )
     parser.add_argument(
         "--github-hosted",

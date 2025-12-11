@@ -1,34 +1,18 @@
-resource "null_resource" "runners_handler_build" {
-  triggers = {
-    webhook_router   = filemd5("${path.module}/lambdas/webhook_router.py")
-    runner_labels    = filemd5("${path.module}/../../../../lib/python/runner_labels/__init__.py")
-    runners_yml      = filemd5("${path.module}/../../../../etc/runners.yml")
-    requirements     = filemd5("${path.module}/lambdas/requirements.txt")
-    build_script_ver = "1"
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      rm -rf ${path.module}/.terraform/lambda_build/runners_handler
-      mkdir -p ${path.module}/.terraform/lambda_build/runners_handler/etc
-      pip install -q -r ${path.module}/lambdas/requirements.txt \
-        -t ${path.module}/.terraform/lambda_build/runners_handler \
-        --platform manylinux2014_aarch64 --only-binary=:all:
-      cp ${path.module}/lambdas/webhook_router.py \
-        ${path.module}/.terraform/lambda_build/runners_handler/
-      cp ${path.module}/../../../../lib/python/runner_labels/__init__.py \
-        ${path.module}/.terraform/lambda_build/runners_handler/runner_labels.py
-      cp ${path.module}/../../../../etc/runners.yml \
-        ${path.module}/.terraform/lambda_build/runners_handler/etc/
-    EOT
-  }
-}
-
 data "archive_file" "runners_handler" {
-  type        = "zip"
-  source_dir  = "${path.module}/.terraform/lambda_build/runners_handler"
+  type = "zip"
+  source {
+    content  = file("${path.module}/lambdas/webhook_router.py")
+    filename = "webhook_router.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
+    filename = "runner_labels.py"
+  }
+  source {
+    content  = file("${path.module}/../../../../etc/runners.json")
+    filename = "etc/runners.json"
+  }
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
-  depends_on  = [null_resource.runners_handler_build]
 }
 
 resource "aws_lambda_function" "runners_handler" {

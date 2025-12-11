@@ -3,18 +3,18 @@ from pathlib import Path
 
 
 def _get_openapi_path() -> Path:
-    """Get the path to openapi.yml file."""
+    """Get the path to openapi.json file."""
     base = Path(__file__).parent.parent.parent.parent.parent.parent
-    return base / "src" / "www" / "api" / "openapi.yml"
+    return base / "src" / "www" / "api" / "openapi.json"
 
 
 def test_openapi_spec_file_exists():
-    """Verify openapi.yml file exists."""
+    """Verify openapi.json file exists."""
     assert _get_openapi_path().exists()
 
 
-def test_openapi_spec_is_valid_yaml(openapi_spec):
-    """Verify spec is valid YAML."""
+def test_openapi_spec_is_valid_json(openapi_spec):
+    """Verify spec is valid JSON."""
     assert openapi_spec is not None
 
 

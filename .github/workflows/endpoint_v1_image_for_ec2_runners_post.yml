@@ -87,11 +87,11 @@ jobs:
         name: Extract configuration values
         run: |
           CONF=src/api/endpoints/image_for_ec2_runners/post
-          CONF="${CONF}/config.yml"
-          RUNNER_USER=$(yq '.runner_user' "$CONF")
-          RUNNER_VERSION=$(yq '.runner_version' "$CONF")
-          SOURCE_AMI=$(yq '.source_ami' "$CONF")
-          YQ_VERSION=$(yq '.yq_version' "$CONF")
+          CONF="${CONF}/config.json"
+          RUNNER_USER=$(jq -r '.runner_user' "$CONF")
+          RUNNER_VERSION=$(jq -r '.runner_version' "$CONF")
+          SOURCE_AMI=$(jq -r '.source_ami' "$CONF")
+          YQ_VERSION=$(jq -r '.yq_version' "$CONF")
           OS_FAMILY=$(echo "$SOURCE_AMI" | cut -d'-' -f1)
           OS_VERSION=$(echo "$SOURCE_AMI" | cut -d'-' -f2)
           OS_ARCH=$(echo "$SOURCE_AMI" | cut -d'-' -f3)
@@ -118,10 +118,10 @@ jobs:
         run: |
           python3 -m pip install boto3 boto3-stubs mypy paramiko \
             pylint pytest pyyaml types-paramiko types-PyYAML botocore
-      - name: Linting YAML files
+      - name: Linting config files
         run: |
           WF=.github/workflows/endpoint_v1_image_for_ec2_runners_post.yml
-          CONF=src/api/endpoints/image_for_ec2_runners/post/config.yml
+          CONF=src/api/endpoints/image_for_ec2_runners/post/config.json
           EMPTY='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY='key-ordering: enable'
           LINE='line-length: disable'
@@ -130,7 +130,8 @@ jobs:
           RULES="$EMPTY, $KEY, $LINE, $EOF, $TRUTH"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            $WF $CONF
+            $WF
+          jsonlint -q $CONF
       - env:
           PYTHONPATH: >-
             lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment
@@ -264,7 +265,7 @@ jobs:
           REGION="${{ steps.shared.outputs.aws_region }}"
           SSM="${{ steps.api.outputs.ssm_param }}"
           python3 $BASE/cleanup.py \
-            --config $BASE/config.yml \
+            --config $BASE/config.json \
             --region "$REGION" \
             --ssm-parameter-name "$SSM"
       - env:

@@ -8,7 +8,6 @@ from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
-import yaml
 
 from terraform_config import TEST_AWS_REGION
 from lambda_response import (
@@ -95,9 +94,9 @@ def parse_lambda_response_payload(response: Any) -> Any:
 def openapi_spec() -> Dict[str, Any]:
     """Load and return the OpenAPI specification."""
     base = Path(__file__).parent.parent.parent.parent.parent.parent
-    openapi_path = base / "src" / "www" / "api" / "openapi.yml"
+    openapi_path = base / "src" / "www" / "api" / "openapi.json"
     with open(openapi_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+        return json.load(f)
 
 
 @pytest.fixture

@@ -10,11 +10,10 @@ Usage:
     python3 scripts/dispatch_descendants.py --workflow bootstrap --repo owner/repo
 """
 import argparse
+import json
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
-
-import yaml
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--graph",
-        default="etc/workflow-dependencies.yml",
+        default="etc/workflow-dependencies.json",
         help="Path to the workflow dependency graph file"
     )
     parser.add_argument(
@@ -57,9 +56,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def load_dependency_graph(graph_path: str) -> dict:
-    """Load the workflow dependency graph from YAML."""
+    """Load the workflow dependency graph from JSON."""
     with open(graph_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return json.load(f)
 
 
 def find_descendants(graph: dict, workflow: str) -> list[str]:

@@ -17,7 +17,7 @@ BASE_DIR = os.path.join(
 )
 POST_DIR = os.path.join(BASE_DIR, 'post')
 FILES_DIR = POST_DIR  # Backwards compatibility alias
-CONFIG_PATH = os.path.join(POST_DIR, 'config.yml')
+CONFIG_PATH = os.path.join(POST_DIR, 'config.json')
 DOCKERFILE_PATH = os.path.join(POST_DIR, 'Dockerfile')
 TFVARS_PATH = os.path.join(
     os.path.dirname(__file__), '../../../../src/api/endpoints/ecs_runner/terraform.tfvars'

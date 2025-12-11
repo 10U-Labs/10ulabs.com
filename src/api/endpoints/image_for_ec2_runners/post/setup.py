@@ -86,6 +86,8 @@ def install_system_packages() -> None:
         "gh",
         "git",
         "jq",
+        "nodejs",
+        "npm",
         "python3-pip",
         "unzip",
         "wget",
@@ -123,6 +125,11 @@ def install_yq(arch: str, version: str) -> None:
     url = f"https://github.com/mikefarah/yq/releases/download/v{version}/yq_linux_{arch}"
     run(f"curl -sSL -o /usr/local/bin/yq {url}")
     run("chmod +x /usr/local/bin/yq")
+
+
+def install_jsonlint() -> None:
+    """Install jsonlint for JSON validation."""
+    run("npm install -g jsonlint")
 
 
 def create_runner_user(username: str) -> None:
@@ -180,6 +187,7 @@ def main() -> None:
     install_system_packages()
     install_python_packages()
     install_yq(arch, args.yq_version)
+    install_jsonlint()
     create_runner_user(args.runner_user)
     install_github_actions_runner(arch, args.runner_user, args.runner_version)
     install_ssm_agent(arch)
