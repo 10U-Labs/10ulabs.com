@@ -8,6 +8,10 @@ data "archive_file" "runners_handler" {
     content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }
+  source {
+    content  = file("${path.module}/../../../../etc/runners.yml")
+    filename = "etc/runners.yml"
+  }
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
 }
 
@@ -30,6 +34,7 @@ resource "aws_lambda_function" "runners_handler" {
       API_BASE_URL             = "https://${local.api_fqdn}"
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+      ETC_PATH                 = "/var/task"
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
