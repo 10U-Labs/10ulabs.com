@@ -10,6 +10,8 @@ runner label system. Labels combine to select the appropriate runner:
     Pricing:      spot | on-demand
     Workflow ID:  runner-{github.run_id}
 
+Configuration is loaded from etc/runners.yml (single source of truth).
+
 Example label combinations:
     ["ecs", "fargate", "x86", "spot", "runner-12345"] -> ECS Fargate X86_64 Spot
     ["ecs", "fargate", "arm", "spot", "runner-12345"] -> ECS Fargate ARM64 Spot
@@ -19,75 +21,109 @@ Example label combinations:
     ["ec2", "fpga", "on-demand", "runner-12345"] -> EC2 f2.12xlarge On-Demand (no arch)
 """
 
+import os
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
 
 
-# Valid label values
-PLATFORMS = frozenset({"ecs", "ec2"})
-PRICING_MODELS = frozenset({"spot", "on-demand"})
+def _find_config_file() -> Path:
+    """Find the runners.yml config file."""
+    # Try relative to this file (lib/python/runner_labels/__init__.py)
+    module_dir = Path(__file__).parent
+    config_path = module_dir.parent.parent.parent / "etc" / "runners.yml"
+    if config_path.exists():
+        return config_path
 
-# ECS compute types
-ECS_COMPUTE = frozenset({"fargate"})
+    # Try from ETC_PATH environment variable (for Lambda deployment)
+    etc_path = os.environ.get("ETC_PATH")
+    if etc_path:
+        config_path = Path(etc_path) / "runners.yml"
+        if config_path.exists():
+            return config_path
 
-# EC2 compute types
-EC2_COMPUTE = frozenset({"general-purpose", "memory-optimized", "gpu", "fpga"})
+    # Try current working directory
+    config_path = Path.cwd() / "etc" / "runners.yml"
+    if config_path.exists():
+        return config_path
 
-# EC2 compute types that REQUIRE architecture label
-EC2_COMPUTE_REQUIRES_ARCH = frozenset({"general-purpose", "memory-optimized"})
+    raise FileNotFoundError(
+        "Could not find etc/runners.yml. "
+        "Set ETC_PATH environment variable or run from repo root."
+    )
 
-# EC2 compute types that FORBID architecture label
-EC2_COMPUTE_FORBIDS_ARCH = frozenset({"gpu", "fpga"})
+
+def _load_config() -> Dict[str, Any]:
+    """Load configuration from etc/runners.yml."""
+    config_path = _find_config_file()
+    with open(config_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+# Load configuration from YAML (single source of truth)
+_config = _load_config()
+_labels = _config.get("labels", {})
+
+# Valid label values from YAML
+PLATFORMS = frozenset(_labels.get("platforms", ["ecs", "ec2"]))
+PRICING_MODELS = frozenset(_labels.get("pricing_models", ["spot", "on-demand"]))
+
+# ECS labels from YAML
+_ecs_config = _labels.get("ecs", {})
+ECS_COMPUTE = frozenset(_ecs_config.get("compute_types", ["fargate"]))
+ECS_ARCHITECTURES = frozenset(_ecs_config.get("architectures", ["x86", "arm"]))
+
+# EC2 labels from YAML
+_ec2_config = _labels.get("ec2", {})
+EC2_COMPUTE = frozenset(_ec2_config.get("compute_types", []))
+EC2_ARCHITECTURES = frozenset(_ec2_config.get("architectures", []))
+EC2_COMPUTE_REQUIRES_ARCH = frozenset(_ec2_config.get("compute_requires_arch", []))
+EC2_COMPUTE_FORBIDS_ARCH = frozenset(_ec2_config.get("compute_forbids_arch", []))
 
 # All compute types (derived)
 COMPUTE_TYPES = ECS_COMPUTE | EC2_COMPUTE
 
-# Architecture labels for ECS (maps to task CPU architecture)
-ECS_ARCHITECTURES = frozenset({"x86", "arm"})
-
-# Architecture labels for EC2 (maps to instance type suffix)
-EC2_ARCHITECTURES = frozenset({"intel", "amd", "arm"})
-
 # All architecture labels
 ALL_ARCHITECTURES = ECS_ARCHITECTURES | EC2_ARCHITECTURES
 
-# Instance type mapping: (compute, architecture) -> instance type
-# For gpu/fpga, architecture is None
-INSTANCE_TYPE_MAP: Dict[tuple, str] = {
-    ("general-purpose", "intel"): "m8i.4xlarge",
-    ("general-purpose", "amd"): "m8a.4xlarge",
-    ("general-purpose", "arm"): "m8g.4xlarge",
-    ("memory-optimized", "intel"): "r8i.4xlarge",
-    ("memory-optimized", "amd"): "r8a.4xlarge",
-    ("memory-optimized", "arm"): "r8g.4xlarge",
-    ("gpu", None): "g6e.2xlarge",
-    ("fpga", None): "f2.12xlarge",
-}
+# Instance type mapping from YAML
+_instance_map = _labels.get("instance_type_map", {})
+INSTANCE_TYPE_MAP: Dict[tuple, str] = {}
+for compute, arch_map in _instance_map.items():
+    if isinstance(arch_map, dict):
+        for arch, instance_type in arch_map.items():
+            INSTANCE_TYPE_MAP[(compute, arch)] = instance_type
+    else:
+        # No architecture (gpu, fpga)
+        INSTANCE_TYPE_MAP[(compute, None)] = arch_map
 
-# ECS task architecture mapping
-ECS_TASK_ARCHITECTURE_MAP = {
-    "x86": "X86_64",
-    "arm": "ARM64",
-}
+# ECS task architecture mapping from YAML
+ECS_TASK_ARCHITECTURE_MAP = _labels.get("ecs_task_architecture_map", {})
 
-# ECS Fargate configuration
+# ECS Fargate configuration from YAML
+_fargate_config = _config.get("fargate", {})
 ECS_FARGATE_CONFIG = {
-    "cpu": "4096",
-    "memory": "16384",
+    "cpu": _fargate_config.get("cpu", "4096"),
+    "memory": _fargate_config.get("memory", "16384"),
 }
 
 # Runner ID pattern
 RUNNER_ID_PATTERN = re.compile(r"^runner-(\d+)$")
 
-# Default/canonical values for testing (single source of truth)
-# These are used when tests need a representative valid label
-DEFAULT_ECS_ARCH = "x86"
-DEFAULT_EC2_ARCH = "intel"
-DEFAULT_ECS_COMPUTE = "fargate"
-DEFAULT_EC2_COMPUTE = "memory-optimized"
-DEFAULT_PRICING = "spot"
-DEFAULT_RUNNER_ID = "runner-12345"
+# Default/canonical values for testing (from YAML - single source of truth)
+_ecs_defaults = _ecs_config.get("defaults", {})
+_ec2_defaults = _ec2_config.get("defaults", {})
+_global_defaults = _labels.get("defaults", {})
+
+DEFAULT_ECS_ARCH = _ecs_defaults.get("architecture", "x86")
+DEFAULT_EC2_ARCH = _ec2_defaults.get("architecture", "intel")
+DEFAULT_ECS_COMPUTE = _ecs_defaults.get("compute", "fargate")
+DEFAULT_EC2_COMPUTE = _ec2_defaults.get("compute", "memory-optimized")
+DEFAULT_PRICING = _global_defaults.get("pricing", "spot")
+DEFAULT_RUNNER_ID = _global_defaults.get("runner_id", "runner-12345")
 
 
 @dataclass
