@@ -16,7 +16,7 @@ def get_composite_labels(
 
     Args:
         platform: Platform type ('ecs' or 'ec2')
-        compute: Compute type ('fargate', 'c8i', 'r8i', 'g6e')
+        compute: Compute type ('fargate', 'r8i', 'g6e')
         pricing: Pricing model ('spot' or 'on-demand')
         runner_id: Runner ID label (e.g., 'runner-12345')
 
@@ -30,15 +30,15 @@ def get_runner_labels() -> Dict[str, List[str]]:
     """Get runner labels as composite label lists for testing.
 
     Returns dict with keys mapping to composite label lists:
-        - ec2: EC2 c8i spot labels
+        - ec2: EC2 r8i spot labels
         - fargate: ECS fargate spot labels
-        - ec2_e2e_test: EC2 c8i spot labels with e2e marker
+        - ec2_e2e_test: EC2 r8i spot labels with e2e marker
         - fargate_e2e_test: ECS fargate spot labels with e2e marker
     """
     return {
-        'ec2': ['ec2', 'c8i', 'spot', 'runner-12345'],
+        'ec2': ['ec2', 'r8i', 'spot', 'runner-12345'],
         'fargate': ['ecs', 'fargate', 'spot', 'runner-12345'],
-        'ec2_e2e_test': ['ec2', 'c8i', 'spot', 'runner-12345', 'e2e'],
+        'ec2_e2e_test': ['ec2', 'r8i', 'spot', 'runner-12345', 'e2e'],
         'fargate_e2e_test': ['ecs', 'fargate', 'spot', 'runner-12345', 'e2e'],
     }
 

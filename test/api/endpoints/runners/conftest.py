@@ -53,10 +53,10 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
     return ""
 
 
-def _parse_runners_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
+def _parse_runners_locals(shared_config: Dict[str, Any]) -> Dict[str, str]:
     """Parse runners locals.tf file to extract configuration values."""
     locals_path = RUNNERS_SRC_PATH / "locals.tf"
-    config = {}
+    config: Dict[str, str] = {}
     with open(locals_path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -67,6 +67,11 @@ def _parse_runners_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
                     value = value.strip()
                     if value.startswith('"') and value.endswith('"'):
                         config[key] = value[1:-1]
+                    elif 'module.shared.lambda_handler_names.' in value:
+                        # Handle nested lambda_handler_names reference
+                        handler_key = value.split('.')[-1].strip()
+                        handler_names = shared_config.get('lambda_handler_names', {})
+                        config[key] = handler_names.get(handler_key, '')
                     elif 'module.shared.' in value:
                         ref = value.replace('module.shared.', '').strip()
                         config[key] = shared_config.get(ref, '')
@@ -78,19 +83,23 @@ def _parse_runners_locals(shared_config: Dict[str, str]) -> Dict[str, str]:
 
 
 @pytest.fixture(name="config", scope="module")
-def config_fixture(shared_config) -> Dict[str, str]:
+def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide configuration dictionary from Terraform files."""
-    tfvars_path = RUNNERS_SRC_PATH / "terraform.tfvars"
-    result = {}
-    with open(tfvars_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
-                if match:
-                    key, value = match.groups()
-                    result[key] = value.strip('"')
+    # Start with all values from runners locals.tf (single source of truth)
     runners_locals = _parse_runners_locals(shared_config)
+    result: Dict[str, Any] = dict(runners_locals)
+    # Override with tfvars if it exists (for backward compatibility)
+    tfvars_path = RUNNERS_SRC_PATH / "terraform.tfvars"
+    if tfvars_path.exists():
+        with open(tfvars_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    match = re.match(r'(\w+)\s*=\s*"?([^"]+)"?', line)
+                    if match:
+                        key, value = match.groups()
+                        result[key] = value.strip('"')
+    # Add computed/derived values
     result['aws_region'] = runners_locals.get(
         'aws_region', shared_config.get('aws_region', '')
     )

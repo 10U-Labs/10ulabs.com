@@ -1,5 +1,7 @@
 """Pytest fixtures for pre-deployment integration tests."""
+import importlib
 import subprocess
+import sys
 from pathlib import Path
 
 import boto3
@@ -9,6 +11,11 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[6]
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
+
+# Add lib/python to path for terraform_config module
+LIB_DIR = REPO_ROOT / "lib" / "python"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
 
 def _terraform_init(directory: Path) -> bool:
@@ -36,10 +43,33 @@ def _terraform_output(directory: Path, name: str) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
+def _get_shared_config():
+    """Load shared config from terraform_config module."""
+    terraform_config = importlib.import_module("terraform_config")
+    return terraform_config.get_shared_config()
+
+
 @pytest.fixture(scope="session")
-def aws_region():
-    """Provide the AWS region."""
-    return "us-east-1"
+def shared_config():
+    """Provide shared config from terraform module."""
+    return _get_shared_config()
+
+
+@pytest.fixture(scope="session")
+def aws_region(request):
+    """Provide the AWS region from shared config."""
+    cfg = request.getfixturevalue("shared_config")
+    return cfg.get("aws_region", "us-east-2")
+
+
+@pytest.fixture(scope="session")
+def config(request):
+    """Provide config for integration tests."""
+    cfg = request.getfixturevalue("shared_config")
+    return {
+        'resource_prefix': cfg.get('resource_prefix', 'TenULabs'),
+        'aws_region': cfg.get('aws_region', 'us-east-2'),
+    }
 
 
 @pytest.fixture(scope="session")
