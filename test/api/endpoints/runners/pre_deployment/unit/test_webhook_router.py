@@ -136,7 +136,7 @@ def test_lambda_handler_sqs_event_processes_successfully(
 
     job_data = {
         'job_id': 123,
-        'job_labels': ['ec2', 'c8i', 'spot', 'runner-12345'],
+        'job_labels': ['ec2', 'r8i', 'spot', 'runner-12345'],
         'github_repo': 'test-org/test-repo'
     }
     event = sqs_event_factory(records=[{

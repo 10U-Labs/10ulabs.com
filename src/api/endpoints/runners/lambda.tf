@@ -93,7 +93,7 @@ data "archive_file" "circuit_breaker_remediation" {
 
 resource "aws_lambda_function" "circuit_breaker_remediation" {
   filename         = data.archive_file.circuit_breaker_remediation.output_path
-  function_name    = "${local.resource_prefix}-CircuitBreakerRemediation"
+  function_name    = "${local.resource_prefix}CircuitBreakerRemediation"
   role             = aws_iam_role.circuit_breaker_remediation.arn
   handler          = "circuit_breaker_remediation.lambda_handler"
   source_code_hash = data.archive_file.circuit_breaker_remediation.output_base64sha256
@@ -119,7 +119,7 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CircuitBreakerRemediation"
+    Name = "${local.resource_prefix}CircuitBreakerRemediation"
   })
 
   depends_on = [
@@ -129,7 +129,7 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
-  name              = "/aws/lambda/${local.resource_prefix}-CircuitBreakerRemediation"
+  name              = "/aws/lambda/${local.resource_prefix}CircuitBreakerRemediation"
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
@@ -145,7 +145,7 @@ data "archive_file" "dlq_reprocessor" {
 
 resource "aws_lambda_function" "dlq_reprocessor" {
   filename         = data.archive_file.dlq_reprocessor.output_path
-  function_name    = "${local.resource_prefix}-DLQReprocessor"
+  function_name    = "${local.resource_prefix}DLQReprocessor"
   role             = aws_iam_role.dlq_reprocessor.arn
   handler          = "dlq_reprocessor.handler"
   source_code_hash = data.archive_file.dlq_reprocessor.output_base64sha256
@@ -172,7 +172,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-DLQReprocessor"
+    Name = "${local.resource_prefix}DLQReprocessor"
   })
 
   depends_on = [
@@ -182,7 +182,7 @@ resource "aws_lambda_function" "dlq_reprocessor" {
 }
 
 resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
-  name              = "/aws/lambda/${local.resource_prefix}-DLQReprocessor"
+  name              = "/aws/lambda/${local.resource_prefix}DLQReprocessor"
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
@@ -198,7 +198,7 @@ data "archive_file" "circuit_breaker_recovery" {
 
 resource "aws_lambda_function" "circuit_breaker_recovery" {
   filename         = data.archive_file.circuit_breaker_recovery.output_path
-  function_name    = "${local.resource_prefix}-CircuitBreakerRecovery"
+  function_name    = "${local.resource_prefix}CircuitBreakerRecovery"
   role             = aws_iam_role.circuit_breaker_recovery.arn
   handler          = "circuit_breaker_recovery.lambda_handler"
   source_code_hash = data.archive_file.circuit_breaker_recovery.output_base64sha256
@@ -224,7 +224,7 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-CircuitBreakerRecovery"
+    Name = "${local.resource_prefix}CircuitBreakerRecovery"
   })
 
   depends_on = [
@@ -234,7 +234,7 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
-  name              = "/aws/lambda/${local.resource_prefix}-CircuitBreakerRecovery"
+  name              = "/aws/lambda/${local.resource_prefix}CircuitBreakerRecovery"
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
@@ -250,7 +250,7 @@ data "archive_file" "drift_recovery" {
 
 resource "aws_lambda_function" "drift_recovery" {
   filename         = data.archive_file.drift_recovery.output_path
-  function_name    = "${local.resource_prefix}-DriftRecovery"
+  function_name    = "${local.resource_prefix}DriftRecovery"
   role             = aws_iam_role.drift_recovery.arn
   handler          = "drift_recovery.lambda_handler"
   source_code_hash = data.archive_file.drift_recovery.output_base64sha256
@@ -276,7 +276,7 @@ resource "aws_lambda_function" "drift_recovery" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-DriftRecovery"
+    Name = "${local.resource_prefix}DriftRecovery"
   })
 
   depends_on = [
@@ -286,7 +286,7 @@ resource "aws_lambda_function" "drift_recovery" {
 }
 
 resource "aws_cloudwatch_log_group" "drift_recovery" {
-  name              = "/aws/lambda/${local.resource_prefix}-DriftRecovery"
+  name              = "/aws/lambda/${local.resource_prefix}DriftRecovery"
   retention_in_days = 30
 
   tags = merge(local.common_tags, {
@@ -308,7 +308,7 @@ data "archive_file" "spot_interruption_handler" {
 
 resource "aws_lambda_function" "spot_interruption_handler" {
   filename         = data.archive_file.spot_interruption_handler.output_path
-  function_name    = "${local.resource_prefix}-SpotInterruptionHandler"
+  function_name    = "${local.resource_prefix}SpotInterruptionHandler"
   role             = aws_iam_role.spot_interruption_handler.arn
   handler          = "spot_interruption_handler.lambda_handler"
   source_code_hash = data.archive_file.spot_interruption_handler.output_base64sha256
@@ -336,7 +336,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-SpotInterruptionHandler"
+    Name = "${local.resource_prefix}SpotInterruptionHandler"
   })
 
   depends_on = [
@@ -346,7 +346,7 @@ resource "aws_lambda_function" "spot_interruption_handler" {
 }
 
 resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
-  name              = "/aws/lambda/${local.resource_prefix}-SpotInterruptionHandler"
+  name              = "/aws/lambda/${local.resource_prefix}SpotInterruptionHandler"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
@@ -362,7 +362,7 @@ data "archive_file" "stale_runner_cleanup" {
 
 resource "aws_lambda_function" "stale_runner_cleanup" {
   filename         = data.archive_file.stale_runner_cleanup.output_path
-  function_name    = "${local.resource_prefix}-StaleRunnerCleanup"
+  function_name    = "${local.resource_prefix}StaleRunnerCleanup"
   role             = aws_iam_role.stale_runner_cleanup.arn
   handler          = "stale_runner_cleanup.lambda_handler"
   source_code_hash = data.archive_file.stale_runner_cleanup.output_base64sha256
@@ -389,7 +389,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-StaleRunnerCleanup"
+    Name = "${local.resource_prefix}StaleRunnerCleanup"
   })
 
   depends_on = [
@@ -399,7 +399,7 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
 }
 
 resource "aws_cloudwatch_log_group" "stale_runner_cleanup" {
-  name              = "/aws/lambda/${local.resource_prefix}-StaleRunnerCleanup"
+  name              = "/aws/lambda/${local.resource_prefix}StaleRunnerCleanup"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
