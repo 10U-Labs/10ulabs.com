@@ -1,25 +1,28 @@
-"""Tests for self-healing infrastructure deployment."""
+"""Tests for self-healing infrastructure deployment.
+
+Lambda function names are derived from locals.tf via the config fixture (single source of truth).
+"""
 
 from ...conftest import find_sns_topic_arns
 
 
 def test_circuit_breaker_remediation_lambda_deployed(lambda_client, config):
     """Verify that CircuitBreakerRemediation Lambda is deployed."""
-    function_name = f"{config['resource_prefix']}-CircuitBreakerRemediation"
+    function_name = config['circuit_breaker_remediation_function_name']
     response = lambda_client.get_function(FunctionName=function_name)
     assert response['Configuration']['FunctionName'] == function_name
 
 
 def test_circuit_breaker_recovery_lambda_deployed(lambda_client, config):
     """Verify that CircuitBreakerRecovery Lambda is deployed."""
-    function_name = f"{config['resource_prefix']}-CircuitBreakerRecovery"
+    function_name = config['circuit_breaker_recovery_function_name']
     response = lambda_client.get_function(FunctionName=function_name)
     assert response['Configuration']['FunctionName'] == function_name
 
 
 def test_dlq_reprocessor_lambda_deployed(lambda_client, config):
     """Verify that DLQReprocessor Lambda is deployed."""
-    function_name = f"{config['resource_prefix']}-DLQReprocessor"
+    function_name = config['dlq_reprocessor_function_name']
     response = lambda_client.get_function(FunctionName=function_name)
     assert response['Configuration']['FunctionName'] == function_name
 
@@ -68,7 +71,7 @@ def test_circuit_breaker_state_table_deployed(dynamodb_client, config):
 
 def test_recovery_lambda_can_be_invoked(lambda_client, config):
     """Verify that CircuitBreakerRecovery Lambda can be invoked."""
-    function_name = f"{config['resource_prefix']}-CircuitBreakerRecovery"
+    function_name = config['circuit_breaker_recovery_function_name']
     response = lambda_client.invoke(
         FunctionName=function_name,
         InvocationType='RequestResponse',
@@ -79,7 +82,7 @@ def test_recovery_lambda_can_be_invoked(lambda_client, config):
 
 def test_dlq_reprocessor_lambda_can_be_invoked(lambda_client, config):
     """Verify that DLQReprocessor Lambda can be invoked."""
-    function_name = f"{config['resource_prefix']}-DLQReprocessor"
+    function_name = config['dlq_reprocessor_function_name']
     response = lambda_client.invoke(
         FunctionName=function_name,
         InvocationType='RequestResponse',
@@ -100,7 +103,8 @@ def test_circuit_breaker_state_table_readable(dynamodb_client, config):
 
 def test_recovery_lambda_logs_exist(logs_client, config):
     """Verify that CircuitBreakerRecovery Lambda log group exists."""
-    log_group_name = f"/aws/lambda/{config['resource_prefix']}-CircuitBreakerRecovery"
+    function_name = config['circuit_breaker_recovery_function_name']
+    log_group_name = f"/aws/lambda/{function_name}"
     response = logs_client.describe_log_groups(
         logGroupNamePrefix=log_group_name
     )
@@ -110,7 +114,8 @@ def test_recovery_lambda_logs_exist(logs_client, config):
 
 def test_remediation_lambda_logs_exist(logs_client, config):
     """Verify that CircuitBreakerRemediation Lambda log group exists."""
-    log_group_name = f"/aws/lambda/{config['resource_prefix']}-CircuitBreakerRemediation"
+    function_name = config['circuit_breaker_remediation_function_name']
+    log_group_name = f"/aws/lambda/{function_name}"
     response = logs_client.describe_log_groups(
         logGroupNamePrefix=log_group_name
     )
@@ -120,7 +125,8 @@ def test_remediation_lambda_logs_exist(logs_client, config):
 
 def test_dlq_reprocessor_logs_exist(logs_client, config):
     """Verify that DLQReprocessor Lambda log group exists."""
-    log_group_name = f"/aws/lambda/{config['resource_prefix']}-DLQReprocessor"
+    function_name = config['dlq_reprocessor_function_name']
+    log_group_name = f"/aws/lambda/{function_name}"
     response = logs_client.describe_log_groups(
         logGroupNamePrefix=log_group_name
     )
