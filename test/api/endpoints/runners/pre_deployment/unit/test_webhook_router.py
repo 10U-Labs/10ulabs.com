@@ -116,6 +116,7 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
 
 @patch('urllib.request.urlopen')
 @patch('boto3.client')
+# pylint: disable=too-many-arguments,too-many-positional-arguments
 def test_lambda_handler_sqs_event_processes_successfully(
     mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context, config
 ):
