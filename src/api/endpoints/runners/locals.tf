@@ -27,7 +27,7 @@ locals {
   circuit_breaker_alert_email = "jdrowne@10ulabs.com"
 
   # IAM role names (single source of truth)
-  lambda_runners_handler_role_name      = "${module.shared.lambda_handler_names.webhook}-ServiceRole"
+  lambda_runners_handler_role_name      = "${module.shared.lambda_handler_names.webhook}ServiceRole"
   circuit_breaker_remediation_role_name = "${module.shared.resource_prefix}CircuitBreakerRemediationRole"
   dlq_reprocessor_role_name             = "${module.shared.resource_prefix}DLQReprocessorRole"
   circuit_breaker_recovery_role_name    = "${module.shared.resource_prefix}CircuitBreakerRecoveryRole"

@@ -174,12 +174,24 @@ def _resolve_prefix_refs(value: str, prefix: str) -> str:
     return value
 
 
+def _resolve_all_refs(value: str, prefix: str, handler_names: Dict[str, str]) -> str:
+    """Resolve all module.shared references in a Terraform string value."""
+    value = _resolve_prefix_refs(value, prefix)
+    # Resolve ${module.shared.lambda_handler_names.X} interpolations
+    for handler_key, handler_value in handler_names.items():
+        value = value.replace(
+            f"${{module.shared.lambda_handler_names.{handler_key}}}",
+            handler_value
+        )
+    return value
+
+
 def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     """Extract local values from locals.tf in the given endpoint directory.
 
     Resolves ${module.shared.resource_prefix} and ${local.resource_prefix}
     references using the shared module's resource_prefix. Also resolves
-    module.shared.lambda_handler_names.X references.
+    module.shared.lambda_handler_names.X references (both direct and interpolated).
 
     Args:
         tf_dir: Path to the endpoint's Terraform directory (e.g., src/api/endpoints/foo)
@@ -196,11 +208,11 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     prefix = get_resource_prefix()
     handler_names = parse_lambda_handler_names()
 
-    # Parse quoted string values
+    # Parse quoted string values and resolve all interpolations
     for match in re.finditer(r'(\w+)\s*=\s*"([^"]*)"', content):
-        locals_dict[match.group(1)] = _resolve_prefix_refs(match.group(2), prefix)
+        locals_dict[match.group(1)] = _resolve_all_refs(match.group(2), prefix, handler_names)
 
-    # Parse module.shared.lambda_handler_names references
+    # Parse module.shared.lambda_handler_names references (direct, not interpolated)
     for match in re.finditer(r'(\w+)\s*=\s*module\.shared\.lambda_handler_names\.(\w+)', content):
         local_name, handler_key = match.groups()
         if handler_key in handler_names:
