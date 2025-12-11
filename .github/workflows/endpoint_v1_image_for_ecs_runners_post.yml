@@ -75,7 +75,7 @@ jobs:
           pip install pylint mypy yamllint pytest boto3 \
             boto3-stubs[ecr] botocore dockerfile-parse pyyaml \
             requests types-dockerfile-parse types-PyYAML types-requests
-      - name: Linting YAML files
+      - name: Lint workflow file
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
@@ -87,7 +87,8 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/endpoint_v1_image_for_ecs_runners_post.yml
-          jsonlint -q src/api/endpoints/image_for_ecs_runners/post/config.json
+      - name: Lint JSON config
+        run: jsonlint src/api/endpoints/image_for_ecs_runners/post/config.json
       - name: Run pylint
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post
