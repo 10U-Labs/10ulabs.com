@@ -53,28 +53,10 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
     return ""
 
 
-def _parse_runners_locals(shared_config: Dict[str, Any]) -> Dict[str, str]:
-    """Parse runners locals.tf file to extract configuration values."""
-    locals_path = RUNNERS_SRC_PATH / "locals.tf"
-    config: Dict[str, str] = {}
-    with open(locals_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#') and not line.startswith('locals'):
-                match = re.match(r'(\w+)\s*=\s*(.+)', line)
-                if match:
-                    key, value = match.groups()
-                    value = value.strip()
-                    if value.startswith('"') and value.endswith('"'):
-                        config[key] = value[1:-1]
-                    elif 'module.shared.lambda_handler_names.' in value:
-                        # Handle nested lambda_handler_names reference
-                        handler_key = value.split('.')[-1].strip()
-                        handler_names = shared_config.get('lambda_handler_names', {})
-                        config[key] = handler_names.get(handler_key, '')
-                    elif 'module.shared.' in value:
-                        ref = value.replace('module.shared.', '').strip()
-                        config[key] = shared_config.get(ref, '')
+def _get_runners_locals(shared_config: Dict[str, Any]) -> Dict[str, str]:
+    """Get runners locals using terraform_config module (single source of truth)."""
+    terraform_config = importlib.import_module("terraform_config")
+    config = terraform_config.get_endpoint_local_values(RUNNERS_SRC_PATH)
     config['api_fqdn'] = f"api.{shared_config.get('domain_name', '')}"
     github_org = shared_config.get('github_org', '')
     github_repo = shared_config.get('name_for_github_repo', '')
@@ -86,7 +68,7 @@ def _parse_runners_locals(shared_config: Dict[str, Any]) -> Dict[str, str]:
 def config_fixture(shared_config) -> Dict[str, Any]:
     """Provide configuration dictionary from Terraform files."""
     # Start with all values from runners locals.tf (single source of truth)
-    runners_locals = _parse_runners_locals(shared_config)
+    runners_locals = _get_runners_locals(shared_config)
     result: Dict[str, Any] = dict(runners_locals)
     # Override with tfvars if it exists (for backward compatibility)
     tfvars_path = RUNNERS_SRC_PATH / "terraform.tfvars"
@@ -123,15 +105,13 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     lambda_fn = result.get('webhook_handler_function_name', '')
     result['circuit_breaker_state_table_name'] = f"{prefix}-circuit-breaker-state"
     result['workflow_runners_table_name'] = f"{prefix}-workflow-runners"
-    result['lambda_runners_role_name'] = f"{lambda_fn}-ServiceRole"
-    result['webhook_handler_service_role_name'] = f"{lambda_fn}-ServiceRole"
-    cb_remediation = f"/aws/lambda/{prefix}-CircuitBreakerRemediation"
-    result['circuit_breaker_remediation_log_group_name'] = cb_remediation
-    result['dlq_reprocessor_log_group_name'] = f"/aws/lambda/{prefix}-DLQReprocessor"
-    cb_recovery = f"/aws/lambda/{prefix}-CircuitBreakerRecovery"
-    result['circuit_breaker_recovery_log_group_name'] = cb_recovery
-    runner_labels = get_runner_labels()
-    result.update(runner_labels)
+    result['lambda_runners_role_name'] = f"{lambda_fn}ServiceRole"
+    result['webhook_handler_service_role_name'] = f"{lambda_fn}ServiceRole"
+    # Log group names derived from Lambda function names (single source of truth: locals.tf)
+    for key in ['circuit_breaker_remediation', 'dlq_reprocessor', 'circuit_breaker_recovery']:
+        fn_name = result.get(f'{key}_function_name', '')
+        result[f'{key}_log_group_name'] = f"/aws/lambda/{fn_name}"
+    result.update(get_runner_labels())
     result['api_version'] = 'v1'
     ecs_runner_tfvars = ECS_RUNNER_SRC_PATH / "terraform.tfvars"
     with open(ecs_runner_tfvars, encoding="utf-8") as f:

@@ -26,6 +26,14 @@ locals {
   # Alerting
   circuit_breaker_alert_email = "jdrowne@10ulabs.com"
 
+  # Lambda function names (single source of truth)
+  circuit_breaker_remediation_function_name = "${module.shared.resource_prefix}CircuitBreakerRemediation"
+  dlq_reprocessor_function_name             = "${module.shared.resource_prefix}DLQReprocessor"
+  circuit_breaker_recovery_function_name    = "${module.shared.resource_prefix}CircuitBreakerRecovery"
+  drift_recovery_function_name              = "${module.shared.resource_prefix}DriftRecovery"
+  spot_interruption_handler_function_name   = "${module.shared.resource_prefix}SpotInterruptionHandler"
+  stale_runner_cleanup_function_name        = "${module.shared.resource_prefix}StaleRunnerCleanup"
+
   # IAM role names (single source of truth)
   lambda_runners_handler_role_name      = "${module.shared.lambda_handler_names.webhook}ServiceRole"
   circuit_breaker_remediation_role_name = "${module.shared.resource_prefix}CircuitBreakerRemediationRole"
