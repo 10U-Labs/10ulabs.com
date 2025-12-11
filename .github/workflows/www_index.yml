@@ -11,6 +11,7 @@ jobs:
     runs-on:
       - ecs
       - fargate
+      - arm
       - spot
       - runner-${{ github.run_id }}
     steps:
