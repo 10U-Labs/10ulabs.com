@@ -33,3 +33,11 @@ output "task_definition_arn" {
 output "task_role_arn" {
   value = aws_iam_role.ecs_task_role.arn
 }
+
+output "task_role_name" {
+  value = aws_iam_role.ecs_task_role.name
+}
+
+output "lambda_role_name" {
+  value = aws_iam_role.lambda_execution.name
+}

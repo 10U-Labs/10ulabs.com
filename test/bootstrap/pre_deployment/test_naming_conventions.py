@@ -23,6 +23,19 @@ def get_resource_prefix() -> str:
     return match.group(1) if match else "TenULabs"
 
 
+def _extract_block_content(content: str, start_pos: int) -> str:
+    """Extract content of a Terraform block starting at the given brace position."""
+    brace_count = 0
+    for i, char in enumerate(content[start_pos:]):
+        if char == '{':
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0:
+                return content[start_pos:start_pos + i + 1]
+    return content[start_pos:]
+
+
 def extract_iam_role_names(tf_file: Path) -> list:
     """Extract IAM role names from a Terraform file."""
     if not tf_file.exists():
@@ -36,18 +49,7 @@ def extract_iam_role_names(tf_file: Path) -> list:
 
     for match in re.finditer(role_pattern, content):
         resource_name = match.group(1)
-        start_pos = match.end() - 1
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-        block_content = content[start_pos:end_pos]
+        block_content = _extract_block_content(content, match.end() - 1)
         name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
             role_name = name_match.group(1)
