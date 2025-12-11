@@ -292,30 +292,26 @@ def test_route_runner_request_503_does_not_trigger_circuit_breaker_failure(webho
     """Test route runner request 503 does not trigger circuit breaker failure."""
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
-    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
-        with patch('time.sleep'):
-            http_error = urllib.error.HTTPError(
-                'url', 503, 'Service Unavailable', {}, None
-            )
-            mock_urlopen.side_effect = http_error
-        with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
-            webhook_router.route_runner_request(123, config['ec2'], 'test/repo')
-            mock_record.assert_not_called()
+    http_error = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
+    with patch('boto3.client'), \
+         patch('urllib.request.urlopen', side_effect=http_error), \
+         patch('time.sleep'), \
+         patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
+        webhook_router.route_runner_request(123, config['ec2'], 'test/repo')
+        mock_record.assert_not_called()
 
 
 def test_route_runner_request_500_triggers_circuit_breaker_failure(webhook_router, config):
     """Test route runner request 500 triggers circuit breaker failure."""
     webhook_router.circuit_breaker_state['state'] = 'closed'
     webhook_router.circuit_breaker_state['failures'] = 0
-    with patch('boto3.client'), patch('urllib.request.urlopen') as mock_urlopen:
-        with patch('time.sleep'):
-            http_error = urllib.error.HTTPError(
-                'url', 500, 'Internal Server Error', {}, None
-            )
-            mock_urlopen.side_effect = http_error
-        with patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
-            webhook_router.route_runner_request(123, config['ec2'], 'test/repo')
-            mock_record.assert_called_once()
+    http_error = urllib.error.HTTPError('url', 500, 'Internal Server Error', {}, None)
+    with patch('boto3.client'), \
+         patch('urllib.request.urlopen', side_effect=http_error), \
+         patch('time.sleep'), \
+         patch.object(webhook_router, 'record_circuit_breaker_failure') as mock_record:
+        webhook_router.route_runner_request(123, config['ec2'], 'test/repo')
+        mock_record.assert_called_once()
 
 
 def test_handle_workflow_job_enqueues_ec2_job(webhook_router, mock_sqs, config):
