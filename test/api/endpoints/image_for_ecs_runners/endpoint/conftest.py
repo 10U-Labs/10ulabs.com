@@ -15,7 +15,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def aws_region() -> str:
     """Return the AWS region for tests."""
     return get_aws_region()
