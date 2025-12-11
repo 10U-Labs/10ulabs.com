@@ -151,14 +151,12 @@ jobs:
             --explicit-package-bases lib/python/ec2_fleet/ $TEST/
       - name: Run unit tests
         run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/pre_deployment/unit/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
+          python3 -m pytest test/api/endpoints/image_for_ec2_runners/post/pre_deployment/unit/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/pre_deployment/integration/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
+          python3 -m pytest test/api/endpoints/image_for_ec2_runners/post/pre_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - env:
           OS_ARCH: ${{ steps.config.outputs.os_architecture }}
           OS_FAMILY: ${{ steps.config.outputs.os_family }}
@@ -218,9 +216,8 @@ jobs:
           TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
         name: Run post-deployment integration tests
         run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/post_deployment/integration/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
+          python3 -m pytest test/api/endpoints/image_for_ec2_runners/post/post_deployment/integration/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
         run: |
           terraform -chdir=src/bootstrap init -backend=true \
@@ -242,9 +239,8 @@ jobs:
           TEST_SUBNET_IDS: ${{ steps.api.outputs.subnet_ids }}
         name: Run E2E tests
         run: |
-          BASE=test/api/endpoints/image_for_ec2_runners/post
-          python3 -m pytest $BASE/post_deployment/e2e/ \
-            --confcutdir=$BASE --verbose --pythonwarnings=error
+          python3 -m pytest test/api/endpoints/image_for_ec2_runners/post/post_deployment/e2e/ \
+            --confcutdir=test --verbose --pythonwarnings=error
       - name: Promote AMI
         run: |
           SCRIPT=src/api/endpoints/image_for_ec2_runners/post

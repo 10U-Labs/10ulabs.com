@@ -37,12 +37,6 @@ def _terraform_output(directory: Path, name: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def lambda_client(aws_region):
-    """Create a Lambda client."""
-    return boto3.client("lambda", region_name=aws_region)
-
-
-@pytest.fixture(scope="session")
 def iam_client(aws_region):
     """Create an IAM client."""
     return boto3.client("iam", region_name=aws_region)

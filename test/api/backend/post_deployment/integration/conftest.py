@@ -4,12 +4,6 @@ import boto3
 import pytest
 
 
-@pytest.fixture(name="lambda_client", scope="module")
-def lambda_client_fixture(aws_region):
-    """Create and return a boto3 Lambda client for the specified region."""
-    return boto3.client("lambda", region_name=aws_region)
-
-
 @pytest.fixture(name="s3_client", scope="module")
 def s3_client_fixture(aws_region):
     """Create and return a boto3 S3 client for the specified region."""

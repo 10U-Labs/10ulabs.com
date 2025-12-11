@@ -134,12 +134,6 @@ def dynamodb_client(aws_region):
 
 
 @pytest.fixture
-def lambda_client(aws_region):
-    """Provide Lambda client for the configured AWS region."""
-    return boto3.client('lambda', region_name=aws_region)
-
-
-@pytest.fixture
 def cloudwatch_client(aws_region):
     """Provide CloudWatch client for the configured AWS region."""
     return boto3.client('cloudwatch', region_name=aws_region)
