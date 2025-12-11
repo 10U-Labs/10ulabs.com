@@ -560,7 +560,8 @@ def run_phase(matching_workflows, phase_name, extract_fn):
 def main():
     """Main entry point for the pre-git checks hook."""
     command = parse_command_from_stdin()
-    if not command or not re.search(r'\bgit\s+commit\b', command):
+    # Match git commit with optional flags between git and commit (e.g., git -C <path> commit)
+    if not command or not re.search(r'\bgit\s+(?:[\w-]+\s+\S+\s+)*commit\b', command):
         sys.exit(0)
 
     print("Running static analysis before git commit...")
