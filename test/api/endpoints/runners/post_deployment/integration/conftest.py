@@ -12,25 +12,13 @@ __all__ = ['skip_if_endpoint_not_deployed']
 DEFAULT_REQUEST_TIMEOUT = 10
 
 
-@pytest.fixture(name="aws_region", scope="module")
-def aws_region_fixture(config):
-    """Provide the AWS region from config."""
-    return config["aws_region"]
-
-
-@pytest.fixture(name="ssm_client", scope="module")
-def ssm_client_fixture(aws_region):
-    """Provide an SSM client for the configured region."""
-    return boto3.client("ssm", region_name=aws_region)
-
-
-@pytest.fixture(name="sqs_client", scope="module")
+@pytest.fixture(name="sqs_client", scope="session")
 def sqs_client_fixture(aws_region):
     """Provide an SQS client for the configured region."""
     return boto3.client("sqs", region_name=aws_region)
 
 
-@pytest.fixture(name="ecs_client", scope="module")
+@pytest.fixture(name="ecs_client", scope="session")
 def ecs_client_fixture(aws_region):
     """Provide an ECS client for the configured region."""
     return boto3.client("ecs", region_name=aws_region)

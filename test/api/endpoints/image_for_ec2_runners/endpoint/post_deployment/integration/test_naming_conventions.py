@@ -8,8 +8,8 @@ import pytest
 from naming_conventions import validate_name
 
 
-class TestDeployedIAMRoleNamingConventions:
-    """Tests for deployed IAM role naming conventions."""
+class TestDeployedNamingConventions:
+    """Tests for deployed resource naming conventions."""
 
     def test_image_for_ec2_runners_handler_role_name_is_pascalcase(self, iam_client, config):
         """Verify ImageForEC2RunnersHandler IAM role name uses PascalCase."""
@@ -27,10 +27,6 @@ class TestDeployedIAMRoleNamingConventions:
             )
         except iam_client.exceptions.NoSuchEntityException:
             pytest.skip(f"IAM role '{role_name}' not deployed")
-
-
-class TestDeployedLambdaFunctionNamingConventions:
-    """Tests for deployed Lambda function naming conventions."""
 
     def test_image_for_ec2_runners_handler_function_name_is_pascalcase(self, lambda_client, config):
         """Verify ImageForEC2RunnersHandler Lambda function name uses PascalCase."""
