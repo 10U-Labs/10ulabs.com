@@ -1,0 +1,40 @@
+{
+  "board": {
+    "3dviewports": [],
+    "design_settings": {
+      "defaults": {
+        "board_outline_line_width": 0.1,
+        "copper_line_width": 0.2,
+        "copper_text_size_h": 1.5,
+        "copper_text_size_v": 1.5,
+        "copper_text_thickness": 0.3,
+        "other_line_width": 0.15,
+        "silk_line_width": 0.15,
+        "silk_text_size_h": 1.0,
+        "silk_text_size_v": 1.0,
+        "silk_text_thickness": 0.15
+      }
+    }
+  },
+  "meta": {
+    "filename": "gfci-tandem-20a.kicad_pro",
+    "version": 1
+  },
+  "net_settings": {
+    "classes": [
+      {
+        "clearance": 3.0,
+        "name": "High Voltage",
+        "track_width": 1.0
+      }
+    ]
+  },
+  "sheets": [
+    ["top.kicad_sch", "Top Level"],
+    ["power_input.kicad_sch", "Power Input"],
+    ["breaker_mech.kicad_sch", "Breaker Mechanisms"],
+    ["ct_sense.kicad_sch", "CT Sensing"],
+    ["gfci_control.kicad_sch", "GFCI Control"],
+    ["test_reset.kicad_sch", "Test/Reset"]
+  ]
+}
