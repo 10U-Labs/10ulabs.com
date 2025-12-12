@@ -8,9 +8,9 @@ import pytest
 from naming_conventions import validate_name
 
 
-def test_catchall_handler_role_name_is_pascalcase(iam_client):
+def test_catchall_handler_role_name_is_pascalcase(iam_client, shared_config):
     """Verify CatchAllHandler IAM role name uses PascalCase."""
-    role_name = "CatchAllHandler-ServiceRole"
+    role_name = f"{shared_config['resource_prefix']}CatchAllHandlerServiceRole"
     try:
         response = iam_client.get_role(RoleName=role_name)
         actual_name = response['Role']['RoleName']
@@ -22,9 +22,9 @@ def test_catchall_handler_role_name_is_pascalcase(iam_client):
         pytest.skip(f"IAM role '{role_name}' not deployed")
 
 
-def test_catchall_handler_function_name_is_pascalcase(lambda_client, config):
+def test_catchall_handler_function_name_is_pascalcase(lambda_client, shared_config):
     """Verify CatchAllHandler Lambda function name uses PascalCase."""
-    function_name = config.get('catchall_handler_function_name', 'TenULabsCatchAllHandler')
+    function_name = shared_config['lambda_handler_names']['catchall']
     try:
         response = lambda_client.get_function(FunctionName=function_name)
         actual_name = response['Configuration']['FunctionName']

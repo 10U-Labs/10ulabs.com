@@ -3,17 +3,17 @@ import pytest
 from botocore.exceptions import ClientError
 
 
-def test_lambda_catchall_handler_exists(lambda_client, config):
+def test_lambda_catchall_handler_exists(lambda_client, shared_config):
     """Verify Lambda catchall handler function exists."""
-    function_name = config["catchall_handler_function_name"]
+    function_name = shared_config['lambda_handler_names']['catchall']
     response = lambda_client.get_function(FunctionName=function_name)
     names_match = response["Configuration"]["FunctionName"] == function_name
     assert names_match
 
 
-def test_lambda_catchall_handler_runtime(lambda_client, config):
+def test_lambda_catchall_handler_runtime(lambda_client, shared_config):
     """Verify Lambda catchall handler uses Python 3.13 runtime."""
-    function_name = config["catchall_handler_function_name"]
+    function_name = shared_config['lambda_handler_names']['catchall']
     response = lambda_client.get_function(FunctionName=function_name)
     is_python313 = response["Configuration"]["Runtime"] == "python3.13"
     assert is_python313
