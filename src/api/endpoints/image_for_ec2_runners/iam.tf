@@ -57,7 +57,6 @@ resource "aws_iam_role_policy" "ssm_access" {
         ]
         Resource = [
           module.shared.ssm_github_pat_arn,
-          "arn:aws:ssm:${local.aws_region}:${module.shared.aws_account_id}:parameter/github-runner/*",
           "arn:aws:ssm:${local.aws_region}:${module.shared.aws_account_id}:parameter${module.shared.ssm_ec2_runner_ami_latest}"
         ]
       }
