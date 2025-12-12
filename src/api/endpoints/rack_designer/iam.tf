@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda" {
-  name = "${local.resource_prefix}-RackDesignerLambda-Role"
+  name = local.handler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerLambda-Role"
+    Name = local.handler_role_name
   })
 }
 

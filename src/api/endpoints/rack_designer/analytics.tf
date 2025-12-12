@@ -41,7 +41,7 @@ resource "aws_glue_catalog_database" "analytics" {
 }
 
 resource "aws_iam_role" "glue_crawler" {
-  name = "${local.resource_prefix}-RackDesignerGlueCrawler-Role"
+  name = local.glue_crawler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -55,7 +55,7 @@ resource "aws_iam_role" "glue_crawler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerGlueCrawler-Role"
+    Name = local.glue_crawler_role_name
   })
 }
 
@@ -102,7 +102,7 @@ resource "aws_glue_crawler" "events" {
 }
 
 resource "aws_iam_role" "export_lambda" {
-  name = "${local.resource_prefix}-RackDesignerExport-Role"
+  name = local.export_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -116,7 +116,7 @@ resource "aws_iam_role" "export_lambda" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerExport-Role"
+    Name = local.export_role_name
   })
 }
 
@@ -162,7 +162,7 @@ data "archive_file" "export_lambda" {
 }
 
 resource "aws_lambda_function" "export" {
-  function_name    = "${local.resource_prefix}-RackDesignerExport"
+  function_name    = local.export_function_name
   role             = aws_iam_role.export_lambda.arn
   handler          = "export_handler.lambda_handler"
   runtime          = "python3.13"
@@ -180,7 +180,7 @@ resource "aws_lambda_function" "export" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerExport"
+    Name = local.export_function_name
   })
 }
 
@@ -211,7 +211,7 @@ resource "aws_scheduler_schedule" "daily_export" {
 }
 
 resource "aws_iam_role" "scheduler" {
-  name = "${local.resource_prefix}-RackDesignerScheduler-Role"
+  name = local.scheduler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -225,7 +225,7 @@ resource "aws_iam_role" "scheduler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerScheduler-Role"
+    Name = local.scheduler_role_name
   })
 }
 
@@ -254,7 +254,7 @@ data "archive_file" "crawler_trigger" {
 }
 
 resource "aws_iam_role" "crawler_trigger" {
-  name = "${local.resource_prefix}-RackDesignerCrawlerTrigger-Role"
+  name = local.crawler_trigger_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -268,7 +268,7 @@ resource "aws_iam_role" "crawler_trigger" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerCrawlerTrigger-Role"
+    Name = local.crawler_trigger_role_name
   })
 }
 
@@ -292,7 +292,7 @@ resource "aws_iam_role_policy" "crawler_trigger_glue" {
 }
 
 resource "aws_lambda_function" "crawler_trigger" {
-  function_name    = "${local.resource_prefix}-RackDesignerCrawlerTrigger"
+  function_name    = local.crawler_trigger_function_name
   role             = aws_iam_role.crawler_trigger.arn
   handler          = "crawler_trigger.lambda_handler"
   runtime          = "python3.13"
@@ -308,7 +308,7 @@ resource "aws_lambda_function" "crawler_trigger" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-RackDesignerCrawlerTrigger"
+    Name = local.crawler_trigger_function_name
   })
 }
 
