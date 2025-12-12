@@ -16,6 +16,13 @@ from hook_utils import LINT_DISABLE_PATTERNS
 
 
 DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
+OUTPUT_LINES = []
+
+
+def capture_print(message=""):
+    """Print and capture output for later inclusion in hook response."""
+    print(message)
+    OUTPUT_LINES.append(message)
 
 
 def allow_tool_use():
@@ -27,6 +34,8 @@ def allow_tool_use():
             "permissionDecisionReason": "Auto-approved"
         }
     }
+    if OUTPUT_LINES:
+        output["outputToUser"] = "\n".join(OUTPUT_LINES)
     print(json.dumps(output))
     sys.exit(0)
 
@@ -115,21 +124,21 @@ def check_changed_files_for_lint_disables(changed_files):
 
 def run_lint_disable_check(changed_files):
     """Run lint disable check phase. Returns True if passed, False if failed."""
-    print("\n" + "="*60)
-    print("PHASE: LINT DISABLE CHECK")
-    print("="*60)
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: LINT DISABLE CHECK")
+    capture_print("="*60)
     lint_violations = check_changed_files_for_lint_disables(changed_files)
     if lint_violations:
-        print("\nLINT DISABLE VIOLATIONS FOUND:")
+        capture_print("\nLINT DISABLE VIOLATIONS FOUND:")
         for file_path, line_num, description in lint_violations:
-            print(f"  {file_path}:{line_num} - {description}")
-        print("\n" + "="*60)
-        print("LINT DISABLE CHECK FAILED - Remove lint disable comments")
-        print("Fix the actual code instead of disabling lint checks.")
-        print("="*60)
+            capture_print(f"  {file_path}:{line_num} - {description}")
+        capture_print("\n" + "="*60)
+        capture_print("LINT DISABLE CHECK FAILED - Remove lint disable comments")
+        capture_print("Fix the actual code instead of disabling lint checks.")
+        capture_print("="*60)
         print("LINT DISABLE CHECK FAILED", file=sys.stderr)
         return False
-    print("No lint disable patterns found in changed files.")
+    capture_print("No lint disable patterns found in changed files.")
     return True
 
 
@@ -203,9 +212,9 @@ def check_file_for_single_assert(file_path):
 
 def run_single_assert_check(changed_files):
     """Run single-assert-per-test check. Returns True if passed, False if failed."""
-    print("\n" + "="*60)
-    print("PHASE: SINGLE ASSERT CHECK")
-    print("="*60)
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: SINGLE ASSERT CHECK")
+    capture_print("="*60)
 
     all_violations = []
     for file_path in changed_files:
@@ -213,18 +222,18 @@ def run_single_assert_check(changed_files):
         all_violations.extend(violations)
 
     if all_violations:
-        print("\nSINGLE ASSERT VIOLATIONS FOUND:")
+        capture_print("\nSINGLE ASSERT VIOLATIONS FOUND:")
         for file_path, line_num, func_name, count in all_violations:
-            print(f"  {file_path}:{line_num} - {func_name}() has {count} asserts (should be 1)")
-        print("\n" + "="*60)
-        print("SINGLE ASSERT CHECK FAILED")
-        print("Each test function should have exactly one assert.")
-        print("Split tests with multiple asserts into separate test functions.")
-        print("="*60)
+            capture_print(f"  {file_path}:{line_num} - {func_name}() has {count} asserts (should be 1)")
+        capture_print("\n" + "="*60)
+        capture_print("SINGLE ASSERT CHECK FAILED")
+        capture_print("Each test function should have exactly one assert.")
+        capture_print("Split tests with multiple asserts into separate test functions.")
+        capture_print("="*60)
         print("SINGLE ASSERT CHECK FAILED", file=sys.stderr)
         return False
 
-    print("All test functions have single asserts.")
+    capture_print("All test functions have single asserts.")
     return True
 
 
@@ -238,12 +247,12 @@ def run_workflow_yaml_lint(changed_files):
     if not workflow_files:
         return True
 
-    print("\n" + "="*60)
-    print("PHASE: WORKFLOW YAML LINT")
-    print("="*60)
-    print(f"Checking {len(workflow_files)} workflow file(s):")
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: WORKFLOW YAML LINT")
+    capture_print("="*60)
+    capture_print(f"Checking {len(workflow_files)} workflow file(s):")
     for f in workflow_files:
-        print(f"  - {f}")
+        capture_print(f"  - {f}")
 
     # Use consistent yamllint config matching workflow standards
     config = (
@@ -263,19 +272,19 @@ def run_workflow_yaml_lint(changed_files):
     )
 
     if result.returncode != 0:
-        print("\nYAMLLINT ERRORS:")
+        capture_print("\nYAMLLINT ERRORS:")
         if result.stdout:
             for line in result.stdout.strip().split('\n'):
-                print(f"  {line}")
+                capture_print(f"  {line}")
         if result.stderr:
             for line in result.stderr.strip().split('\n'):
-                print(f"  {line}")
-        print("\n" + "="*60)
-        print("WORKFLOW YAML LINT FAILED")
-        print("="*60)
+                capture_print(f"  {line}")
+        capture_print("\n" + "="*60)
+        capture_print("WORKFLOW YAML LINT FAILED")
+        capture_print("="*60)
         return False
 
-    print("All workflow files passed yamllint.")
+    capture_print("All workflow files passed yamllint.")
     return True
 
 
@@ -521,7 +530,7 @@ def run_command(cmd_info, workflow_name):
     """Run a single command and return True if it passes."""
     if cmd_info.get('conditional'):
         log_debug(f"Skipping conditional command: {cmd_info.get('name')}")
-        print("  [SKIP] Conditional on github-hosted")
+        capture_print("  [SKIP] Conditional on github-hosted")
         return True
 
     name = cmd_info['name']
@@ -532,10 +541,10 @@ def run_command(cmd_info, workflow_name):
         return True
 
     log_debug(f"Running command: {name}")
-    print(f"\n[{workflow_name}] {name}")
+    capture_print(f"\n[{workflow_name}] {name}")
 
     first_line = script.split('\n', maxsplit=1)[0].strip()
-    print(f"  $ {first_line[:70]}{'...' if len(first_line) > 70 else ''}")
+    capture_print(f"  $ {first_line[:70]}{'...' if len(first_line) > 70 else ''}")
 
     result = subprocess.run(
         f"set -e\n{script}",
@@ -552,22 +561,22 @@ def run_command(cmd_info, workflow_name):
         log_debug(f"Command FAILED: {name} (exit {result.returncode})")
         log_debug(f"Stdout: {result.stdout[:500] if result.stdout else 'none'}")
         log_debug(f"Stderr: {result.stderr[:500] if result.stderr else 'none'}")
-        print(f"  FAILED (exit {result.returncode})")
-        print("  Full command:")
+        capture_print(f"  FAILED (exit {result.returncode})")
+        capture_print("  Full command:")
         for line in script.split('\n'):
-            print(f"    {line}")
+            capture_print(f"    {line}")
         if result.stdout:
-            print("  Stdout:")
+            capture_print("  Stdout:")
             for out_line in result.stdout.strip().split('\n'):
-                print(f"    {out_line}")
+                capture_print(f"    {out_line}")
         if result.stderr:
-            print("  Stderr:")
+            capture_print("  Stderr:")
             for err_line in result.stderr.strip().split('\n'):
-                print(f"    {err_line}")
+                capture_print(f"    {err_line}")
         return False
 
     log_debug(f"Command PASSED: {name}")
-    print("  PASSED")
+    capture_print("  PASSED")
     return True
 
 
@@ -599,14 +608,14 @@ def parse_command_from_stdin():
 
 def run_phase(matching_workflows, phase_name, extract_fn):
     """Run a phase of checks (static analysis or tests) on matching workflows."""
-    print("\n" + "="*60)
-    print(f"PHASE: {phase_name}")
-    print("="*60)
+    capture_print("\n" + "="*60)
+    capture_print(f"PHASE: {phase_name}")
+    capture_print("="*60)
     passed = True
     for wf in matching_workflows:
         commands = extract_fn(wf['workflow'])
         if commands:
-            print(f"\n[{wf['name']}]")
+            capture_print(f"\n[{wf['name']}]")
             if not run_commands(commands, wf['name']):
                 passed = False
     return passed
@@ -621,20 +630,20 @@ def main():
         allow_tool_use()
 
     log_debug("pre_git_checks: starting static analysis checks")
-    print("Running static analysis before git commit...")
+    capture_print("Running static analysis before git commit...")
     project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '.')
     os.chdir(project_dir)
 
     changed_files = get_changed_files()
     if not changed_files:
         log_debug("No changed files found - allowing")
-        print("No changed files.")
+        capture_print("No changed files.")
         allow_tool_use()
 
     log_debug(f"Found {len(changed_files)} changed files: {changed_files}")
-    print(f"Staged files ({len(changed_files)}):")
+    capture_print(f"Staged files ({len(changed_files)}):")
     for f in changed_files:
-        print(f"  - {f}")
+        capture_print(f"  - {f}")
 
     if not run_lint_disable_check(changed_files):
         log_debug("Lint disable check FAILED - denying tool use")
@@ -652,24 +661,24 @@ def main():
     matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
     if not matching_workflows:
         log_debug("No matching workflows found - allowing")
-        print("\nNo matching workflows found for additional checks.")
+        capture_print("\nNo matching workflows found for additional checks.")
         allow_tool_use()
 
-    print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
+    capture_print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
 
     static_ok = run_phase(
         matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands)
     if not static_ok:
         log_debug("STATIC ANALYSIS FAILED - denying tool use")
-        print("\n" + "="*60)
-        print("STATIC ANALYSIS FAILED - Fix issues before committing")
-        print("="*60)
+        capture_print("\n" + "="*60)
+        capture_print("STATIC ANALYSIS FAILED - Fix issues before committing")
+        capture_print("="*60)
         deny_tool_use("STATIC ANALYSIS FAILED - Fix lint/type errors")
 
     log_debug("ALL CHECKS PASSED - exiting with code 0")
-    print("\n" + "="*60)
-    print("ALL CHECKS PASSED")
-    print("="*60)
+    capture_print("\n" + "="*60)
+    capture_print("ALL CHECKS PASSED")
+    capture_print("="*60)
     allow_tool_use()
 
 
