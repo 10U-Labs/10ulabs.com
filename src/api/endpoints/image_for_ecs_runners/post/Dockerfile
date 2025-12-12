@@ -52,7 +52,7 @@ RUN apt-get update && \
     npm install -g jsonlint && npm cache clean --force && \
     python3 -m pip install --no-cache-dir --break-system-packages \
         'boto3>=1.35.0' boto3-stubs 'botocore>=1.35.0' dockerfile-parse dnspython \
-        mypy paramiko pylint pytest python-hcl2 PyYAML requests types-dockerfile-parse \
+        mypy paramiko pylint PyJWT pytest python-hcl2 PyYAML requests types-dockerfile-parse \
         types-paramiko types-PyYAML types-requests yamllint && \
     apt-get purge -y python3-pip && apt-get autoremove -y && \
     useradd -m -s /bin/bash runner && echo "runner ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
