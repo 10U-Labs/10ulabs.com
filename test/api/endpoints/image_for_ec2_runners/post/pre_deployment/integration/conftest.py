@@ -1,67 +1,36 @@
-"""Pytest fixtures for pre-deployment integration tests."""
+"""Pytest fixtures for pre-deployment integration tests.
+
+Common fixtures (terraform_init, terraform_output, terraform_output_json) are
+inherited from test/api/conftest.py.
+"""
 import json
-import subprocess
-from pathlib import Path
+
+from test.api.conftest import (
+    API_BACKEND_DIR,
+    terraform_init,
+    terraform_output,
+    terraform_output_json,
+)
 
 import boto3
 import pytest
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
-BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
-
-
-def _run_terraform_output(output_name: str, as_json: bool = False) -> str:
-    """ run terraform output."""
-
-    cmd = ["terraform", "output"]
-    if as_json:
-        cmd.append("-json")
-    else:
-        cmd.append("-raw")
-    cmd.append(output_name)
-    result = subprocess.run(
-        cmd,
-        cwd=str(BACKEND_DIR),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
-
-
-def _terraform_init() -> bool:
-    """ terraform init."""
-
-    result = subprocess.run(
-        ["terraform", "init", "-backend=true", "-input=false"],
-        cwd=str(BACKEND_DIR),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.returncode == 0
-
-
 @pytest.fixture(scope="session")
 def terraform_initialized():
     """Terraform initialized."""
-
-    success = _terraform_init()
-    return success
+    return terraform_init(API_BACKEND_DIR)
 
 
 @pytest.fixture(scope="session")
 def ec2_client(aws_region):
     """Ec2 client."""
-
     return boto3.client("ec2", region_name=aws_region)
 
 
 @pytest.fixture(scope="session")
 def iam_client(aws_region):
     """Iam client."""
-
     return boto3.client("iam", region_name=aws_region)
 
 
@@ -72,14 +41,24 @@ def terraform_outputs(request):
     result = {}
     if initialized:
         result = {
-            "ec2_runner_ami_purpose_value": _run_terraform_output("ec2_runner_ami_purpose_value"),
-            "ec2_runner_ami_stable_tag": _run_terraform_output("ec2_runner_ami_stable_tag"),
-            "runner_security_group_id": _run_terraform_output("runner_security_group_id"),
-            "ssm_parameter_name_for_latest_ami": _run_terraform_output(
-                "ssm_parameter_name_for_latest_ami"
+            "ec2_runner_ami_purpose_value": terraform_output(
+                API_BACKEND_DIR, "ec2_runner_ami_purpose_value"
             ),
-            "vpc_public_subnet_ids": _run_terraform_output("vpc_public_subnet_ids"),
-            "ec2_instance_types": _run_terraform_output("ec2_instance_types", as_json=True),
+            "ec2_runner_ami_stable_tag": terraform_output(
+                API_BACKEND_DIR, "ec2_runner_ami_stable_tag"
+            ),
+            "runner_security_group_id": terraform_output(
+                API_BACKEND_DIR, "runner_security_group_id"
+            ),
+            "ssm_parameter_name_for_latest_ami": terraform_output(
+                API_BACKEND_DIR, "ssm_parameter_name_for_latest_ami"
+            ),
+            "vpc_public_subnet_ids": terraform_output(
+                API_BACKEND_DIR, "vpc_public_subnet_ids"
+            ),
+            "ec2_instance_types": terraform_output_json(
+                API_BACKEND_DIR, "ec2_instance_types"
+            ),
         }
     return result
 
