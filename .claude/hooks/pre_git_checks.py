@@ -233,7 +233,8 @@ def run_single_assert_check(changed_files):
     if all_violations:
         capture_print("\nSINGLE ASSERT VIOLATIONS FOUND:")
         for file_path, line_num, func_name, count in all_violations:
-            capture_print(f"  {file_path}:{line_num} - {func_name}() has {count} asserts (should be 1)")
+            msg = f"  {file_path}:{line_num} - {func_name}() has {count} asserts"
+            capture_print(msg)
         capture_print("\n" + "="*60)
         capture_print("SINGLE ASSERT CHECK FAILED")
         capture_print("Each test function should have exactly one assert.")
