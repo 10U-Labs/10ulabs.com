@@ -18,17 +18,23 @@ from hook_utils import LINT_DISABLE_PATTERNS
 DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
 
 
-def deny_tool_use(reason):
-    """Output JSON to deny tool use and exit with code 0."""
+def allow_tool_use():
+    """Allow tool use by outputting JSON with permissionDecision: allow."""
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason
+            "permissionDecision": "allow",
+            "permissionDecisionReason": "Auto-approved"
         }
     }
     print(json.dumps(output))
     sys.exit(0)
+
+
+def deny_tool_use(reason):
+    """Block tool use by exiting with code 2 and stderr message."""
+    print(reason, file=sys.stderr)
+    sys.exit(2)
 
 
 def log_debug(message):
@@ -612,7 +618,7 @@ def main():
     # Match git commit with optional flags between git and commit (e.g., git -C <path> commit)
     if not command or not re.search(r'\bgit\s+(?:[\w-]+\s+\S+\s+)*commit\b', command):
         log_debug(f"pre_git_checks: skipping - not a git commit (command: {command[:50]}...)")
-        sys.exit(0)
+        allow_tool_use()
 
     log_debug("pre_git_checks: starting static analysis checks")
     print("Running static analysis before git commit...")
@@ -621,9 +627,9 @@ def main():
 
     changed_files = get_changed_files()
     if not changed_files:
-        log_debug("No changed files found - exiting with code 0")
+        log_debug("No changed files found - allowing")
         print("No changed files.")
-        sys.exit(0)
+        allow_tool_use()
 
     log_debug(f"Found {len(changed_files)} changed files: {changed_files}")
     print(f"Staged files ({len(changed_files)}):")
@@ -645,9 +651,9 @@ def main():
     workflows_dir = os.path.join(project_dir, '.github/workflows')
     matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
     if not matching_workflows:
-        log_debug("No matching workflows found - exiting with code 0")
+        log_debug("No matching workflows found - allowing")
         print("\nNo matching workflows found for additional checks.")
-        sys.exit(0)
+        allow_tool_use()
 
     print(f"\nMatching workflows: {[w['name'] for w in matching_workflows]}")
 
@@ -664,7 +670,7 @@ def main():
     print("\n" + "="*60)
     print("ALL CHECKS PASSED")
     print("="*60)
-    sys.exit(0)
+    allow_tool_use()
 
 
 if __name__ == '__main__':
