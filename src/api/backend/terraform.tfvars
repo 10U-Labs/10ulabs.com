@@ -1,6 +1,5 @@
 api_gateway_log_group_name      = "/aws/apigateway/TenULabsApi"
 api_gateway_name                = "TenULabsApi"
-catchall_handler_function_name  = "TenULabsCatchAllHandler"
 catchall_handler_log_group_name = "/aws/lambda/TenULabsCatchAllHandler"
 ssm_parameter_name_for_api_key  = "/api/key"
 stack_name                      = "TenULabsApi"
