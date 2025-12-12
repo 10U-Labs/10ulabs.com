@@ -30,6 +30,13 @@ resource "aws_lambda_function" "contact_handler" {
   tags = merge(local.common_tags, {
     Name = module.shared.lambda_handler_names.contact
   })
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_contact_handler_basic,
+    aws_iam_role_policy.lambda_contact_handler_ssm,
+    aws_iam_role_policy.lambda_contact_handler_kms,
+    aws_iam_role_policy.lambda_contact_handler_ses,
+  ]
 }
 
 resource "aws_cloudwatch_log_group" "contact_handler" {
