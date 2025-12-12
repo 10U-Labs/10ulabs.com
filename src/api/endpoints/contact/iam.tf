@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_contact_handler" {
-  name = "ContactHandler-ServiceRole"
+  name = local.contact_handler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda_contact_handler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "ContactHandler-ServiceRole"
+    Name = local.contact_handler_role_name
   })
 }
 
