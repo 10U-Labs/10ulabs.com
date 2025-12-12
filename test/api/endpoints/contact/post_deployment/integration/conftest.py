@@ -1,1 +1,1 @@
-"""Pytest fixtures for contact integration tests."""
+"""Pytest fixtures for contact post-deployment integration tests."""
