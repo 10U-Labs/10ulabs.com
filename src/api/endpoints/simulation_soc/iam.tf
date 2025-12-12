@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda_simulation_soc_handler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = local.lambda_role_name
+    Name = local.handler_role_name
   })
 }
 
