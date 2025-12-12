@@ -36,12 +36,6 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   ]
 }
 
-# Generate frontend auth config
-resource "local_file" "auth_config" {
-  content  = "var GOOGLE_CLIENT_ID = '${var.google_client_id}';\n"
-  filename = "${path.module}/../../../www/paths/simulations/soc/js/config.js"
-}
-
 resource "aws_cloudwatch_log_group" "simulation_soc_handler" {
   name              = local.handler_log_group
   retention_in_days = 7

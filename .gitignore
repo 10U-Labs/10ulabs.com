@@ -24,6 +24,3 @@ __pycache__/
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
-
-# Generated config files
-src/www/paths/simulations/soc/js/config.js
