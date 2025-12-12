@@ -13,7 +13,7 @@ These are the non-negotiable rules that all agents must follow.
 
 ## 2. Profitability
 
-Making LEGAL profits is the highest priority so that we can:
+Making LEGAL profits is the second highest priority so that we can:
 - Pay the bills
 - Give more resources to the agents
 - Sustain operations

@@ -1,4 +1,6 @@
 """Shared pytest fixtures and utilities for API tests."""
+import subprocess
+from pathlib import Path
 from typing import Dict, List
 from unittest.mock import Mock
 
@@ -15,6 +17,151 @@ from runner_labels import (
     DEFAULT_PRICING,
     DEFAULT_RUNNER_ID,
 )
+
+
+# Common directory constants
+REPO_ROOT = Path(__file__).resolve().parents[2]
+API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
+ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
+
+
+def terraform_init(directory: Path) -> bool:
+    """Initialize terraform in the given directory.
+
+    Args:
+        directory: Path to the terraform directory.
+
+    Returns:
+        True if initialization succeeded, False otherwise.
+    """
+    result = subprocess.run(
+        ["terraform", "init", "-backend=true", "-input=false"],
+        cwd=str(directory),
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    return result.returncode == 0
+
+
+def terraform_output(directory: Path, name: str) -> str:
+    """Get a terraform output value.
+
+    Args:
+        directory: Path to the terraform directory.
+        name: Name of the output variable.
+
+    Returns:
+        The output value as a string, or empty string if not found.
+    """
+    result = subprocess.run(
+        ["terraform", "output", "-raw", name],
+        cwd=str(directory),
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def terraform_output_json(directory: Path, name: str) -> str:
+    """Get a terraform output value as JSON string.
+
+    Args:
+        directory: Path to the terraform directory.
+        name: Name of the output variable.
+
+    Returns:
+        The output value as a JSON string, or empty string if not found.
+    """
+    result = subprocess.run(
+        ["terraform", "output", "-json", name],
+        cwd=str(directory),
+        capture_output=True,
+        text=True,
+        check=False
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def get_runners_outputs(directory: Path) -> Dict[str, str]:
+    """Get runners terraform outputs from the specified directory.
+
+    Args:
+        directory: Path to the runners terraform directory.
+
+    Returns:
+        Dictionary with vpc_id, vpc_public_subnet_ids, and runner_security_group_id.
+    """
+    return {
+        "vpc_id": terraform_output(directory, "vpc_id"),
+        "vpc_public_subnet_ids": terraform_output(directory, "vpc_public_subnet_ids"),
+        "runner_security_group_id": terraform_output(
+            directory, "runner_security_group_id"
+        ),
+    }
+
+
+@pytest.fixture(scope="session")
+def api_backend_terraform_initialized():
+    """Initialize terraform for api_backend state access."""
+    return terraform_init(API_BACKEND_DIR)
+
+
+@pytest.fixture(scope="session")
+def api_backend_outputs(request):
+    """Get api_backend terraform outputs.
+
+    Single source of truth for api_backend output names.
+    """
+    if not request.getfixturevalue("api_backend_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_backend")
+    return {
+        "api_gateway_rest_api_id": terraform_output(
+            API_BACKEND_DIR, "api_gateway_rest_api_id"
+        ),
+    }
+
+
+@pytest.fixture(scope="session")
+def ecs_runner_terraform_initialized():
+    """Initialize terraform for ecs_runner state access."""
+    return terraform_init(ECS_RUNNER_DIR)
+
+
+@pytest.fixture(scope="session")
+def ecs_runner_outputs(request):
+    """Get ecs_runner terraform outputs.
+
+    Single source of truth for ecs_runner output names.
+    """
+    if not request.getfixturevalue("ecs_runner_terraform_initialized"):
+        pytest.skip("Terraform init failed for ecs_runner")
+    return {
+        "lambda_function_arn": terraform_output(
+            ECS_RUNNER_DIR, "lambda_function_arn"
+        ),
+        "lambda_function_name": terraform_output(
+            ECS_RUNNER_DIR, "lambda_function_name"
+        ),
+        "cluster_arn": terraform_output(ECS_RUNNER_DIR, "cluster_arn"),
+        "cluster_name": terraform_output(ECS_RUNNER_DIR, "cluster_name"),
+        "task_definition_arn": terraform_output(
+            ECS_RUNNER_DIR, "task_definition_arn"
+        ),
+    }
+
+
+@pytest.fixture(scope="session")
+def apigateway_client(aws_region):
+    """Create an API Gateway client."""
+    return boto3.client("apigateway", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def ses_client(aws_region):
+    """Create an SES client."""
+    return boto3.client("ses", region_name=aws_region)
 
 
 def get_composite_labels(
@@ -57,10 +204,22 @@ def get_runner_labels() -> Dict[str, List[str]]:
         - fargate_e2e_test: ECS fargate x86 spot labels with e2e marker
     """
     return {
-        'ec2': ['ec2', DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID],
-        'fargate': ['ecs', DEFAULT_ECS_COMPUTE, DEFAULT_ECS_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID],
-        'ec2_e2e_test': ['ec2', DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID, 'e2e'],
-        'fargate_e2e_test': ['ecs', DEFAULT_ECS_COMPUTE, DEFAULT_ECS_ARCH, DEFAULT_PRICING, DEFAULT_RUNNER_ID, 'e2e'],
+        'ec2': [
+            'ec2', DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH, DEFAULT_PRICING,
+            DEFAULT_RUNNER_ID,
+        ],
+        'fargate': [
+            'ecs', DEFAULT_ECS_COMPUTE, DEFAULT_ECS_ARCH, DEFAULT_PRICING,
+            DEFAULT_RUNNER_ID,
+        ],
+        'ec2_e2e_test': [
+            'ec2', DEFAULT_EC2_COMPUTE, DEFAULT_EC2_ARCH, DEFAULT_PRICING,
+            DEFAULT_RUNNER_ID, 'e2e',
+        ],
+        'fargate_e2e_test': [
+            'ecs', DEFAULT_ECS_COMPUTE, DEFAULT_ECS_ARCH, DEFAULT_PRICING,
+            DEFAULT_RUNNER_ID, 'e2e',
+        ],
     }
 
 

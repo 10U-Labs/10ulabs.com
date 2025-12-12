@@ -1,55 +1,37 @@
-"""Pytest fixtures for pre-deployment integration tests."""
-import subprocess
-from pathlib import Path
+"""Pytest fixtures for pre-deployment integration tests.
+
+Common fixtures (terraform_init, terraform_output) are inherited from
+test/api/conftest.py.
+"""
+from test.api.conftest import (
+    API_BACKEND_DIR,
+    terraform_init,
+    terraform_output,
+)
 
 import pytest
-
-
-REPO_ROOT = Path(__file__).resolve().parents[7]
-API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
-
-
-def _terraform_init(directory: Path) -> bool:
-    """Initialize terraform in the given directory."""
-    result = subprocess.run(
-        ["terraform", "init", "-backend=true", "-input=false"],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.returncode == 0
-
-
-def _terraform_output(directory: Path, name: str) -> str:
-    """Get a terraform output value."""
-    cmd = ["terraform", "output", "-raw", name]
-    result = subprocess.run(
-        cmd,
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
 
 
 @pytest.fixture(scope="session")
 def terraform_initialized():
     """Initialize terraform for api_backend state access."""
-    return _terraform_init(API_BACKEND_DIR)
+    return terraform_init(API_BACKEND_DIR)
 
 
 @pytest.fixture(scope="session")
 def api_backend_outputs(request):
-    """Get api_backend terraform outputs."""
+    """Get api_backend terraform outputs for EC2 runner AMI.
+
+    Note: This overrides the shared api_backend_outputs fixture with
+    EC2-runner-specific outputs.
+    """
     if not request.getfixturevalue("terraform_initialized"):
         pytest.skip("Terraform init failed for api_backend")
     return {
-        "ec2_runner_ami_purpose_value": _terraform_output(
+        "ec2_runner_ami_purpose_value": terraform_output(
             API_BACKEND_DIR, "ec2_runner_ami_purpose_value"
         ),
-        "ec2_runner_ami_stable_tag": _terraform_output(
+        "ec2_runner_ami_stable_tag": terraform_output(
             API_BACKEND_DIR, "ec2_runner_ami_stable_tag"
         ),
     }

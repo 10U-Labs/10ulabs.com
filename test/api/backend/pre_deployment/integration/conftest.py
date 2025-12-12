@@ -1,14 +1,13 @@
 """Pytest fixtures for api_backend pre-deployment integration tests."""
 
 import re
-import subprocess
-from pathlib import Path
+
+from test.api.conftest import REPO_ROOT, terraform_init, terraform_output
 
 import boto3
 import pytest
 
 
-REPO_ROOT = Path(__file__).resolve().parents[5]
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 
 STATE_BUCKET = "10ulabs-terraform-state-us-east-2"
@@ -57,30 +56,6 @@ def current_role_name(request):
     return role_arn.split("/")[-1]
 
 
-def _terraform_init(directory: Path) -> bool:
-    """Initialize terraform in the given directory."""
-    result = subprocess.run(
-        ["terraform", "init", "-backend=true", "-input=false"],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.returncode == 0
-
-
-def _terraform_output(directory: Path, name: str) -> str:
-    """Get a terraform output value."""
-    result = subprocess.run(
-        ["terraform", "output", "-raw", name],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.stdout.strip() if result.returncode == 0 else ""
-
-
 @pytest.fixture(scope="session")
 def state_bucket_name():
     """Provide the terraform state bucket name."""
@@ -102,7 +77,7 @@ def s3_client():
 @pytest.fixture(scope="session")
 def bootstrap_initialized():
     """Initialize terraform for bootstrap state access."""
-    return _terraform_init(BOOTSTRAP_DIR)
+    return terraform_init(BOOTSTRAP_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -111,13 +86,13 @@ def bootstrap_outputs(request):
     if not request.getfixturevalue("bootstrap_initialized"):
         pytest.skip("Terraform init failed for bootstrap")
     return {
-        "arn_for_central_logs_bucket": _terraform_output(
+        "arn_for_central_logs_bucket": terraform_output(
             BOOTSTRAP_DIR, "arn_for_central_logs_bucket"
         ),
-        "arn_for_github_actions_role": _terraform_output(
+        "arn_for_github_actions_role": terraform_output(
             BOOTSTRAP_DIR, "arn_for_github_actions_role"
         ),
-        "arn_for_state_bucket": _terraform_output(
+        "arn_for_state_bucket": terraform_output(
             BOOTSTRAP_DIR, "arn_for_state_bucket"
         ),
     }

@@ -1,28 +1,21 @@
-"""Pytest fixtures for pre-deployment integration tests."""
-import subprocess
-from pathlib import Path
+"""Pytest fixtures for pre-deployment integration tests.
+
+Common fixtures (terraform_init, terraform_output) are inherited from
+test/api/conftest.py.
+"""
+from test.api.conftest import (
+    REPO_ROOT,
+    get_runners_outputs,
+    terraform_init,
+    terraform_output,
+)
 
 import boto3
 import pytest
 
-from ...conftest import terraform_output
 
-
-REPO_ROOT = Path(__file__).resolve().parents[6]
 IMAGE_FOR_EC2_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
-
-
-def _terraform_init(directory: Path) -> bool:
-    """Initialize terraform in the given directory."""
-    result = subprocess.run(
-        ["terraform", "init", "-backend=true", "-input=false"],
-        cwd=str(directory),
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    return result.returncode == 0
 
 
 @pytest.fixture(scope="session")
@@ -34,13 +27,13 @@ def ec2_client(aws_region):
 @pytest.fixture(scope="session")
 def image_for_ec2_runners_terraform_initialized():
     """Initialize terraform for image_for_ec2_runners state access."""
-    return _terraform_init(IMAGE_FOR_EC2_RUNNERS_DIR)
+    return terraform_init(IMAGE_FOR_EC2_RUNNERS_DIR)
 
 
 @pytest.fixture(scope="session")
 def runners_terraform_initialized():
     """Initialize terraform for runners state access."""
-    return _terraform_init(RUNNERS_DIR)
+    return terraform_init(RUNNERS_DIR)
 
 
 @pytest.fixture(scope="session")
@@ -63,15 +56,7 @@ def image_for_ec2_runners_outputs(request):
 
 @pytest.fixture(scope="session")
 def runners_outputs(request):
-    """Get runners terraform outputs."""
+    """Get runners terraform outputs for EC2 runner tests."""
     if not request.getfixturevalue("runners_terraform_initialized"):
         pytest.skip("Terraform init failed for runners")
-    return {
-        "vpc_id": terraform_output(RUNNERS_DIR, "vpc_id"),
-        "vpc_public_subnet_ids": terraform_output(
-            RUNNERS_DIR, "vpc_public_subnet_ids"
-        ),
-        "runner_security_group_id": terraform_output(
-            RUNNERS_DIR, "runner_security_group_id"
-        ),
-    }
+    return get_runners_outputs(RUNNERS_DIR)
