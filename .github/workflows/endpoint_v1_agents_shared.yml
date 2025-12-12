@@ -132,7 +132,6 @@ jobs:
           !contains(github.event.head_commit.message, '[skip descendants]')
         name: Dispatch descendant workflows
         run: |
-          python3 -m pip install pyyaml
           SKIP_FLAG=""
           SKIP_INPUT="${{ github.event.inputs.skip_descendants }}"
           if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
