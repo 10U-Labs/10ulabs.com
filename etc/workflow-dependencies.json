@@ -430,7 +430,7 @@
   },
   "endpoint_v1_simulation_soc": {
     "depends_on": [
-      "endpoint_v1_rack_designer"
+      "endpoint_v1_runners"
     ],
     "name": "Ensuring the /v1/simulation-soc API endpoint exists and is properly configured",
     "paths": [
