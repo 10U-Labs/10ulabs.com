@@ -84,5 +84,5 @@ class TestConfigTags:
     def test_setup_script_exists(self, post_dir):
         """Setup script exists."""
 
-        script_path = post_dir / "setup.sh"
+        script_path = post_dir / "setup.py"
         assert script_path.exists()

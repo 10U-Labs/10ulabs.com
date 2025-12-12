@@ -327,13 +327,14 @@ class TestCleanupTempFiles:
 class TestMain:
     """Tests for the main function."""
 
-    def test_parses_required_arguments(self, setup_module):
+    def test_parses_required_arguments(self, setup_module, loaded_config):
         """Parses required arguments."""
         test_args = [
             "setup.py",
-            "--runner-user", "github-runner",
-            "--runner-version", "2.330.0",
-            "--yq-version", "4.44.1",
+            "--runner-user", loaded_config["runner_user"],
+            "--runner-version", loaded_config["runner_version"],
+            "--terraform-version", loaded_config["terraform_version"],
+            "--yq-version", loaded_config["yq_version"],
         ]
         with patch.object(sys, "argv", test_args), \
              patch.object(setup_module, "get_arch", return_value="arm64"), \
@@ -343,6 +344,9 @@ class TestMain:
              patch.object(setup_module, "install_system_packages"), \
              patch.object(setup_module, "install_python_packages"), \
              patch.object(setup_module, "install_yq"), \
+             patch.object(setup_module, "install_jsonlint"), \
+             patch.object(setup_module, "install_hadolint"), \
+             patch.object(setup_module, "install_terraform"), \
              patch.object(setup_module, "create_runner_user"), \
              patch.object(setup_module, "install_github_actions_runner"), \
              patch.object(setup_module, "install_ssm_agent"), \
@@ -350,13 +354,14 @@ class TestMain:
              patch.object(setup_module, "cleanup_temp_files"):
             setup_module.main()
 
-    def test_calls_all_install_functions(self, setup_module):
+    def test_calls_all_install_functions(self, setup_module, loaded_config):
         """Calls all install functions."""
         test_args = [
             "setup.py",
-            "--runner-user", "github-runner",
-            "--runner-version", "2.330.0",
-            "--yq-version", "4.44.1",
+            "--runner-user", loaded_config["runner_user"],
+            "--runner-version", loaded_config["runner_version"],
+            "--terraform-version", loaded_config["terraform_version"],
+            "--yq-version", loaded_config["yq_version"],
         ]
         with patch.object(sys, "argv", test_args), \
              patch.object(setup_module, "get_arch", return_value="arm64"), \
@@ -366,6 +371,9 @@ class TestMain:
              patch.object(setup_module, "install_system_packages") as mock_sys, \
              patch.object(setup_module, "install_python_packages") as mock_pip, \
              patch.object(setup_module, "install_yq") as mock_yq, \
+             patch.object(setup_module, "install_jsonlint") as mock_jsonlint, \
+             patch.object(setup_module, "install_hadolint") as mock_hadolint, \
+             patch.object(setup_module, "install_terraform") as mock_terraform, \
              patch.object(setup_module, "create_runner_user") as mock_user, \
              patch.object(setup_module, "install_github_actions_runner") as mock_runner, \
              patch.object(setup_module, "install_ssm_agent") as mock_ssm, \
@@ -376,9 +384,14 @@ class TestMain:
             mock_gh.assert_called_once()
             mock_sys.assert_called_once()
             mock_pip.assert_called_once()
-            mock_yq.assert_called_once_with("arm64", "4.44.1")
-            mock_user.assert_called_once_with("github-runner")
-            mock_runner.assert_called_once_with("arm64", "github-runner", "2.330.0")
+            mock_yq.assert_called_once_with("arm64", loaded_config["yq_version"])
+            mock_jsonlint.assert_called_once()
+            mock_hadolint.assert_called_once_with("arm64")
+            mock_terraform.assert_called_once_with("arm64", loaded_config["terraform_version"])
+            mock_user.assert_called_once_with(loaded_config["runner_user"])
+            mock_runner.assert_called_once_with(
+                "arm64", loaded_config["runner_user"], loaded_config["runner_version"]
+            )
             mock_ssm.assert_called_once_with("arm64")
             mock_cw.assert_called_once_with("arm64")
             mock_cleanup.assert_called_once()
