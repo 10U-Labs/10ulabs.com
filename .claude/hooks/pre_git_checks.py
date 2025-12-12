@@ -41,12 +41,15 @@ def get_changed_files():
         capture_output=True, text=True, check=False
     )
     files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+    log_debug(f"git diff --cached returned {len(files)} files: {files[:5]}...")
     if not files:
+        log_debug("No staged files, falling back to HEAD~1")
         result = subprocess.run(
             ['git', 'diff', 'HEAD~1', '--name-only', '--no-ext-diff'],
             capture_output=True, text=True, check=False
         )
         files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+        log_debug(f"git diff HEAD~1 returned {len(files)} files: {files[:5]}...")
     return [f for f in files if f]
 
 
@@ -444,15 +447,20 @@ def find_matching_workflows(changed_files, workflows_dir, project_dir):
     then falls back to on.push.paths in workflow files for non-orchestrated
     workflows (like claude.yml).
     """
+    log_debug(f"Finding workflows for {len(changed_files)} changed files")
     from_deps = find_workflows_from_dependencies(
         changed_files, workflows_dir, project_dir)
     unique = dedupe_workflows(from_deps)
+    log_debug(f"Found {len(unique)} workflows from dependencies: {[w['name'] for w in unique]}")
 
     # Fallback: check on.push.paths in workflow files not in workflow-dependencies
     from_push_paths = find_workflows_by_push_paths(
         changed_files, workflows_dir, unique)
+    log_debug(f"Found {len(from_push_paths)} workflows from push paths")
 
-    return dedupe_workflows(unique + from_push_paths)
+    result = dedupe_workflows(unique + from_push_paths)
+    log_debug(f"Total matching workflows: {[w['name'] for w in result]}")
+    return result
 
 
 def clean_command(cmd):
@@ -493,6 +501,7 @@ def build_step_env(step_env):
 def run_command(cmd_info, workflow_name):
     """Run a single command and return True if it passes."""
     if cmd_info.get('conditional'):
+        log_debug(f"Skipping conditional command: {cmd_info.get('name')}")
         print("  [SKIP] Conditional on github-hosted")
         return True
 
@@ -500,8 +509,10 @@ def run_command(cmd_info, workflow_name):
     script = clean_script(cmd_info['run'])
 
     if not script.strip():
+        log_debug(f"Skipping empty script: {name}")
         return True
 
+    log_debug(f"Running command: {name}")
     print(f"\n[{workflow_name}] {name}")
 
     first_line = script.split('\n', maxsplit=1)[0].strip()
@@ -519,6 +530,9 @@ def run_command(cmd_info, workflow_name):
     )
 
     if result.returncode != 0:
+        log_debug(f"Command FAILED: {name} (exit {result.returncode})")
+        log_debug(f"Stdout: {result.stdout[:500] if result.stdout else 'none'}")
+        log_debug(f"Stderr: {result.stderr[:500] if result.stderr else 'none'}")
         print(f"  FAILED (exit {result.returncode})")
         print("  Full command:")
         for line in script.split('\n'):
@@ -533,6 +547,7 @@ def run_command(cmd_info, workflow_name):
                 print(f"    {err_line}")
         return False
 
+    log_debug(f"Command PASSED: {name}")
     print("  PASSED")
     return True
 
@@ -593,25 +608,31 @@ def main():
 
     changed_files = get_changed_files()
     if not changed_files:
+        log_debug("No changed files found - exiting with code 0")
         print("No changed files.")
         sys.exit(0)
 
+    log_debug(f"Found {len(changed_files)} changed files: {changed_files}")
     print(f"Staged files ({len(changed_files)}):")
     for f in changed_files:
         print(f"  - {f}")
 
     if not run_lint_disable_check(changed_files):
+        log_debug("Lint disable check FAILED - exiting with code 2")
         sys.exit(2)
 
     if not run_single_assert_check(changed_files):
+        log_debug("Single assert check FAILED - exiting with code 2")
         sys.exit(2)
 
     if not run_workflow_yaml_lint(changed_files):
+        log_debug("Workflow YAML lint FAILED - exiting with code 2")
         sys.exit(2)
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
     matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
     if not matching_workflows:
+        log_debug("No matching workflows found - exiting with code 0")
         print("\nNo matching workflows found for additional checks.")
         sys.exit(0)
 
@@ -620,12 +641,14 @@ def main():
     static_ok = run_phase(
         matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands)
     if not static_ok:
+        log_debug("STATIC ANALYSIS FAILED - exiting with code 2")
         print("\n" + "="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing")
         print("="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing", file=sys.stderr)
         sys.exit(2)
 
+    log_debug("ALL CHECKS PASSED - exiting with code 0")
     print("\n" + "="*60)
     print("ALL CHECKS PASSED")
     print("="*60)
@@ -633,4 +656,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        log_debug(f"UNHANDLED EXCEPTION: {type(e).__name__}: {e}")
+        import traceback
+        log_debug(f"Traceback: {traceback.format_exc()}")
+        print(f"Hook crashed: {e}", file=sys.stderr)
+        sys.exit(2)
