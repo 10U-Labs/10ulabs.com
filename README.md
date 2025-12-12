@@ -31,9 +31,9 @@ bootstrap
                                                                                      │
                               ┌──────────────────────────┬───────────────────────────┼───────────────────────────┐
                               │                          │                           │                           │
-                      endpoint_v1_echo          endpoint_v1_contact                  │              endpoint_v1_rack_designer
-                                                         │                           │                           │
-                                                    www_index                        │              endpoint_v1_simulation_soc
+                      endpoint_v1_echo          endpoint_v1_contact      endpoint_v1_rack_designer      endpoint_v1_simulation_soc
+                                                         │
+                                                    www_index
                                                                                      │
                                                                         endpoint_v1_agents_shared
                                                                                      │
