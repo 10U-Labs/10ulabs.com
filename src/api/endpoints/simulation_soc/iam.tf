@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_simulation_soc_handler" {
-  name = local.lambda_role_name
+  name = local.handler_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

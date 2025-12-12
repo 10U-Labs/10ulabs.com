@@ -6,7 +6,7 @@ data "archive_file" "simulation_soc_handler" {
 
 resource "aws_lambda_function" "simulation_soc_handler" {
   filename         = data.archive_file.simulation_soc_handler.output_path
-  function_name    = var.simulation_soc_handler_function_name
+  function_name    = local.handler_function_name
   role             = aws_iam_role.lambda_simulation_soc_handler.arn
   handler          = "handler.handler"
   source_code_hash = data.archive_file.simulation_soc_handler.output_base64sha256
@@ -27,7 +27,7 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = var.simulation_soc_handler_function_name
+    Name = local.handler_function_name
   })
 }
 
@@ -38,11 +38,11 @@ resource "local_file" "auth_config" {
 }
 
 resource "aws_cloudwatch_log_group" "simulation_soc_handler" {
-  name              = var.simulation_soc_handler_log_group_name
+  name              = local.handler_log_group
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.simulation_soc_handler_function_name}Logs"
+    Name = "${local.handler_function_name}Logs"
   })
 }
 
