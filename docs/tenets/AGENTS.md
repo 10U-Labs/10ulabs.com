@@ -66,3 +66,5 @@ When making decisions, prioritize in this order:
 6. U.S. Soil Infrastructure (data sovereignty)
 
 If any action would violate tenet #1, **DO NOT PROCEED**.
+
+If you need something to accomplish any of these tenets, ask a human for help.
