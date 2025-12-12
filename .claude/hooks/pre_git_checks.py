@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Pre-git checks hook that runs static analysis before git commit."""
 import ast
+import datetime
 import fnmatch
 import json
 import os
@@ -12,6 +13,19 @@ from pathlib import Path
 import yaml
 
 from hook_utils import LINT_DISABLE_PATTERNS
+
+
+DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
+
+
+def log_debug(message):
+    """Append debug message to log file for diagnosing hook issues."""
+    try:
+        with open(DEBUG_LOG, 'a') as f:
+            timestamp = datetime.datetime.now().isoformat()
+            f.write(f"[{timestamp}] {message}\n")
+    except (IOError, OSError):
+        pass  # Don't fail if can't write log
 
 
 SKIP_LINT_CHECK_PATTERNS = [
@@ -535,10 +549,17 @@ def run_commands(commands, workflow_name):
 def parse_command_from_stdin():
     """Parse the bash command from Claude Code hook stdin JSON."""
     input_data = sys.stdin.read()
+    log_debug(f"pre_git_checks: stdin received {len(input_data)} bytes")
+    if not input_data:
+        log_debug("pre_git_checks: WARNING - stdin was empty!")
+        print("WARNING: pre_git_checks received empty stdin", file=sys.stderr)
     try:
         data = json.loads(input_data)
-        return data.get('tool_input', {}).get('command', '')
-    except json.JSONDecodeError:
+        command = data.get('tool_input', {}).get('command', '')
+        log_debug(f"pre_git_checks: parsed command: {command[:100]}...")
+        return command
+    except json.JSONDecodeError as e:
+        log_debug(f"pre_git_checks: JSON decode error: {e}")
         return ''
 
 
@@ -562,8 +583,10 @@ def main():
     command = parse_command_from_stdin()
     # Match git commit with optional flags between git and commit (e.g., git -C <path> commit)
     if not command or not re.search(r'\bgit\s+(?:[\w-]+\s+\S+\s+)*commit\b', command):
+        log_debug(f"pre_git_checks: skipping - not a git commit (command: {command[:50]}...)")
         sys.exit(0)
 
+    log_debug("pre_git_checks: starting static analysis checks")
     print("Running static analysis before git commit...")
     project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '.')
     os.chdir(project_dir)

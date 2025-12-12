@@ -363,35 +363,40 @@ class TestMain:
             "--terraform-version", loaded_config["terraform_version"],
             "--yq-version", loaded_config["yq_version"],
         ]
+        mocks = {}
         with patch.object(sys, "argv", test_args), \
              patch.object(setup_module, "get_arch", return_value="arm64"), \
              patch.object(setup_module, "get_version_codename", return_value="bookworm"), \
-             patch.object(setup_module, "add_docker_apt_repository") as mock_docker, \
-             patch.object(setup_module, "add_github_cli_apt_repository") as mock_gh, \
-             patch.object(setup_module, "install_system_packages") as mock_sys, \
-             patch.object(setup_module, "install_python_packages") as mock_pip, \
-             patch.object(setup_module, "install_yq") as mock_yq, \
-             patch.object(setup_module, "install_jsonlint") as mock_jsonlint, \
-             patch.object(setup_module, "install_hadolint") as mock_hadolint, \
-             patch.object(setup_module, "install_terraform") as mock_terraform, \
-             patch.object(setup_module, "create_runner_user") as mock_user, \
-             patch.object(setup_module, "install_github_actions_runner") as mock_runner, \
-             patch.object(setup_module, "install_ssm_agent") as mock_ssm, \
-             patch.object(setup_module, "install_cloudwatch_agent") as mock_cw, \
-             patch.object(setup_module, "cleanup_temp_files") as mock_cleanup:
+             patch.object(setup_module, "add_docker_apt_repository") as mocks["docker"], \
+             patch.object(setup_module, "add_github_cli_apt_repository") as mocks["gh"], \
+             patch.object(setup_module, "install_system_packages") as mocks["sys"], \
+             patch.object(setup_module, "install_python_packages") as mocks["pip"], \
+             patch.object(setup_module, "install_yq") as mocks["yq"], \
+             patch.object(setup_module, "install_jsonlint") as mocks["jsonlint"], \
+             patch.object(setup_module, "install_hadolint") as mocks["hadolint"], \
+             patch.object(setup_module, "install_terraform") as mocks["terraform"], \
+             patch.object(setup_module, "create_runner_user") as mocks["user"], \
+             patch.object(setup_module, "install_github_actions_runner") as mocks["runner"], \
+             patch.object(setup_module, "install_ssm_agent") as mocks["ssm"], \
+             patch.object(setup_module, "install_cloudwatch_agent") as mocks["cw"], \
+             patch.object(setup_module, "cleanup_temp_files") as mocks["cleanup"]:
             setup_module.main()
-            mock_docker.assert_called_once_with("bookworm")
-            mock_gh.assert_called_once()
-            mock_sys.assert_called_once()
-            mock_pip.assert_called_once()
-            mock_yq.assert_called_once_with("arm64", loaded_config["yq_version"])
-            mock_jsonlint.assert_called_once()
-            mock_hadolint.assert_called_once_with("arm64")
-            mock_terraform.assert_called_once_with("arm64", loaded_config["terraform_version"])
-            mock_user.assert_called_once_with(loaded_config["runner_user"])
-            mock_runner.assert_called_once_with(
-                "arm64", loaded_config["runner_user"], loaded_config["runner_version"]
-            )
-            mock_ssm.assert_called_once_with("arm64")
-            mock_cw.assert_called_once_with("arm64")
-            mock_cleanup.assert_called_once()
+        self._verify_install_calls(mocks, loaded_config)
+
+    def _verify_install_calls(self, mocks, config):
+        """Verify all install functions were called correctly."""
+        mocks["docker"].assert_called_once_with("bookworm")
+        mocks["gh"].assert_called_once()
+        mocks["sys"].assert_called_once()
+        mocks["pip"].assert_called_once()
+        mocks["yq"].assert_called_once_with("arm64", config["yq_version"])
+        mocks["jsonlint"].assert_called_once()
+        mocks["hadolint"].assert_called_once_with("arm64")
+        mocks["terraform"].assert_called_once_with("arm64", config["terraform_version"])
+        mocks["user"].assert_called_once_with(config["runner_user"])
+        mocks["runner"].assert_called_once_with(
+            "arm64", config["runner_user"], config["runner_version"]
+        )
+        mocks["ssm"].assert_called_once_with("arm64")
+        mocks["cw"].assert_called_once_with("arm64")
+        mocks["cleanup"].assert_called_once()
