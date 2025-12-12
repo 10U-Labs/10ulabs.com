@@ -102,7 +102,7 @@ jobs:
         run: |
           python3 -m pytest \
             test/api/endpoints/simulation_soc/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --verbose --capture=no --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/simulation_soc && terraform apply -auto-approve
       - name: Get website bucket name
