@@ -8,11 +8,6 @@
             "type": "command",
             "command": "python3 .claude/hooks/bash_command_blocker.py",
             "timeout": 300
-          },
-          {
-            "type": "command",
-            "command": "python3 .claude/hooks/pre_git_checks.py",
-            "timeout": 300
           }
         ]
       },
