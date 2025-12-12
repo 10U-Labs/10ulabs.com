@@ -76,13 +76,6 @@ jobs:
           echo "security_group_id=$SECURITY_GROUP_ID" >> $GITHUB_OUTPUT
           echo "subnet_ids=$SUBNET_IDS" >> $GITHUB_OUTPUT
           echo "ssm_param=$SSM_PARAM" >> $GITHUB_OUTPUT
-      - name: Install yq
-        run: |
-          ARCH=$(dpkg --print-architecture)
-          URL="https://github.com/mikefarah/yq/releases/latest"
-          URL="${URL}/download/yq_linux_${ARCH}"
-          sudo wget -qO /usr/local/bin/yq "$URL" && \
-            sudo chmod +x /usr/local/bin/yq
       - id: config
         name: Extract configuration values
         run: |
