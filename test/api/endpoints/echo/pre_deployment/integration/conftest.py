@@ -93,13 +93,7 @@ def api_backend_outputs(request):
     if not request.getfixturevalue("api_backend_terraform_initialized"):
         pytest.skip("Terraform init failed for api_backend")
     return {
-        "api_gateway_id": _terraform_output(
-            API_BACKEND_DIR, "api_gateway_id"
-        ),
-        "api_gateway_execution_arn": _terraform_output(
-            API_BACKEND_DIR, "api_gateway_execution_arn"
-        ),
-        "lambda_execution_role_arn": _terraform_output(
-            API_BACKEND_DIR, "lambda_execution_role_arn"
+        "api_gateway_rest_api_id": _terraform_output(
+            API_BACKEND_DIR, "api_gateway_rest_api_id"
         ),
     }
