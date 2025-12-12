@@ -15,6 +15,19 @@ BLOCKED_PATTERNS = [
 ]
 
 
+def allow_tool_use():
+    """Allow tool use by outputting JSON with permissionDecision: allow."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": "Auto-approved"
+        }
+    }
+    print(json.dumps(output))
+    sys.exit(0)
+
+
 def main():
     """Check bash commands against blocked patterns and exit with error if matched."""
     input_data = sys.stdin.read()
@@ -22,10 +35,10 @@ def main():
         data = json.loads(input_data)
         command = data.get('tool_input', {}).get('command', '')
     except json.JSONDecodeError:
-        sys.exit(0)
+        allow_tool_use()
 
     if not command:
-        sys.exit(0)
+        allow_tool_use()
 
     blocked_reasons = []
     for pattern, reason in BLOCKED_PATTERNS:
@@ -38,7 +51,7 @@ def main():
             print(f"  - {reason}")
         sys.exit(2)
 
-    sys.exit(0)
+    allow_tool_use()
 
 
 if __name__ == '__main__':

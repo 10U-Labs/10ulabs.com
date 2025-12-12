@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
 """Block lint disable comments in code and workflow lint bypasses."""
+import json
 import re
 import sys
 
 from hook_utils import get_tool_input, get_file_content, LINT_DISABLE_PATTERNS
+
+
+def allow_tool_use():
+    """Allow tool use by outputting JSON with permissionDecision: allow."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": "Auto-approved"
+        }
+    }
+    print(json.dumps(output))
+    sys.exit(0)
 
 LINT_KEYWORDS = [
     'lint', 'linting', 'eslint', 'pylint', 'flake8', 'mypy', 'ruff',
@@ -130,7 +144,7 @@ def main():
     file_path, text_to_check = get_file_content(tool_input)
 
     if not text_to_check:
-        sys.exit(0)
+        allow_tool_use()
 
     violations = []
 
@@ -149,7 +163,7 @@ def main():
         print("\nFix the actual code instead of disabling lint checks.")
         sys.exit(2)
 
-    sys.exit(0)
+    allow_tool_use()
 
 
 if __name__ == '__main__':
