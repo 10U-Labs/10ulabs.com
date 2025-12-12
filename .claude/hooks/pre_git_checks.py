@@ -18,6 +18,19 @@ from hook_utils import LINT_DISABLE_PATTERNS
 DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
 
 
+def deny_tool_use(reason):
+    """Output JSON to deny tool use and exit with code 0."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason
+        }
+    }
+    print(json.dumps(output))
+    sys.exit(0)
+
+
 def log_debug(message):
     """Append debug message to log file for diagnosing hook issues."""
     try:
@@ -618,19 +631,16 @@ def main():
         print(f"  - {f}")
 
     if not run_lint_disable_check(changed_files):
-        log_debug("Lint disable check FAILED - exiting with code 2")
-        print("LINT DISABLE CHECK FAILED", file=sys.stderr)
-        sys.exit(2)
+        log_debug("Lint disable check FAILED - denying tool use")
+        deny_tool_use("LINT DISABLE CHECK FAILED - Remove lint disable comments")
 
     if not run_single_assert_check(changed_files):
-        log_debug("Single assert check FAILED - exiting with code 2")
-        print("SINGLE ASSERT CHECK FAILED", file=sys.stderr)
-        sys.exit(2)
+        log_debug("Single assert check FAILED - denying tool use")
+        deny_tool_use("SINGLE ASSERT CHECK FAILED - Split into separate tests")
 
     if not run_workflow_yaml_lint(changed_files):
-        log_debug("Workflow YAML lint FAILED - exiting with code 2")
-        print("WORKFLOW YAML LINT FAILED", file=sys.stderr)
-        sys.exit(2)
+        log_debug("Workflow YAML lint FAILED - denying tool use")
+        deny_tool_use("WORKFLOW YAML LINT FAILED - Fix YAML lint errors")
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
     matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
@@ -644,12 +654,11 @@ def main():
     static_ok = run_phase(
         matching_workflows, "STATIC ANALYSIS", extract_static_analysis_commands)
     if not static_ok:
-        log_debug("STATIC ANALYSIS FAILED - exiting with code 2")
+        log_debug("STATIC ANALYSIS FAILED - denying tool use")
         print("\n" + "="*60)
         print("STATIC ANALYSIS FAILED - Fix issues before committing")
         print("="*60)
-        print("STATIC ANALYSIS FAILED - Fix issues before committing", file=sys.stderr)
-        sys.exit(2)
+        deny_tool_use("STATIC ANALYSIS FAILED - Fix lint/type errors")
 
     log_debug("ALL CHECKS PASSED - exiting with code 0")
     print("\n" + "="*60)
@@ -665,5 +674,4 @@ if __name__ == '__main__':
         log_debug(f"UNHANDLED EXCEPTION: {type(e).__name__}: {e}")
         import traceback
         log_debug(f"Traceback: {traceback.format_exc()}")
-        print(f"Hook crashed: {e}", file=sys.stderr)
-        sys.exit(2)
+        deny_tool_use(f"Hook crashed: {e}")
