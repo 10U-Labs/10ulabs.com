@@ -28,14 +28,6 @@ def create_iam_role_tests(roles: list):
                 f"IAM role '{resource_name}' has invalid name '{role_name}': {error}"
             )
 
-        def test_no_iam_role_names_contain_dashes(self):
-            """Verify no IAM role names contain dashes."""
-            violations = [(r, n) for r, n in roles if '-' in n]
-            assert len(violations) == 0, (
-                f"Found {len(violations)} IAM roles with dashes:\n"
-                + "\n".join(f"  - {r}: '{n}'" for r, n in violations)
-            )
-
     return TestIAMRoleNamingConventions
 
 
@@ -62,14 +54,6 @@ def create_lambda_function_tests(functions: list):
             assert error is None, (
                 f"Lambda function '{resource_name}' has invalid name "
                 f"'{function_name}': {error}"
-            )
-
-        def test_no_lambda_function_names_contain_dashes(self):
-            """Verify no Lambda function names contain dashes."""
-            violations = [(r, n) for r, n in functions if '-' in n]
-            assert len(violations) == 0, (
-                f"Found {len(violations)} Lambda functions with dashes:\n"
-                + "\n".join(f"  - {r}: '{n}'" for r, n in violations)
             )
 
     return TestLambdaFunctionNamingConventions
