@@ -78,19 +78,10 @@ jobs:
       - name: Run mypy on tests
         run: |
           MYPYPATH=lib/python python3 -m mypy test/api/endpoints/simulation_soc/
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ steps.config.outputs.terraform_version }}
-          terraform_wrapper: false
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/simulation_soc && \
             terraform fmt -diff -check -recursive
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
       - name: Terraform Init
         run: cd src/api/endpoints/simulation_soc && terraform init
       - env:
