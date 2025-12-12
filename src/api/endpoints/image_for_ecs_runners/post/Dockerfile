@@ -38,7 +38,7 @@ COPY --from=builder /tmp/runner.tar.gz /tmp/
 COPY entrypoint.py cloudwatch-agent-config.json /tmp/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        ca-certificates fontconfig fonts-wqy-zenhei git jq \
+        ca-certificates curl fontconfig fonts-wqy-zenhei git jq wget \
         libatk-bridge2.0-0t64 libatk1.0-0t64 libatspi2.0-0t64 libavahi-client3 \
         libavahi-common3 libcairo2 libcups2t64 libdrm-amdgpu1 libdrm2 \
         libfontconfig1 libfreetype6 libgbm1 libgl1 libgl1-mesa-dri libglib2.0-0t64 \
