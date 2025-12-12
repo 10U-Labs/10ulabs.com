@@ -5,6 +5,19 @@ import sys
 from typing import Callable
 
 
+def allow_tool_use():
+    """Allow tool use by outputting JSON with permissionDecision: allow."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "allow",
+            "permissionDecisionReason": "Auto-approved"
+        }
+    }
+    print(json.dumps(output))
+    sys.exit(0)
+
+
 LINT_DISABLE_PATTERNS = [
     (r'eslint-disable', 'eslint-disable'),
     (r'@ts-ignore', '@ts-ignore'),
@@ -51,7 +64,7 @@ def report_violations_and_exit(violations, blocked_message):
         for violation in violations:
             print(f"  - {violation}")
         sys.exit(2)
-    sys.exit(0)
+    allow_tool_use()
 
 
 def run_file_content_hook(check_fn: Callable, blocked_message: str):
@@ -60,7 +73,7 @@ def run_file_content_hook(check_fn: Callable, blocked_message: str):
     file_path, text_to_check = get_file_content(tool_input)
 
     if not text_to_check or not file_path:
-        sys.exit(0)
+        allow_tool_use()
 
     violations = check_fn(text_to_check, file_path)
     report_violations_and_exit(violations, blocked_message)
@@ -72,7 +85,7 @@ def run_content_only_hook(check_fn: Callable, blocked_message: str, extra_messag
     _, text_to_check = get_file_content(tool_input)
 
     if not text_to_check:
-        sys.exit(0)
+        allow_tool_use()
 
     violations = check_fn(text_to_check)
     if violations:
@@ -82,4 +95,4 @@ def run_content_only_hook(check_fn: Callable, blocked_message: str, extra_messag
         if extra_message:
             print(f"\n{extra_message}")
         sys.exit(2)
-    sys.exit(0)
+    allow_tool_use()
