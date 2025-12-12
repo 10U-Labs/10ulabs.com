@@ -619,14 +619,17 @@ def main():
 
     if not run_lint_disable_check(changed_files):
         log_debug("Lint disable check FAILED - exiting with code 2")
+        print("LINT DISABLE CHECK FAILED", file=sys.stderr)
         sys.exit(2)
 
     if not run_single_assert_check(changed_files):
         log_debug("Single assert check FAILED - exiting with code 2")
+        print("SINGLE ASSERT CHECK FAILED", file=sys.stderr)
         sys.exit(2)
 
     if not run_workflow_yaml_lint(changed_files):
         log_debug("Workflow YAML lint FAILED - exiting with code 2")
+        print("WORKFLOW YAML LINT FAILED", file=sys.stderr)
         sys.exit(2)
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
