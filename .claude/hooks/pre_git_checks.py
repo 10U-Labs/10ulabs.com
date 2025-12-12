@@ -21,7 +21,7 @@ DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
 def log_debug(message):
     """Append debug message to log file for diagnosing hook issues."""
     try:
-        with open(DEBUG_LOG, 'a') as f:
+        with open(DEBUG_LOG, 'a', encoding='utf-8') as f:
             timestamp = datetime.datetime.now().isoformat()
             f.write(f"[{timestamp}] {message}\n")
     except (IOError, OSError):
@@ -661,7 +661,7 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except Exception as e:
+    except (RuntimeError, ValueError, TypeError, OSError, IOError) as e:
         log_debug(f"UNHANDLED EXCEPTION: {type(e).__name__}: {e}")
         import traceback
         log_debug(f"Traceback: {traceback.format_exc()}")
