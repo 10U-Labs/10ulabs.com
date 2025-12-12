@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda_catchall_handler" {
-  name = "CatchAllHandler-ServiceRole"
+  name = local.lambda_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -13,7 +13,7 @@ resource "aws_iam_role" "lambda_catchall_handler" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "CatchAllHandler-ServiceRole"
+    Name = local.lambda_role_name
   })
 }
 
