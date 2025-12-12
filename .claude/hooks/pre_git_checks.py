@@ -41,9 +41,18 @@ def allow_tool_use():
 
 
 def deny_tool_use(reason):
-    """Block tool use by exiting with code 2 and stderr message."""
-    print(reason, file=sys.stderr)
-    sys.exit(2)
+    """Block tool use by outputting JSON with permissionDecision: block."""
+    output = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "block",
+            "permissionDecisionReason": reason
+        }
+    }
+    if OUTPUT_LINES:
+        output["systemMessage"] = "\n".join(OUTPUT_LINES)
+    print(json.dumps(output))
+    sys.exit(0)
 
 
 def log_debug(message):
