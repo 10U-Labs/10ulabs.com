@@ -29,6 +29,11 @@ resource "aws_lambda_function" "simulation_soc_handler" {
   tags = merge(local.common_tags, {
     Name = module.shared.lambda_handler_names.simulation_soc
   })
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_simulation_soc_handler_basic,
+    aws_iam_role_policy.lambda_simulation_soc_handler_kms,
+  ]
 }
 
 # Generate frontend auth config
