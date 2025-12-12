@@ -2,6 +2,7 @@
 import json
 import os
 import subprocess
+import urllib.request
 import pytest
 
 
@@ -11,14 +12,13 @@ def get_github_oidc_token():
     token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
     if not token_url or not token_request_token:
         pytest.skip("OIDC token not available")
-    result = subprocess.run(
-        ['curl', '-s', '-H', f'Authorization: Bearer {token_request_token}',
-         f'{token_url}&audience=sts.amazonaws.com'],
-        capture_output=True,
-        text=True,
-        check=True
+    url = f'{token_url}&audience=sts.amazonaws.com'
+    request = urllib.request.Request(
+        url,
+        headers={'Authorization': f'Bearer {token_request_token}'}
     )
-    data = json.loads(result.stdout)
+    with urllib.request.urlopen(request) as response:
+        data = json.loads(response.read().decode('utf-8'))
     token = data.get('value')
     if not token:
         pytest.fail("Could not retrieve OIDC token")
