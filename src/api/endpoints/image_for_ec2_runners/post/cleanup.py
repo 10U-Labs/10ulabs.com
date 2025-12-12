@@ -2,11 +2,12 @@
 """Script to clean up old AMIs, snapshots, and launch templates."""
 import argparse
 from dataclasses import dataclass
+import json
 import re
 import sys
+
 import boto3
 from botocore.exceptions import ClientError
-import json
 
 
 @dataclass

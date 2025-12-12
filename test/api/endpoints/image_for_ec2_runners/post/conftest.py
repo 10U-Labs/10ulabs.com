@@ -15,14 +15,36 @@ SHARED_MODULE_PATH = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "o
 TFVARS_PATH = REPO_ROOT / "src" / "api" / "backend" / "terraform.tfvars"
 
 
+def _parse_locals() -> dict:
+    """Parse locals from shared module locals.tf."""
+    locals_path = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
+    with open(locals_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    values = {}
+    pattern = r'(\w+)\s*=\s*"([^"]+)"'
+    for match in re.finditer(pattern, content):
+        key, value = match.groups()
+        values[key] = value
+    return values
+
+
 def _get_terraform_output_value(output_name: str) -> str:
     """ get terraform output value."""
     with open(SHARED_MODULE_PATH, 'r', encoding='utf-8') as f:
         content = f.read()
+    # Try literal string value first
     pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*"([^"]+)"'
     match = re.search(pattern, content)
-    result = match.group(1) if match else ''
-    return result
+    if match:
+        return match.group(1)
+    # Try local.* reference
+    local_pattern = rf'output\s+"{output_name}"\s*\{{\s*value\s*=\s*local\.(\w+)'
+    local_match = re.search(local_pattern, content)
+    if local_match:
+        local_name = local_match.group(1)
+        locals_dict = _parse_locals()
+        return locals_dict.get(local_name, '')
+    return ''
 
 
 def get_aws_region() -> str:
