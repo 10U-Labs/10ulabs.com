@@ -6,7 +6,7 @@ data "archive_file" "catchall_handler" {
 
 resource "aws_lambda_function" "catchall_handler" {
   filename         = data.archive_file.catchall_handler.output_path
-  function_name    = var.catchall_handler_function_name
+  function_name    = module.shared.lambda_handler_names.catchall
   role             = aws_iam_role.lambda_catchall_handler.arn
   handler          = "catchall.handler"
   source_code_hash = data.archive_file.catchall_handler.output_base64sha256
@@ -22,7 +22,7 @@ resource "aws_lambda_function" "catchall_handler" {
   }
 
   tags = merge(local.common_tags, {
-    Name = var.catchall_handler_function_name
+    Name = module.shared.lambda_handler_names.catchall
   })
 }
 
@@ -31,6 +31,6 @@ resource "aws_cloudwatch_log_group" "catchall_handler" {
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "${var.catchall_handler_function_name}Logs"
+    Name = "${module.shared.lambda_handler_names.catchall}Logs"
   })
 }
