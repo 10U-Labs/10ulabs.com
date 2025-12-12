@@ -20,8 +20,7 @@ OUTPUT_LINES = []
 
 
 def capture_print(message=""):
-    """Print and capture output for later inclusion in hook response."""
-    print(message)
+    """Capture output for later inclusion in hook response JSON."""
     OUTPUT_LINES.append(message)
 
 
@@ -41,11 +40,11 @@ def allow_tool_use():
 
 
 def deny_tool_use(reason):
-    """Block tool use by outputting JSON with permissionDecision: block."""
+    """Deny tool use by outputting JSON with permissionDecision: deny."""
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "block",
+            "permissionDecision": "deny",
             "permissionDecisionReason": reason
         }
     }
