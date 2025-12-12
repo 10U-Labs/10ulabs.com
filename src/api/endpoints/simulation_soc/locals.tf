@@ -5,9 +5,8 @@ locals {
   github_repo_full = "${module.shared.github_org}/${module.shared.name_for_github_repo}"
 
   # Lambda configuration (single source of truth)
-  handler_function_name = module.shared.lambda_handler_names.simulation_soc
-  handler_log_group     = "/aws/lambda/${local.handler_function_name}"
-  handler_role_name     = "${local.resource_prefix}SimulationSocHandlerServiceRole"
+  handler_log_group = "/aws/lambda/${module.shared.lambda_handler_names.simulation_soc}"
+  handler_role_name = "${local.resource_prefix}SimulationSocHandlerServiceRole"
 
   common_tags = {
     ManagedBy = "terraform"
