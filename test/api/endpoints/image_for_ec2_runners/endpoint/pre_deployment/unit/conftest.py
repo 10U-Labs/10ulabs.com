@@ -107,8 +107,8 @@ def _module_loader_fixture() -> Callable[[str, Path], ModuleType]:
     return _load
 
 
-@pytest.fixture
-def build_ami_module(module_loader):
+@pytest.fixture(name="build_ami_module")
+def _build_ami_module_fixture(module_loader):
     """Load the build_ami module."""
     return module_loader("build_ami", POST_DIR / "build_ami.py")
 
@@ -263,3 +263,56 @@ def create_mock_boto_clients():
 def mock_boto_clients():
     """Return factory function for creating mock boto clients."""
     return create_mock_boto_clients
+
+
+@pytest.fixture(name="script_file")
+def _script_file_fixture(tmp_path):
+    """Create a temporary script file for testing."""
+    script = tmp_path / "setup.sh"
+    script.write_text("#!/bin/bash\necho hello")
+    return script
+
+
+@pytest.fixture(name="make_script_params")
+def _make_script_params_fixture(build_ami_module, script_file):
+    """Factory for creating ScriptParams with sensible defaults."""
+    defaults = {
+        "ip_addr": "1.2.3.4",
+        "key_material": "key",
+        "setup_script": script_file,
+        "runner_version": "1.0",
+        "terraform_version": "1.0",
+        "yq_version": "1.0",
+        "runner_user": "test",
+    }
+
+    def _make(**kwargs):
+        params = {**defaults, **kwargs}
+        return build_ami_module.ScriptParams(
+            params["ip_addr"],
+            params["key_material"],
+            params["setup_script"],
+            params["runner_version"],
+            params["terraform_version"],
+            params["yq_version"],
+            params["runner_user"],
+        )
+    return _make
+
+
+@pytest.fixture(name="mock_ssh_context")
+def _mock_ssh_context_fixture(build_ami_module):
+    """Provide patched SSH client and SFTP mocks for run_script tests."""
+    with patch.object(
+        build_ami_module.paramiko.Ed25519Key, 'from_private_key'
+    ):
+        mock_client = MagicMock()
+        mock_sftp = MagicMock()
+        mock_client.open_sftp.return_value = mock_sftp
+        with patch.object(
+            build_ami_module.paramiko,
+            'SSHClient',
+            return_value=mock_client,
+        ):
+            with patch.object(build_ami_module, 'run_ssh_command'):
+                yield mock_client, mock_sftp
