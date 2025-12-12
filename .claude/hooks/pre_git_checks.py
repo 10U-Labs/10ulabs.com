@@ -35,7 +35,7 @@ def allow_tool_use():
         }
     }
     if OUTPUT_LINES:
-        output["outputToUser"] = "\n".join(OUTPUT_LINES)
+        output["systemMessage"] = "\n".join(OUTPUT_LINES)
     print(json.dumps(output))
     sys.exit(0)
 
