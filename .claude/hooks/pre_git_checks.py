@@ -71,22 +71,53 @@ SKIP_LINT_CHECK_PATTERNS = [
 ]
 
 
-def get_changed_files():
-    """Get list of changed files from git staging area or last commit."""
+def get_changed_files(command=''):
+    """Get list of changed files from git staging area, working tree, or last commit.
+
+    If command contains 'git add', also include unstaged modified files since
+    the hook runs BEFORE the command executes.
+    """
+    files = set()
+
+    # Get staged files
     result = subprocess.run(
         ['git', 'diff', '--cached', '--name-only', '--no-ext-diff'],
         capture_output=True, text=True, check=False
     )
-    files = result.stdout.strip().split('\n') if result.stdout.strip() else []
-    log_debug(f"git diff --cached returned {len(files)} files: {files[:5]}...")
+    staged = result.stdout.strip().split('\n') if result.stdout.strip() else []
+    log_debug(f"git diff --cached returned {len(staged)} files: {staged[:5]}...")
+    files.update(f for f in staged if f)
+
+    # If command includes 'git add', get unstaged modified files too
+    if 'git add' in command:
+        result = subprocess.run(
+            ['git', 'diff', '--name-only', '--no-ext-diff'],
+            capture_output=True, text=True, check=False
+        )
+        unstaged = result.stdout.strip().split('\n') if result.stdout.strip() else []
+        log_debug(f"git diff (unstaged) returned {len(unstaged)} files: {unstaged[:5]}...")
+        files.update(f for f in unstaged if f)
+
+        # Also get untracked files if 'git add -A' or 'git add .'
+        if re.search(r'git add\s+(-A|\.)', command):
+            result = subprocess.run(
+                ['git', 'ls-files', '--others', '--exclude-standard'],
+                capture_output=True, text=True, check=False
+            )
+            untracked = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            log_debug(f"git ls-files (untracked) returned {len(untracked)} files")
+            files.update(f for f in untracked if f)
+
     if not files:
-        log_debug("No staged files, falling back to HEAD~1")
+        log_debug("No staged/unstaged files, falling back to HEAD~1")
         result = subprocess.run(
             ['git', 'diff', 'HEAD~1', '--name-only', '--no-ext-diff'],
             capture_output=True, text=True, check=False
         )
-        files = result.stdout.strip().split('\n') if result.stdout.strip() else []
-        log_debug(f"git diff HEAD~1 returned {len(files)} files: {files[:5]}...")
+        fallback = result.stdout.strip().split('\n') if result.stdout.strip() else []
+        log_debug(f"git diff HEAD~1 returned {len(fallback)} files: {fallback[:5]}...")
+        files.update(f for f in fallback if f)
+
     return [f for f in files if f]
 
 
@@ -644,14 +675,14 @@ def main():
     project_dir = os.environ.get('CLAUDE_PROJECT_DIR', '.')
     os.chdir(project_dir)
 
-    changed_files = get_changed_files()
+    changed_files = get_changed_files(command)
     if not changed_files:
         log_debug("No changed files found - allowing")
         capture_print("No changed files.")
         allow_tool_use()
 
     log_debug(f"Found {len(changed_files)} changed files: {changed_files}")
-    capture_print(f"Staged files ({len(changed_files)}):")
+    capture_print(f"Changed files ({len(changed_files)}):")
     for f in changed_files:
         capture_print(f"  - {f}")
 
