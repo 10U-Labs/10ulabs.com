@@ -157,7 +157,7 @@ jobs:
             BASE_COMMIT="HEAD^"
           fi
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/api/(index\.html|openapi\.yml|404\.html)'; then
+            if grep -qE 'src/www/api/(index\.html|openapi\.json|404\.html)'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
