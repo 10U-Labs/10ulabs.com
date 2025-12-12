@@ -1,5 +1,4 @@
 """Unit tests for load_config functionality."""
-import json
 
 
 class TestLoadConfigBasic:

@@ -206,227 +206,94 @@ class TestWaitForInstanceIntegration:
 class TestRunScriptConnection:
     """Tests for run_script SSH connection handling."""
 
-    def test_connects_to_correct_ip(self, build_ami_module, tmp_path):
+    def test_connects_to_correct_ip(
+        self, build_ami_module, mock_ssh_context, make_script_params
+    ):
         """Test that SSH connects to correct IP address."""
-        script_file = tmp_path / "setup.sh"
-        script_file.write_text("#!/bin/bash\necho hello")
-        with patch.object(
-            build_ami_module.paramiko.Ed25519Key, 'from_private_key'
-        ):
-            mock_client = MagicMock()
-            mock_sftp = MagicMock()
-            mock_client.open_sftp.return_value = mock_sftp
-            with patch.object(
-                build_ami_module.paramiko,
-                'SSHClient',
-                return_value=mock_client,
-            ):
-                with patch.object(build_ami_module, 'run_ssh_command'):
-                    params = build_ami_module.ScriptParams(
-                        "192.168.1.100",
-                        "key",
-                        script_file,
-                        "1.0",
-                        "1.0",
-                        "test",
-                    )
-                    build_ami_module.run_script(params)
-                    assert (
-                        mock_client.connect.call_args[0][0] == "192.168.1.100"
-                    )
+        mock_client, _ = mock_ssh_context
+        params = make_script_params(ip_addr="192.168.1.100")
+        build_ami_module.run_script(params)
+        assert mock_client.connect.call_args[0][0] == "192.168.1.100"
 
-    def test_connects_with_admin_username(self, build_ami_module, tmp_path):
+    def test_connects_with_admin_username(
+        self, build_ami_module, mock_ssh_context, make_script_params
+    ):
         """Test that SSH connects with admin username."""
-        script_file = tmp_path / "setup.sh"
-        script_file.write_text("#!/bin/bash\necho hello")
-        with patch.object(
-            build_ami_module.paramiko.Ed25519Key, 'from_private_key'
-        ):
-            mock_client = MagicMock()
-            mock_sftp = MagicMock()
-            mock_client.open_sftp.return_value = mock_sftp
-            with patch.object(
-                build_ami_module.paramiko,
-                'SSHClient',
-                return_value=mock_client,
-            ):
-                with patch.object(build_ami_module, 'run_ssh_command'):
-                    params = build_ami_module.ScriptParams(
-                        "1.2.3.4",
-                        "key",
-                        script_file,
-                        "1.0",
-                        "1.0",
-                        "test",
-                    )
-                    build_ami_module.run_script(params)
-                    assert (
-                        mock_client.connect.call_args[1]["username"]
-                        == "admin"
-                    )
+        mock_client, _ = mock_ssh_context
+        params = make_script_params()
+        build_ami_module.run_script(params)
+        assert mock_client.connect.call_args[1]["username"] == "admin"
 
-    def test_closes_client_after_completion(self, build_ami_module, tmp_path):
+    def test_closes_client_after_completion(
+        self, build_ami_module, mock_ssh_context, make_script_params
+    ):
         """Test that SSH client is closed after completion."""
-        script_file = tmp_path / "setup.sh"
-        script_file.write_text("#!/bin/bash\necho hello")
-        with patch.object(
-            build_ami_module.paramiko.Ed25519Key, 'from_private_key'
-        ):
-            mock_client = MagicMock()
-            mock_sftp = MagicMock()
-            mock_client.open_sftp.return_value = mock_sftp
-            with patch.object(
-                build_ami_module.paramiko,
-                'SSHClient',
-                return_value=mock_client,
-            ):
-                with patch.object(build_ami_module, 'run_ssh_command'):
-                    params = build_ami_module.ScriptParams(
-                        "1.2.3.4",
-                        "key",
-                        script_file,
-                        "1.0",
-                        "1.0",
-                        "test",
-                    )
-                    build_ami_module.run_script(params)
-                    assert mock_client.close.called
+        mock_client, _ = mock_ssh_context
+        params = make_script_params()
+        build_ami_module.run_script(params)
+        assert mock_client.close.called
 
 
 class TestRunScriptSftp:
     """Tests for run_script SFTP file handling."""
 
-    def test_uploads_script_via_sftp(self, build_ami_module, tmp_path):
+    def test_uploads_script_via_sftp(
+        self, build_ami_module, mock_ssh_context, make_script_params
+    ):
         """Test that script is uploaded via SFTP."""
-        script_file = tmp_path / "setup.sh"
-        script_file.write_text("#!/bin/bash\necho hello")
-        with patch.object(
-            build_ami_module.paramiko.Ed25519Key, 'from_private_key'
-        ):
-            mock_client = MagicMock()
-            mock_sftp = MagicMock()
-            mock_client.open_sftp.return_value = mock_sftp
-            with patch.object(
-                build_ami_module.paramiko,
-                'SSHClient',
-                return_value=mock_client,
-            ):
-                with patch.object(build_ami_module, 'run_ssh_command'):
-                    params = build_ami_module.ScriptParams(
-                        "1.2.3.4",
-                        "key",
-                        script_file,
-                        "1.0",
-                        "1.0",
-                        "test",
-                    )
-                    build_ami_module.run_script(params)
-                    assert mock_sftp.put.called
+        _, mock_sftp = mock_ssh_context
+        params = make_script_params()
+        build_ami_module.run_script(params)
+        assert mock_sftp.put.called
 
-    def test_makes_script_executable(self, build_ami_module, tmp_path):
+    def test_makes_script_executable(
+        self, build_ami_module, mock_ssh_context, make_script_params
+    ):
         """Test that script is made executable after upload."""
-        script_file = tmp_path / "setup.sh"
-        script_file.write_text("#!/bin/bash\necho hello")
-        with patch.object(
-            build_ami_module.paramiko.Ed25519Key, 'from_private_key'
-        ):
-            mock_client = MagicMock()
-            mock_sftp = MagicMock()
-            mock_client.open_sftp.return_value = mock_sftp
-            with patch.object(
-                build_ami_module.paramiko,
-                'SSHClient',
-                return_value=mock_client,
-            ):
-                with patch.object(build_ami_module, 'run_ssh_command'):
-                    params = build_ami_module.ScriptParams(
-                        "1.2.3.4",
-                        "key",
-                        script_file,
-                        "1.0",
-                        "1.0",
-                        "test",
-                    )
-                    build_ami_module.run_script(params)
-                    mock_sftp.chmod.assert_called_with(
-                        "/tmp/setup.sh", 0o755
-                    )
+        _, mock_sftp = mock_ssh_context
+        params = make_script_params()
+        build_ami_module.run_script(params)
+        mock_sftp.chmod.assert_called_with("/tmp/setup.sh", 0o755)
 
-    def test_closes_sftp_after_upload(self, build_ami_module, tmp_path):
+    def test_closes_sftp_after_upload(
+        self, build_ami_module, mock_ssh_context, make_script_params
+    ):
         """Test that SFTP connection is closed after upload."""
-        script_file = tmp_path / "setup.sh"
-        script_file.write_text("#!/bin/bash\necho hello")
-        with patch.object(
-            build_ami_module.paramiko.Ed25519Key, 'from_private_key'
-        ):
-            mock_client = MagicMock()
-            mock_sftp = MagicMock()
-            mock_client.open_sftp.return_value = mock_sftp
-            with patch.object(
-                build_ami_module.paramiko,
-                'SSHClient',
-                return_value=mock_client,
-            ):
-                with patch.object(build_ami_module, 'run_ssh_command'):
-                    params = build_ami_module.ScriptParams(
-                        "1.2.3.4",
-                        "key",
-                        script_file,
-                        "1.0",
-                        "1.0",
-                        "test",
-                    )
-                    build_ami_module.run_script(params)
-                    assert mock_sftp.close.called
+        _, mock_sftp = mock_ssh_context
+        params = make_script_params()
+        build_ami_module.run_script(params)
+        assert mock_sftp.close.called
 
 
 class TestScriptParamsDataclass:
     """Tests for ScriptParams dataclass."""
 
-    def test_stores_ip_addr(self, build_ami_module, tmp_path):
+    def test_stores_ip_addr(self, make_script_params):
         """Test that ip_addr is stored correctly."""
-        script = tmp_path / "setup.py"
-        params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", script, "2.0", "4.0", "runner"
-        )
+        params = make_script_params(ip_addr="1.2.3.4")
         assert params.ip_addr == "1.2.3.4"
 
-    def test_stores_key_material(self, build_ami_module, tmp_path):
+    def test_stores_key_material(self, make_script_params):
         """Test that key_material is stored correctly."""
-        script = tmp_path / "setup.py"
-        params = build_ami_module.ScriptParams(
-            "1.2.3.4", "my-key", script, "2.0", "4.0", "runner"
-        )
+        params = make_script_params(key_material="my-key")
         assert params.key_material == "my-key"
 
-    def test_stores_setup_script(self, build_ami_module, tmp_path):
+    def test_stores_setup_script(self, make_script_params, script_file):
         """Test that setup_script is stored correctly."""
-        script = tmp_path / "setup.py"
-        params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", script, "2.0", "4.0", "runner"
-        )
-        assert params.setup_script == script
+        params = make_script_params(setup_script=script_file)
+        assert params.setup_script == script_file
 
-    def test_stores_runner_version(self, build_ami_module, tmp_path):
+    def test_stores_runner_version(self, make_script_params):
         """Test that runner_version is stored correctly."""
-        script = tmp_path / "setup.py"
-        params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", script, "2.330.0", "4.0", "runner"
-        )
+        params = make_script_params(runner_version="2.330.0")
         assert params.runner_version == "2.330.0"
 
-    def test_stores_yq_version(self, build_ami_module, tmp_path):
+    def test_stores_yq_version(self, make_script_params):
         """Test that yq_version is stored correctly."""
-        script = tmp_path / "setup.py"
-        params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", script, "2.0", "4.44.1", "runner"
-        )
+        params = make_script_params(yq_version="4.44.1")
         assert params.yq_version == "4.44.1"
 
-    def test_stores_runner_user(self, build_ami_module, tmp_path):
+    def test_stores_runner_user(self, make_script_params):
         """Test that runner_user is stored correctly."""
-        script = tmp_path / "setup.py"
-        params = build_ami_module.ScriptParams(
-            "1.2.3.4", "key", script, "2.0", "4.0", "github-runner"
-        )
+        params = make_script_params(runner_user="github-runner")
         assert params.runner_user == "github-runner"
