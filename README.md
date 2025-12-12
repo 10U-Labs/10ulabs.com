@@ -88,4 +88,4 @@ bootstrap
 - [x] `endpoint_v1_contact.yml`
 - [x] `www_index.yml`
 - [x] `endpoint_v1_rack_designer.yml`
-- [ ] `endpoint_v1_simulation_soc.yml`
+- [x] `endpoint_v1_simulation_soc.yml`
