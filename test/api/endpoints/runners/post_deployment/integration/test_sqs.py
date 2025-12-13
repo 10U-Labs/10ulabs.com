@@ -75,7 +75,7 @@ def test_sqs_dlq_receives_failed_messages(sqs_client, config):
 
 def test_sqs_job_dlq_exists_and_configured(sqs_client, config):
     """Test sqs job dlq exists and configured."""
-    queue_name = config["job_queue_dlq_name"]
+    queue_name = config["job_dlq_name"]
     dlq_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
     attr_names = ['MessageRetentionPeriod']
     attributes = sqs_client.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=attr_names)
@@ -109,40 +109,7 @@ def test_sqs_drift_recovery_queue_has_deduplication(sqs_client, config):
     assert attributes['Attributes'].get('ContentBasedDeduplication') == 'true'
 
 
-def test_sqs_job_queue_can_send_message(sqs_client, config):
-    """Test we can send a message to the job queue."""
-    queue_name = config["job_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
-    response = sqs_client.send_message(
-        QueueUrl=queue_url,
-        MessageBody='{"test": "post-deployment-integration-test"}'
-    )
-    assert 'MessageId' in response
-    # Clean up: receive and delete the test message
-    messages = sqs_client.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=1)
-    if 'Messages' in messages:
-        for msg in messages['Messages']:
-            sqs_client.delete_message(
-                QueueUrl=queue_url, ReceiptHandle=msg['ReceiptHandle']
-            )
-
-
-def test_sqs_job_queue_can_receive_message(sqs_client, config):
-    """Test we can receive messages from the job queue."""
-    queue_name = config["job_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
-    # Send a test message first
-    sqs_client.send_message(
-        QueueUrl=queue_url,
-        MessageBody='{"test": "post-deployment-receive-test"}'
-    )
-    # Receive it
-    response = sqs_client.receive_message(
-        QueueUrl=queue_url, MaxNumberOfMessages=1, WaitTimeSeconds=1
-    )
-    assert 'Messages' in response
-    # Clean up
-    for msg in response['Messages']:
-        sqs_client.delete_message(
-            QueueUrl=queue_url, ReceiptHandle=msg['ReceiptHandle']
-        )
+# NOTE: Removed test_sqs_job_queue_can_send_message and test_sqs_job_queue_can_receive_message
+# These tests sent real messages to the production job queue which has a Lambda trigger.
+# The Lambda would process these invalid test messages, fail, and trip the circuit breaker.
+# SQS send/receive capability is an AWS service guarantee - no need to test it.
