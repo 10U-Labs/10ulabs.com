@@ -14,7 +14,7 @@
   },
   "api_shared_ecs_runner": {
     "depends_on": [
-      "endpoint_health"
+      "endpoint_v1_ec2_runner"
     ],
     "name": "Deploying API Shared ECS Runner Infrastructure",
     "paths": [
@@ -288,7 +288,7 @@
   },
   "endpoint_v1_agents_shared": {
     "depends_on": [
-      "endpoint_v1_runners"
+      "endpoint_v1_simulation_soc"
     ],
     "name": "Deploying Agents Shared Infrastructure",
     "paths": [
@@ -310,7 +310,7 @@
   },
   "endpoint_v1_contact": {
     "depends_on": [
-      "endpoint_v1_runners"
+      "endpoint_v1_echo"
     ],
     "name": "Ensuring /v1/contact API endpoint exists and is properly configured",
     "paths": [
@@ -399,7 +399,7 @@
   },
   "endpoint_v1_rack_designer": {
     "depends_on": [
-      "endpoint_v1_runners"
+      "www_index"
     ],
     "name": "Ensuring /v1/rack-designer API endpoint exists and is properly configured",
     "paths": [
@@ -411,7 +411,6 @@
   },
   "endpoint_v1_runners": {
     "depends_on": [
-      "endpoint_v1_ec2_runner",
       "endpoint_v1_ecs_runner"
     ],
     "name": "Ensuring the /v1/runners API endpoint exists and is properly configured",
@@ -426,7 +425,7 @@
   },
   "endpoint_v1_simulation_soc": {
     "depends_on": [
-      "endpoint_v1_runners"
+      "endpoint_v1_rack_designer"
     ],
     "name": "Ensuring the /v1/simulation-soc API endpoint exists and is properly configured",
     "paths": [

@@ -11,35 +11,38 @@ bootstrap
                     │
                     └── endpoint_health
                             │
-                            ├── api_shared_runners ─────────────────────────────────┐
-                            │       │                                                │
-                            │       └── endpoint_v1_image_for_ec2_runners            │
-                            │               │                                        │
-                            │               └── endpoint_v1_ec2_runner ──────────────┤
-                            │                                                        │
-                            └── api_shared_ecs_runner ───────────────────────────────┤
-                                                                                     │
-                                                        endpoint_v1_image_for_ecs_runners
-                                                                     │
-                                                        endpoint_v1_ecs_runner ──────┤
-                                                                                     │
-                                                                          endpoint_v1_runners
-                                                                                     │
-                              ┌──────────────────────────┬───────────────────────────┼───────────────────────────┐
-                              │                          │                           │                           │
-                      endpoint_v1_echo          endpoint_v1_contact      endpoint_v1_rack_designer      endpoint_v1_simulation_soc
-                                                         │
-                                                    www_index
-                                                                                     │
-                                                                        endpoint_v1_agents_shared
-                                                                                     │
-                                                              endpoint_v1_agents_troubleshooter_of_workflows
-                                                                                     │
-                    ┌────────────────────────────────────────────────────────────────┼────────────────────────────────────────────────────────────────┐
-                    │                                                                │                                                                │
-    endpoint_v1_agents_*_of_agents                            endpoint_v1_agents_*_of_workflows                            endpoint_v1_agents_*_of_*_tests
-    (creator_of_agents, deleter_of_agents,                    (creator_of_workflows, deleter_of_workflows,                 (creator_of_unit_tests, etc.)
-     evaluator_of_agents, modifier_of_agents)                  evaluator_of_workflows, modifier_of_workflows)
+                            └── api_shared_runners
+                                    │
+                                    └── endpoint_v1_image_for_ec2_runners
+                                            │
+                                            └── endpoint_v1_ec2_runner
+                                                    │
+                                                    └── api_shared_ecs_runner
+                                                            │
+                                                            └── endpoint_v1_image_for_ecs_runners
+                                                                    │
+                                                                    └── endpoint_v1_ecs_runner
+                                                                            │
+                                                                            └── endpoint_v1_runners
+                                                                                    │
+                                                                                    └── endpoint_v1_echo
+                                                                                            │
+                                                                                            └── endpoint_v1_contact
+                                                                                                    │
+                                                                                                    └── www_index
+                                                                                                            │
+                                                                                                            └── endpoint_v1_rack_designer
+                                                                                                                    │
+                                                                                                                    └── endpoint_v1_simulation_soc
+                                                                                                                            │
+                                                                                                                            └── endpoint_v1_agents_shared
+                                                                                                                                    │
+                                                                                                                                    └── endpoint_v1_agents_troubleshooter_of_workflows
+                                                                                                                                            │
+                                          ┌─────────────────────────────────────────────────────────────────────────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────┐
+                                          │                                                                                                 │                                                                                                 │
+                          endpoint_v1_agents_*_of_agents                                                            endpoint_v1_agents_*_of_workflows                                                             endpoint_v1_agents_*_of_*_tests
+                          (creator, deleter, evaluator, modifier)                                                   (creator, deleter, evaluator, modifier)                                                       (creator, deleter, modifier of unit/integration/e2e tests)
 ```
 
 ## Deployment Status
