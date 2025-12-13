@@ -190,11 +190,11 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
         'circuit_breaker_state_table': f"{prefix}-circuit-breaker-state",
         'workflow_runners_table': f"{prefix}-workflow-runners",
         'incidents_table': f"{prefix}-incidents",
-        # SQS queues (job_dlq and webhook_dlq use webhook handler name per locals.tf)
-        'job_queue': f"{prefix}-jobs",
-        'job_dlq': f"{webhook_handler}-job-dlq",
-        'webhook_dlq': f"{webhook_handler}-dlq",
-        'drift_recovery_queue': f"{prefix}-DriftRecovery.fifo",
+        # SQS queues (PascalCase naming convention)
+        'job_queue': f"{webhook_handler}Jobs",
+        'job_dlq': f"{webhook_handler}JobDlq",
+        'webhook_dlq': f"{webhook_handler}Dlq",
+        'drift_recovery_queue': f"{prefix}DriftRecovery.fifo",
     }
 
 
@@ -347,3 +347,39 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
                     functions.append((match.group(1), handler_names[module_match.group(1)]))
 
     return functions
+
+
+def extract_sqs_queue_names(tf_file: Path) -> list:
+    """Extract SQS queue names from a Terraform file.
+
+    Handles quoted strings and local references.
+
+    Args:
+        tf_file: Path to the Terraform file (typically sqs.tf)
+
+    Returns:
+        List of (resource_name, resolved_queue_name) tuples.
+    """
+    if not tf_file.exists():
+        return []
+    with open(tf_file, encoding="utf-8") as f:
+        content = f.read()
+
+    prefix = get_resource_prefix()
+    local_values = get_endpoint_local_values(tf_file.parent)
+    queues = []
+
+    for match in re.finditer(r'resource\s+"aws_sqs_queue"\s+"([^"]+)"\s*\{', content):
+        block_content = _extract_block_content(content, match.end() - 1)
+        name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
+        if name_match:
+            queue_name = _resolve_prefix_refs(name_match.group(1), prefix)
+            queues.append((match.group(1), queue_name))
+        else:
+            local_match = re.search(
+                r'^\s*name\s*=\s*local\.(\w+)', block_content, re.MULTILINE
+            )
+            if local_match and local_match.group(1) in local_values:
+                queues.append((match.group(1), local_values[local_match.group(1)]))
+
+    return queues

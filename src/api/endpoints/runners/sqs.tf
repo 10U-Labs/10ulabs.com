@@ -32,7 +32,7 @@ resource "aws_sqs_queue" "job_queue" {
 }
 
 resource "aws_sqs_queue" "drift_recovery" {
-  name                        = "${local.resource_prefix}-DriftRecovery.fifo"
+  name                        = "${local.resource_prefix}DriftRecovery.fifo"
   fifo_queue                  = true
   content_based_deduplication = true
   deduplication_scope         = "queue"
@@ -41,7 +41,7 @@ resource "aws_sqs_queue" "drift_recovery" {
   visibility_timeout_seconds  = 60
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-DriftRecovery-Queue"
+    Name = "${local.resource_prefix}DriftRecoveryQueue"
   })
 }
 
