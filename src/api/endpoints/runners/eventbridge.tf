@@ -145,8 +145,8 @@ resource "aws_lambda_permission" "ec2_spot_interruption" {
 
 resource "aws_cloudwatch_event_rule" "stale_runner_cleanup_schedule" {
   name                = "${local.resource_prefix}-StaleRunnerCleanupSchedule"
-  description         = "Triggers stale runner cleanup every 15 minutes"
-  schedule_expression = "rate(15 minutes)"
+  description         = "Triggers stale runner cleanup every 30 minutes"
+  schedule_expression = "rate(30 minutes)"
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-StaleRunnerCleanupSchedule"
