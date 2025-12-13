@@ -113,3 +113,96 @@ def test_sqs_drift_recovery_queue_has_deduplication(sqs_client, config):
 # These tests sent real messages to the production job queue which has a Lambda trigger.
 # The Lambda would process these invalid test messages, fail, and trip the circuit breaker.
 # SQS send/receive capability is an AWS service guarantee - no need to test it.
+
+
+# === Webhook Ingress Queue Tests (API Gateway → SQS direct integration) ===
+
+
+def test_sqs_webhook_ingress_queue_exists(sqs_client, config):
+    """Test webhook ingress queue exists (API Gateway → SQS direct integration)."""
+    queue_name = config["webhook_ingress_queue_name"]
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert 'QueueUrl' in response
+
+
+def test_sqs_webhook_ingress_dlq_exists(sqs_client, config):
+    """Test webhook ingress DLQ exists."""
+    queue_name = config["webhook_ingress_dlq_name"]
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert 'QueueUrl' in response
+
+
+def test_sqs_webhook_ingress_has_redrive_policy(sqs_client, config):
+    """Test webhook ingress queue has redrive policy to DLQ."""
+    queue_name = config["webhook_ingress_queue_name"]
+    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    attributes = sqs_client.get_queue_attributes(
+        QueueUrl=queue_url, AttributeNames=['RedrivePolicy']
+    )
+    assert 'RedrivePolicy' in attributes['Attributes']
+
+
+def test_sqs_webhook_ingress_short_retention(sqs_client, config):
+    """Test webhook ingress queue has short retention for DDoS protection."""
+    queue_name = config["webhook_ingress_queue_name"]
+    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    attributes = sqs_client.get_queue_attributes(
+        QueueUrl=queue_url, AttributeNames=['MessageRetentionPeriod']
+    )
+    retention = int(attributes['Attributes']['MessageRetentionPeriod'])
+    # Should be <= 1 hour (3600 seconds) for DDoS protection
+    assert retention <= 3600
+
+
+# === Ignored Events Queue Tests ===
+
+
+def test_sqs_ignored_events_queue_exists(sqs_client, config):
+    """Test ignored events queue exists."""
+    queue_name = config["ignored_events_queue_name"]
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert 'QueueUrl' in response
+
+
+def test_sqs_ignored_events_dlq_exists(sqs_client, config):
+    """Test ignored events DLQ exists."""
+    queue_name = config["ignored_events_dlq_name"]
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert 'QueueUrl' in response
+
+
+def test_sqs_ignored_events_has_redrive_policy(sqs_client, config):
+    """Test ignored events queue has redrive policy."""
+    queue_name = config["ignored_events_queue_name"]
+    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    attributes = sqs_client.get_queue_attributes(
+        QueueUrl=queue_url, AttributeNames=['RedrivePolicy']
+    )
+    assert 'RedrivePolicy' in attributes['Attributes']
+
+
+# === Cleanup Queue Tests ===
+
+
+def test_sqs_cleanup_queue_exists(sqs_client, config):
+    """Test cleanup queue exists."""
+    queue_name = config["cleanup_queue_name"]
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert 'QueueUrl' in response
+
+
+def test_sqs_cleanup_dlq_exists(sqs_client, config):
+    """Test cleanup DLQ exists."""
+    queue_name = config["cleanup_dlq_name"]
+    response = sqs_client.get_queue_url(QueueName=queue_name)
+    assert 'QueueUrl' in response
+
+
+def test_sqs_cleanup_has_redrive_policy(sqs_client, config):
+    """Test cleanup queue has redrive policy."""
+    queue_name = config["cleanup_queue_name"]
+    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
+    attributes = sqs_client.get_queue_attributes(
+        QueueUrl=queue_url, AttributeNames=['RedrivePolicy']
+    )
+    assert 'RedrivePolicy' in attributes['Attributes']

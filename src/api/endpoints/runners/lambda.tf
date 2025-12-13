@@ -33,11 +33,13 @@ resource "aws_lambda_function" "runners_handler" {
     variables = {
       API_BASE_URL             = "https://${local.api_fqdn}"
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
+      CLEANUP_QUEUE_URL        = aws_sqs_queue.cleanup_queue.url
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       ETC_PATH                 = "/var/task"
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
+      IGNORED_EVENTS_QUEUE_URL = aws_sqs_queue.ignored_events.url
       JOB_QUEUE_URL            = aws_sqs_queue.job_queue.url
       WEBHOOK_SECRET_NAME      = aws_ssm_parameter.webhook_secret.name
       WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
@@ -83,8 +85,24 @@ resource "aws_cloudwatch_log_group" "runners_handler" {
   })
 }
 
+# Event source mapping for webhook ingress queue (API Gateway → SQS → Lambda)
+# This is the entry point for GitHub webhooks after removing Lambda from the API Gateway hot path
+resource "aws_lambda_event_source_mapping" "runners_handler_webhook_ingress" {
+  event_source_arn                   = aws_sqs_queue.webhook_ingress.arn
+  function_name                      = aws_lambda_function.runners_handler.arn
+  batch_size                         = 1
+  maximum_batching_window_in_seconds = 0
+}
+
 resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
   event_source_arn                   = aws_sqs_queue.job_queue.arn
+  function_name                      = aws_lambda_function.runners_handler.arn
+  batch_size                         = 1
+  maximum_batching_window_in_seconds = 0
+}
+
+resource "aws_lambda_event_source_mapping" "runners_handler_cleanup_sqs" {
+  event_source_arn                   = aws_sqs_queue.cleanup_queue.arn
   function_name                      = aws_lambda_function.runners_handler.arn
   batch_size                         = 1
   maximum_batching_window_in_seconds = 0

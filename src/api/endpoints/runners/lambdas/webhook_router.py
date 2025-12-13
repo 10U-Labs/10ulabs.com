@@ -31,6 +31,13 @@ validate_labels = _runner_labels.validate_labels
 LabelParseError = _runner_labels.LabelParseError
 LabelValidationError = _runner_labels.LabelValidationError
 
+# Import webhook_ingress - peer module in same lambdas directory
+try:
+    import webhook_ingress as _webhook_ingress
+except ImportError:
+    _webhook_ingress = importlib.import_module('webhook_ingress')
+webhook_ingress = _webhook_ingress
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -245,6 +252,52 @@ def enqueue_job(job_data: Dict[str, Any]) -> Dict[str, Any]:
         return {'success': False, 'error': str(e)}
 
 
+def enqueue_cleanup(cleanup_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Enqueue cleanup task to SQS for async processing."""
+    queue_url = os.environ.get('CLEANUP_QUEUE_URL')
+    if not queue_url:
+        logger.error("CLEANUP_QUEUE_URL not set, cannot enqueue cleanup")
+        return {'success': False, 'error': 'Cleanup queue not configured'}
+
+    try:
+        sqs = get_sqs_client()
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(cleanup_data)
+        )
+        logger.info("Enqueued cleanup to SQS: %s", response.get('MessageId'))
+        return {'success': True, 'message_id': response.get('MessageId')}
+    except ClientError as e:
+        logger.error("Failed to enqueue cleanup: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
+def enqueue_ignored_event(event_data: Dict[str, Any], reason: str) -> Dict[str, Any]:
+    """Enqueue ignored event to SQS for audit/debugging purposes."""
+    queue_url = os.environ.get('IGNORED_EVENTS_QUEUE_URL')
+    if not queue_url:
+        logger.warning("IGNORED_EVENTS_QUEUE_URL not set, skipping ignored event enqueue")
+        return {'success': False, 'error': 'Ignored events queue not configured'}
+
+    try:
+        sqs = get_sqs_client()
+        message_body = {
+            'event_data': event_data,
+            'reason': reason,
+            'timestamp': datetime.datetime.now(datetime.UTC).isoformat()
+        }
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(message_body)
+        )
+        msg_id = response.get('MessageId')
+        logger.info("Enqueued ignored event to SQS: %s (reason: %s)", msg_id, reason)
+        return {'success': True, 'message_id': response.get('MessageId')}
+    except ClientError as e:
+        logger.error("Failed to enqueue ignored event: %s", e)
+        return {'success': False, 'error': str(e)}
+
+
 def get_workflow_runners(run_id: str) -> List[Dict[str, Any]]:
     """Get all runners associated with a workflow run from DynamoDB."""
     table_name = os.environ.get('WORKFLOW_RUNNERS_TABLE')
@@ -390,7 +443,7 @@ def terminate_runners_for_workflow(run_id: str) -> Dict[str, Any]:
 
 
 def handle_workflow_run(event_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Handle workflow_run webhook events and cleanup runners."""
+    """Handle workflow_run webhook events and enqueue cleanup tasks."""
     action = event_data.get('action')
     workflow_run = event_data.get('workflow_run', {})
     run_id = workflow_run.get('id')
@@ -404,14 +457,41 @@ def handle_workflow_run(event_data: Dict[str, Any]) -> Dict[str, Any]:
             'statusCode': 200,
             'body': json.dumps({'message': f"Ignored action: {action}"})
         }
-    result = terminate_runners_for_workflow(str(run_id))
+
+    cleanup_data = {
+        'type': 'cleanup',
+        'run_id': str(run_id),
+        'workflow_name': workflow_name,
+        'conclusion': conclusion
+    }
+
+    if test_mode_enabled['value']:
+        logger.info("Test mode enabled - skipping cleanup enqueue")
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'message': 'Test mode - cleanup not enqueued',
+                'run_id': run_id,
+                'test_mode': True
+            })
+        }
+
+    result = enqueue_cleanup(cleanup_data)
+    if result['success']:
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'message': 'Workflow run completed, cleanup enqueued',
+                'run_id': run_id,
+                'message_id': result.get('message_id')
+            })
+        }
     return {
-        'statusCode': 200,
+        'statusCode': 500,
         'body': json.dumps({
-            'message': 'Workflow run completed, runners terminated',
-            'run_id': run_id,
-            'terminated': result['terminated'],
-            'failed': result['failed']
+            'message': 'Failed to enqueue cleanup',
+            'error': result['error'],
+            'run_id': run_id
         })
     }
 
@@ -711,6 +791,31 @@ def handle_sqs_message(message: Dict[str, Any]) -> Dict[str, Any]:
         return {'success': False, 'error': f'Invalid message format: {e}'}
 
 
+def handle_cleanup_message(message: Dict[str, Any]) -> Dict[str, Any]:
+    """Process a single SQS message containing a cleanup request."""
+    try:
+        body = json.loads(message['body'])
+        run_id = body.get('run_id')
+        workflow_name = body.get('workflow_name')
+        conclusion = body.get('conclusion')
+
+        logger.info(
+            "Processing cleanup from SQS: run_id=%s, workflow=%s, conclusion=%s",
+            run_id, workflow_name, conclusion
+        )
+
+        result = terminate_runners_for_workflow(run_id)
+
+        logger.info(
+            "Cleanup completed for run_id=%s: terminated=%d, failed=%d",
+            run_id, result['terminated'], result['failed']
+        )
+        return {'success': True, 'result': result}
+    except (ValueError, KeyError) as e:
+        logger.error("Failed to parse cleanup message: %s", e)
+        return {'success': False, 'error': f'Invalid message format: {e}'}
+
+
 def handle_health_check() -> Dict[str, Any]:
     """Return health check status including circuit breaker state."""
     health_status = {
@@ -836,6 +941,21 @@ def _process_webhook_event(event: dict, headers: dict, start_time: float) -> dic
     return result
 
 
+def _get_ingress_handler():
+    """Create an IngressHandler with dependencies from this module."""
+    deps = {
+        'get_webhook_secret': get_webhook_secret,
+        'verify_signature': verify_signature,
+        'publish_metric': publish_metric,
+        'check_idempotency': check_and_record_idempotency,
+        'get_runner_type': get_runner_type_from_labels,
+        'enqueue_job': enqueue_job,
+        'enqueue_cleanup': enqueue_cleanup,
+        'enqueue_ignored': enqueue_ignored_event
+    }
+    return webhook_ingress.IngressHandler(deps)
+
+
 def lambda_handler(event, _context):
     """Main Lambda entry point for webhook and SQS events."""
     start_time = time.time()
@@ -844,10 +964,25 @@ def lambda_handler(event, _context):
     records = event.get('Records', [])
     is_sqs = records and records[0].get('eventSource') == 'aws:sqs'
     if is_sqs:
-        logger.info("Processing SQS event")
-        results = [handle_sqs_message(record) for record in event['Records']]
-        if not all(r['success'] for r in results):
-            raise RuntimeError("One or more SQS messages failed to process")
-        return {'statusCode': 200, 'body': json.dumps({'message': 'Processed successfully'})}
+        event_source_arn = records[0].get('eventSourceARN', '')
+
+        # Determine queue type and select handler
+        if webhook_ingress.is_webhook_ingress_queue(event_source_arn):
+            queue_type = 'webhook_ingress'
+            ingress_handler = _get_ingress_handler()
+            handler = ingress_handler.handle
+        elif webhook_ingress.is_cleanup_queue(event_source_arn):
+            queue_type = 'cleanup'
+            handler = handle_cleanup_message
+        else:
+            queue_type = 'job'
+            handler = handle_sqs_message
+
+        logger.info("Processing SQS event from %s queue", queue_type)
+
+        results = [handler(record) for record in event['Records']]
+        if not all(r.get('success') for r in results):
+            raise RuntimeError(f"One or more {queue_type} messages failed")
+        return {'statusCode': 200, 'body': json.dumps({'message': 'Processed'})}
 
     return handle_api_gateway_event(event, start_time)

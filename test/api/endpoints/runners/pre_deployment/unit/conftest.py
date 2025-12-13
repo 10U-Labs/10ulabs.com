@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 from types import ModuleType
@@ -151,6 +152,10 @@ def parse_lambda_response_payload(response: Any) -> Any:
 @pytest.fixture
 def webhook_router(config):
     """Provide webhook router module with mocked environment."""
+    # Load webhook_ingress first and add to sys.modules so webhook_router can import it
+    ingress_module = load_lambda_module("webhook_ingress.py", "webhook_ingress")
+    sys.modules['webhook_ingress'] = ingress_module
+
     env_vars = {
         'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
         'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
@@ -169,6 +174,13 @@ def webhook_router(config):
             state = {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'}
             setattr(module, '_circuit_breaker_state', state)
         yield module
+
+
+@pytest.fixture
+def webhook_ingress():
+    """Provide webhook ingress module."""
+    module = load_lambda_module("webhook_ingress.py", "webhook_ingress")
+    yield module
 
 
 @pytest.fixture

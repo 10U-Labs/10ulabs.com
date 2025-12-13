@@ -61,3 +61,12 @@ output "vpc_public_subnet_ids" {
 output "vpc_id" {
   value = data.terraform_remote_state.runners.outputs.vpc_id
 }
+
+# Audit infrastructure outputs
+output "api_audit_log_table_name" {
+  value = aws_dynamodb_table.api_audit_log.name
+}
+
+output "api_audit_log_table_arn" {
+  value = aws_dynamodb_table.api_audit_log.arn
+}
