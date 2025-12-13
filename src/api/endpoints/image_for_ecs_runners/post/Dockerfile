@@ -23,14 +23,14 @@ RUN apt-get update && \
     unzip -oq /tmp/terraform.zip -d /staging/usr/local/bin && \
     unzip -oq /tmp/tflint.zip -d /staging/usr/local/bin && \
     curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" | tar -xJ -C /tmp && \
-    cp /tmp/node-v${NODE_VERSION}-linux-arm64/bin/node /staging/usr/local/bin/ && \
-    cp -r /tmp/node-v${NODE_VERSION}-linux-arm64/lib/node_modules /staging/usr/local/lib/ && \
+    cp "/tmp/node-v${NODE_VERSION}-linux-arm64/bin/node" /staging/usr/local/bin/ && \
+    cp -r "/tmp/node-v${NODE_VERSION}-linux-arm64/lib/node_modules" /staging/usr/local/lib/ && \
     ln -s ../lib/node_modules/npm/bin/npm-cli.js /staging/usr/local/bin/npm && \
     ln -s ../lib/node_modules/npm/bin/npx-cli.js /staging/usr/local/bin/npx && \
     curl -fsSL -o /staging/tmp/runner.tar.gz "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz" && \
     GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
     curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_arm64.tar.gz" | \
-        tar -xzf - -C /staging/usr/local/bin --strip-components=2 gh_${GH_VERSION}_linux_arm64/bin/gh
+        tar -xzf - -C /staging/usr/local/bin --strip-components=2 "gh_${GH_VERSION}_linux_arm64/bin/gh"
 
 # Runtime stage - minimal image with all tools
 FROM debian:stable-slim
