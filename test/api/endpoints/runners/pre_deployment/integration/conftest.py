@@ -47,6 +47,13 @@ def config(shared_config):
         'job_dlq_name': resource_names['job_dlq'],
         'webhook_dlq_name': resource_names['webhook_dlq'],
         'drift_recovery_queue_name': resource_names['drift_recovery_queue'],
+        # New queues for API Gateway → SQS direct integration
+        'webhook_ingress_queue_name': resource_names['webhook_ingress_queue'],
+        'webhook_ingress_dlq_name': resource_names['webhook_ingress_dlq'],
+        'ignored_events_queue_name': resource_names['ignored_events_queue'],
+        'ignored_events_dlq_name': resource_names['ignored_events_dlq'],
+        'cleanup_queue_name': resource_names['cleanup_queue'],
+        'cleanup_dlq_name': resource_names['cleanup_dlq'],
     }
 
 
