@@ -195,6 +195,13 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
         'job_dlq': f"{webhook_handler}JobDlq",
         'webhook_dlq': f"{webhook_handler}Dlq",
         'drift_recovery_queue': f"{prefix}DriftRecovery.fifo",
+        # New queues for API Gateway → SQS direct integration
+        'webhook_ingress_queue': f"{webhook_handler}Ingress",
+        'webhook_ingress_dlq': f"{webhook_handler}IngressDlq",
+        'ignored_events_queue': f"{webhook_handler}IgnoredEvents",
+        'ignored_events_dlq': f"{webhook_handler}IgnoredEventsDlq",
+        'cleanup_queue': f"{webhook_handler}Cleanup",
+        'cleanup_dlq': f"{webhook_handler}CleanupDlq",
     }
 
 
