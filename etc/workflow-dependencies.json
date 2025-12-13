@@ -145,7 +145,7 @@
   },
   "endpoint_v1_agents_deleter_of_e2e_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_deleter_of_post_deployment_integration_tests"
     ],
     "name": "Deploying Deleter of E2E Tests Agent",
     "paths": [
@@ -156,7 +156,7 @@
   },
   "endpoint_v1_agents_deleter_of_post_deployment_integration_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_deleter_of_pre_deployment_integration_tests"
     ],
     "name": "Deploying Deleter of Post-Deployment Integration Tests Agent",
     "paths": [
@@ -167,7 +167,7 @@
   },
   "endpoint_v1_agents_deleter_of_pre_deployment_integration_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_deleter_of_unit_tests"
     ],
     "name": "Deploying Deleter of Pre-Deployment Integration Tests Agent",
     "paths": [
@@ -178,7 +178,7 @@
   },
   "endpoint_v1_agents_deleter_of_unit_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_modifier_of_e2e_tests"
     ],
     "name": "Deploying Deleter of Unit Tests Agent",
     "paths": [
