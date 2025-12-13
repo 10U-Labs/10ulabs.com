@@ -8,13 +8,12 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.event.inputs.dry_run != 'true'
     name: Deploy Agents Shared Infrastructure
-    runs-on: >-
-      ${{ ( vars.USE_GITHUB_HOSTED == 'true' ||
-            github.event.inputs.github_hosted == 'true' ||
-            contains(github.event.head_commit.message, '[github-hosted]') ) &&
-          'ubuntu-latest' ||
-          fromJSON(format('["ecs", "fargate", "arm", "spot", "runner-{0}"]',
-            github.run_id)) }}
+    runs-on:
+      - ecs
+      - fargate
+      - arm
+      - spot
+      - runner-${{ github.run_id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,35 +30,17 @@ jobs:
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          TF_PROVIDERS="src/api/endpoints/agents/shared/providers.tf"
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            $TF_PROVIDERS | cut -d'"' -f2 | sed 's/>= //')
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
           echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Set up Python for yamllint
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install yamllint
-        run: python3 -m pip install yamllint
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
@@ -70,33 +51,16 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/endpoint_v1_agents_shared.yml
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ steps.config.outputs.terraform_version }}
-          terraform_wrapper: false
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/agents/shared
           terraform fmt -diff -check -recursive
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
       - name: Terraform Init
         run: cd src/api/endpoints/agents/shared && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
         run: cd src/api/endpoints/agents/shared && tflint --init && tflint
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install Python dependencies
-        run: |
-          python3 -m pip install \
-            pylint mypy pytest boto3 boto3-stubs PyJWT
       - name: Run pylint
         run: |
           python3 -m pylint \
@@ -147,10 +111,6 @@ on:
         default: false
         description: Dry run mode (show structure without executing)
         required: false
-        type: boolean
-      github_hosted:
-        default: false
-        description: 'Use GitHub-hosted runner instead of ephemeral ECS'
         type: boolean
       skip_descendants:
         default: false
