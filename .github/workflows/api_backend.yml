@@ -236,6 +236,10 @@ on:
         default: false
         description: Skip dispatching descendant workflows
         type: boolean
+      spot_recovery_reason:
+        description: Spot recovery trigger reason
+        required: false
+        type: string
 permissions:
   actions: write
   contents: read

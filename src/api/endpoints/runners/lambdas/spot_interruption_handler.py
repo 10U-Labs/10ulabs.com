@@ -2,8 +2,11 @@
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.request
+from typing import Tuple
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -63,31 +66,203 @@ def get_workflow_run_status(
     return result
 
 
-def rerun_github_job(github_token: str, github_repo: str, job_id: str) -> bool:
-    """Trigger a re-run for a GitHub Actions job."""
-    result = False
-    if not job_id:
-        logger.error("No job_id provided for re-run")
-    else:
-        url = f'https://api.github.com/repos/{github_repo}/actions/jobs/{job_id}/rerun'
-        headers = {
-            'Authorization': f'Bearer {github_token}',
-            'Accept': 'application/vnd.github+json',
-            'X-GitHub-Api-Version': '2022-11-28'
+def cancel_workflow_run(github_token: str, github_repo: str, run_id: str) -> bool:
+    """Cancel a GitHub Actions workflow run."""
+    url = f'https://api.github.com/repos/{github_repo}/actions/runs/{run_id}/cancel'
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    try:
+        req = urllib.request.Request(url, data=b'', headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=30) as response:
+            if response.status == 202:
+                logger.info("Successfully cancelled workflow run %s", run_id)
+                return True
+            logger.warning("Unexpected response status %s for cancel", response.status)
+    except urllib.error.HTTPError as e:
+        logger.error("Failed to cancel workflow %s: HTTP %s - %s", run_id, e.code, e.reason)
+    except urllib.error.URLError as e:
+        logger.error("Failed to cancel workflow %s: %s", run_id, e)
+    return False
+
+
+def create_check_run_annotation(
+    github_token: str,
+    github_repo: str,
+    head_sha: str,
+    title: str,
+    summary: str
+) -> bool:
+    """Create a Check Run with annotation explaining the cancellation."""
+    url = f'https://api.github.com/repos/{github_repo}/check-runs'
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'name': 'Spot Interruption Handler',
+        'head_sha': head_sha,
+        'status': 'completed',
+        'conclusion': 'neutral',
+        'output': {
+            'title': title,
+            'summary': summary
         }
+    }
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=30) as response:
+            if response.status == 201:
+                logger.info("Successfully created check run annotation")
+                return True
+            logger.warning("Unexpected response status %s for check run", response.status)
+    except urllib.error.HTTPError as e:
+        logger.error("Failed to create check run: HTTP %s - %s", e.code, e.reason)
+    except urllib.error.URLError as e:
+        logger.error("Failed to create check run: %s", e)
+    return False
+
+
+def wait_for_workflow_completion(
+    github_token: str,
+    github_repo: str,
+    run_id: str,
+    timeout_seconds: int = 60
+) -> bool:
+    """Poll workflow run until it completes or times out."""
+    url = f'https://api.github.com/repos/{github_repo}/actions/runs/{run_id}'
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    start_time = time.time()
+    while time.time() - start_time < timeout_seconds:
         try:
-            req = urllib.request.Request(url, data=b'', headers=headers, method='POST')
-            with urllib.request.urlopen(req, timeout=30) as response:
-                if response.status == 201:
-                    logger.info("Successfully triggered re-run for job %s", job_id)
-                    result = True
-                else:
-                    logger.warning("Unexpected response status %s for job re-run", response.status)
-        except urllib.error.HTTPError as e:
-            logger.error("Failed to re-run job %s: HTTP %s - %s", job_id, e.code, e.reason)
-        except urllib.error.URLError as e:
-            logger.error("Failed to re-run job %s: %s", job_id, e)
-    return result
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read())
+                if data.get('status') == 'completed':
+                    logger.info("Workflow %s completed", run_id)
+                    return True
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            logger.warning("Error polling workflow status: %s", e)
+        time.sleep(5)
+    logger.warning("Timeout waiting for workflow %s to complete", run_id)
+    return False
+
+
+def get_workflow_info_from_run(
+    github_token: str,
+    github_repo: str,
+    run_id: str
+) -> Tuple[str, str]:
+    """Get workflow ID and head_sha from a workflow run."""
+    url = f'https://api.github.com/repos/{github_repo}/actions/runs/{run_id}'
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+    }
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read())
+            workflow_id = str(data.get('workflow_id', ''))
+            head_sha = data.get('head_sha', '')
+            return (workflow_id, head_sha)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        logger.error("Failed to get workflow info: %s", e)
+    return ('', '')
+
+
+def dispatch_workflow(
+    github_token: str,
+    github_repo: str,
+    workflow_id: str,
+    ref: str,
+    reason: str
+) -> bool:
+    """Dispatch a new workflow run with a reason message."""
+    url = f'https://api.github.com/repos/{github_repo}/actions/workflows/{workflow_id}/dispatches'
+    headers = {
+        'Authorization': f'Bearer {github_token}',
+        'Accept': 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+    }
+    payload = {
+        'ref': ref,
+        'inputs': {
+            'spot_recovery_reason': reason
+        }
+    }
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=30) as response:
+            if response.status == 204:
+                logger.info("Successfully dispatched workflow %s", workflow_id)
+                return True
+            logger.warning("Unexpected response status %s for dispatch", response.status)
+    except urllib.error.HTTPError as e:
+        logger.error("Failed to dispatch workflow: HTTP %s - %s", e.code, e.reason)
+    except urllib.error.URLError as e:
+        logger.error("Failed to dispatch workflow: %s", e)
+    return False
+
+
+def recover_from_spot_interruption(
+    github_token: str,
+    github_repo: str,
+    run_id: str,
+    instance_id: str
+) -> dict:
+    """
+    Handle spot interruption recovery:
+    1. Cancel the workflow
+    2. Add annotation explaining why
+    3. Wait for completion
+    4. Dispatch new workflow
+    """
+    workflow_id, head_sha = get_workflow_info_from_run(
+        github_token, github_repo, run_id
+    )
+    if not workflow_id:
+        logger.error("Failed to get workflow info for run %s", run_id)
+        return {'statusCode': 500, 'body': 'Failed to get workflow info'}
+
+    if not cancel_workflow_run(github_token, github_repo, run_id):
+        logger.error("Failed to cancel workflow run %s", run_id)
+        return {'statusCode': 500, 'body': 'Failed to cancel workflow'}
+
+    reason = (
+        f"EC2 Spot Instance {instance_id} received interruption warning. "
+        f"AWS is reclaiming spot capacity. Workflow cancelled and will be "
+        f"automatically re-triggered."
+    )
+    create_check_run_annotation(
+        github_token, github_repo, head_sha,
+        "Spot Instance Interruption",
+        reason
+    )
+
+    wait_for_workflow_completion(github_token, github_repo, run_id)
+
+    recovery_reason = f"Auto-recovery from spot interruption of instance {instance_id}"
+    if dispatch_workflow(
+        github_token, github_repo, workflow_id, "main", recovery_reason
+    ):
+        logger.info("Successfully dispatched recovery workflow for %s", workflow_id)
+        return {'statusCode': 200, 'body': 'Recovery workflow dispatched'}
+
+    logger.error("Failed to dispatch recovery workflow")
+    return {'statusCode': 500, 'body': 'Failed to dispatch recovery workflow'}
 
 
 def _is_spot_interruption(stop_code: str, stopped_reason: str) -> bool:
@@ -95,8 +270,8 @@ def _is_spot_interruption(stop_code: str, stopped_reason: str) -> bool:
     return 'SpotInterruption' in stop_code or 'capacity' in stopped_reason.lower()
 
 
-def _trigger_job_rerun(github_repo: str, run_id: str, job_id: str) -> dict:
-    """Trigger a job re-run if the workflow is still active."""
+def _trigger_ecs_recovery(github_repo: str, run_id: str, task_arn: str) -> dict:
+    """Trigger recovery for an ECS spot interruption."""
     github_token = get_github_token()
     if not github_token:
         logger.error("No GitHub token available")
@@ -105,10 +280,59 @@ def _trigger_job_rerun(github_repo: str, run_id: str, job_id: str) -> dict:
     if workflow_status not in ['queued', 'in_progress', 'waiting']:
         logger.info("Workflow %s not active (status=%s), skipping", run_id, workflow_status)
         return {'statusCode': 200, 'body': f'Workflow not active: {workflow_status}'}
-    logger.info("Triggering job re-run for job_id=%s", job_id)
-    if rerun_github_job(github_token, github_repo, job_id):
-        return {'statusCode': 200, 'body': 'Job re-run triggered'}
-    return {'statusCode': 500, 'body': 'Failed to re-run'}
+    logger.info("Initiating ECS spot recovery for run_id=%s", run_id)
+    return recover_from_ecs_spot_interruption(
+        github_token, github_repo, run_id, task_arn
+    )
+
+
+def recover_from_ecs_spot_interruption(
+    github_token: str,
+    github_repo: str,
+    run_id: str,
+    task_arn: str
+) -> dict:
+    """
+    Handle ECS spot interruption recovery:
+    1. Cancel the workflow
+    2. Add annotation explaining why
+    3. Wait for completion
+    4. Dispatch new workflow
+    """
+    workflow_id, head_sha = get_workflow_info_from_run(
+        github_token, github_repo, run_id
+    )
+    if not workflow_id:
+        logger.error("Failed to get workflow info for run %s", run_id)
+        return {'statusCode': 500, 'body': 'Failed to get workflow info'}
+
+    if not cancel_workflow_run(github_token, github_repo, run_id):
+        logger.error("Failed to cancel workflow run %s", run_id)
+        return {'statusCode': 500, 'body': 'Failed to cancel workflow'}
+
+    task_id = task_arn.split('/')[-1] if '/' in task_arn else task_arn
+    reason = (
+        f"ECS Fargate Spot task {task_id} was interrupted. "
+        f"AWS reclaimed spot capacity. Workflow cancelled and will be "
+        f"automatically re-triggered."
+    )
+    create_check_run_annotation(
+        github_token, github_repo, head_sha,
+        "ECS Spot Interruption",
+        reason
+    )
+
+    wait_for_workflow_completion(github_token, github_repo, run_id)
+
+    recovery_reason = f"Auto-recovery from ECS spot interruption of task {task_id}"
+    if dispatch_workflow(
+        github_token, github_repo, workflow_id, "main", recovery_reason
+    ):
+        logger.info("Successfully dispatched recovery workflow for %s", workflow_id)
+        return {'statusCode': 200, 'body': 'Recovery workflow dispatched'}
+
+    logger.error("Failed to dispatch recovery workflow")
+    return {'statusCode': 500, 'body': 'Failed to dispatch recovery workflow'}
 
 
 def handle_ecs_task_stopped(event: dict) -> dict:
@@ -120,18 +344,17 @@ def handle_ecs_task_stopped(event: dict) -> dict:
     tag_dict = _get_ecs_task_tags(task_arn)
     run_id = tag_dict.get('RunId', '')
     github_repo = tag_dict.get('GitHubRepo', '')
-    job_id = tag_dict.get('GitHubJobId', '')
     logger.info(
-        "ECS task stopped: arn=%s, stopCode=%s, reason=%s, run_id=%s, job_id=%s",
-        task_arn, stop_code, stopped_reason, run_id, job_id
+        "ECS task stopped: arn=%s, stopCode=%s, reason=%s, run_id=%s",
+        task_arn, stop_code, stopped_reason, run_id
     )
-    if not run_id or not job_id:
-        logger.info("No run_id or job_id in task tags, skipping")
-        return {'statusCode': 200, 'body': 'No run_id or job_id'}
+    if not run_id:
+        logger.info("No run_id in task tags, skipping")
+        return {'statusCode': 200, 'body': 'No run_id'}
     if not _is_spot_interruption(stop_code, stopped_reason):
-        logger.info("Not a spot interruption, skipping job re-run")
+        logger.info("Not a spot interruption, skipping recovery")
         return {'statusCode': 200, 'body': 'Not a spot interruption'}
-    return _trigger_job_rerun(github_repo, run_id, job_id)
+    return _trigger_ecs_recovery(github_repo, run_id, task_arn)
 
 
 def _get_ecs_task_tags(task_arn: str) -> dict:
@@ -174,10 +397,9 @@ def handle_ec2_spot_interruption(event: dict) -> dict:
     if tag_dict:
         run_id = tag_dict.get('RunId', '')
         github_repo = tag_dict.get('GitHubRepo', '')
-        job_id = tag_dict.get('GitHubJobId', '')
-        if not run_id or not job_id:
-            logger.info("No run_id or job_id in instance tags, skipping")
-            result = {'statusCode': 200, 'body': 'No run_id or job_id'}
+        if not run_id:
+            logger.info("No run_id in instance tags, skipping")
+            result = {'statusCode': 200, 'body': 'No run_id'}
         else:
             github_token = get_github_token()
             if not github_token:
@@ -194,13 +416,11 @@ def handle_ec2_spot_interruption(event: dict) -> dict:
                     result = {'statusCode': 200, 'body': body}
                 else:
                     logger.info(
-                        "Triggering job re-run for job_id=%s", job_id
+                        "Initiating spot interruption recovery for run_id=%s", run_id
                     )
-                    success = rerun_github_job(github_token, github_repo, job_id)
-                    if success:
-                        result = {'statusCode': 200, 'body': 'Job re-run triggered'}
-                    else:
-                        result = {'statusCode': 500, 'body': 'Failed to re-run'}
+                    result = recover_from_spot_interruption(
+                        github_token, github_repo, run_id, instance_id
+                    )
     return result
 
 
