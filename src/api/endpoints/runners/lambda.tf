@@ -90,6 +90,64 @@ resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
   maximum_batching_window_in_seconds = 0
 }
 
+data "archive_file" "circuit_breaker_reset" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/circuit_breaker_reset.py"
+  output_path = "${path.module}/.terraform/lambda_packages/circuit_breaker_reset.zip"
+}
+
+resource "aws_lambda_function" "circuit_breaker_reset" {
+  filename         = data.archive_file.circuit_breaker_reset.output_path
+  function_name    = local.circuit_breaker_reset_function_name
+  role             = aws_iam_role.circuit_breaker_reset.arn
+  handler          = "circuit_breaker_reset.lambda_handler"
+  source_code_hash = data.archive_file.circuit_breaker_reset.output_base64sha256
+  runtime          = "python3.13"
+  architectures    = ["arm64"]
+  timeout          = 60
+  memory_size      = 256
+  description      = "Manual reset endpoint for circuit breaker"
+
+
+  environment {
+    variables = {
+      WEBHOOK_FUNCTION_NAME = aws_lambda_function.runners_handler.function_name
+      STATE_TABLE_NAME      = aws_dynamodb_table.circuit_breaker_state.name
+    }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.circuit_breaker_reset.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = local.circuit_breaker_reset_function_name
+  })
+
+  depends_on = [
+    aws_iam_role_policy.circuit_breaker_reset_permissions,
+    aws_iam_role_policy_attachment.circuit_breaker_reset_basic,
+  ]
+}
+
+resource "aws_cloudwatch_log_group" "circuit_breaker_reset" {
+  name              = "/aws/lambda/${local.circuit_breaker_reset_function_name}"
+  retention_in_days = 30
+
+  tags = merge(local.common_tags, {
+    Name = "${local.circuit_breaker_reset_function_name}Logs"
+  })
+}
+
+resource "aws_lambda_permission" "circuit_breaker_reset_api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.circuit_breaker_reset.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "arn:aws:execute-api:${local.aws_region}:${local.aws_account_id}:${data.terraform_remote_state.api.outputs.api_gateway_rest_api_id}/*"
+}
+
 data "archive_file" "circuit_breaker_remediation" {
   type        = "zip"
   source_file = "${path.module}/lambdas/circuit_breaker_remediation.py"

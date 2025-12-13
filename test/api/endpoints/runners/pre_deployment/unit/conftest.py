@@ -53,7 +53,56 @@ __all__ = [
     'create_mock_lambda_with_disabled_mappings',
     'create_mock_lambda_delete_concurrency_error',
     'reset_module_state',
+    'create_mock_dynamodb_for_reset',
 ]
+
+
+def create_mock_dynamodb_for_reset():
+    """Create a mock DynamoDB client configured for reset state testing."""
+    mock_db_client = MagicMock()
+    return mock_db_client
+
+
+def create_circuit_breaker_status_mocks(
+    db_state='closed', sqs_state='Enabled', concurrency=None
+):
+    """Create mocks for circuit breaker status checks."""
+    mock_db = MagicMock()
+    mock_db.get_item.return_value = {
+        'Item': {
+            'state': {'S': db_state},
+            'last_failure_time': {'N': '0'},
+            'recovery_attempts': {'N': '0'}
+        }
+    }
+    mock_lam = MagicMock()
+    mock_lam.list_event_source_mappings.return_value = {
+        'EventSourceMappings': [{'State': sqs_state}] if sqs_state else []
+    }
+    if concurrency is None:
+        mock_lam.get_function_concurrency.return_value = {}
+    else:
+        mock_lam.get_function_concurrency.return_value = {
+            'ReservedConcurrentExecutions': concurrency
+        }
+    return mock_db, mock_lam
+
+
+@pytest.fixture
+def cb_status_mock_factory():
+    """Factory fixture for creating circuit breaker status check mocks."""
+    return create_circuit_breaker_status_mocks
+
+
+@pytest.fixture
+def cb_dynamodb_reset_mock():
+    """Fixture providing patched boto3 client returning DynamoDB mock for reset."""
+    with patch.dict('os.environ', {}):
+        with patch('boto3.client') as mock_boto:
+            mock_db = MagicMock()
+            mock_boto.return_value = mock_db
+            yield mock_db
+
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
@@ -130,6 +179,19 @@ def circuit_breaker_remediation(config):
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("circuit_breaker_remediation.py", "circuit_breaker_remediation")
+        yield module
+
+
+@pytest.fixture
+def circuit_breaker_reset(config):
+    """Provide circuit breaker reset module."""
+    env_vars = {
+        'AWS_REGION': config['aws_region'],
+        'WEBHOOK_FUNCTION_NAME': 'test-webhook-function',
+        'STATE_TABLE_NAME': 'test-state-table'
+    }
+    with patch.dict('os.environ', env_vars):
+        module = load_lambda_module("circuit_breaker_reset.py", "circuit_breaker_reset")
         yield module
 
 

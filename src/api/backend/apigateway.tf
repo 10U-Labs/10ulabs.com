@@ -2,6 +2,7 @@ locals {
   # Lambda function names - sourced from shared module for consistency
   lambda_function_names = {
     catchall              = module.shared.lambda_handler_names.catchall
+    circuit_breaker_reset = "${module.shared.resource_prefix}CircuitBreakerReset"
     contact               = module.shared.lambda_handler_names.contact
     ec2_runner            = module.shared.lambda_handler_names.ec2_runner
     ecs_runner            = module.shared.lambda_handler_names.ecs_runner
@@ -22,6 +23,7 @@ locals {
 
   # Construct all integration ARNs directly from function names
   catchall_integration_arn  = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.catchall}/invocations"
+  circuit_breaker_reset_arn = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.circuit_breaker_reset}/invocations"
   contact_arn               = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.contact}/invocations"
   ec2_runner_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ec2_runner}/invocations"
   ecs_runner_arn            = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.ecs_runner}/invocations"
@@ -35,6 +37,7 @@ locals {
 
   openapi_spec = templatefile("${path.module}/../../www/api/openapi.json", {
     CatchAllHandlerArn           = local.catchall_integration_arn
+    CircuitBreakerResetArn       = local.circuit_breaker_reset_arn
     ContactHandlerArn            = local.contact_arn
     EcsRunnerHandlerArn          = local.ecs_runner_arn
     EC2RunnerHandlerArn          = local.ec2_runner_arn

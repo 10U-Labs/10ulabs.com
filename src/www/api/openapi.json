@@ -544,6 +544,317 @@
         }
       }
     },
+    "/v1/runners/circuit-breaker": {
+      "get": {
+        "summary": "Get Circuit Breaker Status",
+        "description": "Returns the current status of the runners circuit breaker including DynamoDB state, SQS event source state, and Lambda concurrency",
+        "operationId": "getCircuitBreakerStatus",
+        "tags": [
+          "/v1/runners"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Circuit breaker is healthy (closed state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "healthy",
+                    "state",
+                    "sqs_event_source",
+                    "reserved_concurrency"
+                  ],
+                  "properties": {
+                    "healthy": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "state": {
+                      "type": "string",
+                      "example": "closed"
+                    },
+                    "sqs_event_source": {
+                      "type": "string",
+                      "example": "Enabled"
+                    },
+                    "reserved_concurrency": {
+                      "type": "integer",
+                      "nullable": true,
+                      "example": null
+                    },
+                    "last_failure_time": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "recovery_attempts": {
+                      "type": "integer",
+                      "example": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Circuit breaker is unhealthy (open or half-open state)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "healthy",
+                    "state"
+                  ],
+                  "properties": {
+                    "healthy": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "state": {
+                      "type": "string",
+                      "example": "open"
+                    },
+                    "sqs_event_source": {
+                      "type": "string",
+                      "example": "Disabled"
+                    },
+                    "reserved_concurrency": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "last_failure_time": {
+                      "type": "integer"
+                    },
+                    "recovery_attempts": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${CircuitBreakerResetArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for circuit breaker endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "circuitBreakerOptions",
+        "tags": [
+          "/v1/runners"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runners/circuit-breaker/reset": {
+      "post": {
+        "summary": "Reset Circuit Breaker",
+        "description": "Resets the circuit breaker by closing DynamoDB state, removing reserved concurrency, and re-enabling SQS event source",
+        "operationId": "resetCircuitBreaker",
+        "tags": [
+          "/v1/runners"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Circuit breaker reset successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "details"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Circuit breaker reset"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "state_reset": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "concurrency_removed": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "sqs_enabled": {
+                          "type": "object",
+                          "properties": {
+                            "success": {
+                              "type": "boolean"
+                            },
+                            "enabled_count": {
+                              "type": "integer"
+                            },
+                            "message": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Partial or complete failure during reset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "success",
+                    "message",
+                    "details"
+                  ],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Partial failure"
+                    },
+                    "details": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "uri": "${CircuitBreakerResetArn}",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for circuit breaker reset endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "circuitBreakerResetOptions",
+        "tags": [
+          "/v1/runners"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/image-for-ec2-runners": {
       "post": {
         "summary": "Build Image for EC2 Runners",
