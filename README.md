@@ -4,62 +4,82 @@
 
 ```
 bootstrap
-    │
-    └── www_shared
-            │
-            └── api_backend
-                    │
-                    └── endpoint_health
-                            │
-                            └── api_shared_runners
-                                    │
-                                    └── endpoint_v1_image_for_ec2_runners
-                                            │
-                                            └── endpoint_v1_ec2_runner
-                                                    │
-                                                    └── api_shared_ecs_runner
-                                                            │
-                                                            └── endpoint_v1_image_for_ecs_runners
-                                                                    │
-                                                                    └── endpoint_v1_ecs_runner
-                                                                            │
-                                                                            └── endpoint_v1_runners
-                                                                                    │
-                                                                                    └── endpoint_v1_echo
-                                                                                            │
-                                                                                            └── endpoint_v1_contact
-                                                                                                    │
-                                                                                                    └── www_index
-                                                                                                            │
-                                                                                                            └── endpoint_v1_rack_designer
-                                                                                                                    │
-                                                                                                                    └── endpoint_v1_simulation_soc
-                                                                                                                            │
-                                                                                                                            └── endpoint_v1_agents_shared
-                                                                                                                                    │
-                                                                                                                                    └── endpoint_v1_agents_troubleshooter_of_workflows
-                                                                                                                                            │
-                                                                                                                                            └── endpoint_v1_agents_creator_of_agents
-                                                                                                                                                    └── endpoint_v1_agents_evaluator_of_agents
-                                                                                                                                                            └── endpoint_v1_agents_modifier_of_agents
-                                                                                                                                                                    └── endpoint_v1_agents_deleter_of_agents
-                                                                                                                                                                            └── endpoint_v1_agents_evaluator_of_workflows
-                                                                                                                                                                                    └── endpoint_v1_agents_creator_of_workflows
-                                                                                                                                                                                            └── endpoint_v1_agents_modifier_of_workflows
-                                                                                                                                                                                                    └── endpoint_v1_agents_deleter_of_workflows
-                                                                                                                                                                                                            └── endpoint_v1_agents_creator_of_unit_tests
-                                                                                                                                                                                                                    └── endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests
-                                                                                                                                                                                                                            └── endpoint_v1_agents_creator_of_pre_deployment_integration_tests
-                                                                                                                                                                                                                                    └── endpoint_v1_agents_creator_of_post_deployment_integration_tests
-                                                                                                                                                                                                                                            └── endpoint_v1_agents_creator_of_e2e_tests
-                                                                                                                                                                                                                                                    └── endpoint_v1_agents_modifier_of_unit_tests
-                                                                                                                                                                                                                                                            └── endpoint_v1_agents_modifier_of_pre_deployment_integration_tests
-                                                                                                                                                                                                                                                                    └── endpoint_v1_agents_modifier_of_post_deployment_integration_tests
-                                                                                                                                                                                                                                                                            └── endpoint_v1_agents_modifier_of_e2e_tests
-                                                                                                                                                                                                                                                                                    └── endpoint_v1_agents_deleter_of_unit_tests
-                                                                                                                                                                                                                                                                                            └── endpoint_v1_agents_deleter_of_pre_deployment_integration_tests
-                                                                                                                                                                                                                                                                                                    └── endpoint_v1_agents_deleter_of_post_deployment_integration_tests
-                                                                                                                                                                                                                                                                                                            └── endpoint_v1_agents_deleter_of_e2e_tests
+    ↓
+www_shared
+    ↓
+api_backend
+    ↓
+endpoint_health
+    ↓
+api_shared_runners
+    ↓
+endpoint_v1_image_for_ec2_runners
+    ↓
+endpoint_v1_ec2_runner
+    ↓
+api_shared_ecs_runner
+    ↓
+endpoint_v1_image_for_ecs_runners
+    ↓
+endpoint_v1_ecs_runner
+    ↓
+endpoint_v1_runners
+    ↓
+endpoint_v1_echo
+    ↓
+endpoint_v1_contact
+    ↓
+www_index
+    ↓
+endpoint_v1_rack_designer
+    ↓
+endpoint_v1_simulation_soc
+    ↓
+endpoint_v1_agents_shared
+    ↓
+endpoint_v1_agents_troubleshooter_of_workflows
+    ↓
+endpoint_v1_agents_creator_of_agents
+    ↓
+endpoint_v1_agents_evaluator_of_agents
+    ↓
+endpoint_v1_agents_modifier_of_agents
+    ↓
+endpoint_v1_agents_deleter_of_agents
+    ↓
+endpoint_v1_agents_evaluator_of_workflows
+    ↓
+endpoint_v1_agents_creator_of_workflows
+    ↓
+endpoint_v1_agents_modifier_of_workflows
+    ↓
+endpoint_v1_agents_deleter_of_workflows
+    ↓
+endpoint_v1_agents_creator_of_unit_tests
+    ↓
+endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests
+    ↓
+endpoint_v1_agents_creator_of_pre_deployment_integration_tests
+    ↓
+endpoint_v1_agents_creator_of_post_deployment_integration_tests
+    ↓
+endpoint_v1_agents_creator_of_e2e_tests
+    ↓
+endpoint_v1_agents_modifier_of_unit_tests
+    ↓
+endpoint_v1_agents_modifier_of_pre_deployment_integration_tests
+    ↓
+endpoint_v1_agents_modifier_of_post_deployment_integration_tests
+    ↓
+endpoint_v1_agents_modifier_of_e2e_tests
+    ↓
+endpoint_v1_agents_deleter_of_unit_tests
+    ↓
+endpoint_v1_agents_deleter_of_pre_deployment_integration_tests
+    ↓
+endpoint_v1_agents_deleter_of_post_deployment_integration_tests
+    ↓
+endpoint_v1_agents_deleter_of_e2e_tests
 ```
 
 ## Deployment Status
