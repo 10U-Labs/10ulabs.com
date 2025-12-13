@@ -9,8 +9,9 @@ locals {
   image_tag  = "${local.agent_name}-latest"
 
   # Lambda naming
-  lambda_name    = "${local.resource_prefix}TroubleshooterOfWorkflowsWebhook"
-  log_group_name = "/aws/lambda/${local.lambda_name}"
+  lambda_name              = "${local.resource_prefix}TroubleshooterOfWorkflowsWebhook"
+  webhook_lambda_role_name = "${local.resource_prefix}TroubleshooterOfWorkflowsWebhookRole"
+  log_group_name           = "/aws/lambda/${local.lambda_name}"
 
   # GitHub App SSM parameters
   github_app_ssm = {
