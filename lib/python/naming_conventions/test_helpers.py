@@ -57,3 +57,38 @@ def create_lambda_function_tests(functions: list):
             )
 
     return TestLambdaFunctionNamingConventions
+
+
+def create_sqs_queue_tests(queues: list):
+    """Create test class for SQS queue naming conventions.
+
+    Args:
+        queues: List of (resource_name, queue_name) tuples
+
+    Returns:
+        Test class with parametrized tests for the given queues.
+    """
+    class TestSQSQueueNamingConventions:
+        """Tests for SQS queue naming conventions."""
+
+        @pytest.mark.parametrize(
+            "resource_name,queue_name",
+            queues,
+            ids=[f"sqs_{q[0]}" for q in queues],
+        )
+        def test_sqs_queue_name_is_pascalcase(self, resource_name, queue_name):
+            """Verify SQS queue name uses PascalCase (no dashes or underscores).
+
+            Note: FIFO queues must end with '.fifo' suffix per AWS requirements.
+            The suffix is stripped before validation.
+            """
+            name_to_check = queue_name
+            if name_to_check.endswith('.fifo'):
+                name_to_check = name_to_check[:-5]
+            error = validate_name(name_to_check)
+            assert error is None, (
+                f"SQS queue '{resource_name}' has invalid name "
+                f"'{queue_name}': {error}"
+            )
+
+    return TestSQSQueueNamingConventions

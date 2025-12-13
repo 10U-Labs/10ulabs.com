@@ -13,11 +13,11 @@ locals {
   lambda_memory_mb               = 256
   lambda_timeout_seconds         = 120
 
-  # Resource names derived from webhook handler
+  # Resource names derived from webhook handler (PascalCase for SQS queues)
   idempotency_table_name = "${module.shared.lambda_handler_names.webhook}-idempotency"
-  job_queue_name         = "${module.shared.lambda_handler_names.webhook}-jobs"
-  job_queue_dlq_name     = "${module.shared.lambda_handler_names.webhook}-job-dlq"
-  webhook_dlq_name       = "${module.shared.lambda_handler_names.webhook}-dlq"
+  job_queue_name         = "${module.shared.lambda_handler_names.webhook}Jobs"
+  job_queue_dlq_name     = "${module.shared.lambda_handler_names.webhook}JobDlq"
+  webhook_dlq_name       = "${module.shared.lambda_handler_names.webhook}Dlq"
 
   # SSM parameter names
   ssm_parameter_name_for_latest_ami     = module.shared.ssm_ec2_runner_ami_latest
