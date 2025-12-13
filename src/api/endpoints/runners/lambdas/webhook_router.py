@@ -647,23 +647,33 @@ def handle_workflow_job(event_data: Dict[str, Any]) -> Dict[str, Any]:
         'runner_type': runner_type
     }
 
-    result = enqueue_job(job_data)
-
-    if result['success']:
+    if test_mode_enabled['value']:
+        logger.info("Test mode enabled - skipping SQS enqueue")
         status_code = 200
         response_body = {
-            'message': 'Job enqueued successfully',
+            'message': 'Test mode - job not enqueued',
             'job_id': job_id,
             'run_id': run_id,
-            'message_id': result.get('message_id')
+            'test_mode': True
         }
     else:
-        status_code = 500
-        response_body = {
-            'message': 'Failed to enqueue job',
-            'error': result['error'],
-            'job_id': job_id
-        }
+        result = enqueue_job(job_data)
+
+        if result['success']:
+            status_code = 200
+            response_body = {
+                'message': 'Job enqueued successfully',
+                'job_id': job_id,
+                'run_id': run_id,
+                'message_id': result.get('message_id')
+            }
+        else:
+            status_code = 500
+            response_body = {
+                'message': 'Failed to enqueue job',
+                'error': result['error'],
+                'job_id': job_id
+            }
 
     return {
         'statusCode': status_code,
