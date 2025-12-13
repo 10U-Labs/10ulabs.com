@@ -24,6 +24,7 @@ resource "aws_iam_role_policy" "api_gateway_sqs" {
   name = "SendToWebhookIngressQueue"
   role = aws_iam_role.api_gateway_sqs.id
 
+  # Construct ARN from known values (avoid dependency on runners remote state)
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -32,7 +33,7 @@ resource "aws_iam_role_policy" "api_gateway_sqs" {
         "sqs:SendMessage",
         "sqs:GetQueueUrl"
       ]
-      Resource = data.terraform_remote_state.runners.outputs.webhook_ingress_queue_arn
+      Resource = "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.webhook_ingress_queue_name}"
     }]
   })
 }

@@ -23,9 +23,6 @@ data "terraform_remote_state" "runners" {
     runner_security_group_id          = ""
     ssm_parameter_name_for_latest_ami = ""
     vpc_public_subnet_ids             = ""
-    webhook_ingress_queue_url         = ""
-    webhook_ingress_queue_arn         = ""
-    webhook_ingress_queue_name        = ""
   }
 }
 
