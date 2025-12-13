@@ -185,8 +185,8 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
     handler_names = parse_lambda_handler_names()
     webhook_handler = handler_names.get('webhook', f"{prefix}WebhookHandler")
     return {
-        # DynamoDB tables
-        'idempotency_table': f"{prefix}-idempotency",
+        # DynamoDB tables (idempotency uses webhook handler name per locals.tf)
+        'idempotency_table': f"{webhook_handler}-idempotency",
         'circuit_breaker_state_table': f"{prefix}-circuit-breaker-state",
         'workflow_runners_table': f"{prefix}-workflow-runners",
         'incidents_table': f"{prefix}-incidents",
