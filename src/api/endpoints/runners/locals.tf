@@ -27,6 +27,7 @@ locals {
   circuit_breaker_alert_email = "jdrowne@10ulabs.com"
 
   # Lambda function names (single source of truth)
+  circuit_breaker_reset_function_name       = "${module.shared.resource_prefix}CircuitBreakerReset"
   circuit_breaker_remediation_function_name = "${module.shared.resource_prefix}CircuitBreakerRemediation"
   dlq_reprocessor_function_name             = "${module.shared.resource_prefix}DLQReprocessor"
   circuit_breaker_recovery_function_name    = "${module.shared.resource_prefix}CircuitBreakerRecovery"
@@ -36,6 +37,7 @@ locals {
 
   # IAM role names (single source of truth)
   lambda_runners_handler_role_name      = "${module.shared.lambda_handler_names.webhook}ServiceRole"
+  circuit_breaker_reset_role_name       = "${module.shared.resource_prefix}CircuitBreakerResetRole"
   circuit_breaker_remediation_role_name = "${module.shared.resource_prefix}CircuitBreakerRemediationRole"
   dlq_reprocessor_role_name             = "${module.shared.resource_prefix}DLQReprocessorRole"
   circuit_breaker_recovery_role_name    = "${module.shared.resource_prefix}CircuitBreakerRecoveryRole"

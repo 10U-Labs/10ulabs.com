@@ -160,6 +160,66 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ec2" {
   })
 }
 
+resource "aws_iam_role" "circuit_breaker_reset" {
+  name = local.circuit_breaker_reset_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = local.circuit_breaker_reset_role_name
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "circuit_breaker_reset_basic" {
+  role       = aws_iam_role.circuit_breaker_reset.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "circuit_breaker_reset_permissions" {
+  name = "ResetPermissions"
+  role = aws_iam_role.circuit_breaker_reset.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "lambda:UpdateEventSourceMapping",
+          "lambda:DeleteFunctionConcurrency",
+          "lambda:GetFunctionConcurrency"
+        ]
+        Resource = [
+          aws_lambda_function.runners_handler.arn,
+          "arn:aws:lambda:${local.aws_region}:${local.aws_account_id}:event-source-mapping:*"
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:ListEventSourceMappings"]
+        Resource = ["*"]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem"
+        ]
+        Resource = [aws_dynamodb_table.circuit_breaker_state.arn]
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role" "circuit_breaker_remediation" {
   name = local.circuit_breaker_remediation_role_name
 
