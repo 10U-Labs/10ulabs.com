@@ -28,7 +28,7 @@ def build_layer(layer_name: str, requirements_path: Path, output_path: Path) -> 
         # Install dependencies for Lambda's ARM64 Linux runtime
         subprocess.run(
             [
-                sys.executable,
+                "python3",
                 "-m",
                 "pip",
                 "install",
