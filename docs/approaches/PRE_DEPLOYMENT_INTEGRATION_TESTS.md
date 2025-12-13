@@ -2,6 +2,20 @@
 
 Pre-deployment integration tests validate that infrastructure dependencies exist and are properly configured **before** attempting deployment. This catches misconfigurations early with precise diagnostic information.
 
+## Critical Distinction: Prerequisites vs Created Resources
+
+**Pre-deployment tests ONLY test resources created by OTHER workflows that THIS workflow depends on.**
+
+| Workflow | Pre-deployment tests should check... | NOT check... |
+|----------|--------------------------------------|--------------|
+| `endpoint_v1_runners` | IAM role from bootstrap, API Gateway from api_backend | SQS queues, DynamoDB tables (created by this workflow) |
+| `api_backend` | S3 buckets from bootstrap | API Gateway, Lambda functions (created by this workflow) |
+| `endpoint_v1_health` | API Gateway from api_backend | Lambda function (created by this workflow) |
+
+**Why?** Resources created by the workflow don't exist yet when pre-deployment tests run (terraform apply hasn't executed). Testing for their existence will always fail on first deployment or when renaming resources.
+
+**Post-deployment tests** verify that terraform apply succeeded by checking existence, configuration, and capability of resources the workflow just created.
+
 ## Philosophy: Fail Fast with Granular Diagnostics
 
 When a deployment fails, the error message is often cryptic:
