@@ -14,10 +14,16 @@ locals {
   lambda_timeout_seconds         = 120
 
   # Resource names derived from webhook handler (PascalCase for SQS queues)
-  idempotency_table_name = "${module.shared.lambda_handler_names.webhook}-idempotency"
-  job_queue_name         = "${module.shared.lambda_handler_names.webhook}Jobs"
-  job_queue_dlq_name     = "${module.shared.lambda_handler_names.webhook}JobDlq"
-  webhook_dlq_name       = "${module.shared.lambda_handler_names.webhook}Dlq"
+  idempotency_table_name     = "${module.shared.lambda_handler_names.webhook}-idempotency"
+  webhook_ingress_queue_name = "${module.shared.lambda_handler_names.webhook}Ingress"
+  webhook_ingress_dlq_name   = "${module.shared.lambda_handler_names.webhook}IngressDlq"
+  job_queue_name             = "${module.shared.lambda_handler_names.webhook}Jobs"
+  job_queue_dlq_name         = "${module.shared.lambda_handler_names.webhook}JobDlq"
+  cleanup_queue_name         = "${module.shared.lambda_handler_names.webhook}Cleanup"
+  cleanup_queue_dlq_name     = "${module.shared.lambda_handler_names.webhook}CleanupDlq"
+  ignored_events_queue_name  = "${module.shared.lambda_handler_names.webhook}IgnoredEvents"
+  ignored_events_dlq_name    = "${module.shared.lambda_handler_names.webhook}IgnoredEventsDlq"
+  webhook_dlq_name           = "${module.shared.lambda_handler_names.webhook}Dlq"
 
   # SSM parameter names
   ssm_parameter_name_for_latest_ami     = module.shared.ssm_ec2_runner_ami_latest

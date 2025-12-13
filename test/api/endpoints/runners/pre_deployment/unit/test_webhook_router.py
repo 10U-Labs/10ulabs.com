@@ -114,11 +114,9 @@ def test_lambda_handler_ping_event_returns_200(webhook_router, lambda_context):
 
 
 
-@patch('urllib.request.urlopen')
 @patch('boto3.client')
-# pylint: disable=too-many-arguments,too-many-positional-arguments
 def test_lambda_handler_sqs_event_processes_successfully(
-    mock_boto_client, mock_urlopen, webhook_router, sqs_event_factory, lambda_context, config
+    mock_boto_client, webhook_router, sqs_event_factory, lambda_context, config
 ):
     """Test lambda handler sqs event processes successfully."""
     mock_ec2 = MagicMock()
@@ -130,24 +128,25 @@ def test_lambda_handler_sqs_event_processes_successfully(
     mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-token'}}
     mock_boto_client.side_effect = create_multi_client_mock(mock_ec2, mock_ssm)
 
-    mock_response = MagicMock()
-    mock_response.status = 200
-    mock_response.read.return_value = b'{"success": true}'
-    mock_urlopen.return_value.__enter__.return_value = mock_response
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.read.return_value = b'{"success": true}'
+        mock_urlopen.return_value.__enter__.return_value = mock_response
 
-    job_data = {
-        'job_id': 123,
-        'job_labels': config['ec2'],
-        'github_repo': 'test-org/test-repo'
-    }
-    event = sqs_event_factory(records=[{
-        'messageId': 'test-message-id',
-        'eventSource': 'aws:sqs',
-        'body': json.dumps(job_data),
-        'attributes': {},
-        'messageAttributes': {}
-    }])
-    response = webhook_router.lambda_handler(event, lambda_context)
+        job_data = {
+            'job_id': 123,
+            'job_labels': config['ec2'],
+            'github_repo': 'test-org/test-repo'
+        }
+        event = sqs_event_factory(records=[{
+            'messageId': 'test-message-id',
+            'eventSource': 'aws:sqs',
+            'body': json.dumps(job_data),
+            'attributes': {},
+            'messageAttributes': {}
+        }])
+        response = webhook_router.lambda_handler(event, lambda_context)
     assert_response_status(response, 200)
 
 
@@ -451,86 +450,6 @@ def test_get_webhook_secret_force_refresh_clears_cache(webhook_router, mock_ssm)
     secret = webhook_router.get_webhook_secret(force_refresh=True)
     assert secret == 'test-secret'
 
-
-
-def test_make_http_request_with_retry_succeeds_on_first_attempt(webhook_router):
-    """Test make http request with retry succeeds on first attempt."""
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_response = MagicMock()
-        mock_response.read.return_value = json.dumps({'result': 'success'}).encode()
-        mock_response.__enter__.return_value = mock_response
-        mock_urlopen.return_value = mock_response
-        result = webhook_router.make_http_request_with_retry('http://test.com', {})
-        success, _data, _error, _status = result
-    assert success is True
-
-
-def test_make_http_request_with_retry_retries_on_server_error_returns_false(webhook_router):
-    """Test make http request with retry retries on server error returns false."""
-    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
-        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
-        result = webhook_router.make_http_request_with_retry(
-            'http://test.com', {}, max_retries=1
-        )
-        success, _data, _error, _status = result
-    assert success is False
-
-
-def test_make_http_request_with_retry_retries_on_server_error_returns_status_code(webhook_router):
-    """Test make http request with retry retries on server error returns status code."""
-    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
-        mock_urlopen.side_effect = urllib.error.HTTPError('url', 500, 'Server Error', {}, None)
-        result = webhook_router.make_http_request_with_retry(
-            'http://test.com', {}, max_retries=1
-        )
-        _success, _data, _error, status = result
-    assert status == 500
-
-
-def test_make_http_request_with_retry_fails_immediately_on_client_error_returns_false(
-    webhook_router
-):
-    """Test make http request with retry fails immediately on client error returns false."""
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
-        result = webhook_router.make_http_request_with_retry('http://test.com', {})
-        success, _data, _error, _status = result
-    assert success is False
-
-
-def test_make_http_request_with_retry_fails_immediately_on_client_error_returns_status_code(
-    webhook_router
-):
-    """Test make http request with retry fails immediately on client error returns status code."""
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_urlopen.side_effect = urllib.error.HTTPError('url', 400, 'Bad Request', {}, None)
-        result = webhook_router.make_http_request_with_retry('http://test.com', {})
-        _success, _data, _error, status = result
-    assert status == 400
-
-
-def test_make_http_request_with_retry_returns_503_returns_false(webhook_router):
-    """Test make http request with retry returns 503 returns false."""
-    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
-        http_error = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
-        mock_urlopen.side_effect = http_error
-        result = webhook_router.make_http_request_with_retry(
-            'http://test.com', {}, max_retries=1
-        )
-        success, _data, _error, _status = result
-    assert success is False
-
-
-def test_make_http_request_with_retry_returns_503_status_code(webhook_router):
-    """Test make http request with retry returns 503 status code."""
-    with patch('urllib.request.urlopen') as mock_urlopen, patch('time.sleep'):
-        http_error = urllib.error.HTTPError('url', 503, 'Service Unavailable', {}, None)
-        mock_urlopen.side_effect = http_error
-        result = webhook_router.make_http_request_with_retry(
-            'http://test.com', {}, max_retries=1
-        )
-        _success, _data, _error, status = result
-    assert status == 503
 
 
 def test_publish_metric_sends_to_cloudwatch(webhook_router, mock_cloudwatch):
@@ -956,45 +875,58 @@ def test_lambda_handler_options_request_allows_options_method(webhook_router, la
     assert 'OPTIONS' in allowed_methods
 
 
-def test_should_record_circuit_breaker_failure_returns_false_for_503(webhook_router):
-    """Test should record circuit breaker failure returns false for 503."""
-    assert webhook_router.should_record_circuit_breaker_failure(503) is False
+# === Webhook Router enqueue_ignored_event Tests ===
 
 
-def test_should_record_circuit_breaker_failure_returns_false_for_500(webhook_router):
-    """Test should record circuit breaker failure returns false for 500.
-
-    Any HTTP response means the service is alive, so don't trip the breaker.
-    """
-    assert webhook_router.should_record_circuit_breaker_failure(500) is False
-
-
-def test_should_record_circuit_breaker_failure_returns_false_for_502(webhook_router):
-    """Test should record circuit breaker failure returns false for 502.
-
-    Any HTTP response means the service is alive, so don't trip the breaker.
-    """
-    assert webhook_router.should_record_circuit_breaker_failure(502) is False
+def test_enqueue_ignored_event_returns_success(webhook_router, mock_sqs):
+    """Test enqueue_ignored_event returns success."""
+    mock_sqs.send_message.return_value = {'MessageId': 'msg-123'}
+    queue_url = 'https://sqs.us-east-1.amazonaws.com/123456789012/ignored-queue'
+    with patch.dict('os.environ', {'IGNORED_EVENTS_QUEUE_URL': queue_url}):
+        result = webhook_router.enqueue_ignored_event({'test': 'data'}, 'test reason')
+    assert result['success'] is True
 
 
-def test_should_record_circuit_breaker_failure_returns_false_for_504(webhook_router):
-    """Test should record circuit breaker failure returns false for 504.
-
-    Any HTTP response means the service is alive, so don't trip the breaker.
-    """
-    assert webhook_router.should_record_circuit_breaker_failure(504) is False
-
-
-def test_should_record_circuit_breaker_failure_returns_false_for_400(webhook_router):
-    """Test should record circuit breaker failure returns false for 400."""
-    assert webhook_router.should_record_circuit_breaker_failure(400) is False
+def test_enqueue_ignored_event_returns_message_id(webhook_router, mock_sqs):
+    """Test enqueue_ignored_event returns message id."""
+    mock_sqs.send_message.return_value = {'MessageId': 'msg-123'}
+    queue_url = 'https://sqs.us-east-1.amazonaws.com/123456789012/ignored-queue'
+    with patch.dict('os.environ', {'IGNORED_EVENTS_QUEUE_URL': queue_url}):
+        result = webhook_router.enqueue_ignored_event({'test': 'data'}, 'test reason')
+    assert result.get('message_id') == 'msg-123'
 
 
-def test_should_record_circuit_breaker_failure_returns_false_for_200(webhook_router):
-    """Test should record circuit breaker failure returns false for 200."""
-    assert webhook_router.should_record_circuit_breaker_failure(200) is False
+def test_enqueue_ignored_event_without_queue_url_returns_error(webhook_router):
+    """Test enqueue_ignored_event returns error when queue URL not set."""
+    with patch.dict('os.environ', {}, clear=True):
+        result = webhook_router.enqueue_ignored_event({'test': 'data'}, 'test reason')
+    assert result['success'] is False
 
 
-def test_should_record_circuit_breaker_failure_returns_true_for_none(webhook_router):
-    """Test should record circuit breaker failure returns true for none."""
-    assert webhook_router.should_record_circuit_breaker_failure(None) is True
+def test_lambda_handler_detects_webhook_ingress_queue(webhook_router, lambda_context, mock_ssm):
+    """Test lambda_handler correctly detects webhook ingress queue."""
+    mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'test-secret'}}
+    webhook_router.webhook_secret_cache['value'] = 'test-secret'
+
+    payload = {'zen': 'Design for failure', 'hook_id': 123}
+    body = json.dumps(payload)
+    signature = webhook_router.hmac.new(
+        'test-secret'.encode('utf-8'),
+        body.encode('utf-8'),
+        webhook_router.hashlib.sha256
+    ).hexdigest()
+
+    event = {
+        'Records': [{
+            'eventSource': 'aws:sqs',
+            'eventSourceARN': 'arn:aws:sqs:us-east-1:123456789:TestHandlerIngress',
+            'body': body,
+            'messageAttributes': {
+                'x-hub-signature-256': {'stringValue': f'sha256={signature}'},
+                'x-github-event': {'stringValue': 'ping'},
+                'x-github-delivery': {'stringValue': 'test-delivery-id'}
+            }
+        }]
+    }
+    response = webhook_router.lambda_handler(event, lambda_context)
+    assert_response_status(response, 200)
