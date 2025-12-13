@@ -5,6 +5,10 @@ data "archive_file" "runners_handler" {
     filename = "webhook_router.py"
   }
   source {
+    content  = file("${path.module}/lambdas/webhook_ingress.py")
+    filename = "webhook_ingress.py"
+  }
+  source {
     content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
     filename = "runner_labels.py"
   }

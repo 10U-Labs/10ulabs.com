@@ -66,8 +66,13 @@ def test_v1_runners_post_ignores_missing_signature(api_url):
     assert response.status_code == 200
 
 
-def test_v1_runners_post_rejects_invalid_signature(api_url):
-    """Verify that webhook rejects requests with invalid signature."""
+def test_v1_runners_post_accepts_request_to_sqs(api_url):
+    """Verify that webhook accepts requests into SQS queue.
+
+    With API Gateway → SQS direct integration, signature validation happens
+    asynchronously in the Lambda that processes from SQS. The endpoint always
+    returns 200 to accept the request into the queue.
+    """
     skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
     headers = {
         "x-github-event": "workflow_job",
@@ -82,7 +87,9 @@ def test_v1_runners_post_rejects_invalid_signature(api_url):
     response = requests.post(
         f"{api_url}/v1/runners", json=payload, headers=headers, timeout=10
     )
-    assert response.status_code == 401
+    # API Gateway → SQS returns 200 (accepted into queue)
+    # Signature validation happens asynchronously in Lambda
+    assert response.status_code == 200
 
 
 def test_workflow_job_completed_action_returns_200(api_url):
