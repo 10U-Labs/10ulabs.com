@@ -167,6 +167,34 @@ def get_resource_prefix() -> str:
     return parse_locals().get("resource_prefix", "TenULabs")
 
 
+def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
+    """Get all resource names for the runners endpoint.
+
+    Computes DynamoDB table names, SQS queue names, etc. from the resource prefix.
+    This is the single source of truth for runners resource naming.
+
+    Args:
+        prefix: Resource prefix. If None, reads from shared Terraform module.
+
+    Returns:
+        Dict mapping resource keys to their full names.
+    """
+    if prefix is None:
+        prefix = get_resource_prefix()
+    return {
+        # DynamoDB tables
+        'idempotency_table': f"{prefix}-idempotency",
+        'circuit_breaker_state_table': f"{prefix}-circuit-breaker-state",
+        'workflow_runners_table': f"{prefix}-workflow-runners",
+        'incidents_table': f"{prefix}-incidents",
+        # SQS queues
+        'job_queue': f"{prefix}-jobs",
+        'job_dlq': f"{prefix}-job-dlq",
+        'webhook_dlq': f"{prefix}-dlq",
+        'drift_recovery_queue': f"{prefix}-DriftRecovery.fifo",
+    }
+
+
 def _resolve_prefix_refs(value: str, prefix: str) -> str:
     """Resolve resource_prefix references in a Terraform string value."""
     value = value.replace("${module.shared.resource_prefix}", prefix)
