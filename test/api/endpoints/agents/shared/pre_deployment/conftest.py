@@ -1,10 +1,9 @@
 """Pytest fixtures for agents/shared pre-deployment tests."""
-from pathlib import Path
-
 import pytest
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
-AGENTS_SHARED_DIR = REPO_ROOT / "src" / "api" / "agents" / "shared"
+from terraform_config import REPO_ROOT
+
+AGENTS_SHARED_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "agents" / "shared"
 SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 
 
