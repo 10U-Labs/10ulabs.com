@@ -22,4 +22,9 @@ resource "aws_bedrockagentcore_agent_runtime" "troubleshooter_of_workflows" {
   tags = merge(local.common_tags, {
     Name = local.stack_name
   })
+
+  depends_on = [
+    aws_iam_role_policy.agent_execution,
+    aws_iam_role_policy_attachment.agent_execution_managed,
+  ]
 }
