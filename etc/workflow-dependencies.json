@@ -79,7 +79,7 @@
   },
   "endpoint_v1_agents_creator_of_e2e_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_post_deployment_integration_tests"
     ],
     "name": "Deploying Creator of E2E Tests Agent",
     "paths": [
@@ -90,7 +90,7 @@
   },
   "endpoint_v1_agents_creator_of_post_deployment_integration_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_pre_deployment_integration_tests"
     ],
     "name": "Deploying Creator of Post-Deployment Integration Tests Agent",
     "paths": [
@@ -101,7 +101,7 @@
   },
   "endpoint_v1_agents_creator_of_pre_deployment_integration_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_unit_tests"
     ],
     "name": "Deploying Creator of Pre-Deployment Integration Tests Agent",
     "paths": [
@@ -112,7 +112,7 @@
   },
   "endpoint_v1_agents_creator_of_unit_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_deleter_of_workflows"
     ],
     "name": "Deploying Creator of Unit Tests Agent",
     "paths": [
