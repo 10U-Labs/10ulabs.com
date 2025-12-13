@@ -57,7 +57,7 @@
   },
   "endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_unit_tests"
     ],
     "name": "Deploying Code Reviewer for Pre-Deployment Integration Tests",
     "paths": [
@@ -101,7 +101,7 @@
   },
   "endpoint_v1_agents_creator_of_pre_deployment_integration_tests": {
     "depends_on": [
-      "endpoint_v1_agents_creator_of_unit_tests"
+      "endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests"
     ],
     "name": "Deploying Creator of Pre-Deployment Integration Tests Agent",
     "paths": [
@@ -134,7 +134,7 @@
   },
   "endpoint_v1_agents_deleter_of_agents": {
     "depends_on": [
-      "endpoint_v1_agents_creator_of_agents"
+      "endpoint_v1_agents_modifier_of_agents"
     ],
     "name": "Deploying Agent Deleter",
     "paths": [
@@ -222,7 +222,7 @@
   },
   "endpoint_v1_agents_modifier_of_agents": {
     "depends_on": [
-      "endpoint_v1_agents_creator_of_agents"
+      "endpoint_v1_agents_evaluator_of_agents"
     ],
     "name": "Deploying Agent Modifier",
     "paths": [
