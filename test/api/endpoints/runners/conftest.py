@@ -105,6 +105,11 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['workflow_runners_table_name'] = f"{prefix}-workflow-runners"
     result['lambda_runners_role_name'] = f"{lambda_fn}ServiceRole"
     result['webhook_handler_service_role_name'] = f"{lambda_fn}ServiceRole"
+    # SQS queue names (PascalCase naming convention, single source of truth: terraform_config)
+    result['job_queue_name'] = f"{lambda_fn}Jobs"
+    result['job_dlq_name'] = f"{lambda_fn}JobDlq"
+    result['webhook_dlq_name'] = f"{lambda_fn}Dlq"
+    result['drift_recovery_queue_name'] = f"{prefix}DriftRecovery.fifo"
     # Log group names derived from Lambda function names (single source of truth: locals.tf)
     for key in ['circuit_breaker_remediation', 'dlq_reprocessor', 'circuit_breaker_recovery']:
         fn_name = result.get(f'{key}_function_name', '')
