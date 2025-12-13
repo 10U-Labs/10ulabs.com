@@ -446,7 +446,7 @@
             "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
           },
           "requestTemplates": {
-            "application/json": "#set($githubEvent = $input.params().header.get('x-github-event'))#set($signature = $input.params().header.get('x-hub-signature-256'))#set($delivery = $input.params().header.get('x-github-delivery'))#set($wrapper = \"{\"\"headers\"\":{\"\"x-github-event\"\":\"\"$util.escapeJavaScript($githubEvent)\"\",\"\"x-hub-signature-256\"\":\"\"$util.escapeJavaScript($signature)\"\",\"\"x-github-delivery\"\":\"\"$util.escapeJavaScript($delivery)\"\"},\"\"body\"\":$input.body}\")Action=SendMessage&MessageBody=$util.urlEncode($wrapper)"
+            "application/json": "#set($githubEvent = $input.params().header.get('x-github-event'))#set($signature = $input.params().header.get('x-hub-signature-256'))#set($delivery = $input.params().header.get('x-github-delivery'))#set($wrapper = \"{\"\"headers\"\":{\"\"x-github-event\"\":\"\"$util.escapeJavaScript($githubEvent)\"\",\"\"x-hub-signature-256\"\":\"\"$util.escapeJavaScript($signature)\"\",\"\"x-github-delivery\"\":\"\"$util.escapeJavaScript($delivery)\"\"},\"\"body\"\":\"\"$util.escapeJavaScript($input.body)\"\"}\")Action=SendMessage&MessageBody=$util.urlEncode($wrapper)"
           },
           "responses": {
             "default": {

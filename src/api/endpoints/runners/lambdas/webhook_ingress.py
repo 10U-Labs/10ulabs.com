@@ -141,8 +141,15 @@ class IngressHandler:
             if isinstance(wrapper, dict) and 'headers' in wrapper and 'body' in wrapper:
                 headers = wrapper.get('headers', {})
                 inner_body = wrapper.get('body')
-                # body could be dict (already parsed) or string
-                if isinstance(inner_body, dict):
+                # body should be a string (original GitHub payload for signature verification)
+                if isinstance(inner_body, str):
+                    body_str = inner_body
+                    try:
+                        payload = json.loads(body_str)
+                    except (ValueError, TypeError):
+                        payload = None
+                elif isinstance(inner_body, dict):
+                    # Fallback for dict (signature verification will fail)
                     body_str = json.dumps(inner_body)
                     payload = inner_body
                 else:
