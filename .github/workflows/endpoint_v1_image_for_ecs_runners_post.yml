@@ -144,7 +144,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           pytest test/api/endpoints/image_for_ecs_runners/post/pre_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||

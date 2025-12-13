@@ -152,7 +152,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest test/api/endpoints/image_for_ec2_runners/post/pre_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - env:
           OS_ARCH: ${{ steps.config.outputs.os_architecture }}
           OS_FAMILY: ${{ steps.config.outputs.os_family }}

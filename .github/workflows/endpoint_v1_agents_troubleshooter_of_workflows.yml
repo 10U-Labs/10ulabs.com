@@ -128,7 +128,7 @@ jobs:
         run: |
           TEST_PATH=test/api/endpoints/agents/troubleshooter_of_workflows
           python3 -m pytest $TEST_PATH/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --capture=no --verbose --pythonwarnings=error
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - id: meta

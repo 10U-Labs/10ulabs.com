@@ -90,7 +90,7 @@ jobs:
         run: |
           python3 -m pytest \
             test/api/endpoints/contact/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --capture=no --verbose --pythonwarnings=error
       - env:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
         name: Terraform Apply

@@ -139,7 +139,7 @@ jobs:
         run: |
           ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
           pytest $ENDPOINT/pre_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
           cd src/api/endpoints/image_for_ecs_runners

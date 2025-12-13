@@ -124,7 +124,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest test/api/endpoints/runners/pre_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+            --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/runners && terraform apply -auto-approve
       - name: Run post-deployment integration tests
