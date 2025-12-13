@@ -142,8 +142,6 @@ jobs:
           tags: |
             type=sha,prefix=troubleshooter-of-workflows-
             type=raw,value=troubleshooter-of-workflows-latest
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - env:
