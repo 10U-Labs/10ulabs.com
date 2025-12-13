@@ -1,6 +1,7 @@
 # IAM role for API Gateway to send messages to SQS (used for direct SQS integration)
 # This removes Lambda from the API Gateway hot path, preventing throttling from causing 500 errors
 # ARN constructed from known values to avoid dependency on runners remote state
+# Queue: ${handler}Ingress where handler = module.shared.lambda_handler_names.webhook
 
 resource "aws_iam_role" "api_gateway_sqs" {
   name = "${local.resource_prefix}ApiGatewaySqsRole"
