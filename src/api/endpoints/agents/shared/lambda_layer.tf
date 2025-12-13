@@ -5,7 +5,7 @@
 
 locals {
   lambda_layer_dir   = "${path.module}/.terraform/lambda_layer"
-  github_auth_script = "${path.module}/lambda_layer/build.sh"
+  github_auth_script = "${path.module}/lambda_layer/build.py"
   github_auth_reqs   = "${path.module}/lambda_layer/requirements.txt"
   github_auth_module = "${path.module}/lambda_layer/github_auth.py"
   github_auth_zip    = "${local.lambda_layer_dir}/github_auth.zip"
@@ -27,7 +27,7 @@ resource "null_resource" "github_auth_layer_build" {
   }
 
   provisioner "local-exec" {
-    command = "${local.github_auth_script} github_auth ${local.github_auth_reqs} ${local.github_auth_zip}"
+    command = "python3 ${local.github_auth_script} github_auth ${local.github_auth_reqs} ${local.github_auth_zip}"
   }
 }
 
