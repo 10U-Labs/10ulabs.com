@@ -134,7 +134,7 @@
   },
   "endpoint_v1_agents_deleter_of_agents": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_agents"
     ],
     "name": "Deploying Agent Deleter",
     "paths": [
@@ -200,7 +200,7 @@
   },
   "endpoint_v1_agents_evaluator_of_agents": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_agents"
     ],
     "name": "Deploying Agent Evaluator",
     "paths": [
@@ -222,7 +222,7 @@
   },
   "endpoint_v1_agents_modifier_of_agents": {
     "depends_on": [
-      "endpoint_v1_agents_troubleshooter_of_workflows"
+      "endpoint_v1_agents_creator_of_agents"
     ],
     "name": "Deploying Agent Modifier",
     "paths": [
