@@ -14,7 +14,7 @@ def test_sqs_messages_processed_by_lambda(config):
 def test_failed_messages_move_to_dlq_after_max_retries(config):
     """Test failed messages move to dlq after max retries."""
     sqs = boto3.client('sqs', region_name=config['aws_region'])
-    dlq_url = sqs.get_queue_url(QueueName=config['job_queue_dlq_name'])['QueueUrl']
+    dlq_url = sqs.get_queue_url(QueueName=config['job_dlq_name'])['QueueUrl']
     attr_names = ['ApproximateNumberOfMessages']
     attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=attr_names)
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
@@ -32,7 +32,7 @@ def test_sqs_message_processing_updates_status(config):
 def test_dlq_reprocessor_moves_messages_back(config):
     """Test dlq reprocessor moves messages back."""
     sqs = boto3.client('sqs', region_name=config['aws_region'])
-    dlq_url = sqs.get_queue_url(QueueName=config['job_queue_dlq_name'])['QueueUrl']
+    dlq_url = sqs.get_queue_url(QueueName=config['job_dlq_name'])['QueueUrl']
     attr_names = ['ApproximateNumberOfMessages']
     attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=attr_names)
     assert "ApproximateNumberOfMessages" in attributes["Attributes"]
