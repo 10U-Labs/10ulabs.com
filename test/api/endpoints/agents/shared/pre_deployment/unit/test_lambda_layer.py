@@ -10,19 +10,35 @@ def test_lambda_layer_tf_defines_github_auth_layer(agents_shared_dir):
     assert re.search(pattern, content) is not None
 
 
-def test_lambda_layer_has_compatible_runtimes(agents_shared_dir):
-    """Test that Lambda layer supports required Python runtimes."""
+def test_lambda_layer_supports_python313(agents_shared_dir):
+    """Test that Lambda layer supports Python 3.13 runtime."""
     lambda_layer_tf = agents_shared_dir / "lambda_layer.tf"
     content = lambda_layer_tf.read_text()
     assert "python3.13" in content
+
+
+def test_lambda_layer_supports_python312(agents_shared_dir):
+    """Test that Lambda layer supports Python 3.12 runtime."""
+    lambda_layer_tf = agents_shared_dir / "lambda_layer.tf"
+    content = lambda_layer_tf.read_text()
     assert "python3.12" in content
 
 
-def test_lambda_layer_source_files_exist(agents_shared_dir):
-    """Test that Lambda layer source files exist."""
+def test_lambda_layer_build_script_exists(agents_shared_dir):
+    """Test that Lambda layer build script exists."""
     layer_dir = agents_shared_dir / "lambda_layer"
-    assert (layer_dir / "build.sh").exists()
+    assert (layer_dir / "build.py").exists()
+
+
+def test_lambda_layer_requirements_exists(agents_shared_dir):
+    """Test that Lambda layer requirements.txt exists."""
+    layer_dir = agents_shared_dir / "lambda_layer"
     assert (layer_dir / "requirements.txt").exists()
+
+
+def test_lambda_layer_github_auth_module_exists(agents_shared_dir):
+    """Test that Lambda layer github_auth.py module exists."""
+    layer_dir = agents_shared_dir / "lambda_layer"
     assert (layer_dir / "github_auth.py").exists()
 
 
