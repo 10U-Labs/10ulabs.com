@@ -97,7 +97,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TESTS="test/api/endpoints/rack_designer/pre_deployment/integration/"
-          python3 -m pytest $TESTS --verbose --pythonwarnings=error
+          python3 -m pytest $TESTS --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/rack_designer && terraform apply -auto-approve
       - name: Get website bucket name

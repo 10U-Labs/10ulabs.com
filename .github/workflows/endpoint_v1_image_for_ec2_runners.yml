@@ -119,7 +119,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           pytest test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
           cd src/api/endpoints/image_for_ec2_runners

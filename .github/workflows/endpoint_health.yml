@@ -127,7 +127,7 @@ jobs:
         run: |
           python3 -m pytest \
             test/api/endpoints/health/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/health && terraform apply -auto-approve
       - name: Run post-deployment integration tests

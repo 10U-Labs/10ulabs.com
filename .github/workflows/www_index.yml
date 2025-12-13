@@ -61,7 +61,7 @@ jobs:
         run: |
           python3 -m pytest \
             test/www/index/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --capture=no --verbose --pythonwarnings=error
       - name: Get bucket name from shared Terraform
         run: |
           terraform -chdir=src/www/shared init \

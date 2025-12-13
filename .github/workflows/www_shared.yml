@@ -98,11 +98,11 @@ jobs:
             .github/workflows/www_shared.yml
       - name: Run pylint
         run: |
-          python3 -m pylint test/www/shared/ \
+          PYTHONPATH=lib/python python3 -m pylint test/www/shared/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: python3 -m mypy test/www/shared/
+        run: MYPYPATH=lib/python python3 -m mypy test/www/shared/
       - name: Terraform Format Check
         run: cd src/www/shared && terraform fmt -diff -check -recursive
       - name: Terraform Init
@@ -125,7 +125,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest test/www/shared/pre_deployment/integration/ \
-            --verbose --pythonwarnings=error
+            --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/www/shared && terraform apply -auto-approve
       - id: check_files
