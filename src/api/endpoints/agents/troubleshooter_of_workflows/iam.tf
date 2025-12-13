@@ -7,7 +7,7 @@ data "aws_region" "current" {}
 # ===================================================================
 
 resource "aws_iam_role" "agent_execution" {
-  name = "${local.stack_name}-agent-execution-role"
+  name = "${local.resource_prefix}TroubleshooterOfWorkflowsAgentExecutionRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -30,7 +30,7 @@ resource "aws_iam_role" "agent_execution" {
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.stack_name}-agent-execution-role"
+    Name = "${local.resource_prefix}TroubleshooterOfWorkflowsAgentExecutionRole"
   })
 }
 
@@ -135,7 +135,7 @@ resource "aws_iam_role_policy" "agent_execution" {
 # ===================================================================
 
 resource "aws_iam_role" "webhook_lambda" {
-  name = "${local.lambda_name}Role"
+  name = local.webhook_lambda_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
