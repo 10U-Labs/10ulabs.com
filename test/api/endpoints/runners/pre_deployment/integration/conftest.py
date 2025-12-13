@@ -9,7 +9,7 @@ These tests follow the 5-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TES
 
 Inherited fixtures from parent conftest files:
 - test/conftest.py: shared_config, aws_region, sts_client, iam_client,
-  caller_identity, current_role_arn, current_role_name
+  caller_identity, current_role_arn, current_role_name, ssm_client, ssm_github_pat_name
 - test/api/conftest.py: lambda_client, ecs_runner_terraform_initialized,
   ecs_runner_outputs, terraform_init, terraform_output
 - test/api/endpoints/runners/conftest.py: dynamodb_client
@@ -21,6 +21,8 @@ import boto3
 import pytest
 
 
+API_SHARED_ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "shared" / "ecs_runner"
+API_SHARED_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
 EC2_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 RUNNERS_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
@@ -94,5 +96,73 @@ def ec2_runner_outputs(request):
         ),
         "ec2_runner_role_arn": terraform_output(
             EC2_RUNNER_DIR, "ec2_runner_role_arn"
+        ),
+    }
+
+
+# =============================================================================
+# API Shared Infrastructure Fixtures (REQUIRED - no defaults in data.tf)
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def ec2_client(aws_region):
+    """Create an EC2 client."""
+    return boto3.client("ec2", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def api_shared_runners_terraform_initialized():
+    """Initialize terraform for api_shared_runners state access."""
+    return terraform_init(API_SHARED_RUNNERS_DIR)
+
+
+@pytest.fixture(scope="session")
+def api_shared_runners_outputs(request):
+    """Get api_shared_runners terraform outputs.
+
+    These outputs are REQUIRED (no defaults in runners/data.tf):
+    - vpc_id: Used by drift_recovery Lambda and outputs passthrough
+    - vpc_public_subnet_ids: Used by outputs passthrough
+    - runner_security_group_id: Used by outputs passthrough
+    """
+    if not request.getfixturevalue("api_shared_runners_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_shared_runners")
+    return {
+        "vpc_id": terraform_output(API_SHARED_RUNNERS_DIR, "vpc_id"),
+        "vpc_public_subnet_ids": terraform_output(
+            API_SHARED_RUNNERS_DIR, "vpc_public_subnet_ids"
+        ),
+        "runner_security_group_id": terraform_output(
+            API_SHARED_RUNNERS_DIR, "runner_security_group_id"
+        ),
+    }
+
+
+@pytest.fixture(scope="session")
+def api_shared_ecs_runner_terraform_initialized():
+    """Initialize terraform for api_shared_ecs_runner state access."""
+    return terraform_init(API_SHARED_ECS_RUNNER_DIR)
+
+
+@pytest.fixture(scope="session")
+def api_shared_ecs_runner_outputs(request):
+    """Get api_shared_ecs_runner terraform outputs.
+
+    These outputs are REQUIRED (no defaults in runners/data.tf):
+    - ecr_repository_arn: Used by outputs passthrough
+    - ecr_repository_name: Used by outputs passthrough
+    - ecr_repository_url: Used by outputs passthrough
+    """
+    if not request.getfixturevalue("api_shared_ecs_runner_terraform_initialized"):
+        pytest.skip("Terraform init failed for api_shared_ecs_runner")
+    return {
+        "ecr_repository_arn": terraform_output(
+            API_SHARED_ECS_RUNNER_DIR, "ecr_repository_arn"
+        ),
+        "ecr_repository_name": terraform_output(
+            API_SHARED_ECS_RUNNER_DIR, "ecr_repository_name"
+        ),
+        "ecr_repository_url": terraform_output(
+            API_SHARED_ECS_RUNNER_DIR, "ecr_repository_url"
         ),
     }
