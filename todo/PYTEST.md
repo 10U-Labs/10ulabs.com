@@ -1,0 +1,1 @@
+- Show percentage when --capture=no
