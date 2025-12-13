@@ -13,6 +13,7 @@ locals {
     rack_designer         = module.shared.lambda_handler_names.rack_designer
     runners               = module.shared.lambda_handler_names.webhook
     simulation_soc        = module.shared.lambda_handler_names.simulation_soc
+    webhook               = module.shared.lambda_handler_names.webhook
   }
 
   # Helper to construct Lambda ARN from function name
@@ -36,7 +37,9 @@ locals {
   simulation_soc_arn        = "${local.apigw_integration_prefix}/${local.lambda_arn_prefix}:${local.lambda_function_names.simulation_soc}/invocations"
 
   # SQS integration for /v1/runners (API Gateway → SQS direct, no Lambda in hot path)
-  webhook_ingress_sqs_uri = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${data.terraform_remote_state.runners.outputs.webhook_ingress_queue_name}"
+  # Construct queue name from shared module (avoid dependency on runners remote state)
+  webhook_ingress_queue_name = "${local.lambda_function_names.webhook}Ingress"
+  webhook_ingress_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.webhook_ingress_queue_name}"
 
   openapi_spec = templatefile("${path.module}/../../www/api/openapi.json", {
     CatchAllHandlerArn           = local.catchall_integration_arn
