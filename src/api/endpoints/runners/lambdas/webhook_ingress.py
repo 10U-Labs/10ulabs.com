@@ -121,13 +121,64 @@ class IngressHandler:
         self._deps['enqueue_ignored'](payload, f'event type {github_event} ignored')
         return {'success': True, 'routed': 'ignored_events'}
 
+    def _extract_headers_and_body(
+            self, record: Dict[str, Any]
+    ) -> tuple[Dict[str, str], str, Dict[str, Any] | None]:
+        """Extract headers and body from ingress message.
+
+        Supports two formats:
+        1. Wrapped format (API Gateway → SQS): {"headers": {...}, "body": {...}}
+        2. Legacy format: Headers in SQS message attributes, body in record['body']
+
+        Returns:
+            Tuple of (headers_dict, original_body_str, parsed_payload_or_None)
+        """
+        raw_body = record.get('body', '')
+
+        # Try wrapped format first (API Gateway → SQS direct integration)
+        try:
+            wrapper = json.loads(raw_body)
+            if isinstance(wrapper, dict) and 'headers' in wrapper and 'body' in wrapper:
+                headers = wrapper.get('headers', {})
+                inner_body = wrapper.get('body')
+                # body could be dict (already parsed) or string
+                if isinstance(inner_body, dict):
+                    body_str = json.dumps(inner_body)
+                    payload = inner_body
+                else:
+                    body_str = str(inner_body) if inner_body else ''
+                    try:
+                        payload = json.loads(body_str)
+                    except (ValueError, TypeError):
+                        payload = None
+                return (headers, body_str, payload)
+        except (ValueError, TypeError):
+            pass
+
+        # Fallback to legacy format (headers in SQS message attributes)
+        headers = {
+            'x-github-event': get_message_attribute(record, 'x-github-event'),
+            'x-hub-signature-256': get_message_attribute(record, 'x-hub-signature-256'),
+            'x-github-delivery': get_message_attribute(record, 'x-github-delivery'),
+        }
+        # Remove None values
+        headers = {k: v for k, v in headers.items() if v is not None}
+
+        try:
+            payload = json.loads(raw_body)
+        except (ValueError, TypeError):
+            payload = None
+
+        return (headers, raw_body, payload)
+
     def handle(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Process webhook from ingress queue."""
         start_time = time.time()
-        github_event = get_message_attribute(record, 'x-github-event')
-        signature = get_message_attribute(record, 'x-hub-signature-256')
-        delivery_id = get_message_attribute(record, 'x-github-delivery')
-        body_str = record.get('body', '')
+
+        headers, body_str, payload = self._extract_headers_and_body(record)
+        github_event = headers.get('x-github-event')
+        signature = headers.get('x-hub-signature-256')
+        delivery_id = headers.get('x-github-delivery')
 
         logger.info("Processing webhook ingress: event=%s, delivery=%s",
                     github_event, delivery_id)
@@ -140,10 +191,8 @@ class IngressHandler:
             logger.info("Duplicate webhook delivery %s detected", delivery_id)
             return {'success': True, 'skipped': True, 'reason': 'duplicate'}
 
-        try:
-            payload = json.loads(body_str)
-        except (ValueError, KeyError) as e:
-            logger.error("Failed to parse webhook body: %s", e)
+        if payload is None:
+            logger.error("Failed to parse webhook body")
             return {'success': True, 'skipped': True, 'reason': 'invalid_json'}
 
         elapsed_ms = (time.time() - start_time) * 1000
