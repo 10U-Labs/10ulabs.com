@@ -126,54 +126,7 @@ def test_circuit_breaker_status_contains_sqs_event_source_field(api_url, api_key
     assert "sqs_event_source" in data
 
 
-def test_circuit_breaker_reset_endpoint_returns_200(api_url, api_key):
-    """Test POST /v1/runners/circuit-breaker/reset returns 200 on success."""
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
-    response = requests.post(
-        f"{api_url}/v1/runners/circuit-breaker/reset",
-        headers=headers,
-        timeout=DEFAULT_REQUEST_TIMEOUT,
-    )
-    assert response.status_code in [200, 500]
-
-
-def test_circuit_breaker_reset_response_contains_success_field(api_url, api_key):
-    """Test reset response contains success field."""
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
-    response = requests.post(
-        f"{api_url}/v1/runners/circuit-breaker/reset",
-        headers=headers,
-        timeout=DEFAULT_REQUEST_TIMEOUT,
-    )
-    data = response.json()
-    assert "success" in data
-
-
-def test_circuit_breaker_reset_response_contains_details(api_url, api_key):
-    """Test reset response contains details about actions taken."""
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
-    response = requests.post(
-        f"{api_url}/v1/runners/circuit-breaker/reset",
-        headers=headers,
-        timeout=DEFAULT_REQUEST_TIMEOUT,
-    )
-    data = response.json()
-    assert "details" in data
-
-
-def test_circuit_breaker_healthy_after_reset(api_url, api_key):
-    """Test circuit breaker shows healthy status after reset."""
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
-    requests.post(
-        f"{api_url}/v1/runners/circuit-breaker/reset",
-        headers=headers,
-        timeout=DEFAULT_REQUEST_TIMEOUT,
-    )
-    time.sleep(1)
-    status_response = requests.get(
-        f"{api_url}/v1/runners/circuit-breaker",
-        headers={"x-api-key": api_key},
-        timeout=DEFAULT_REQUEST_TIMEOUT,
-    )
-    status = status_response.json()
-    assert status.get("state") == "closed"
+# NOTE: POST /v1/runners/circuit-breaker/reset is not tested here because
+# calling it would reset a legitimately open circuit breaker, potentially
+# causing damage. The reset endpoint should only be tested manually or in
+# isolated environments.
