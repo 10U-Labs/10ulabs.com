@@ -138,51 +138,219 @@ def test_get_ecs_task_tags_uses_ecs_cluster_env_var(spot_interruption_handler):
     assert call_kwargs['cluster'] == 'my-custom-cluster'
 
 
-def test_rerun_github_job_returns_false_when_no_job_id(spot_interruption_handler):
-    """Test rerun github job returns false when no job id."""
-    result = spot_interruption_handler.rerun_github_job('token', 'test/repo', '')
+def test_cancel_workflow_run_returns_true_on_success(spot_interruption_handler):
+    """Test cancel workflow run returns true on 202 response."""
+    mock_response = Mock()
+    mock_response.status = 202
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = spot_interruption_handler.cancel_workflow_run('test-token', 'test/repo', '123')
+    assert result is True
+
+
+def test_cancel_workflow_run_returns_false_on_http_error(spot_interruption_handler):
+    """Test cancel workflow run returns false on http error."""
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            'http://test', 404, 'Not Found', {}, None
+        )
+        result = spot_interruption_handler.cancel_workflow_run('test-token', 'test/repo', '123')
     assert result is False
 
 
-def test_rerun_github_job_calls_github_api(spot_interruption_handler):
-    """Test rerun github job calls github api."""
+def test_cancel_workflow_run_calls_correct_api(spot_interruption_handler):
+    """Test cancel workflow run calls correct GitHub API endpoint."""
     mock_response = Mock()
-    mock_response.status = 201
+    mock_response.status = 202
     mock_response.__enter__ = Mock(return_value=mock_response)
     mock_response.__exit__ = Mock(return_value=False)
     with patch('urllib.request.urlopen', return_value=mock_response) as mock_urlopen:
-        spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+        spot_interruption_handler.cancel_workflow_run('test-token', 'test/repo', '123')
         call_args = mock_urlopen.call_args[0][0]
-    assert 'actions/jobs/123/rerun' in call_args.full_url
+    assert 'actions/runs/123/cancel' in call_args.full_url
 
 
-def test_rerun_github_job_returns_true_on_success(spot_interruption_handler):
-    """Test rerun github job returns true on success."""
+def test_get_workflow_info_from_run_returns_workflow_id(spot_interruption_handler):
+    """Test get workflow info from run returns workflow_id."""
+    mock_response = Mock()
+    mock_response.read.return_value = b'{"workflow_id": 456, "head_sha": "abc123"}'
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        workflow_id, _ = spot_interruption_handler.get_workflow_info_from_run(
+            'test-token', 'test/repo', '123'
+        )
+    assert workflow_id == '456'
+
+
+def test_get_workflow_info_from_run_returns_head_sha(spot_interruption_handler):
+    """Test get workflow info from run returns head_sha."""
+    mock_response = Mock()
+    mock_response.read.return_value = b'{"workflow_id": 456, "head_sha": "abc123"}'
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        _, head_sha = spot_interruption_handler.get_workflow_info_from_run(
+            'test-token', 'test/repo', '123'
+        )
+    assert head_sha == 'abc123'
+
+
+def test_get_workflow_info_from_run_returns_empty_workflow_id_on_error(spot_interruption_handler):
+    """Test get workflow info from run returns empty workflow_id on error."""
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            'http://test', 404, 'Not Found', {}, None
+        )
+        workflow_id, _ = spot_interruption_handler.get_workflow_info_from_run(
+            'test-token', 'test/repo', '123'
+        )
+    assert workflow_id == ''
+
+
+def test_get_workflow_info_from_run_returns_empty_head_sha_on_error(spot_interruption_handler):
+    """Test get workflow info from run returns empty head_sha on error."""
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            'http://test', 404, 'Not Found', {}, None
+        )
+        _, head_sha = spot_interruption_handler.get_workflow_info_from_run(
+            'test-token', 'test/repo', '123'
+        )
+    assert head_sha == ''
+
+
+def test_dispatch_workflow_returns_true_on_success(spot_interruption_handler):
+    """Test dispatch workflow returns true on 204 response."""
+    mock_response = Mock()
+    mock_response.status = 204
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    with patch('urllib.request.urlopen', return_value=mock_response):
+        result = spot_interruption_handler.dispatch_workflow(
+            'test-token', 'test/repo', '456', 'main', 'test reason'
+        )
+    assert result is True
+
+
+def test_dispatch_workflow_returns_false_on_http_error(spot_interruption_handler):
+    """Test dispatch workflow returns false on http error."""
+    with patch('urllib.request.urlopen') as mock_urlopen:
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            'http://test', 404, 'Not Found', {}, None
+        )
+        result = spot_interruption_handler.dispatch_workflow(
+            'test-token', 'test/repo', '456', 'main', 'test reason'
+        )
+    assert result is False
+
+
+def test_create_check_run_annotation_returns_true_on_success(spot_interruption_handler):
+    """Test create check run annotation returns true on 201 response."""
     mock_response = Mock()
     mock_response.status = 201
     mock_response.__enter__ = Mock(return_value=mock_response)
     mock_response.__exit__ = Mock(return_value=False)
     with patch('urllib.request.urlopen', return_value=mock_response):
-        result = spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+        result = spot_interruption_handler.create_check_run_annotation(
+            'test-token', 'test/repo', 'abc123', 'Test Title', 'Test summary'
+        )
     assert result is True
 
 
-def test_rerun_github_job_returns_false_on_http_error(spot_interruption_handler):
-    """Test rerun github job returns false on http error."""
+def test_create_check_run_annotation_returns_false_on_http_error(spot_interruption_handler):
+    """Test create check run annotation returns false on http error."""
     with patch('urllib.request.urlopen') as mock_urlopen:
         mock_urlopen.side_effect = urllib.error.HTTPError(
-            'http://test', 404, 'Not Found', {}, None
+            'http://test', 403, 'Forbidden', {}, None
         )
-        result = spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
+        result = spot_interruption_handler.create_check_run_annotation(
+            'test-token', 'test/repo', 'abc123', 'Test Title', 'Test summary'
+        )
     assert result is False
 
 
-def test_rerun_github_job_returns_false_on_url_error(spot_interruption_handler):
-    """Test rerun github job returns false on url error."""
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_urlopen.side_effect = urllib.error.URLError('Connection refused')
-        result = spot_interruption_handler.rerun_github_job('test-token', 'test/repo', '123')
-    assert result is False
+def test_spot_recovery_returns_200_status(spot_interruption_handler):
+    """Test recover from spot interruption returns 200 status on success."""
+    handler = spot_interruption_handler
+    with patch.object(handler, 'get_workflow_info_from_run') as mock_info:
+        mock_info.return_value = ('456', 'abc123')
+        with patch.object(handler, 'cancel_workflow_run') as mock_cancel:
+            mock_cancel.return_value = True
+            with patch.object(handler, 'create_check_run_annotation'):
+                with patch.object(handler, 'wait_for_workflow_completion'):
+                    with patch.object(handler, 'dispatch_workflow') as mock_dispatch:
+                        mock_dispatch.return_value = True
+                        result = handler.recover_from_spot_interruption(
+                            'test-token', 'test/repo', '123', 'i-test123'
+                        )
+    assert result['statusCode'] == 200
+
+
+def test_spot_recovery_returns_success_body(spot_interruption_handler):
+    """Test recover from spot interruption returns success body."""
+    handler = spot_interruption_handler
+    with patch.object(handler, 'get_workflow_info_from_run') as mock_info:
+        mock_info.return_value = ('456', 'abc123')
+        with patch.object(handler, 'cancel_workflow_run') as mock_cancel:
+            mock_cancel.return_value = True
+            with patch.object(handler, 'create_check_run_annotation'):
+                with patch.object(handler, 'wait_for_workflow_completion'):
+                    with patch.object(handler, 'dispatch_workflow') as mock_dispatch:
+                        mock_dispatch.return_value = True
+                        result = handler.recover_from_spot_interruption(
+                            'test-token', 'test/repo', '123', 'i-test123'
+                        )
+    assert result['body'] == 'Recovery workflow dispatched'
+
+
+def test_spot_recovery_returns_500_when_no_workflow_info(spot_interruption_handler):
+    """Test recover from spot interruption returns 500 when workflow info not found."""
+    handler = spot_interruption_handler
+    with patch.object(handler, 'get_workflow_info_from_run') as mock_info:
+        mock_info.return_value = ('', '')
+        result = handler.recover_from_spot_interruption(
+            'test-token', 'test/repo', '123', 'i-test123'
+        )
+    assert result['statusCode'] == 500
+
+
+def test_spot_recovery_returns_error_body_when_no_workflow_info(spot_interruption_handler):
+    """Test recover returns error body when workflow info not found."""
+    handler = spot_interruption_handler
+    with patch.object(handler, 'get_workflow_info_from_run') as mock_info:
+        mock_info.return_value = ('', '')
+        result = handler.recover_from_spot_interruption(
+            'test-token', 'test/repo', '123', 'i-test123'
+        )
+    assert 'Failed to get workflow info' in result['body']
+
+
+def test_spot_recovery_returns_500_when_cancel_fails(spot_interruption_handler):
+    """Test recover from spot interruption returns 500 when cancel fails."""
+    handler = spot_interruption_handler
+    with patch.object(handler, 'get_workflow_info_from_run') as mock_info:
+        mock_info.return_value = ('456', 'abc123')
+        with patch.object(handler, 'cancel_workflow_run') as mock_cancel:
+            mock_cancel.return_value = False
+            result = handler.recover_from_spot_interruption(
+                'test-token', 'test/repo', '123', 'i-test123'
+            )
+    assert result['statusCode'] == 500
+
+
+def test_spot_recovery_returns_error_body_when_cancel_fails(spot_interruption_handler):
+    """Test recover returns error body when cancel fails."""
+    handler = spot_interruption_handler
+    with patch.object(handler, 'get_workflow_info_from_run') as mock_info:
+        mock_info.return_value = ('456', 'abc123')
+        with patch.object(handler, 'cancel_workflow_run') as mock_cancel:
+            mock_cancel.return_value = False
+            result = handler.recover_from_spot_interruption(
+                'test-token', 'test/repo', '123', 'i-test123'
+            )
+    assert 'Failed to cancel workflow' in result['body']
 
 
 def test_handle_ecs_task_stopped_fetches_tags_from_api(spot_interruption_handler):
@@ -237,25 +405,7 @@ def test_handle_ecs_task_stopped_skips_when_no_run_id(spot_interruption_handler)
     ) as mock_get_tags:
         mock_get_tags.return_value = {'GitHubJobId': '456'}
         result = spot_interruption_handler.handle_ecs_task_stopped(event)
-    assert result['body'] == 'No run_id or job_id'
-
-
-def test_handle_ecs_task_stopped_skips_when_no_job_id(spot_interruption_handler):
-    """Test handle ecs task stopped skips when no job id."""
-    event = {
-        'detail': {
-            'taskArn': 'arn:aws:ecs:test:task/123',
-            'stopCode': 'SpotInterruption',
-            'stoppedReason': 'Spot interrupted'
-        }
-    }
-    get_ecs_task_tags_fn = getattr(spot_interruption_handler, "_get_ecs_task_tags")
-    with patch.object(
-        spot_interruption_handler, '_get_ecs_task_tags', wraps=get_ecs_task_tags_fn
-    ) as mock_get_tags:
-        mock_get_tags.return_value = {'RunId': '123'}
-        result = spot_interruption_handler.handle_ecs_task_stopped(event)
-    assert result['body'] == 'No run_id or job_id'
+    assert result['body'] == 'No run_id'
 
 
 def test_handle_ecs_task_stopped_skips_non_spot_interruption(spot_interruption_handler):
@@ -280,8 +430,8 @@ def test_handle_ecs_task_stopped_skips_non_spot_interruption(spot_interruption_h
     assert result['body'] == 'Not a spot interruption'
 
 
-def test_handle_ecs_task_stopped_triggers_job_rerun_on_spot_interruption(spot_interruption_handler):
-    """Test handle ecs task stopped triggers job rerun on spot interruption."""
+def test_handle_ecs_task_stopped_triggers_recovery_on_spot_interruption(spot_interruption_handler):
+    """Test handle ecs task stopped triggers recovery on spot interruption."""
     event = {
         'detail': {
             'taskArn': 'arn:aws:ecs:test:task/123',
@@ -295,7 +445,6 @@ def test_handle_ecs_task_stopped_triggers_job_rerun_on_spot_interruption(spot_in
     ) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
@@ -305,17 +454,22 @@ def test_handle_ecs_task_stopped_triggers_job_rerun_on_spot_interruption(spot_in
             )
             with get_status_patch as mock_get_status:
                 mock_get_status.return_value = 'in_progress'
-                with patch.object(spot_interruption_handler, 'rerun_github_job') as mock_rerun:
-                    mock_rerun.return_value = True
+                recovery_patch = patch.object(
+                    spot_interruption_handler, 'recover_from_ecs_spot_interruption'
+                )
+                with recovery_patch as mock_recovery:
+                    mock_recovery.return_value = {
+                        'statusCode': 200, 'body': 'Recovery workflow dispatched'
+                    }
                     result = spot_interruption_handler.handle_ecs_task_stopped(event)
-    assert result['body'] == 'Job re-run triggered'
+    assert result['body'] == 'Recovery workflow dispatched'
 
 
-def test_handle_ecs_task_stopped_passes_job_id_to_rerun(spot_interruption_handler):
-    """Test handle ecs task stopped passes job id to rerun."""
+def test_handle_ecs_task_stopped_passes_task_arn_to_recovery(spot_interruption_handler):
+    """Test handle ecs task stopped passes task arn to recovery."""
     event = {
         'detail': {
-            'taskArn': 'arn:aws:ecs:test:task/123',
+            'taskArn': 'arn:aws:ecs:test:task/789',
             'stopCode': 'SpotInterruption',
             'stoppedReason': 'Your Spot Task was interrupted.'
         }
@@ -326,7 +480,6 @@ def test_handle_ecs_task_stopped_passes_job_id_to_rerun(spot_interruption_handle
     ) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'GitHubJobId': '789',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
@@ -336,15 +489,18 @@ def test_handle_ecs_task_stopped_passes_job_id_to_rerun(spot_interruption_handle
             )
             with get_status_patch as mock_get_status:
                 mock_get_status.return_value = 'in_progress'
-                with patch.object(spot_interruption_handler, 'rerun_github_job') as mock_rerun:
-                    mock_rerun.return_value = True
+                recovery_patch = patch.object(
+                    spot_interruption_handler, 'recover_from_ecs_spot_interruption'
+                )
+                with recovery_patch as mock_recovery:
+                    mock_recovery.return_value = {'statusCode': 200, 'body': 'ok'}
                     spot_interruption_handler.handle_ecs_task_stopped(event)
-                    call_args = mock_rerun.call_args[0]
-    assert call_args[2] == '789'
+                    call_args = mock_recovery.call_args[0]
+    assert call_args[3] == 'arn:aws:ecs:test:task/789'
 
 
-def test_handle_ecs_task_stopped_checks_workflow_status_before_rerun(spot_interruption_handler):
-    """Test handle ecs task stopped checks workflow status before rerun."""
+def test_handle_ecs_task_stopped_checks_workflow_status_before_recovery(spot_interruption_handler):
+    """Test handle ecs task stopped checks workflow status before recovery."""
     event = {
         'detail': {
             'taskArn': 'arn:aws:ecs:test:task/123',
@@ -358,7 +514,6 @@ def test_handle_ecs_task_stopped_checks_workflow_status_before_rerun(spot_interr
     ) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
@@ -387,7 +542,6 @@ def test_handle_ecs_task_stopped_fails_when_no_github_token(spot_interruption_ha
     ) as mock_get_tags:
         mock_get_tags.return_value = {
             'RunId': '123',
-            'GitHubJobId': '456',
             'GitHubRepo': 'test/repo'
         }
         with patch.object(spot_interruption_handler, 'get_github_token') as mock_get_token:
