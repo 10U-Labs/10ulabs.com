@@ -170,8 +170,9 @@ def get_resource_prefix() -> str:
 def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
     """Get all resource names for the runners endpoint.
 
-    Computes DynamoDB table names, SQS queue names, etc. from the resource prefix.
-    This is the single source of truth for runners resource naming.
+    Computes DynamoDB table names, SQS queue names, etc. from the resource prefix
+    and lambda handler names. This is the single source of truth for runners
+    resource naming.
 
     Args:
         prefix: Resource prefix. If None, reads from shared Terraform module.
@@ -181,16 +182,18 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
     """
     if prefix is None:
         prefix = get_resource_prefix()
+    handler_names = parse_lambda_handler_names()
+    webhook_handler = handler_names.get('webhook', f"{prefix}WebhookHandler")
     return {
         # DynamoDB tables
         'idempotency_table': f"{prefix}-idempotency",
         'circuit_breaker_state_table': f"{prefix}-circuit-breaker-state",
         'workflow_runners_table': f"{prefix}-workflow-runners",
         'incidents_table': f"{prefix}-incidents",
-        # SQS queues
+        # SQS queues (job_dlq and webhook_dlq use webhook handler name per locals.tf)
         'job_queue': f"{prefix}-jobs",
-        'job_dlq': f"{prefix}-job-dlq",
-        'webhook_dlq': f"{prefix}-dlq",
+        'job_dlq': f"{webhook_handler}-job-dlq",
+        'webhook_dlq': f"{webhook_handler}-dlq",
         'drift_recovery_queue': f"{prefix}-DriftRecovery.fifo",
     }
 
