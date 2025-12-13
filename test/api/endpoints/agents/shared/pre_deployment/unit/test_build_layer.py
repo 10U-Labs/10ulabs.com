@@ -1,6 +1,5 @@
 """Unit tests for the Lambda layer build script."""
 
-import sys
 import zipfile
 from pathlib import Path
 from unittest.mock import patch
@@ -30,14 +29,29 @@ def output_path(tmp_path):
 class TestBuildLayerPipInvocation:
     """Tests for pip install invocation."""
 
+    def test_calls_pip_with_requirements_flag(self, layer_source_dir, output_path):
+        """Test that pip is called with the -r flag."""
+        requirements_path = layer_source_dir / "requirements.txt"
+        with patch("subprocess.run") as mock_run:
+            build_layer("test_layer", requirements_path, output_path)
+            args = mock_run.call_args[0][0]
+            assert "-r" in args
+
     def test_calls_pip_with_requirements_path(self, layer_source_dir, output_path):
         """Test that pip is called with the requirements file path."""
         requirements_path = layer_source_dir / "requirements.txt"
         with patch("subprocess.run") as mock_run:
             build_layer("test_layer", requirements_path, output_path)
             args = mock_run.call_args[0][0]
-            assert "-r" in args
             assert str(requirements_path) in args
+
+    def test_calls_pip_with_platform_flag(self, layer_source_dir, output_path):
+        """Test that pip is called with --platform flag."""
+        requirements_path = layer_source_dir / "requirements.txt"
+        with patch("subprocess.run") as mock_run:
+            build_layer("test_layer", requirements_path, output_path)
+            args = mock_run.call_args[0][0]
+            assert "--platform" in args
 
     def test_calls_pip_with_arm64_platform(self, layer_source_dir, output_path):
         """Test that pip targets ARM64 Linux platform."""
@@ -45,8 +59,15 @@ class TestBuildLayerPipInvocation:
         with patch("subprocess.run") as mock_run:
             build_layer("test_layer", requirements_path, output_path)
             args = mock_run.call_args[0][0]
-            assert "--platform" in args
             assert "manylinux2014_aarch64" in args
+
+    def test_calls_pip_with_python_version_flag(self, layer_source_dir, output_path):
+        """Test that pip is called with --python-version flag."""
+        requirements_path = layer_source_dir / "requirements.txt"
+        with patch("subprocess.run") as mock_run:
+            build_layer("test_layer", requirements_path, output_path)
+            args = mock_run.call_args[0][0]
+            assert "--python-version" in args
 
     def test_calls_pip_with_python313(self, layer_source_dir, output_path):
         """Test that pip targets Python 3.13."""
@@ -54,7 +75,6 @@ class TestBuildLayerPipInvocation:
         with patch("subprocess.run") as mock_run:
             build_layer("test_layer", requirements_path, output_path)
             args = mock_run.call_args[0][0]
-            assert "--python-version" in args
             assert "3.13" in args
 
     def test_calls_pip_with_only_binary(self, layer_source_dir, output_path):
@@ -72,14 +92,28 @@ class TestBuildLayerPipInvocation:
             build_layer("test_layer", requirements_path, output_path)
             assert mock_run.call_args[1]["check"] is True
 
-    def test_uses_sys_executable_for_pip(self, layer_source_dir, output_path):
-        """Test that pip is invoked via sys.executable -m pip."""
+    def test_uses_python3_for_pip(self, layer_source_dir, output_path):
+        """Test that pip is invoked via python3 for PATH resolution."""
         requirements_path = layer_source_dir / "requirements.txt"
         with patch("subprocess.run") as mock_run:
             build_layer("test_layer", requirements_path, output_path)
             args = mock_run.call_args[0][0]
-            assert args[0] == sys.executable
+            assert args[0] == "python3"
+
+    def test_uses_module_flag_for_pip(self, layer_source_dir, output_path):
+        """Test that pip is invoked with -m flag."""
+        requirements_path = layer_source_dir / "requirements.txt"
+        with patch("subprocess.run") as mock_run:
+            build_layer("test_layer", requirements_path, output_path)
+            args = mock_run.call_args[0][0]
             assert args[1] == "-m"
+
+    def test_invokes_pip_module(self, layer_source_dir, output_path):
+        """Test that pip module is specified."""
+        requirements_path = layer_source_dir / "requirements.txt"
+        with patch("subprocess.run") as mock_run:
+            build_layer("test_layer", requirements_path, output_path)
+            args = mock_run.call_args[0][0]
             assert args[2] == "pip"
 
 
