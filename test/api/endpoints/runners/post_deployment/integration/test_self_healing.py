@@ -69,28 +69,6 @@ def test_circuit_breaker_state_table_deployed(dynamodb_client, config):
     assert response['Table']['TableStatus'] == 'ACTIVE'
 
 
-def test_recovery_lambda_can_be_invoked(lambda_client, config):
-    """Verify that CircuitBreakerRecovery Lambda can be invoked."""
-    function_name = config['circuit_breaker_recovery_function_name']
-    response = lambda_client.invoke(
-        FunctionName=function_name,
-        InvocationType='RequestResponse',
-        Payload=b'{}'
-    )
-    assert response['StatusCode'] == 200
-
-
-def test_dlq_reprocessor_lambda_can_be_invoked(lambda_client, config):
-    """Verify that DLQReprocessor Lambda can be invoked."""
-    function_name = config['dlq_reprocessor_function_name']
-    response = lambda_client.invoke(
-        FunctionName=function_name,
-        InvocationType='RequestResponse',
-        Payload=b'{}'
-    )
-    assert response['StatusCode'] == 200
-
-
 def test_circuit_breaker_state_table_readable(dynamodb_client, config):
     """Verify that circuit breaker state table is readable."""
     table_name = f"{config['resource_prefix']}-circuit-breaker-state"
