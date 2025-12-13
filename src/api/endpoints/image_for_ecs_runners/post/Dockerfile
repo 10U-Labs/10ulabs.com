@@ -36,7 +36,11 @@ RUN apt-get update && \
 FROM debian:stable-slim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /home/runner
-COPY --from=builder /staging /
+COPY --from=builder /staging/tmp/aws /tmp/aws
+COPY --from=builder /staging/tmp/amazon-cloudwatch-agent.deb /tmp/
+COPY --from=builder /staging/tmp/runner.tar.gz /tmp/
+COPY --from=builder /staging/usr/local/bin /usr/local/bin
+COPY --from=builder /staging/usr/local/lib /usr/local/lib
 COPY entrypoint.py cloudwatch-agent-config.json /tmp/
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
