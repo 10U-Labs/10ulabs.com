@@ -3,10 +3,12 @@
 These tests MUST run first (test_01_) because all other tests depend on having
 valid AWS credentials and IAM permissions.
 
-Three-layer testing model:
-- Layer 1: Existence - Can we call AWS APIs? Does the role exist?
-- Layer 2: Configuration - Does the role have required policies?
-- Layer 3: Capability - Can we actually perform required actions?
+Five-layer testing model:
+- Layer 1: Authentication - Are credentials configured and valid?
+- Layer 2: Authorization - Can we call required APIs?
+- Layer 3: Existence - Does the role exist?
+- Layer 4: Configuration - Does the role have required policies?
+- Layer 5: Capability - Can we actually perform required actions?
 """
 
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -30,16 +32,28 @@ class TestAWSCredentialsExistence:
     def test_02_can_call_sts_api(self, sts_client):
         """Verify we can call sts:GetCallerIdentity."""
         try:
-            response = sts_client.get_caller_identity()
-            assert "Account" in response
-            assert "Arn" in response
+            sts_client.get_caller_identity()
         except ClientError as e:
             pytest.fail(
                 f"Failed to call sts:GetCallerIdentity: {e.response['Error']['Message']}. "
                 "Check AWS credentials are valid and not expired."
             )
 
-    def test_03_caller_identity_is_role(self, caller_identity):
+    def test_03_sts_response_contains_account(self, caller_identity):
+        """Verify STS response contains Account."""
+        assert "Account" in caller_identity, (
+            "STS GetCallerIdentity response missing 'Account' field. "
+            "AWS credentials may be malformed."
+        )
+
+    def test_04_sts_response_contains_arn(self, caller_identity):
+        """Verify STS response contains Arn."""
+        assert "Arn" in caller_identity, (
+            "STS GetCallerIdentity response missing 'Arn' field. "
+            "AWS credentials may be malformed."
+        )
+
+    def test_05_caller_identity_is_role(self, caller_identity):
         """Verify we are running as an IAM role (not user)."""
         arn = caller_identity.get("Arn", "")
         assert ":assumed-role/" in arn or ":role/" in arn, (
@@ -49,7 +63,7 @@ class TestAWSCredentialsExistence:
 
 
 class TestIAMRoleExistence:
-    """Layer 1: Verify the IAM role exists and we can inspect it."""
+    """Layer 3: Verify the IAM role exists and we can inspect it."""
 
     def test_01_can_call_iam_get_role_api(self, iam_client, current_role_name):
         """Verify we have permission to call iam:GetRole."""
@@ -84,7 +98,7 @@ class TestIAMRoleExistence:
 
 
 class TestIAMRoleConfiguration:
-    """Layer 2: Verify the IAM role has required policies attached."""
+    """Layer 4: Verify the IAM role has required policies attached."""
 
     def test_01_can_list_attached_policies(self, iam_client, current_role_name):
         """Verify we can list policies attached to the role."""
@@ -118,7 +132,7 @@ class TestIAMRoleConfiguration:
 
 
 class TestIAMRoleCapability:
-    """Layer 3: Verify the role can perform required actions."""
+    """Layer 5: Verify the role can perform required actions."""
 
     def test_01_can_call_s3_list_buckets(self, s3_client):
         """Verify we can call s3:ListBuckets (basic S3 permission check)."""
