@@ -41,14 +41,18 @@ def test_v1_runners_health_returns_circuit_breaker_state(api_url, api_key):
     assert_circuit_breaker_state_in_response(response)
 
 
-def test_v1_runners_post_ignores_missing_github_event_header(api_url):
-    """Verify that webhook ignores requests without GitHub event header."""
+def test_v1_runners_post_rejects_missing_github_event_header(api_url):
+    """Verify that webhook rejects requests without GitHub event header.
+
+    API Gateway request validation requires x-github-event header to filter
+    out non-GitHub traffic (bots, scanners) at the gateway layer.
+    """
     skip_if_endpoint_not_deployed(api_url, "/v1/runners", "POST")
     payload = {"action": "queued"}
     response = requests.post(
         f"{api_url}/v1/runners", json=payload, headers=TEST_HEADERS, timeout=10
     )
-    assert response.status_code == 200
+    assert response.status_code == 400
 
 
 def test_v1_runners_post_ignores_missing_signature(api_url):

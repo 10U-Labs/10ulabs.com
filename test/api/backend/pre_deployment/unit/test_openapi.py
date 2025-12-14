@@ -410,3 +410,85 @@ def test_openapi_spec_ec2_ami_delete_has_options_method(openapi_spec):
 def test_openapi_spec_ecs_runner_has_options_method(openapi_spec):
     """Verify /v1/ecs-runner has OPTIONS method."""
     assert 'options' in openapi_spec['paths']['/v1/ecs-runner']
+
+
+def test_openapi_spec_has_request_validators(openapi_spec):
+    """Verify spec has x-amazon-apigateway-request-validators section."""
+    assert 'x-amazon-apigateway-request-validators' in openapi_spec
+
+
+def test_openapi_spec_has_validate_headers_validator(openapi_spec):
+    """Verify spec has validate-headers validator defined."""
+    validators = openapi_spec['x-amazon-apigateway-request-validators']
+    assert 'validate-headers' in validators
+
+
+def test_openapi_spec_validate_headers_validates_parameters(openapi_spec):
+    """Verify validate-headers validator validates request parameters."""
+    validators = openapi_spec['x-amazon-apigateway-request-validators']
+    assert validators['validate-headers']['validateRequestParameters'] is True
+
+
+def test_openapi_spec_runners_post_has_request_validator(openapi_spec):
+    """Verify /v1/runners POST has request validator reference."""
+    post = openapi_spec['paths']['/v1/runners']['post']
+    assert 'x-amazon-apigateway-request-validator' in post
+
+
+def test_openapi_spec_runners_post_uses_validate_headers(openapi_spec):
+    """Verify /v1/runners POST uses validate-headers validator."""
+    post = openapi_spec['paths']['/v1/runners']['post']
+    assert post['x-amazon-apigateway-request-validator'] == 'validate-headers'
+
+
+def test_openapi_spec_runners_post_has_parameters(openapi_spec):
+    """Verify /v1/runners POST has parameters defined."""
+    post = openapi_spec['paths']['/v1/runners']['post']
+    assert 'parameters' in post
+
+
+def test_openapi_spec_runners_post_has_github_event_parameter(openapi_spec):
+    """Verify /v1/runners POST has x-github-event parameter."""
+    post = openapi_spec['paths']['/v1/runners']['post']
+    parameters = post['parameters']
+    param_names = [p.get('name') for p in parameters]
+    assert 'x-github-event' in param_names
+
+
+def test_openapi_spec_runners_post_github_event_is_header(openapi_spec):
+    """Verify x-github-event parameter is a header parameter."""
+    post = openapi_spec['paths']['/v1/runners']['post']
+    parameters = post['parameters']
+    github_event_param = next(
+        (p for p in parameters if p.get('name') == 'x-github-event'),
+        None
+    )
+    assert github_event_param['in'] == 'header'
+
+
+def test_openapi_spec_runners_post_github_event_is_required(openapi_spec):
+    """Verify x-github-event header is required."""
+    post = openapi_spec['paths']['/v1/runners']['post']
+    parameters = post['parameters']
+    github_event_param = next(
+        (p for p in parameters if p.get('name') == 'x-github-event'),
+        None
+    )
+    assert github_event_param['required'] is True
+
+
+def test_openapi_spec_has_gateway_responses(openapi_spec):
+    """Verify spec has x-amazon-apigateway-gateway-responses section."""
+    assert 'x-amazon-apigateway-gateway-responses' in openapi_spec
+
+
+def test_openapi_spec_has_bad_request_parameters_response(openapi_spec):
+    """Verify spec has BAD_REQUEST_PARAMETERS gateway response."""
+    responses = openapi_spec['x-amazon-apigateway-gateway-responses']
+    assert 'BAD_REQUEST_PARAMETERS' in responses
+
+
+def test_openapi_spec_bad_request_parameters_returns_400(openapi_spec):
+    """Verify BAD_REQUEST_PARAMETERS returns 400 status code."""
+    responses = openapi_spec['x-amazon-apigateway-gateway-responses']
+    assert responses['BAD_REQUEST_PARAMETERS']['statusCode'] == 400
