@@ -76,3 +76,63 @@ def test_api_gateway_custom_domain_exists(apigatewayv2_client):
     """Verify API Gateway custom domain names are configured."""
     domain_names = apigatewayv2_client.get_domain_names()
     assert domain_names
+
+
+def test_rest_api_has_request_validators(apigateway_client, config):
+    """Verify REST API has request validators configured."""
+    api_name = config["api_gateway_name"]
+    api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
+    validators = apigateway_client.get_request_validators(restApiId=api_id)
+    assert len(validators['items']) > 0
+
+
+def test_rest_api_has_validate_headers_validator(apigateway_client, config):
+    """Verify REST API has validate-headers validator."""
+    api_name = config["api_gateway_name"]
+    api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
+    validators = apigateway_client.get_request_validators(restApiId=api_id)
+    validator_names = [v.get('name') for v in validators['items']]
+    assert 'validate-headers' in validator_names
+
+
+def test_rest_api_validate_headers_validator_exists(apigateway_client, config):
+    """Verify validate-headers validator exists in the validators list."""
+    api_name = config["api_gateway_name"]
+    api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
+    validators = apigateway_client.get_request_validators(restApiId=api_id)
+    validator = next(
+        (v for v in validators['items'] if v.get('name') == 'validate-headers'),
+        None
+    )
+    assert validator is not None
+
+
+def test_rest_api_validate_headers_validates_params(apigateway_client, config):
+    """Verify validate-headers validator has validateRequestParameters enabled."""
+    api_name = config["api_gateway_name"]
+    api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
+    validators = apigateway_client.get_request_validators(restApiId=api_id)
+    validator = next(
+        (v for v in validators['items'] if v.get('name') == 'validate-headers'),
+        None
+    )
+    assert validator.get('validateRequestParameters') is True
+
+
+def test_rest_api_has_gateway_responses(apigateway_client, config):
+    """Verify REST API has gateway responses configured."""
+    api_name = config["api_gateway_name"]
+    api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
+    responses = apigateway_client.get_gateway_responses(restApiId=api_id)
+    assert len(responses['items']) > 0
+
+
+def test_rest_api_has_bad_request_parameters_response(apigateway_client, config):
+    """Verify REST API has BAD_REQUEST_PARAMETERS gateway response."""
+    api_name = config["api_gateway_name"]
+    api_id = get_api_gateway_id_by_name(apigateway_client, api_name)
+    response = apigateway_client.get_gateway_response(
+        restApiId=api_id,
+        responseType='BAD_REQUEST_PARAMETERS'
+    )
+    assert response.get('statusCode') == '400'
