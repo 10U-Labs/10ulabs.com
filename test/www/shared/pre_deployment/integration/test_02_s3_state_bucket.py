@@ -128,3 +128,8 @@ class TestWriteCapability:
                     f"No permission to call s3:DeleteObject on '{state_bucket_name}'"
                 )
             raise
+        finally:
+            try:
+                s3_client.delete_object(Bucket=state_bucket_name, Key=test_object_key)
+            except ClientError:
+                pass

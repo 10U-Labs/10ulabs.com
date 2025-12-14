@@ -118,3 +118,8 @@ class TestTerraformStateBucketCapability:
                     "Check IAM permissions for s3:DeleteObject."
                 )
             raise
+        finally:
+            try:
+                s3_client.delete_object(Bucket=state_bucket_name, Key=test_key)
+            except ClientError:
+                pass
