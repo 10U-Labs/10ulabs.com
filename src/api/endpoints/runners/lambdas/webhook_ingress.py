@@ -138,29 +138,44 @@ class IngressHandler:
         # Try wrapped format first (API Gateway → SQS direct integration)
         try:
             wrapper = json.loads(raw_body)
-            if isinstance(wrapper, dict) and 'headers' in wrapper and 'body' in wrapper:
+            if isinstance(wrapper, dict) and 'headers' in wrapper:
                 headers = wrapper.get('headers', {})
-                inner_body = wrapper.get('body')
-                # body should be a string (original GitHub payload for signature verification)
-                if isinstance(inner_body, str):
-                    body_str = inner_body
-                    try:
-                        payload = json.loads(body_str)
-                    except (ValueError, TypeError):
-                        payload = None
-                elif isinstance(inner_body, dict):
-                    # Fallback for dict (signature verification will fail)
-                    body_str = json.dumps(inner_body)
-                    payload = inner_body
-                else:
-                    body_str = str(inner_body) if inner_body else ''
-                    try:
-                        payload = json.loads(body_str)
-                    except (ValueError, TypeError):
-                        payload = None
-                return (headers, body_str, payload)
-        except (ValueError, TypeError):
-            pass
+                if 'body' in wrapper:
+                    inner_body = wrapper.get('body')
+                    # body should be a string (original GitHub payload)
+                    if isinstance(inner_body, str):
+                        body_str = inner_body
+                        try:
+                            payload = json.loads(body_str)
+                        except (ValueError, TypeError):
+                            payload = None
+                    elif isinstance(inner_body, dict):
+                        # Fallback for dict (signature verification will fail)
+                        body_str = json.dumps(inner_body)
+                        payload = inner_body
+                    else:
+                        body_str = str(inner_body) if inner_body else ''
+                        try:
+                            payload = json.loads(body_str)
+                        except (ValueError, TypeError):
+                            payload = None
+                    return (headers, body_str, payload)
+                # Headers present but body missing (truncation or malformed)
+                logger.warning(
+                    "Wrapped format has headers but no body key - likely truncated. "
+                    "keys=%s", list(wrapper.keys())[:10])
+                return (headers, '', None)
+        except (ValueError, TypeError) as e:
+            logger.warning("Failed to parse wrapped format: %s, raw_body_preview=%s",
+                           str(e), raw_body[:200] if raw_body else 'empty')
+        else:
+            # JSON parsed but doesn't have 'headers' - log what we got
+            if isinstance(wrapper, dict):
+                logger.warning("Parsed JSON but no 'headers' key. keys=%s",
+                               list(wrapper.keys())[:10])
+            else:
+                logger.warning("Parsed JSON but not a dict. type=%s",
+                               type(wrapper).__name__)
 
         # Fallback to legacy format (headers in SQS message attributes)
         headers = {
