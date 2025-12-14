@@ -130,3 +130,8 @@ class TestCentralLogsBucketCapability:
                     "Check IAM permissions for s3:DeleteObject."
                 )
             raise
+        finally:
+            try:
+                s3_client.delete_object(Bucket=bucket, Key=object_key)
+            except ClientError:
+                pass
