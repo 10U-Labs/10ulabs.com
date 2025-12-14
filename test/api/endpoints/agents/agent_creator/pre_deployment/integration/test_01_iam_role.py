@@ -31,16 +31,26 @@ class TestAWSCredentialsExistence:
     def test_02_can_call_sts_api(self, sts_client):
         """Verify we can call sts:GetCallerIdentity."""
         try:
-            response = sts_client.get_caller_identity()
-            assert "Account" in response
-            assert "Arn" in response
+            sts_client.get_caller_identity()
         except ClientError as err:
             pytest.fail(
                 f"Failed to call sts:GetCallerIdentity: {err.response['Error']['Message']}. "
                 "Check AWS credentials are valid and not expired."
             )
 
-    def test_03_caller_identity_is_role(self, caller_identity):
+    def test_03_sts_response_contains_account(self, caller_identity):
+        """Verify STS response contains Account."""
+        assert "Account" in caller_identity, (
+            "STS GetCallerIdentity response missing 'Account' field."
+        )
+
+    def test_04_sts_response_contains_arn(self, caller_identity):
+        """Verify STS response contains Arn."""
+        assert "Arn" in caller_identity, (
+            "STS GetCallerIdentity response missing 'Arn' field."
+        )
+
+    def test_05_caller_identity_is_role(self, caller_identity):
         """Verify we are running as an IAM role (not user)."""
         arn = caller_identity.get("Arn", "")
         assert ":assumed-role/" in arn or ":role/" in arn, (
