@@ -34,6 +34,11 @@ resource "aws_lambda_function" "simulation_soc_handler" {
     aws_iam_role_policy_attachment.lambda_simulation_soc_handler_basic,
     aws_iam_role_policy.lambda_simulation_soc_handler_kms,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.lambda_simulation_soc_handler.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "simulation_soc_handler" {

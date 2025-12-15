@@ -182,6 +182,11 @@ resource "aws_lambda_function" "export" {
   tags = merge(local.common_tags, {
     Name = local.export_function_name
   })
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.export_lambda.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "export_lambda" {
@@ -310,6 +315,11 @@ resource "aws_lambda_function" "crawler_trigger" {
   tags = merge(local.common_tags, {
     Name = local.crawler_trigger_function_name
   })
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.crawler_trigger.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "crawler_trigger" {

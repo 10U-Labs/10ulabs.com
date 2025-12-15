@@ -31,6 +31,11 @@ resource "aws_lambda_function" "health_handler" {
   tags = merge(local.common_tags, {
     Name = var.health_handler_function_name
   })
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.lambda_health_handler.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "health_handler" {
