@@ -37,6 +37,11 @@ resource "aws_lambda_function" "contact_handler" {
     aws_iam_role_policy.lambda_contact_handler_kms,
     aws_iam_role_policy.lambda_contact_handler_ses,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.lambda_contact_handler.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "contact_handler" {

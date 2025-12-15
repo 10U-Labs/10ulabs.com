@@ -28,6 +28,11 @@ resource "aws_lambda_function" "handler" {
   depends_on = [
     aws_cloudwatch_log_group.lambda
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.lambda_execution.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "lambda" {

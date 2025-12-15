@@ -78,6 +78,11 @@ resource "aws_lambda_function" "runners_handler" {
     aws_iam_role_policy_attachment.lambda_runners_handler_basic,
     aws_iam_role_policy_attachment.lambda_runners_handler_xray,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.lambda_runners_handler.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "runners_handler" {
@@ -151,6 +156,11 @@ resource "aws_lambda_function" "circuit_breaker_reset" {
     aws_iam_role_policy.circuit_breaker_reset_permissions,
     aws_iam_role_policy_attachment.circuit_breaker_reset_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.circuit_breaker_reset.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_reset" {
@@ -211,6 +221,11 @@ resource "aws_lambda_function" "circuit_breaker_remediation" {
     aws_iam_role_policy.circuit_breaker_remediation_permissions,
     aws_iam_role_policy_attachment.circuit_breaker_remediation_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.circuit_breaker_remediation.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_remediation" {
@@ -264,6 +279,11 @@ resource "aws_lambda_function" "dlq_reprocessor" {
     aws_iam_role_policy.dlq_reprocessor_permissions,
     aws_iam_role_policy_attachment.dlq_reprocessor_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.dlq_reprocessor.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "dlq_reprocessor" {
@@ -316,6 +336,11 @@ resource "aws_lambda_function" "circuit_breaker_recovery" {
     aws_iam_role_policy.circuit_breaker_recovery_permissions,
     aws_iam_role_policy_attachment.circuit_breaker_recovery_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.circuit_breaker_recovery.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
@@ -368,6 +393,11 @@ resource "aws_lambda_function" "drift_recovery" {
     aws_iam_role_policy.drift_recovery_permissions,
     aws_iam_role_policy_attachment.drift_recovery_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.drift_recovery.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "drift_recovery" {
@@ -428,6 +458,11 @@ resource "aws_lambda_function" "spot_interruption_handler" {
     aws_iam_role_policy.spot_interruption_handler_permissions,
     aws_iam_role_policy_attachment.spot_interruption_handler_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.spot_interruption_handler.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
@@ -481,6 +516,11 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
     aws_iam_role_policy.stale_runner_cleanup_permissions,
     aws_iam_role_policy_attachment.stale_runner_cleanup_basic,
   ]
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.stale_runner_cleanup.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "stale_runner_cleanup" {
