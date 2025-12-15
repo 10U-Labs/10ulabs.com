@@ -3,94 +3,17 @@
 These tests parse Terraform files to validate naming conventions before deployment.
 Names must use PascalCase (no dashes, underscores, or other separators).
 """
-import re
 from pathlib import Path
 
 import pytest
 
 from naming_conventions import validate_name
+from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 AGENT_CREATOR_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents" / "agent_creator"
 IAM_FILE = AGENT_CREATOR_SRC / "iam.tf"
 LAMBDA_FILE = AGENT_CREATOR_SRC / "lambda.tf"
-
-
-def get_resource_prefix() -> str:
-    """Get the resource prefix from shared Terraform module."""
-    shared_locals = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
-    with open(shared_locals, encoding="utf-8") as f:
-        content = f.read()
-    match = re.search(r'resource_prefix\s*=\s*"([^"]+)"', content)
-    return match.group(1) if match else "TenULabs"
-
-
-def extract_iam_role_names(tf_file: Path) -> list:
-    """Extract IAM role names from a Terraform file."""
-    if not tf_file.exists():
-        return []
-    with open(tf_file, encoding="utf-8") as f:
-        content = f.read()
-
-    prefix = get_resource_prefix()
-    roles = []
-    role_pattern = r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{'
-
-    for match in re.finditer(role_pattern, content):
-        resource_name = match.group(1)
-        start_pos = match.end() - 1
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-        block_content = content[start_pos:end_pos]
-        name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
-        if name_match:
-            role_name = name_match.group(1)
-            resolved = role_name.replace("${local.resource_prefix}", prefix)
-            roles.append((resource_name, resolved))
-
-    return roles
-
-
-def extract_lambda_function_names(tf_file: Path) -> list:
-    """Extract Lambda function names from a Terraform file."""
-    if not tf_file.exists():
-        return []
-    with open(tf_file, encoding="utf-8") as f:
-        content = f.read()
-
-    prefix = get_resource_prefix()
-    functions = []
-    func_pattern = r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{'
-
-    for match in re.finditer(func_pattern, content):
-        resource_name = match.group(1)
-        start_pos = match.end() - 1
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-        block_content = content[start_pos:end_pos]
-        name_match = re.search(r'^\s*function_name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
-        if name_match:
-            function_name = name_match.group(1)
-            resolved = function_name.replace("${local.resource_prefix}", prefix)
-            functions.append((resource_name, resolved))
-
-    return functions
 
 
 IAM_ROLES = extract_iam_role_names(IAM_FILE)

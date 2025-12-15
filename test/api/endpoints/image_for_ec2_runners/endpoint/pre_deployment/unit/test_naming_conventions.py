@@ -3,72 +3,17 @@
 These tests parse Terraform files to validate naming conventions before deployment.
 Names must use PascalCase (no dashes, underscores, or other separators).
 """
-import re
 from pathlib import Path
 
 import pytest
 
 from naming_conventions import validate_name
+from terraform_config import extract_iam_role_names, extract_lambda_function_names
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 IMAGE_EC2_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 IAM_FILE = IMAGE_EC2_SRC / "iam.tf"
 LAMBDA_FILE = IMAGE_EC2_SRC / "lambda.tf"
-
-
-def get_resource_prefix() -> str:
-    """Get the resource prefix from shared Terraform module."""
-    shared_locals = REPO_ROOT / "lib" / "terraform" / "modules" / "shared" / "locals.tf"
-    with open(shared_locals, encoding="utf-8") as f:
-        content = f.read()
-    match = re.search(r'resource_prefix\s*=\s*"([^"]+)"', content)
-    return match.group(1) if match else "TenULabs"
-
-
-def find_block_end(content: str, start_pos: int) -> int:
-    """Find the end position of a brace-delimited block."""
-    brace_count = 0
-    for i, char in enumerate(content[start_pos:]):
-        if char == '{':
-            brace_count += 1
-        elif char == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                return start_pos + i + 1
-    return start_pos
-
-
-def extract_terraform_resources(tf_file: Path, resource_type: str, name_attr: str) -> list:
-    """Extract resource names from a Terraform file."""
-    if not tf_file.exists():
-        return []
-    with open(tf_file, encoding="utf-8") as f:
-        content = f.read()
-
-    prefix = get_resource_prefix()
-    resources = []
-    pattern = rf'resource\s+"{resource_type}"\s+"([^"]+)"\s*\{{'
-
-    for match in re.finditer(pattern, content):
-        resource_name = match.group(1)
-        start_pos = match.end() - 1
-        block_content = content[start_pos:find_block_end(content, start_pos)]
-        name_match = re.search(rf'^\s*{name_attr}\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
-        if name_match:
-            resolved = name_match.group(1).replace("${local.resource_prefix}", prefix)
-            resources.append((resource_name, resolved))
-
-    return resources
-
-
-def extract_iam_role_names(tf_file: Path) -> list:
-    """Extract IAM role names from a Terraform file."""
-    return extract_terraform_resources(tf_file, "aws_iam_role", "name")
-
-
-def extract_lambda_function_names(tf_file: Path) -> list:
-    """Extract Lambda function names from a Terraform file."""
-    return extract_terraform_resources(tf_file, "aws_lambda_function", "function_name")
 
 
 IAM_ROLES = extract_iam_role_names(IAM_FILE)
