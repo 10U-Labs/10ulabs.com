@@ -10,13 +10,13 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 | # | Issue | Status | PR | Impact | Remarks |
 |---|-------|--------|-----|--------|---------|
-| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | 🟡 Open | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement | |
-| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | 🟡 Open | [#6762](https://github.com/verilator/verilator/pull/6762) | Hours of debugging saved | |
-| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | ⏸️ On hold | - | 2-4x faster compilation | Rethinking approach after 3a rejection |
-| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | ❌ Closed | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
+| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement | |
+| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Hours of debugging saved | |
+| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | ⏸️ Paused | - | 2-4x faster compilation | Rethinking approach after 3a rejection |
+| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | ❌ Rejected | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
 | 3b | [Parallelize V3Const](#3b-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation | Blocked on 3a approach decision |
 | 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination | Blocked on 3a approach decision |
-| 4 | [Function Inlining](#4-function-inlining) | 🟡 Open | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
+| 4 | [Function Inlining](#4-function-inlining) | ⏳ Submitted | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
 | 5 | [AST Object Pooling](#5-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction | |
 
 ---
@@ -25,7 +25,7 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 **File:** `src/V3ThreadPool.cpp`
 
-**Status:** 🟡 Open - [PR #6761](https://github.com/verilator/verilator/pull/6761)
+**Status:** ⏳ Submitted - [PR #6761](https://github.com/verilator/verilator/pull/6761)
 
 **Problem:** The `wait()` function uses busy-wait loop that wastes CPU cycles.
 
@@ -79,7 +79,7 @@ void V3ThreadPool::workerJobLoop() {
 
 **Files:** `include/verilated_threading_advisor.h`, `include/verilated.cpp`
 
-**Status:** 🟡 Open - [PR #6762](https://github.com/verilator/verilator/pull/6762)
+**Status:** ⏳ Submitted - [PR #6762](https://github.com/verilator/verilator/pull/6762)
 
 **Current state:**
 - `VlExecutionProfiler` exists for collecting profiling data (verilated_profiler.h)
@@ -132,7 +132,7 @@ class VlThreadingAdvisor {
 
 **Files:** `src/Verilator.cpp`, various V3*.cpp passes
 
-**Status:** ⏸️ On hold (PR #6763 closed without merge; rethinking approach)
+**Status:** ⏸️ Paused (PR #6763 closed without merge; rethinking approach)
 
 **Goal:** Extend the `V3ThreadScope` parallel processing pattern to additional compiler passes.
 
@@ -162,7 +162,7 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 **File:** `src/V3FuncOpt.cpp`
 
-**Status:** ❌ Closed - [PR #6763](https://github.com/verilator/verilator/pull/6763) was not merged
+**Status:** ❌ Rejected - [PR #6763](https://github.com/verilator/verilator/pull/6763) was not merged
 
 **Proposed solution:** Apply per-function parallelization using `V3ThreadScope`. Each `AstCFunc` is processed independently in parallel.
 
@@ -212,7 +212,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 **Files:** `src/V3InlineCFuncs.cpp` (new file)
 
-**Status:** 🟡 Open - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
+**Status:** ⏳ Submitted - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
 
 **Resolves:** [Issue #2367](https://github.com/verilator/verilator/issues/2367)
 
