@@ -12,12 +12,13 @@ Remaining optimization opportunities for Verilator (v5.x).
 |---|-------|--------|-----|--------|---------|
 | 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement | |
 | 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Hours of debugging saved | |
-| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | ⏸️ Paused | - | 2-4x faster compilation | Rethinking approach after 3a rejection |
-| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | ❌ Rejected | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
-| 3b | [Parallelize V3Const](#3b-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation | Blocked on 3a approach decision |
-| 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination | Blocked on 3a approach decision |
-| 4 | [Function Inlining](#4-function-inlining) | ⏳ Submitted | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
-| 5 | [AST Object Pooling](#5-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction | |
+| 3 | [Removing Race Conditions on AST Constructors](#3-removing-race-conditions-on-ast-constructors) | 📝 Todo | - | Prerequisite for parallelization | |
+| 4 | [Module-Level Parallel Verilation](#4-module-level-parallel-verilation) | ⏸️ Paused | - | 2-4x faster compilation | Rethinking approach after #5 rejection |
+| 5 | [Parallelize V3FuncOpt](#5-parallelize-v3funcopt) | ❌ Rejected | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
+| 6 | [Parallelize V3Const](#6-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation | Blocked on approach decision |
+| 7 | [Parallelize V3Dead](#7-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination | Blocked on approach decision |
+| 8 | [Function Inlining](#8-function-inlining) | ⏳ Submitted | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
+| 9 | [AST Object Pooling](#9-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction | |
 
 ---
 
@@ -128,7 +129,21 @@ class VlThreadingAdvisor {
 
 ---
 
-## 3. Module-Level Parallel Verilation
+## 3. Removing Race Conditions on AST Constructors
+
+**Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
+
+**Status:** 📝 Todo
+
+**Problem:** AST node constructors have race conditions that prevent safe parallel instantiation. This is a prerequisite for broader parallelization efforts.
+
+**Impact:** Prerequisite for parallelization
+**Difficulty:** Medium - requires careful analysis of shared state
+**Risk:** Low - fixes existing thread-safety issues
+
+---
+
+## 4. Module-Level Parallel Verilation
 
 **Files:** `src/Verilator.cpp`, various V3*.cpp passes
 
@@ -158,7 +173,7 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 ---
 
-### 3a. Parallelize V3FuncOpt
+## 5. Parallelize V3FuncOpt
 
 **File:** `src/V3FuncOpt.cpp`
 
@@ -175,7 +190,7 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 ---
 
-### 3b. Parallelize V3Const
+## 6. Parallelize V3Const
 
 **File:** `src/V3Const.cpp`
 
@@ -198,7 +213,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 ---
 
-### 3c. Parallelize V3Dead
+## 7. Parallelize V3Dead
 
 **File:** `src/V3Dead.cpp`
 
@@ -208,7 +223,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 ---
 
-## 4. Function Inlining
+## 8. Function Inlining
 
 **Files:** `src/V3InlineCFuncs.cpp` (new file)
 
@@ -242,7 +257,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 ---
 
-## 5. AST Object Pooling
+## 9. AST Object Pooling
 
 **Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
 
