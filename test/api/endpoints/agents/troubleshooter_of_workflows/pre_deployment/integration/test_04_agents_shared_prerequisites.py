@@ -5,6 +5,8 @@ This endpoint depends on resources created by the agents_shared workflow:
 - Lambda layer for GitHub authentication
 
 Five-layer testing model:
+- Layer 1: Authentication - Covered by test_01_iam_role.py
+- Layer 2: Authorization - Can we call ECR and Lambda APIs?
 - Layer 3: Existence - Do the prerequisite resources exist?
 - Layer 4: Configuration - Are they configured correctly?
 - Layer 5: Capability - Can we perform required operations?
@@ -12,6 +14,74 @@ Five-layer testing model:
 
 from botocore.exceptions import ClientError
 import pytest
+
+
+class TestECRAPIAuthorization:
+    """Layer 2: Verify we can call ECR APIs."""
+
+    def test_01_can_call_describe_repositories_api(self, ecr_client):
+        """Verify we have permission to call ecr:DescribeRepositories."""
+        try:
+            ecr_client.describe_repositories(maxResults=1)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "AccessDeniedException":
+                pytest.fail(
+                    "No permission to call ecr:DescribeRepositories. "
+                    "Check IAM permissions for ecr:DescribeRepositories."
+                )
+            raise
+
+    def test_02_can_call_list_images_api(self, ecr_client, agents_shared_outputs):
+        """Verify we have permission to call ecr:ListImages."""
+        repository_name = agents_shared_outputs.get("ecr_repository_name")
+        if not repository_name:
+            pytest.skip("ecr_repository_name output not available")
+        try:
+            ecr_client.list_images(repositoryName=repository_name, maxResults=1)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "AccessDeniedException":
+                pytest.fail(
+                    "No permission to call ecr:ListImages. "
+                    "Check IAM permissions for ecr:ListImages."
+                )
+            if err.response["Error"]["Code"] == "RepositoryNotFoundException":
+                pass  # Existence check is in Layer 3
+            else:
+                raise
+
+
+class TestLambdaAPIAuthorization:
+    """Layer 2: Verify we can call Lambda APIs."""
+
+    def test_01_can_call_list_layers_api(self, lambda_client):
+        """Verify we have permission to call lambda:ListLayers."""
+        try:
+            lambda_client.list_layers(MaxItems=1)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "AccessDeniedException":
+                pytest.fail(
+                    "No permission to call lambda:ListLayers. "
+                    "Check IAM permissions for lambda:ListLayers."
+                )
+            raise
+
+    def test_02_can_call_get_layer_version_api(self, lambda_client, agents_shared_outputs):
+        """Verify we have permission to call lambda:GetLayerVersionByArn."""
+        layer_arn = agents_shared_outputs.get("lambda_layer_github_auth_arn")
+        if not layer_arn:
+            pytest.skip("lambda_layer_github_auth_arn output not available")
+        try:
+            lambda_client.get_layer_version_by_arn(Arn=layer_arn)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "AccessDeniedException":
+                pytest.fail(
+                    "No permission to call lambda:GetLayerVersionByArn. "
+                    "Check IAM permissions for lambda:GetLayerVersion."
+                )
+            if err.response["Error"]["Code"] == "ResourceNotFoundException":
+                pass  # Existence check is in Layer 3
+            else:
+                raise
 
 
 class TestAgentsSharedOutputsExistence:
