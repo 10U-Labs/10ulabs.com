@@ -27,7 +27,7 @@ HANDLER_PATH = (
     / "endpoints"
     / "agents"
     / "troubleshooter_of_workflows"
-    / "webhook_lambda"
+    / "lambda"
     / "handler.py"
 )
 spec = importlib.util.spec_from_file_location("handler", HANDLER_PATH)
@@ -43,31 +43,50 @@ _is_scheduled_event = handler._is_scheduled_event
 _handle_scheduled_scan = handler._handle_scheduled_scan
 
 
-class TestHandleScheduledScanTestMode:
-    """Tests for _handle_scheduled_scan test_mode functionality."""
+class TestHandleScheduledScanTestModeReturnValue:
+    """Tests for _handle_scheduled_scan test_mode return value."""
 
-    def test_test_mode_returns_immediately(self):
-        """Should return immediately without scanning when test_mode=True."""
+    def test_test_mode_returns_status_code_200(self):
+        """Should return status code 200 when test_mode=True."""
         result = _handle_scheduled_scan("fake_token", test_mode=True)
-
         assert result["statusCode"] == 200
+
+    def test_test_mode_returns_mode_scheduled(self):
+        """Should return mode=scheduled when test_mode=True."""
+        result = _handle_scheduled_scan("fake_token", test_mode=True)
         body = json.loads(result["body"])
         assert body["mode"] == "scheduled"
+
+    def test_test_mode_returns_processed_zero(self):
+        """Should return processed=0 when test_mode=True."""
+        result = _handle_scheduled_scan("fake_token", test_mode=True)
+        body = json.loads(result["body"])
         assert body["processed"] == 0
-        assert body["test_mode"] is True
 
-    def test_test_mode_does_not_call_github_api(self):
-        """Should not make any GitHub API calls when test_mode=True."""
-        # If this tried to use the fake token with GitHub API, it would fail
-        result = _handle_scheduled_scan("invalid_token_that_would_fail", test_mode=True)
-
-        assert result["statusCode"] == 200
+    def test_test_mode_returns_test_mode_true(self):
+        """Should return test_mode=True in body when test_mode=True."""
+        result = _handle_scheduled_scan("fake_token", test_mode=True)
         body = json.loads(result["body"])
         assert body["test_mode"] is True
 
 
-class TestShouldSkipEvent:
-    """Tests for _should_skip_event function."""
+class TestHandleScheduledScanTestModeNoApiCalls:
+    """Tests for _handle_scheduled_scan test_mode not calling APIs."""
+
+    def test_test_mode_does_not_call_github_api_returns_200(self):
+        """Should return 200 without calling GitHub API when test_mode=True."""
+        result = _handle_scheduled_scan("invalid_token_that_would_fail", test_mode=True)
+        assert result["statusCode"] == 200
+
+    def test_test_mode_does_not_call_github_api_returns_test_mode(self):
+        """Should return test_mode=True without calling GitHub API."""
+        result = _handle_scheduled_scan("invalid_token_that_would_fail", test_mode=True)
+        body = json.loads(result["body"])
+        assert body["test_mode"] is True
+
+
+class TestShouldSkipEventNonCompleted:
+    """Tests for _should_skip_event with non-completed actions."""
 
     def test_skips_non_completed_action(self):
         """Should skip events that are not 'completed'."""
@@ -75,8 +94,16 @@ class TestShouldSkipEvent:
             "action": "requested",
             "workflow_run": {"conclusion": "failure"},
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
+
+    def test_skips_non_completed_action_reason(self):
+        """Should include 'non-completed' in skip reason."""
+        payload = {
+            "action": "requested",
+            "workflow_run": {"conclusion": "failure"},
+        }
+        _, reason = _should_skip_event(payload)
         assert "non-completed" in reason.lower()
 
     def test_skips_in_progress_action(self):
@@ -85,9 +112,21 @@ class TestShouldSkipEvent:
             "action": "in_progress",
             "workflow_run": {"conclusion": None},
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
+
+    def test_skips_in_progress_action_reason(self):
+        """Should include 'non-completed' in skip reason for in_progress."""
+        payload = {
+            "action": "in_progress",
+            "workflow_run": {"conclusion": None},
+        }
+        _, reason = _should_skip_event(payload)
         assert "non-completed" in reason.lower()
+
+
+class TestShouldSkipEventConclusions:
+    """Tests for _should_skip_event with various conclusions."""
 
     def test_skips_successful_workflow(self):
         """Should skip workflows that completed successfully."""
@@ -95,8 +134,16 @@ class TestShouldSkipEvent:
             "action": "completed",
             "workflow_run": {"conclusion": "success"},
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
+
+    def test_skips_successful_workflow_reason(self):
+        """Should include 'success' in skip reason."""
+        payload = {
+            "action": "completed",
+            "workflow_run": {"conclusion": "success"},
+        }
+        _, reason = _should_skip_event(payload)
         assert "success" in reason.lower()
 
     def test_skips_cancelled_workflow(self):
@@ -105,9 +152,21 @@ class TestShouldSkipEvent:
             "action": "completed",
             "workflow_run": {"conclusion": "cancelled"},
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
+
+    def test_skips_cancelled_workflow_reason(self):
+        """Should include 'cancelled' in skip reason."""
+        payload = {
+            "action": "completed",
+            "workflow_run": {"conclusion": "cancelled"},
+        }
+        _, reason = _should_skip_event(payload)
         assert "cancelled" in reason.lower()
+
+
+class TestShouldSkipEventTroubleshooter:
+    """Tests for _should_skip_event with troubleshooter-of-workflows workflows."""
 
     def test_skips_troubleshooter_of_workflows_workflow(self):
         """Should skip troubleshooter-of-workflows workflows to avoid loops."""
@@ -118,8 +177,19 @@ class TestShouldSkipEvent:
                 "conclusion": "failure",
             },
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
+
+    def test_skips_troubleshooter_of_workflows_workflow_reason(self):
+        """Should include 'troubleshooter-of-workflows' in skip reason."""
+        payload = {
+            "action": "completed",
+            "workflow_run": {
+                "name": "Deploying Troubleshooter-of-Workflows Agent",
+                "conclusion": "failure",
+            },
+        }
+        _, reason = _should_skip_event(payload)
         assert "troubleshooter-of-workflows" in reason.lower()
 
     def test_skips_troubleshooter_of_workflows_case_insensitive(self):
@@ -131,9 +201,24 @@ class TestShouldSkipEvent:
                 "conclusion": "failure",
             },
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
+
+    def test_skips_troubleshooter_of_workflows_case_insensitive_reason(self):
+        """Should include 'troubleshooter-of-workflows' in skip reason regardless of case."""
+        payload = {
+            "action": "completed",
+            "workflow_run": {
+                "name": "TROUBLESHOOTER-OF-WORKFLOWS Deploy",
+                "conclusion": "failure",
+            },
+        }
+        _, reason = _should_skip_event(payload)
         assert "troubleshooter-of-workflows" in reason.lower()
+
+
+class TestShouldSkipEventFailedWorkflow:
+    """Tests for _should_skip_event with failed workflows."""
 
     def test_does_not_skip_failed_workflow(self):
         """Should NOT skip failed workflows (this is what we want to process)."""
@@ -144,21 +229,35 @@ class TestShouldSkipEvent:
                 "conclusion": "failure",
             },
         }
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is False
+
+    def test_does_not_skip_failed_workflow_empty_reason(self):
+        """Should return empty reason for failed workflows."""
+        payload = {
+            "action": "completed",
+            "workflow_run": {
+                "name": "CI Build",
+                "conclusion": "failure",
+            },
+        }
+        _, reason = _should_skip_event(payload)
         assert reason == ""
+
+
+class TestShouldSkipEventEdgeCases:
+    """Tests for _should_skip_event edge cases."""
 
     def test_handles_missing_workflow_run(self):
         """Should handle missing workflow_run key gracefully."""
         payload = {"action": "completed"}
-        should_skip, reason = _should_skip_event(payload)
-        # Should skip because conclusion is None
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
 
     def test_handles_empty_payload(self):
         """Should handle empty payload gracefully."""
         payload = {}
-        should_skip, reason = _should_skip_event(payload)
+        should_skip, _ = _should_skip_event(payload)
         assert should_skip is True
 
 
@@ -196,88 +295,208 @@ class TestParseWebhookPayload:
         assert result == {}
 
 
-class TestBuildAgentPayload:
-    """Tests for _build_agent_payload function."""
+class TestBuildAgentPayloadGithubToken:
+    """Tests for _build_agent_payload github_token field."""
 
-    def test_builds_payload_from_webhook(self):
-        """Should build agent payload from webhook event."""
+    def test_builds_payload_github_token(self):
+        """Should include github_token in payload."""
         payload = {
-            "workflow_run": {
-                "id": 12345,
-                "name": "CI Build",
-                "path": ".github/workflows/ci.yml",
-                "head_sha": "abc123",
-                "head_branch": "main",
-            },
-            "repository": {
-                "name": "my-repo",
-                "owner": {"login": "my-org"},
-            },
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
         }
-        github_token = "ghp_test123"
-
-        result = _build_agent_payload(payload, github_token)
-
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["github_token"] == "ghp_test123"
+
+
+class TestBuildAgentPayloadRepository:
+    """Tests for _build_agent_payload repository fields."""
+
+    def test_builds_payload_owner(self):
+        """Should include owner in payload."""
+        payload = {
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["owner"] == "my-org"
+
+    def test_builds_payload_repo(self):
+        """Should include repo in payload."""
+        payload = {
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["repo"] == "my-repo"
+
+
+class TestBuildAgentPayloadWorkflowRun:
+    """Tests for _build_agent_payload workflow_run fields."""
+
+    def test_builds_payload_run_id(self):
+        """Should include run_id in payload."""
+        payload = {
+            "workflow_run": {"id": 12345, "name": "CI Build"},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["run_id"] == 12345
+
+    def test_builds_payload_workflow_name(self):
+        """Should include workflow_name in payload."""
+        payload = {
+            "workflow_run": {"id": 12345, "name": "CI Build"},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["workflow_name"] == "CI Build"
+
+    def test_builds_payload_workflow_path(self):
+        """Should include workflow_path in payload."""
+        payload = {
+            "workflow_run": {"id": 12345, "path": ".github/workflows/ci.yml"},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["workflow_path"] == ".github/workflows/ci.yml"
+
+    def test_builds_payload_head_sha(self):
+        """Should include head_sha in payload."""
+        payload = {
+            "workflow_run": {"id": 12345, "head_sha": "abc123"},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["head_sha"] == "abc123"
+
+    def test_builds_payload_head_branch(self):
+        """Should include head_branch in payload."""
+        payload = {
+            "workflow_run": {"id": 12345, "head_branch": "main"},
+            "repository": {"name": "my-repo", "owner": {"login": "my-org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["head_branch"] == "main"
 
-    def test_handles_missing_optional_fields(self):
-        """Should handle missing optional fields gracefully."""
+
+class TestBuildAgentPayloadMissingFields:
+    """Tests for _build_agent_payload with missing optional fields."""
+
+    def test_handles_missing_run_id(self):
+        """Should include run_id even when minimal fields provided."""
         payload = {
             "workflow_run": {"id": 12345},
             "repository": {"name": "repo", "owner": {"login": "org"}},
         }
-        github_token = "ghp_test123"
-
-        result = _build_agent_payload(payload, github_token)
-
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["run_id"] == 12345
+
+    def test_handles_missing_workflow_name(self):
+        """Should handle missing workflow_name gracefully."""
+        payload = {
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "repo", "owner": {"login": "org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["workflow_name"] is None
+
+    def test_handles_missing_workflow_path(self):
+        """Should handle missing workflow_path gracefully."""
+        payload = {
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "repo", "owner": {"login": "org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["workflow_path"] == ""
+
+    def test_handles_missing_head_sha(self):
+        """Should handle missing head_sha gracefully."""
+        payload = {
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "repo", "owner": {"login": "org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["head_sha"] is None
+
+    def test_handles_missing_head_branch(self):
+        """Should handle missing head_branch gracefully."""
+        payload = {
+            "workflow_run": {"id": 12345},
+            "repository": {"name": "repo", "owner": {"login": "org"}},
+        }
+        result = _build_agent_payload(payload, "ghp_test123")
         assert result["head_branch"] is None
 
 
-class TestBuildAgentPayloadFromRun:
-    """Tests for _build_agent_payload_from_run function."""
+class TestBuildAgentPayloadFromRunBasicFields:
+    """Tests for _build_agent_payload_from_run basic fields."""
 
-    def test_builds_payload_from_run_object(self):
-        """Should build agent payload from workflow run object."""
-        run = {
-            "id": 12345,
-            "name": "CI Build",
-            "path": ".github/workflows/ci.yml",
-            "head_sha": "abc123",
-            "head_branch": "main",
-        }
-        github_token = "ghp_test123"
-
-        result = _build_agent_payload_from_run(run, github_token)
-
+    def test_builds_payload_github_token(self):
+        """Should include github_token in payload."""
+        run = {"id": 12345}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["github_token"] == "ghp_test123"
-        assert result["owner"] == "10U-Labs-LLC"  # Default from handler
-        assert result["repo"] == "10ulabs.com"    # Default from handler
+
+    def test_builds_payload_owner(self):
+        """Should include default owner in payload."""
+        run = {"id": 12345}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
+        assert result["owner"] == "10U-Labs-LLC"
+
+    def test_builds_payload_repo(self):
+        """Should include default repo in payload."""
+        run = {"id": 12345}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
+        assert result["repo"] == "10ulabs.com"
+
+    def test_builds_payload_run_id(self):
+        """Should include run_id in payload."""
+        run = {"id": 12345}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["run_id"] == 12345
+
+
+class TestBuildAgentPayloadFromRunWorkflowFields:
+    """Tests for _build_agent_payload_from_run workflow fields."""
+
+    def test_builds_payload_workflow_name(self):
+        """Should include workflow_name in payload."""
+        run = {"id": 12345, "name": "CI Build"}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["workflow_name"] == "CI Build"
+
+    def test_builds_payload_workflow_path(self):
+        """Should include workflow_path in payload."""
+        run = {"id": 12345, "path": ".github/workflows/ci.yml"}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["workflow_path"] == ".github/workflows/ci.yml"
+
+    def test_builds_payload_head_sha(self):
+        """Should include head_sha in payload."""
+        run = {"id": 12345, "head_sha": "abc123"}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["head_sha"] == "abc123"
+
+    def test_builds_payload_head_branch(self):
+        """Should include head_branch in payload."""
+        run = {"id": 12345, "head_branch": "main"}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["head_branch"] == "main"
 
-    def test_handles_missing_fields(self):
-        """Should handle missing fields gracefully."""
+
+class TestBuildAgentPayloadFromRunMissingFields:
+    """Tests for _build_agent_payload_from_run with missing fields."""
+
+    def test_handles_missing_workflow_name(self):
+        """Should handle missing workflow_name gracefully."""
         run = {"id": 12345}
-        github_token = "ghp_test123"
-
-        result = _build_agent_payload_from_run(run, github_token)
-
-        assert result["run_id"] == 12345
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["workflow_name"] is None
+
+    def test_handles_missing_workflow_path(self):
+        """Should handle missing workflow_path gracefully."""
+        run = {"id": 12345}
+        result = _build_agent_payload_from_run(run, "ghp_test123")
         assert result["workflow_path"] == ""
 
 
