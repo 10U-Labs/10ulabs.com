@@ -40,6 +40,11 @@ resource "aws_lambda_function" "webhook" {
   tags = merge(local.common_tags, {
     Name = local.lambda_name
   })
+
+  # Force Lambda replacement when IAM role is recreated to refresh KMS grant
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.webhook_lambda.id]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "webhook_lambda" {
