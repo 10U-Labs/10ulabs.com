@@ -28,7 +28,7 @@ def parse_bootstrap_tfvar(var_name: str) -> str:
 def parse_health_tfvars() -> Dict[str, str]:
     """Parse health endpoint terraform.tfvars configuration."""
     base = Path(__file__).parent.parent.parent.parent
-    tfvars_path = base / "src" / "api" / "endpoints" / "health" / "terraform.tfvars"
+    tfvars_path = base / "src" / "api" / "operational" / "health" / "terraform.tfvars"
     config = {}
     with open(tfvars_path, encoding="utf-8") as f:
         for line in f:
