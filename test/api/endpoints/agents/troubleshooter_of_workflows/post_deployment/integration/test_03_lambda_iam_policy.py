@@ -1,6 +1,8 @@
 """Integration tests for Lambda IAM policy configuration.
 
 Five-layer testing model:
+- Layer 1: Authentication - Covered by test_01_agentcore_runtime.py
+- Layer 2: Authorization - Can we call IAM APIs?
 - Layer 3: Existence - Does the Lambda role exist?
 - Layer 4: Configuration - Does the role have correct policy for AgentCore?
 
@@ -8,14 +10,49 @@ These tests verify the deployed Lambda role has the correct IAM permissions
 to invoke the AgentCore agent runtime, including subresource access.
 """
 
-import json
-
 from botocore.exceptions import ClientError
 import pytest
 
 
 LAMBDA_ROLE_NAME = "TenULabsTroubleshooterOfWorkflowsWebhookRole"
 AGENTCORE_POLICY_NAME = "TenULabsTroubleshooterOfWorkflowsWebhookAgentCorePolicy"
+
+
+class TestIAMAPIAuthorization:
+    """Layer 2: Verify we can call IAM APIs."""
+
+    def test_01_can_call_get_role_api(self, iam_client):
+        """Verify we have permission to call iam:GetRole."""
+        try:
+            # Use a role we know exists (or will fail with NoSuchEntity, not AccessDenied)
+            iam_client.get_role(RoleName=LAMBDA_ROLE_NAME)
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "AccessDenied":
+                pytest.fail(
+                    "No permission to call iam:GetRole. "
+                    "Check IAM permissions for iam:GetRole."
+                )
+            if err.response["Error"]["Code"] == "NoSuchEntity":
+                pass  # Role doesn't exist yet, but we have permission to check
+            else:
+                raise
+
+    def test_02_can_call_get_role_policy_api(self, iam_client):
+        """Verify we have permission to call iam:GetRolePolicy."""
+        try:
+            iam_client.get_role_policy(
+                RoleName=LAMBDA_ROLE_NAME, PolicyName=AGENTCORE_POLICY_NAME
+            )
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "AccessDenied":
+                pytest.fail(
+                    "No permission to call iam:GetRolePolicy. "
+                    "Check IAM permissions for iam:GetRolePolicy."
+                )
+            if err.response["Error"]["Code"] == "NoSuchEntity":
+                pass  # Role/policy doesn't exist yet, but we have permission to check
+            else:
+                raise
 
 
 class TestLambdaRoleExistence:
@@ -118,8 +155,8 @@ class TestLambdaRoleConfiguration:
                 pytest.skip("AgentCore policy not found")
             raise
 
-    def test_04_agentcore_policy_has_multiple_resources(self, iam_client):
-        """Verify the policy has both base ARN and wildcard pattern."""
+    def test_04_agentcore_policy_has_at_least_two_resources(self, iam_client):
+        """Verify the policy has at least two resources."""
         try:
             response = iam_client.get_role_policy(
                 RoleName=LAMBDA_ROLE_NAME, PolicyName=AGENTCORE_POLICY_NAME
@@ -134,25 +171,67 @@ class TestLambdaRoleConfiguration:
                     stmt_resources = [stmt_resources]
                 resources.extend(stmt_resources)
 
-            # Should have at least 2 resources: base ARN and wildcard
             assert len(resources) >= 2, (
                 "AgentCore policy should have at least 2 resources: "
                 "the base runtime ARN and a wildcard pattern for subresources. "
                 f"Found {len(resources)} resource(s): {resources}"
             )
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "NoSuchEntity":
+                pytest.skip("AgentCore policy not found")
+            raise
 
-            # Verify we have both a base ARN (no wildcard) and a wildcard pattern
+    def test_05_agentcore_policy_has_base_arn(self, iam_client):
+        """Verify the policy includes a base ARN without wildcard."""
+        try:
+            response = iam_client.get_role_policy(
+                RoleName=LAMBDA_ROLE_NAME, PolicyName=AGENTCORE_POLICY_NAME
+            )
+            policy = response["PolicyDocument"]
+            statements = policy.get("Statement", [])
+
+            resources = []
+            for stmt in statements:
+                stmt_resources = stmt.get("Resource", [])
+                if isinstance(stmt_resources, str):
+                    stmt_resources = [stmt_resources]
+                resources.extend(stmt_resources)
+
             has_base = any(
                 not res.endswith("/*") and not res.endswith("*") for res in resources
             )
+            assert has_base, (
+                "AgentCore policy must include the base runtime ARN "
+                "(without wildcard suffix). "
+                f"Resources: {resources}"
+            )
+        except ClientError as err:
+            if err.response["Error"]["Code"] == "NoSuchEntity":
+                pytest.skip("AgentCore policy not found")
+            raise
+
+    def test_06_agentcore_policy_has_wildcard_pattern(self, iam_client):
+        """Verify the policy includes a wildcard pattern for subresources."""
+        try:
+            response = iam_client.get_role_policy(
+                RoleName=LAMBDA_ROLE_NAME, PolicyName=AGENTCORE_POLICY_NAME
+            )
+            policy = response["PolicyDocument"]
+            statements = policy.get("Statement", [])
+
+            resources = []
+            for stmt in statements:
+                stmt_resources = stmt.get("Resource", [])
+                if isinstance(stmt_resources, str):
+                    stmt_resources = [stmt_resources]
+                resources.extend(stmt_resources)
+
             has_wildcard = any(
                 res.endswith("/*") or res.endswith("*") for res in resources
             )
-
-            assert has_base and has_wildcard, (
-                "AgentCore policy must include both the base runtime ARN "
-                "and a wildcard pattern for subresources. "
-                f"Has base ARN: {has_base}, Has wildcard: {has_wildcard}. "
+            assert has_wildcard, (
+                "AgentCore policy must include a wildcard pattern for subresources "
+                "(ending in /* or *). "
                 f"Resources: {resources}"
             )
         except ClientError as err:
