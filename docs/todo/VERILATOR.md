@@ -10,13 +10,14 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 | # | Issue | Status | PR | Impact |
 |---|-------|--------|-----|--------|
-| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR SUBMITTED | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
-| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR SUBMITTED | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
-| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | IN PROGRESS | - | 2-4x faster compilation on large multi-module designs |
-| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | PR SUBMITTED | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallel optimization |
+| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR OPEN | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
+| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR OPEN | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
+| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PAUSED | - | 2-4x faster compilation on large multi-module designs |
+| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | CLOSED | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallel optimization |
 | 3b | [Parallelize V3Const](#3b-parallelize-v3const) | NOT DONE | - | Per-module constant propagation |
 | 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | NOT DONE | - | Per-module dead code elimination |
-| 4 | [AST Object Pooling](#4-ast-object-pooling) | NOT DONE | - | 10-20% memory reduction, faster allocation |
+| 4 | [Function Inlining](#4-function-inlining) | PR OPEN | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces function call overhead from --output-split-cfuncs |
+| 5 | [AST Object Pooling](#5-ast-object-pooling) | NOT DONE | - | 10-20% memory reduction, faster allocation |
 
 ---
 
@@ -24,7 +25,7 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 **File:** `src/V3ThreadPool.cpp`
 
-**Status:** PR SUBMITTED - [PR #6761](https://github.com/verilator/verilator/pull/6761)
+**Status:** PR OPEN - [PR #6761](https://github.com/verilator/verilator/pull/6761)
 
 **Problem:** The `wait()` function uses busy-wait loop that wastes CPU cycles.
 
@@ -78,7 +79,7 @@ void V3ThreadPool::workerJobLoop() {
 
 **Files:** `include/verilated_threading_advisor.h`, `include/verilated.cpp`
 
-**Status:** PR SUBMITTED - [PR #6762](https://github.com/verilator/verilator/pull/6762)
+**Status:** PR OPEN - [PR #6762](https://github.com/verilator/verilator/pull/6762)
 
 **Current state:**
 - `VlExecutionProfiler` exists for collecting profiling data (verilated_profiler.h)
@@ -131,7 +132,7 @@ class VlThreadingAdvisor {
 
 **Files:** `src/Verilator.cpp`, various V3*.cpp passes
 
-**Status:** IN PROGRESS
+**Status:** PAUSED (PR #6763 was closed without merge)
 
 **Goal:** Extend the `V3ThreadScope` parallel processing pattern to additional compiler passes.
 
@@ -161,14 +162,16 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 **File:** `src/V3FuncOpt.cpp`
 
-**Status:** PR SUBMITTED - [PR #6763](https://github.com/verilator/verilator/pull/6763)
+**Status:** CLOSED - [PR #6763](https://github.com/verilator/verilator/pull/6763) was not merged
 
-**Solution:** Apply per-function parallelization using `V3ThreadScope`. Each `AstCFunc` is processed independently in parallel.
+**Proposed solution:** Apply per-function parallelization using `V3ThreadScope`. Each `AstCFunc` is processed independently in parallel.
 
-**Changes:**
+**Changes proposed:**
 - Add `V3ThreadScope` to `funcOptAll()` to parallelize function processing
 - Convert `FuncOptStats` to use `std::atomic<uint64_t>` for thread-safe updates
 - Add `VL_MT_SAFE` annotation to `FuncOptVisitor::apply()`
+
+**Note:** This approach was not accepted by maintainers. Future parallelization efforts may require different strategies.
 
 ---
 
@@ -205,7 +208,41 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 ---
 
-## 4. AST Object Pooling
+## 4. Function Inlining
+
+**Files:** `src/V3InlineCFuncs.cpp` (new file)
+
+**Status:** PR OPEN - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
+
+**Resolves:** [Issue #2367](https://github.com/verilator/verilator/issues/2367)
+
+**Problem:** When `--output-split-cfuncs` places functions in separate compilation units, the C++ compiler cannot inline them, resulting in function call overhead for small functions.
+
+**Solution:** Add `--inline-cfuncs` and `--inline-cfuncs-product` options to inline small CFunc calls directly into their callers at the Verilator level.
+
+**Two thresholds:**
+- `--inline-cfuncs <n>` (default 20): Always inline if function has ≤ n AST nodes
+- `--inline-cfuncs-product <n>` (default 200): Also inline if size × call_count ≤ n
+
+**Functions are inlined when they:**
+- Meet size thresholds above
+- Have no `$c()` statements
+- Have void return type
+- Are in the same scope as caller
+
+**Implementation details:**
+- Separate V3InlineCFuncs pass running after V3Reloop
+- Local variables cloned with unique names (`__Vinline_<func>_<var>`)
+- V3Stats tracking: `"Optimizations, Inlined CFuncs"`
+- Automatically disabled when `--prof-cfuncs` or `--trace` is used
+
+**Impact:** Reduces function call overhead from --output-split-cfuncs
+**Difficulty:** Medium - required multiple iterations based on maintainer feedback
+**Risk:** Low - opt-in feature with sensible defaults
+
+---
+
+## 5. AST Object Pooling
 
 **Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
 
@@ -260,6 +297,11 @@ public:
 
 ## Our Contributions
 
+**Open PRs:**
 - [PR #6761: Optimize V3ThreadPool::wait() to use condition variable](https://github.com/verilator/verilator/pull/6761)
 - [PR #6762: Add runtime threading advisor for configuration warnings](https://github.com/verilator/verilator/pull/6762)
+- [PR #6815: Inline small CFuncs to reduce function call overhead](https://github.com/verilator/verilator/pull/6815)
+
+**Closed PRs (not merged):**
 - [PR #6763: Parallelize V3FuncOpt using V3ThreadScope](https://github.com/verilator/verilator/pull/6763)
+- [PR #6765: Inline small CFuncs (superseded by #6815)](https://github.com/verilator/verilator/pull/6765)
