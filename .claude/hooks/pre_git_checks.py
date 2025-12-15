@@ -282,6 +282,7 @@ def run_workflow_yaml_lint(changed_files):
     workflow_files = [
         f for f in changed_files
         if f.startswith('.github/workflows/') and f.endswith('.yml')
+        and os.path.isfile(f)  # Skip deleted files
     ]
 
     if not workflow_files:
