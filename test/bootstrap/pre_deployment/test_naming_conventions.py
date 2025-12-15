@@ -3,31 +3,45 @@
 These tests parse Terraform files to validate naming conventions before deployment.
 Names must use PascalCase (no dashes, underscores, or other separators).
 """
+import re
 from pathlib import Path
 
 import pytest
 
 from naming_conventions import validate_name
-from terraform_config import extract_iam_role_names
+from terraform_config import get_resource_prefix
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 BOOTSTRAP_SRC = REPO_ROOT / "src" / "bootstrap"
 
 
-def find_all_tf_files_with_iam_roles() -> list:
-    """Find all Terraform files in bootstrap that define IAM roles."""
-    all_roles = []
-    for tf_file in BOOTSTRAP_SRC.rglob("*.tf"):
-        # Skip non-iam files and subdirectory modules
-        if tf_file.name != "iam.tf":
-            continue
-        roles = extract_iam_role_names(tf_file)
-        for resource_name, role_name in roles:
-            all_roles.append((resource_name, role_name, tf_file.name))
-    return all_roles
+def extract_iam_role_names_from_bootstrap_locals() -> list:
+    """Extract IAM role names from bootstrap locals.tf.
+
+    Bootstrap passes role names to modules via variables, so we extract
+    the actual names from locals.tf where they're defined.
+    """
+    locals_file = BOOTSTRAP_SRC / "locals.tf"
+    if not locals_file.exists():
+        return []
+
+    with open(locals_file, encoding="utf-8") as f:
+        content = f.read()
+
+    prefix = get_resource_prefix()
+    roles = []
+
+    # Match locals that define IAM role names (contain "role" in the name)
+    for match in re.finditer(r'(name_for_\w*role\w*)\s*=\s*"([^"]*)"', content, re.I):
+        local_name, value = match.groups()
+        # Resolve ${local.resource_prefix} references
+        resolved = value.replace("${local.resource_prefix}", prefix)
+        roles.append((local_name, resolved, "locals.tf"))
+
+    return roles
 
 
-IAM_ROLES = find_all_tf_files_with_iam_roles()
+IAM_ROLES = extract_iam_role_names_from_bootstrap_locals()
 
 
 class TestIAMRoleNamingConventions:

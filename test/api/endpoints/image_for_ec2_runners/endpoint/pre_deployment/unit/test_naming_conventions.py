@@ -17,7 +17,7 @@ LAMBDA_FILE = IMAGE_EC2_SRC / "lambda.tf"
 
 
 IAM_ROLES = extract_iam_role_names(IAM_FILE)
-LAMBDA_FUNCTIONS = extract_lambda_function_names(LAMBDA_FILE)
+LAMBDA_FUNCTIONS = extract_lambda_function_names(LAMBDA_FILE, use_handler_names=True)
 
 
 class TestIAMRoleNamingConventions:
