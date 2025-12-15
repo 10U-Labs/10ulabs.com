@@ -8,16 +8,16 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 ## Table of Contents
 
-| # | Issue | Status | PR | Impact |
-|---|-------|--------|-----|--------|
-| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | 🟡 Open | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
-| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | 🟡 Open | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
-| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | ⏸️ On hold | - | 2-4x faster compilation on large multi-module designs |
-| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | ❌ Closed | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallel optimization |
-| 3b | [Parallelize V3Const](#3b-parallelize-v3const) | ⬜ Todo | - | Per-module constant propagation |
-| 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | ⬜ Todo | - | Per-module dead code elimination |
-| 4 | [Function Inlining](#4-function-inlining) | 🟡 Open | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces function call overhead from --output-split-cfuncs |
-| 5 | [AST Object Pooling](#5-ast-object-pooling) | ⬜ Todo | - | 10-20% memory reduction, faster allocation |
+| # | Issue | Status | PR | Impact | Remarks |
+|---|-------|--------|-----|--------|---------|
+| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | 🟡 Open | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement | |
+| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | 🟡 Open | [#6762](https://github.com/verilator/verilator/pull/6762) | Hours of debugging saved | |
+| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | ⏸️ On hold | - | 2-4x faster compilation | Rethinking approach after 3a rejection |
+| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | ❌ Closed | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
+| 3b | [Parallelize V3Const](#3b-parallelize-v3const) | 📝 Todo | - | Per-module constant propagation | Blocked on 3a approach decision |
+| 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | 📝 Todo | - | Per-module dead code elimination | Blocked on 3a approach decision |
+| 4 | [Function Inlining](#4-function-inlining) | 🟡 Open | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
+| 5 | [AST Object Pooling](#5-ast-object-pooling) | 📝 Todo | - | 10-20% memory reduction | |
 
 ---
 
@@ -179,7 +179,7 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 **File:** `src/V3Const.cpp`
 
-**Status:** ⬜ Todo
+**Status:** 📝 Todo
 
 **Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Would need conversion to `V3PchAstMT.h` and analysis of cross-module constant propagation dependencies.
 
@@ -202,7 +202,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 **File:** `src/V3Dead.cpp`
 
-**Status:** ⬜ Todo
+**Status:** 📝 Todo
 
 **Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Dead code elimination may have cross-module reference counting dependencies that need careful analysis.
 
@@ -246,7 +246,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 **Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
 
-**Status:** ⬜ Todo
+**Status:** 📝 Todo
 
 **Problem:** `AstVarRef` and `AstConst` are the most allocated node types. Standard `new` allocation is used throughout (188 occurrences of `new AstConst` and `new AstVarRef` across the codebase).
 
