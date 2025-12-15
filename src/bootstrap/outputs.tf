@@ -52,7 +52,3 @@ output "runner_security_group_id" {
   value = aws_security_group.runner.id
 }
 
-# Lambda Layer Outputs
-output "lambda_layer_github_auth_arn" {
-  value = aws_lambda_layer_version.github_auth.arn
-}

@@ -23,10 +23,10 @@ resource "aws_iam_role" "api_gateway_sqs" {
 }
 
 resource "aws_iam_role_policy" "api_gateway_sqs" {
-  name = "SendToWebhookIngressQueue"
+  name = "SendToIngressQueues"
   role = aws_iam_role.api_gateway_sqs.id
 
-  # Construct ARN from known values (avoid dependency on runners remote state)
+  # Construct ARNs from known values (avoid dependency on remote state)
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -35,7 +35,11 @@ resource "aws_iam_role_policy" "api_gateway_sqs" {
         "sqs:SendMessage",
         "sqs:GetQueueUrl"
       ]
-      Resource = "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.webhook_ingress_queue_name}"
+      Resource = [
+        "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.webhook_ingress_queue_name}",
+        "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.agent_webhook_queue_name}",
+        "arn:aws:sqs:${local.aws_region}:${local.aws_account_id}:${local.agent_invoker_queue_name}"
+      ]
     }]
   })
 }

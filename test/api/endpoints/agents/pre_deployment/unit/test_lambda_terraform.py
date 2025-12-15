@@ -19,25 +19,65 @@ def test_webhook_lambda_function_exists():
     assert 'resource "aws_lambda_function" "webhook"' in content
 
 
-def test_lambda_function_url_resource_exists():
-    """Verify Lambda function URL resource is defined."""
+def test_scanner_lambda_function_exists():
+    """Verify scanner Lambda function resource is defined."""
     lambda_file = AGENTS_SRC / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_lambda_function_url" "webhook"' in content
+    assert 'resource "aws_lambda_function" "scanner"' in content
 
 
-def test_eventbridge_rule_resource_exists():
-    """Verify EventBridge scheduled rule resource is defined."""
+def test_invoker_lambda_function_exists():
+    """Verify invoker Lambda function resource is defined."""
     lambda_file = AGENTS_SRC / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'resource "aws_cloudwatch_event_rule"' in content
+    assert 'resource "aws_lambda_function" "invoker"' in content
 
 
-def test_webhook_lambda_handler_archive_exists():
-    """Verify handler archive_file data source is defined."""
+def test_webhook_lambda_archive_exists():
+    """Verify webhook archive_file data source is defined."""
     lambda_file = AGENTS_SRC / "lambda.tf"
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
-    assert 'data "archive_file"' in content
+    assert 'data "archive_file" "webhook_lambda"' in content
+
+
+def test_scanner_lambda_archive_exists():
+    """Verify scanner archive_file data source is defined."""
+    lambda_file = AGENTS_SRC / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "scanner_lambda"' in content
+
+
+def test_invoker_lambda_archive_exists():
+    """Verify invoker archive_file data source is defined."""
+    lambda_file = AGENTS_SRC / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'data "archive_file" "invoker_lambda"' in content
+
+
+def test_webhook_sqs_event_source_mapping_exists():
+    """Verify webhook SQS event source mapping is defined."""
+    lambda_file = AGENTS_SRC / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_lambda_event_source_mapping" "webhook_sqs"' in content
+
+
+def test_scanner_sqs_event_source_mapping_exists():
+    """Verify scanner SQS event source mapping is defined."""
+    lambda_file = AGENTS_SRC / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_lambda_event_source_mapping" "scanner_sqs"' in content
+
+
+def test_invoker_sqs_event_source_mapping_exists():
+    """Verify invoker SQS event source mapping is defined."""
+    lambda_file = AGENTS_SRC / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert 'resource "aws_lambda_event_source_mapping" "invoker_sqs"' in content

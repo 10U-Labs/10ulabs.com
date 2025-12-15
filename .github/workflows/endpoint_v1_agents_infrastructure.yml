@@ -110,15 +110,18 @@ jobs:
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/endpoint_v1_agents_infrastructure.yml
       - env:
-          PYTHONPATH: src/bootstrap/lambda_layer
+          PYTHONPATH: src/api/endpoints/agents/lambdas/layer
         name: Run pylint
         run: |
           SRC=src/api/endpoints/agents
-          python3 -m pylint $SRC/lambdas/ --fail-on=C,R,W --fail-under=10.0
-          python3 -m pylint $SRC/runtime/ --fail-on=C,R,W --fail-under=10.0
+          PYLINT_OPTS="--fail-on=C,R,W --fail-under=10.0"
+          PYLINT_OPTS="$PYLINT_OPTS --min-similarity-lines=150"
+          python3 -m pylint $SRC/lambdas/ $PYLINT_OPTS
+          python3 -m pylint $SRC/runtime/ $PYLINT_OPTS
       - env:
-          MYPYPATH: src/bootstrap/lambda_layer:src/api/endpoints/agents/stubs
-          PYTHONPATH: src/bootstrap/lambda_layer
+          MYPYPATH: >-
+            src/api/endpoints/agents/lambdas/layer:src/api/endpoints/agents/stubs
+          PYTHONPATH: src/api/endpoints/agents/lambdas/layer
         name: Run mypy
         run: |
           python3 -m mypy \

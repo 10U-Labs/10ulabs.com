@@ -5,9 +5,9 @@
 
 locals {
   lambda_layer_dir   = "${path.module}/.terraform/lambda_layer"
-  github_auth_script = "${path.module}/lambda_layer/build.py"
-  github_auth_reqs   = "${path.module}/lambda_layer/requirements.txt"
-  github_auth_module = "${path.module}/lambda_layer/github_auth.py"
+  github_auth_script = "${path.module}/lambdas/layer/build.py"
+  github_auth_reqs   = "${path.module}/lambdas/layer/requirements.txt"
+  github_auth_module = "${path.module}/lambdas/layer/github_auth.py"
   github_auth_zip    = "${local.lambda_layer_dir}/github_auth.zip"
 
   # Hash of source files for layer versioning

@@ -55,11 +55,11 @@ resource "aws_iam_role_policy" "agentcore_execution" {
 }
 
 # ===================================================================
-# Webhook Lambda Role
+# Agent Lambda Role (shared by all agent Lambdas)
 # ===================================================================
 
 resource "aws_iam_role" "webhook_lambda" {
-  name = "${local.lambda_name}Role"
+  name = "${local.resource_prefix}AgentLambdaRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -76,7 +76,7 @@ resource "aws_iam_role" "webhook_lambda" {
 }
 
 resource "aws_iam_role_policy" "webhook_lambda_logs" {
-  name = "${local.lambda_name}LogsPolicy"
+  name = "AgentLambdaLogsPolicy"
   role = aws_iam_role.webhook_lambda.id
 
   policy = jsonencode({
@@ -87,13 +87,39 @@ resource "aws_iam_role_policy" "webhook_lambda_logs" {
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ]
-      Resource = "${aws_cloudwatch_log_group.webhook_lambda.arn}:*"
+      Resource = [
+        "${aws_cloudwatch_log_group.webhook_lambda.arn}:*",
+        "${aws_cloudwatch_log_group.scanner_lambda.arn}:*",
+        "${aws_cloudwatch_log_group.invoker_lambda.arn}:*"
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "webhook_lambda_sqs" {
+  name = "AgentLambdaSQSPolicy"
+  role = aws_iam_role.webhook_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = [
+        aws_sqs_queue.webhook_ingress.arn,
+        aws_sqs_queue.scanner.arn,
+        aws_sqs_queue.invoker_ingress.arn
+      ]
     }]
   })
 }
 
 resource "aws_iam_role_policy" "webhook_lambda_ssm" {
-  name = "${local.lambda_name}SSMPolicy"
+  name = "AgentLambdaSSMPolicy"
   role = aws_iam_role.webhook_lambda.id
 
   policy = jsonencode({
@@ -114,7 +140,7 @@ resource "aws_iam_role_policy" "webhook_lambda_ssm" {
 }
 
 resource "aws_iam_role_policy" "webhook_lambda_agentcore" {
-  name = "${local.lambda_name}AgentCorePolicy"
+  name = "AgentLambdaAgentCorePolicy"
   role = aws_iam_role.webhook_lambda.id
 
   policy = jsonencode({
@@ -133,7 +159,7 @@ resource "aws_iam_role_policy" "webhook_lambda_agentcore" {
 }
 
 resource "aws_iam_role_policy" "webhook_lambda_kms" {
-  name = "${local.lambda_name}KMSPolicy"
+  name = "AgentLambdaKMSPolicy"
   role = aws_iam_role.webhook_lambda.id
 
   policy = jsonencode({
@@ -151,7 +177,7 @@ resource "aws_iam_role_policy" "webhook_lambda_kms" {
 
 # S3 permissions for Lambda to read prompts
 resource "aws_iam_role_policy" "webhook_lambda_s3" {
-  name = "${local.lambda_name}S3Policy"
+  name = "AgentLambdaS3Policy"
   role = aws_iam_role.webhook_lambda.id
 
   policy = jsonencode({
