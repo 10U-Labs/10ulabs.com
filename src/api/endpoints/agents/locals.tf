@@ -4,13 +4,9 @@ locals {
   aws_account_id  = module.shared.aws_account_id
   resource_prefix = module.shared.resource_prefix
 
-  # ECR repository
-  ecr_repository_name = "agents"
-
-  # Runtime naming
+  # Runtime naming (direct code deploy - no Docker/ECR)
   runtime_name = "agent-runtime"
   stack_name   = "${local.resource_prefix}-${local.runtime_name}"
-  image_tag    = "runtime-latest"
 
   # Lambda naming
   lambda_name    = "${local.resource_prefix}AgentWebhook"

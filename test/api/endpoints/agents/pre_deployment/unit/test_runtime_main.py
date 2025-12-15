@@ -21,11 +21,11 @@ def test_runtime_main_imports_tools():
     assert "from tools import ALL_TOOLS" in content
 
 
-def test_runtime_main_has_load_prompt_function():
-    """Test that main.py defines load_prompt function."""
+def test_runtime_main_has_load_prompt_from_s3_function():
+    """Test that main.py defines load_prompt_from_s3 function."""
     main_file = RUNTIME_DIR / "main.py"
     content = main_file.read_text()
-    assert "def load_prompt" in content
+    assert "def load_prompt_from_s3" in content
 
 
 def test_runtime_main_has_extract_recommendation_function():
@@ -36,10 +36,10 @@ def test_runtime_main_has_extract_recommendation_function():
 
 
 def test_runtime_main_has_entrypoint_decorator():
-    """Test that main.py has @app.entrypoint decorator."""
+    """Test that main.py uses app.entrypoint pattern."""
     main_file = RUNTIME_DIR / "main.py"
     content = main_file.read_text()
-    assert "@app.entrypoint" in content
+    assert "@_apply_entrypoint" in content or "@app.entrypoint" in content
 
 
 def test_runtime_main_has_invoke_function():
@@ -49,11 +49,32 @@ def test_runtime_main_has_invoke_function():
     assert "def invoke" in content
 
 
-def test_runtime_main_references_prompts_directory():
-    """Test that main.py references the prompts directory."""
+def test_runtime_main_uses_s3_for_prompts():
+    """Test that main.py uses S3 for loading prompts."""
     main_file = RUNTIME_DIR / "main.py"
     content = main_file.read_text()
-    assert "prompts" in content.lower()
+    assert "s3_client" in content or "s3.get_object" in content.lower()
+
+
+def test_runtime_main_has_guardrail_configuration():
+    """Test that main.py supports guardrail configuration."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert "GUARDRAIL_ID" in content or "guardrail" in content.lower()
+
+
+def test_runtime_main_has_memory_configuration():
+    """Test that main.py supports memory configuration."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert "MEMORY_ARN" in content or "memory" in content.lower()
+
+
+def test_runtime_main_references_prompts_bucket():
+    """Test that main.py references PROMPTS_BUCKET environment variable."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert "PROMPTS_BUCKET" in content
 
 
 class TestExtractRecommendation:
@@ -100,11 +121,8 @@ Done.
 class TestLoadPromptLogic:
     """Test the load_prompt logic."""
 
-    def test_prompts_directory_exists_in_runtime(self):
-        """Test that prompts directory exists (main.py expects it in container)."""
-        # In the container, prompts are copied to runtime/prompts
-        # But in the repo, they're in agents/prompts
-        # The Dockerfile copies them
+    def test_prompts_directory_exists_in_src(self):
+        """Test that prompts directory exists in source (uploaded to S3)."""
         prompts_in_src = AGENTS_SRC / "prompts"
         assert prompts_in_src.exists()
 
