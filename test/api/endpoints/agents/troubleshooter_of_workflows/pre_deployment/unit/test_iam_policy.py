@@ -108,3 +108,46 @@ class TestAgentCoreIAMPolicy:
             "the base ARN and wildcard pattern. "
             f"Current Resource value: {resource}"
         )
+
+
+class TestKMSIAMPolicy:
+    """Tests for the KMS IAM policy configuration.
+
+    The webhook Lambda needs kms:Decrypt permission to decrypt environment
+    variables encrypted with the AWS-managed Lambda KMS key.
+
+    This is a regression test for the KMSAccessDeniedException bug where the
+    Lambda returned 502 errors because it could not decrypt environment variables.
+    """
+
+    def test_webhook_lambda_kms_policy_exists(self):
+        """Verify the webhook_lambda_kms policy resource exists."""
+        content = _read_iam_tf()
+        assert 'resource "aws_iam_role_policy" "webhook_lambda_kms"' in content, (
+            "webhook_lambda_kms policy resource not found in iam.tf. "
+            "Lambda needs kms:Decrypt permission to decrypt environment variables."
+        )
+
+    def test_kms_policy_has_decrypt_permission(self):
+        """Verify the KMS policy grants kms:Decrypt permission."""
+        content = _read_iam_tf()
+        assert "kms:Decrypt" in content, (
+            "kms:Decrypt permission not found in iam.tf. "
+            "Lambda needs this permission to decrypt environment variables."
+        )
+
+    def test_kms_policy_has_describe_key_permission(self):
+        """Verify the KMS policy grants kms:DescribeKey permission."""
+        content = _read_iam_tf()
+        assert "kms:DescribeKey" in content, (
+            "kms:DescribeKey permission not found in iam.tf. "
+            "This permission is required alongside kms:Decrypt."
+        )
+
+    def test_kms_policy_uses_shared_module_key_arn(self):
+        """Verify the KMS policy uses the shared module's KMS key ARN."""
+        content = _read_iam_tf()
+        assert "module.shared.kms_lambda_key_arn" in content, (
+            "KMS policy should use module.shared.kms_lambda_key_arn as the resource. "
+            "This ensures consistency with other endpoints in the codebase."
+        )

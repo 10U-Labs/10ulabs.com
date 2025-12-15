@@ -100,6 +100,12 @@ def ecr_client(aws_region):
 
 
 @pytest.fixture(scope="session")
+def kms_client(aws_region):
+    """Create a KMS client."""
+    return boto3.client("kms", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
 def ecr_repository_name(shared_config):
     """Provide the ECR repository name for agents."""
     return shared_config["ecr_repository_name_agents"]
