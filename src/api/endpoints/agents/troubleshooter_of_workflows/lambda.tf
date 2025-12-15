@@ -62,6 +62,15 @@ resource "aws_lambda_function_url" "webhook" {
   authorization_type = "NONE"
 }
 
+# Allow public access to Function URL
+resource "aws_lambda_permission" "function_url" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.webhook.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
 # EventBridge rule to scan for unresolved failures every 15 minutes
 resource "aws_cloudwatch_event_rule" "scheduled_scan" {
   name                = "${local.lambda_name}-scheduled-scan"
