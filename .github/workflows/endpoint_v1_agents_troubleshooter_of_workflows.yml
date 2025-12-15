@@ -110,7 +110,7 @@ jobs:
         name: Run pylint
         run: |
           SRC=src/api/endpoints/agents/troubleshooter_of_workflows
-          python3 -m pylint $SRC/webhook_lambda/ \
+          python3 -m pylint $SRC/lambda/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - env:
@@ -119,7 +119,7 @@ jobs:
         name: Run mypy
         run: |
           python3 -m mypy \
-            src/api/endpoints/agents/troubleshooter_of_workflows/webhook_lambda/
+            src/api/endpoints/agents/troubleshooter_of_workflows/lambda/
       - env:
           PYTHONPATH: src/bootstrap/lambda_layer
         name: Run unit tests
@@ -150,7 +150,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: >-
-            src/api/endpoints/agents/troubleshooter_of_workflows/agent_code
+            src/api/endpoints/agents/troubleshooter_of_workflows/agent
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

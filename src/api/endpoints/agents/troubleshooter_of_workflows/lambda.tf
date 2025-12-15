@@ -3,7 +3,7 @@
 
 data "archive_file" "webhook_lambda" {
   type        = "zip"
-  source_file = "${path.module}/webhook_lambda/handler.py"
+  source_file = "${path.module}/lambda/handler.py"
   output_path = "${path.module}/.terraform/lambda_packages/webhook.zip"
 }
 
