@@ -1,7 +1,13 @@
 ---
-concurrency:
-  cancel-in-progress: true
-  group: ${{ github.workflow_ref }}-${{ github.ref }}
+# Agent Factory Infrastructure Workflow
+#
+# Deploys the complete agent infrastructure including:
+# - S3 buckets (prompts + runtime code)
+# - AgentCore Runtime (direct code deploy)
+# - Guardrails, Memory, and Policy
+# - Lambda webhook handler
+#
+# IMPORTANT: No cancel-in-progress to prevent agent creation conflicts
 jobs:
   deploy:
     if: >-
@@ -40,6 +46,7 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "resource_prefix=$RESOURCE_PREFIX" >> $GITHUB_OUTPUT
           GH_ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
           echo "$GH_ROLE_ARN" >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
@@ -48,6 +55,23 @@ jobs:
         with:
           aws-region: ${{ steps.config.outputs.aws_region }}
           role-to-assume: ${{ steps.config.outputs.github_actions_role_arn }}
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Install Python dependencies
+        run: |
+          python3 -m pip install \
+            pylint mypy yamllint pytest boto3 boto3-stubs requests \
+            PyJWT cryptography
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -74,18 +98,36 @@ jobs:
       - name: Terraform Plan
         run: |
           cd src/api/endpoints/agents
-          terraform plan -target=aws_ecr_repository.agents \
-            -target=aws_ecr_lifecycle_policy.agents \
-            -target=null_resource.github_auth_layer_build \
-            -target=aws_lambda_layer_version.github_auth
+          terraform plan
+      - name: Linting YAML files
+        run: |
+          EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
+          KEY_ORDERING='key-ordering: enable'
+          NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
+          TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
+          RULES="$EMPTY_LINES, $KEY_ORDERING, $NEWLINE_AT_EOF, $TRUTHY"
+          yamllint --strict \
+            --config-data "{extends: default, rules: {$RULES}}" \
+            .github/workflows/endpoint_v1_agents_infrastructure.yml
+      - env:
+          PYTHONPATH: src/bootstrap/lambda_layer
+        name: Run pylint
+        run: |
+          SRC=src/api/endpoints/agents
+          python3 -m pylint $SRC/lambdas/ --fail-on=C,R,W --fail-under=10.0
+          python3 -m pylint $SRC/runtime/ --fail-on=C,R,W --fail-under=10.0
+      - env:
+          MYPYPATH: src/bootstrap/lambda_layer:src/api/endpoints/agents/stubs
+          PYTHONPATH: src/bootstrap/lambda_layer
+        name: Run mypy
+        run: |
+          python3 -m mypy \
+            src/api/endpoints/agents/lambdas/ \
+            src/api/endpoints/agents/runtime/
       - name: Terraform Apply
         run: |
           cd src/api/endpoints/agents
-          terraform apply -auto-approve \
-            -target=aws_ecr_repository.agents \
-            -target=aws_ecr_lifecycle_policy.agents \
-            -target=null_resource.github_auth_layer_build \
-            -target=aws_lambda_layer_version.github_auth
+          terraform apply -auto-approve
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
@@ -107,9 +149,7 @@ on:
     branches:
       - main
     paths:
-      - src/api/endpoints/agents/ecr.tf
-      - src/api/endpoints/agents/lambda_layer.tf
-      - src/api/endpoints/agents/lambda_layer/**
+      - src/api/endpoints/agents/**
   workflow_dispatch:
     inputs:
       dry_run:

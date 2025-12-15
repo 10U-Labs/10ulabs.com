@@ -69,3 +69,27 @@ def kms_lambda_key_alias():
 def bedrock_client(aws_region):
     """Create a Bedrock client."""
     return boto3.client("bedrock", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def s3_prompts_bucket_name(shared_config):
+    """Return the S3 bucket name for agent prompts."""
+    return f"{shared_config['resource_prefix']}-agent-prompts"
+
+
+@pytest.fixture(scope="session")
+def s3_runtime_code_bucket_name(shared_config):
+    """Return the S3 bucket name for agent runtime code."""
+    return f"{shared_config['resource_prefix']}-agent-runtime-code"
+
+
+@pytest.fixture(scope="session")
+def opensearch_client(aws_region):
+    """Create an OpenSearch Serverless client."""
+    return boto3.client("opensearchserverless", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def memory_collection_name(shared_config):
+    """Return the OpenSearch collection name for agent memory."""
+    return f"{shared_config['resource_prefix']}-memory"

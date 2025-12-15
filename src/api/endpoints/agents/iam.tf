@@ -148,3 +148,104 @@ resource "aws_iam_role_policy" "webhook_lambda_kms" {
     }]
   })
 }
+
+# S3 permissions for Lambda to read prompts
+resource "aws_iam_role_policy" "webhook_lambda_s3" {
+  name = "${local.lambda_name}S3Policy"
+  role = aws_iam_role.webhook_lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        aws_s3_bucket.prompts.arn,
+        "${aws_s3_bucket.prompts.arn}/*"
+      ]
+    }]
+  })
+}
+
+# ===================================================================
+# AgentCore Additional Permissions
+# ===================================================================
+
+# Guardrails permissions for AgentCore runtime
+resource "aws_iam_role_policy" "agentcore_guardrails" {
+  name = "AgentCoreGuardrailsPolicy"
+  role = aws_iam_role.agentcore_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "bedrock:ApplyGuardrail",
+        "bedrock:GetGuardrail"
+      ]
+      Resource = [
+        aws_bedrock_guardrail.agents.guardrail_arn,
+        "${aws_bedrock_guardrail.agents.guardrail_arn}/*"
+      ]
+    }]
+  })
+}
+
+# Memory permissions for AgentCore runtime
+resource "aws_iam_role_policy" "agentcore_memory" {
+  name = "AgentCoreMemoryPolicy"
+  role = aws_iam_role.agentcore_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock-agentcore:GetMemory",
+          "bedrock-agentcore:PutMemory",
+          "bedrock-agentcore:DeleteMemory",
+          "bedrock-agentcore:ListMemories"
+        ]
+        Resource = [
+          aws_bedrockagentcore_memory.agents.arn,
+          "${aws_bedrockagentcore_memory.agents.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "aoss:APIAccessAll"
+        ]
+        Resource = [
+          aws_opensearchserverless_collection.memory.arn
+        ]
+      }
+    ]
+  })
+}
+
+# S3 permissions for AgentCore runtime to read prompts
+resource "aws_iam_role_policy" "agentcore_s3" {
+  name = "AgentCoreS3Policy"
+  role = aws_iam_role.agentcore_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        aws_s3_bucket.prompts.arn,
+        "${aws_s3_bucket.prompts.arn}/*"
+      ]
+    }]
+  })
+}
