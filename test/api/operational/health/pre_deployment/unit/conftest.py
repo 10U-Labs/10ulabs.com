@@ -2,7 +2,7 @@
 import importlib.util
 from types import ModuleType
 
-from test.api.endpoints.health.conftest import HEALTH_SRC
+from test.api.operational.health.conftest import HEALTH_SRC
 
 import pytest
 

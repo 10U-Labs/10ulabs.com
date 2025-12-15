@@ -1,5 +1,5 @@
 """Unit tests for health endpoint outputs Terraform configuration."""
-from test.api.endpoints.health.conftest import HEALTH_SRC
+from test.api.operational.health.conftest import HEALTH_SRC
 
 OUTPUTS_FILE = HEALTH_SRC / "outputs.tf"
 
