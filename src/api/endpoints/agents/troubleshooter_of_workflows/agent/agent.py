@@ -287,32 +287,6 @@ def create_pull_request(
     return _github_api_request(endpoint, github_token, method="POST", data=data)
 
 
-@tool
-def merge_pull_request(
-    owner: str,
-    repo: str,
-    pull_number: int,
-    merge_method: str,
-    github_token: str,
-) -> dict[str, Any]:
-    """
-    Merge a pull request in a GitHub repository.
-
-    Args:
-        owner: The GitHub organization or user that owns the repository
-        repo: The repository name
-        pull_number: The pull request number
-        merge_method: The merge method to use (merge, squash, or rebase)
-        github_token: GitHub Personal Access Token
-
-    Returns:
-        The merge result including SHA and message
-    """
-    endpoint = f"/repos/{owner}/{repo}/pulls/{pull_number}/merge"
-    data = {"merge_method": merge_method}
-    return _github_api_request(endpoint, github_token, method="PUT", data=data)
-
-
 # Create the agent with tools
 agent = Agent(
     system_prompt=_load_system_prompt(),
@@ -323,7 +297,6 @@ agent = Agent(
         create_branch,
         commit_file,
         create_pull_request,
-        merge_pull_request,
     ],
 )
 
