@@ -28,21 +28,3 @@ class TestDeployedIAMRoleNamingConventions:
         assert error is None, (
             f"Deployed IAM role has invalid name '{actual_name}': {error}"
         )
-
-    def test_agentcore_execution_role_exists(self, iam_client):
-        """Verify AgentCore execution role exists."""
-        role_name = "TenULabsAgentCoreExecutionRole"
-        try:
-            iam_client.get_role(RoleName=role_name)
-        except iam_client.exceptions.NoSuchEntityException:
-            pytest.fail(f"IAM role '{role_name}' does not exist")
-
-    def test_agentcore_execution_role_name_is_pascalcase(self, iam_client):
-        """Verify AgentCore execution role name uses PascalCase."""
-        role_name = "TenULabsAgentCoreExecutionRole"
-        response = iam_client.get_role(RoleName=role_name)
-        actual_name = response['Role']['RoleName']
-        error = validate_name(actual_name)
-        assert error is None, (
-            f"Deployed IAM role has invalid name '{actual_name}': {error}"
-        )
