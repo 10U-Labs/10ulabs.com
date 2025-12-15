@@ -17,14 +17,15 @@ from compute_root_workflows import (
     _output_slots,
     compute_execution_plan,
     compute_execution_plan_levels,
+    compute_merge_roots,
     compute_root_workflows,
     file_matches_patterns,
     get_affected_workflows,
     get_all_ancestors,
-    get_all_descendants,
     topological_sort,
     topological_sort_levels,
 )
+from workflow_utils import get_all_descendants
 
 
 # Sample dependency graph for testing
@@ -47,7 +48,7 @@ SAMPLE_GRAPH = {
     "health": {
         "name": "Health",
         "depends_on": ["api"],
-        "paths": [".github/workflows/endpoint_health.yml", "src/api/endpoints/health/**"],
+        "paths": [".github/workflows/operational_health.yml", "src/api/operational/health/**"],
     },
     "ecr": {
         "name": "ECR",
@@ -81,36 +82,59 @@ SAMPLE_GRAPH = {
 class TestFileMatchesPatterns:
     """Tests for file_matches_patterns function."""
 
-    def test_exact_match(self) -> None:
-        """Test exact file path matching."""
+    def test_exact_match_returns_true(self) -> None:
+        """Test exact file path matching returns true."""
         patterns = [".github/workflows/bootstrap.yml"]
         assert file_matches_patterns(".github/workflows/bootstrap.yml", patterns)
+
+    def test_exact_match_returns_false_for_different_file(self) -> None:
+        """Test exact file path matching returns false for different file."""
+        patterns = [".github/workflows/bootstrap.yml"]
         assert not file_matches_patterns(".github/workflows/api_backend.yml", patterns)
 
-    def test_glob_star_match(self) -> None:
-        """Test single * glob pattern matching.
+    def test_glob_star_match_direct_child(self) -> None:
+        """Test single * glob pattern matches direct child."""
+        patterns = ["src/*.tf"]
+        assert file_matches_patterns("src/main.tf", patterns)
+
+    def test_glob_star_match_nested_child(self) -> None:
+        """Test single * glob pattern matches nested child.
 
         Note: fnmatch treats * as matching any characters including /,
         so src/*.tf matches src/sub/main.tf. This is acceptable since
         we primarily use ** patterns in workflow-dependencies.json.
         """
         patterns = ["src/*.tf"]
-        assert file_matches_patterns("src/main.tf", patterns)
-        # fnmatch * matches any chars including /, so this also matches
         assert file_matches_patterns("src/sub/main.tf", patterns)
 
-    def test_double_star_match(self) -> None:
-        """Test ** glob pattern matching."""
+    def test_double_star_match_direct_child(self) -> None:
+        """Test ** glob pattern matches direct child."""
         patterns = ["src/bootstrap/**"]
         assert file_matches_patterns("src/bootstrap/main.tf", patterns)
+
+    def test_double_star_match_nested_child(self) -> None:
+        """Test ** glob pattern matches nested child."""
+        patterns = ["src/bootstrap/**"]
         assert file_matches_patterns("src/bootstrap/sub/file.tf", patterns)
+
+    def test_double_star_match_returns_false_for_different_path(self) -> None:
+        """Test ** glob pattern returns false for different path."""
+        patterns = ["src/bootstrap/**"]
         assert not file_matches_patterns("src/api/main.tf", patterns)
 
-    def test_multiple_patterns(self) -> None:
-        """Test matching against multiple patterns."""
+    def test_multiple_patterns_matches_first(self) -> None:
+        """Test matching first of multiple patterns."""
         patterns = [".github/workflows/bootstrap.yml", "src/bootstrap/**"]
         assert file_matches_patterns(".github/workflows/bootstrap.yml", patterns)
+
+    def test_multiple_patterns_matches_second(self) -> None:
+        """Test matching second of multiple patterns."""
+        patterns = [".github/workflows/bootstrap.yml", "src/bootstrap/**"]
         assert file_matches_patterns("src/bootstrap/main.tf", patterns)
+
+    def test_multiple_patterns_returns_false_for_no_match(self) -> None:
+        """Test multiple patterns returns false when none match."""
+        patterns = [".github/workflows/bootstrap.yml", "src/bootstrap/**"]
         assert not file_matches_patterns("src/api/main.tf", patterns)
 
     def test_empty_patterns(self) -> None:
@@ -150,12 +174,22 @@ class TestGetAllAncestors:
         }
         assert ancestors == expected
 
-    def test_caching(self) -> None:
-        """Test that ancestor computation uses caching."""
+    def test_caching_stores_target_workflow(self) -> None:
+        """Test that ancestor computation caches target workflow."""
         cache: dict[str, set[str]] = {}
         get_all_ancestors("api", SAMPLE_GRAPH, cache)
         assert "api" in cache
+
+    def test_caching_stores_direct_ancestor(self) -> None:
+        """Test that ancestor computation caches direct ancestor."""
+        cache: dict[str, set[str]] = {}
+        get_all_ancestors("api", SAMPLE_GRAPH, cache)
         assert "www_shared" in cache
+
+    def test_caching_stores_transitive_ancestor(self) -> None:
+        """Test that ancestor computation caches transitive ancestor."""
+        cache: dict[str, set[str]] = {}
+        get_all_ancestors("api", SAMPLE_GRAPH, cache)
         assert "bootstrap" in cache
 
 
@@ -215,7 +249,7 @@ class TestComputeRootWorkflows:
             "src/bootstrap/main.tf",
             "src/www/shared/main.tf",
             "src/api/backend/main.tf",
-            "src/api/endpoints/health/main.tf",
+            "src/api/operational/health/main.tf",
         ]
         roots = compute_root_workflows(changed, SAMPLE_GRAPH)
         assert roots == ["bootstrap"]
@@ -333,13 +367,28 @@ class TestGetAllDescendants:
         }
         assert descendants == expected
 
-    def test_caching(self) -> None:
-        """Test that descendant computation uses caching."""
+    def test_caching_stores_target_workflow(self) -> None:
+        """Test that descendant computation caches target workflow."""
         cache: dict[str, set[str]] = {}
         get_all_descendants("ecr", SAMPLE_GRAPH, cache)
         assert "ecr" in cache
+
+    def test_caching_stores_direct_descendant(self) -> None:
+        """Test that descendant computation caches direct descendant."""
+        cache: dict[str, set[str]] = {}
+        get_all_descendants("ecr", SAMPLE_GRAPH, cache)
         assert "image_for_ecs_runners" in cache
+
+    def test_caching_stores_second_level_descendant(self) -> None:
+        """Test that descendant computation caches second level descendant."""
+        cache: dict[str, set[str]] = {}
+        get_all_descendants("ecr", SAMPLE_GRAPH, cache)
         assert "ecs_runner" in cache
+
+    def test_caching_stores_leaf_descendant(self) -> None:
+        """Test that descendant computation caches leaf descendant."""
+        cache: dict[str, set[str]] = {}
+        get_all_descendants("ecr", SAMPLE_GRAPH, cache)
         assert "contact" in cache
 
 
@@ -392,17 +441,26 @@ class TestTopologicalSort:
         result = topological_sort(workflows, SAMPLE_GRAPH)
         assert result == ["bootstrap", "www_shared", "api"]
 
-    def test_respects_dependencies(self) -> None:
-        """Test that dependencies come before dependents."""
+    def test_respects_dependencies_bootstrap_before_www_shared(self) -> None:
+        """Test that bootstrap comes before www_shared."""
         workflows = {"api", "bootstrap", "www_shared", "health"}
         result = topological_sort(workflows, SAMPLE_GRAPH)
-        # Verify order: bootstrap before www_shared before api before health
         assert result.index("bootstrap") < result.index("www_shared")
+
+    def test_respects_dependencies_www_shared_before_api(self) -> None:
+        """Test that www_shared comes before api."""
+        workflows = {"api", "bootstrap", "www_shared", "health"}
+        result = topological_sort(workflows, SAMPLE_GRAPH)
         assert result.index("www_shared") < result.index("api")
+
+    def test_respects_dependencies_api_before_health(self) -> None:
+        """Test that api comes before health."""
+        workflows = {"api", "bootstrap", "www_shared", "health"}
+        result = topological_sort(workflows, SAMPLE_GRAPH)
         assert result.index("api") < result.index("health")
 
-    def test_diamond_pattern(self) -> None:
-        """Test sorting diamond-shaped graph."""
+    def test_diamond_pattern_root_first(self) -> None:
+        """Test diamond-shaped graph has root first."""
         graph = {
             "root": {"depends_on": []},
             "left": {"depends_on": ["root"]},
@@ -411,11 +469,42 @@ class TestTopologicalSort:
         }
         workflows = {"root", "left", "right", "bottom"}
         result = topological_sort(workflows, graph)
-        # Root must be first, bottom must be last
         assert result[0] == "root"
+
+    def test_diamond_pattern_bottom_last(self) -> None:
+        """Test diamond-shaped graph has bottom last."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        workflows = {"root", "left", "right", "bottom"}
+        result = topological_sort(workflows, graph)
         assert result[-1] == "bottom"
-        # Left and right must be before bottom
+
+    def test_diamond_pattern_left_before_bottom(self) -> None:
+        """Test diamond-shaped graph has left before bottom."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        workflows = {"root", "left", "right", "bottom"}
+        result = topological_sort(workflows, graph)
         assert result.index("left") < result.index("bottom")
+
+    def test_diamond_pattern_right_before_bottom(self) -> None:
+        """Test diamond-shaped graph has right before bottom."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        workflows = {"root", "left", "right", "bottom"}
+        result = topological_sort(workflows, graph)
         assert result.index("right") < result.index("bottom")
 
     def test_partial_graph(self) -> None:
@@ -441,8 +530,8 @@ class TestTopologicalSortLevels:
         levels = topological_sort_levels(workflows, SAMPLE_GRAPH)
         assert levels == [["bootstrap"], ["www_shared"], ["api"]]
 
-    def test_parallel_workflows(self) -> None:
-        """Test parallel workflows in same level."""
+    def test_parallel_workflows_has_three_levels(self) -> None:
+        """Test parallel workflows graph has 3 levels."""
         graph = {
             "root": {"depends_on": []},
             "left": {"depends_on": ["root"]},
@@ -452,12 +541,45 @@ class TestTopologicalSortLevels:
         workflows = {"root", "left", "right", "bottom"}
         levels = topological_sort_levels(workflows, graph)
         assert len(levels) == 3
+
+    def test_parallel_workflows_root_in_first_level(self) -> None:
+        """Test parallel workflows has root in first level."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        workflows = {"root", "left", "right", "bottom"}
+        levels = topological_sort_levels(workflows, graph)
         assert levels[0] == ["root"]
+
+    def test_parallel_workflows_left_right_in_second_level(self) -> None:
+        """Test parallel workflows has left and right in second level."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        workflows = {"root", "left", "right", "bottom"}
+        levels = topological_sort_levels(workflows, graph)
         assert sorted(levels[1]) == ["left", "right"]
+
+    def test_parallel_workflows_bottom_in_third_level(self) -> None:
+        """Test parallel workflows has bottom in third level."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        workflows = {"root", "left", "right", "bottom"}
+        levels = topological_sort_levels(workflows, graph)
         assert levels[2] == ["bottom"]
 
-    def test_complex_parallel(self) -> None:
-        """Test complex graph with multiple parallel paths."""
+    def test_complex_parallel_has_four_levels(self) -> None:
+        """Test complex parallel graph has 4 levels."""
         graph = {
             "a": {"depends_on": []},
             "b": {"depends_on": ["a"]},
@@ -469,9 +591,61 @@ class TestTopologicalSortLevels:
         workflows = {"a", "b", "c", "d", "e", "f"}
         levels = topological_sort_levels(workflows, graph)
         assert len(levels) == 4
+
+    def test_complex_parallel_a_in_first_level(self) -> None:
+        """Test complex parallel graph has a in first level."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": ["a"]},
+            "c": {"depends_on": ["a"]},
+            "d": {"depends_on": ["b"]},
+            "e": {"depends_on": ["c"]},
+            "f": {"depends_on": ["d", "e"]},
+        }
+        workflows = {"a", "b", "c", "d", "e", "f"}
+        levels = topological_sort_levels(workflows, graph)
         assert levels[0] == ["a"]
+
+    def test_complex_parallel_bc_in_second_level(self) -> None:
+        """Test complex parallel graph has b and c in second level."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": ["a"]},
+            "c": {"depends_on": ["a"]},
+            "d": {"depends_on": ["b"]},
+            "e": {"depends_on": ["c"]},
+            "f": {"depends_on": ["d", "e"]},
+        }
+        workflows = {"a", "b", "c", "d", "e", "f"}
+        levels = topological_sort_levels(workflows, graph)
         assert sorted(levels[1]) == ["b", "c"]
+
+    def test_complex_parallel_de_in_third_level(self) -> None:
+        """Test complex parallel graph has d and e in third level."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": ["a"]},
+            "c": {"depends_on": ["a"]},
+            "d": {"depends_on": ["b"]},
+            "e": {"depends_on": ["c"]},
+            "f": {"depends_on": ["d", "e"]},
+        }
+        workflows = {"a", "b", "c", "d", "e", "f"}
+        levels = topological_sort_levels(workflows, graph)
         assert sorted(levels[2]) == ["d", "e"]
+
+    def test_complex_parallel_f_in_fourth_level(self) -> None:
+        """Test complex parallel graph has f in fourth level."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": ["a"]},
+            "c": {"depends_on": ["a"]},
+            "d": {"depends_on": ["b"]},
+            "e": {"depends_on": ["c"]},
+            "f": {"depends_on": ["d", "e"]},
+        }
+        workflows = {"a", "b", "c", "d", "e", "f"}
+        levels = topological_sort_levels(workflows, graph)
         assert levels[3] == ["f"]
 
 
@@ -505,8 +679,8 @@ class TestComputeExecutionPlan:
         expected = ["ecr", "image_for_ecs_runners", "ecs_runner", "contact"]
         assert plan == expected
 
-    def test_multiple_roots(self) -> None:
-        """Test multiple roots combine descendants."""
+    def test_multiple_roots_includes_all_descendants(self) -> None:
+        """Test multiple roots include all descendants."""
         graph = {
             "a": {"depends_on": []},
             "b": {"depends_on": []},
@@ -514,10 +688,28 @@ class TestComputeExecutionPlan:
             "d": {"depends_on": ["b"]},
         }
         plan = compute_execution_plan(["a", "b"], graph)
-        # Both branches included
         assert set(plan) == {"a", "b", "c", "d"}
-        # Order respects dependencies
+
+    def test_multiple_roots_a_before_c(self) -> None:
+        """Test multiple roots has a before c."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": []},
+            "c": {"depends_on": ["a"]},
+            "d": {"depends_on": ["b"]},
+        }
+        plan = compute_execution_plan(["a", "b"], graph)
         assert plan.index("a") < plan.index("c")
+
+    def test_multiple_roots_b_before_d(self) -> None:
+        """Test multiple roots has b before d."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": []},
+            "c": {"depends_on": ["a"]},
+            "d": {"depends_on": ["b"]},
+        }
+        plan = compute_execution_plan(["a", "b"], graph)
         assert plan.index("b") < plan.index("d")
 
 
@@ -530,16 +722,23 @@ class TestComputeExecutionPlanLevels:
         levels = compute_execution_plan_levels(["a"], graph)
         assert levels == [["a"]]
 
-    def test_single_root_with_descendants(self) -> None:
-        """Test single root includes all descendants in levels."""
+    def test_single_root_with_descendants_has_eight_levels(self) -> None:
+        """Test single root with descendants has 8 levels."""
         levels = compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
-        # Should be 8 levels for linear chain
         assert len(levels) == 8
+
+    def test_single_root_with_descendants_bootstrap_first(self) -> None:
+        """Test single root with descendants has bootstrap first."""
+        levels = compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
         assert levels[0] == ["bootstrap"]
+
+    def test_single_root_with_descendants_contact_last(self) -> None:
+        """Test single root with descendants has contact last."""
+        levels = compute_execution_plan_levels(["bootstrap"], SAMPLE_GRAPH)
         assert levels[-1] == ["contact"]
 
-    def test_parallel_branches(self) -> None:
-        """Test parallel branches appear in same level."""
+    def test_parallel_branches_has_three_levels(self) -> None:
+        """Test parallel branches graph has 3 levels."""
         graph = {
             "root": {"depends_on": []},
             "left": {"depends_on": ["root"]},
@@ -548,12 +747,42 @@ class TestComputeExecutionPlanLevels:
         }
         levels = compute_execution_plan_levels(["root"], graph)
         assert len(levels) == 3
+
+    def test_parallel_branches_root_in_first_level(self) -> None:
+        """Test parallel branches has root in first level."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        levels = compute_execution_plan_levels(["root"], graph)
         assert levels[0] == ["root"]
+
+    def test_parallel_branches_left_right_in_second_level(self) -> None:
+        """Test parallel branches has left and right in second level."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        levels = compute_execution_plan_levels(["root"], graph)
         assert sorted(levels[1]) == ["left", "right"]
+
+    def test_parallel_branches_bottom_in_third_level(self) -> None:
+        """Test parallel branches has bottom in third level."""
+        graph = {
+            "root": {"depends_on": []},
+            "left": {"depends_on": ["root"]},
+            "right": {"depends_on": ["root"]},
+            "bottom": {"depends_on": ["left", "right"]},
+        }
+        levels = compute_execution_plan_levels(["root"], graph)
         assert levels[2] == ["bottom"]
 
-    def test_multiple_roots_same_level(self) -> None:
-        """Test multiple independent roots in same level."""
+    def test_multiple_roots_same_level_has_two_levels(self) -> None:
+        """Test multiple independent roots has 2 levels."""
         graph = {
             "a": {"depends_on": []},
             "b": {"depends_on": []},
@@ -561,41 +790,113 @@ class TestComputeExecutionPlanLevels:
         }
         levels = compute_execution_plan_levels(["a", "b"], graph)
         assert len(levels) == 2
+
+    def test_multiple_roots_same_level_ab_in_first_level(self) -> None:
+        """Test multiple independent roots has a and b in first level."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": []},
+            "c": {"depends_on": ["a", "b"]},
+        }
+        levels = compute_execution_plan_levels(["a", "b"], graph)
         assert sorted(levels[0]) == ["a", "b"]
+
+    def test_multiple_roots_same_level_c_in_second_level(self) -> None:
+        """Test multiple independent roots has c in second level."""
+        graph = {
+            "a": {"depends_on": []},
+            "b": {"depends_on": []},
+            "c": {"depends_on": ["a", "b"]},
+        }
+        levels = compute_execution_plan_levels(["a", "b"], graph)
         assert levels[1] == ["c"]
 
 
 class TestOutputSlots:
     """Tests for _output_slots function."""
 
-    def test_output_slots_exact(self) -> None:
-        """Test outputting exact number of slots."""
+    def test_exact_slots_outputs_count(self) -> None:
+        """Test outputting exact number of slots shows correct count."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             _output_slots(["a", "b", "c"], 3)
             output = mock_stdout.getvalue()
         assert "count=3" in output
+
+    def test_exact_slots_outputs_first_key(self) -> None:
+        """Test outputting exact number of slots shows first key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b", "c"], 3)
+            output = mock_stdout.getvalue()
         assert "key_01=a" in output
+
+    def test_exact_slots_outputs_second_key(self) -> None:
+        """Test outputting exact number of slots shows second key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b", "c"], 3)
+            output = mock_stdout.getvalue()
         assert "key_02=b" in output
+
+    def test_exact_slots_outputs_third_key(self) -> None:
+        """Test outputting exact number of slots shows third key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b", "c"], 3)
+            output = mock_stdout.getvalue()
         assert "key_03=c" in output
 
-    def test_output_slots_more_slots_than_items(self) -> None:
-        """Test outputting more slots than items."""
+    def test_more_slots_outputs_count(self) -> None:
+        """Test more slots than items shows correct count."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             _output_slots(["a", "b"], 4)
             output = mock_stdout.getvalue()
         assert "count=2" in output
+
+    def test_more_slots_outputs_first_key(self) -> None:
+        """Test more slots than items shows first key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b"], 4)
+            output = mock_stdout.getvalue()
         assert "key_01=a" in output
+
+    def test_more_slots_outputs_second_key(self) -> None:
+        """Test more slots than items shows second key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b"], 4)
+            output = mock_stdout.getvalue()
         assert "key_02=b" in output
+
+    def test_more_slots_outputs_empty_third_key(self) -> None:
+        """Test more slots than items shows empty third key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b"], 4)
+            output = mock_stdout.getvalue()
         assert "key_03=" in output
+
+    def test_more_slots_outputs_empty_fourth_key(self) -> None:
+        """Test more slots than items shows empty fourth key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots(["a", "b"], 4)
+            output = mock_stdout.getvalue()
         assert "key_04=" in output
 
-    def test_output_slots_empty(self) -> None:
-        """Test outputting with no items."""
+    def test_empty_list_outputs_count_zero(self) -> None:
+        """Test outputting with no items shows count zero."""
         with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
             _output_slots([], 2)
             output = mock_stdout.getvalue()
         assert "count=0" in output
+
+    def test_empty_list_outputs_empty_first_key(self) -> None:
+        """Test outputting with no items shows empty first key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots([], 2)
+            output = mock_stdout.getvalue()
         assert "key_01=" in output
+
+    def test_empty_list_outputs_empty_second_key(self) -> None:
+        """Test outputting with no items shows empty second key."""
+        with patch("sys.stdout", new_callable=io.StringIO) as mock_stdout:
+            _output_slots([], 2)
+            output = mock_stdout.getvalue()
         assert "key_02=" in output
 
 
@@ -665,3 +966,150 @@ class TestOutputLevelsIndexed:
             _output_levels_indexed([])
             output = mock_stdout.getvalue().strip()
         assert output == "[]"
+
+
+class TestComputeMergeRoots:
+    """Tests for compute_merge_roots function.
+
+    This function merges running workflows with new root workflows to find
+    the optimal restart point when a new orchestrator run starts while
+    workflows from a previous run are still executing.
+    """
+
+    def test_no_running_workflows(self) -> None:
+        """Test with no running workflows returns new roots unchanged."""
+        new_roots = ["api"]
+        running: list[str] = []
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        assert result == ["api"]
+
+    def test_no_new_roots(self) -> None:
+        """Test with no new roots returns running workflows as roots."""
+        new_roots: list[str] = []
+        running = ["api"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        assert result == ["api"]
+
+    def test_both_empty(self) -> None:
+        """Test with both empty returns empty."""
+        result = compute_merge_roots([], [], SAMPLE_GRAPH)
+        assert result == []
+
+    def test_running_downstream_of_new_root(self) -> None:
+        """Test when running workflow is downstream of new changes.
+
+        Scenario: Chain at api, new changes affect www_shared
+        www_shared is upstream of api, so merge root is www_shared.
+        """
+        running = ["api"]
+        new_roots = ["www_shared"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        # www_shared is ancestor of api, so www_shared is the merge root
+        assert result == ["www_shared"]
+
+    def test_running_upstream_of_new_root(self) -> None:
+        """Test when running workflow is upstream of new changes.
+
+        Scenario: Chain at www_shared, new changes affect health
+        www_shared is upstream of health, so merge root is www_shared.
+        """
+        running = ["www_shared"]
+        new_roots = ["health"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        # www_shared is ancestor of health, so www_shared is the merge root
+        assert result == ["www_shared"]
+
+    def test_running_and_new_same_level(self) -> None:
+        """Test when running and new are at the same workflow.
+
+        Scenario: Chain at api, new changes also affect api
+        Merge root should be api.
+        """
+        running = ["api"]
+        new_roots = ["api"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        assert result == ["api"]
+
+    def test_unrelated_branches(self) -> None:
+        """Test when running and new are in unrelated branches.
+
+        Using diamond graph where left and right are independent.
+        """
+        graph = {
+            "root": {"depends_on": [], "name": "Root"},
+            "left": {"depends_on": ["root"], "name": "Left"},
+            "right": {"depends_on": ["root"], "name": "Right"},
+            "bottom": {"depends_on": ["left", "right"], "name": "Bottom"},
+        }
+        running = ["left"]
+        new_roots = ["right"]
+        result = compute_merge_roots(running, new_roots, graph)
+        # Both are independent branches, both should be roots
+        assert sorted(result) == ["left", "right"]
+
+    def test_running_at_common_ancestor(self) -> None:
+        """Test when running workflow is ancestor of new changes.
+
+        Scenario: Running at bootstrap, new changes affect api
+        bootstrap is ancestor of api, so bootstrap is the merge root.
+        """
+        running = ["bootstrap"]
+        new_roots = ["api"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        assert result == ["bootstrap"]
+
+    def test_multiple_running_workflows(self) -> None:
+        """Test with multiple running workflows from parallel branches."""
+        graph = {
+            "root": {"depends_on": [], "name": "Root"},
+            "left": {"depends_on": ["root"], "name": "Left"},
+            "right": {"depends_on": ["root"], "name": "Right"},
+            "left_child": {"depends_on": ["left"], "name": "Left Child"},
+            "right_child": {"depends_on": ["right"], "name": "Right Child"},
+        }
+        running = ["left_child", "right_child"]
+        new_roots = ["root"]
+        result = compute_merge_roots(running, new_roots, graph)
+        # root is ancestor of both, so root is the only merge root
+        assert result == ["root"]
+
+    def test_multiple_new_roots(self) -> None:
+        """Test with multiple new root workflows."""
+        graph = {
+            "a": {"depends_on": [], "name": "A"},
+            "b": {"depends_on": [], "name": "B"},
+            "c": {"depends_on": ["a"], "name": "C"},
+            "d": {"depends_on": ["b"], "name": "D"},
+        }
+        running = ["c"]
+        new_roots = ["a", "b"]
+        result = compute_merge_roots(running, new_roots, graph)
+        # a is ancestor of c, so only a and b are roots
+        assert sorted(result) == ["a", "b"]
+
+    def test_deep_chain_merge(self) -> None:
+        """Test merge in deep dependency chain.
+
+        Scenario: Running at health, new changes affect www_shared
+        Should restart from www_shared.
+        """
+        running = ["health"]
+        new_roots = ["www_shared"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        assert result == ["www_shared"]
+
+    def test_unknown_running_workflow_filtered(self) -> None:
+        """Test that unknown workflow keys are filtered out."""
+        running = ["unknown_workflow"]
+        new_roots = ["api"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        # Unknown workflow is filtered, only api remains
+        assert result == ["api"]
+
+    def test_mix_of_known_and_unknown(self) -> None:
+        """Test with mix of known and unknown workflows."""
+        running = ["api", "unknown_workflow"]
+        new_roots = ["www_shared"]
+        result = compute_merge_roots(running, new_roots, SAMPLE_GRAPH)
+        # www_shared is ancestor of api, unknown is filtered
+        assert result == ["www_shared"]

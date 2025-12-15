@@ -298,6 +298,66 @@ def compute_root_workflows(
     return sorted(roots)
 
 
+def compute_merge_roots(
+    running_workflows: list[str],
+    new_roots: list[str],
+    graph: dict[str, Any]
+) -> list[str]:
+    """
+    Compute the minimal set of root workflows that covers both
+    running workflows and new roots.
+
+    This is used when a new orchestrator run starts while workflows from
+    a previous run are still executing. The merge roots are the oldest
+    ancestors that need to be (re)started to cover both the running
+    workflows and the new changes.
+
+    Algorithm:
+    1. Combine running workflows with new roots into "affected" set
+    2. Find workflows with no affected ancestors (these are the merge roots)
+
+    Examples:
+    - Running: [api_backend], New: [operational_health]
+      operational_health is downstream of api_backend
+      Merge roots: [api_backend] (let it finish, it will trigger operational_health)
+
+    - Running: [api_backend], New: [www_shared]
+      www_shared is upstream of api_backend
+      Merge roots: [www_shared] (need to restart from here)
+
+    - Running: [api_backend], New: [bootstrap]
+      Different branches of dependency tree
+      Merge roots: [bootstrap, ...] (depends on api_backend's original root)
+    """
+    # Combine all workflows that need to be covered
+    affected = set(running_workflows) | set(new_roots)
+
+    if not affected:
+        return []
+
+    # Filter to only workflows that exist in the graph
+    affected = {wf for wf in affected if wf in graph}
+
+    if not affected:
+        return []
+
+    # Build ancestor cache
+    ancestor_cache: dict[str, set[str]] = {}
+    for workflow in affected:
+        get_all_ancestors(workflow, graph, ancestor_cache)
+
+    # Find merge roots: workflows with no affected ancestors
+    roots: list[str] = []
+    for workflow in affected:
+        ancestors = ancestor_cache.get(workflow, set())
+        # If none of this workflow's ancestors are in affected set, it's a root
+        if not ancestors.intersection(affected):
+            roots.append(workflow)
+
+    # Sort for deterministic output
+    return sorted(roots)
+
+
 def _parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -344,6 +404,10 @@ def _parse_args() -> argparse.Namespace:
         "--levels",
         action="store_true",
         help="Output execution plan as levels for parallel execution",
+    )
+    parser.add_argument(
+        "--running",
+        help="JSON array of currently running workflow keys to merge with",
     )
     return parser.parse_args()
 
@@ -415,6 +479,12 @@ def main() -> None:
         roots = [args.start_from]
     else:
         roots = compute_root_workflows(changed_files, graph)
+
+    # Merge with running workflows if provided
+    if args.running:
+        running_workflows = json.loads(args.running)
+        if running_workflows:
+            roots = compute_merge_roots(running_workflows, roots, graph)
 
     # Compute execution plan if requested
     if args.levels:
