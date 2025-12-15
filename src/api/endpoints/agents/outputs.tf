@@ -1,25 +1,3 @@
-# ECR Repository Outputs
-output "ecr_repository_arn" {
-  description = "ARN of the agents ECR repository"
-  value       = aws_ecr_repository.agents.arn
-}
-
-output "ecr_repository_name" {
-  description = "Name of the agents ECR repository"
-  value       = aws_ecr_repository.agents.name
-}
-
-output "ecr_repository_url" {
-  description = "URL of the agents ECR repository"
-  value       = aws_ecr_repository.agents.repository_url
-}
-
-# Lambda Layer Outputs
-output "lambda_layer_github_auth_arn" {
-  description = "ARN of the GitHub Auth Lambda layer"
-  value       = aws_lambda_layer_version.github_auth.arn
-}
-
 # AgentCore Outputs
 output "agentcore_runtime_arn" {
   description = "ARN of the AgentCore runtime"
@@ -37,7 +15,33 @@ output "webhook_lambda_arn" {
   value       = aws_lambda_function.webhook.arn
 }
 
-output "webhook_lambda_url" {
-  description = "Function URL of the webhook Lambda"
-  value       = aws_lambda_function_url.webhook.function_url
+output "scanner_lambda_arn" {
+  description = "ARN of the scanner Lambda"
+  value       = aws_lambda_function.scanner.arn
+}
+
+output "invoker_lambda_arn" {
+  description = "ARN of the invoker Lambda"
+  value       = aws_lambda_function.invoker.arn
+}
+
+# SQS Queue Outputs (for API Gateway integration)
+output "webhook_ingress_queue_url" {
+  description = "URL of the webhook ingress SQS queue"
+  value       = aws_sqs_queue.webhook_ingress.url
+}
+
+output "webhook_ingress_queue_arn" {
+  description = "ARN of the webhook ingress SQS queue"
+  value       = aws_sqs_queue.webhook_ingress.arn
+}
+
+output "invoker_ingress_queue_url" {
+  description = "URL of the invoker ingress SQS queue"
+  value       = aws_sqs_queue.invoker_ingress.url
+}
+
+output "invoker_ingress_queue_arn" {
+  description = "ARN of the invoker ingress SQS queue"
+  value       = aws_sqs_queue.invoker_ingress.arn
 }

@@ -9,8 +9,9 @@ locals {
   stack_name   = "${local.resource_prefix}-${local.runtime_name}"
 
   # Lambda naming
-  lambda_name    = "${local.resource_prefix}AgentWebhook"
-  log_group_name = "/aws/lambda/${local.lambda_name}"
+  webhook_lambda_name = "${local.resource_prefix}AgentWebhook"
+  scanner_lambda_name = "${local.resource_prefix}AgentScanner"
+  invoker_lambda_name = "${local.resource_prefix}AgentInvoker"
 
   # GitHub App SSM parameters
   github_app_ssm = {

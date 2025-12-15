@@ -41,6 +41,12 @@ locals {
   webhook_ingress_queue_name = "${local.lambda_function_names.webhook}Ingress"
   webhook_ingress_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.webhook_ingress_queue_name}"
 
+  # SQS integration for /v1/agents (API Gateway → SQS direct)
+  agent_webhook_queue_name = "${module.shared.resource_prefix}-webhook-ingress"
+  agent_invoker_queue_name = "${module.shared.resource_prefix}-invoker-ingress"
+  agent_webhook_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.agent_webhook_queue_name}"
+  agent_invoker_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.agent_invoker_queue_name}"
+
   openapi_spec = templatefile("${path.module}/../../www/api/openapi.json", {
     CatchAllHandlerArn           = local.catchall_integration_arn
     CircuitBreakerResetArn       = local.circuit_breaker_reset_arn
@@ -57,6 +63,9 @@ locals {
     # SQS direct integration for /v1/runners webhook ingress
     WebhookIngressSqsUri = local.webhook_ingress_sqs_uri
     ApiGatewaySqsRoleArn = aws_iam_role.api_gateway_sqs.arn
+    # SQS direct integration for /v1/agents
+    AgentWebhookIngressSqsUri = local.agent_webhook_sqs_uri
+    AgentInvokerIngressSqsUri = local.agent_invoker_sqs_uri
   })
   spec_hash = substr(md5(local.openapi_spec), 0, 8)
 }

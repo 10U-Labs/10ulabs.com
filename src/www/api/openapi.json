@@ -916,6 +916,260 @@
         }
       }
     },
+    "/v1/agents": {
+      "post": {
+        "summary": "GitHub Webhook for Agent Events",
+        "description": "Receives GitHub webhook events for agent troubleshooting (API Gateway → SQS direct integration, no Lambda in hot path)",
+        "operationId": "agentWebhook",
+        "tags": [
+          "/v1/agents"
+        ],
+        "x-amazon-apigateway-request-validator": "validate-headers",
+        "parameters": [
+          {
+            "name": "x-github-event",
+            "in": "header",
+            "required": true,
+            "description": "GitHub webhook event type (e.g., workflow_run, check_run)",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Webhook accepted and queued for processing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "accepted"
+                    },
+                    "messageId": {
+                      "type": "string",
+                      "description": "SQS message ID for tracking"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required x-github-event header",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Missing required request parameters: [x-github-event]"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "aws",
+          "httpMethod": "POST",
+          "uri": "${AgentWebhookIngressSqsUri}",
+          "credentials": "${ApiGatewaySqsRoleArn}",
+          "requestParameters": {
+            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
+          },
+          "requestTemplates": {
+            "application/json": "#set($githubEvent = $input.params().header.get('x-github-event'))#set($signature = $input.params().header.get('x-hub-signature-256'))#set($delivery = $input.params().header.get('x-github-delivery'))#set($wrapper = \"{\"\"headers\"\":{\"\"x-github-event\"\":\"\"$util.escapeJavaScript($githubEvent)\"\",\"\"x-hub-signature-256\"\":\"\"$util.escapeJavaScript($signature)\"\",\"\"x-github-delivery\"\":\"\"$util.escapeJavaScript($delivery)\"\"},\"\"body\"\":\"\"$util.escapeJavaScript($input.body)\"\"}\")Action=SendMessage&MessageBody=$util.urlEncode($wrapper)"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for agents endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "agentsOptions",
+        "tags": [
+          "/v1/agents"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/agents/invoke": {
+      "post": {
+        "summary": "Direct Agent Invocation",
+        "description": "Directly invoke an agent for troubleshooting (API Gateway → SQS direct integration)",
+        "operationId": "invokeAgent",
+        "tags": [
+          "/v1/agents"
+        ],
+        "security": [
+          {
+            "api_key": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "repository",
+                  "run_id"
+                ],
+                "properties": {
+                  "repository": {
+                    "type": "string",
+                    "description": "Full repository name (owner/repo)"
+                  },
+                  "run_id": {
+                    "type": "integer",
+                    "description": "GitHub workflow run ID to investigate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invocation request accepted and queued for processing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "accepted"
+                    },
+                    "messageId": {
+                      "type": "string",
+                      "description": "SQS message ID for tracking"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "aws",
+          "httpMethod": "POST",
+          "uri": "${AgentInvokerIngressSqsUri}",
+          "credentials": "${ApiGatewaySqsRoleArn}",
+          "requestParameters": {
+            "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
+          },
+          "requestTemplates": {
+            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseTemplates": {
+                "application/json": "{\"message\": \"accepted\", \"messageId\": \"$input.json('$.SendMessageResponse.SendMessageResult.MessageId')\"}"
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for agents invoke endpoint",
+        "description": "Handles CORS preflight requests",
+        "operationId": "agentsInvokeOptions",
+        "tags": [
+          "/v1/agents"
+        ],
+        "responses": {
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Origin": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Access-Control-Allow-Headers": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Origin": "'*'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Api-Key'"
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/image-for-ec2-runners": {
       "post": {
         "summary": "Build Image for EC2 Runners",
@@ -2672,6 +2926,10 @@
       "description": "Health check endpoints"
     },
     {
+      "name": "/v1/agents",
+      "description": "Agent troubleshooting endpoints"
+    },
+    {
       "name": "/v1/contact",
       "description": "Contact form endpoints"
     },
@@ -2718,6 +2976,7 @@
     {
       "name": "/v1/",
       "tags": [
+        "/v1/agents",
         "/v1/contact",
         "/v1/ec2-runner",
         "/v1/echo",
