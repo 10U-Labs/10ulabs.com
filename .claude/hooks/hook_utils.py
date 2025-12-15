@@ -19,6 +19,7 @@ def allow_tool_use():
 
 
 LINT_DISABLE_PATTERNS = [
+    # Inline code comments
     (r'eslint-disable', 'eslint-disable'),
     (r'@ts-ignore', '@ts-ignore'),
     (r'@ts-nocheck', '@ts-nocheck'),
@@ -35,6 +36,13 @@ LINT_DISABLE_PATTERNS = [
     (r'<!--\s*markdownlint-disable', 'markdownlint-disable'),
     (r'#\s*yamllint\s+disable', 'yamllint disable'),
     (r'stylelint-disable', 'stylelint-disable'),
+    # Workflow/CLI flag patterns that disable or loosen checks
+    (r'--ignore-missing-imports', 'mypy --ignore-missing-imports'),
+    (r'--max-args', 'pylint --max-args (loosens argument limit)'),
+    (r'line-length:\s*disable', 'yamllint line-length: disable'),
+    (r'--disable=', 'pylint --disable flag'),
+    (r'--skip-check', 'lint skip-check flag'),
+    (r'--no-verify', 'git --no-verify (skips hooks)'),
 ]
 
 
