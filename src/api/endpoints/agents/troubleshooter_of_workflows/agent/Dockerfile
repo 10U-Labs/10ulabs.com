@@ -15,5 +15,5 @@ RUN apt-get update && \
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1
 WORKDIR /app
-COPY agent.py .
+COPY agent.py prompt.md ./
 CMD ["python3", "agent.py"]
