@@ -212,6 +212,46 @@ def _resolve_prefix_refs(value: str, prefix: str) -> str:
     return value
 
 
+def _resolve_local_interpolations(value: str, local_values: Dict[str, str]) -> str:
+    """Resolve ${local.*} interpolations in a Terraform string value.
+
+    Resolves iteratively to handle nested local references.
+    """
+    max_iterations = 10
+    for _ in range(max_iterations):
+        new_value = value
+        for local_name, local_value in local_values.items():
+            new_value = new_value.replace(f"${{local.{local_name}}}", local_value)
+        if new_value == value:
+            break
+        value = new_value
+    return value
+
+
+def get_tfvars_values(tf_dir: Path) -> Dict[str, str]:
+    """Parse terraform.tfvars file in the given directory.
+
+    Args:
+        tf_dir: Path to the Terraform directory
+
+    Returns:
+        Dict mapping variable names to their string values.
+    """
+    tfvars_file = tf_dir / "terraform.tfvars"
+    if not tfvars_file.exists():
+        return {}
+
+    values = {}
+    with open(tfvars_file, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                match = re.match(r'(\w+)\s*=\s*"([^"]+)"', line)
+                if match:
+                    values[match.group(1)] = match.group(2)
+    return values
+
+
 def _resolve_all_refs(value: str, prefix: str, handler_names: Dict[str, str]) -> str:
     """Resolve all module.shared references in a Terraform string value."""
     value = _resolve_prefix_refs(value, prefix)
@@ -275,8 +315,8 @@ def _extract_block_content(content: str, start_pos: int) -> str:
 def extract_iam_role_names(tf_file: Path) -> list:
     """Extract IAM role names from a Terraform file.
 
-    Handles both quoted strings (name = "Value") and local references
-    (name = local.var_name).
+    Handles quoted strings (name = "Value"), local references (name = local.var_name),
+    and var references (name = var.var_name via tfvars).
 
     Args:
         tf_file: Path to the Terraform file (typically iam.tf)
@@ -291,6 +331,7 @@ def extract_iam_role_names(tf_file: Path) -> list:
 
     prefix = get_resource_prefix()
     local_values = get_endpoint_local_values(tf_file.parent)
+    tfvars_values = get_tfvars_values(tf_file.parent)
     roles = []
 
     for match in re.finditer(r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{', content):
@@ -298,6 +339,7 @@ def extract_iam_role_names(tf_file: Path) -> list:
         name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
             role_name = _resolve_prefix_refs(name_match.group(1), prefix)
+            role_name = _resolve_local_interpolations(role_name, local_values)
             roles.append((match.group(1), role_name))
         else:
             local_match = re.search(
@@ -305,6 +347,12 @@ def extract_iam_role_names(tf_file: Path) -> list:
             )
             if local_match and local_match.group(1) in local_values:
                 roles.append((match.group(1), local_values[local_match.group(1)]))
+            else:
+                var_match = re.search(
+                    r'^\s*name\s*=\s*var\.(\w+)', block_content, re.MULTILINE
+                )
+                if var_match and var_match.group(1) in tfvars_values:
+                    roles.append((match.group(1), tfvars_values[var_match.group(1)]))
 
     return roles
 
@@ -312,7 +360,8 @@ def extract_iam_role_names(tf_file: Path) -> list:
 def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False) -> list:
     """Extract Lambda function names from a Terraform file.
 
-    Handles quoted strings, local references, and optionally module.shared references.
+    Handles quoted strings, local references, var references (via tfvars),
+    and optionally module.shared references.
 
     Args:
         tf_file: Path to the Terraform file (typically lambda.tf)
@@ -328,6 +377,7 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
 
     prefix = get_resource_prefix()
     local_values = get_endpoint_local_values(tf_file.parent)
+    tfvars_values = get_tfvars_values(tf_file.parent)
     handler_names = parse_lambda_handler_names() if use_handler_names else {}
     functions = []
 
@@ -345,13 +395,19 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
             )
             if local_match and local_match.group(1) in local_values:
                 functions.append((match.group(1), local_values[local_match.group(1)]))
-            elif use_handler_names:
-                module_match = re.search(
-                    r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
-                    block_content, re.MULTILINE
+            else:
+                var_match = re.search(
+                    r'^\s*function_name\s*=\s*var\.(\w+)', block_content, re.MULTILINE
                 )
-                if module_match and module_match.group(1) in handler_names:
-                    functions.append((match.group(1), handler_names[module_match.group(1)]))
+                if var_match and var_match.group(1) in tfvars_values:
+                    functions.append((match.group(1), tfvars_values[var_match.group(1)]))
+                elif use_handler_names:
+                    module_match = re.search(
+                        r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
+                        block_content, re.MULTILINE
+                    )
+                    if module_match and module_match.group(1) in handler_names:
+                        functions.append((match.group(1), handler_names[module_match.group(1)]))
 
     return functions
 

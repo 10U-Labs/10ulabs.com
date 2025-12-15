@@ -18,7 +18,9 @@ IAM_ROLES = (
     extract_iam_role_names(ECS_RUNNER_SRC / "iam.tf")
     + extract_iam_role_names(ECS_RUNNER_SRC / "ecs_iam.tf")
 )
-LAMBDA_FUNCTIONS = extract_lambda_function_names(ECS_RUNNER_SRC / "lambda.tf")
+LAMBDA_FUNCTIONS = extract_lambda_function_names(
+    ECS_RUNNER_SRC / "lambda.tf", use_handler_names=True
+)
 
 assert IAM_ROLES, "Failed to extract IAM roles from ecs_runner Terraform files"
 assert LAMBDA_FUNCTIONS, "Failed to extract Lambda functions from ecs_runner Terraform files"
