@@ -76,13 +76,13 @@ class TestIAMRoleNamingConventions:
 
     @pytest.mark.parametrize(
         "resource_name,role_name,source_file",
-        IAM_ROLES,
-        ids=[f"{r[2]}::{r[0]}" for r in IAM_ROLES] if IAM_ROLES else ["no_roles"],
+        IAM_ROLES if IAM_ROLES else [("NONE", "NONE", "NONE")],
+        ids=[f"{r[2]}::{r[0]}" for r in IAM_ROLES] if IAM_ROLES else ["no_roles_found"],
     )
     def test_iam_role_name_is_pascalcase(self, resource_name, role_name, source_file):
         """Verify IAM role name uses PascalCase (no dashes or underscores)."""
-        if not IAM_ROLES:
-            pytest.skip("No IAM roles found in bootstrap")
+        if resource_name == "NONE":
+            pytest.fail("No IAM roles found in bootstrap - check Terraform files")
         error = validate_name(role_name)
         assert error is None, (
             f"IAM role '{resource_name}' in {source_file} has invalid name '{role_name}': {error}"

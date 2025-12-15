@@ -102,13 +102,13 @@ class TestIAMRoleNamingConventions:
 
     @pytest.mark.parametrize(
         "resource_name,role_name",
-        IAM_ROLES,
-        ids=[f"iam_role_{r[0]}" for r in IAM_ROLES] if IAM_ROLES else ["no_roles"],
+        IAM_ROLES if IAM_ROLES else [("NONE", "NONE")],
+        ids=[f"iam_role_{r[0]}" for r in IAM_ROLES] if IAM_ROLES else ["no_roles_found"],
     )
     def test_iam_role_name_is_pascalcase(self, resource_name, role_name):
         """Verify IAM role name uses PascalCase (no dashes or underscores)."""
-        if not IAM_ROLES:
-            pytest.skip("No IAM roles found in iam.tf")
+        if resource_name == "NONE":
+            pytest.fail("No IAM roles found in iam.tf - check Terraform files")
         error = validate_name(role_name)
         assert error is None, (
             f"IAM role '{resource_name}' has invalid name '{role_name}': {error}"
@@ -128,13 +128,14 @@ class TestLambdaFunctionNamingConventions:
 
     @pytest.mark.parametrize(
         "resource_name,function_name",
-        LAMBDA_FUNCTIONS,
-        ids=[f"lambda_{f[0]}" for f in LAMBDA_FUNCTIONS] if LAMBDA_FUNCTIONS else ["no_functions"],
+        LAMBDA_FUNCTIONS if LAMBDA_FUNCTIONS else [("NONE", "NONE")],
+        ids=([f"lambda_{f[0]}" for f in LAMBDA_FUNCTIONS]
+             if LAMBDA_FUNCTIONS else ["no_functions_found"]),
     )
     def test_lambda_function_name_is_pascalcase(self, resource_name, function_name):
         """Verify Lambda function name uses PascalCase (no dashes or underscores)."""
-        if not LAMBDA_FUNCTIONS:
-            pytest.skip("No Lambda functions found in lambda.tf")
+        if resource_name == "NONE":
+            pytest.fail("No Lambda functions found in lambda.tf - check Terraform files")
         error = validate_name(function_name)
         assert error is None, (
             f"Lambda function '{resource_name}' has invalid name '{function_name}': {error}"
