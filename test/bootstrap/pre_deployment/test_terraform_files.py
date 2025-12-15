@@ -89,8 +89,3 @@ def test_central_logs_module_exists(bootstrap_dir):
 def test_vpc_tf_file_exists(bootstrap_dir):
     """Test that vpc.tf file exists."""
     assert (bootstrap_dir / "vpc.tf").exists()
-
-
-def test_agentcore_tf_file_exists(bootstrap_dir):
-    """Test that agentcore.tf file exists."""
-    assert (bootstrap_dir / "agentcore.tf").exists()

@@ -17,10 +17,10 @@ resource "aws_iam_role" "agentcore_execution" {
       Action = "sts:AssumeRole"
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = local.aws_account_id
+          "aws:SourceAccount" = module.shared.aws_account_id
         }
         ArnLike = {
-          "aws:SourceArn" = "arn:aws:bedrock-agentcore:${local.aws_region}:${local.aws_account_id}:*"
+          "aws:SourceArn" = "arn:aws:bedrock-agentcore:${module.shared.aws_region}:${module.shared.aws_account_id}:*"
         }
       }
     }]
