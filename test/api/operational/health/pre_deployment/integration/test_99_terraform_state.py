@@ -10,7 +10,7 @@ from pathlib import Path
 from terraform_drift.test_helpers import create_orphaned_resource_tests
 
 HEALTH_SRC = (
-    Path(__file__).parents[6] / "src" / "api" / "endpoints" / "health"
+    Path(__file__).parents[6] / "src" / "api" / "operational" / "health"
 )
 
 TestOrphanedResources = create_orphaned_resource_tests(

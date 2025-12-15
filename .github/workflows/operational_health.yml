@@ -31,7 +31,7 @@ jobs:
             lib/terraform/modules/shared/locals.tf | \
             grep -v '\$' | cut -d'"' -f2)
           TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/endpoints/health/backend.tf | \
+            src/api/operational/health/backend.tf | \
             cut -d'"' -f2 | sed 's/>= //')
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
@@ -94,51 +94,51 @@ jobs:
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
-            .github/workflows/endpoint_health.yml
+            .github/workflows/operational_health.yml
       - name: Run pylint on source
         run: |
-          python3 -m pylint src/api/endpoints/health/lambda/handler.py \
+          python3 -m pylint src/api/operational/health/lambda/handler.py \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run pylint on tests
         run: |
-          PYTHONPATH=lib/python python3 -m pylint test/api/endpoints/health/ \
+          PYTHONPATH=lib/python python3 -m pylint test/api/operational/health/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy on source
-        run: python3 -m mypy src/api/endpoints/health/lambda/handler.py
+        run: python3 -m mypy src/api/operational/health/lambda/handler.py
       - name: Run mypy on tests
-        run: MYPYPATH=lib/python python3 -m mypy test/api/endpoints/health/
+        run: MYPYPATH=lib/python python3 -m mypy test/api/operational/health/
       - name: Terraform Format Check
-        run: cd src/api/endpoints/health && terraform fmt -diff -check -recursive
+        run: cd src/api/operational/health && terraform fmt -diff -check -recursive
       - name: Terraform Init
-        run: cd src/api/endpoints/health && terraform init
+        run: cd src/api/operational/health && terraform init
       - env:
           GITHUB_TOKEN: ${{ github.token }}
         name: Run tflint
-        run: cd src/api/endpoints/health && tflint --init && tflint
+        run: cd src/api/operational/health && tflint --init && tflint
       - name: Terraform Plan
-        run: cd src/api/endpoints/health && terraform plan
+        run: cd src/api/operational/health && terraform plan
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/endpoints/health/pre_deployment/unit/ \
+          python3 -m pytest test/api/operational/health/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/endpoints/health/pre_deployment/integration/ \
+            test/api/operational/health/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/endpoints/health && terraform apply -auto-approve
+        run: cd src/api/operational/health && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
           python3 -m pytest \
-            test/api/endpoints/health/post_deployment/integration/ \
+            test/api/operational/health/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
           python3 -m pytest \
-            test/api/endpoints/health/post_deployment/e2e/ \
+            test/api/operational/health/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -153,7 +153,7 @@ jobs:
           if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
           python3 scripts/dispatch_descendants.py \
             $SKIP_FLAG \
-            --workflow endpoint_health \
+            --workflow operational_health \
             --repo ${{ github.repository }}
 name: Ensuring the /health API endpoint exists and is properly configured
 on:

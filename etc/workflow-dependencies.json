@@ -25,7 +25,7 @@
   },
   "api_shared_runners": {
     "depends_on": [
-      "endpoint_health"
+      "operational_health"
     ],
     "name": "Deploying API Shared Runners Infrastructure",
     "paths": [
@@ -44,15 +44,15 @@
       "test/bootstrap/**"
     ]
   },
-  "endpoint_health": {
+  "operational_health": {
     "depends_on": [
       "api_backend"
     ],
-    "name": "Ensuring health endpoint exists and is properly configured",
+    "name": "Ensuring operational health endpoint exists and is properly configured",
     "paths": [
-      ".github/workflows/endpoint_health.yml",
-      "src/api/endpoints/health/**",
-      "test/api/endpoints/health/**"
+      ".github/workflows/operational_health.yml",
+      "src/api/operational/health/**",
+      "test/api/operational/health/**"
     ]
   },
   "endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests": {

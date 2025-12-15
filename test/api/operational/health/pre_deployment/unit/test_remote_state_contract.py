@@ -4,7 +4,7 @@ These tests verify that all terraform_remote_state.api.outputs references
 in health/lambda.tf exist in api/backend/outputs.tf.
 """
 import re
-from test.api.endpoints.health.conftest import HEALTH_SRC, REPO_ROOT
+from test.api.operational.health.conftest import HEALTH_SRC, REPO_ROOT
 
 LAMBDA_FILE = HEALTH_SRC / "lambda.tf"
 API_BACKEND_OUTPUTS_FILE = REPO_ROOT / "src" / "api" / "backend" / "outputs.tf"

@@ -10,7 +10,7 @@ def test_health_handler_subscription_filter_exists(logs_client, config):
         response = logs_client.describe_subscription_filters(logGroupName=log_group)
     except ClientError as err:
         if err.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Health handler log group not deployed (managed by endpoint_health.yml)")
+            pytest.skip("Health handler log group not deployed (managed by operational_health.yml)")
         raise
     filter_names = [f['filterName'] for f in response['subscriptionFilters']]
     has_filter = 'health-handler-to-firehose' in filter_names
@@ -24,7 +24,7 @@ def test_health_handler_subscription_destinations_firehose(logs_client, config):
         response = logs_client.describe_subscription_filters(logGroupName=log_group)
     except ClientError as err:
         if err.response["Error"]["Code"] == "ResourceNotFoundException":
-            pytest.skip("Health handler log group not deployed (managed by endpoint_health.yml)")
+            pytest.skip("Health handler log group not deployed (managed by operational_health.yml)")
         raise
     destination_arn = response['subscriptionFilters'][0]['destinationArn']
     is_firehose = 'firehose' in destination_arn

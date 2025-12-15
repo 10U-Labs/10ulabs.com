@@ -9,7 +9,7 @@ www_shared
     ↓
 api_backend
     ↓
-endpoint_health
+operational_health
     ↓
 api_shared_runners
     ↓
@@ -88,7 +88,7 @@ endpoint_v1_agents_deleter_of_e2e_tests
 - [x] `api_shared_ecs_runner.yml`
 - [x] `api_shared_runners.yml`
 - [x] `bootstrap.yml`
-- [x] `endpoint_health.yml`
+- [x] `operational_health.yml`
 - [ ] `endpoint_v1_agents_code_reviewer_of_pre_deployment_integration_tests.yml`
 - [ ] `endpoint_v1_agents_creator_of_agents.yml`
 - [ ] `endpoint_v1_agents_creator_of_e2e_tests.yml`

@@ -1,5 +1,5 @@
 """Unit tests for health endpoint IAM Terraform configuration."""
-from test.api.endpoints.health.conftest import HEALTH_SRC
+from test.api.operational.health.conftest import HEALTH_SRC
 
 IAM_FILE = HEALTH_SRC / "iam.tf"
 

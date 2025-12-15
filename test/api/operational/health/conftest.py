@@ -6,7 +6,7 @@ from typing import Dict
 import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
-HEALTH_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "health"
+HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 
 
 @pytest.fixture(name="config", scope="module")

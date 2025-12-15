@@ -1,5 +1,5 @@
 """Unit tests for health endpoint Lambda Terraform configuration."""
-from test.api.endpoints.health.conftest import HEALTH_SRC, REPO_ROOT
+from test.api.operational.health.conftest import HEALTH_SRC, REPO_ROOT
 
 LAMBDA_FILE = HEALTH_SRC / "lambda.tf"
 API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
