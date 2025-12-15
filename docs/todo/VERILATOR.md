@@ -10,14 +10,14 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 | # | Issue | Status | PR | Impact |
 |---|-------|--------|-----|--------|
-| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | PR OPEN | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
-| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | PR OPEN | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
-| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | PAUSED | - | 2-4x faster compilation on large multi-module designs |
-| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | CLOSED | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallel optimization |
-| 3b | [Parallelize V3Const](#3b-parallelize-v3const) | NOT DONE | - | Per-module constant propagation |
-| 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | NOT DONE | - | Per-module dead code elimination |
-| 4 | [Function Inlining](#4-function-inlining) | PR OPEN | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces function call overhead from --output-split-cfuncs |
-| 5 | [AST Object Pooling](#5-ast-object-pooling) | NOT DONE | - | 10-20% memory reduction, faster allocation |
+| 1 | [Thread Pool Lock Contention](#1-thread-pool-lock-contention) | 🟡 Open | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement for multi-threaded workloads |
+| 2 | [Threading Self-Diagnostic System](#2-threading-self-diagnostic-system) | 🟡 Open | [#6762](https://github.com/verilator/verilator/pull/6762) | Saves hours of debugging; enables informed optimization |
+| 3 | [Module-Level Parallel Verilation](#3-module-level-parallel-verilation) | ⏸️ On hold | - | 2-4x faster compilation on large multi-module designs |
+| 3a | [Parallelize V3FuncOpt](#3a-parallelize-v3funcopt) | ❌ Closed | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallel optimization |
+| 3b | [Parallelize V3Const](#3b-parallelize-v3const) | ⬜ Todo | - | Per-module constant propagation |
+| 3c | [Parallelize V3Dead](#3c-parallelize-v3dead) | ⬜ Todo | - | Per-module dead code elimination |
+| 4 | [Function Inlining](#4-function-inlining) | 🟡 Open | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces function call overhead from --output-split-cfuncs |
+| 5 | [AST Object Pooling](#5-ast-object-pooling) | ⬜ Todo | - | 10-20% memory reduction, faster allocation |
 
 ---
 
@@ -25,7 +25,7 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 **File:** `src/V3ThreadPool.cpp`
 
-**Status:** PR OPEN - [PR #6761](https://github.com/verilator/verilator/pull/6761)
+**Status:** 🟡 Open - [PR #6761](https://github.com/verilator/verilator/pull/6761)
 
 **Problem:** The `wait()` function uses busy-wait loop that wastes CPU cycles.
 
@@ -79,7 +79,7 @@ void V3ThreadPool::workerJobLoop() {
 
 **Files:** `include/verilated_threading_advisor.h`, `include/verilated.cpp`
 
-**Status:** PR OPEN - [PR #6762](https://github.com/verilator/verilator/pull/6762)
+**Status:** 🟡 Open - [PR #6762](https://github.com/verilator/verilator/pull/6762)
 
 **Current state:**
 - `VlExecutionProfiler` exists for collecting profiling data (verilated_profiler.h)
@@ -132,7 +132,7 @@ class VlThreadingAdvisor {
 
 **Files:** `src/Verilator.cpp`, various V3*.cpp passes
 
-**Status:** PAUSED (PR #6763 was closed without merge)
+**Status:** ⏸️ On hold (PR #6763 closed without merge; rethinking approach)
 
 **Goal:** Extend the `V3ThreadScope` parallel processing pattern to additional compiler passes.
 
@@ -162,7 +162,7 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 **File:** `src/V3FuncOpt.cpp`
 
-**Status:** CLOSED - [PR #6763](https://github.com/verilator/verilator/pull/6763) was not merged
+**Status:** ❌ Closed - [PR #6763](https://github.com/verilator/verilator/pull/6763) was not merged
 
 **Proposed solution:** Apply per-function parallelization using `V3ThreadScope`. Each `AstCFunc` is processed independently in parallel.
 
@@ -179,7 +179,7 @@ for (AstNodeModule* modp = v3Global.rootp()->modulesp(); modp;
 
 **File:** `src/V3Const.cpp`
 
-**Status:** NOT DONE
+**Status:** ⬜ Todo
 
 **Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Would need conversion to `V3PchAstMT.h` and analysis of cross-module constant propagation dependencies.
 
@@ -202,7 +202,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 **File:** `src/V3Dead.cpp`
 
-**Status:** NOT DONE
+**Status:** ⬜ Todo
 
 **Challenge:** Currently uses `V3PchAstNoMT.h` (MT-disabled). Dead code elimination may have cross-module reference counting dependencies that need careful analysis.
 
@@ -212,7 +212,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 **Files:** `src/V3InlineCFuncs.cpp` (new file)
 
-**Status:** PR OPEN - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
+**Status:** 🟡 Open - [PR #6815](https://github.com/verilator/verilator/pull/6815) (supersedes closed [#6765](https://github.com/verilator/verilator/pull/6765))
 
 **Resolves:** [Issue #2367](https://github.com/verilator/verilator/issues/2367)
 
@@ -246,7 +246,7 @@ void V3Const::constifyAllModules(AstNetlist* nodep) {
 
 **Files:** `src/V3Ast.cpp`, `src/V3AstNodes.cpp`
 
-**Status:** NOT IMPLEMENTED
+**Status:** ⬜ Todo
 
 **Problem:** `AstVarRef` and `AstConst` are the most allocated node types. Standard `new` allocation is used throughout (188 occurrences of `new AstConst` and `new AstVarRef` across the codebase).
 
