@@ -28,39 +28,65 @@ def _get_lambda_function_names():
     ))
 
 
-@pytest.mark.parametrize(
-    "resource_name,role_name",
-    _get_iam_role_names(),
-    ids=[name for name, _ in _get_iam_role_names()],
-)
-def test_iam_role_name_is_pascalcase(iam_client, resource_name, role_name):
-    """Verify IAM role name uses PascalCase."""
-    _ = resource_name  # Used for test parametrization IDs
-    try:
+class TestDeployedIAMRoleNamingConventions:
+    """Tests for deployed IAM role naming conventions."""
+
+    @pytest.mark.parametrize(
+        "resource_name,role_name",
+        _get_iam_role_names(),
+        ids=[name for name, _ in _get_iam_role_names()],
+    )
+    def test_iam_role_exists(self, iam_client, resource_name, role_name):
+        """Verify IAM role exists."""
+        _ = resource_name  # Used for test parametrization IDs
+        try:
+            iam_client.get_role(RoleName=role_name)
+        except iam_client.exceptions.NoSuchEntityException:
+            pytest.fail(f"IAM role '{role_name}' does not exist")
+
+    @pytest.mark.parametrize(
+        "resource_name,role_name",
+        _get_iam_role_names(),
+        ids=[name for name, _ in _get_iam_role_names()],
+    )
+    def test_iam_role_name_is_pascalcase(self, iam_client, resource_name, role_name):
+        """Verify IAM role name uses PascalCase."""
+        _ = resource_name  # Used for test parametrization IDs
         response = iam_client.get_role(RoleName=role_name)
         actual_name = response['Role']['RoleName']
         error = validate_name(actual_name)
         assert error is None, (
             f"Deployed IAM role has invalid name '{actual_name}': {error}"
         )
-    except iam_client.exceptions.NoSuchEntityException:
-        pytest.skip(f"IAM role '{role_name}' not deployed")
 
 
-@pytest.mark.parametrize(
-    "resource_name,function_name",
-    _get_lambda_function_names(),
-    ids=[name for name, _ in _get_lambda_function_names()],
-)
-def test_lambda_function_name_is_pascalcase(lambda_client, resource_name, function_name):
-    """Verify Lambda function name uses PascalCase."""
-    _ = resource_name  # Used for test parametrization IDs
-    try:
+class TestDeployedLambdaFunctionNamingConventions:
+    """Tests for deployed Lambda function naming conventions."""
+
+    @pytest.mark.parametrize(
+        "resource_name,function_name",
+        _get_lambda_function_names(),
+        ids=[name for name, _ in _get_lambda_function_names()],
+    )
+    def test_lambda_function_exists(self, lambda_client, resource_name, function_name):
+        """Verify Lambda function exists."""
+        _ = resource_name  # Used for test parametrization IDs
+        try:
+            lambda_client.get_function(FunctionName=function_name)
+        except lambda_client.exceptions.ResourceNotFoundException:
+            pytest.fail(f"Lambda function '{function_name}' does not exist")
+
+    @pytest.mark.parametrize(
+        "resource_name,function_name",
+        _get_lambda_function_names(),
+        ids=[name for name, _ in _get_lambda_function_names()],
+    )
+    def test_lambda_function_name_is_pascalcase(self, lambda_client, resource_name, function_name):
+        """Verify Lambda function name uses PascalCase."""
+        _ = resource_name  # Used for test parametrization IDs
         response = lambda_client.get_function(FunctionName=function_name)
         actual_name = response['Configuration']['FunctionName']
         error = validate_name(actual_name)
         assert error is None, (
             f"Deployed Lambda function has invalid name '{actual_name}': {error}"
         )
-    except lambda_client.exceptions.ResourceNotFoundException:
-        pytest.skip(f"Lambda function '{function_name}' not deployed")

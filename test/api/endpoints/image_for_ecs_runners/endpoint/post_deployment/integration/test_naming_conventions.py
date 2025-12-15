@@ -8,8 +8,20 @@ import pytest
 from naming_conventions import validate_name
 
 
-class TestDeployedNamingConventions:
-    """Tests for deployed resource naming conventions."""
+class TestDeployedIAMRoleNamingConventions:
+    """Tests for deployed IAM role naming conventions."""
+
+    def test_image_for_ecs_runners_handler_role_exists(self, iam_client, config):
+        """Verify ImageForEcsRunnersHandler IAM role exists."""
+        function_name = config.get(
+            'image_for_ecs_runners_handler_function_name',
+            'TenULabsImageForEcsRunnersHandler'
+        )
+        role_name = f"{function_name}ServiceRole"
+        try:
+            iam_client.get_role(RoleName=role_name)
+        except iam_client.exceptions.NoSuchEntityException:
+            pytest.fail(f"IAM role '{role_name}' does not exist")
 
     def test_image_for_ecs_runners_handler_role_name_is_pascalcase(self, iam_client, config):
         """Verify ImageForEcsRunnersHandler IAM role name uses PascalCase."""
@@ -18,15 +30,27 @@ class TestDeployedNamingConventions:
             'TenULabsImageForEcsRunnersHandler'
         )
         role_name = f"{function_name}ServiceRole"
+        response = iam_client.get_role(RoleName=role_name)
+        actual_name = response['Role']['RoleName']
+        error = validate_name(actual_name)
+        assert error is None, (
+            f"Deployed IAM role has invalid name '{actual_name}': {error}"
+        )
+
+
+class TestDeployedLambdaFunctionNamingConventions:
+    """Tests for deployed Lambda function naming conventions."""
+
+    def test_image_for_ecs_runners_handler_function_exists(self, lambda_client, config):
+        """Verify ImageForEcsRunnersHandler Lambda function exists."""
+        function_name = config.get(
+            'image_for_ecs_runners_handler_function_name',
+            'TenULabsImageForEcsRunnersHandler'
+        )
         try:
-            response = iam_client.get_role(RoleName=role_name)
-            actual_name = response['Role']['RoleName']
-            error = validate_name(actual_name)
-            assert error is None, (
-                f"Deployed IAM role has invalid name '{actual_name}': {error}"
-            )
-        except iam_client.exceptions.NoSuchEntityException:
-            pytest.skip(f"IAM role '{role_name}' not deployed")
+            lambda_client.get_function(FunctionName=function_name)
+        except lambda_client.exceptions.ResourceNotFoundException:
+            pytest.fail(f"Lambda function '{function_name}' does not exist")
 
     def test_image_for_ecs_runners_handler_function_name_is_pascalcase(self, lambda_client, config):
         """Verify ImageForEcsRunnersHandler Lambda function name uses PascalCase."""
@@ -34,12 +58,9 @@ class TestDeployedNamingConventions:
             'image_for_ecs_runners_handler_function_name',
             'TenULabsImageForEcsRunnersHandler'
         )
-        try:
-            response = lambda_client.get_function(FunctionName=function_name)
-            actual_name = response['Configuration']['FunctionName']
-            error = validate_name(actual_name)
-            assert error is None, (
-                f"Deployed Lambda function has invalid name '{actual_name}': {error}"
-            )
-        except lambda_client.exceptions.ResourceNotFoundException:
-            pytest.skip(f"Lambda function '{function_name}' not deployed")
+        response = lambda_client.get_function(FunctionName=function_name)
+        actual_name = response['Configuration']['FunctionName']
+        error = validate_name(actual_name)
+        assert error is None, (
+            f"Deployed Lambda function has invalid name '{actual_name}': {error}"
+        )
