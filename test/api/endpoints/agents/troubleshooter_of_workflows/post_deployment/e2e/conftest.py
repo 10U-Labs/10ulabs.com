@@ -14,12 +14,14 @@ from test.api.endpoints.agents.troubleshooter_of_workflows.post_deployment.integ
     agent_runtime_arn,
     agent_runtime_name,
     ecr_repo_name,
-    lambda_client,
     lambda_function_name,
     webhook_url,
     AGENT_RUNTIME_NAME,
     LAMBDA_NAME,
 )
+
+# Note: lambda_client fixture is inherited from test/api/conftest.py
+# and does not need to be explicitly imported here.
 
 __all__ = [
     "agentcore_control_client",
@@ -27,7 +29,6 @@ __all__ = [
     "agent_runtime_arn",
     "agent_runtime_name",
     "ecr_repo_name",
-    "lambda_client",
     "lambda_function_name",
     "webhook_url",
     "AGENT_RUNTIME_NAME",
