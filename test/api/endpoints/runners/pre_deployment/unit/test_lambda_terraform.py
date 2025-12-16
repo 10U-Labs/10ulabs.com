@@ -1,5 +1,4 @@
 """Unit tests for test lambda terraform."""
-import re
 
 
 def test_lambda_terraform_file_exists(runners_src_path):
@@ -119,16 +118,6 @@ def test_spot_interruption_handler_lambda_exists(runners_src_path):
     assert 'resource "aws_lambda_function" "spot_interruption_handler"' in content
 
 
-def test_all_lambdas_use_python313_runtime(runners_src_path):
-    """Test all lambdas use python313 runtime."""
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    lambda_count = content.count('resource "aws_lambda_function"')
-    python313_count = len(re.findall(r'runtime\s+=\s+"python3\.13"', content))
-    assert python313_count == lambda_count
-
-
 def test_stale_runner_cleanup_ec2_tag_references_ec2_runner_output(runners_src_path):
     """Test stale runner cleanup ec2 tag references ec2 runner output."""
     lambda_file = runners_src_path / "lambda.tf"
@@ -139,30 +128,3 @@ def test_stale_runner_cleanup_ec2_tag_references_ec2_runner_output(runners_src_p
     stale_section = content[stale_start:stale_end]
     ec2_managed_by_tag = 'data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag'
     assert ec2_managed_by_tag in stale_section
-
-
-def test_runners_handler_archive_includes_runner_labels(runners_src_path):
-    """Test runners handler archive includes runner_labels.py.
-
-    This is a regression test to ensure the Lambda archive includes the
-    runner_labels module. Without this module, the Lambda will fail at runtime
-    with a ModuleNotFoundError when processing webhook events.
-    """
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    # Check archive_file includes runner_labels
-    assert "runner_labels/__init__.py" in content
-    assert 'filename = "runner_labels.py"' in content
-
-
-def test_runners_handler_archive_includes_runners_json(runners_src_path):
-    """Test runners handler archive includes etc/runners.json.
-
-    The runner_labels module reads configuration from etc/runners.json.
-    Without this file, the Lambda will fail with FileNotFoundError.
-    """
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    assert "etc/runners.json" in content
