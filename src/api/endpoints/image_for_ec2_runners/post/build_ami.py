@@ -149,6 +149,9 @@ def create_launch_template(ec2, params: LaunchTemplateParams, tags):
     }
     if params.iam_profile:
         data["IamInstanceProfile"] = {"Name": params.iam_profile}
+    if tags:
+        tag_list = [{"Key": k, "Value": str(v)} for k, v in tags.items()]
+        data["TagSpecifications"] = [{"ResourceType": "instance", "Tags": tag_list}]
     tag_specs = []
     if tags:
         tag_list = [{"Key": k, "Value": str(v)} for k, v in tags.items()]
