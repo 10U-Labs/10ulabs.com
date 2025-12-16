@@ -11,6 +11,11 @@ def test_dockerfile_declares_node_version_arg(dockerfile_content):
     assert dockerfile_content.find('ARG NODE_VERSION') != -1
 
 
+def test_dockerfile_installs_eslint_via_npm(npm_install_packages):
+    """Test that Dockerfile installs eslint via npm."""
+    assert npm_install_packages.find('eslint') != -1
+
+
 def test_dockerfile_installs_jsonlint_via_npm(npm_install_packages):
     """Test that Dockerfile installs jsonlint via npm."""
     assert npm_install_packages.find('jsonlint') != -1

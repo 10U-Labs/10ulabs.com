@@ -26,6 +26,13 @@ def test_npm_installed(docker_image):
     assert result.returncode == 0
 
 
+def test_eslint_installed_globally(docker_image):
+    """Test that eslint is installed globally."""
+    result = run_command_in_container(docker_image, "which eslint")
+
+    assert result.returncode == 0
+
+
 def test_jsonlint_installed_globally(docker_image):
     """Test that jsonlint is installed globally."""
     result = run_command_in_container(docker_image, "which jsonlint")

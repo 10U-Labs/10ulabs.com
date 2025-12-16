@@ -202,6 +202,20 @@ class TestInstallPythonPackages:
             assert "pytest" in pip_call
 
 
+def test_install_eslint_installs_globally(setup_module):
+    """Test install_eslint installs eslint globally via npm."""
+    with patch.object(setup_module, "run") as mock_run:
+        setup_module.install_eslint()
+        mock_run.assert_called_once_with("npm install -g eslint")
+
+
+def test_install_jsonlint_installs_globally(setup_module):
+    """Test install_jsonlint installs jsonlint globally via npm."""
+    with patch.object(setup_module, "run") as mock_run:
+        setup_module.install_jsonlint()
+        mock_run.assert_called_once_with("npm install -g jsonlint")
+
+
 class TestInstallYq:
     """Tests for the install_yq function."""
 
@@ -344,6 +358,7 @@ class TestMain:
              patch.object(setup_module, "install_system_packages"), \
              patch.object(setup_module, "install_python_packages"), \
              patch.object(setup_module, "install_yq"), \
+             patch.object(setup_module, "install_eslint"), \
              patch.object(setup_module, "install_jsonlint"), \
              patch.object(setup_module, "install_hadolint"), \
              patch.object(setup_module, "install_terraform"), \
@@ -372,6 +387,7 @@ class TestMain:
              patch.object(setup_module, "install_system_packages") as mocks["sys"], \
              patch.object(setup_module, "install_python_packages") as mocks["pip"], \
              patch.object(setup_module, "install_yq") as mocks["yq"], \
+             patch.object(setup_module, "install_eslint") as mocks["eslint"], \
              patch.object(setup_module, "install_jsonlint") as mocks["jsonlint"], \
              patch.object(setup_module, "install_hadolint") as mocks["hadolint"], \
              patch.object(setup_module, "install_terraform") as mocks["terraform"], \
@@ -390,6 +406,7 @@ class TestMain:
         mocks["sys"].assert_called_once()
         mocks["pip"].assert_called_once()
         mocks["yq"].assert_called_once_with("arm64", config["yq_version"])
+        mocks["eslint"].assert_called_once()
         mocks["jsonlint"].assert_called_once()
         mocks["hadolint"].assert_called_once_with("arm64")
         mocks["terraform"].assert_called_once_with("arm64", config["terraform_version"])
