@@ -1,8 +1,6 @@
 """Unit tests for agents runtime main.py."""
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 AGENTS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents"
 RUNTIME_DIR = AGENTS_SRC / "runtime"
@@ -12,6 +10,34 @@ def test_runtime_main_py_exists():
     """Test that main.py exists in runtime directory."""
     main_file = RUNTIME_DIR / "main.py"
     assert main_file.exists()
+
+
+def test_runtime_main_has_model_id_constant():
+    """Test that main.py defines MODEL_ID constant."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert "MODEL_ID" in content
+
+
+def test_runtime_main_uses_opus_model():
+    """Test that main.py uses Claude Opus 4.5 model."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert "claude-opus-4-5" in content
+
+
+def test_runtime_main_imports_bedrock_model():
+    """Test that main.py imports BedrockModel from strands.models."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert "from strands.models import BedrockModel" in content
+
+
+def test_runtime_main_passes_model_to_agent():
+    """Test that main.py passes model to Agent configuration."""
+    main_file = RUNTIME_DIR / "main.py"
+    content = main_file.read_text()
+    assert '"model": model' in content or "'model': model" in content
 
 
 def test_runtime_main_imports_tools():

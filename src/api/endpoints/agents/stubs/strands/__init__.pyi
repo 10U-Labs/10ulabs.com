@@ -8,8 +8,9 @@ def tool(func: T) -> T: ...
 class Agent:
     def __init__(
         self,
-        system_prompt: str,
-        tools: Sequence[Any],
+        model: Any = ...,
+        system_prompt: str = ...,
+        tools: Sequence[Any] = ...,
     ) -> None: ...
     def __call__(self, request: str) -> AgentResult: ...
 

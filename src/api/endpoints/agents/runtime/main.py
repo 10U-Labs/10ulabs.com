@@ -25,6 +25,7 @@ from botocore.exceptions import ClientError
 try:
     from bedrock_agentcore import BedrockAgentCoreApp
     from strands import Agent
+    from strands.models import BedrockModel
     _RUNTIME_AVAILABLE = True
 except ImportError:
     _RUNTIME_AVAILABLE = False
@@ -40,6 +41,9 @@ GUARDRAIL_ID = os.environ.get("GUARDRAIL_ID", "")
 GUARDRAIL_VERSION = os.environ.get("GUARDRAIL_VERSION", "DRAFT")
 MEMORY_ARN = os.environ.get("MEMORY_ARN", "")
 AWS_REGION = os.environ.get("AWS_REGION", "us-east-2")
+
+# Model configuration - Claude Opus 4.5 for maximum capability
+MODEL_ID = "us.anthropic.claude-opus-4-5-20251101-v1:0"
 
 # S3 client for fetching prompts
 s3_client = boto3.client("s3", region_name=AWS_REGION)
@@ -139,8 +143,10 @@ def invoke(payload: dict[str, Any]) -> dict[str, Any]:
     except ValueError as err:
         return {"error": str(err)}
 
-    # Build agent configuration
+    # Build agent configuration with Claude Opus 4.5
+    model = BedrockModel(model_id=MODEL_ID) if _RUNTIME_AVAILABLE else None
     agent_config: dict[str, Any] = {
+        "model": model,
         "system_prompt": system_prompt,
         "tools": ALL_TOOLS,
     }
