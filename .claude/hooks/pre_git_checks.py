@@ -300,7 +300,6 @@ def run_workflow_yaml_lint(changed_files):
         "{extends: default, rules: {"
         "empty-lines: {max: 0, max-start: 0, max-end: 1}, "
         "key-ordering: enable, "
-        "line-length: disable, "
         "new-line-at-end-of-file: enable, "
         "truthy: {allowed-values: ['true', 'false', 'on']}}}"
     )
@@ -326,6 +325,100 @@ def run_workflow_yaml_lint(changed_files):
         return False
 
     capture_print("All workflow files passed yamllint.")
+    return True
+
+
+def run_json_lint(changed_files):
+    """Run jsonlint on changed JSON files. Returns True if passed."""
+    json_files = [
+        f for f in changed_files
+        if f.endswith('.json')
+        and 'node_modules' not in f
+        and 'package-lock.json' not in f
+        and os.path.isfile(f)  # Skip deleted files
+    ]
+
+    if not json_files:
+        return True
+
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: JSON LINT")
+    capture_print("="*60)
+    capture_print(f"Checking {len(json_files)} JSON file(s):")
+    for f in json_files:
+        capture_print(f"  - {f}")
+
+    failed_files = []
+    for json_file in json_files:
+        result = subprocess.run(
+            ['jsonlint', '-q', json_file],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if result.returncode != 0:
+            failed_files.append((json_file, result.stderr or result.stdout))
+
+    if failed_files:
+        capture_print("\nJSONLINT ERRORS:")
+        for file_path, error in failed_files:
+            capture_print(f"  {file_path}:")
+            for line in error.strip().split('\n'):
+                capture_print(f"    {line}")
+        capture_print("\n" + "="*60)
+        capture_print("JSON LINT FAILED")
+        capture_print("="*60)
+        return False
+
+    capture_print("All JSON files passed jsonlint.")
+    return True
+
+
+def run_javascript_lint(changed_files):
+    """Run eslint on changed JavaScript files. Returns True if passed."""
+    js_files = [
+        f for f in changed_files
+        if f.endswith('.js')
+        and 'node_modules' not in f
+        and os.path.isfile(f)  # Skip deleted files
+    ]
+
+    if not js_files:
+        return True
+
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: JAVASCRIPT LINT")
+    capture_print("="*60)
+    capture_print(f"Checking {len(js_files)} JavaScript file(s):")
+    for f in js_files:
+        capture_print(f"  - {f}")
+
+    # Run eslint - it will find config files in parent directories
+    result = subprocess.run(
+        ['npx', 'eslint'] + js_files,
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+    # Check if eslint couldn't find a config (exit code 2 with specific message)
+    if result.returncode != 0:
+        if 'eslint.config' in (result.stderr or result.stdout):
+            capture_print("No ESLint config found, skipping JavaScript lint.")
+            return True
+        capture_print("\nESLINT ERRORS:")
+        if result.stdout:
+            for line in result.stdout.strip().split('\n'):
+                capture_print(f"  {line}")
+        if result.stderr:
+            for line in result.stderr.strip().split('\n'):
+                capture_print(f"  {line}")
+        capture_print("\n" + "="*60)
+        capture_print("JAVASCRIPT LINT FAILED")
+        capture_print("="*60)
+        return False
+
+    capture_print("All JavaScript files passed eslint.")
     return True
 
 
@@ -662,6 +755,21 @@ def run_phase(matching_workflows, phase_name, extract_fn):
     return passed
 
 
+def run_file_level_checks(changed_files):
+    """Run all file-level checks. Calls deny_tool_use on failure."""
+    checks = [
+        (run_lint_disable_check, "LINT DISABLE CHECK FAILED - Remove lint disable comments"),
+        (run_single_assert_check, "SINGLE ASSERT CHECK FAILED - Split into separate tests"),
+        (run_workflow_yaml_lint, "WORKFLOW YAML LINT FAILED - Fix YAML lint errors"),
+        (run_json_lint, "JSON LINT FAILED - Fix JSON syntax errors"),
+        (run_javascript_lint, "JAVASCRIPT LINT FAILED - Fix ESLint errors"),
+    ]
+    for check_fn, failure_msg in checks:
+        if not check_fn(changed_files):
+            log_debug(f"{failure_msg.split(' - ', maxsplit=1)[0]} - denying tool use")
+            deny_tool_use(failure_msg)
+
+
 def main():
     """Main entry point for the pre-git checks hook."""
     command = parse_command_from_stdin()
@@ -686,17 +794,7 @@ def main():
     for f in changed_files:
         capture_print(f"  - {f}")
 
-    if not run_lint_disable_check(changed_files):
-        log_debug("Lint disable check FAILED - denying tool use")
-        deny_tool_use("LINT DISABLE CHECK FAILED - Remove lint disable comments")
-
-    if not run_single_assert_check(changed_files):
-        log_debug("Single assert check FAILED - denying tool use")
-        deny_tool_use("SINGLE ASSERT CHECK FAILED - Split into separate tests")
-
-    if not run_workflow_yaml_lint(changed_files):
-        log_debug("Workflow YAML lint FAILED - denying tool use")
-        deny_tool_use("WORKFLOW YAML LINT FAILED - Fix YAML lint errors")
+    run_file_level_checks(changed_files)
 
     workflows_dir = os.path.join(project_dir, '.github/workflows')
     matching_workflows = find_matching_workflows(changed_files, workflows_dir, project_dir)
