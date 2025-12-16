@@ -55,9 +55,15 @@ def test_security_group_defined(api_shared_runners_dir):
     assert re.search(pattern, content) is not None
 
 
-def test_security_group_allows_egress(api_shared_runners_dir):
-    """Test that security group allows outbound traffic."""
+def test_security_group_has_egress_block(api_shared_runners_dir):
+    """Test that security group has egress block defined."""
     sg_tf = api_shared_runners_dir / "security_groups.tf"
     content = sg_tf.read_text()
     assert "egress" in content
+
+
+def test_security_group_allows_all_outbound(api_shared_runners_dir):
+    """Test that security group allows outbound to all destinations."""
+    sg_tf = api_shared_runners_dir / "security_groups.tf"
+    content = sg_tf.read_text()
     assert "0.0.0.0/0" in content
