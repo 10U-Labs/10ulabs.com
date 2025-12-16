@@ -2,7 +2,6 @@
 import importlib.util
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Any
 from types import ModuleType
@@ -150,40 +149,6 @@ def parse_lambda_response_payload(response: Any) -> Any:
 
 
 @pytest.fixture
-def webhook_router(config):
-    """Provide webhook router module with mocked environment."""
-    # Load webhook_ingress first and add to sys.modules so webhook_router can import it
-    ingress_module = load_lambda_module("webhook_ingress.py", "webhook_ingress")
-    sys.modules['webhook_ingress'] = ingress_module
-
-    env_vars = {
-        'API_KEY_PARAMETER_NAME': config['ssm_parameter_name_for_api_key'],
-        'WEBHOOK_SECRET_NAME': config['ssm_parameter_name_for_webhook_secret'],
-        'API_BASE_URL': f"https://{config['api_fqdn']}/{config['api_version']}",
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("webhook_router.py", "webhook_router")
-        if hasattr(module, '_clients'):
-            clients = {'ssm': None, 'dynamodb': None, 'sqs': None, 'cloudwatch': None}
-            setattr(module, '_clients', clients)
-        if hasattr(module, '_webhook_secret_cache'):
-            setattr(module, '_webhook_secret_cache', {'value': None})
-        if hasattr(module, '_api_key_cache'):
-            setattr(module, '_api_key_cache', {'value': None})
-        if hasattr(module, '_circuit_breaker_state'):
-            state = {'failures': 0, 'last_failure_time': 0.0, 'state': 'closed'}
-            setattr(module, '_circuit_breaker_state', state)
-        yield module
-
-
-@pytest.fixture
-def webhook_ingress():
-    """Provide webhook ingress module."""
-    module = load_lambda_module("webhook_ingress.py", "webhook_ingress")
-    yield module
-
-
-@pytest.fixture
 def circuit_breaker_remediation(config):
     """Provide circuit breaker remediation module."""
     env_vars = {
@@ -226,60 +191,6 @@ def circuit_breaker_recovery(config):
     }
     with patch.dict('os.environ', env_vars):
         module = load_lambda_module("circuit_breaker_recovery.py", "circuit_breaker_recovery")
-        yield module
-
-
-@pytest.fixture
-def drift_recovery(config):
-    """Provide drift recovery module."""
-    env_vars = {
-        'AWS_REGION': config['aws_region'],
-        'GITHUB_REPO': config['github_repo'],
-        'GITHUB_TOKEN_PARAMETER_NAME': config['ssm_parameter_name_for_github_pat'],
-        'SNS_TOPIC_ARN': f'arn:aws:sns:{TEST_AWS_REGION}:123456789012:test-topic',
-        'MANAGED_VPC_ID': 'vpc-managed123'
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("drift_recovery.py", "drift_recovery")
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
-        yield module
-
-
-@pytest.fixture
-def spot_interruption_handler(config):
-    """Provide spot interruption handler module."""
-    env_vars = {
-        'AWS_REGION': config['aws_region'],
-        'ECS_CLUSTER': config['cluster_name'],
-        'GITHUB_REPO': config['github_repo'],
-        'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
-        'API_BASE_URL': f"https://{config['api_fqdn']}",
-        'API_KEY': 'test-api-key',
-        'WORKFLOW_RUNNERS_TABLE': 'test-workflow-runners'
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("spot_interruption_handler.py", "spot_interruption_handler")
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
-        yield module
-
-
-@pytest.fixture
-def stale_runner_cleanup(config):
-    """Provide stale runner cleanup module."""
-    env_vars = {
-        'AWS_REGION': config['aws_region'],
-        'ECS_CLUSTER': config['cluster_name'],
-        'GITHUB_REPO': config['github_repo'],
-        'GITHUB_TOKEN_SECRET_NAME': config['ssm_parameter_name_for_github_pat'],
-        'WORKFLOW_RUNNERS_TABLE': 'test-workflow-runners',
-        'EC2_MANAGED_BY_TAG': 'ec2-runner-api'
-    }
-    with patch.dict('os.environ', env_vars):
-        module = load_lambda_module("stale_runner_cleanup.py", "stale_runner_cleanup")
-        if hasattr(module, '_clients'):
-            setattr(module, '_clients', {})
         yield module
 
 
@@ -389,14 +300,6 @@ TEST_CONSTANTS = {
 ENV_VAR_PRESETS = {
     'base': {
         'AWS_REGION': TEST_AWS_REGION,
-    },
-    'webhook_router': {
-        'AWS_REGION': TEST_AWS_REGION,
-        'API_KEY_PARAMETER_NAME': 'test-api-key-param',
-        'WEBHOOK_SECRET_NAME': 'test-webhook-secret',
-        'API_BASE_URL': 'https://api.test.com/v1',
-        'IDEMPOTENCY_TABLE_NAME': 'test-table',
-        'JOB_QUEUE_URL': f'https://sqs.{TEST_AWS_REGION}.amazonaws.com/123456789012/test-queue',
     },
 }
 

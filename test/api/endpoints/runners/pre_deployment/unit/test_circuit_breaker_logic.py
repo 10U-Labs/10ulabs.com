@@ -1,6 +1,5 @@
-"""Unit tests for test circuit breaker logic."""
+"""Unit tests for DLQ reprocessor and circuit breaker Python lambdas."""
 import json
-import time
 from unittest.mock import patch, MagicMock
 
 from botocore.exceptions import ClientError
@@ -11,117 +10,6 @@ from .conftest import (
     assert_no_hardcoded_env_defaults,
     get_lambda_path,
 )
-
-
-def test_check_circuit_breaker_closed_state_returns_true(webhook_router):
-    """Test check circuit breaker closed state returns true."""
-    webhook_router.circuit_breaker_state['state'] = 'closed'
-    webhook_router.circuit_breaker_state['failures'] = 0
-    with patch('boto3.client'):
-        result = webhook_router.check_circuit_breaker()
-    assert result is True
-
-
-
-def test_check_circuit_breaker_open_state_returns_false(webhook_router):
-    """Test check circuit breaker open state returns false."""
-    webhook_router.circuit_breaker_state['state'] = 'open'
-    webhook_router.circuit_breaker_state['last_failure_time'] = time.time()
-    with patch('boto3.client'):
-        result = webhook_router.check_circuit_breaker()
-    assert result is False
-
-
-
-def test_check_circuit_breaker_transitions_to_half_open_after_timeout(webhook_router):
-    """Test check circuit breaker transitions to half open after timeout."""
-    webhook_router.circuit_breaker_state['state'] = 'open'
-    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
-    with patch('boto3.client'):
-        result = webhook_router.check_circuit_breaker()
-    assert result is True
-
-
-
-def test_check_circuit_breaker_opens_after_threshold_failures(webhook_router):
-    """Test check circuit breaker opens after threshold failures."""
-    webhook_router.circuit_breaker_state['state'] = 'closed'
-    webhook_router.circuit_breaker_state['failures'] = 5
-    with patch('boto3.client'):
-        result = webhook_router.check_circuit_breaker()
-    assert result is False
-
-
-
-def test_record_circuit_breaker_success_resets_failures(webhook_router):
-    """Test record circuit breaker success resets failures."""
-    webhook_router.circuit_breaker_state['failures'] = 3
-    webhook_router.record_circuit_breaker_success()
-    assert webhook_router.circuit_breaker_state['failures'] == 0
-
-
-
-def test_record_circuit_breaker_success_closes_half_open_circuit(webhook_router):
-    """Test record circuit breaker success closes half open circuit."""
-    webhook_router.circuit_breaker_state['state'] = 'half-open'
-    webhook_router.record_circuit_breaker_success()
-    assert webhook_router.circuit_breaker_state['state'] == 'closed'
-
-
-
-def test_record_circuit_breaker_failure_increments_count(webhook_router):
-    """Test record circuit breaker failure increments count."""
-    webhook_router.circuit_breaker_state['failures'] = 0
-    webhook_router.record_circuit_breaker_failure()
-    assert webhook_router.circuit_breaker_state['failures'] == 1
-
-
-
-def test_record_circuit_breaker_failure_reopens_half_open_circuit(webhook_router):
-    """Test record circuit breaker failure reopens half open circuit."""
-    webhook_router.circuit_breaker_state['state'] = 'half-open'
-    webhook_router.record_circuit_breaker_failure()
-    assert webhook_router.circuit_breaker_state['state'] == 'open'
-
-
-
-def test_circuit_breaker_concurrent_failures_increment_count(webhook_router):
-    """Test circuit breaker concurrent failures increment count."""
-    webhook_router.circuit_breaker_state['state'] = 'closed'
-    webhook_router.circuit_breaker_state['failures'] = 0
-    webhook_router.record_circuit_breaker_failure()
-    webhook_router.record_circuit_breaker_failure()
-    assert webhook_router.circuit_breaker_state['failures'] == 2
-
-
-
-def test_circuit_breaker_concurrent_success_resets_failures(webhook_router):
-    """Test circuit breaker concurrent success resets failures."""
-    webhook_router.circuit_breaker_state['state'] = 'closed'
-    webhook_router.circuit_breaker_state['failures'] = 4
-    webhook_router.record_circuit_breaker_success()
-    assert webhook_router.circuit_breaker_state['failures'] == 0
-
-
-
-def test_circuit_breaker_half_open_allows_one_request(webhook_router):
-    """Test circuit breaker half open allows one request."""
-    webhook_router.circuit_breaker_state['state'] = 'open'
-    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 61
-    with patch('boto3.client'):
-        result = webhook_router.check_circuit_breaker()
-    assert result is True
-
-
-
-def test_circuit_breaker_state_remains_open_before_timeout(webhook_router):
-    """Test circuit breaker state remains open before timeout."""
-    webhook_router.circuit_breaker_state['state'] = 'open'
-    webhook_router.circuit_breaker_state['last_failure_time'] = time.time() - 30
-    with patch('boto3.client'):
-        result = webhook_router.check_circuit_breaker()
-    assert result is False
-
 
 
 def test_handler_processes_job_dlq(dlq_reprocessor, dlq_message_factory, mock_sqs, lambda_context):
