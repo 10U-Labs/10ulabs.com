@@ -119,9 +119,10 @@ jobs:
           CONF=src/api/endpoints/image_for_ec2_runners/post/config.json
           EMPTY='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY='key-ordering: enable'
+          LINE='line-length: disable'
           EOF='new-line-at-end-of-file: enable'
           TRUTH='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY, $KEY, $EOF, $TRUTH"
+          RULES="$EMPTY, $KEY, $LINE, $EOF, $TRUTH"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             $WF

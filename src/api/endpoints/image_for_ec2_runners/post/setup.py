@@ -127,6 +127,11 @@ def install_yq(arch: str, version: str) -> None:
     run("chmod +x /usr/local/bin/yq")
 
 
+def install_eslint() -> None:
+    """Install eslint for JavaScript linting."""
+    run("npm install -g eslint")
+
+
 def install_jsonlint() -> None:
     """Install jsonlint for JSON validation."""
     run("npm install -g jsonlint")
@@ -205,6 +210,7 @@ def main() -> None:
     install_system_packages()
     install_python_packages()
     install_yq(arch, args.yq_version)
+    install_eslint()
     install_jsonlint()
     install_hadolint(arch)
     install_terraform(arch, args.terraform_version)

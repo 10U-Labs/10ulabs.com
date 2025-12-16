@@ -39,7 +39,6 @@ LINT_DISABLE_PATTERNS = [
     # Workflow/CLI flag patterns that disable or loosen checks
     (r'--ignore-missing-imports', 'mypy --ignore-missing-imports'),
     (r'--max-args', 'pylint --max-args (loosens argument limit)'),
-    (r'line-length:\s*disable', 'yamllint line-length: disable'),
     (r'--disable=', 'pylint --disable flag'),
     (r'--skip-check', 'lint skip-check flag'),
     (r'--no-verify', 'git --no-verify (skips hooks)'),

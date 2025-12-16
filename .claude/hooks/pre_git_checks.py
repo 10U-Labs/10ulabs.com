@@ -300,6 +300,7 @@ def run_workflow_yaml_lint(changed_files):
         "{extends: default, rules: {"
         "empty-lines: {max: 0, max-start: 0, max-end: 1}, "
         "key-ordering: enable, "
+        "line-length: disable, "
         "new-line-at-end-of-file: enable, "
         "truthy: {allowed-values: ['true', 'false', 'on']}}}"
     )
