@@ -91,10 +91,9 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: {max: 120}'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
@@ -123,6 +122,15 @@ jobs:
           cd ../../../../test/api/endpoints/runners
           npm ci
           npm run lint
+      - name: Linting JSON files
+        run: |
+          for file in \
+            src/api/endpoints/runners/lambdas/layer/package.json \
+            test/api/endpoints/runners/package.json
+          do
+            echo "Validating $file"
+            jsonlint "$file"
+          done
       - name: Terraform Format Check
         run: cd src/api/endpoints/runners && terraform fmt -diff -check -recursive
       - name: Terraform Init

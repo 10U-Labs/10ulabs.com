@@ -45,14 +45,26 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           python3 -m yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/www_index.yml
+      - name: Linting JSON files
+        run: |
+          for file in \
+            src/www/api/openapi.json \
+            src/www/paths/index/components.json \
+            src/www/paths/index/package.json \
+            src/www/paths/index/tsconfig.json \
+            src/www/paths/index/tsconfig.app.json \
+            src/www/paths/index/tsconfig.node.json
+          do
+            echo "Validating $file"
+            jsonlint "$file"
+          done
       - name: Install npm dependencies
         run: npm ci --prefix src/www/paths/index
       - name: Run unit tests
