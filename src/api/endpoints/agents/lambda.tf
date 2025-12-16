@@ -5,7 +5,7 @@
 
 locals {
   # Common Lambda settings
-  lambda_runtime      = "python3.13"
+  lambda_runtime      = "nodejs22.x"
   lambda_architecture = "arm64"
   lambda_timeout      = 120
   lambda_memory       = 256
@@ -28,7 +28,7 @@ locals {
 
 data "archive_file" "webhook_lambda" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/webhook.py"
+  source_file = "${path.module}/lambdas/webhook.js"
   output_path = "${path.module}/.terraform/lambda_packages/webhook.zip"
 }
 
@@ -36,7 +36,7 @@ resource "aws_lambda_function" "webhook" {
   filename         = data.archive_file.webhook_lambda.output_path
   function_name    = local.webhook_lambda_name
   role             = aws_iam_role.webhook_lambda.arn
-  handler          = "webhook.lambda_handler"
+  handler          = "webhook.handler"
   source_code_hash = data.archive_file.webhook_lambda.output_base64sha256
   runtime          = local.lambda_runtime
   architectures    = [local.lambda_architecture]
@@ -87,7 +87,7 @@ resource "aws_lambda_event_source_mapping" "webhook_sqs" {
 
 data "archive_file" "scanner_lambda" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/scanner.py"
+  source_file = "${path.module}/lambdas/scanner.js"
   output_path = "${path.module}/.terraform/lambda_packages/scanner.zip"
 }
 
@@ -95,7 +95,7 @@ resource "aws_lambda_function" "scanner" {
   filename         = data.archive_file.scanner_lambda.output_path
   function_name    = local.scanner_lambda_name
   role             = aws_iam_role.webhook_lambda.arn # Reuse same role
-  handler          = "scanner.lambda_handler"
+  handler          = "scanner.handler"
   source_code_hash = data.archive_file.scanner_lambda.output_base64sha256
   runtime          = local.lambda_runtime
   architectures    = [local.lambda_architecture]
@@ -146,7 +146,7 @@ resource "aws_lambda_event_source_mapping" "scanner_sqs" {
 
 data "archive_file" "invoker_lambda" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/invoker.py"
+  source_file = "${path.module}/lambdas/invoker.js"
   output_path = "${path.module}/.terraform/lambda_packages/invoker.zip"
 }
 
@@ -154,7 +154,7 @@ resource "aws_lambda_function" "invoker" {
   filename         = data.archive_file.invoker_lambda.output_path
   function_name    = local.invoker_lambda_name
   role             = aws_iam_role.webhook_lambda.arn # Reuse same role
-  handler          = "invoker.lambda_handler"
+  handler          = "invoker.handler"
   source_code_hash = data.archive_file.invoker_lambda.output_base64sha256
   runtime          = local.lambda_runtime
   architectures    = [local.lambda_architecture]

@@ -455,7 +455,11 @@ def store_workflow_runner(
 def create_ec2_user_data(
         registration_token: str, job_labels: List[str],
         github_repo: str, runner_name: str) -> str:
-    """Generate EC2 user data script for GitHub runner configuration."""
+    """Generate EC2 user data script for GitHub runner configuration.
+
+    Uses --ephemeral so runner auto-deregisters after one job, then instance
+    self-terminates via aws ec2 terminate-instances.
+    """
     aws_region = os.environ['AWS_REGION']
     runner_labels = ','.join(job_labels)
     return f"""#!/bin/bash
@@ -482,7 +486,8 @@ sudo -u github-runner ./config.sh \
     --token "{registration_token}" \
     --name "{runner_name}" \
     --labels "{runner_labels}" \
-    --unattended
+    --unattended \
+    --ephemeral
 
 sudo -u github-runner ./run.sh
 

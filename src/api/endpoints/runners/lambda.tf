@@ -1,21 +1,6 @@
 data "archive_file" "runners_handler" {
-  type = "zip"
-  source {
-    content  = file("${path.module}/lambdas/webhook_router.py")
-    filename = "webhook_router.py"
-  }
-  source {
-    content  = file("${path.module}/lambdas/webhook_ingress.py")
-    filename = "webhook_ingress.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../lib/python/runner_labels/__init__.py")
-    filename = "runner_labels.py"
-  }
-  source {
-    content  = file("${path.module}/../../../../etc/runners.json")
-    filename = "etc/runners.json"
-  }
+  type        = "zip"
+  source_file = "${path.module}/lambdas/webhook_router.js"
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
 }
 
@@ -23,23 +8,22 @@ resource "aws_lambda_function" "runners_handler" {
   filename                       = data.archive_file.runners_handler.output_path
   function_name                  = local.webhook_handler_function_name
   role                           = aws_iam_role.lambda_runners_handler.arn
-  handler                        = "webhook_router.lambda_handler"
+  handler                        = "webhook_router.handler"
   source_code_hash               = data.archive_file.runners_handler.output_base64sha256
-  runtime                        = "python3.13"
+  runtime                        = "nodejs22.x"
   architectures                  = ["arm64"]
   timeout                        = local.lambda_timeout_seconds
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "GitHub webhook router for GitHub self-hosted runners"
-
+  layers                         = [aws_lambda_layer_version.runners_layer.arn]
 
   environment {
     variables = {
       API_BASE_URL             = "https://${local.api_fqdn}"
       API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      CLEANUP_QUEUE_URL        = aws_sqs_queue.cleanup_queue.url
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
-      ETC_PATH                 = "/var/task"
+      ETC_PATH                 = "/opt/nodejs/runners-layer"
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
@@ -105,13 +89,6 @@ resource "aws_lambda_event_source_mapping" "runners_handler_webhook_ingress" {
 
 resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
   event_source_arn                   = aws_sqs_queue.job_queue.arn
-  function_name                      = aws_lambda_function.runners_handler.arn
-  batch_size                         = 1
-  maximum_batching_window_in_seconds = 0
-}
-
-resource "aws_lambda_event_source_mapping" "runners_handler_cleanup_sqs" {
-  event_source_arn                   = aws_sqs_queue.cleanup_queue.arn
   function_name                      = aws_lambda_function.runners_handler.arn
   batch_size                         = 1
   maximum_batching_window_in_seconds = 0
@@ -354,7 +331,7 @@ resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
 
 data "archive_file" "drift_recovery" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/drift_recovery.py"
+  source_file = "${path.module}/lambdas/drift_recovery.js"
   output_path = "${path.module}/.terraform/lambda_packages/drift_recovery.zip"
 }
 
@@ -362,14 +339,14 @@ resource "aws_lambda_function" "drift_recovery" {
   filename         = data.archive_file.drift_recovery.output_path
   function_name    = local.drift_recovery_function_name
   role             = aws_iam_role.drift_recovery.arn
-  handler          = "drift_recovery.lambda_handler"
+  handler          = "drift_recovery.handler"
   source_code_hash = data.archive_file.drift_recovery.output_base64sha256
-  runtime          = "python3.13"
+  runtime          = "nodejs22.x"
   architectures    = ["arm64"]
   timeout          = 30
   memory_size      = 256
   description      = "Triggers API workflow when infrastructure drift is detected"
-
+  layers           = [aws_lambda_layer_version.runners_layer.arn]
 
   environment {
     variables = {
@@ -417,7 +394,7 @@ resource "aws_lambda_event_source_mapping" "drift_recovery_sqs" {
 
 data "archive_file" "spot_interruption_handler" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/spot_interruption_handler.py"
+  source_file = "${path.module}/lambdas/spot_interruption_handler.js"
   output_path = "${path.module}/.terraform/lambda_packages/spot_interruption_handler.zip"
 }
 
@@ -425,14 +402,14 @@ resource "aws_lambda_function" "spot_interruption_handler" {
   filename         = data.archive_file.spot_interruption_handler.output_path
   function_name    = local.spot_interruption_handler_function_name
   role             = aws_iam_role.spot_interruption_handler.arn
-  handler          = "spot_interruption_handler.lambda_handler"
+  handler          = "spot_interruption_handler.handler"
   source_code_hash = data.archive_file.spot_interruption_handler.output_base64sha256
-  runtime          = "python3.13"
+  runtime          = "nodejs22.x"
   architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
   description      = "Handles spot interruption events and launches replacement runners"
-
+  layers           = [aws_lambda_layer_version.runners_layer.arn]
 
   environment {
     variables = {
@@ -476,7 +453,7 @@ resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
 
 data "archive_file" "stale_runner_cleanup" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/stale_runner_cleanup.py"
+  source_file = "${path.module}/lambdas/stale_runner_cleanup.js"
   output_path = "${path.module}/.terraform/lambda_packages/stale_runner_cleanup.zip"
 }
 
@@ -484,14 +461,14 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
   filename         = data.archive_file.stale_runner_cleanup.output_path
   function_name    = local.stale_runner_cleanup_function_name
   role             = aws_iam_role.stale_runner_cleanup.arn
-  handler          = "stale_runner_cleanup.lambda_handler"
+  handler          = "stale_runner_cleanup.handler"
   source_code_hash = data.archive_file.stale_runner_cleanup.output_base64sha256
-  runtime          = "python3.13"
+  runtime          = "nodejs22.x"
   architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 256
   description      = "Cleans up stale runners from completed or failed workflows"
-
+  layers           = [aws_lambda_layer_version.runners_layer.arn]
 
   environment {
     variables = {

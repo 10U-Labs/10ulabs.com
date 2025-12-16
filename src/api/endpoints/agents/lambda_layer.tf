@@ -1,46 +1,52 @@
-# Lambda Layer for GitHub App Authentication
+# Lambda Layer for GitHub App Authentication and Agent Utilities
 #
-# Contains PyJWT and cryptography for GitHub App token generation.
-# Used by the agent webhook Lambda.
+# Contains jsonwebtoken and Bedrock Agent Runtime SDK for GitHub App token generation
+# and agent invocation. Used by agent Lambda handlers.
 
 locals {
-  lambda_layer_dir   = "${path.module}/.terraform/lambda_layer"
-  github_auth_script = "${path.module}/lambdas/layer/build.py"
-  github_auth_reqs   = "${path.module}/lambdas/layer/requirements.txt"
-  github_auth_module = "${path.module}/lambdas/layer/github_auth.py"
-  github_auth_zip    = "${local.lambda_layer_dir}/github_auth.zip"
+  lambda_layer_dir        = "${path.module}/.terraform/lambda_layer"
+  agents_layer_source_dir = "${path.module}/lambdas/layer"
+  agents_layer_zip        = "${local.lambda_layer_dir}/agents_layer.zip"
 
   # Hash of source files for layer versioning
-  github_auth_content_hash = base64sha256(join("", [
-    file(local.github_auth_reqs),
-    file(local.github_auth_module),
-    file(local.github_auth_script),
+  agents_layer_content_hash = base64sha256(join("", [
+    file("${local.agents_layer_source_dir}/package.json"),
+    file("${local.agents_layer_source_dir}/index.js"),
+    file("${local.agents_layer_source_dir}/github_app_auth.js"),
+    file("${local.agents_layer_source_dir}/agent_utils.js"),
   ]))
 }
 
-# Build the GitHub Auth layer zip
-resource "null_resource" "github_auth_layer_build" {
+# Build the agents layer zip
+resource "null_resource" "agents_layer_build" {
   triggers = {
-    content_hash = local.github_auth_content_hash
-    output_path  = local.github_auth_zip
+    content_hash = local.agents_layer_content_hash
+    output_path  = local.agents_layer_zip
   }
 
   provisioner "local-exec" {
-    command = "python3 ${local.github_auth_script} github_auth ${local.github_auth_reqs} ${local.github_auth_zip}"
+    working_dir = local.agents_layer_source_dir
+    command     = <<-EOT
+      rm -rf ${local.lambda_layer_dir}/nodejs
+      mkdir -p ${local.lambda_layer_dir}/nodejs/agents-layer
+      cp package.json index.js github_app_auth.js agent_utils.js ${local.lambda_layer_dir}/nodejs/agents-layer/
+      cd ${local.lambda_layer_dir}/nodejs/agents-layer && npm install --production
+      cd ${local.lambda_layer_dir} && zip -r ${local.agents_layer_zip} nodejs
+    EOT
   }
 }
 
-# GitHub Auth layer
+# Agents layer
 resource "aws_lambda_layer_version" "github_auth" {
-  filename                 = local.github_auth_zip
-  layer_name               = "${local.resource_prefix}GithubAuthLayer"
-  description              = "PyJWT and cryptography for GitHub App authentication"
-  compatible_runtimes      = ["python3.13", "python3.12", "python3.11"]
+  filename                 = local.agents_layer_zip
+  layer_name               = "${local.resource_prefix}AgentsLayer"
+  description              = "Node.js utilities for GitHub App authentication and agent invocation"
+  compatible_runtimes      = ["nodejs22.x", "nodejs20.x"]
   compatible_architectures = ["arm64"]
 
-  source_code_hash = local.github_auth_content_hash
+  source_code_hash = local.agents_layer_content_hash
 
-  depends_on = [null_resource.github_auth_layer_build]
+  depends_on = [null_resource.agents_layer_build]
 
   lifecycle {
     create_before_destroy = true

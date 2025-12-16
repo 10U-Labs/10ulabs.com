@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
-"""Entrypoint script for GitHub Actions self-hosted runner on Fargate."""
+"""Entrypoint script for GitHub Actions self-hosted runner on Fargate.
+
+Uses --ephemeral flag so runner auto-deregisters after one job.
+"""
 import argparse
 import signal
 import subprocess
 import sys
-
-
-def cleanup_runner(registration_token):
-    """Remove the GitHub Actions runner registration."""
-    print("Removing runner...")
-    subprocess.run(
-        ['./config.sh', 'remove', '--token', registration_token],
-        check=False
-    )
 
 
 def start_cloudwatch_agent():
@@ -63,7 +57,7 @@ def main():
 
     def signal_handler(_signum, _frame):
         stop_cloudwatch_agent()
-        cleanup_runner(registration_token)
+        # Runner auto-deregisters with --ephemeral, no manual cleanup needed
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
@@ -76,7 +70,8 @@ def main():
         '--name', runner_name,
         '--labels', runner_labels,
         '--work', '_work',
-        '--unattended'
+        '--unattended',
+        '--ephemeral'
     ], check=False)
 
     if config_result.returncode != 0:

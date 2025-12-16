@@ -72,7 +72,6 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
         ]
         Resource = [
           aws_sqs_queue.job_queue.arn,
-          aws_sqs_queue.cleanup_queue.arn,
           aws_sqs_queue.webhook_dlq.arn,
           aws_sqs_queue.ignored_events.arn,
         ]
@@ -87,7 +86,6 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
         Resource = [
           aws_sqs_queue.webhook_ingress.arn,
           aws_sqs_queue.job_queue.arn,
-          aws_sqs_queue.cleanup_queue.arn,
         ]
       }
     ]

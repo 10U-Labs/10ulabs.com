@@ -19,8 +19,6 @@ locals {
   webhook_ingress_dlq_name   = "${module.shared.lambda_handler_names.webhook}IngressDlq"
   job_queue_name             = "${module.shared.lambda_handler_names.webhook}Jobs"
   job_queue_dlq_name         = "${module.shared.lambda_handler_names.webhook}JobDlq"
-  cleanup_queue_name         = "${module.shared.lambda_handler_names.webhook}Cleanup"
-  cleanup_queue_dlq_name     = "${module.shared.lambda_handler_names.webhook}CleanupDlq"
   ignored_events_queue_name  = "${module.shared.lambda_handler_names.webhook}IgnoredEvents"
   ignored_events_dlq_name    = "${module.shared.lambda_handler_names.webhook}IgnoredEventsDlq"
   webhook_dlq_name           = "${module.shared.lambda_handler_names.webhook}Dlq"
