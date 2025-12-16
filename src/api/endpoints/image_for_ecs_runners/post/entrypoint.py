@@ -70,7 +70,11 @@ def main():
     def signal_handler(_signum, _frame):
         if state["process"] is not None:
             state["process"].terminate()
-            state["process"].wait()
+            try:
+                state["process"].wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                state["process"].kill()
+                state["process"].wait()
         stop_cloudwatch_agent()
         cleanup_runner(registration_token)
         sys.exit(0)
