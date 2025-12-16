@@ -1,36 +1,10 @@
 """
 E2E test configuration and utilities for ECS runner image lifecycle tests.
 """
-import json
 import subprocess
 import time
 import pytest
-
-
-@pytest.fixture(scope="module")
-def runner_registration_token(github_pat, github_repo):
-    """
-    Generate a GitHub Actions runner registration token.
-    """
-    result = subprocess.run(
-        [
-            "curl",
-            "-X", "POST",
-            "-H", f"Authorization: token {github_pat}",
-            "-H", "Accept: application/vnd.github.v3+json",
-            (f"https://api.github.com/repos/{github_repo}/"
-             "actions/runners/registration-token")
-        ],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    response = json.loads(result.stdout)
-    try:
-        token = response["token"]
-    except KeyError:
-        token = ""
-    return token
+from ..conftest import login_to_ecr, run_github_api_curl
 
 
 def start_runner_container(uri, repo, name, labels, token):
@@ -82,18 +56,12 @@ def get_github_runners(pat, repo):
     """
     Retrieve the list of GitHub Actions runners for a repository.
     """
-    result = subprocess.run(
-        [
-            "curl",
-            "-H", f"Authorization: token {pat}",
-            "-H", "Accept: application/vnd.github.v3+json",
-            f"https://api.github.com/repos/{repo}/actions/runners"
-        ],
-        check=False,
-        capture_output=True,
-        text=True
-    )
-    response = json.loads(result.stdout)
+    response = run_github_api_curl([
+        "curl",
+        "-H", f"Authorization: token {pat}",
+        "-H", "Accept: application/vnd.github.v3+json",
+        f"https://api.github.com/repos/{repo}/actions/runners"
+    ])
     try:
         runners = response["runners"]
     except KeyError:
@@ -169,3 +137,46 @@ def start_runner_and_get_info(config):
     return get_runner_and_cleanup(
         process, config["pat"], config["repo"], config["name"]
     )
+
+
+def create_shared_runner_context(image_uri, repo, token, region, pat):
+    """Create and return a shared runner context for tests."""
+    login_to_ecr(region)
+
+    runner_name = f"e2e-test-shared-{int(time.time())}"
+    labels = "e2e-label1,e2e-label2,e2e-label3"
+
+    process = start_runner_container(image_uri, repo, runner_name, labels, token)
+
+    time.sleep(30)
+
+    runners = get_github_runners(pat, repo)
+    runner_info = find_runner_by_name(runners, runner_name)
+
+    return {
+        "process": process,
+        "name": runner_name,
+        "labels": labels,
+        "info": runner_info,
+        "pat": pat,
+        "repo": repo
+    }
+
+
+@pytest.fixture(scope="module")
+def shared_runner(
+    ecr_image_uri,
+    github_repo,
+    runner_registration_token,
+    aws_region,
+    github_pat
+):
+    """Start a single runner container shared across basic tests."""
+    context = create_shared_runner_context(
+        ecr_image_uri, github_repo, runner_registration_token, aws_region, github_pat
+    )
+
+    yield context
+
+    context["process"].terminate()
+    wait_for_process_with_backoff(context["process"])

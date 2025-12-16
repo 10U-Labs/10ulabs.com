@@ -1,6 +1,4 @@
-"""
-E2E tests for GitHub Actions runner lifecycle management.
-"""
+"""E2E tests for runner lifecycle management."""
 import time
 from ..conftest import login_to_ecr
 from .conftest import (
@@ -18,9 +16,7 @@ def test_runner_cleanup_on_sigterm(
     aws_region,
     github_pat
 ):
-    """
-    Test that runner properly cleans up and deregisters on SIGTERM.
-    """
+    """Test that runner properly cleans up and deregisters on SIGTERM."""
     login_to_ecr(aws_region)
 
     runner_name = f"e2e-test-sigterm-{int(time.time())}"

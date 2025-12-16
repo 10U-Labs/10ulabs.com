@@ -1,4 +1,5 @@
 """Test fixtures for ECS runner image post-deployment tests."""
+import json
 import os
 import subprocess
 
@@ -161,3 +162,36 @@ def login_to_ecr(region):
         check=True,
         text=True
     )
+
+
+def run_github_api_curl(args):
+    """Run a curl command and return parsed JSON response."""
+    result = subprocess.run(
+        args,
+        check=False,
+        capture_output=True,
+        text=True
+    )
+    return json.loads(result.stdout)
+
+
+def get_runner_registration_token(pat, repo):
+    """Generate a GitHub Actions runner registration token."""
+    response = run_github_api_curl([
+        "curl",
+        "-X", "POST",
+        "-H", f"Authorization: token {pat}",
+        "-H", "Accept: application/vnd.github.v3+json",
+        f"https://api.github.com/repos/{repo}/actions/runners/registration-token"
+    ])
+    try:
+        token = response["token"]
+    except KeyError:
+        token = ""
+    return token
+
+
+@pytest.fixture(scope="module")
+def runner_registration_token(github_pat, github_repo):
+    """Fixture that generates a GitHub Actions runner registration token."""
+    return get_runner_registration_token(github_pat, github_repo)
