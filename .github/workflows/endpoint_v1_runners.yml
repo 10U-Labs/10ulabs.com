@@ -79,11 +79,19 @@ jobs:
         run: |
           python3 -m pip install pylint mypy yamllint pytest boto3 \
             boto3-stubs PyYAML types-PyYAML requests types-requests
+      - if: >-
+          vars.USE_GITHUB_HOSTED == 'true' ||
+          github.event.inputs.github_hosted == 'true' ||
+          contains(github.event.head_commit.message, '[github-hosted]')
+        name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Linting YAML files
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: disable'
+          LINE_LENGTH='line-length: {max: 120}'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
           RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
@@ -107,6 +115,14 @@ jobs:
             MYPYPATH=lib/python python3 -m mypy "$file"
           done
           MYPYPATH=lib/python python3 -m mypy test/api/endpoints/runners/
+      - name: Linting JavaScript files
+        run: |
+          cd src/api/endpoints/runners
+          npm install --save-dev @eslint/js eslint globals
+          npx eslint lambdas/
+          cd ../../../../test/api/endpoints/runners
+          npm ci
+          npm run lint
       - name: Terraform Format Check
         run: cd src/api/endpoints/runners && terraform fmt -diff -check -recursive
       - name: Terraform Init
@@ -117,10 +133,16 @@ jobs:
         run: cd src/api/endpoints/runners && tflint --init && tflint
       - name: Terraform Plan
         run: cd src/api/endpoints/runners && terraform plan
-      - name: Run unit tests
+      - name: Run Python unit tests
         run: |
           python3 -m pytest test/api/endpoints/runners/pre_deployment/unit/ \
+            --ignore=test/api/endpoints/runners/pre_deployment/unit/*.test.js \
             --confcutdir=test --verbose --pythonwarnings=error
+      - name: Run JavaScript unit tests
+        run: |
+          cd test/api/endpoints/runners
+          npm ci
+          npm test
       - name: Run pre-deployment integration tests
         run: |
           python3 -m pytest test/api/endpoints/runners/pre_deployment/integration/ \

@@ -1,13 +1,10 @@
 const crypto = require('crypto');
 const https = require('https');
 const {
-  getGitHubToken,
   getSSMClient,
   getDynamoDBClient,
   getSQSClient,
   getCloudWatchClient,
-  getECSClient,
-  getEC2Client,
   parseLabels,
   validateLabels,
   LabelParseError,
@@ -16,11 +13,9 @@ const {
   IngressHandler
 } = require('/opt/nodejs/runners-layer');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
-const { PutItemCommand, QueryCommand, DeleteItemCommand } = require('@aws-sdk/client-dynamodb');
+const { PutItemCommand } = require('@aws-sdk/client-dynamodb');
 const { SendMessageCommand, GetQueueAttributesCommand } = require('@aws-sdk/client-sqs');
 const { PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
-const { StopTaskCommand } = require('@aws-sdk/client-ecs');
-const { TerminateInstancesCommand } = require('@aws-sdk/client-ec2');
 
 const logger = {
   info: (...args) => console.log('[INFO]', ...args),
@@ -30,7 +25,6 @@ const logger = {
 
 const webhookSecretCache = { value: null };
 const apiKeyCache = { value: null };
-const githubTokenCache = { value: null };
 let testModeEnabled = false;
 
 const circuitBreakerState = {
@@ -192,170 +186,6 @@ async function enqueueIgnoredEvent(eventData, reason) {
     logger.error('Failed to enqueue ignored event:', err.message);
     return { success: false, error: err.message };
   }
-}
-
-async function getWorkflowRunners(runId) {
-  const tableName = process.env.WORKFLOW_RUNNERS_TABLE;
-  if (!tableName) {
-    return [];
-  }
-  try {
-    const response = await getDynamoDBClient().send(new QueryCommand({
-      TableName: tableName,
-      KeyConditionExpression: 'run_id = :rid',
-      ExpressionAttributeValues: { ':rid': { S: String(runId) } }
-    }));
-    return (response.Items || []).map(item => ({
-      run_id: item.run_id?.S,
-      runner_type: item.runner_type?.S,
-      resource_id: item.resource_id?.S,
-      runner_name: item.runner_name?.S || '',
-      github_repo: item.github_repo?.S || ''
-    }));
-  } catch (err) {
-    logger.error('Failed to get workflow runners:', err.message);
-    return [];
-  }
-}
-
-async function deleteWorkflowRunner(runId, runnerType) {
-  const tableName = process.env.WORKFLOW_RUNNERS_TABLE;
-  if (!tableName) {
-    return false;
-  }
-  try {
-    await getDynamoDBClient().send(new DeleteItemCommand({
-      TableName: tableName,
-      Key: {
-        run_id: { S: String(runId) },
-        runner_type: { S: runnerType }
-      }
-    }));
-    return true;
-  } catch (err) {
-    logger.error('Failed to delete workflow runner:', err.message);
-    return false;
-  }
-}
-
-function deleteGitHubRunner(githubToken, githubRepo, runnerName) {
-  return new Promise((resolve) => {
-    const options = {
-      hostname: 'api.github.com',
-      path: `/repos/${githubRepo}/actions/runners`,
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${githubToken}`,
-        'Accept': 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'WebhookRouter/1.0'
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => { data += chunk; });
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          logger.error('Failed to list runners for', runnerName);
-          return resolve(false);
-        }
-        const runners = JSON.parse(data).runners || [];
-        const runner = runners.find(r => r.name === runnerName);
-        if (!runner) {
-          logger.info('Runner', runnerName, 'not found in GitHub');
-          return resolve(true);
-        }
-
-        const deleteOpts = {
-          hostname: 'api.github.com',
-          path: `/repos/${githubRepo}/actions/runners/${runner.id}`,
-          method: 'DELETE',
-          headers: options.headers
-        };
-        const deleteReq = https.request(deleteOpts, (deleteRes) => {
-          if (deleteRes.statusCode === 204) {
-            logger.info('Deleted GitHub runner', runnerName, '(id=', runner.id, ')');
-            resolve(true);
-          } else {
-            logger.error('Failed to delete GitHub runner', runnerName);
-            resolve(false);
-          }
-        });
-        deleteReq.on('error', () => resolve(false));
-        deleteReq.end();
-      });
-    });
-    req.on('error', () => resolve(false));
-    req.end();
-  });
-}
-
-async function terminateEcsTask(taskArn) {
-  const cluster = process.env.ECS_CLUSTER;
-  if (!cluster) {
-    return false;
-  }
-  try {
-    await getECSClient().send(new StopTaskCommand({
-      cluster,
-      task: taskArn,
-      reason: 'Workflow completed'
-    }));
-    logger.info('Stopped ECS task:', taskArn);
-    return true;
-  } catch (err) {
-    logger.error('Failed to stop ECS task', taskArn, ':', err.message);
-    return false;
-  }
-}
-
-async function terminateEc2Instance(instanceId) {
-  try {
-    await getEC2Client().send(new TerminateInstancesCommand({
-      InstanceIds: [instanceId]
-    }));
-    logger.info('Terminated EC2 instance:', instanceId);
-    return true;
-  } catch (err) {
-    logger.error('Failed to terminate EC2 instance', instanceId, ':', err.message);
-    return false;
-  }
-}
-
-async function terminateRunnersForWorkflow(runId) {
-  const runners = await getWorkflowRunners(runId);
-  if (runners.length === 0) {
-    logger.info('No runners found for workflow run', runId);
-    return { terminated: 0, failed: 0 };
-  }
-
-  const githubToken = await getGitHubToken();
-  let terminated = 0;
-  let failed = 0;
-
-  for (const runner of runners) {
-    let success = false;
-    if (runner.runner_type.startsWith('ec2')) {
-      success = await terminateEc2Instance(runner.resource_id);
-    } else if (runner.runner_type.startsWith('fargate')) {
-      success = await terminateEcsTask(runner.resource_id);
-    }
-
-    if (success) {
-      terminated++;
-      await deleteWorkflowRunner(runId, runner.runner_type);
-      if (githubToken && runner.runner_name && runner.github_repo) {
-        await deleteGitHubRunner(githubToken, runner.github_repo, runner.runner_name);
-      }
-    } else {
-      failed++;
-    }
-  }
-
-  const result = { terminated, failed };
-  logger.info('Terminated runners for workflow', runId, ':', JSON.stringify(result));
-  return result;
 }
 
 function handleWorkflowRun(eventData) {

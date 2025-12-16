@@ -1,0 +1,24 @@
+{
+  "name": "runners-lambda-tests",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-ec2": "^3.0.0",
+    "@aws-sdk/client-ecs": "^3.0.0",
+    "@aws-sdk/client-sns": "^3.0.0",
+    "@aws-sdk/client-sqs": "^3.0.0",
+    "@aws-sdk/client-ssm": "^3.0.0",
+    "@eslint/js": "^9.32.0",
+    "aws-sdk-client-mock": "^4.0.0",
+    "eslint": "^9.32.0",
+    "globals": "^15.15.0",
+    "vitest": "^2.1.8"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
