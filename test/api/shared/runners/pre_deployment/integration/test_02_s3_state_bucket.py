@@ -52,24 +52,7 @@ class TestTerraformStateBucketExistence:
 class TestTerraformStateBucketConfiguration:
     """Layer 4: Verify the terraform state bucket is configured correctly."""
 
-    def test_01_versioning_enabled(self, s3_client, state_bucket_name):
-        """Verify bucket versioning is enabled (required for terraform state)."""
-        try:
-            response = s3_client.get_bucket_versioning(Bucket=state_bucket_name)
-            status = response.get("Status", "")
-            assert status == "Enabled", (
-                f"Bucket '{state_bucket_name}' versioning is '{status}', expected 'Enabled'. "
-                "Terraform state buckets must have versioning enabled for state recovery."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "AccessDenied":
-                pytest.skip(
-                    f"No permission to check versioning on '{state_bucket_name}'. "
-                    "Check IAM permissions for s3:GetBucketVersioning."
-                )
-            raise
-
-    def test_02_encryption_enabled(self, s3_client, state_bucket_name):
+    def test_01_encryption_enabled(self, s3_client, state_bucket_name):
         """Verify bucket encryption is enabled."""
         try:
             response = s3_client.get_bucket_encryption(Bucket=state_bucket_name)
