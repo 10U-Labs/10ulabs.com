@@ -36,6 +36,16 @@ def stop_cloudwatch_agent():
     )
 
 
+def cleanup_runner(token: str) -> None:
+    """Remove/deregister the runner from GitHub."""
+    print("Deregistering runner...")
+    subprocess.run(
+        ['./config.sh', '--remove', '--token', token],
+        check=False,
+        capture_output=True
+    )
+
+
 def main():
     """Main entry point for the runner script."""
     parser = argparse.ArgumentParser(description='GitHub Actions self-hosted runner for Fargate')
@@ -57,7 +67,7 @@ def main():
 
     def signal_handler(_signum, _frame):
         stop_cloudwatch_agent()
-        # Runner auto-deregisters with --ephemeral, no manual cleanup needed
+        cleanup_runner(registration_token)
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
