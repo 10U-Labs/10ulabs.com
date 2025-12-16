@@ -16,7 +16,9 @@ jobs:
           github.event.inputs.github_hosted == 'true' ||
           contains(github.event.head_commit.message, '[github-hosted]'))
         && 'ubuntu-latest'
-        || fromJSON(format('["ec2", "general-purpose", "arm", "spot", "runner-{0}"]', github.run_id))
+        || fromJSON(format(
+          '["ec2", "general-purpose", "arm", "spot", "runner-{0}"]',
+          github.run_id))
       }}
     steps:
       - name: Checkout code
@@ -29,13 +31,16 @@ jobs:
             | grep -v '\$' | cut -d'"' -f2)
           AWS_ACCOUNT_ID=$(grep 'aws_account_id' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          ECR_REPOSITORY_NAME=$(grep -A1 'output "ecr_repository_name_runners"' \
-            lib/terraform/modules/shared/outputs.tf | grep 'value' | cut -d'"' -f2)
+          ECR_REPOSITORY_NAME=$( \
+            grep -A1 'output "ecr_repository_name_runners"' \
+            lib/terraform/modules/shared/outputs.tf | \
+            grep 'value' | cut -d'"' -f2)
           FARGATE_CPU_ARCHITECTURE=$(grep 'fargate_cpu_architecture' \
             src/api/endpoints/ecs_runner/terraform.tfvars | \
             cut -d'"' -f2 | tr '[:upper:]' '[:lower:]')
           RESOURCE_PREFIX=$(grep 'resource_prefix' \
-            lib/terraform/modules/shared/locals.tf | grep -v '\$' | cut -d'"' -f2)
+            lib/terraform/modules/shared/locals.tf | \
+            grep -v '\$' | cut -d'"' -f2)
           GITHUB_ACTIONS_ROLE_SUFFIX=$(grep \
             'name_for_github_actions_role' src/bootstrap/locals.tf | \
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
@@ -79,10 +84,9 @@ jobs:
         run: |
           EMPTY_LINES='empty-lines: {max: 0, max-start: 0, max-end: 1}'
           KEY_ORDERING='key-ordering: enable'
-          LINE_LENGTH='line-length: disable'
           NEWLINE_AT_EOF='new-line-at-end-of-file: enable'
           TRUTHY='truthy: {allowed-values: ["true", "false", "on"]}'
-          RULES="$EMPTY_LINES, $KEY_ORDERING, $LINE_LENGTH"
+          RULES="$EMPTY_LINES, $KEY_ORDERING"
           RULES="$RULES, $NEWLINE_AT_EOF, $TRUTHY"
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
@@ -137,8 +141,8 @@ jobs:
             --ignore DL3015 --ignore DL3016 $DOCKERFILE
       - name: Run unit tests
         run: |
-          pytest test/api/endpoints/image_for_ecs_runners/post/pre_deployment/unit/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+          TEST=test/api/endpoints/image_for_ecs_runners/post/pre_deployment/unit/
+          pytest $TEST --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -150,7 +154,8 @@ jobs:
           terraform_wrapper: false
       - name: Run pre-deployment integration tests
         run: |
-          pytest test/api/endpoints/image_for_ecs_runners/post/pre_deployment/integration/ \
+          TEST=test/api/endpoints/image_for_ecs_runners/post/pre_deployment
+          pytest $TEST/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -250,7 +255,8 @@ jobs:
           echo "ecr_repository=$REPO" >> $GITHUB_OUTPUT
       - name: Run post-deployment integration tests
         run: |
-          pytest test/api/endpoints/image_for_ecs_runners/post/post_deployment/integration/ \
+          TEST=test/api/endpoints/image_for_ecs_runners/post/post_deployment
+          pytest $TEST/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
         run: |
@@ -264,14 +270,16 @@ jobs:
           echo "GITHUB_PAT=$GITHUB_PAT" >> $GITHUB_ENV
       - name: Run E2E tests
         run: |
-          pytest test/api/endpoints/image_for_ecs_runners/post/post_deployment/e2e/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+          TEST=test/api/endpoints/image_for_ecs_runners/post/post_deployment
+          pytest $TEST/e2e/ --confcutdir=test --verbose --pythonwarnings=error
       - name: Promote image
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post
           SCRIPT=$POST_DIR/promote_docker_image.py
           REPO='${{ steps.config.outputs.ecr_repository_name }}'
-          TAG='${{ steps.build.outputs.image_tag || steps.build-ec2.outputs.image_tag }}'
+          BUILD_TAG='${{ steps.build.outputs.image_tag }}'
+          EC2_TAG='${{ steps.build-ec2.outputs.image_tag }}'
+          TAG="${BUILD_TAG:-$EC2_TAG}"
           REGION='${{ steps.config.outputs.aws_region }}'
           python3 $SCRIPT \
             --repository "$REPO" \
