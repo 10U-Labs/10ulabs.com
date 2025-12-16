@@ -3,7 +3,6 @@ import importlib.util
 import os
 import re
 import sys
-
 from test.api.endpoints.image_for_ecs_runners.conftest import (
     BASE_DIR,
     FILES_DIR,

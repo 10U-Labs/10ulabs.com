@@ -4,19 +4,35 @@ import entrypoint
 
 
 @patch('entrypoint.subprocess.run')
-def test_cleanup_runner_calls_config_remove(mock_run):
-    """Test that cleanup_runner calls config.sh --remove."""
+def test_cleanup_runner_calls_subprocess_run(mock_run):
+    """Test that cleanup_runner calls subprocess.run."""
     entrypoint.cleanup_runner('test-token')
     mock_run.assert_called_once()
-    call_args = mock_run.call_args[0][0]
-    assert './config.sh' in call_args
-    assert '--remove' in call_args
 
 
 @patch('entrypoint.subprocess.run')
-def test_cleanup_runner_passes_token(mock_run):
-    """Test that cleanup_runner passes the token to config.sh."""
+def test_cleanup_runner_calls_config_sh(mock_run):
+    """Test that cleanup_runner calls config.sh."""
+    entrypoint.cleanup_runner('test-token')
+    assert './config.sh' in mock_run.call_args[0][0]
+
+
+@patch('entrypoint.subprocess.run')
+def test_cleanup_runner_passes_remove_flag(mock_run):
+    """Test that cleanup_runner passes --remove flag."""
+    entrypoint.cleanup_runner('test-token')
+    assert '--remove' in mock_run.call_args[0][0]
+
+
+@patch('entrypoint.subprocess.run')
+def test_cleanup_runner_passes_token_flag(mock_run):
+    """Test that cleanup_runner passes --token flag."""
     entrypoint.cleanup_runner('my-secret-token')
-    call_args = mock_run.call_args[0][0]
-    assert '--token' in call_args
-    assert 'my-secret-token' in call_args
+    assert '--token' in mock_run.call_args[0][0]
+
+
+@patch('entrypoint.subprocess.run')
+def test_cleanup_runner_passes_token_value(mock_run):
+    """Test that cleanup_runner passes the token value."""
+    entrypoint.cleanup_runner('my-secret-token')
+    assert 'my-secret-token' in mock_run.call_args[0][0]

@@ -65,7 +65,12 @@ def main():
     print(f"Runner Name: {runner_name}")
     print(f"Labels: {runner_labels}")
 
+    state = {"process": None}
+
     def signal_handler(_signum, _frame):
+        if state["process"] is not None:
+            state["process"].terminate()
+            state["process"].wait()
         stop_cloudwatch_agent()
         cleanup_runner(registration_token)
         sys.exit(0)
@@ -91,12 +96,14 @@ def main():
     start_cloudwatch_agent()
 
     print("Starting runner...")
-    run_result = subprocess.run(['./run.sh'], check=False)
+    with subprocess.Popen(['./run.sh']) as process:
+        state["process"] = process
+        returncode = process.wait()
 
     stop_cloudwatch_agent()
 
-    print(f"Runner exited with code {run_result.returncode}")
-    sys.exit(run_result.returncode)
+    print(f"Runner exited with code {returncode}")
+    sys.exit(returncode)
 
 
 if __name__ == '__main__':

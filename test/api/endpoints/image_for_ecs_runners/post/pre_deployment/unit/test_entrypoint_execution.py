@@ -4,6 +4,15 @@ import entrypoint
 import pytest
 
 
+def _setup_popen_mock(mock_popen, returncode=0):
+    """Configure Popen mock for execution flow tests - validates run.sh behavior."""
+    exec_process = Mock()
+    exec_process.wait.return_value = returncode
+    mock_popen.return_value.__enter__ = Mock(return_value=exec_process)
+    mock_popen.return_value.__exit__ = Mock(return_value=False)
+    return exec_process
+
+
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
@@ -17,49 +26,49 @@ def test_main_exits_with_code_1_when_config_fails(mock_run):
     assert exc_info.value.code == 1
 
 
+@patch('entrypoint.subprocess.Popen')
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_run_sh_called_after_successful_configuration(mock_run):
+def test_run_sh_called_after_successful_configuration(mock_run, mock_popen):
     """Test that run.sh is called after successful configuration."""
     mock_run.return_value = Mock(returncode=0)
+    _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    run_sh_calls = [
-        c for c in mock_run.call_args_list if c[0][0] == ['./run.sh']
-    ]
-    assert len(run_sh_calls) == 1
+    mock_popen.assert_called_once_with(['./run.sh'])
 
 
+@patch('entrypoint.subprocess.Popen')
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_main_exits_with_run_sh_return_code(mock_run):
+def test_main_exits_with_run_sh_return_code(mock_run, mock_popen):
     """Test that main exits with run.sh return code."""
-    mock_run.side_effect = [
-        Mock(returncode=0), Mock(returncode=0),
-        Mock(returncode=42), Mock(returncode=0)
-    ]
+    mock_run.return_value = Mock(returncode=0)
+    _setup_popen_mock(mock_popen, returncode=42)
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
     assert exc_info.value.code == 42
 
 
+@patch('entrypoint.subprocess.Popen')
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_run_sh_uses_check_false_parameter(mock_run):
-    """Test that run.sh uses check=False parameter."""
+def test_run_sh_uses_popen(mock_run, mock_popen):
+    """Test that run.sh uses Popen for execution."""
     mock_run.return_value = Mock(returncode=0)
+    _setup_popen_mock(mock_popen)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_args_list[1][1]['check'] is False
+    mock_popen.assert_called_once()
 
 
 @patch('entrypoint.subprocess.run')
@@ -75,14 +84,15 @@ def test_config_sh_returns_non_zero_exit_code(mock_run):
     assert exc_info.value.code == 1
 
 
+@patch('entrypoint.subprocess.Popen')
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_run_sh_not_called_when_config_fails(mock_run):
+def test_run_sh_not_called_when_config_fails(mock_run, mock_popen):
     """Test that run.sh is not called when config fails."""
     mock_run.return_value = Mock(returncode=1)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_run.call_count == 1
+    mock_popen.assert_not_called()
