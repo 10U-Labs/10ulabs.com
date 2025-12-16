@@ -25,6 +25,7 @@ class LaunchOptions:
     max_retries: int = 2
     wait_for_ready: bool = True
     excluded_azs: list[str] = field(default_factory=list)
+    use_spot: bool = True
 
 
 def get_subnet_az(ec2_client: Any, subnet_id: str) -> str:
@@ -107,14 +108,14 @@ def create_fleet_instance(
 ) -> str:
     """Create an EC2 instance using fleet API with the specified template."""
     overrides = _build_fleet_overrides(options)
-    response = ec2_client.create_fleet(
-        Type="instant",
-        TargetCapacitySpecification={
+    capacity_type = "spot" if options.use_spot else "on-demand"
+    fleet_params: dict[str, Any] = {
+        "Type": "instant",
+        "TargetCapacitySpecification": {
             "TotalTargetCapacity": 1,
-            "DefaultTargetCapacityType": "on-demand",
+            "DefaultTargetCapacityType": capacity_type,
         },
-        OnDemandOptions={"AllocationStrategy": options.allocation_strategy},
-        LaunchTemplateConfigs=[
+        "LaunchTemplateConfigs": [
             {
                 "LaunchTemplateSpecification": {
                     "LaunchTemplateId": template_id,
@@ -123,7 +124,12 @@ def create_fleet_instance(
                 "Overrides": overrides,
             }
         ],
-    )
+    }
+    if options.use_spot:
+        fleet_params["SpotOptions"] = {"AllocationStrategy": options.allocation_strategy}
+    else:
+        fleet_params["OnDemandOptions"] = {"AllocationStrategy": options.allocation_strategy}
+    response = ec2_client.create_fleet(**fleet_params)
     return _extract_instance_id(response)
 
 
@@ -270,6 +276,7 @@ def _attempt_launch(
         instance_types=options.instance_types,
         subnet_ids=available_subnets,
         allocation_strategy=options.allocation_strategy,
+        use_spot=options.use_spot,
     )
     current_instance_id = ""
     try:
