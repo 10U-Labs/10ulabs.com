@@ -76,10 +76,14 @@ def main():
         if state["process"] is not None:
             state["process"].terminate()
             try:
-                state["process"].wait(timeout=5)
+                state["process"].wait(timeout=3)
             except subprocess.TimeoutExpired:
+                print("Runner did not exit, sending SIGKILL...", flush=True)
                 state["process"].kill()
-                state["process"].wait()
+                try:
+                    state["process"].wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    print("Runner still not dead after SIGKILL", flush=True)
         stop_cloudwatch_agent()
         print("Shutdown complete", flush=True)
         sys.exit(0)
