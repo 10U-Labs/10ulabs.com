@@ -12,7 +12,7 @@ def start_runner_container(uri, repo, name, labels, token):
     Start a GitHub Actions runner container with specified configuration.
     """
     args = [
-        "docker", "run", "--rm",
+        "docker", "run", "--rm", "--init",
         "--platform", "linux/arm64",
         uri,
         "--repo", repo,
