@@ -27,6 +27,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from workflow_utils import get_all_descendants
+
+
 def load_dependency_graph(graph_path: Path) -> dict[str, Any]:
     """Load the workflow dependency graph from JSON file."""
     with open(graph_path, encoding="utf-8") as file:
@@ -66,33 +69,6 @@ def get_all_ancestors(
 
     cache[workflow] = ancestors
     return ancestors
-
-
-def get_all_descendants(
-    workflow: str, graph: dict[str, Any], cache: dict[str, set[str]] | None = None
-) -> set[str]:
-    """
-    Get all descendants (workflows that depend on this one) of a workflow.
-
-    Returns a set of workflow keys that depend on this workflow,
-    including indirect dependents.
-    """
-    if cache is None:
-        cache = {}
-
-    if workflow in cache:
-        return cache[workflow]
-
-    descendants: set[str] = set()
-
-    # Find all workflows that directly depend on this one
-    for wf_key, wf_config in graph.items():
-        if workflow in wf_config.get("depends_on", []):
-            descendants.add(wf_key)
-            descendants.update(get_all_descendants(wf_key, graph, cache))
-
-    cache[workflow] = descendants
-    return descendants
 
 
 def _insert_sorted(queue: list[str], item: str) -> None:

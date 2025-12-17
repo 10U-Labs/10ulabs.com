@@ -59,7 +59,9 @@ jobs:
           echo "Event before: ${{ github.event.before }}"
           echo "Current SHA: ${{ github.sha }}"
           # More robust base commit detection
-          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+          BEFORE="${{ github.event.before }}"
+          ZERO="0000000000000000000000000000000000000000"
+          if [ "$BEFORE" = "$ZERO" ]; then
             # Initial commit or force push
             BASE="HEAD~1"
             echo "Using HEAD~1 for initial/force push"
@@ -72,11 +74,12 @@ jobs:
             echo "Fallback to HEAD~1 due to missing commit"
           fi
           # Get changed files with error handling
-          if CHANGED=$(git diff --name-only "$BASE" "${{ github.sha }}" 2>/dev/null); then
+          SHA="${{ github.sha }}"
+          if CHANGED=$(git diff --name-only "$BASE" "$SHA" 2>/dev/null); then
             echo "Successfully got changed files using git diff"
           else
             echo "Warning: git diff failed, using git show for current commit"
-            CHANGED=$(git show --name-only --format="" "${{ github.sha }}" || echo "")
+            CHANGED=$(git show --name-only --format="" "$SHA" || echo "")
           fi
           echo "Changed files:"
           echo "$CHANGED"
@@ -191,8 +194,7 @@ jobs:
             scripts/get_running_workflows.py \
             scripts/workflow_utils.py \
             --fail-on=C,R,W \
-            --fail-under=10.0 \
-            --disable=R0801
+            --fail-under=10.0
           echo "Pylint completed"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
@@ -233,15 +235,16 @@ jobs:
           START_FROM="${{ inputs.start_from }}"
           if [ -n "$START_FROM" ]; then
             echo "Manual trigger: starting from '$START_FROM'"
-            # Support comma-separated workflows (trim spaces, convert to newlines)
-            ROOTS=$(echo "$START_FROM" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            # Support comma-separated workflows (trim spaces, newlines)
+            SED_TRIM='s/^[[:space:]]*//;s/[[:space:]]*$//'
+            ROOTS=$(echo "$START_FROM" | tr ',' '\n' | sed "$SED_TRIM")
           else
             CHANGED="${{ steps.files.outputs.changed }}"
-            RUNNING="${{ steps.running.outputs.workflows }}"
+            RUNNING='${{ steps.running.outputs.workflows }}'
             echo "Changed files for workflow computation:"
             echo "$CHANGED"
             echo "Running workflows to merge with: $RUNNING"
-            # Get all level-1 workflows (independent roots), merging with running workflows
+            # Get level-1 workflows (independent roots), merge with running
             JQ='[.[] | select(.level == 1) | .name] | join("\n")'
             ROOTS=$(echo "$CHANGED" | \
               python3 scripts/compute_root_workflows.py \
@@ -281,7 +284,8 @@ jobs:
           echo "Canceling workflows that will be re-run from merge roots..."
           ROOTS="${{ steps.plan.outputs.root_workflows }}"
           # Convert newline-separated roots to JSON array
-          ROOTS_JSON=$(echo "$ROOTS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          JQ_FILTER='split("\n") | map(select(length > 0))'
+          ROOTS_JSON=$(echo "$ROOTS" | jq -R -s -c "$JQ_FILTER")
           echo "Merge roots: $ROOTS_JSON"
           python3 scripts/cancel_workflows.py \
             --repo ${{ github.repository }} \
@@ -306,14 +310,14 @@ jobs:
             echo "GH_TOKEN length: ${#GH_TOKEN}"
             exit 1
           fi
-          # Check for skip_descendants input or [skip descendants] in commit message
+          # Check for skip_descendants input or [skip descendants]
           SKIP_DESCENDANTS=""
           if [ "${{ inputs.skip_descendants }}" = "true" ]; then
             echo "skip_descendants input is true"
             SKIP_DESCENDANTS="-f skip_descendants=true"
           else
-            # Use heredoc with single-quoted delimiter to prevent bash interpretation
-            # of ${...} patterns that may appear in commit messages
+            # Heredoc with single-quoted delimiter prevents bash
+            # interpreting ${...} patterns in commit messages
             COMMIT_MSG=$(cat <<'COMMIT_EOF'
           ${{ github.event.head_commit.message }}
           COMMIT_EOF
@@ -334,10 +338,13 @@ jobs:
                 continue
               fi
               # Dispatch with error handling (include skip flag if set)
+              REPO="${{ github.repository }}"
               if [ -n "$SKIP_DESCENDANTS" ]; then
-                gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }} -f skip_descendants=true && RESULT=0 || RESULT=1
+                gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
+                  -f skip_descendants=true && RESULT=0 || RESULT=1
               else
-                gh workflow run "$WORKFLOW_FILE" --repo ${{ github.repository }} && RESULT=0 || RESULT=1
+                gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
+                  && RESULT=0 || RESULT=1
               fi
               if [ "$RESULT" -eq 0 ]; then
                 echo "  ✓ Successfully dispatched ${WORKFLOW}.yml"
@@ -350,9 +357,9 @@ jobs:
           echo "Workflow dispatch completed"
           echo "Successfully dispatched $DISPATCH_COUNT workflow(s)"
           if [ -n "$SKIP_DESCENDANTS" ]; then
-            echo "Note: Descendants will be skipped due to [skip descendants]"
+            echo "Note: Descendants skipped due to [skip descendants]"
           else
-            echo "Descendants will be triggered by each workflow's dispatch step"
+            echo "Descendants triggered by each workflow's dispatch step"
           fi
 name: Workflow Orchestrator
 on:
@@ -382,7 +389,7 @@ on:
         required: false
         type: string
       start_from:
-        description: 'Workflow(s) to start from, comma-separated (e.g., "health, bootstrap")'
+        description: 'Workflow(s) to start from (e.g., "health, bootstrap")'
         type: string
 permissions:
   actions: write

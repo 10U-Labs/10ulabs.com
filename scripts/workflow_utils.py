@@ -4,9 +4,37 @@
 This module provides common functions used across multiple orchestration scripts
 to avoid code duplication.
 """
+import argparse
 import json
 import subprocess
 from typing import Any
+
+
+def create_base_parser(description: str) -> argparse.ArgumentParser:
+    """Create a base argument parser with common --repo and --graph args."""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--repo",
+        required=True,
+        help="The GitHub repository (e.g., 'owner/repo')"
+    )
+    parser.add_argument(
+        "--graph",
+        default="etc/workflow-dependencies.json",
+        help="Path to the workflow dependency graph file"
+    )
+    return parser
+
+
+def load_graph_with_error(graph_path: str) -> tuple[dict[str, Any] | None, str]:
+    """Load dependency graph, returning (graph, error_message).
+
+    Returns (graph, "") on success, (None, error_message) on failure.
+    """
+    try:
+        return load_dependency_graph(graph_path), ""
+    except FileNotFoundError:
+        return None, f"Error: Graph file not found: {graph_path}"
 
 
 def load_dependency_graph(graph_path: str) -> dict[str, Any]:

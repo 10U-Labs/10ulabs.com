@@ -23,31 +23,20 @@ from typing import Any
 
 from workflow_utils import (
     build_name_to_key_map,
+    create_base_parser,
     get_all_descendants,
     get_workflow_runs,
-    load_dependency_graph,
+    load_graph_with_error,
 )
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Cancel superseded workflow runs"
-    )
-    parser.add_argument(
-        "--repo",
-        required=True,
-        help="The GitHub repository (e.g., 'owner/repo')"
-    )
+    parser = create_base_parser("Cancel superseded workflow runs")
     parser.add_argument(
         "--merge-roots",
         required=True,
         help="JSON array of merge root workflow keys"
-    )
-    parser.add_argument(
-        "--graph",
-        default="etc/workflow-dependencies.json",
-        help="Path to the workflow dependency graph file"
     )
     parser.add_argument(
         "--dry-run",
@@ -120,10 +109,9 @@ def main() -> int:
         return 0
 
     # Load dependency graph
-    try:
-        graph = load_dependency_graph(args.graph)
-    except FileNotFoundError:
-        print(f"Error: Graph file not found: {args.graph}", file=sys.stderr)
+    graph, error = load_graph_with_error(args.graph)
+    if graph is None:
+        print(error, file=sys.stderr)
         return 1
 
     # Get workflows to cancel (merge roots + all descendants)
@@ -133,19 +121,12 @@ def main() -> int:
     # Build name-to-key mapping
     name_to_key = build_name_to_key_map(graph)
 
-    # Get cancelable runs
-    in_progress = get_cancelable_runs(args.repo, "in_progress")
-    queued = get_cancelable_runs(args.repo, "queued")
-    all_runs = in_progress + queued
-
-    # Filter to runs that should be canceled
-    runs_to_cancel: list[dict[str, Any]] = []
-    for run in all_runs:
-        name = run.get("name", "")
-        if name in name_to_key:
-            key = name_to_key[name]
-            if key in workflows_to_cancel:
-                runs_to_cancel.append(run)
+    # Get cancelable runs and filter to ones that should be canceled
+    runs_to_cancel: list[dict[str, Any]] = [
+        run for run in (get_cancelable_runs(args.repo, "in_progress") +
+                        get_cancelable_runs(args.repo, "queued"))
+        if name_to_key.get(run.get("name", "")) in workflows_to_cancel
+    ]
 
     if not runs_to_cancel:
         print("No runs to cancel")

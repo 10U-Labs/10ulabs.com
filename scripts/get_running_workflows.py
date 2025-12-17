@@ -17,25 +17,16 @@ import sys
 
 from workflow_utils import (
     build_name_to_key_map,
+    create_base_parser,
     get_workflow_runs,
-    load_dependency_graph,
+    load_graph_with_error,
 )
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Get currently running workflows from GitHub Actions"
-    )
-    parser.add_argument(
-        "--repo",
-        required=True,
-        help="The GitHub repository (e.g., 'owner/repo')"
-    )
-    parser.add_argument(
-        "--graph",
-        default="etc/workflow-dependencies.json",
-        help="Path to the workflow dependency graph file"
+    parser = create_base_parser(
+        "Get currently running workflows from GitHub Actions"
     )
     parser.add_argument(
         "--exclude-orchestrator",
@@ -51,10 +42,9 @@ def main() -> int:
     args = parse_args()
 
     # Load dependency graph
-    try:
-        graph = load_dependency_graph(args.graph)
-    except FileNotFoundError:
-        print(f"Error: Graph file not found: {args.graph}", file=sys.stderr)
+    graph, error = load_graph_with_error(args.graph)
+    if graph is None:
+        print(error, file=sys.stderr)
         return 1
 
     # Build name-to-key mapping
