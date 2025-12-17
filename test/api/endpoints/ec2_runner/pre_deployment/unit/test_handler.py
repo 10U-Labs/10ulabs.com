@@ -383,3 +383,10 @@ def test_create_ec2_user_data_cloudwatch_uses_config_file(ec2_runner_handler):
     result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
     contains_config_path = 'amazon-cloudwatch-agent.json' in result
     assert contains_config_path
+
+
+def test_create_ec2_user_data_cloudwatch_conditional_on_config(ec2_runner_handler):
+    """Test that CloudWatch agent startup is conditional on config existing."""
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    has_conditional_check = 'if [ -f "$CW_CONFIG" ]' in result
+    assert has_conditional_check

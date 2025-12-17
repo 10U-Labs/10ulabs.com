@@ -479,10 +479,12 @@ umount /mnt
 mount "$INSTANCE_STORE" /home/github-runner
 chown -R github-runner:github-runner /home/github-runner
 
-# Start CloudWatch agent for memory metrics
-/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
-    -a fetch-config -m ec2 \
-    -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+# Start CloudWatch agent for memory metrics (if config exists)
+CW_CONFIG=/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+if [ -f "$CW_CONFIG" ]; then
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+        -a fetch-config -m ec2 -c file:$CW_CONFIG -s
+fi
 
 cd /home/github-runner/actions-runner
 
