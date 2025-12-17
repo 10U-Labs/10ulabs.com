@@ -33,6 +33,42 @@ def test_ec2_runner_self_terminate_policy_exists():
     assert 'resource "aws_iam_role_policy" "ec2_runner_self_terminate"' in content
 
 
+def test_ec2_runner_cloudwatch_logs_policy_exists():
+    """Test that EC2 runner CloudWatch Logs policy is defined."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert 'resource "aws_iam_role_policy" "ec2_runner_cloudwatch_logs"' in content
+
+
+def test_ec2_runner_cloudwatch_logs_policy_has_create_log_group():
+    """Test that CloudWatch Logs policy has CreateLogGroup action."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "logs:CreateLogGroup" in content
+
+
+def test_ec2_runner_cloudwatch_logs_policy_has_create_log_stream():
+    """Test that CloudWatch Logs policy has CreateLogStream action."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "logs:CreateLogStream" in content
+
+
+def test_ec2_runner_cloudwatch_logs_policy_has_put_log_events():
+    """Test that CloudWatch Logs policy has PutLogEvents action."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "logs:PutLogEvents" in content
+
+
+def test_ec2_runner_cloudwatch_logs_policy_has_describe_log_streams():
+    """Test that CloudWatch Logs policy has DescribeLogStreams action."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "logs:DescribeLogStreams" in content
+
+
+def test_ec2_runner_cloudwatch_logs_policy_targets_github_runner_diag():
+    """Test that CloudWatch Logs policy targets github-runner/diag log group."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "/github-runner/diag" in content
+
+
 def test_ec2_instance_profile_exists():
     """Test that EC2 instance profile is defined."""
     content = IAM_FILE.read_text(encoding="utf-8")

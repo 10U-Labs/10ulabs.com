@@ -55,6 +55,27 @@ resource "aws_iam_role_policy" "ec2_runner_self_terminate" {
   })
 }
 
+resource "aws_iam_role_policy" "ec2_runner_cloudwatch_logs" {
+  name = "CloudWatchLogsAccess"
+  role = aws_iam_role.ec2_runner.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams"
+      ]
+      Resource = [
+        "arn:aws:logs:${module.shared.aws_region}:${module.shared.aws_account_id}:log-group:/github-runner/diag:*"
+      ]
+    }]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2_runner" {
   name = "GitHubSelfHostedRunnerInstanceProfile"
   role = aws_iam_role.ec2_runner.name

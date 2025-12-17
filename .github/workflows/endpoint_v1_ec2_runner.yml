@@ -104,7 +104,9 @@ jobs:
           MYPYPATH=lib/python python3 -m mypy --explicit-package-bases \
             test/api/endpoints/ec2_runner/
       - name: Terraform Format Check
-        run: cd src/api/endpoints/ec2_runner && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/endpoints/ec2_runner
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/endpoints/ec2_runner && terraform init
       - env:
@@ -120,14 +122,18 @@ jobs:
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest test/api/endpoints/ec2_runner/pre_deployment/integration/ \
-            --capture=no --confcutdir=test --verbose --pythonwarnings=error
+          TEST=test/api/endpoints/ec2_runner/pre_deployment/integration/
+          python3 -m pytest $TEST \
+            --capture=no --confcutdir=test \
+            --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/ec2_runner && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest test/api/endpoints/ec2_runner/post_deployment/integration/ \
-            --confcutdir=test --verbose --pythonwarnings=error
+          TEST=test/api/endpoints/ec2_runner/post_deployment/integration/
+          python3 -m pytest $TEST \
+            --confcutdir=test \
+            --verbose --pythonwarnings=error
       - env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         name: Run E2E tests
