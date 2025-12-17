@@ -33,4 +33,8 @@ def test_runner_graceful_shutdown_on_sigterm(
 
     exited_gracefully = container.stop(timeout=10)
 
+    if not exited_gracefully:
+        output = container.get_output()
+        print(f"Container output:\n{output}")
+
     assert exited_gracefully, "Container did not respond to SIGTERM within timeout"

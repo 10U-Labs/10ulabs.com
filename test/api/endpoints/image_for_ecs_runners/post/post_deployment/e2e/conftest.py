@@ -46,6 +46,12 @@ class RunnerContainer:
         elapsed = time.time() - start
         return elapsed < timeout
 
+    def get_output(self):
+        """Get any captured output from the container."""
+        if self._process.stdout:
+            return self._process.stdout.read().decode('utf-8', errors='replace')
+        return ""
+
     def is_running(self):
         """Check if the container process is still running."""
         return self._process.poll() is None
@@ -54,7 +60,7 @@ class RunnerContainer:
 def _create_background_process(args):
     """Create a background process. Caller is responsible for cleanup."""
     return subprocess.Popen(
-        args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True
+        args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True
     )
 
 
