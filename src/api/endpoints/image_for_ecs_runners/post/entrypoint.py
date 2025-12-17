@@ -11,7 +11,7 @@ import sys
 
 def start_cloudwatch_agent():
     """Start the CloudWatch agent for log collection."""
-    print("Starting CloudWatch agent...")
+    print("Starting CloudWatch agent...", flush=True)
     result = subprocess.run(
         ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
          '-a', 'fetch-config', '-m', 'ec2', '-s',
@@ -21,9 +21,9 @@ def start_cloudwatch_agent():
         text=True
     )
     if result.returncode != 0:
-        print(f"Warning: CloudWatch agent failed to start: {result.stderr}")
+        print(f"Warning: CloudWatch agent failed to start: {result.stderr}", flush=True)
     else:
-        print("CloudWatch agent started successfully")
+        print("CloudWatch agent started successfully", flush=True)
 
 
 def stop_cloudwatch_agent():
@@ -42,7 +42,7 @@ def stop_cloudwatch_agent():
 
 def cleanup_runner(token: str) -> None:
     """Remove/deregister the runner from GitHub."""
-    print("Deregistering runner...")
+    print("Deregistering runner...", flush=True)
     subprocess.run(
         ['./config.sh', '--remove', '--token', token],
         check=False,
@@ -64,15 +64,15 @@ def main():
     runner_labels = args.labels
     registration_token = args.token
 
-    print("Registering GitHub Actions runner...")
-    print(f"Repository: {repo}")
-    print(f"Runner Name: {runner_name}")
-    print(f"Labels: {runner_labels}")
+    print("Registering GitHub Actions runner...", flush=True)
+    print(f"Repository: {repo}", flush=True)
+    print(f"Runner Name: {runner_name}", flush=True)
+    print(f"Labels: {runner_labels}", flush=True)
 
     state = {"process": None}
 
     def signal_handler(_signum, _frame):
-        print("Received shutdown signal, cleaning up...")
+        print("Received shutdown signal, cleaning up...", flush=True)
         if state["process"] is not None:
             state["process"].terminate()
             try:
@@ -81,7 +81,7 @@ def main():
                 state["process"].kill()
                 state["process"].wait()
         stop_cloudwatch_agent()
-        print("Shutdown complete")
+        print("Shutdown complete", flush=True)
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
@@ -99,19 +99,19 @@ def main():
     ], check=False)
 
     if config_result.returncode != 0:
-        print(f"Error: config.sh failed with exit code {config_result.returncode}")
+        print(f"Error: config.sh failed with exit code {config_result.returncode}", flush=True)
         sys.exit(1)
 
     start_cloudwatch_agent()
 
-    print("Starting runner...")
+    print("Starting runner...", flush=True)
     with subprocess.Popen(['./run.sh']) as process:
         state["process"] = process
         returncode = process.wait()
 
     stop_cloudwatch_agent()
 
-    print(f"Runner exited with code {returncode}")
+    print(f"Runner exited with code {returncode}", flush=True)
     sys.exit(returncode)
 
 
