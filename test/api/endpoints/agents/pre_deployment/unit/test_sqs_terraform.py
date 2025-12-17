@@ -81,3 +81,36 @@ def test_scanner_queue_policy_exists():
     with open(sqs_file, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_sqs_queue_policy" "scanner_eventbridge"' in content
+
+
+def test_webhook_queue_has_fifo_attribute():
+    """Verify webhook ingress queue has fifo_queue attribute."""
+    sqs_file = AGENTS_SRC / "sqs.tf"
+    with open(sqs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "fifo_queue" in content
+
+
+def test_webhook_queue_name_ends_with_fifo():
+    """Verify webhook queue name ends with .fifo suffix."""
+    sqs_file = AGENTS_SRC / "sqs.tf"
+    with open(sqs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "${local.webhook_queue_name}.fifo" in content
+
+
+def test_webhook_queue_has_content_deduplication():
+    """Verify webhook queue has content-based deduplication enabled."""
+    sqs_file = AGENTS_SRC / "sqs.tf"
+    with open(sqs_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "content_based_deduplication" in content
+
+
+def test_webhook_dlq_is_fifo():
+    """Verify webhook DLQ is also configured as FIFO (required for FIFO source)."""
+    sqs_file = AGENTS_SRC / "sqs.tf"
+    with open(sqs_file, encoding="utf-8") as f:
+        content = f.read()
+    # DLQ must also be FIFO when main queue is FIFO (using variable interpolation)
+    assert "${local.webhook_queue_name}-dlq.fifo" in content

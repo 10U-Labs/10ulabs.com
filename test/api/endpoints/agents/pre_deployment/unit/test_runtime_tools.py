@@ -126,3 +126,43 @@ class TestToolsIntegrity:
         content = tools_file.read_text()
         tool_count = content.count("@tool")
         assert tool_count >= 6
+
+
+class TestSSLAndRetry:
+    """Tests for SSL certificate handling and retry logic."""
+
+    def test_tools_imports_ssl_module(self):
+        """Test that tools.py imports ssl module for HTTPS."""
+        tools_file = RUNTIME_DIR / "tools.py"
+        content = tools_file.read_text()
+        assert "import ssl" in content
+
+    def test_tools_imports_certifi(self):
+        """Test that tools.py imports certifi for CA certificates."""
+        tools_file = RUNTIME_DIR / "tools.py"
+        content = tools_file.read_text()
+        assert "import certifi" in content
+
+    def test_tools_has_ssl_context_function(self):
+        """Test that tools.py has SSL context creation function."""
+        tools_file = RUNTIME_DIR / "tools.py"
+        content = tools_file.read_text()
+        assert "_create_ssl_context" in content
+
+    def test_github_request_uses_ssl_context(self):
+        """Test that GitHub requests use SSL context."""
+        tools_file = RUNTIME_DIR / "tools.py"
+        content = tools_file.read_text()
+        assert "context=" in content
+
+    def test_github_request_has_max_retries(self):
+        """Test that GitHub requests use max retries constant."""
+        tools_file = RUNTIME_DIR / "tools.py"
+        content = tools_file.read_text()
+        assert "_MAX_RETRIES" in content
+
+    def test_github_request_has_retryable_status_codes(self):
+        """Test that GitHub requests define retryable status codes."""
+        tools_file = RUNTIME_DIR / "tools.py"
+        content = tools_file.read_text()
+        assert "_RETRYABLE_STATUS_CODES" in content

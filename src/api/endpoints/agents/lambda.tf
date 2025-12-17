@@ -33,17 +33,18 @@ data "archive_file" "webhook_lambda" {
 }
 
 resource "aws_lambda_function" "webhook" {
-  filename         = data.archive_file.webhook_lambda.output_path
-  function_name    = local.webhook_lambda_name
-  role             = aws_iam_role.webhook_lambda.arn
-  handler          = "webhook.handler"
-  source_code_hash = data.archive_file.webhook_lambda.output_base64sha256
-  runtime          = local.lambda_runtime
-  architectures    = [local.lambda_architecture]
-  timeout          = local.lambda_timeout
-  memory_size      = local.lambda_memory
-  description      = "Agent webhook handler - processes GitHub workflow failures"
-  layers           = [aws_lambda_layer_version.github_auth.arn]
+  filename                       = data.archive_file.webhook_lambda.output_path
+  function_name                  = local.webhook_lambda_name
+  role                           = aws_iam_role.webhook_lambda.arn
+  handler                        = "webhook.handler"
+  source_code_hash               = data.archive_file.webhook_lambda.output_base64sha256
+  runtime                        = local.lambda_runtime
+  architectures                  = [local.lambda_architecture]
+  timeout                        = local.lambda_timeout
+  memory_size                    = local.lambda_memory
+  reserved_concurrent_executions = 2 # Limit parallel invocations to prevent Bedrock throttling
+  description                    = "Agent webhook handler - processes GitHub workflow failures"
+  layers                         = [aws_lambda_layer_version.github_auth.arn]
 
   environment {
     variables = local.common_env_vars

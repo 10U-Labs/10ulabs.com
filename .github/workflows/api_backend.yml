@@ -37,9 +37,10 @@ jobs:
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
-          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "aws_region=$AWS_REGION" >> "$GITHUB_OUTPUT"
+          ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$ROLE_ARN" >> "$GITHUB_OUTPUT"
+          echo "terraform_version=$TERRAFORM_VERSION" >> "$GITHUB_OUTPUT"
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -59,8 +60,10 @@ jobs:
             output -raw arn_for_github_actions_role)
           GITHUB_PAT_PARAMETER_NAME=$(terraform -chdir=src/bootstrap \
             output -raw ssm_parameter_name_for_github_pat)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
-          echo "github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME" >> $GITHUB_OUTPUT
+          ROLE_ARN="github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN"
+          echo "$ROLE_ARN" >> "$GITHUB_OUTPUT"
+          PAT_NAME="github_pat_parameter_name=$GITHUB_PAT_PARAMETER_NAME"
+          echo "$PAT_NAME" >> "$GITHUB_OUTPUT"
       - name: Re-configure AWS credentials with bootstrap role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -155,9 +158,10 @@ jobs:
           else
             BASE_COMMIT="HEAD^"
           fi
+          API_PATTERN='src/www/api/(index\.html|openapi\.json|404\.html)'
           git diff --name-only $BASE_COMMIT ${{ github.sha }} | \
-            if grep -qE 'src/www/api/(index\.html|openapi\.json|404\.html)'; then
-              echo "changed=true" >> $GITHUB_OUTPUT
+            if grep -qE "$API_PATTERN"; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
             else
               echo "changed=false" >> $GITHUB_OUTPUT
             fi
@@ -168,8 +172,9 @@ jobs:
           steps.check_files.outputs.changed == 'true'
         name: Get API domain from Terraform output
         run: |
-          API_FQDN=$(cd src/api/backend && terraform output -raw api_domain_name)
-          echo "API_FQDN=$API_FQDN" >> $GITHUB_ENV
+          API_FQDN=$(cd src/api/backend && \
+            terraform output -raw api_domain_name)
+          echo "API_FQDN=$API_FQDN" >> "$GITHUB_ENV"
       - if: >-
           github.event.inputs.invalidate_cloudfront == 'true' ||
           contains(github.event.head_commit.message,

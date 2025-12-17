@@ -41,8 +41,8 @@ locals {
   webhook_ingress_queue_name = "${local.lambda_function_names.webhook}Ingress"
   webhook_ingress_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.webhook_ingress_queue_name}"
 
-  # SQS integration for /v1/agents (API Gateway → SQS direct)
-  agent_webhook_queue_name = "${module.shared.resource_prefix}-webhook-ingress"
+  # SQS integration for /v1/agents (API Gateway → SQS direct, FIFO queue)
+  agent_webhook_queue_name = "${module.shared.resource_prefix}-webhook-ingress.fifo"
   agent_invoker_queue_name = "${module.shared.resource_prefix}-invoker-ingress"
   agent_webhook_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.agent_webhook_queue_name}"
   agent_invoker_sqs_uri    = "arn:aws:apigateway:${local.aws_region}:sqs:path/${local.aws_account_id}/${local.agent_invoker_queue_name}"

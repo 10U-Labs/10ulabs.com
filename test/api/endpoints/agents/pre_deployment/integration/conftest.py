@@ -93,3 +93,31 @@ def opensearch_client(aws_region):
 def memory_collection_name(shared_config):
     """Return the OpenSearch collection name for agent memory."""
     return f"{shared_config['resource_prefix']}-memory"
+
+
+# =============================================================================
+# API Gateway Fixtures (for FIFO queue integration tests)
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def apigateway_client(aws_region):
+    """Create an API Gateway client."""
+    return boto3.client("apigateway", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def sqs_client(aws_region):
+    """Create an SQS client."""
+    return boto3.client("sqs", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def api_gateway_id(shared_config):
+    """Return the API Gateway REST API ID."""
+    return shared_config.get("api_gateway_id")
+
+
+@pytest.fixture(scope="session")
+def webhook_queue_name(shared_config):
+    """Return the webhook FIFO queue name."""
+    return f"{shared_config['resource_prefix']}-webhook-ingress.fifo"

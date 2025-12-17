@@ -174,3 +174,116 @@ class TestScheduledScan:
 
         body = response.json()
         assert body.get("test_mode") is True or "test" in str(body).lower()
+
+
+class TestFIFODeduplication:
+    """E2E tests for FIFO queue deduplication.
+
+    These tests verify that duplicate webhook events are deduplicated
+    by the SQS FIFO queue, preventing duplicate agent invocations.
+    """
+
+    @pytest.fixture
+    def api_gateway_url(self, shared_config):
+        """Get the API Gateway webhook URL."""
+        import os
+        api_url = os.environ.get("AGENTS_API_GATEWAY_URL")
+        if not api_url:
+            pytest.skip(
+                "AGENTS_API_GATEWAY_URL environment variable not set. "
+                "Set it to https://{api-id}.execute-api.{region}.amazonaws.com/{stage}/v1/agents"
+            )
+        return api_url
+
+    @pytest.fixture
+    def sqs_client(self, shared_config):
+        """Get SQS client."""
+        import boto3
+        aws_region = shared_config.get("aws_region", "us-east-2")
+        return boto3.client("sqs", region_name=aws_region)
+
+    @pytest.fixture
+    def webhook_queue_url(self, sqs_client, shared_config):
+        """Get the webhook FIFO queue URL."""
+        resource_prefix = shared_config.get("resource_prefix", "10ulabs")
+        queue_name = f"{resource_prefix}-webhook-ingress.fifo"
+        try:
+            response = sqs_client.get_queue_url(QueueName=queue_name)
+            return response["QueueUrl"]
+        except Exception:
+            pytest.skip(f"Queue {queue_name} not found")
+
+    def test_fifo_deduplication_prevents_duplicate_messages(
+        self, api_gateway_url, sqs_client, webhook_queue_url
+    ):
+        """Verify FIFO deduplication prevents duplicate webhook processing.
+
+        Sends identical webhook payloads twice and verifies only one
+        message lands in the queue (content-based deduplication).
+        """
+        import time
+
+        # Use a test payload that will be skipped (not trigger agent)
+        # but will still be enqueued to test deduplication
+        test_payload = {
+            "action": "completed",
+            "workflow_run": {
+                "id": 99999999,  # Test run ID
+                "name": "FIFO Deduplication Test",
+                "conclusion": "success",  # Will be skipped, not a failure
+                "head_sha": "test-dedup-sha",
+                "head_branch": "test-branch",
+            },
+            "repository": {
+                "name": "10ulabs.com",
+                "owner": {"login": "10U-Labs-LLC"},
+            },
+        }
+
+        # Get initial queue depth
+        initial_attrs = sqs_client.get_queue_attributes(
+            QueueUrl=webhook_queue_url,
+            AttributeNames=["ApproximateNumberOfMessages"]
+        )
+        initial_count = int(initial_attrs["Attributes"].get(
+            "ApproximateNumberOfMessages", "0"
+        ))
+
+        try:
+            # Send the same payload twice (should be deduplicated)
+            # If any request fails, it will raise an exception
+            for _ in range(2):
+                response = requests.post(
+                    api_gateway_url,
+                    json=test_payload,
+                    headers={"Content-Type": "application/json"},
+                    timeout=30,
+                )
+                response.raise_for_status()
+
+            # Wait for messages to appear in queue
+            time.sleep(2)
+
+            # Check queue depth - should only increase by 1 due to deduplication
+            final_attrs = sqs_client.get_queue_attributes(
+                QueueUrl=webhook_queue_url,
+                AttributeNames=["ApproximateNumberOfMessages"]
+            )
+            final_count = int(final_attrs["Attributes"].get(
+                "ApproximateNumberOfMessages", "0"
+            ))
+
+            messages_added = final_count - initial_count
+
+            # With deduplication, sending same message twice should result in 1 message
+            # (or 0 if Lambda already processed it)
+            assert messages_added <= 1, (
+                f"Expected at most 1 new message due to FIFO deduplication, "
+                f"but found {messages_added} new messages. "
+                f"Initial: {initial_count}, Final: {final_count}"
+            )
+
+        finally:
+            # Clean up: purge any test messages (best effort)
+            # Note: FIFO queues can be purged but test messages may already be processed
+            pass

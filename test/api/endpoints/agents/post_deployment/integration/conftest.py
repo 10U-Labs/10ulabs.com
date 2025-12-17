@@ -60,3 +60,21 @@ def memory_collection_name(shared_config):
 def agentcore_runtime_name(shared_config):
     """Return the AgentCore runtime name."""
     return f"{shared_config['resource_prefix']}_agent_runtime".replace("-", "_")
+
+
+@pytest.fixture(scope="session")
+def sqs_client(aws_region):
+    """Create an SQS client."""
+    return boto3.client("sqs", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
+def webhook_queue_name(shared_config):
+    """Return the webhook FIFO queue name."""
+    return f"{shared_config['resource_prefix']}-webhook-ingress.fifo"
+
+
+@pytest.fixture(scope="session")
+def webhook_dlq_name(shared_config):
+    """Return the webhook DLQ FIFO queue name."""
+    return f"{shared_config['resource_prefix']}-webhook-ingress-dlq.fifo"

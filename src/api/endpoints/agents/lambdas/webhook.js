@@ -4,6 +4,17 @@ const logger = {
   info: (...args) => console.log('[INFO]', ...args)
 };
 
+/**
+ * Add random jitter delay to prevent thundering herd when multiple webhooks arrive.
+ * @param {number} maxMs - Maximum delay in milliseconds (default 30000 = 30 seconds)
+ * @returns {Promise<number>} - The actual delay applied
+ */
+async function jitterDelay(maxMs = 30000) {
+  const delayMs = Math.floor(Math.random() * maxMs);
+  await new Promise(resolve => setTimeout(resolve, delayMs));
+  return delayMs;
+}
+
 function parseWebhookPayload(body) {
   if (body === null || body === undefined || body === '') {
     return {};
@@ -66,6 +77,10 @@ async function processWebhookEvent(payload, githubToken) {
     '(run', workflowRun.id, ') in',
     `${(repo.owner || {}).login}/${repo.name}`
   );
+
+  // Add jitter delay to prevent thundering herd when multiple webhooks arrive
+  const delayMs = await jitterDelay();
+  logger.info(`Applied jitter delay: ${delayMs}ms`);
 
   const agentPayload = buildAgentPayload(payload, githubToken);
   let result = await invokeAgent('troubleshooter_of_workflows', agentPayload);

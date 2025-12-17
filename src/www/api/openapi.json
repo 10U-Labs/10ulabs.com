@@ -984,7 +984,7 @@
             "integration.request.header.Content-Type": "'application/x-www-form-urlencoded'"
           },
           "requestTemplates": {
-            "application/json": "Action=SendMessage&MessageBody=$util.urlEncode($input.body)&MessageAttribute.1.Name=x-github-event&MessageAttribute.1.Value.DataType=String&MessageAttribute.1.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-event'))&MessageAttribute.2.Name=x-hub-signature-256&MessageAttribute.2.Value.DataType=String&MessageAttribute.2.Value.StringValue=$util.urlEncode($input.params().header.get('x-hub-signature-256'))&MessageAttribute.3.Name=x-github-delivery&MessageAttribute.3.Value.DataType=String&MessageAttribute.3.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-delivery'))"
+            "application/json": "Action=SendMessage&MessageGroupId=agents&MessageBody=$util.urlEncode($input.body)&MessageAttribute.1.Name=x-github-event&MessageAttribute.1.Value.DataType=String&MessageAttribute.1.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-event'))&MessageAttribute.2.Name=x-hub-signature-256&MessageAttribute.2.Value.DataType=String&MessageAttribute.2.Value.StringValue=$util.urlEncode($input.params().header.get('x-hub-signature-256'))&MessageAttribute.3.Name=x-github-delivery&MessageAttribute.3.Value.DataType=String&MessageAttribute.3.Value.StringValue=$util.urlEncode($input.params().header.get('x-github-delivery'))"
           },
           "responses": {
             "default": {

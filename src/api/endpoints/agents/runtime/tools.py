@@ -10,11 +10,14 @@ Type stubs (.pyi files) are provided for mypy type checking.
 
 import json
 import base64
+import ssl
+import time
 import urllib.request
 import urllib.error
 from typing import Any, Callable, TypeVar
 
 import boto3
+import certifi
 
 # Container-only import - stub provided for type checking
 try:
@@ -31,6 +34,17 @@ except ImportError:
 # GitHub API Tools
 # =============================================================================
 
+# Retry configuration
+_RETRYABLE_STATUS_CODES = {429, 502, 503, 504}
+_MAX_RETRIES = 3
+_BASE_DELAY = 1.0
+
+
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create SSL context with certifi CA bundle for container environments."""
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def _github_headers(token: str) -> dict[str, str]:
     """Get headers for GitHub API requests."""
     return {
@@ -42,34 +56,55 @@ def _github_headers(token: str) -> dict[str, str]:
 
 
 def _github_request(
-    endpoint: str, token: str, method: str = "GET", data: dict | None = None
+    endpoint: str,
+    token: str,
+    method: str = "GET",
+    data: dict | None = None,
 ) -> Any:
-    """Make a request to the GitHub API."""
+    """Make a request to the GitHub API with retry logic."""
     url = f"https://api.github.com{endpoint}"
     headers = _github_headers(token)
     body = json.dumps(data).encode("utf-8") if data else None
-    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    ssl_context = _create_ssl_context()
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as err:
-        error_body = err.read().decode("utf-8") if err.fp else ""
-        raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
+    for attempt in range(_MAX_RETRIES + 1):
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(
+                req, timeout=30, context=ssl_context
+            ) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as err:
+            error_body = err.read().decode("utf-8") if err.fp else ""
+            if err.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_RETRIES:
+                time.sleep(_BASE_DELAY * (2**attempt))
+                continue
+            raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
+
+    raise RuntimeError("Unexpected error in _github_request")
 
 
 def _github_request_raw(endpoint: str, token: str) -> str:
-    """Make a request to GitHub API and return raw text response."""
+    """Make a request to GitHub API and return raw text response with retry logic."""
     url = f"https://api.github.com{endpoint}"
     headers = _github_headers(token)
-    req = urllib.request.Request(url, headers=headers, method="GET")
+    ssl_context = _create_ssl_context()
 
-    try:
-        with urllib.request.urlopen(req, timeout=60) as response:
-            return response.read().decode("utf-8")
-    except urllib.error.HTTPError as err:
-        error_body = err.read().decode("utf-8") if err.fp else ""
-        raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
+    for attempt in range(_MAX_RETRIES + 1):
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(
+                req, timeout=60, context=ssl_context
+            ) as response:
+                return response.read().decode("utf-8")
+        except urllib.error.HTTPError as err:
+            error_body = err.read().decode("utf-8") if err.fp else ""
+            if err.code in _RETRYABLE_STATUS_CODES and attempt < _MAX_RETRIES:
+                time.sleep(_BASE_DELAY * (2**attempt))
+                continue
+            raise RuntimeError(f"GitHub API error {err.code}: {error_body}") from err
+
+    raise RuntimeError("Unexpected error in _github_request_raw")
 
 
 @tool

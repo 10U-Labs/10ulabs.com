@@ -17,13 +17,16 @@ locals {
 
 # =============================================================================
 # Webhook Ingress Queue (GitHub webhooks -> webhook.py)
+# FIFO queue with content-based deduplication to prevent duplicate agent runs
 # =============================================================================
 
 resource "aws_sqs_queue" "webhook_ingress" {
-  name                       = local.webhook_queue_name
-  message_retention_seconds  = 3600 # 1 hour (DDoS protection)
-  visibility_timeout_seconds = local.visibility_timeout
-  receive_wait_time_seconds  = 20 # Long polling
+  name                        = "${local.webhook_queue_name}.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  message_retention_seconds   = 3600 # 1 hour (DDoS protection)
+  visibility_timeout_seconds  = local.visibility_timeout
+  receive_wait_time_seconds   = 20 # Long polling
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.webhook_dlq.arn
@@ -31,16 +34,17 @@ resource "aws_sqs_queue" "webhook_ingress" {
   })
 
   tags = merge(local.common_tags, {
-    Name = local.webhook_queue_name
+    Name = "${local.webhook_queue_name}.fifo"
   })
 }
 
 resource "aws_sqs_queue" "webhook_dlq" {
-  name                      = "${local.webhook_queue_name}-dlq"
+  name                      = "${local.webhook_queue_name}-dlq.fifo"
+  fifo_queue                = true
   message_retention_seconds = local.dlq_retention
 
   tags = merge(local.common_tags, {
-    Name = "${local.webhook_queue_name}-dlq"
+    Name = "${local.webhook_queue_name}-dlq.fifo"
   })
 }
 

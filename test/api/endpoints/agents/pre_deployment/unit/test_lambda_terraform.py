@@ -81,3 +81,11 @@ def test_invoker_sqs_event_source_mapping_exists():
     with open(lambda_file, encoding="utf-8") as f:
         content = f.read()
     assert 'resource "aws_lambda_event_source_mapping" "invoker_sqs"' in content
+
+
+def test_webhook_lambda_has_concurrency_limit():
+    """Verify webhook Lambda has reserved concurrent executions to prevent throttling."""
+    lambda_file = AGENTS_SRC / "lambda.tf"
+    with open(lambda_file, encoding="utf-8") as f:
+        content = f.read()
+    assert "reserved_concurrent_executions" in content
