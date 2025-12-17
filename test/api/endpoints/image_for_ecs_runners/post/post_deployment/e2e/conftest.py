@@ -18,6 +18,7 @@ class RunnerContainer:
         """
         self.name = config["name"]
         self.container_name = f"runner-{self.name}"
+        self._captured_output = None
         args = [
             "docker", "run", "--rm", "--init",
             "--name", self.container_name,
@@ -44,12 +45,15 @@ class RunnerContainer:
         )
         self._process.wait()
         if self._process.stdout:
+            self._captured_output = self._process.stdout.read()
             self._process.stdout.close()
         elapsed = time.time() - start
         return elapsed < timeout
 
     def get_output(self):
         """Get any captured output from the container."""
+        if self._captured_output is not None:
+            return self._captured_output.decode('utf-8', errors='replace')
         if self._process.stdout:
             return self._process.stdout.read().decode('utf-8', errors='replace')
         return ""
