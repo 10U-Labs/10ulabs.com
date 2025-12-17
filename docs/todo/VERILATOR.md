@@ -11,8 +11,8 @@ Remaining optimization opportunities for Verilator (v5.x).
 | # | Issue | Status | PR | Impact | Remarks |
 |---|-------|--------|-----|--------|---------|
 | 1 | [Function Inlining](#1-function-inlining) | ⏳ Submitted | [#6815](https://github.com/verilator/verilator/pull/6815) | Reduces call overhead | |
-| 2 | [Thread Pool Lock Contention](#2-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | 20-40% throughput improvement | |
-| 3 | [Threading Self-Diagnostic System](#3-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Hours of debugging saved | |
+| 2 | [Thread Pool Lock Contention](#2-thread-pool-lock-contention) | ⏳ Submitted | [#6761](https://github.com/verilator/verilator/pull/6761) | Faster verilate step (V3ThreadPool) | |
+| 3 | [Threading Self-Diagnostic System](#3-threading-self-diagnostic-system) | ⏳ Submitted | [#6762](https://github.com/verilator/verilator/pull/6762) | Runtime threading advice (VlThreadPool) | |
 | 4 | [Removing Race Conditions on AST Constructors](#4-removing-race-conditions-on-ast-constructors) | 📝 Todo | - | Prerequisite for parallelization | |
 | 5 | [Module-Level Parallel Verilation](#5-module-level-parallel-verilation) | ⏸️ Paused | - | 2-4x faster compilation | Rethinking approach after #6 rejection |
 | 6 | [Parallelize V3FuncOpt](#6-parallelize-v3funcopt) | ❌ Rejected | [#6763](https://github.com/verilator/verilator/pull/6763) | Per-function parallelization | Maintainers preferred different strategy |
@@ -62,6 +62,8 @@ Remaining optimization opportunities for Verilator (v5.x).
 
 **Status:** ⏳ Submitted - [PR #6761](https://github.com/verilator/verilator/pull/6761)
 
+**Affects:** Compile-time parallelization (verilate step). V3ThreadPool is controlled by `--verilate-jobs N` (or `-j N`), not to be confused with VlThreadPool which handles runtime simulation threading (`--threads N`).
+
 **Problem:** The `wait()` function uses busy-wait loop that wastes CPU cycles.
 
 ```cpp
@@ -104,7 +106,7 @@ void V3ThreadPool::workerJobLoop() {
 }
 ```
 
-**Impact:** 20-40% throughput improvement for multi-threaded workloads
+**Impact:** Reduces CPU waste during verilate step, especially at high thread counts (32+) where busy-wait contention is significant. Enables better resource sharing on build farms.
 **Difficulty:** Easy - isolated change, well-understood pattern
 **Risk:** Low - follows same pattern already used for worker threads
 
@@ -115,6 +117,8 @@ void V3ThreadPool::workerJobLoop() {
 **Files:** `include/verilated_threading_advisor.h`, `include/verilated.cpp`
 
 **Status:** ⏳ Submitted - [PR #6762](https://github.com/verilator/verilator/pull/6762)
+
+**Affects:** Runtime simulation threading (VlThreadPool, controlled by `--threads N`). This is separate from compile-time parallelization (V3ThreadPool in Section 2).
 
 **Current state:**
 - `VlExecutionProfiler` exists for collecting profiling data (verilated_profiler.h)
