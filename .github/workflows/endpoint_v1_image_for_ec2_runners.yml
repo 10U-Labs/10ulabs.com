@@ -113,11 +113,13 @@ jobs:
         run: cd src/api/endpoints/image_for_ec2_runners && terraform plan
       - name: Run unit tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/unit/ \
+          TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
+          pytest $TEST_DIR/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/endpoint/pre_deployment/integration/ \
+          TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
+          pytest $TEST_DIR/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
@@ -125,7 +127,8 @@ jobs:
           terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          pytest test/api/endpoints/image_for_ec2_runners/endpoint/post_deployment/integration/ \
+          TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
+          pytest $TEST_DIR/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -142,7 +145,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_v1_image_for_ec2_runners \
             --repo ${{ github.repository }}
-name: Ensuring the /v1/image-for-ec2-runners API endpoint exists and is properly configured
+name: Deploy /v1/image-for-ec2-runners API endpoint
 on:
   workflow_dispatch:
     inputs:
