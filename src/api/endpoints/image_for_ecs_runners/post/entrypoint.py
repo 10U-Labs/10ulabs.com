@@ -7,37 +7,74 @@ import argparse
 import signal
 import subprocess
 import sys
+import threading
+from typing import Any
+
+# Module-level state for CloudWatch agent
+_cw_state: dict[str, Any] = {"stop_event": None}
+
+
+def _run_cloudwatch_agent(toml_path: str, stop_event: threading.Event) -> None:
+    """Run CloudWatch agent in a thread until stop event is set."""
+    with subprocess.Popen(
+        ['/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent',
+         '-config', toml_path],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    ) as process:
+        # Wait for stop signal, checking periodically
+        while not stop_event.wait(timeout=1.0):
+            if process.poll() is not None:
+                break
+        # Stop event received or process exited, terminate if still running
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
 
 
 def start_cloudwatch_agent():
-    """Start the CloudWatch agent for log collection."""
+    """Start the CloudWatch agent for log collection.
+
+    Run agent directly without systemd (containers don't have systemd).
+    """
     print("Starting CloudWatch agent...", flush=True)
+    config_path = '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json'
+    toml_path = '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml'
+
+    # Translate JSON config to TOML
     result = subprocess.run(
-        ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
-         '-a', 'fetch-config', '-m', 'ec2', '-s',
-         '-c', 'file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json'],
+        ['/opt/aws/amazon-cloudwatch-agent/bin/config-translator',
+         '--input', config_path,
+         '--output', toml_path,
+         '--mode', 'auto'],
         check=False,
         capture_output=True,
         text=True
     )
     if result.returncode != 0:
-        print(f"Warning: CloudWatch agent failed to start: {result.stderr}", flush=True)
-    else:
-        print("CloudWatch agent started successfully", flush=True)
+        print(f"Warning: Config translation failed: {result.stderr}", flush=True)
+        return
+
+    # Start agent in background thread
+    stop_event = threading.Event()
+    _cw_state["stop_event"] = stop_event
+    thread = threading.Thread(
+        target=_run_cloudwatch_agent,
+        args=(toml_path, stop_event),
+        daemon=True
+    )
+    thread.start()
+    print("CloudWatch agent started successfully", flush=True)
 
 
 def stop_cloudwatch_agent():
-    """Stop the CloudWatch agent."""
-    try:
-        subprocess.run(
-            ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
-             '-a', 'stop'],
-            check=False,
-            capture_output=True,
-            timeout=3
-        )
-    except subprocess.TimeoutExpired:
-        pass
+    """Stop the CloudWatch agent by signaling the background thread."""
+    stop_event = _cw_state.get("stop_event")
+    if stop_event is not None:
+        stop_event.set()
 
 
 def cleanup_runner(token: str) -> None:
