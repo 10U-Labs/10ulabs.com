@@ -43,6 +43,8 @@ class RunnerContainer:
             capture_output=True
         )
         self._process.wait()
+        if self._process.stdout:
+            self._process.stdout.close()
         elapsed = time.time() - start
         return elapsed < timeout
 
