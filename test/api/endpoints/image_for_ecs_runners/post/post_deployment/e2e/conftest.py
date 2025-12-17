@@ -31,13 +31,20 @@ class RunnerContainer:
         self._process = _create_background_process(args)
 
     def stop(self, timeout=10):
-        """Stop the container gracefully using docker stop."""
+        """Stop the container gracefully using docker stop.
+
+        Returns:
+            True if container exited within timeout (graceful), False if SIGKILL was needed.
+        """
+        start = time.time()
         subprocess.run(
             ["docker", "stop", "-t", str(timeout), self.container_name],
             check=False,
             capture_output=True
         )
         self._process.wait()
+        elapsed = time.time() - start
+        return elapsed < timeout
 
     def is_running(self):
         """Check if the container process is still running."""
