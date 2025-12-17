@@ -14,7 +14,7 @@ class RunnerContainer:
         """Start a runner container with specified configuration.
 
         Args:
-            config: Dict with keys: uri, repo, name, labels, token
+            config: Dict with keys: uri, repo, name, labels, token, pat (optional)
         """
         self.name = config["name"]
         self.container_name = f"runner-{self.name}"
@@ -22,12 +22,16 @@ class RunnerContainer:
             "docker", "run", "--rm", "--init",
             "--name", self.container_name,
             "--platform", "linux/arm64",
+        ]
+        if "pat" in config:
+            args.extend(["--env", f"GITHUB_PAT={config['pat']}"])
+        args.extend([
             config["uri"],
             "--repo", config["repo"],
             "--name", self.name,
             "--labels", config["labels"],
             "--token", config["token"]
-        ]
+        ])
         self._process = _create_background_process(args)
 
     def stop(self, timeout=10):

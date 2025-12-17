@@ -25,7 +25,8 @@ def test_runner_cleanup_on_sigterm(
         "repo": github_repo,
         "name": runner_name,
         "labels": "e2e-sigterm",
-        "token": runner_registration_token
+        "token": runner_registration_token,
+        "pat": github_pat
     }
     container = RunnerContainer(config)
 
