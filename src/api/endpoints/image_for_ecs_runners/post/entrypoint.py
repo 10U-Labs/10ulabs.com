@@ -4,12 +4,9 @@
 Uses --ephemeral flag so runner auto-deregisters after one job.
 """
 import argparse
-import json
-import os
 import signal
 import subprocess
 import sys
-import urllib.request
 
 
 def start_cloudwatch_agent():
@@ -39,34 +36,11 @@ def stop_cloudwatch_agent():
     )
 
 
-def get_removal_token(repo: str, pat: str) -> str:
-    """Get a removal token from GitHub API."""
-    url = f"https://api.github.com/repos/{repo}/actions/runners/remove-token"
-    request = urllib.request.Request(url, method='POST')
-    request.add_header('Authorization', f'token {pat}')
-    request.add_header('Accept', 'application/vnd.github.v3+json')
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            return data.get('token', '')
-    except (urllib.error.URLError, json.JSONDecodeError) as e:
-        print(f"Warning: Failed to get removal token: {e}")
-        return ''
-
-
-def cleanup_runner(repo: str) -> None:
+def cleanup_runner(token: str) -> None:
     """Remove/deregister the runner from GitHub."""
     print("Deregistering runner...")
-    pat = os.environ.get('GITHUB_PAT', '')
-    if not pat:
-        print("Warning: GITHUB_PAT not set, skipping deregistration")
-        return
-    removal_token = get_removal_token(repo, pat)
-    if not removal_token:
-        print("Warning: Could not get removal token, skipping deregistration")
-        return
     subprocess.run(
-        ['./config.sh', '--remove', '--token', removal_token],
+        ['./config.sh', '--remove', '--token', token],
         check=False,
         capture_output=True
     )
@@ -102,7 +76,7 @@ def main():
                 state["process"].kill()
                 state["process"].wait()
         stop_cloudwatch_agent()
-        cleanup_runner(repo)
+        cleanup_runner(registration_token)
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
