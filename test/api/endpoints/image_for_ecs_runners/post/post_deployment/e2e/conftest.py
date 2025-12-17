@@ -7,25 +7,47 @@ import pytest
 from ..conftest import login_to_ecr, run_github_api_curl
 
 
-def start_runner_container(uri, repo, name, labels, token):
-    """
-    Start a GitHub Actions runner container with specified configuration.
-    """
-    args = [
-        "docker", "run", "--rm", "--init",
-        "--platform", "linux/arm64",
-        uri,
-        "--repo", repo,
-        "--name", name,
-        "--labels", labels,
-        "--token", token
-    ]
+class RunnerContainer:
+    """Wrapper for a Docker container running a GitHub Actions runner."""
+
+    def __init__(self, config):
+        """Start a runner container with specified configuration.
+
+        Args:
+            config: Dict with keys: uri, repo, name, labels, token
+        """
+        self.name = config["name"]
+        self.container_name = f"runner-{self.name}"
+        args = [
+            "docker", "run", "--rm", "--init",
+            "--name", self.container_name,
+            "--platform", "linux/arm64",
+            config["uri"],
+            "--repo", config["repo"],
+            "--name", self.name,
+            "--labels", config["labels"],
+            "--token", config["token"]
+        ]
+        self._process = _create_background_process(args)
+
+    def stop(self, timeout=10):
+        """Stop the container gracefully using docker stop."""
+        subprocess.run(
+            ["docker", "stop", "-t", str(timeout), self.container_name],
+            check=False,
+            capture_output=True
+        )
+        self._process.wait()
+
+    def is_running(self):
+        """Check if the container process is still running."""
+        return self._process.poll() is None
+
+
+def _create_background_process(args):
+    """Create a background process. Caller is responsible for cleanup."""
     return subprocess.Popen(
-        args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        close_fds=True
+        args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True
     )
 
 
@@ -39,16 +61,12 @@ def wait_for_process_with_backoff(process, max_attempts=7):
         wait_time = 2 ** attempt
         returncode = process.poll()
         if returncode is not None:
-            process.stdout.close()
-            process.stderr.close()
             return
         time.sleep(wait_time)
         total_wait = total_wait + wait_time
         attempt = attempt + 1
     process.kill()
     process.wait()
-    process.stdout.close()
-    process.stderr.close()
     raise subprocess.TimeoutExpired(process.args, total_wait)
 
 
@@ -69,15 +87,14 @@ def get_github_runners(pat, repo):
     return runners
 
 
-def get_runner_and_cleanup(process, pat, repo, name):
+def get_runner_and_cleanup(container, pat, repo):
     """
-    Get runner information from GitHub and clean up the process.
+    Get runner information from GitHub and clean up the container.
     """
     time.sleep(30)
     runners = get_github_runners(pat, repo)
-    runner = find_runner_by_name(runners, name)
-    process.terminate()
-    wait_for_process_with_backoff(process)
+    runner = find_runner_by_name(runners, container.name)
+    container.stop()
     return runner
 
 
@@ -124,19 +141,14 @@ def start_runner_and_get_info(config):
     """
     Start a runner container and retrieve its info from GitHub.
 
-    Combines start_runner_container and get_runner_and_cleanup into a single
+    Combines RunnerContainer and get_runner_and_cleanup into a single
     operation to reduce code duplication in tests.
 
     Args:
         config: Dict with keys: uri, repo, name, labels, token, pat
     """
-    process = start_runner_container(
-        config["uri"], config["repo"], config["name"],
-        config["labels"], config["token"]
-    )
-    return get_runner_and_cleanup(
-        process, config["pat"], config["repo"], config["name"]
-    )
+    container = RunnerContainer(config)
+    return get_runner_and_cleanup(container, config["pat"], config["repo"])
 
 
 def create_shared_runner_context(image_uri, repo, token, region, pat):
@@ -146,7 +158,14 @@ def create_shared_runner_context(image_uri, repo, token, region, pat):
     runner_name = f"e2e-test-shared-{int(time.time())}"
     labels = "e2e-label1,e2e-label2,e2e-label3"
 
-    process = start_runner_container(image_uri, repo, runner_name, labels, token)
+    config = {
+        "uri": image_uri,
+        "repo": repo,
+        "name": runner_name,
+        "labels": labels,
+        "token": token
+    }
+    container = RunnerContainer(config)
 
     time.sleep(30)
 
@@ -154,7 +173,7 @@ def create_shared_runner_context(image_uri, repo, token, region, pat):
     runner_info = find_runner_by_name(runners, runner_name)
 
     return {
-        "process": process,
+        "container": container,
         "name": runner_name,
         "labels": labels,
         "info": runner_info,
@@ -178,5 +197,4 @@ def shared_runner(
 
     yield context
 
-    context["process"].terminate()
-    wait_for_process_with_backoff(context["process"])
+    context["container"].stop()

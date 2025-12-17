@@ -2,9 +2,8 @@
 import time
 from ..conftest import login_to_ecr
 from .conftest import (
-    start_runner_container,
+    RunnerContainer,
     get_github_runners,
-    wait_for_process_with_backoff,
     runner_exists_with_name
 )
 
@@ -21,18 +20,18 @@ def test_runner_cleanup_on_sigterm(
 
     runner_name = f"e2e-test-sigterm-{int(time.time())}"
 
-    process = start_runner_container(
-        ecr_image_uri,
-        github_repo,
-        runner_name,
-        "e2e-sigterm",
-        runner_registration_token
-    )
+    config = {
+        "uri": ecr_image_uri,
+        "repo": github_repo,
+        "name": runner_name,
+        "labels": "e2e-sigterm",
+        "token": runner_registration_token
+    }
+    container = RunnerContainer(config)
 
     time.sleep(30)
 
-    process.terminate()
-    wait_for_process_with_backoff(process)
+    container.stop()
 
     time.sleep(10)
 
