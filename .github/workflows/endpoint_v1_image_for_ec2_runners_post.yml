@@ -125,7 +125,7 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             $WF
-          jsonlint $CONF
+          jsonlint -q $CONF
       - env:
           PYTHONPATH: >-
             lib/python:test/api/endpoints/image_for_ec2_runners/post/post_deployment

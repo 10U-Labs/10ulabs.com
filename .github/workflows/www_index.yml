@@ -54,16 +54,15 @@ jobs:
             .github/workflows/www_index.yml
       - name: Linting JSON files
         run: |
+          # Note: tsconfig files use JSONC (JSON with Comments) format
+          # which jsonlint doesn't support, so we skip them here
           for file in \
             src/www/api/openapi.json \
             src/www/paths/index/components.json \
-            src/www/paths/index/package.json \
-            src/www/paths/index/tsconfig.json \
-            src/www/paths/index/tsconfig.app.json \
-            src/www/paths/index/tsconfig.node.json
+            src/www/paths/index/package.json
           do
             echo "Validating $file"
-            jsonlint "$file"
+            jsonlint -q "$file"
           done
       - name: Install npm dependencies
         run: npm ci --prefix src/www/paths/index

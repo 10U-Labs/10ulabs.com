@@ -98,7 +98,7 @@ jobs:
             src/api/endpoints/image_for_ecs_runners/post/cloudwatch-agent-config.json
           do
             echo "Validating $file"
-            jsonlint "$file"
+            jsonlint -q "$file"
           done
       - name: Run pylint
         run: |

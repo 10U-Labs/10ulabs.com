@@ -179,7 +179,7 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/orchestrator.yml
-          jsonlint etc/workflow-dependencies.json
+          jsonlint -q etc/workflow-dependencies.json
           echo "Linting completed"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
