@@ -244,6 +244,11 @@ def run_script(params: ScriptParams):
     remote_script = f"/tmp/{params.setup_script.name}"
     sftp.put(str(params.setup_script), remote_script)
     sftp.chmod(remote_script, 0o755)
+    # Transfer additional config files if they exist
+    script_dir = params.setup_script.parent
+    config_file = script_dir / "cloudwatch-agent-config.json"
+    if config_file.exists():
+        sftp.put(str(config_file), f"/tmp/{config_file.name}")
     sftp.close()
     args_str = (
         f"--runner-version {params.runner_version} "

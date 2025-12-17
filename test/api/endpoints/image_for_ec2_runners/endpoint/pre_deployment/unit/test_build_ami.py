@@ -265,6 +265,44 @@ class TestRunScriptSftp:
         assert mock_sftp.close.called
 
 
+class TestRunScriptCloudwatchConfig:
+    """Tests for run_script CloudWatch config transfer."""
+
+    def test_transfers_cloudwatch_config_if_exists(
+        self, build_ami_module, mock_ssh_context, tmp_path
+    ):
+        """Test that CloudWatch config file is transferred if it exists."""
+        _, mock_sftp = mock_ssh_context
+        # Create script and config file in same directory
+        script = tmp_path / "setup.py"
+        script.write_text("print('hello')")
+        config = tmp_path / "cloudwatch-agent-config.json"
+        config.write_text('{"test": true}')
+        params = build_ami_module.ScriptParams(
+            "1.2.3.4", "key", script, "1.0", "1.0", "1.0", "test"
+        )
+        build_ami_module.run_script(params)
+        # Check that config file was transferred
+        put_calls = [str(c) for c in mock_sftp.put.call_args_list]
+        assert any("cloudwatch-agent-config.json" in c for c in put_calls)
+
+    def test_skips_cloudwatch_config_if_not_exists(
+        self, build_ami_module, mock_ssh_context, tmp_path
+    ):
+        """Test that missing CloudWatch config file is handled gracefully."""
+        _, mock_sftp = mock_ssh_context
+        # Create script but no config file
+        script = tmp_path / "setup.py"
+        script.write_text("print('hello')")
+        params = build_ami_module.ScriptParams(
+            "1.2.3.4", "key", script, "1.0", "1.0", "1.0", "test"
+        )
+        build_ami_module.run_script(params)
+        # Should only transfer the script, not config
+        put_calls = [str(c) for c in mock_sftp.put.call_args_list]
+        assert not any("cloudwatch-agent-config.json" in c for c in put_calls)
+
+
 class TestScriptParamsDataclass:
     """Tests for ScriptParams dataclass."""
 
