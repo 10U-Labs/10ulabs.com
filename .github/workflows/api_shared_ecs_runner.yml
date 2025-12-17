@@ -31,8 +31,9 @@ jobs:
             sed 's/.*\${local\.resource_prefix}//' | cut -d'"' -f1)
           RESOURCE_PREFIX=$(grep 'resource_prefix' $TF_SHARED_LOCALS \
             | grep -v '\$' | cut -d'"' -f2)
-          TERRAFORM_VERSION=$(grep 'required_version' \
-            src/api/shared/ecs_runner/providers.tf | cut -d'"' -f2 | sed 's/>= //')
+          TF_PROVIDERS=src/api/shared/ecs_runner/providers.tf
+          TERRAFORM_VERSION=$(grep 'required_version' $TF_PROVIDERS \
+            | cut -d'"' -f2 | sed 's/>= //')
           ROLE_PREFIX="arn:aws:iam::${AWS_ACCOUNT_ID}:role"
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
@@ -71,7 +72,9 @@ jobs:
         with:
           tflint_version: latest
       - name: Terraform Format Check
-        run: cd src/api/shared/ecs_runner && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/shared/ecs_runner
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/shared/ecs_runner && terraform init
       - env:
@@ -99,8 +102,8 @@ jobs:
         run: cd src/api/shared/ecs_runner && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest test/api/shared/ecs_runner/post_deployment/integration/ \
-            --verbose --pythonwarnings=error
+          TEST=test/api/shared/ecs_runner/post_deployment/integration
+          python3 -m pytest $TEST/ --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
