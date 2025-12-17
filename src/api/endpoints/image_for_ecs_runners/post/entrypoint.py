@@ -28,12 +28,16 @@ def start_cloudwatch_agent():
 
 def stop_cloudwatch_agent():
     """Stop the CloudWatch agent."""
-    subprocess.run(
-        ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
-         '-a', 'stop'],
-        check=False,
-        capture_output=True
-    )
+    try:
+        subprocess.run(
+            ['sudo', '/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl',
+             '-a', 'stop'],
+            check=False,
+            capture_output=True,
+            timeout=3
+        )
+    except subprocess.TimeoutExpired:
+        pass
 
 
 def cleanup_runner(token: str) -> None:
@@ -68,6 +72,7 @@ def main():
     state = {"process": None}
 
     def signal_handler(_signum, _frame):
+        print("Received shutdown signal, cleaning up...")
         if state["process"] is not None:
             state["process"].terminate()
             try:
@@ -76,7 +81,7 @@ def main():
                 state["process"].kill()
                 state["process"].wait()
         stop_cloudwatch_agent()
-        cleanup_runner(registration_token)
+        print("Shutdown complete")
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, signal_handler)
