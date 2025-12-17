@@ -285,21 +285,6 @@ jobs:
             --repository "$REPO" \
             --image-tag "$TAG" \
             --region "$REGION"
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.skip_descendants != 'true' &&
-          !contains(github.event.head_commit.message, '[skip descendants]')
-        name: Dispatch descendant workflows
-        run: |
-          SKIP_FLAG=""
-          SKIP_INPUT="${{ github.event.inputs.skip_descendants }}"
-          if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
-          python3 scripts/dispatch_descendants.py \
-            $SKIP_FLAG \
-            --workflow endpoint_v1_image_for_ecs_runners_post \
-            --repo ${{ github.repository }}
 name: Building Docker image for ECS runners
 on:
   workflow_dispatch:
@@ -312,10 +297,6 @@ on:
       github_hosted:
         default: false
         description: 'Use GitHub-hosted runner instead of ephemeral ECS'
-        type: boolean
-      skip_descendants:
-        default: false
-        description: Skip dispatching descendant workflows
         type: boolean
       spot_recovery_reason:
         description: Spot recovery trigger reason
