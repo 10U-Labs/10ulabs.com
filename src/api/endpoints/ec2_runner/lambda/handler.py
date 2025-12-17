@@ -479,6 +479,11 @@ umount /mnt
 mount "$INSTANCE_STORE" /home/github-runner
 chown -R github-runner:github-runner /home/github-runner
 
+# Start CloudWatch agent for memory metrics
+/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+    -a fetch-config -m ec2 \
+    -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+
 cd /home/github-runner/actions-runner
 
 sudo -u github-runner ./config.sh \

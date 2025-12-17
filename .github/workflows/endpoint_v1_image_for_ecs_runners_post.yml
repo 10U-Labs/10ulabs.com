@@ -170,14 +170,20 @@ jobs:
         name: Load Docker build configuration
         run: |
           CONFIG_FILE=src/api/endpoints/image_for_ecs_runners/post/config.json
-          NODE_VERSION=$(jq -r '.node_version' $CONFIG_FILE)
-          RUNNER_VERSION=$(jq -r '.runner_version' $CONFIG_FILE)
-          TERRAFORM_VERSION=$(jq -r '.terraform_version' $CONFIG_FILE)
-          YQ_VERSION=$(jq -r '.yq_version' $CONFIG_FILE)
-          echo "node_version=$NODE_VERSION" >> $GITHUB_OUTPUT
-          echo "runner_version=$RUNNER_VERSION" >> $GITHUB_OUTPUT
-          echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
-          echo "yq_version=$YQ_VERSION" >> $GITHUB_OUTPUT
+          GH_VER=$(jq -r '.gh_version' $CONFIG_FILE)
+          HADOLINT_VER=$(jq -r '.hadolint_version' $CONFIG_FILE)
+          NODE_VER=$(jq -r '.node_version' $CONFIG_FILE)
+          RUNNER_VER=$(jq -r '.runner_version' $CONFIG_FILE)
+          TERRAFORM_VER=$(jq -r '.terraform_version' $CONFIG_FILE)
+          TFLINT_VER=$(jq -r '.tflint_version' $CONFIG_FILE)
+          YQ_VER=$(jq -r '.yq_version' $CONFIG_FILE)
+          echo "gh_version=$GH_VER" >> $GITHUB_OUTPUT
+          echo "hadolint_version=$HADOLINT_VER" >> $GITHUB_OUTPUT
+          echo "node_version=$NODE_VER" >> $GITHUB_OUTPUT
+          echo "runner_version=$RUNNER_VER" >> $GITHUB_OUTPUT
+          echo "terraform_version=$TERRAFORM_VER" >> $GITHUB_OUTPUT
+          echo "tflint_version=$TFLINT_VER" >> $GITHUB_OUTPUT
+          echo "yq_version=$YQ_VER" >> $GITHUB_OUTPUT
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
       - if: >-
@@ -206,16 +212,25 @@ jobs:
           REPO='${{ steps.config.outputs.ecr_repository_name }}'
           CPU='${{ steps.config.outputs.fargate_cpu_architecture }}'
           ECR_URL="${ACCT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
-          NODE_VER="${{ steps.docker_config.outputs.node_version }}"
-          RUNNER_VER="${{ steps.docker_config.outputs.runner_version }}"
-          TF_VER="${{ steps.docker_config.outputs.terraform_version }}"
-          YQ_VER="${{ steps.docker_config.outputs.yq_version }}"
+          CACHE_URL="${ECR_URL}:buildcache"
+          GH_VER='${{ steps.docker_config.outputs.gh_version }}'
+          HADOLINT_VER='${{ steps.docker_config.outputs.hadolint_version }}'
+          NODE_VER='${{ steps.docker_config.outputs.node_version }}'
+          RUNNER_VER='${{ steps.docker_config.outputs.runner_version }}'
+          TERRAFORM_VER='${{ steps.docker_config.outputs.terraform_version }}'
+          TFLINT_VER='${{ steps.docker_config.outputs.tflint_version }}'
+          YQ_VER='${{ steps.docker_config.outputs.yq_version }}'
           docker buildx build \
             --platform linux/$CPU \
+            --cache-from type=registry,ref=${CACHE_URL} \
+            --cache-to type=registry,ref=${CACHE_URL},mode=max \
+            --build-arg GH_VERSION=$GH_VER \
+            --build-arg HADOLINT_VERSION=$HADOLINT_VER \
             --build-arg NODE_VERSION=$NODE_VER \
             --build-arg RUNNER_ARCH=$CPU \
             --build-arg RUNNER_VERSION=$RUNNER_VER \
-            --build-arg TERRAFORM_VERSION=$TF_VER \
+            --build-arg TERRAFORM_VERSION=$TERRAFORM_VER \
+            --build-arg TFLINT_VERSION=$TFLINT_VER \
             --build-arg YQ_VERSION=$YQ_VER \
             -t $ECR_URL:available \
             -t $ECR_URL:$BUILD_TAG \
@@ -237,15 +252,25 @@ jobs:
           REPO='${{ steps.config.outputs.ecr_repository_name }}'
           CPU='${{ steps.config.outputs.fargate_cpu_architecture }}'
           ECR_URL="${ACCT_ID}.dkr.ecr.${REGION}.amazonaws.com/${REPO}"
-          NODE_VER="${{ steps.docker_config.outputs.node_version }}"
-          RUNNER_VER="${{ steps.docker_config.outputs.runner_version }}"
-          TF_VER="${{ steps.docker_config.outputs.terraform_version }}"
-          YQ_VER="${{ steps.docker_config.outputs.yq_version }}"
+          CACHE_URL="${ECR_URL}:buildcache"
+          GH_VER='${{ steps.docker_config.outputs.gh_version }}'
+          HADOLINT_VER='${{ steps.docker_config.outputs.hadolint_version }}'
+          NODE_VER='${{ steps.docker_config.outputs.node_version }}'
+          RUNNER_VER='${{ steps.docker_config.outputs.runner_version }}'
+          TERRAFORM_VER='${{ steps.docker_config.outputs.terraform_version }}'
+          TFLINT_VER='${{ steps.docker_config.outputs.tflint_version }}'
+          YQ_VER='${{ steps.docker_config.outputs.yq_version }}'
           docker buildx build \
+            --platform linux/$CPU \
+            --cache-from type=registry,ref=${CACHE_URL} \
+            --cache-to type=registry,ref=${CACHE_URL},mode=max \
+            --build-arg GH_VERSION=$GH_VER \
+            --build-arg HADOLINT_VERSION=$HADOLINT_VER \
             --build-arg NODE_VERSION=$NODE_VER \
             --build-arg RUNNER_ARCH=$CPU \
             --build-arg RUNNER_VERSION=$RUNNER_VER \
-            --build-arg TERRAFORM_VERSION=$TF_VER \
+            --build-arg TERRAFORM_VERSION=$TERRAFORM_VER \
+            --build-arg TFLINT_VERSION=$TFLINT_VER \
             --build-arg YQ_VERSION=$YQ_VER \
             -t $ECR_URL:available \
             -t $ECR_URL:$BUILD_TAG \

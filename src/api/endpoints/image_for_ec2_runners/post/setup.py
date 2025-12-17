@@ -188,6 +188,13 @@ def install_cloudwatch_agent(arch: str) -> None:
     run("dpkg -i /tmp/amazon-cloudwatch-agent.deb")
 
 
+def configure_cloudwatch_agent() -> None:
+    """Configure CloudWatch agent for memory metrics."""
+    config_src = Path(__file__).parent / "cloudwatch-agent-config.json"
+    config_dst = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+    run(f"cp {config_src} {config_dst}")
+
+
 def cleanup_temp_files() -> None:
     """Remove temporary files."""
     run("rm -rf /tmp/*")
@@ -218,6 +225,7 @@ def main() -> None:
     install_github_actions_runner(arch, args.runner_user, args.runner_version)
     install_ssm_agent(arch)
     install_cloudwatch_agent(arch)
+    configure_cloudwatch_agent()
     cleanup_temp_files()
 
     print("Setup completed successfully", flush=True)

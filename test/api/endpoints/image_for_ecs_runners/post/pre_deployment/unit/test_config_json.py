@@ -56,3 +56,39 @@ def test_config_yq_version_is_string():
     """Test that config yq_version is a string."""
     config = _read_config()
     assert isinstance(config["yq_version"], str)
+
+
+def test_config_has_gh_version():
+    """Test that config has gh_version field."""
+    config = _read_config()
+    assert config["gh_version"] is not None
+
+
+def test_config_gh_version_is_string():
+    """Test that config gh_version is a string."""
+    config = _read_config()
+    assert isinstance(config["gh_version"], str)
+
+
+def test_config_has_hadolint_version():
+    """Test that config has hadolint_version field."""
+    config = _read_config()
+    assert config["hadolint_version"] is not None
+
+
+def test_config_hadolint_version_is_string():
+    """Test that config hadolint_version is a string."""
+    config = _read_config()
+    assert isinstance(config["hadolint_version"], str)
+
+
+def test_config_has_tflint_version():
+    """Test that config has tflint_version field."""
+    config = _read_config()
+    assert config["tflint_version"] is not None
+
+
+def test_config_tflint_version_is_string():
+    """Test that config tflint_version is a string."""
+    config = _read_config()
+    assert isinstance(config["tflint_version"], str)

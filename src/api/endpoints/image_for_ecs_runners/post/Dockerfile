@@ -1,10 +1,13 @@
 # Build stage - download and prepare all tools
 FROM debian:stable-slim AS builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG GH_VERSION
+ARG HADOLINT_VERSION
 ARG NODE_VERSION
 ARG RUNNER_ARCH
 ARG RUNNER_VERSION
 ARG TERRAFORM_VERSION
+ARG TFLINT_VERSION
 ARG YQ_VERSION
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl jq unzip xz-utils && \
@@ -14,10 +17,8 @@ RUN apt-get update && \
     curl -fsSL -o /staging/tmp/amazon-cloudwatch-agent.deb "https://amazoncloudwatch-agent.s3.amazonaws.com/debian/arm64/latest/amazon-cloudwatch-agent.deb" && \
     curl -fsSL -o /staging/usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_arm64" && \
     chmod +x /staging/usr/local/bin/yq && \
-    HADOLINT_VERSION=$(curl -fsSL https://api.github.com/repos/hadolint/hadolint/releases/latest | jq -r '.tag_name') && \
-    curl -fsSL -o /staging/usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-arm64" && \
+    curl -fsSL -o /staging/usr/local/bin/hadolint "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-arm64" && \
     chmod +x /staging/usr/local/bin/hadolint && \
-    TFLINT_VERSION=$(curl -fsSL https://api.github.com/repos/terraform-linters/tflint/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
     curl -fsSL -o /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_arm64.zip" && \
     curl -fsSL -o /tmp/tflint.zip "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_arm64.zip" && \
     unzip -oq /tmp/terraform.zip -d /staging/usr/local/bin && \
@@ -28,7 +29,6 @@ RUN apt-get update && \
     ln -s ../lib/node_modules/npm/bin/npm-cli.js /staging/usr/local/bin/npm && \
     ln -s ../lib/node_modules/npm/bin/npx-cli.js /staging/usr/local/bin/npx && \
     curl -fsSL -o /staging/tmp/runner.tar.gz "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${RUNNER_ARCH}-${RUNNER_VERSION}.tar.gz" && \
-    GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | jq -r '.tag_name' | sed 's/v//') && \
     curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_arm64.tar.gz" | \
         tar -xzf - -C /staging/usr/local/bin --strip-components=2 "gh_${GH_VERSION}_linux_arm64/bin/gh"
 

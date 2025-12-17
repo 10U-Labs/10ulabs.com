@@ -115,3 +115,15 @@ def test_dynamodb_access_policy_exists():
     """Test that DynamoDB access policy is defined."""
     content = IAM_FILE.read_text(encoding="utf-8")
     assert 'resource "aws_iam_role_policy" "dynamodb_access"' in content
+
+
+def test_ec2_runner_cloudwatch_policy_has_put_metric_data():
+    """Test that CloudWatch policy has PutMetricData action."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "cloudwatch:PutMetricData" in content
+
+
+def test_ec2_runner_cloudwatch_policy_restricts_namespace():
+    """Test that CloudWatch metrics permission restricts to GitHubRunner namespace."""
+    content = IAM_FILE.read_text(encoding="utf-8")
+    assert "GitHubRunner/EC2" in content

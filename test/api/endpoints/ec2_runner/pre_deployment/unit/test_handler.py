@@ -369,3 +369,17 @@ def test_test_mode_post_returns_mock_response(
     body = parse_response_body(response)
     is_test_mode = body.get('test_mode')
     assert is_test_mode
+
+
+def test_create_ec2_user_data_starts_cloudwatch_agent(ec2_runner_handler):
+    """Test that user data starts CloudWatch agent."""
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    contains_agent_ctl = 'amazon-cloudwatch-agent-ctl' in result
+    assert contains_agent_ctl
+
+
+def test_create_ec2_user_data_cloudwatch_uses_config_file(ec2_runner_handler):
+    """Test that user data starts CloudWatch agent with config file."""
+    result = ec2_runner_handler.create_ec2_user_data('token', ['label'], 'repo', 'runner')
+    contains_config_path = 'amazon-cloudwatch-agent.json' in result
+    assert contains_config_path

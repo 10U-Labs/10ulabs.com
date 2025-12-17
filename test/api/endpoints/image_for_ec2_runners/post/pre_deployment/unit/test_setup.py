@@ -338,6 +338,24 @@ class TestCleanupTempFiles:
             assert mock_run.call_count == 1
 
 
+class TestConfigureCloudwatchAgent:
+    """Tests for the configure_cloudwatch_agent function."""
+
+    def test_copies_config_file(self, setup_module):
+        """Copies config file to agent directory."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.configure_cloudwatch_agent()
+            calls = [str(c) for c in mock_run.call_args_list]
+            assert any("amazon-cloudwatch-agent.json" in c for c in calls)
+
+    def test_copies_to_etc_directory(self, setup_module):
+        """Copies to /opt/aws/amazon-cloudwatch-agent/etc."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.configure_cloudwatch_agent()
+            calls = [str(c) for c in mock_run.call_args_list]
+            assert any("/opt/aws/amazon-cloudwatch-agent/etc" in c for c in calls)
+
+
 class TestMain:
     """Tests for the main function."""
 
@@ -366,6 +384,7 @@ class TestMain:
              patch.object(setup_module, "install_github_actions_runner"), \
              patch.object(setup_module, "install_ssm_agent"), \
              patch.object(setup_module, "install_cloudwatch_agent"), \
+             patch.object(setup_module, "configure_cloudwatch_agent"), \
              patch.object(setup_module, "cleanup_temp_files"):
             setup_module.main()
 
@@ -395,6 +414,7 @@ class TestMain:
              patch.object(setup_module, "install_github_actions_runner") as mocks["runner"], \
              patch.object(setup_module, "install_ssm_agent") as mocks["ssm"], \
              patch.object(setup_module, "install_cloudwatch_agent") as mocks["cw"], \
+             patch.object(setup_module, "configure_cloudwatch_agent") as mocks["cw_cfg"], \
              patch.object(setup_module, "cleanup_temp_files") as mocks["cleanup"]:
             setup_module.main()
         self._verify_install_calls(mocks, loaded_config)
@@ -416,4 +436,5 @@ class TestMain:
         )
         mocks["ssm"].assert_called_once_with("arm64")
         mocks["cw"].assert_called_once_with("arm64")
+        mocks["cw_cfg"].assert_called_once()
         mocks["cleanup"].assert_called_once()
