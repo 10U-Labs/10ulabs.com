@@ -1,9 +1,13 @@
 """Pytest fixtures for runners integration tests."""
+import json
+
 from test.api.conftest import skip_if_endpoint_not_deployed
 
 import boto3
 import pytest
 import requests
+
+from runner_labels import DEFAULT_ECS_ARCH, DEFAULT_ECS_COMPUTE, DEFAULT_RUNNER_ID
 
 # Re-export for local imports
 __all__ = ['skip_if_endpoint_not_deployed']
@@ -77,3 +81,46 @@ def create_test_dynamodb_item(client, table_name, item):
 def cleanup_test_dynamodb_item(client, table_name, key):
     """Delete a test item from DynamoDB."""
     client.delete_item(TableName=table_name, Key=key)
+
+
+@pytest.fixture(name="webhook_handler_response", scope="module")
+def webhook_handler_response_fixture(config):
+    """Invoke webhook handler Lambda with runner labels event."""
+    function_name = "TenULabsWebhookHandler"
+    region = config["aws_region"]
+
+    event = {
+        "httpMethod": "POST",
+        "path": "/v1/runners",
+        "headers": {
+            "x-github-event": "workflow_job",
+            "x-test-mode": "true"
+        },
+        "body": json.dumps({
+            "action": "queued",
+            "workflow_job": {
+                "id": 999999,
+                "run_id": 888888,
+                "name": "test-job",
+                "labels": [
+                    "ecs",
+                    DEFAULT_ECS_COMPUTE,
+                    DEFAULT_ECS_ARCH,
+                    "spot",
+                    DEFAULT_RUNNER_ID,
+                ],
+                "status": "queued"
+            },
+            "repository": {"full_name": "test/repo"}
+        })
+    }
+
+    lambda_client = boto3.client("lambda", region_name=region)
+    response = lambda_client.invoke(
+        FunctionName=function_name,
+        InvocationType="RequestResponse",
+        Payload=json.dumps(event)
+    )
+
+    payload = json.loads(response["Payload"].read())
+    return {"response": response, "payload": payload}
