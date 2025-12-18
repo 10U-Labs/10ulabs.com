@@ -42,7 +42,7 @@ class IngressHandler {
     return null;
   }
 
-  _routeWorkflowJob(payload) {
+  async _routeWorkflowJob(payload) {
     const action = payload.action;
     if (action !== 'queued') {
       logger.info(`Ignoring workflow_job action '${action}'`);
@@ -67,7 +67,7 @@ class IngressHandler {
       run_id: job.run_id,
       runner_type: runnerType
     };
-    const result = this._deps.enqueueJob(jobData);
+    const result = await this._deps.enqueueJob(jobData);
     return { success: result.success, routed: 'job_queue' };
   }
 
@@ -82,9 +82,9 @@ class IngressHandler {
     return { success: true, routed: 'acknowledged' };
   }
 
-  _routeEvent(githubEvent, payload) {
+  async _routeEvent(githubEvent, payload) {
     if (githubEvent === 'workflow_job') {
-      return this._routeWorkflowJob(payload);
+      return await this._routeWorkflowJob(payload);
     }
     if (githubEvent === 'workflow_run') {
       return this._routeWorkflowRun(payload);
@@ -139,7 +139,7 @@ class IngressHandler {
       return sigError;
     }
 
-    if (deliveryId && this._deps.checkIdempotency(deliveryId)) {
+    if (deliveryId && await this._deps.checkIdempotency(deliveryId)) {
       logger.info(`Duplicate webhook delivery ${deliveryId} detected`);
       return { success: true, skipped: true, reason: 'duplicate' };
     }
@@ -151,7 +151,7 @@ class IngressHandler {
 
     const elapsedMs = Date.now() - startTime;
     this._deps.publishMetric('WebhookIngressProcessingTime', elapsedMs, 'Milliseconds');
-    return this._routeEvent(githubEvent, payload);
+    return await this._routeEvent(githubEvent, payload);
   }
 }
 
