@@ -52,7 +52,7 @@ RUN apt-get update && \
         libnss3 libpango-1.0-0 libsm6 libssl3t64 libthai0 libxaw7 libxcomposite1 \
         libxdamage1 libxext6 libxfixes3 libxfont2 libxi6 libxkbcommon0 libxmu6 \
         libxrandr2 libxt6t64 libxxf86vm1 mesa-libgallium procps python3 python3-pip \
-        sudo unzip x11-xkb-utils xfonts-scalable xfonts-utils xserver-common xvfb zlib1g && \
+        sudo unzip x11-xkb-utils xfonts-scalable xfonts-utils xserver-common xvfb zip zlib1g && \
     /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli && \
     rm -rf /tmp/aws && \
     dpkg -i /tmp/amazon-cloudwatch-agent.deb && rm /tmp/amazon-cloudwatch-agent.deb && \
