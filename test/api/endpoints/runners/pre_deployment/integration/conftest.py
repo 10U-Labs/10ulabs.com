@@ -52,8 +52,6 @@ def config(shared_config):
         'webhook_ingress_dlq_name': resource_names['webhook_ingress_dlq'],
         'ignored_events_queue_name': resource_names['ignored_events_queue'],
         'ignored_events_dlq_name': resource_names['ignored_events_dlq'],
-        'cleanup_queue_name': resource_names['cleanup_queue'],
-        'cleanup_dlq_name': resource_names['cleanup_dlq'],
     }
 
 
@@ -173,3 +171,53 @@ def api_shared_ecs_runner_outputs(request):
             API_SHARED_ECS_RUNNER_DIR, "ecr_repository_url"
         ),
     }
+
+
+# =============================================================================
+# Shared Resource Fixtures (used by both L3 existence and L4 configuration)
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def vpc_info(request):
+    """Fetch VPC details from AWS. Returns None if VPC not found."""
+    client = request.getfixturevalue("ec2_client")
+    outputs = request.getfixturevalue("api_shared_runners_outputs")
+    vpc_id = outputs.get("vpc_id")
+    if not vpc_id:
+        return None
+    try:
+        response = client.describe_vpcs(VpcIds=[vpc_id])
+        return response["Vpcs"][0] if response["Vpcs"] else None
+    except client.exceptions.ClientError:
+        return None
+
+
+@pytest.fixture(scope="session")
+def subnets_info(request):
+    """Fetch subnet details from AWS. Returns empty list if not found."""
+    client = request.getfixturevalue("ec2_client")
+    outputs = request.getfixturevalue("api_shared_runners_outputs")
+    subnet_ids_str = outputs.get("vpc_public_subnet_ids")
+    if not subnet_ids_str:
+        return []
+    subnet_ids = [s.strip() for s in subnet_ids_str.split(",") if s.strip()]
+    try:
+        response = client.describe_subnets(SubnetIds=subnet_ids)
+        return response["Subnets"]
+    except client.exceptions.ClientError:
+        return []
+
+
+@pytest.fixture(scope="session")
+def ecr_repository_info(request):
+    """Fetch ECR repository details from AWS. Returns None if not found."""
+    client = request.getfixturevalue("ecr_client")
+    outputs = request.getfixturevalue("api_shared_ecs_runner_outputs")
+    repo_name = outputs.get("ecr_repository_name")
+    if not repo_name:
+        return None
+    try:
+        response = client.describe_repositories(repositoryNames=[repo_name])
+        return response["repositories"][0] if response["repositories"] else None
+    except client.exceptions.ClientError:
+        return None

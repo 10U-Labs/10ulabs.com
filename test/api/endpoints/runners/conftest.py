@@ -115,8 +115,6 @@ def config_fixture(shared_config) -> Dict[str, Any]:
     result['webhook_ingress_dlq_name'] = f"{lambda_fn}IngressDlq"
     result['ignored_events_queue_name'] = f"{lambda_fn}IgnoredEvents"
     result['ignored_events_dlq_name'] = f"{lambda_fn}IgnoredEventsDlq"
-    result['cleanup_queue_name'] = f"{lambda_fn}Cleanup"
-    result['cleanup_dlq_name'] = f"{lambda_fn}CleanupDlq"
     # Log group names derived from Lambda function names (single source of truth: locals.tf)
     for key in ['circuit_breaker_remediation', 'dlq_reprocessor', 'circuit_breaker_recovery']:
         fn_name = result.get(f'{key}_function_name', '')

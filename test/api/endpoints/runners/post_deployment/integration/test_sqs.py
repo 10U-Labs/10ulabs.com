@@ -179,30 +179,3 @@ def test_sqs_ignored_events_has_redrive_policy(sqs_client, config):
         QueueUrl=queue_url, AttributeNames=['RedrivePolicy']
     )
     assert 'RedrivePolicy' in attributes['Attributes']
-
-
-# === Cleanup Queue Tests ===
-
-
-def test_sqs_cleanup_queue_exists(sqs_client, config):
-    """Test cleanup queue exists."""
-    queue_name = config["cleanup_queue_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert 'QueueUrl' in response
-
-
-def test_sqs_cleanup_dlq_exists(sqs_client, config):
-    """Test cleanup DLQ exists."""
-    queue_name = config["cleanup_dlq_name"]
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    assert 'QueueUrl' in response
-
-
-def test_sqs_cleanup_has_redrive_policy(sqs_client, config):
-    """Test cleanup queue has redrive policy."""
-    queue_name = config["cleanup_queue_name"]
-    queue_url = sqs_client.get_queue_url(QueueName=queue_name)['QueueUrl']
-    attributes = sqs_client.get_queue_attributes(
-        QueueUrl=queue_url, AttributeNames=['RedrivePolicy']
-    )
-    assert 'RedrivePolicy' in attributes['Attributes']

@@ -200,8 +200,6 @@ def get_runners_resource_names(prefix: str | None = None) -> Dict[str, str]:
         'webhook_ingress_dlq': f"{webhook_handler}IngressDlq",
         'ignored_events_queue': f"{webhook_handler}IgnoredEvents",
         'ignored_events_dlq': f"{webhook_handler}IgnoredEventsDlq",
-        'cleanup_queue': f"{webhook_handler}Cleanup",
-        'cleanup_dlq': f"{webhook_handler}CleanupDlq",
     }
 
 
