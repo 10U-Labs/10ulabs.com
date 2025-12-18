@@ -29,14 +29,19 @@ resource "null_resource" "runners_layer_build" {
   }
 
   provisioner "local-exec" {
-    working_dir = local.runners_layer_source_dir
-    command     = <<-EOT
+    command = <<-EOT
       rm -rf ${local.runners_layer_dir}/nodejs
       mkdir -p ${local.runners_layer_dir}/nodejs/runners-layer/etc
-      cp package.json index.js github_pat_auth.js aws_clients.js runner_labels.js webhook_ingress.js ${local.runners_layer_dir}/nodejs/runners-layer/
+      cp ${local.runners_layer_source_dir}/package.json \
+         ${local.runners_layer_source_dir}/index.js \
+         ${local.runners_layer_source_dir}/github_pat_auth.js \
+         ${local.runners_layer_source_dir}/aws_clients.js \
+         ${local.runners_layer_source_dir}/runner_labels.js \
+         ${local.runners_layer_source_dir}/webhook_ingress.js \
+         ${local.runners_layer_dir}/nodejs/runners-layer/
       cp ${local.etc_dir}/runners.json ${local.runners_layer_dir}/nodejs/runners-layer/etc/
-      cd ${local.runners_layer_dir}/nodejs/runners-layer && npm install --production
-      cd ${local.runners_layer_dir} && zip -r ${local.runners_layer_zip} nodejs
+      cd ${local.runners_layer_dir}/nodejs/runners-layer && npm install --omit=dev
+      cd ${local.runners_layer_dir} && zip -r runners_layer.zip nodejs
     EOT
   }
 }
