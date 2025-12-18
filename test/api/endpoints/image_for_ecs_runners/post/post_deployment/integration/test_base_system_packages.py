@@ -49,6 +49,15 @@ def test_tar_installed(docker_image):
     assert result.returncode == 0
 
 
+def test_zip_installed(docker_image):
+    """
+    Test that zip is installed in the container.
+    """
+    result = run_command_in_container(docker_image, "which zip")
+
+    assert result.returncode == 0
+
+
 def test_python3_venv_installed(docker_image):
     """
     Test that Python venv module is installed in the container.
