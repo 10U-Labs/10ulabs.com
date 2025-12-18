@@ -114,12 +114,8 @@ jobs:
             MYPYPATH=lib/python python3 -m mypy "$file"
           done
           MYPYPATH=lib/python python3 -m mypy test/api/endpoints/runners/
-      - if: >-
-          vars.USE_GITHUB_HOSTED == 'true' ||
-          github.event.inputs.github_hosted == 'true' ||
-          contains(github.event.head_commit.message, '[github-hosted]')
-        name: Install ESLint
-        run: npm install --save-dev @eslint/js eslint globals
+      - name: Install ESLint dependencies
+        run: npm install --save-dev @eslint/js globals
       - name: Linting JavaScript files
         run: |
           npx eslint -c etc/eslint.config.mjs \
