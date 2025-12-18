@@ -38,3 +38,37 @@ def test_jsonlint_installed_globally(docker_image):
     result = run_command_in_container(docker_image, "which jsonlint")
 
     assert result.returncode == 0
+
+
+def test_node_path_includes_global_modules(docker_image):
+    """Test that NODE_PATH includes global node_modules."""
+    result = run_command_in_container(
+        docker_image,
+        "echo $NODE_PATH | grep -q '/usr/local/lib/node_modules'"
+    )
+
+    assert result.returncode == 0
+
+
+def test_esm_import_resolves_eslint_js(docker_image):
+    """Test that ESM import can resolve @eslint/js from global node_modules."""
+    cmd = (
+        "node --input-type=module -e "
+        "\"import js from '@eslint/js'; "
+        "console.log(js.configs.recommended ? 'OK' : 'FAIL')\""
+    )
+    result = run_command_in_container(docker_image, cmd)
+
+    assert result.returncode == 0
+
+
+def test_esm_import_resolves_globals(docker_image):
+    """Test that ESM import can resolve globals from global node_modules."""
+    cmd = (
+        "node --input-type=module -e "
+        "\"import globals from 'globals'; "
+        "console.log(globals.node ? 'OK' : 'FAIL')\""
+    )
+    result = run_command_in_container(docker_image, cmd)
+
+    assert result.returncode == 0
