@@ -81,7 +81,7 @@ describe('webhook_ingress', () => {
     });
 
     describe('handle - signature verification', () => {
-      it('should continue processing when signature is missing (logs warning only)', () => {
+      it('should continue processing when signature is missing (logs warning only)', async () => {
         const record = {
           body: '{"action": "in_progress"}',
           messageAttributes: {
@@ -90,12 +90,12 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'ignored_events' });
       });
 
-      it('should skip message with invalid signature', () => {
+      it('should skip message with invalid signature', async () => {
         mockDeps.verifySignature.mockReturnValue(false);
 
         const record = {
@@ -107,13 +107,13 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, skipped: true, reason: 'invalid_signature' });
         expect(mockDeps.publishMetric).toHaveBeenCalledWith('InvalidSignature', 1.0, 'Count');
       });
 
-      it('should return error when signature verification throws', () => {
+      it('should return error when signature verification throws', async () => {
         mockDeps.getWebhookSecret.mockImplementation(() => {
           throw new Error('Secret not found');
         });
@@ -127,14 +127,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: false, error: 'Secret not found' });
       });
     });
 
     describe('handle - idempotency', () => {
-      it('should skip duplicate deliveries', () => {
+      it('should skip duplicate deliveries', async () => {
         mockDeps.checkIdempotency.mockReturnValue(true);
 
         const record = {
@@ -146,14 +146,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, skipped: true, reason: 'duplicate' });
       });
     });
 
     describe('handle - JSON parsing', () => {
-      it('should skip message with invalid JSON body', () => {
+      it('should skip message with invalid JSON body', async () => {
         const record = {
           body: 'not-valid-json',
           messageAttributes: {
@@ -163,14 +163,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, skipped: true, reason: 'invalid_json' });
       });
     });
 
     describe('handle - workflow_job routing', () => {
-      it('should enqueue job for queued workflow_job with matching labels', () => {
+      it('should enqueue job for queued workflow_job with matching labels', async () => {
         const payload = {
           action: 'queued',
           workflow_job: {
@@ -190,7 +190,7 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'job_queue' });
         expect(mockDeps.enqueueJob).toHaveBeenCalledWith({
@@ -202,7 +202,7 @@ describe('webhook_ingress', () => {
         });
       });
 
-      it('should route non-queued actions to ignored events', () => {
+      it('should route non-queued actions to ignored events', async () => {
         const payload = {
           action: 'completed',
           workflow_job: { id: 12345 }
@@ -217,13 +217,13 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'ignored_events' });
         expect(mockDeps.enqueueIgnored).toHaveBeenCalled();
       });
 
-      it('should route jobs without matching runner type to ignored events', () => {
+      it('should route jobs without matching runner type to ignored events', async () => {
         mockDeps.getRunnerType.mockReturnValue([null]);
 
         const payload = {
@@ -243,14 +243,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'ignored_events' });
       });
     });
 
     describe('handle - workflow_run routing', () => {
-      it('should acknowledge workflow_run events', () => {
+      it('should acknowledge workflow_run events', async () => {
         const payload = {
           action: 'completed',
           workflow_run: {
@@ -268,14 +268,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'acknowledged' });
       });
     });
 
     describe('handle - ping event', () => {
-      it('should acknowledge ping events', () => {
+      it('should acknowledge ping events', async () => {
         const payload = { zen: 'Testing is important' };
 
         const record = {
@@ -287,14 +287,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'ping_acknowledged' });
       });
     });
 
     describe('handle - unknown event types', () => {
-      it('should route unknown event types to ignored events', () => {
+      it('should route unknown event types to ignored events', async () => {
         const payload = { data: 'test' };
 
         const record = {
@@ -306,7 +306,7 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'ignored_events' });
         expect(mockDeps.enqueueIgnored).toHaveBeenCalled();
@@ -314,7 +314,7 @@ describe('webhook_ingress', () => {
     });
 
     describe('handle - metrics', () => {
-      it('should publish processing time metric on successful processing', () => {
+      it('should publish processing time metric on successful processing', async () => {
         const payload = { action: 'queued', workflow_job: { id: 1, labels: [] } };
         mockDeps.getRunnerType.mockReturnValue([null]);
 
@@ -327,7 +327,7 @@ describe('webhook_ingress', () => {
           }
         };
 
-        handler.handle(record);
+        await handler.handle(record);
 
         expect(mockDeps.publishMetric).toHaveBeenCalledWith(
           'WebhookIngressProcessingTime',
@@ -338,7 +338,7 @@ describe('webhook_ingress', () => {
     });
 
     describe('handle - edge cases', () => {
-      it('should handle missing workflow_job object', () => {
+      it('should handle missing workflow_job object', async () => {
         const payload = { action: 'queued' };
 
         const record = {
@@ -351,12 +351,12 @@ describe('webhook_ingress', () => {
         };
 
         mockDeps.getRunnerType.mockReturnValue([null]);
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, routed: 'ignored_events' });
       });
 
-      it('should handle missing repository object', () => {
+      it('should handle missing repository object', async () => {
         const payload = {
           action: 'queued',
           workflow_job: { id: 1, labels: ['ecs'] }
@@ -371,14 +371,14 @@ describe('webhook_ingress', () => {
           }
         };
 
-        handler.handle(record);
+        await handler.handle(record);
 
         expect(mockDeps.enqueueJob).toHaveBeenCalledWith(
           expect.objectContaining({ github_repo: undefined })
         );
       });
 
-      it('should handle empty body', () => {
+      it('should handle empty body', async () => {
         const record = {
           body: '',
           messageAttributes: {
@@ -388,7 +388,7 @@ describe('webhook_ingress', () => {
           }
         };
 
-        const result = handler.handle(record);
+        const result = await handler.handle(record);
 
         expect(result).toEqual({ success: true, skipped: true, reason: 'invalid_json' });
       });
