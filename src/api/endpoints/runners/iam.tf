@@ -303,6 +303,84 @@ resource "aws_iam_role_policy" "runner_terminator_ec2" {
   })
 }
 
+# Ignored Events Archiver IAM
+resource "aws_iam_role" "ignored_events_archiver" {
+  name = local.ignored_events_archiver_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = local.ignored_events_archiver_role_name
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ignored_events_archiver_basic" {
+  role       = aws_iam_role.ignored_events_archiver.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "ignored_events_archiver_xray" {
+  role       = aws_iam_role.ignored_events_archiver.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
+resource "aws_iam_role_policy" "ignored_events_archiver_cloudwatch" {
+  name = "CloudWatchMetrics"
+  role = aws_iam_role.ignored_events_archiver.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cloudwatch:PutMetricData"]
+      Resource = ["*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ignored_events_archiver_sqs" {
+  name = "SQSAccess"
+  role = aws_iam_role.ignored_events_archiver.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = [aws_sqs_queue.ignored_events.arn]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ignored_events_archiver_s3" {
+  name = "S3Access"
+  role = aws_iam_role.ignored_events_archiver.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject"
+      ]
+      Resource = ["${aws_s3_bucket.ignored_events_archive.arn}/*"]
+    }]
+  })
+}
+
 resource "aws_iam_role" "circuit_breaker_reset" {
   name = local.circuit_breaker_reset_role_name
 

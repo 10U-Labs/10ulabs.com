@@ -5,6 +5,7 @@ const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { CloudWatchClient } = require('@aws-sdk/client-cloudwatch');
 const { SNSClient } = require('@aws-sdk/client-sns');
 const { SSMClient } = require('@aws-sdk/client-ssm');
+const { S3Client } = require('@aws-sdk/client-s3');
 
 const clients = {
   ecs: null,
@@ -13,7 +14,8 @@ const clients = {
   dynamodb: null,
   cloudwatch: null,
   sns: null,
-  ssm: null
+  ssm: null,
+  s3: null
 };
 
 function getECSClient() {
@@ -65,6 +67,13 @@ function getSSMClient() {
   return clients.ssm;
 }
 
+function getS3Client() {
+  if (!clients.s3) {
+    clients.s3 = new S3Client({});
+  }
+  return clients.s3;
+}
+
 function clearClients() {
   for (const key of Object.keys(clients)) {
     clients[key] = null;
@@ -79,5 +88,6 @@ module.exports = {
   getCloudWatchClient,
   getSNSClient,
   getSSMClient,
+  getS3Client,
   clearClients
 };

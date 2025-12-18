@@ -223,6 +223,75 @@ resource "aws_lambda_event_source_mapping" "runner_terminator_sqs" {
   maximum_batching_window_in_seconds = 0
 }
 
+# Ignored Events Archiver Lambda - archives ignored events to S3
+data "archive_file" "ignored_events_archiver" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/ignored_events_archiver.js"
+  output_path = "${path.module}/.terraform/lambda_packages/ignored_events_archiver.zip"
+}
+
+resource "aws_lambda_function" "ignored_events_archiver" {
+  filename                       = data.archive_file.ignored_events_archiver.output_path
+  function_name                  = local.ignored_events_archiver_function_name
+  role                           = aws_iam_role.ignored_events_archiver.arn
+  handler                        = "ignored_events_archiver.handler"
+  source_code_hash               = data.archive_file.ignored_events_archiver.output_base64sha256
+  runtime                        = "nodejs22.x"
+  architectures                  = ["arm64"]
+  timeout                        = 60
+  memory_size                    = 256
+  reserved_concurrent_executions = -1
+  description                    = "Archives ignored webhook events to S3 for long-term storage"
+  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+
+  environment {
+    variables = {
+      ARCHIVE_BUCKET_NAME = aws_s3_bucket.ignored_events_archive.bucket
+    }
+  }
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.ignored_events_archiver.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = local.ignored_events_archiver_function_name
+  })
+
+  depends_on = [
+    aws_iam_role_policy.ignored_events_archiver_cloudwatch,
+    aws_iam_role_policy.ignored_events_archiver_sqs,
+    aws_iam_role_policy.ignored_events_archiver_s3,
+    aws_iam_role_policy_attachment.ignored_events_archiver_basic,
+    aws_iam_role_policy_attachment.ignored_events_archiver_xray,
+  ]
+
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.ignored_events_archiver.id]
+  }
+}
+
+resource "aws_cloudwatch_log_group" "ignored_events_archiver" {
+  name              = "/aws/lambda/${local.ignored_events_archiver_function_name}"
+  retention_in_days = 7
+
+  tags = merge(local.common_tags, {
+    Name = "${local.ignored_events_archiver_function_name}Logs"
+  })
+}
+
+resource "aws_lambda_event_source_mapping" "ignored_events_archiver_sqs" {
+  event_source_arn                   = aws_sqs_queue.ignored_events.arn
+  function_name                      = aws_lambda_function.ignored_events_archiver.arn
+  batch_size                         = 10
+  maximum_batching_window_in_seconds = 60
+}
+
 data "archive_file" "circuit_breaker_reset" {
   type        = "zip"
   source_file = "${path.module}/lambdas/circuit_breaker_reset.py"

@@ -42,6 +42,7 @@ locals {
   stale_runner_cleanup_function_name        = "${module.shared.resource_prefix}StaleRunnerCleanup"
   runner_starter_function_name              = "${module.shared.resource_prefix}RunnerStarter"
   runner_terminator_function_name           = "${module.shared.resource_prefix}RunnerTerminator"
+  ignored_events_archiver_function_name     = "${module.shared.resource_prefix}IgnoredEventsArchiver"
 
   # IAM role names (single source of truth)
   lambda_runners_handler_role_name      = "${module.shared.lambda_handler_names.webhook}ServiceRole"
@@ -54,6 +55,7 @@ locals {
   stale_runner_cleanup_role_name        = "${module.shared.resource_prefix}StaleRunnerCleanupRole"
   runner_starter_role_name              = "${module.shared.resource_prefix}RunnerStarterRole"
   runner_terminator_role_name           = "${module.shared.resource_prefix}RunnerTerminatorRole"
+  ignored_events_archiver_role_name     = "${module.shared.resource_prefix}IgnoredEventsArchiverRole"
   config_recorder_role_name             = "${module.shared.resource_prefix}ConfigRecorderRole"
 
   common_tags = {
