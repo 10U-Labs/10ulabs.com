@@ -16,7 +16,7 @@ class LabelValidationError extends Error {
 }
 
 function findConfigFile() {
-  // Try ETC_PATH environment variable (for Lambda deployment)
+  // Try ETC_PATH environment variable
   const etcPath = process.env.ETC_PATH;
   if (etcPath) {
     const configPath = path.join(etcPath, 'runners.json');
@@ -25,10 +25,16 @@ function findConfigFile() {
     }
   }
 
-  // Try relative to this file
-  const modulePath = path.join(__dirname, '..', '..', '..', '..', '..', '..', 'etc', 'runners.json');
-  if (fs.existsSync(modulePath)) {
-    return modulePath;
+  // Try relative to this file (Lambda layer deployment: /opt/nodejs/runners-layer/etc/)
+  const layerPath = path.join(__dirname, 'etc', 'runners.json');
+  if (fs.existsSync(layerPath)) {
+    return layerPath;
+  }
+
+  // Try repo root structure (local development: src/api/endpoints/runners/lambdas/layer/)
+  const repoPath = path.join(__dirname, '..', '..', '..', '..', '..', '..', 'etc', 'runners.json');
+  if (fs.existsSync(repoPath)) {
+    return repoPath;
   }
 
   // Try current working directory
