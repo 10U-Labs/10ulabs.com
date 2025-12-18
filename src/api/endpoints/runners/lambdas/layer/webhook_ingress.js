@@ -23,13 +23,13 @@ class IngressHandler {
     return this._deps;
   }
 
-  _verifySignature(bodyStr, signature, deliveryId) {
+  async _verifySignature(bodyStr, signature, deliveryId) {
     if (!signature) {
       logger.warn('No signature header in webhook ingress message');
       return null;
     }
     try {
-      const webhookSecret = this._deps.getWebhookSecret();
+      const webhookSecret = await this._deps.getWebhookSecret();
       if (!this._deps.verifySignature(bodyStr, signature, webhookSecret)) {
         logger.error('Invalid signature for delivery', deliveryId);
         this._deps.publishMetric('InvalidSignature', 1.0, 'Count');
@@ -124,7 +124,7 @@ class IngressHandler {
     return [headers, rawBody, payload];
   }
 
-  handle(record) {
+  async handle(record) {
     const startTime = Date.now();
 
     const [headers, bodyStr, payload] = this._extractHeadersAndBody(record);
@@ -134,7 +134,7 @@ class IngressHandler {
 
     logger.info(`Processing webhook ingress: event=${githubEvent}, delivery=${deliveryId}`);
 
-    const sigError = this._verifySignature(bodyStr, signature, deliveryId);
+    const sigError = await this._verifySignature(bodyStr, signature, deliveryId);
     if (sigError) {
       return sigError;
     }
