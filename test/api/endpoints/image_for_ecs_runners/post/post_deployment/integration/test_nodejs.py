@@ -50,6 +50,16 @@ def test_node_path_includes_global_modules(docker_image):
     assert result.returncode == 0
 
 
+def test_node_modules_symlink_exists(docker_image):
+    """Test that node_modules symlink exists in WORKDIR for ESM resolution."""
+    result = run_command_in_container(
+        docker_image,
+        "test -L /home/runner/node_modules"
+    )
+
+    assert result.returncode == 0
+
+
 def test_esm_import_resolves_eslint_js(docker_image):
     """Test that ESM import can resolve @eslint/js from global node_modules."""
     cmd = (

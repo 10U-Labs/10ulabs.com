@@ -57,6 +57,7 @@ RUN apt-get update && \
     rm -rf /tmp/aws && \
     dpkg -i /tmp/amazon-cloudwatch-agent.deb && rm /tmp/amazon-cloudwatch-agent.deb && \
     npm install -g @eslint/js eslint globals jsonlint && npm cache clean --force && \
+    ln -s /usr/local/lib/node_modules /home/runner/node_modules && \
     python3 -m pip install --no-cache-dir --no-compile --break-system-packages \
         'boto3>=1.35.0' boto3-stubs 'botocore>=1.35.0' dockerfile-parse dnspython \
         mypy paramiko pylint PyJWT pytest python-hcl2 PyYAML requests types-dockerfile-parse \
