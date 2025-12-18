@@ -73,6 +73,7 @@ RUN apt-get update && \
            /usr/share/i18n/* && \
     find /usr -type f -name '*.pyc' -delete && \
     find /usr -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+ENV NODE_PATH=/usr/local/lib/node_modules
 USER runner
 ENTRYPOINT ["/home/runner/entrypoint.py"]
 CMD ["--repo", "", "--name", "", "--labels", "", "--token", ""]
