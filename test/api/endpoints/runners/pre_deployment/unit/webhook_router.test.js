@@ -89,7 +89,7 @@ describe('webhook_router', () => {
       expect(result.statusCode).toBe(200);
       const body = JSON.parse(result.body);
       expect(body.status).toBe('healthy');
-      expect(body.circuit_breaker).toBeDefined();
+      expect(body.timestamp).toBeDefined();
     });
 
     it('should return 400 for invalid JSON payload', async () => {
@@ -465,40 +465,8 @@ describe('webhook_router', () => {
     });
   });
 
-  describe('handler - SQS job queue events', () => {
-    it('should process job queue message', async () => {
-      vi.stubEnv('API_KEY_PARAMETER_NAME', '/api/key');
-
-      const sqsEvent = {
-        Records: [{
-          eventSource: 'aws:sqs',
-          eventSourceARN: 'arn:aws:sqs:us-east-2:123456789012:job-queue',
-          body: JSON.stringify({
-            job_id: 12345,
-            job_labels: ['self-hosted', 'ec2', 'linux', 'x64', 'small'],
-            github_repo: 'owner/repo',
-            run_id: 67890
-          })
-        }]
-      };
-
-      // This will fail due to https.request not being mockable,
-      // but the code path up to that point will be exercised
-      await expect(handler.handler(sqsEvent, {})).rejects.toThrow();
-    });
-
-    it('should handle invalid SQS message body', async () => {
-      const sqsEvent = {
-        Records: [{
-          eventSource: 'aws:sqs',
-          eventSourceARN: 'arn:aws:sqs:us-east-2:123456789012:job-queue',
-          body: 'invalid-json'
-        }]
-      };
-
-      await expect(handler.handler(sqsEvent, {})).rejects.toThrow();
-    });
-  });
+  // Note: Job queue processing tests moved to runner_starter.test.js
+  // webhook_router now only handles webhook_ingress queue and API Gateway events
 
   describe('handler - SQS webhook ingress queue events', () => {
     it('should process SQS events from queues', async () => {

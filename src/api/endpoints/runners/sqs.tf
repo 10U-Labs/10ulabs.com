@@ -103,6 +103,30 @@ resource "aws_sqs_queue" "job_queue" {
   })
 }
 
+# Cancellation queue - receives cancelled/completed workflow events for runner termination
+resource "aws_sqs_queue" "cancellation_dlq" {
+  name                      = local.cancellation_queue_dlq_name
+  message_retention_seconds = 1209600 # 14 days
+
+  tags = merge(local.common_tags, {
+    Name = local.cancellation_queue_dlq_name
+  })
+}
+
+resource "aws_sqs_queue" "cancellation" {
+  name                       = local.cancellation_queue_name
+  visibility_timeout_seconds = local.lambda_timeout_seconds * 6
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.cancellation_dlq.arn
+    maxReceiveCount     = 3
+  })
+
+  tags = merge(local.common_tags, {
+    Name = local.cancellation_queue_name
+  })
+}
+
 resource "aws_sqs_queue" "drift_recovery" {
   name                        = "${local.resource_prefix}DriftRecovery.fifo"
   fifo_queue                  = true

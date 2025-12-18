@@ -4,8 +4,7 @@ Layer 2: Verify all deployed resources are configured correctly.
 These tests run after existence tests pass.
 """
 import json
-
-from naming_conventions import validate_name
+import re
 
 
 # === Lambda Layer Contents ===
@@ -281,17 +280,20 @@ def test_dlq_reprocessor_rule_has_15_minute_schedule(events_client, config):
 # === Resource Naming Conventions ===
 
 
+def _is_pascalcase(name):
+    """Check if name follows PascalCase convention (no dashes, underscores)."""
+    return bool(re.match(r'^[A-Z][a-zA-Z0-9]*$', name))
+
+
 def test_webhook_handler_name_is_pascalcase(lambda_client):
     """Verify TenULabsWebhookHandler uses PascalCase naming."""
     response = lambda_client.get_function(FunctionName="TenULabsWebhookHandler")
     actual_name = response["Configuration"]["FunctionName"]
-    error = validate_name(actual_name)
-    assert error is None, f"Invalid name '{actual_name}': {error}"
+    assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"
 
 
 def test_sqs_handler_name_is_pascalcase(lambda_client):
     """Verify TenULabsSqsHandler uses PascalCase naming."""
     response = lambda_client.get_function(FunctionName="TenULabsSqsHandler")
     actual_name = response["Configuration"]["FunctionName"]
-    error = validate_name(actual_name)
-    assert error is None, f"Invalid name '{actual_name}': {error}"
+    assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"

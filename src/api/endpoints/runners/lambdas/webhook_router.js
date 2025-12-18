@@ -1,5 +1,4 @@
 const crypto = require('crypto');
-const https = require('https');
 const {
   getSSMClient,
   getDynamoDBClient,
@@ -9,7 +8,6 @@ const {
   validateLabels,
   LabelParseError,
   LabelValidationError,
-  isWebhookIngressQueue,
   IngressHandler
 } = require('/opt/nodejs/runners-layer');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
@@ -24,14 +22,7 @@ const logger = {
 };
 
 const webhookSecretCache = { value: null };
-const apiKeyCache = { value: null };
 let testModeEnabled = false;
-
-const circuitBreakerState = {
-  failures: 0,
-  lastFailureTime: 0,
-  state: 'closed'
-};
 
 function setTestMode(enabled) {
   testModeEnabled = enabled;
@@ -83,56 +74,6 @@ async function checkAndRecordIdempotency(requestId) {
     logger.error('Failed to check idempotency:', err.message);
     return false;
   }
-}
-
-function checkCircuitBreaker() {
-  const currentTime = Date.now() / 1000;
-  const failureThreshold = 5;
-  const timeoutSeconds = 60;
-
-  if (circuitBreakerState.state === 'open') {
-    if (currentTime - circuitBreakerState.lastFailureTime > timeoutSeconds) {
-      logger.info('Circuit breaker transitioning to half-open state');
-      circuitBreakerState.state = 'half-open';
-      circuitBreakerState.failures = 0;
-      publishMetric('CircuitBreakerState', 1.0, 'Count');
-      return true;
-    }
-    publishMetric('CircuitBreakerState', 2.0, 'Count');
-    return false;
-  }
-
-  if (circuitBreakerState.failures >= failureThreshold) {
-    logger.warn('Circuit breaker opening due to', circuitBreakerState.failures, 'failures');
-    circuitBreakerState.state = 'open';
-    circuitBreakerState.lastFailureTime = currentTime;
-    publishMetric('CircuitBreakerState', 2.0, 'Count');
-    return false;
-  }
-
-  publishMetric('CircuitBreakerState', 0.0, 'Count');
-  return true;
-}
-
-function recordCircuitBreakerSuccess() {
-  if (circuitBreakerState.state === 'half-open') {
-    logger.info('Circuit breaker closing after successful request');
-    circuitBreakerState.state = 'closed';
-  }
-  circuitBreakerState.failures = 0;
-}
-
-function recordCircuitBreakerFailure() {
-  circuitBreakerState.failures++;
-  circuitBreakerState.lastFailureTime = Date.now() / 1000;
-  if (circuitBreakerState.state === 'half-open') {
-    logger.warn('Circuit breaker reopening after failed request in half-open state');
-    circuitBreakerState.state = 'open';
-  }
-}
-
-function shouldRecordCircuitBreakerFailure(statusCode) {
-  return statusCode === null;
 }
 
 async function enqueueJob(jobData) {
@@ -188,6 +129,27 @@ async function enqueueIgnoredEvent(eventData, reason) {
   }
 }
 
+async function enqueueCancellation(cancellationData) {
+  const queueUrl = process.env.CANCELLATION_QUEUE_URL;
+  if (!queueUrl) {
+    logger.warn('CANCELLATION_QUEUE_URL not set, skipping cancellation enqueue');
+    return { success: false, error: 'Cancellation queue not configured' };
+  }
+
+  try {
+    const response = await getSQSClient().send(new SendMessageCommand({
+      QueueUrl: queueUrl,
+      MessageBody: JSON.stringify(cancellationData)
+    }));
+    logger.info('Enqueued cancellation to SQS:', response.MessageId,
+      '(job_id:', cancellationData.job_id, ', run_id:', cancellationData.run_id, ')');
+    return { success: true, message_id: response.MessageId };
+  } catch (err) {
+    logger.error('Failed to enqueue cancellation:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 function handleWorkflowRun(eventData) {
   const action = eventData.action;
   const workflowRun = eventData.workflow_run || {};
@@ -233,33 +195,6 @@ async function getWebhookSecret(forceRefresh = false) {
   }
 }
 
-async function getApiKey(forceRefresh = false) {
-  if (forceRefresh) {
-    apiKeyCache.value = null;
-  }
-  if (apiKeyCache.value) {
-    return apiKeyCache.value;
-  }
-
-  const parameterName = process.env.API_KEY_PARAMETER_NAME;
-  if (!parameterName) {
-    throw new Error('API_KEY_PARAMETER_NAME environment variable not set');
-  }
-
-  try {
-    const response = await getSSMClient().send(new GetParameterCommand({
-      Name: parameterName,
-      WithDecryption: true
-    }));
-    const apiKey = response.Parameter?.Value;
-    apiKeyCache.value = apiKey;
-    return apiKey;
-  } catch (err) {
-    logger.error('Failed to retrieve API key:', err.message);
-    throw new Error(`Cannot retrieve API key: ${err.message}`);
-  }
-}
-
 function verifySignature(payloadBody, signatureHeader, secret) {
   if (!signatureHeader) {
     return false;
@@ -277,56 +212,6 @@ function verifySignature(payloadBody, signatureHeader, secret) {
     Buffer.from(computedSignature),
     Buffer.from(githubSignature)
   );
-}
-
-function makeHttpRequestWithRetry(endpoint, payload, headers = {}, maxRetries = 3) {
-  return new Promise((resolve) => {
-    const url = new URL(endpoint);
-    let lastStatusCode = null;
-
-    const attempt = (attemptNum) => {
-      const options = {
-        hostname: url.hostname,
-        port: url.port || 443,
-        path: url.pathname + url.search,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers
-        }
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => { data += chunk; });
-        res.on('end', () => {
-          lastStatusCode = res.statusCode;
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve([true, JSON.parse(data || '{}'), null, res.statusCode]);
-          } else if (res.statusCode >= 400 && res.statusCode < 500) {
-            resolve([false, null, `HTTP ${res.statusCode}`, res.statusCode]);
-          } else if (attemptNum >= maxRetries) {
-            resolve([false, null, `HTTP ${res.statusCode} after ${maxRetries + 1} attempts`, res.statusCode]);
-          } else {
-            setTimeout(() => attempt(attemptNum + 1), Math.pow(2, attemptNum) * 1000);
-          }
-        });
-      });
-
-      req.on('error', (err) => {
-        if (attemptNum >= maxRetries) {
-          resolve([false, null, `${err.message} after ${maxRetries + 1} attempts`, lastStatusCode]);
-        } else {
-          setTimeout(() => attempt(attemptNum + 1), Math.pow(2, attemptNum) * 1000);
-        }
-      });
-
-      req.write(JSON.stringify(payload));
-      req.end();
-    };
-
-    attempt(0);
-  });
 }
 
 function getRunnerTypeFromLabels(jobLabels) {
@@ -352,67 +237,6 @@ function getRunnerTypeFromLabels(jobLabels) {
   }
 
   return [runnerType, endpointSuffix];
-}
-
-function buildRunnerEndpoint(endpointSuffix) {
-  return `${process.env.API_BASE_URL}/v1/${endpointSuffix}`;
-}
-
-function handleRouteSuccess(jobId, runnerType, responseData) {
-  logger.info('Successfully routed job', jobId, 'to', runnerType, 'runner');
-  recordCircuitBreakerSuccess();
-  return { success: true, runner_type: runnerType, response: responseData };
-}
-
-function handleRouteFailure(jobId, error, statusCode) {
-  logger.error('Failed to route job', jobId, ':', error);
-  if (shouldRecordCircuitBreakerFailure(statusCode)) {
-    recordCircuitBreakerFailure();
-  } else {
-    logger.warn('Status', statusCode, 'for job', jobId, '- not counting as circuit breaker failure');
-  }
-  return { success: false, error };
-}
-
-async function routeRunnerRequest(jobId, jobLabels, githubRepo, runId = null) {
-  if (!checkCircuitBreaker()) {
-    logger.error('Circuit breaker is open, rejecting request for job', jobId);
-    return { success: false, error: 'Service temporarily unavailable (circuit breaker open)' };
-  }
-
-  const [runnerType, endpointSuffix] = getRunnerTypeFromLabels(jobLabels);
-  if (!runnerType || !endpointSuffix) {
-    logger.error('No matching runner type for labels:', jobLabels);
-    return { success: false, error: `No matching runner type for labels: ${JSON.stringify(jobLabels)}` };
-  }
-
-  let apiKey;
-  try {
-    apiKey = await getApiKey();
-  } catch (err) {
-    logger.error('Cannot route job', jobId, ':', err.message);
-    return { success: false, error: err.message };
-  }
-
-  const endpoint = buildRunnerEndpoint(endpointSuffix);
-  const payload = {
-    job_id: jobId,
-    job_labels: jobLabels,
-    github_repo: githubRepo,
-    run_id: runId,
-    runner_type: runnerType
-  };
-
-  logger.info('Routing job', jobId, 'to', runnerType, 'runner:', endpoint, '(run_id=', runId, ')');
-
-  const [success, responseData, error, statusCode] = await makeHttpRequestWithRetry(
-    endpoint, payload, { 'x-api-key': apiKey }
-  );
-
-  if (success) {
-    return handleRouteSuccess(jobId, runnerType, responseData);
-  }
-  return handleRouteFailure(jobId, error, statusCode);
 }
 
 async function handleWorkflowJob(eventData) {
@@ -495,35 +319,9 @@ async function handleWorkflowJob(eventData) {
   };
 }
 
-async function handleSqsMessage(message) {
-  try {
-    const body = JSON.parse(message.body);
-    const { job_id: jobId, job_labels: jobLabels, github_repo: githubRepo, run_id: runId } = body;
-
-    logger.info(
-      'Processing job from SQS: job_id=', jobId, ', labels=', JSON.stringify(jobLabels),
-      ', repo=', githubRepo, ', run_id=', runId
-    );
-
-    const result = await routeRunnerRequest(jobId, jobLabels, githubRepo, runId);
-
-    if (result.success) {
-      logger.info('Successfully processed SQS message for job', jobId);
-      return { success: true };
-    }
-
-    logger.error('Failed to process SQS message for job', jobId, ':', result.error);
-    return { success: false, error: result.error };
-  } catch (err) {
-    logger.error('Failed to parse SQS message:', err.message);
-    return { success: false, error: `Invalid message format: ${err.message}` };
-  }
-}
-
 function handleHealthCheck() {
   const healthStatus = {
     status: 'healthy',
-    circuit_breaker: circuitBreakerState.state,
     timestamp: Math.floor(Date.now() / 1000)
   };
   return {
@@ -658,7 +456,8 @@ function getIngressHandler() {
     checkIdempotency: checkAndRecordIdempotency,
     getRunnerType: getRunnerTypeFromLabels,
     enqueueJob,
-    enqueueIgnored: enqueueIgnoredEvent
+    enqueueIgnored: enqueueIgnoredEvent,
+    enqueueCancellation
   };
   return new IngressHandler(deps);
 }
@@ -671,29 +470,20 @@ exports.handler = async (event, _context) => {
   const isSqs = records.length > 0 && records[0].eventSource === 'aws:sqs';
 
   if (isSqs) {
-    const eventSourceArn = records[0].eventSourceARN || '';
+    // This Lambda only handles webhook_ingress queue
+    // job_queue is handled by runner_starter Lambda
+    // cancellation_queue is handled by runner_terminator Lambda
+    logger.info('Processing SQS event from webhook_ingress queue');
 
-    let queueType;
-    let handler;
-    if (isWebhookIngressQueue(eventSourceArn)) {
-      queueType = 'webhook_ingress';
-      const ingressHandler = getIngressHandler();
-      handler = (record) => ingressHandler.handle(record);
-    } else {
-      queueType = 'job';
-      handler = handleSqsMessage;
-    }
-
-    logger.info('Processing SQS event from', queueType, 'queue');
-
+    const ingressHandler = getIngressHandler();
     const results = [];
     for (const record of records) {
-      const result = await handler(record);
+      const result = await ingressHandler.handle(record);
       results.push(result);
     }
 
     if (!results.every(r => r.success)) {
-      throw new Error(`One or more ${queueType} messages failed`);
+      throw new Error('One or more webhook_ingress messages failed');
     }
     return { statusCode: 200, body: JSON.stringify({ message: 'Processed' }) };
   }

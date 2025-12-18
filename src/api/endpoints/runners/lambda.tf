@@ -20,9 +20,7 @@ resource "aws_lambda_function" "runners_handler" {
 
   environment {
     variables = {
-      API_BASE_URL             = "https://${local.api_fqdn}"
-      API_KEY_PARAMETER_NAME   = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
-      ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+      CANCELLATION_QUEUE_URL   = aws_sqs_queue.cancellation.url
       ETC_PATH                 = "/opt/nodejs/runners-layer"
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
@@ -30,7 +28,6 @@ resource "aws_lambda_function" "runners_handler" {
       IGNORED_EVENTS_QUEUE_URL = aws_sqs_queue.ignored_events.url
       JOB_QUEUE_URL            = aws_sqs_queue.job_queue.url
       WEBHOOK_SECRET_NAME      = aws_ssm_parameter.webhook_secret.name
-      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
     }
   }
 
@@ -57,8 +54,6 @@ resource "aws_lambda_function" "runners_handler" {
     aws_iam_role_policy.lambda_runners_handler_sqs,
     aws_iam_role_policy.lambda_runners_handler_dynamodb,
     aws_iam_role_policy.lambda_runners_handler_ssm_github_pat,
-    aws_iam_role_policy.lambda_runners_handler_ecs,
-    aws_iam_role_policy.lambda_runners_handler_ec2,
     aws_iam_role_policy_attachment.lambda_runners_handler_basic,
     aws_iam_role_policy_attachment.lambda_runners_handler_xray,
   ]
@@ -87,9 +82,143 @@ resource "aws_lambda_event_source_mapping" "runners_handler_webhook_ingress" {
   maximum_batching_window_in_seconds = 0
 }
 
-resource "aws_lambda_event_source_mapping" "runners_handler_sqs" {
+# Runner Starter Lambda - processes job_queue messages and starts runners
+data "archive_file" "runner_starter" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/runner_starter.js"
+  output_path = "${path.module}/.terraform/lambda_packages/runner_starter.zip"
+}
+
+resource "aws_lambda_function" "runner_starter" {
+  filename                       = data.archive_file.runner_starter.output_path
+  function_name                  = local.runner_starter_function_name
+  role                           = aws_iam_role.runner_starter.arn
+  handler                        = "runner_starter.handler"
+  source_code_hash               = data.archive_file.runner_starter.output_base64sha256
+  runtime                        = "nodejs22.x"
+  architectures                  = ["arm64"]
+  timeout                        = local.lambda_timeout_seconds
+  memory_size                    = local.lambda_memory_mb
+  reserved_concurrent_executions = -1
+  description                    = "Processes job queue messages and starts GitHub runners"
+  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+
+  environment {
+    variables = {
+      API_BASE_URL           = "https://${local.api_fqdn}"
+      API_KEY_PARAMETER_NAME = data.terraform_remote_state.api.outputs.api_key_ssm_parameter
+    }
+  }
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.runner_starter.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = local.runner_starter_function_name
+  })
+
+  depends_on = [
+    aws_iam_role_policy.runner_starter_ssm,
+    aws_iam_role_policy.runner_starter_cloudwatch,
+    aws_iam_role_policy.runner_starter_sqs,
+    aws_iam_role_policy_attachment.runner_starter_basic,
+    aws_iam_role_policy_attachment.runner_starter_xray,
+  ]
+
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.runner_starter.id]
+  }
+}
+
+resource "aws_cloudwatch_log_group" "runner_starter" {
+  name              = "/aws/lambda/${local.runner_starter_function_name}"
+  retention_in_days = 7
+
+  tags = merge(local.common_tags, {
+    Name = "${local.runner_starter_function_name}Logs"
+  })
+}
+
+resource "aws_lambda_event_source_mapping" "runner_starter_sqs" {
   event_source_arn                   = aws_sqs_queue.job_queue.arn
-  function_name                      = aws_lambda_function.runners_handler.arn
+  function_name                      = aws_lambda_function.runner_starter.arn
+  batch_size                         = 1
+  maximum_batching_window_in_seconds = 0
+}
+
+# Runner Terminator Lambda - processes cancellation_queue and stops runners
+data "archive_file" "runner_terminator" {
+  type        = "zip"
+  source_file = "${path.module}/lambdas/runner_terminator.js"
+  output_path = "${path.module}/.terraform/lambda_packages/runner_terminator.zip"
+}
+
+resource "aws_lambda_function" "runner_terminator" {
+  filename                       = data.archive_file.runner_terminator.output_path
+  function_name                  = local.runner_terminator_function_name
+  role                           = aws_iam_role.runner_terminator.arn
+  handler                        = "runner_terminator.handler"
+  source_code_hash               = data.archive_file.runner_terminator.output_base64sha256
+  runtime                        = "nodejs22.x"
+  architectures                  = ["arm64"]
+  timeout                        = local.lambda_timeout_seconds
+  memory_size                    = local.lambda_memory_mb
+  reserved_concurrent_executions = -1
+  description                    = "Processes cancellation queue and terminates GitHub runners"
+  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+
+  environment {
+    variables = {
+      EC2_MANAGED_BY_TAG = data.terraform_remote_state.ec2_runner.outputs.ec2_runner_managed_by_tag
+      ECS_CLUSTER        = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
+    }
+  }
+
+  tracing_config {
+    mode = "Active"
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = aws_cloudwatch_log_group.runner_terminator.name
+  }
+
+  tags = merge(local.common_tags, {
+    Name = local.runner_terminator_function_name
+  })
+
+  depends_on = [
+    aws_iam_role_policy.runner_terminator_cloudwatch,
+    aws_iam_role_policy.runner_terminator_sqs,
+    aws_iam_role_policy.runner_terminator_ecs,
+    aws_iam_role_policy.runner_terminator_ec2,
+    aws_iam_role_policy_attachment.runner_terminator_basic,
+    aws_iam_role_policy_attachment.runner_terminator_xray,
+  ]
+
+  lifecycle {
+    replace_triggered_by = [aws_iam_role.runner_terminator.id]
+  }
+}
+
+resource "aws_cloudwatch_log_group" "runner_terminator" {
+  name              = "/aws/lambda/${local.runner_terminator_function_name}"
+  retention_in_days = 7
+
+  tags = merge(local.common_tags, {
+    Name = "${local.runner_terminator_function_name}Logs"
+  })
+}
+
+resource "aws_lambda_event_source_mapping" "runner_terminator_sqs" {
+  event_source_arn                   = aws_sqs_queue.cancellation.arn
+  function_name                      = aws_lambda_function.runner_terminator.arn
   batch_size                         = 1
   maximum_batching_window_in_seconds = 0
 }

@@ -72,6 +72,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
         ]
         Resource = [
           aws_sqs_queue.job_queue.arn,
+          aws_sqs_queue.cancellation.arn,
           aws_sqs_queue.webhook_dlq.arn,
           aws_sqs_queue.ignored_events.arn,
         ]
@@ -85,7 +86,6 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
         ]
         Resource = [
           aws_sqs_queue.webhook_ingress.arn,
-          aws_sqs_queue.job_queue.arn,
         ]
       }
     ]
@@ -130,9 +130,147 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ssm_github_pat" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_runners_handler_ecs" {
+# Runner Starter IAM
+resource "aws_iam_role" "runner_starter" {
+  name = local.runner_starter_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = local.runner_starter_role_name
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "runner_starter_basic" {
+  role       = aws_iam_role.runner_starter.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "runner_starter_xray" {
+  role       = aws_iam_role.runner_starter.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
+resource "aws_iam_role_policy" "runner_starter_ssm" {
+  name = "SSMParameterAccess"
+  role = aws_iam_role.runner_starter.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["ssm:GetParameter"]
+      Resource = [data.terraform_remote_state.api.outputs.api_key_ssm_parameter_arn]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "runner_starter_cloudwatch" {
+  name = "CloudWatchMetrics"
+  role = aws_iam_role.runner_starter.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cloudwatch:PutMetricData"]
+      Resource = ["*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "runner_starter_sqs" {
+  name = "SQSAccess"
+  role = aws_iam_role.runner_starter.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = [aws_sqs_queue.job_queue.arn]
+    }]
+  })
+}
+
+# Runner Terminator IAM
+resource "aws_iam_role" "runner_terminator" {
+  name = local.runner_terminator_role_name
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = local.runner_terminator_role_name
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "runner_terminator_basic" {
+  role       = aws_iam_role.runner_terminator.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "runner_terminator_xray" {
+  role       = aws_iam_role.runner_terminator.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
+resource "aws_iam_role_policy" "runner_terminator_cloudwatch" {
+  name = "CloudWatchMetrics"
+  role = aws_iam_role.runner_terminator.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cloudwatch:PutMetricData"]
+      Resource = ["*"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "runner_terminator_sqs" {
+  name = "SQSAccess"
+  role = aws_iam_role.runner_terminator.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = [aws_sqs_queue.cancellation.arn]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "runner_terminator_ecs" {
   name = "ECSAccess"
-  role = aws_iam_role.lambda_runners_handler.id
+  role = aws_iam_role.runner_terminator.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -140,6 +278,7 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ecs" {
       Effect = "Allow"
       Action = [
         "ecs:StopTask",
+        "ecs:ListTasks",
         "ecs:DescribeTasks"
       ]
       Resource = ["*"]
@@ -147,9 +286,9 @@ resource "aws_iam_role_policy" "lambda_runners_handler_ecs" {
   })
 }
 
-resource "aws_iam_role_policy" "lambda_runners_handler_ec2" {
+resource "aws_iam_role_policy" "runner_terminator_ec2" {
   name = "EC2Access"
-  role = aws_iam_role.lambda_runners_handler.id
+  role = aws_iam_role.runner_terminator.id
 
   policy = jsonencode({
     Version = "2012-10-17"

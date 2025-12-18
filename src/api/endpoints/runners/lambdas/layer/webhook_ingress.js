@@ -44,6 +44,23 @@ class IngressHandler {
 
   async _routeWorkflowJob(payload) {
     const action = payload.action;
+
+    // Route cancelled/completed actions to cancellation queue for runner termination
+    if (action === 'cancelled' || action === 'completed') {
+      const job = payload.workflow_job || {};
+      const cancellationData = {
+        action,
+        job_id: job.id,
+        run_id: job.run_id,
+        runner_name: job.runner_name,
+        github_repo: (payload.repository || {}).full_name,
+        timestamp: new Date().toISOString()
+      };
+      logger.info(`Routing ${action} workflow_job to cancellation queue: job_id=${job.id}, run_id=${job.run_id}`);
+      const result = await this._deps.enqueueCancellation(cancellationData);
+      return { success: result.success, routed: 'cancellation_queue' };
+    }
+
     if (action !== 'queued') {
       logger.info(`Ignoring workflow_job action '${action}'`);
       this._deps.enqueueIgnored(payload, `workflow_job action ${action} ignored`);

@@ -68,6 +68,7 @@ describe('webhook_ingress', () => {
         publishMetric: vi.fn(),
         enqueueIgnored: vi.fn(),
         enqueueJob: vi.fn(() => ({ success: true })),
+        enqueueCancellation: vi.fn(() => ({ success: true })),
         getRunnerType: vi.fn(() => ['ecs']),
         checkIdempotency: vi.fn(() => false)
       };
@@ -202,9 +203,38 @@ describe('webhook_ingress', () => {
         });
       });
 
-      it('should route non-queued actions to ignored events', async () => {
+      it('should route cancelled/completed actions to cancellation queue', async () => {
         const payload = {
           action: 'completed',
+          workflow_job: { id: 12345, run_id: 67890, runner_name: 'runner-1' },
+          repository: { full_name: 'owner/repo' }
+        };
+
+        const record = {
+          body: JSON.stringify(payload),
+          messageAttributes: {
+            'x-github-event': { stringValue: 'workflow_job' },
+            'x-hub-signature-256': { stringValue: 'sha256=valid' },
+            'x-github-delivery': { stringValue: 'delivery-123' }
+          }
+        };
+
+        const result = await handler.handle(record);
+
+        expect(result).toEqual({ success: true, routed: 'cancellation_queue' });
+        expect(mockDeps.enqueueCancellation).toHaveBeenCalledWith({
+          action: 'completed',
+          job_id: 12345,
+          run_id: 67890,
+          runner_name: 'runner-1',
+          github_repo: 'owner/repo',
+          timestamp: expect.any(String)
+        });
+      });
+
+      it('should route in_progress actions to ignored events', async () => {
+        const payload = {
+          action: 'in_progress',
           workflow_job: { id: 12345 }
         };
 
