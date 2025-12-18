@@ -1,5 +1,8 @@
 """Pytest fixtures for runners integration tests."""
 import json
+import zipfile
+from io import BytesIO
+from urllib.request import urlopen
 
 from test.api.conftest import skip_if_endpoint_not_deployed
 
@@ -81,6 +84,29 @@ def create_test_dynamodb_item(client, table_name, item):
 def cleanup_test_dynamodb_item(client, table_name, key):
     """Delete a test item from DynamoDB."""
     client.delete_item(TableName=table_name, Key=key)
+
+
+@pytest.fixture(name="layer_contents", scope="module")
+def layer_contents_fixture(config):
+    """Download and extract layer contents for inspection."""
+    lambda_client = boto3.client("lambda", region_name=config["aws_region"])
+
+    # Get latest layer version
+    response = lambda_client.list_layer_versions(
+        LayerName="TenULabsRunnersLayer",
+        MaxItems=1
+    )
+    layer_arn = response["LayerVersions"][0]["LayerVersionArn"]
+
+    # Get layer download URL
+    layer_response = lambda_client.get_layer_version_by_arn(Arn=layer_arn)
+    download_url = layer_response["Content"]["Location"]
+
+    # Download and extract file list
+    with urlopen(download_url) as response:
+        zip_bytes = BytesIO(response.read())
+        with zipfile.ZipFile(zip_bytes, 'r') as zip_file:
+            return zip_file.namelist()
 
 
 @pytest.fixture(name="webhook_handler_response", scope="module")
