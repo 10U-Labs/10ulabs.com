@@ -113,7 +113,8 @@ jobs:
         run: MYPYPATH=lib/python python3 -m mypy test/bootstrap/
       - name: Run unit tests
         run: |
-          python3 -m pytest test/bootstrap/pre_deployment/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/bootstrap/pre_deployment/ \
             --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
@@ -124,11 +125,13 @@ jobs:
             -var="github_app_private_key=${{ secrets.GH_APP_PRIVATE_KEY }}"
       - name: Run integration tests
         run: |
-          python3 -m pytest test/bootstrap/post_deployment/integration/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/bootstrap/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
-          python3 -m pytest test/bootstrap/post_deployment/e2e/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/bootstrap/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

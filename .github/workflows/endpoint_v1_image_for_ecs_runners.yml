@@ -132,12 +132,14 @@ jobs:
       - name: Run unit tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
-          pytest $ENDPOINT/pre_deployment/unit/ --confcutdir=test \
+          pytest --durations=0 \
+            $ENDPOINT/pre_deployment/unit/ --confcutdir=test \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
-          pytest $ENDPOINT/pre_deployment/integration/ \
+          pytest --durations=0 \
+            $ENDPOINT/pre_deployment/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
@@ -146,7 +148,8 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           ENDPOINT="test/api/endpoints/image_for_ecs_runners/endpoint"
-          pytest $ENDPOINT/post_deployment/integration/ \
+          pytest --durations=0 \
+            $ENDPOINT/post_deployment/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

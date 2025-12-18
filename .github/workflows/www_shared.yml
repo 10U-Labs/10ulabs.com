@@ -115,16 +115,19 @@ jobs:
         run: cd src/www/shared && terraform plan
       - name: Run module unit tests
         run: |
-          python3 -m pytest test/lib/terraform/modules/s3_bucket/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/lib/terraform/modules/s3_bucket/unit/ \
             test/lib/terraform/modules/cloudfront_waf/unit/ \
             --verbose --pythonwarnings=error
       - name: Run unit tests
         run: |
-          python3 -m pytest test/www/shared/pre_deployment/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/www/shared/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest test/www/shared/pre_deployment/integration/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/www/shared/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/www/shared && terraform apply -auto-approve

@@ -40,8 +40,8 @@ resource "null_resource" "runners_layer_build" {
          ${local.runners_layer_source_dir}/webhook_ingress.js \
          ${local.runners_layer_dir}/nodejs/runners-layer/
       cp ${local.etc_dir}/runners.json ${local.runners_layer_dir}/nodejs/runners-layer/etc/
-      cd ${local.runners_layer_dir}/nodejs/runners-layer && npm install --omit=dev
-      cd ${local.runners_layer_dir} && zip -r runners_layer.zip nodejs
+      (cd ${local.runners_layer_dir}/nodejs/runners-layer && npm install --omit=dev)
+      (cd ${local.runners_layer_dir} && zip -r runners_layer.zip nodejs)
     EOT
   }
 }

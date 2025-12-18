@@ -117,25 +117,27 @@ jobs:
         run: cd src/api/endpoints/ecs_runner && terraform plan
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/endpoints/ecs_runner/pre_deployment/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/endpoints/ecs_runner/pre_deployment/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest --capture=no --confcutdir=test \
+          python3 -m pytest --durations=0 --capture=no --confcutdir=test \
             --verbose --pythonwarnings=error \
             test/api/endpoints/ecs_runner/pre_deployment/integration/
       - name: Terraform Apply
         run: cd src/api/endpoints/ecs_runner && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest --confcutdir=test \
+          python3 -m pytest --durations=0 --confcutdir=test \
             --verbose --pythonwarnings=error \
             test/api/endpoints/ecs_runner/post_deployment/integration/
       - env:
           GITHUB_RUN_ID: ${{ github.run_id }}
         name: Run E2E tests
         run: |
-          python3 -m pytest test/api/endpoints/ecs_runner/post_deployment/e2e/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/endpoints/ecs_runner/post_deployment/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

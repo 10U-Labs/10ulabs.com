@@ -138,11 +138,13 @@ jobs:
             ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
         name: Run unit tests
         run: |
-          python3 -m pytest test/api/backend/pre_deployment/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/backend/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest test/api/backend/pre_deployment/integration/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/backend/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - env:
           TF_VAR_recaptcha_secret_key: ${{ secrets.RECAPTCHA_SECRET_KEY }}
@@ -203,11 +205,13 @@ jobs:
             ${{ steps.bootstrap.outputs.github_pat_parameter_name }}
         name: Run post-deployment integration tests
         run: |
-          python3 -m pytest test/api/backend/post_deployment/integration/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/backend/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - name: Run E2E tests
         run: |
-          python3 -m pytest test/api/backend/post_deployment/e2e/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/backend/post_deployment/e2e/ \
             --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

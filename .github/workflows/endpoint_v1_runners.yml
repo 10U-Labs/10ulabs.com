@@ -150,7 +150,8 @@ jobs:
         run: cd src/api/endpoints/runners && terraform plan
       - name: Run Python unit tests
         run: |
-          python3 -m pytest test/api/endpoints/runners/pre_deployment/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/endpoints/runners/pre_deployment/unit/ \
             --ignore=test/api/endpoints/runners/pre_deployment/unit/*.test.js \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run JavaScript unit tests
@@ -161,14 +162,16 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/pre_deployment/integration
-          python3 -m pytest $TEST/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            $TEST/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/runners && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/post_deployment/integration
-          python3 -m pytest $TEST/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            $TEST/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GH_PAT }}

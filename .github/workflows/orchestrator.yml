@@ -215,7 +215,8 @@ jobs:
         name: Run unit tests
         run: |
           echo "Running unit tests..."
-          python3 -m pytest test/orchestrator/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/orchestrator/ \
             --verbose --pythonwarnings=error
           echo "Unit tests completed"
       - id: running

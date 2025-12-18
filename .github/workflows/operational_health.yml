@@ -37,7 +37,8 @@ jobs:
           ROLE_NAME="${RESOURCE_PREFIX}${GITHUB_ACTIONS_ROLE_SUFFIX}"
           GITHUB_ACTIONS_ROLE_ARN="${ROLE_PREFIX}/${ROLE_NAME}"
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
           echo "terraform_version=$TERRAFORM_VERSION" >> $GITHUB_OUTPUT
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -56,7 +57,8 @@ jobs:
             -backend=true -input=false > /dev/null
           GITHUB_ACTIONS_ROLE_ARN=$(terraform -chdir=src/bootstrap \
             output -raw arn_for_github_actions_role)
-          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" >> $GITHUB_OUTPUT
+          echo "github_actions_role_arn=$GITHUB_ACTIONS_ROLE_ARN" \
+            >> $GITHUB_OUTPUT
       - name: Re-configure AWS credentials with bootstrap role
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -109,7 +111,9 @@ jobs:
       - name: Run mypy on tests
         run: MYPYPATH=lib/python python3 -m mypy test/api/operational/health/
       - name: Terraform Format Check
-        run: cd src/api/operational/health && terraform fmt -diff -check -recursive
+        run: |
+          cd src/api/operational/health
+          terraform fmt -diff -check -recursive
       - name: Terraform Init
         run: cd src/api/operational/health && terraform init
       - env:
@@ -120,7 +124,8 @@ jobs:
         run: cd src/api/operational/health && terraform plan
       - name: Run unit tests
         run: |
-          python3 -m pytest test/api/operational/health/pre_deployment/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            test/api/operational/health/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |

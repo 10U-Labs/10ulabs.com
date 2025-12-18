@@ -103,7 +103,9 @@ jobs:
             test/api/endpoints/simulation_soc/pre_deployment/integration/ \
             --verbose --capture=no --pythonwarnings=error
       - name: Terraform Apply
-        run: cd src/api/endpoints/simulation_soc && terraform apply -auto-approve
+        run: |
+          cd src/api/endpoints/simulation_soc
+          terraform apply -auto-approve
       - name: Get website bucket name
         run: |
           terraform -chdir=src/www/shared init \

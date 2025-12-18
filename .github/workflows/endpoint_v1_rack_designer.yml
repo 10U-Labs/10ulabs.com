@@ -92,11 +92,13 @@ jobs:
       - name: Run unit tests
         run: |
           TESTS="test/api/endpoints/rack_designer/pre_deployment/unit/"
-          python3 -m pytest $TESTS --verbose --pythonwarnings=error
+          python3 -m pytest --durations=0 --durations=0 \
+            $TESTS --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           TESTS="test/api/endpoints/rack_designer/pre_deployment/integration/"
-          python3 -m pytest $TESTS --capture=no --verbose --pythonwarnings=error
+          python3 -m pytest --durations=0 --durations=0 \
+            $TESTS --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/endpoints/rack_designer && terraform apply -auto-approve
       - name: Get website bucket name
@@ -143,7 +145,8 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TESTS="test/api/endpoints/rack_designer/post_deployment/integration/"
-          python3 -m pytest $TESTS --verbose --pythonwarnings=error
+          python3 -m pytest --durations=0 --durations=0 \
+            $TESTS --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
@@ -159,7 +162,7 @@ jobs:
             $SKIP_FLAG \
             --workflow endpoint_v1_rack_designer \
             --repo ${{ github.repository }}
-name: Ensuring the /v1/rack-designer API endpoint exists and is properly configured
+name: Deploy /v1/rack-designer endpoint
 on:
   workflow_dispatch:
     inputs:

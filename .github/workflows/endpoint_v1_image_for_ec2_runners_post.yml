@@ -147,12 +147,14 @@ jobs:
       - name: Run unit tests
         run: |
           TEST=test/api/endpoints/image_for_ec2_runners/post/pre_deployment
-          python3 -m pytest $TEST/unit/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            $TEST/unit/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/image_for_ec2_runners/post/pre_deployment
-          python3 -m pytest $TEST/integration/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            $TEST/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - env:
           OS_ARCH: ${{ steps.config.outputs.os_architecture }}
@@ -218,7 +220,8 @@ jobs:
         name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/image_for_ec2_runners/post/post_deployment
-          python3 -m pytest $TEST/integration/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            $TEST/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
         run: |
@@ -242,7 +245,8 @@ jobs:
         name: Run E2E tests
         run: |
           TEST=test/api/endpoints/image_for_ec2_runners/post/post_deployment
-          python3 -m pytest $TEST/e2e/ \
+          python3 -m pytest --durations=0 --durations=0 \
+            $TEST/e2e/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Promote AMI
         run: |
