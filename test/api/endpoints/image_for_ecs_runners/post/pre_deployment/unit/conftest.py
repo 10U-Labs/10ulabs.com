@@ -51,9 +51,13 @@ def dockerfile_parser():
 
 @pytest.fixture
 def apt_get_install_packages():
-    """Fixture extracting apt-get install packages from Dockerfile."""
+    """Fixture extracting apt-get install packages from runtime stage."""
     content = _read_dockerfile()
-    match = re.search(r'apt-get install.*?(?=&&\s*rm|$)', content, re.DOTALL)
+    # Split at runtime stage (second FROM) and search in runtime portion only
+    parts = content.split('# Runtime stage')
+    runtime_content = parts[1] if len(parts) > 1 else content
+    # Match from apt-get install to the && that follows the package list
+    match = re.search(r'apt-get install.*?&& \\', runtime_content, re.DOTALL)
     if match:
         return match.group(0)
     return ""
