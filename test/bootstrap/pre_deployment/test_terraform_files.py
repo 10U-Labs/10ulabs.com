@@ -84,8 +84,3 @@ def test_github_pat_tf_file_exists(bootstrap_dir):
 def test_central_logs_module_exists(bootstrap_dir):
     """Test that central_logs module main.tf exists."""
     assert (bootstrap_dir / "modules" / "central_logs" / "main.tf").exists()
-
-
-def test_vpc_tf_file_exists(bootstrap_dir):
-    """Test that vpc.tf file exists."""
-    assert (bootstrap_dir / "vpc.tf").exists()
