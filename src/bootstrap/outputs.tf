@@ -37,18 +37,3 @@ output "name_for_cloudtrail" {
 output "ssm_parameter_name_for_github_pat" {
   value = aws_ssm_parameter.github_pat.name
 }
-
-# VPC Outputs
-output "vpc_id" {
-  value = aws_vpc.main.id
-}
-
-output "vpc_public_subnet_ids" {
-  value = join(",", aws_subnet.public[*].id)
-}
-
-# Security Group Outputs
-output "runner_security_group_id" {
-  value = aws_security_group.runner.id
-}
-
