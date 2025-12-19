@@ -106,20 +106,6 @@ describe('aws_clients', () => {
     });
   });
 
-  describe('getS3Client', () => {
-    it('should create an S3 client', () => {
-      const client = awsClients.getS3Client();
-      expect(client).toBeDefined();
-      expect(typeof client.send).toBe('function');
-    });
-
-    it('should return cached client on subsequent calls', () => {
-      const client1 = awsClients.getS3Client();
-      const client2 = awsClients.getS3Client();
-      expect(client1).toBe(client2);
-    });
-  });
-
   describe('clearClients', () => {
     it('should clear all cached clients', () => {
       const ecs1 = awsClients.getECSClient();
@@ -144,7 +130,6 @@ describe('aws_clients', () => {
       awsClients.getCloudWatchClient();
       awsClients.getSNSClient();
       awsClients.getSSMClient();
-      awsClients.getS3Client();
 
       awsClients.clearClients();
 

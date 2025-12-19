@@ -7,7 +7,6 @@ const {
   getCloudWatchClient,
   getSNSClient,
   getSSMClient,
-  getS3Client,
   clearClients
 } = require('./aws_clients');
 const {
@@ -40,7 +39,6 @@ module.exports = {
   getCloudWatchClient,
   getSNSClient,
   getSSMClient,
-  getS3Client,
   clearClients,
 
   // Runner labels

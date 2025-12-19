@@ -1,5 +1,13 @@
-const { getS3Client, getCloudWatchClient } = require('/opt/nodejs/runners-layer');
-const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getCloudWatchClient } = require('/opt/nodejs/runners-layer');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+let s3Client = null;
+function getS3Client() {
+  if (!s3Client) {
+    s3Client = new S3Client({});
+  }
+  return s3Client;
+}
 const { PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
 
 const logger = {
