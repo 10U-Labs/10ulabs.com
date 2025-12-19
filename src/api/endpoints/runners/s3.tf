@@ -1,6 +1,6 @@
 # S3 bucket for archiving ignored webhook events
 resource "aws_s3_bucket" "ignored_events_archive" {
-  bucket = "${local.resource_prefix}-ignored-events-archive"
+  bucket = lower("${local.resource_prefix}-ignored-events-archive")
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-ignored-events-archive"
