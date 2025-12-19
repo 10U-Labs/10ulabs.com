@@ -12,11 +12,16 @@ from pathlib import Path
 
 import yaml
 
-from hook_utils import BLOCKED_LINT_CONFIG_FILES, LINT_DISABLE_PATTERNS
+from hook_utils import (
+    allow_tool_use as _allow_tool_use,
+    deny_tool_use as _deny_tool_use,
+    BLOCKED_LINT_CONFIG_FILES,
+    LINT_DISABLE_PATTERNS,
+)
 
 
 DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
-OUTPUT_LINES = []
+OUTPUT_LINES: list[str] = []
 
 
 def capture_print(message=""):
@@ -24,34 +29,19 @@ def capture_print(message=""):
     OUTPUT_LINES.append(message)
 
 
+def get_system_message():
+    """Get the captured output as a system message string."""
+    return "\n".join(OUTPUT_LINES) if OUTPUT_LINES else ""
+
+
 def allow_tool_use():
-    """Allow tool use by outputting JSON with permissionDecision: allow."""
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
-            "permissionDecisionReason": "Auto-approved"
-        }
-    }
-    if OUTPUT_LINES:
-        output["systemMessage"] = "\n".join(OUTPUT_LINES)
-    print(json.dumps(output))
-    sys.exit(0)
+    """Allow tool use, including captured output as system message."""
+    _allow_tool_use(get_system_message())
 
 
 def deny_tool_use(reason):
-    """Deny tool use by outputting JSON with permissionDecision: deny."""
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": reason
-        }
-    }
-    if OUTPUT_LINES:
-        output["systemMessage"] = "\n".join(OUTPUT_LINES)
-    print(json.dumps(output))
-    sys.exit(0)
+    """Deny tool use, including captured output as system message."""
+    _deny_tool_use(reason, get_system_message())
 
 
 def log_debug(message):

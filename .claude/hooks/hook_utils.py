@@ -5,15 +5,32 @@ import sys
 from typing import Callable
 
 
-def allow_tool_use():
+def allow_tool_use(system_message: str = ""):
     """Allow tool use by outputting JSON with permissionDecision: allow."""
-    output = {
+    output: dict = {
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": "allow",
             "permissionDecisionReason": "Auto-approved"
         }
     }
+    if system_message:
+        output["systemMessage"] = system_message
+    print(json.dumps(output))
+    sys.exit(0)
+
+
+def deny_tool_use(reason: str, system_message: str = ""):
+    """Deny tool use by outputting JSON with permissionDecision: deny."""
+    output: dict = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason
+        }
+    }
+    if system_message:
+        output["systemMessage"] = system_message
     print(json.dumps(output))
     sys.exit(0)
 

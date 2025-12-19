@@ -1,21 +1,9 @@
 #!/usr/bin/env python3
 """Block creation of linter configuration files."""
-import json
 import os
 import sys
 
-
-def allow_tool_use():
-    """Allow tool use by outputting JSON with permissionDecision: allow."""
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
-            "permissionDecisionReason": "Auto-approved"
-        }
-    }
-    print(json.dumps(output))
-    sys.exit(0)
+from hook_utils import allow_tool_use, get_tool_input
 
 
 BLOCKED_FILENAMES = [
@@ -72,12 +60,8 @@ BLOCKED_FILENAMES = [
 
 def main():
     """Block creation of linter configuration files."""
-    input_data = sys.stdin.read()
-    try:
-        data = json.loads(input_data)
-        file_path = data.get('tool_input', {}).get('file_path', '')
-    except json.JSONDecodeError:
-        allow_tool_use()
+    tool_input = get_tool_input()
+    file_path = tool_input.get('file_path', '')
 
     if not file_path:
         allow_tool_use()

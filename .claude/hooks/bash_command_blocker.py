@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Block forbidden bash commands."""
-import json
 import re
 import sys
+
+from hook_utils import allow_tool_use, get_tool_input
 
 
 BLOCKED_PATTERNS = [
@@ -15,27 +16,10 @@ BLOCKED_PATTERNS = [
 ]
 
 
-def allow_tool_use():
-    """Allow tool use by outputting JSON with permissionDecision: allow."""
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
-            "permissionDecisionReason": "Auto-approved"
-        }
-    }
-    print(json.dumps(output))
-    sys.exit(0)
-
-
 def main():
     """Check bash commands against blocked patterns and exit with error if matched."""
-    input_data = sys.stdin.read()
-    try:
-        data = json.loads(input_data)
-        command = data.get('tool_input', {}).get('command', '')
-    except json.JSONDecodeError:
-        allow_tool_use()
+    tool_input = get_tool_input()
+    command = tool_input.get('command', '')
 
     if not command:
         allow_tool_use()
