@@ -22,7 +22,7 @@ E2E tests are expensive:
 - Flaky (network, timing, external dependencies)
 - Run in production (real resources, real costs)
 
-For any system, aim for 3-5 e2e tests max. Each test should represent a critical user journey that, if broken, would constitute a major incident.
+Each test should represent a critical user journey that, if broken, would constitute a major incident.
 
 ```python
 # CORRECT - critical user journeys only
@@ -292,11 +292,11 @@ def test_webhook():
 ```
 test/api/endpoints/{endpoint}/e2e/
 ├── conftest.py           # Fixtures for API endpoints, signed payloads
-├── test_happy_path.py    # Critical happy path journeys (1-3 tests)
-└── test_security.py      # Critical security journeys (1-2 tests)
+├── test_happy_path.py    # Critical happy path journeys
+└── test_security.py      # Critical security journeys
 ```
 
-E2E tests are organized by journey type, not by component. The number of files should be small (2-3 max).
+E2E tests are organized by journey type, not by component.
 
 ## 9. Fixture Requirements
 
