@@ -5,30 +5,21 @@ These tests run first to catch deployment failures before checking configuration
 """
 from test.api.endpoints.runners.conftest import find_sns_topic_arns
 
-# === Lambda Layer ===
-
-
-def test_lambda_layer_exists(lambda_client):
-    """Verify TenULabsRunnersLayer exists."""
-    response = lambda_client.list_layer_versions(
-        LayerName="TenULabsRunnersLayer", MaxItems=1
-    )
-    assert len(response["LayerVersions"]) > 0
-
-
 # === Lambda Functions ===
 
 
-def test_webhook_handler_lambda_exists(lambda_client):
-    """Verify TenULabsWebhookHandler Lambda exists."""
-    response = lambda_client.get_function(FunctionName="TenULabsWebhookHandler")
-    assert response["Configuration"]["FunctionName"] == "TenULabsWebhookHandler"
+def test_webhook_handler_lambda_exists(lambda_client, config):
+    """Verify WebhookHandler Lambda exists."""
+    function_name = config["webhook_handler_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response["Configuration"]["FunctionName"] == function_name
 
 
-def test_sqs_handler_lambda_exists(lambda_client):
-    """Verify TenULabsSqsHandler Lambda exists."""
-    response = lambda_client.get_function(FunctionName="TenULabsSqsHandler")
-    assert response["Configuration"]["FunctionName"] == "TenULabsSqsHandler"
+def test_runner_starter_lambda_exists(lambda_client, config):
+    """Verify RunnerStarter Lambda exists."""
+    function_name = config["runner_starter_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
+    assert response["Configuration"]["FunctionName"] == function_name
 
 
 def test_circuit_breaker_remediation_lambda_exists(lambda_client, config):

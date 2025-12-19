@@ -7,34 +7,6 @@ import json
 import re
 
 
-# === Lambda Layer Contents ===
-
-
-def test_layer_contains_runner_labels_js(layer_contents):
-    """Verify layer contains runner_labels.js module."""
-    assert "nodejs/runners-layer/runner_labels.js" in layer_contents
-
-
-def test_layer_contains_webhook_ingress_js(layer_contents):
-    """Verify layer contains webhook_ingress.js module."""
-    assert "nodejs/runners-layer/webhook_ingress.js" in layer_contents
-
-
-def test_layer_contains_runners_json(layer_contents):
-    """Verify layer contains etc/runners.json configuration."""
-    assert "nodejs/runners-layer/etc/runners.json" in layer_contents
-
-
-def test_layer_contains_index_js(layer_contents):
-    """Verify layer contains index.js entry point."""
-    assert "nodejs/runners-layer/index.js" in layer_contents
-
-
-def test_layer_contains_package_json(layer_contents):
-    """Verify layer contains package.json."""
-    assert "nodejs/runners-layer/package.json" in layer_contents
-
-
 # === DynamoDB Table Configuration ===
 
 
@@ -285,15 +257,17 @@ def _is_pascalcase(name):
     return bool(re.match(r'^[A-Z][a-zA-Z0-9]*$', name))
 
 
-def test_webhook_handler_name_is_pascalcase(lambda_client):
-    """Verify TenULabsWebhookHandler uses PascalCase naming."""
-    response = lambda_client.get_function(FunctionName="TenULabsWebhookHandler")
+def test_webhook_handler_name_is_pascalcase(lambda_client, config):
+    """Verify WebhookHandler uses PascalCase naming."""
+    function_name = config["webhook_handler_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
     actual_name = response["Configuration"]["FunctionName"]
     assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"
 
 
-def test_sqs_handler_name_is_pascalcase(lambda_client):
-    """Verify TenULabsSqsHandler uses PascalCase naming."""
-    response = lambda_client.get_function(FunctionName="TenULabsSqsHandler")
+def test_runner_starter_name_is_pascalcase(lambda_client, config):
+    """Verify RunnerStarter uses PascalCase naming."""
+    function_name = config["runner_starter_function_name"]
+    response = lambda_client.get_function(FunctionName=function_name)
     actual_name = response["Configuration"]["FunctionName"]
     assert _is_pascalcase(actual_name), f"Name '{actual_name}' is not PascalCase"

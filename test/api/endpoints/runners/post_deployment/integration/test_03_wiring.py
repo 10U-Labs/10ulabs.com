@@ -6,29 +6,6 @@ These tests run after existence and configuration tests pass.
 import json
 
 
-# === Lambda Layer Attachments ===
-
-
-def test_webhook_handler_has_runners_layer_attached(lambda_client):
-    """Verify TenULabsWebhookHandler has the runners layer attached."""
-    response = lambda_client.get_function_configuration(
-        FunctionName="TenULabsWebhookHandler"
-    )
-    layers = response.get("Layers", [])
-    layer_arns = [layer["Arn"] for layer in layers]
-    assert any("TenULabsRunnersLayer" in arn for arn in layer_arns)
-
-
-def test_sqs_handler_has_runners_layer_attached(lambda_client):
-    """Verify TenULabsSqsHandler has the runners layer attached."""
-    response = lambda_client.get_function_configuration(
-        FunctionName="TenULabsSqsHandler"
-    )
-    layers = response.get("Layers", [])
-    layer_arns = [layer["Arn"] for layer in layers]
-    assert any("TenULabsRunnersLayer" in arn for arn in layer_arns)
-
-
 # === EventBridge Rule Targets ===
 
 
@@ -56,18 +33,20 @@ def test_dlq_reprocessor_rule_has_target(events_client, config):
 # === SQS Event Source Mappings ===
 
 
-def test_sqs_handler_has_event_source_mapping(lambda_client):
-    """Verify TenULabsSqsHandler has an SQS event source mapping."""
+def test_runner_starter_has_event_source_mapping(lambda_client, config):
+    """Verify RunnerStarter has an SQS event source mapping."""
+    function_name = config["runner_starter_function_name"]
     response = lambda_client.list_event_source_mappings(
-        FunctionName="TenULabsSqsHandler"
+        FunctionName=function_name
     )
     assert len(response["EventSourceMappings"]) > 0
 
 
-def test_sqs_handler_triggered_by_job_queue(lambda_client, config):
-    """Verify TenULabsSqsHandler is triggered by the job queue."""
+def test_runner_starter_triggered_by_job_queue(lambda_client, config):
+    """Verify RunnerStarter is triggered by the job queue."""
+    function_name = config["runner_starter_function_name"]
     response = lambda_client.list_event_source_mappings(
-        FunctionName="TenULabsSqsHandler"
+        FunctionName=function_name
     )
     event_sources = [m["EventSourceArn"] for m in response["EventSourceMappings"]]
     job_queue_name = config["job_queue_name"]
