@@ -1,8 +1,6 @@
 const https = require('https');
-const {
-  getGitHubToken,
-  getECSClient
-} = require('/opt/nodejs/runners-layer');
+const { getECSClient } = require('/opt/nodejs/clients/ecs');
+const { getGitHubToken } = require('/opt/nodejs/common');
 const { DescribeTasksCommand } = require('@aws-sdk/client-ecs');
 const { DescribeInstancesCommand } = require('@aws-sdk/client-ec2');
 const { EC2Client } = require('@aws-sdk/client-ec2');

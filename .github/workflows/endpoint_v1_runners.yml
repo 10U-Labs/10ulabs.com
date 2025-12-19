@@ -130,7 +130,7 @@ jobs:
       - name: Linting JSON files
         run: |
           for file in \
-            src/api/endpoints/runners/lambdas/layer/package.json \
+            src/api/endpoints/runners/lambdas/layers/common/package.json \
             test/api/endpoints/runners/package.json
           do
             echo "Validating $file"
@@ -150,7 +150,7 @@ jobs:
         run: cd src/api/endpoints/runners && terraform plan
       - name: Run Python unit tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/endpoints/runners/pre_deployment/unit/ \
             --ignore=test/api/endpoints/runners/pre_deployment/unit/*.test.js \
             --confcutdir=test --verbose --pythonwarnings=error
@@ -162,7 +162,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/pre_deployment/integration
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             $TEST/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - name: Terraform Apply
@@ -170,7 +170,7 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/runners/post_deployment/integration
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             $TEST/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - env:

@@ -1,8 +1,6 @@
-const {
-  getECSClient,
-  getEC2Client,
-  getCloudWatchClient
-} = require('/opt/nodejs/runners-layer');
+const { getECSClient } = require('/opt/nodejs/clients/ecs');
+const { getEC2Client } = require('/opt/nodejs/clients/ec2');
+const { getCloudWatchClient } = require('/opt/nodejs/clients/cloudwatch');
 const {
   ListTasksCommand,
   DescribeTasksCommand,

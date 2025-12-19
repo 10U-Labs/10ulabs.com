@@ -5,7 +5,7 @@ describe('webhook_ingress', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    webhookIngress = await import('runners-layer/webhook_ingress.js');
+    webhookIngress = await import('common/webhook_ingress.js');
   });
 
   describe('getMessageAttribute', () => {

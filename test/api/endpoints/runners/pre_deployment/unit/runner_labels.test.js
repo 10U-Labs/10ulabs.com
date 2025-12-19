@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
 import path from 'path';
 
-const REPO_ROOT = path.resolve(import.meta.dirname, '../../../../../../../..');
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../../../../..');
 vi.stubEnv('ETC_PATH', path.join(REPO_ROOT, 'etc'));
 
 describe('runner_labels', () => {
   let runnerLabels;
 
   beforeAll(async () => {
-    runnerLabels = await import('runners-layer/runner_labels.js');
+    runnerLabels = await import('common/runner_labels.js');
   });
 
   describe('parseLabels', () => {

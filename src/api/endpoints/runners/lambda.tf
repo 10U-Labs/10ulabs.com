@@ -16,12 +16,16 @@ resource "aws_lambda_function" "runners_handler" {
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "GitHub webhook router for GitHub self-hosted runners"
-  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+  layers = [
+    aws_lambda_layer_version.ssm_client.arn,
+    aws_lambda_layer_version.cloudwatch_client.arn,
+    aws_lambda_layer_version.common.arn,
+  ]
 
   environment {
     variables = {
       CANCELLATION_QUEUE_URL   = aws_sqs_queue.cancellation.url
-      ETC_PATH                 = "/opt/nodejs/runners-layer"
+      ETC_PATH                 = "/opt/nodejs/common"
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
@@ -101,7 +105,11 @@ resource "aws_lambda_function" "runner_starter" {
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "Processes job queue messages and starts GitHub runners"
-  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+  layers = [
+    aws_lambda_layer_version.ssm_client.arn,
+    aws_lambda_layer_version.cloudwatch_client.arn,
+    aws_lambda_layer_version.common.arn,
+  ]
 
   environment {
     variables = {
@@ -171,7 +179,11 @@ resource "aws_lambda_function" "runner_terminator" {
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "Processes cancellation queue and terminates GitHub runners"
-  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+  layers = [
+    aws_lambda_layer_version.ecs_client.arn,
+    aws_lambda_layer_version.ec2_client.arn,
+    aws_lambda_layer_version.cloudwatch_client.arn,
+  ]
 
   environment {
     variables = {
@@ -242,7 +254,7 @@ resource "aws_lambda_function" "ignored_events_archiver" {
   memory_size                    = 256
   reserved_concurrent_executions = -1
   description                    = "Archives ignored webhook events to S3 for long-term storage"
-  layers                         = [aws_lambda_layer_version.runners_layer.arn]
+  layers                         = [aws_lambda_layer_version.cloudwatch_client.arn]
 
   environment {
     variables = {
@@ -544,7 +556,10 @@ resource "aws_lambda_function" "drift_recovery" {
   timeout          = 30
   memory_size      = 256
   description      = "Triggers API workflow when infrastructure drift is detected"
-  layers           = [aws_lambda_layer_version.runners_layer.arn]
+  layers = [
+    aws_lambda_layer_version.ssm_client.arn,
+    aws_lambda_layer_version.ec2_client.arn,
+  ]
 
   environment {
     variables = {
@@ -607,7 +622,10 @@ resource "aws_lambda_function" "spot_interruption_handler" {
   timeout          = 60
   memory_size      = 256
   description      = "Handles spot interruption events and launches replacement runners"
-  layers           = [aws_lambda_layer_version.runners_layer.arn]
+  layers = [
+    aws_lambda_layer_version.ecs_client.arn,
+    aws_lambda_layer_version.common.arn,
+  ]
 
   environment {
     variables = {
@@ -666,7 +684,11 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
   timeout          = 300
   memory_size      = 256
   description      = "Cleans up stale runners from completed or failed workflows"
-  layers           = [aws_lambda_layer_version.runners_layer.arn]
+  layers = [
+    aws_lambda_layer_version.ecs_client.arn,
+    aws_lambda_layer_version.ec2_client.arn,
+    aws_lambda_layer_version.common.arn,
+  ]
 
   environment {
     variables = {

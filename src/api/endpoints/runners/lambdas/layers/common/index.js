@@ -1,12 +1,5 @@
 const { getGitHubToken, clearTokenCache } = require('./github_pat_auth');
 const {
-  getECSClient,
-  getEC2Client,
-  getCloudWatchClient,
-  getSSMClient,
-  clearClients
-} = require('./aws_clients');
-const {
   parseLabels,
   validateLabels,
   getInstanceType,
@@ -27,13 +20,6 @@ module.exports = {
   // GitHub PAT auth
   getGitHubToken,
   clearTokenCache,
-
-  // AWS clients
-  getECSClient,
-  getEC2Client,
-  getCloudWatchClient,
-  getSSMClient,
-  clearClients,
 
   // Runner labels
   parseLabels,

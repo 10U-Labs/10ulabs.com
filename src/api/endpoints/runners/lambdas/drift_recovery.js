@@ -1,8 +1,6 @@
 const https = require('https');
-const {
-  getSSMClient,
-  getEC2Client
-} = require('/opt/nodejs/runners-layer');
+const { getSSMClient } = require('/opt/nodejs/clients/ssm');
+const { getEC2Client } = require('/opt/nodejs/clients/ec2');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
 const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 

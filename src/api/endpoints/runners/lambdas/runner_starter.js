@@ -1,12 +1,12 @@
 const https = require('https');
+const { getSSMClient } = require('/opt/nodejs/clients/ssm');
+const { getCloudWatchClient } = require('/opt/nodejs/clients/cloudwatch');
 const {
-  getSSMClient,
-  getCloudWatchClient,
   parseLabels,
   validateLabels,
   LabelParseError,
   LabelValidationError
-} = require('/opt/nodejs/runners-layer');
+} = require('/opt/nodejs/common');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
 const { PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
 

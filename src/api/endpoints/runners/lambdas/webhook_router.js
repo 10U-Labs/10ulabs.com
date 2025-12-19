@@ -1,13 +1,13 @@
 const crypto = require('crypto');
+const { getSSMClient } = require('/opt/nodejs/clients/ssm');
+const { getCloudWatchClient } = require('/opt/nodejs/clients/cloudwatch');
 const {
-  getSSMClient,
-  getCloudWatchClient,
   parseLabels,
   validateLabels,
   LabelParseError,
   LabelValidationError,
   IngressHandler
-} = require('/opt/nodejs/runners-layer');
+} = require('/opt/nodejs/common');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
 const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
 const { SQSClient, SendMessageCommand, GetQueueAttributesCommand } = require('@aws-sdk/client-sqs');

@@ -3,7 +3,9 @@ import path from 'path';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const LAMBDAS_PATH = path.join(REPO_ROOT, 'src/api/endpoints/runners/lambdas');
-const LAYER_PATH = path.join(LAMBDAS_PATH, 'layer');
+const LAYERS_PATH = path.join(LAMBDAS_PATH, 'layers');
+const CLIENTS_PATH = path.join(LAYERS_PATH, 'clients');
+const COMMON_PATH = path.join(LAYERS_PATH, 'common');
 
 export default defineConfig({
   test: {
@@ -18,9 +20,20 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'runners-layer': LAYER_PATH,
+      // Client layers
+      'clients/ecs': path.join(CLIENTS_PATH, 'ecs'),
+      'clients/ec2': path.join(CLIENTS_PATH, 'ec2'),
+      'clients/cloudwatch': path.join(CLIENTS_PATH, 'cloudwatch'),
+      'clients/ssm': path.join(CLIENTS_PATH, 'ssm'),
+      '/opt/nodejs/clients/ecs': path.join(CLIENTS_PATH, 'ecs'),
+      '/opt/nodejs/clients/ec2': path.join(CLIENTS_PATH, 'ec2'),
+      '/opt/nodejs/clients/cloudwatch': path.join(CLIENTS_PATH, 'cloudwatch'),
+      '/opt/nodejs/clients/ssm': path.join(CLIENTS_PATH, 'ssm'),
+      // Common layer
+      common: COMMON_PATH,
+      '/opt/nodejs/common': COMMON_PATH,
+      // Lambda source
       lambdas: LAMBDAS_PATH,
-      '/opt/nodejs/runners-layer': LAYER_PATH,
     },
   },
 });

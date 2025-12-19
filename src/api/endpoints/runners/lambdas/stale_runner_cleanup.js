@@ -1,9 +1,7 @@
 const https = require('https');
-const {
-  getGitHubToken,
-  getECSClient,
-  getEC2Client
-} = require('/opt/nodejs/runners-layer');
+const { getECSClient } = require('/opt/nodejs/clients/ecs');
+const { getEC2Client } = require('/opt/nodejs/clients/ec2');
+const { getGitHubToken } = require('/opt/nodejs/common');
 const {
   ListTasksCommand,
   DescribeTasksCommand,
