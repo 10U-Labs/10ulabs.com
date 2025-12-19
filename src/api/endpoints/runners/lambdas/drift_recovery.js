@@ -1,11 +1,18 @@
 const https = require('https');
 const {
   getSSMClient,
-  getSNSClient,
   getEC2Client
 } = require('/opt/nodejs/runners-layer');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
-const { PublishCommand } = require('@aws-sdk/client-sns');
+const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
+
+let snsClient = null;
+function getSNSClient() {
+  if (!snsClient) {
+    snsClient = new SNSClient({});
+  }
+  return snsClient;
+}
 const { DescribeSubnetsCommand, DescribeSecurityGroupsCommand } = require('@aws-sdk/client-ec2');
 
 const logger = {

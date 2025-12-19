@@ -2,10 +2,7 @@ const { getGitHubToken, clearTokenCache } = require('./github_pat_auth');
 const {
   getECSClient,
   getEC2Client,
-  getSQSClient,
-  getDynamoDBClient,
   getCloudWatchClient,
-  getSNSClient,
   getSSMClient,
   clearClients
 } = require('./aws_clients');
@@ -34,10 +31,7 @@ module.exports = {
   // AWS clients
   getECSClient,
   getEC2Client,
-  getSQSClient,
-  getDynamoDBClient,
   getCloudWatchClient,
-  getSNSClient,
   getSSMClient,
   clearClients,
 

@@ -1,8 +1,6 @@
 const crypto = require('crypto');
 const {
   getSSMClient,
-  getDynamoDBClient,
-  getSQSClient,
   getCloudWatchClient,
   parseLabels,
   validateLabels,
@@ -11,8 +9,24 @@ const {
   IngressHandler
 } = require('/opt/nodejs/runners-layer');
 const { GetParameterCommand } = require('@aws-sdk/client-ssm');
-const { PutItemCommand } = require('@aws-sdk/client-dynamodb');
-const { SendMessageCommand, GetQueueAttributesCommand } = require('@aws-sdk/client-sqs');
+const { DynamoDBClient, PutItemCommand } = require('@aws-sdk/client-dynamodb');
+const { SQSClient, SendMessageCommand, GetQueueAttributesCommand } = require('@aws-sdk/client-sqs');
+
+let dynamodbClient = null;
+function getDynamoDBClient() {
+  if (!dynamodbClient) {
+    dynamodbClient = new DynamoDBClient({});
+  }
+  return dynamodbClient;
+}
+
+let sqsClient = null;
+function getSQSClient() {
+  if (!sqsClient) {
+    sqsClient = new SQSClient({});
+  }
+  return sqsClient;
+}
 const { PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
 
 const logger = {

@@ -1,18 +1,12 @@
 const { ECSClient } = require('@aws-sdk/client-ecs');
 const { EC2Client } = require('@aws-sdk/client-ec2');
-const { SQSClient } = require('@aws-sdk/client-sqs');
-const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { CloudWatchClient } = require('@aws-sdk/client-cloudwatch');
-const { SNSClient } = require('@aws-sdk/client-sns');
 const { SSMClient } = require('@aws-sdk/client-ssm');
 
 const clients = {
   ecs: null,
   ec2: null,
-  sqs: null,
-  dynamodb: null,
   cloudwatch: null,
-  sns: null,
   ssm: null
 };
 
@@ -30,32 +24,11 @@ function getEC2Client() {
   return clients.ec2;
 }
 
-function getSQSClient() {
-  if (!clients.sqs) {
-    clients.sqs = new SQSClient({});
-  }
-  return clients.sqs;
-}
-
-function getDynamoDBClient() {
-  if (!clients.dynamodb) {
-    clients.dynamodb = new DynamoDBClient({});
-  }
-  return clients.dynamodb;
-}
-
 function getCloudWatchClient() {
   if (!clients.cloudwatch) {
     clients.cloudwatch = new CloudWatchClient({});
   }
   return clients.cloudwatch;
-}
-
-function getSNSClient() {
-  if (!clients.sns) {
-    clients.sns = new SNSClient({});
-  }
-  return clients.sns;
 }
 
 function getSSMClient() {
@@ -74,10 +47,7 @@ function clearClients() {
 module.exports = {
   getECSClient,
   getEC2Client,
-  getSQSClient,
-  getDynamoDBClient,
   getCloudWatchClient,
-  getSNSClient,
   getSSMClient,
   clearClients
 };
