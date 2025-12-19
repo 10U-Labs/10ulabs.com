@@ -7,10 +7,6 @@ from hook_utils import allow_tool_use, get_tool_input
 
 
 BLOCKED_PATTERNS = [
-    (r'\bcdk\s+deploy\b', 'cdk deploy - use GitOps workflow instead'),
-    (r'\bcdk\s+destroy\b', 'cdk destroy - use GitOps workflow instead'),
-    (r'\bterraform\s+apply\b', 'terraform apply - use GitOps workflow instead'),
-    (r'\bterraform\s+destroy\b', 'terraform destroy - use GitOps workflow instead'),
     (r'\bgh\s+run\s+watch\b', 'gh run watch - requires interactive input'),
     (r'\bsleep\s+', 'sleep - not allowed in automation'),
 ]

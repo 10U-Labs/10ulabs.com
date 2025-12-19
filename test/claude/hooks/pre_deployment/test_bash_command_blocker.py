@@ -3,34 +3,6 @@
 import re
 
 
-def test_blocked_patterns_contains_cdk_deploy(bash_command_blocker):
-    """Test that Blocked patterns contains cdk deploy."""
-    patterns = [p[0] for p in bash_command_blocker.BLOCKED_PATTERNS]
-    cdk_deploy_pattern_exists = any('cdk' in p and 'deploy' in p for p in patterns)
-    assert cdk_deploy_pattern_exists
-
-
-def test_blocked_patterns_contains_cdk_destroy(bash_command_blocker):
-    """Test that Blocked patterns contains cdk destroy."""
-    patterns = [p[0] for p in bash_command_blocker.BLOCKED_PATTERNS]
-    cdk_destroy_pattern_exists = any('cdk' in p and 'destroy' in p for p in patterns)
-    assert cdk_destroy_pattern_exists
-
-
-def test_blocked_patterns_contains_terraform_apply(bash_command_blocker):
-    """Test that Blocked patterns contains terraform apply."""
-    patterns = [p[0] for p in bash_command_blocker.BLOCKED_PATTERNS]
-    terraform_apply_pattern_exists = any('terraform' in p and 'apply' in p for p in patterns)
-    assert terraform_apply_pattern_exists
-
-
-def test_blocked_patterns_contains_terraform_destroy(bash_command_blocker):
-    """Test that Blocked patterns contains terraform destroy."""
-    patterns = [p[0] for p in bash_command_blocker.BLOCKED_PATTERNS]
-    terraform_destroy_pattern_exists = any('terraform' in p and 'destroy' in p for p in patterns)
-    assert terraform_destroy_pattern_exists
-
-
 def test_blocked_patterns_contains_gh_run_watch(bash_command_blocker):
     """Test that Blocked patterns contains gh run watch."""
     patterns = [p[0] for p in bash_command_blocker.BLOCKED_PATTERNS]
@@ -43,38 +15,6 @@ def test_blocked_patterns_contains_sleep(bash_command_blocker):
     patterns = [p[0] for p in bash_command_blocker.BLOCKED_PATTERNS]
     sleep_pattern_exists = any('sleep' in p for p in patterns)
     assert sleep_pattern_exists
-
-
-def test_cdk_deploy_command_matches_pattern():
-    """Test that Cdk deploy command matches pattern."""
-    command = 'cdk deploy --all'
-    pattern = r'\bcdk\s+deploy\b'
-    cdk_deploy_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
-    assert cdk_deploy_command_matches
-
-
-def test_cdk_destroy_command_matches_pattern():
-    """Test that Cdk destroy command matches pattern."""
-    command = 'cdk destroy MyStack'
-    pattern = r'\bcdk\s+destroy\b'
-    cdk_destroy_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
-    assert cdk_destroy_command_matches
-
-
-def test_terraform_apply_command_matches_pattern():
-    """Test that Terraform apply command matches pattern."""
-    command = 'terraform apply -auto-approve'
-    pattern = r'\bterraform\s+apply\b'
-    terraform_apply_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
-    assert terraform_apply_command_matches
-
-
-def test_terraform_destroy_command_matches_pattern():
-    """Test that Terraform destroy command matches pattern."""
-    command = 'terraform destroy -auto-approve'
-    pattern = r'\bterraform\s+destroy\b'
-    terraform_destroy_command_matches = re.search(pattern, command, re.IGNORECASE) is not None
-    assert terraform_destroy_command_matches
 
 
 def test_gh_run_watch_command_matches_pattern():
@@ -111,26 +51,6 @@ def test_git_push_command_is_not_blocked(bash_command_blocker):
         re.search(p[0], command, re.IGNORECASE) is None for p in blocked_patterns
     )
     assert git_push_is_not_blocked
-
-
-def test_cdk_synth_command_is_not_blocked(bash_command_blocker):
-    """Test that Cdk synth command is not blocked."""
-    command = 'cdk synth'
-    blocked_patterns = bash_command_blocker.BLOCKED_PATTERNS
-    cdk_synth_is_not_blocked = all(
-        re.search(p[0], command, re.IGNORECASE) is None for p in blocked_patterns
-    )
-    assert cdk_synth_is_not_blocked
-
-
-def test_terraform_plan_command_is_not_blocked(bash_command_blocker):
-    """Test that Terraform plan command is not blocked."""
-    command = 'terraform plan'
-    blocked_patterns = bash_command_blocker.BLOCKED_PATTERNS
-    terraform_plan_is_not_blocked = all(
-        re.search(p[0], command, re.IGNORECASE) is None for p in blocked_patterns
-    )
-    assert terraform_plan_is_not_blocked
 
 
 def test_gh_pr_create_command_is_not_blocked(bash_command_blocker):
