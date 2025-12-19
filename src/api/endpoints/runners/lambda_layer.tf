@@ -51,8 +51,8 @@ resource "null_resource" "ecs_layer_build" {
       cat > ${local.layers_build_dir}/ecs/nodejs/clients/ecs/package.json << 'EOF'
 {"name":"ecs-client","version":"1.0.0","dependencies":{"@aws-sdk/client-ecs":"^3.0.0"}}
 EOF
-      (cd ${local.layers_build_dir}/ecs/nodejs/clients/ecs && npm install --omit=dev)
-      (cd ${local.layers_build_dir}/ecs && zip -r ../ecs_layer.zip nodejs)
+      (cd ${local.layers_build_dir}/ecs/nodejs/clients/ecs && npm install --omit=dev --silent)
+      (cd ${local.layers_build_dir}/ecs && zip -rq ../ecs_layer.zip nodejs)
     EOT
   }
 }
@@ -89,8 +89,8 @@ resource "null_resource" "ec2_layer_build" {
       cat > ${local.layers_build_dir}/ec2/nodejs/clients/ec2/package.json << 'EOF'
 {"name":"ec2-client","version":"1.0.0","dependencies":{"@aws-sdk/client-ec2":"^3.0.0"}}
 EOF
-      (cd ${local.layers_build_dir}/ec2/nodejs/clients/ec2 && npm install --omit=dev)
-      (cd ${local.layers_build_dir}/ec2 && zip -r ../ec2_layer.zip nodejs)
+      (cd ${local.layers_build_dir}/ec2/nodejs/clients/ec2 && npm install --omit=dev --silent)
+      (cd ${local.layers_build_dir}/ec2 && zip -rq ../ec2_layer.zip nodejs)
     EOT
   }
 }
@@ -127,8 +127,8 @@ resource "null_resource" "cloudwatch_layer_build" {
       cat > ${local.layers_build_dir}/cloudwatch/nodejs/clients/cloudwatch/package.json << 'EOF'
 {"name":"cloudwatch-client","version":"1.0.0","dependencies":{"@aws-sdk/client-cloudwatch":"^3.0.0"}}
 EOF
-      (cd ${local.layers_build_dir}/cloudwatch/nodejs/clients/cloudwatch && npm install --omit=dev)
-      (cd ${local.layers_build_dir}/cloudwatch && zip -r ../cloudwatch_layer.zip nodejs)
+      (cd ${local.layers_build_dir}/cloudwatch/nodejs/clients/cloudwatch && npm install --omit=dev --silent)
+      (cd ${local.layers_build_dir}/cloudwatch && zip -rq ../cloudwatch_layer.zip nodejs)
     EOT
   }
 }
@@ -165,8 +165,8 @@ resource "null_resource" "ssm_layer_build" {
       cat > ${local.layers_build_dir}/ssm/nodejs/clients/ssm/package.json << 'EOF'
 {"name":"ssm-client","version":"1.0.0","dependencies":{"@aws-sdk/client-ssm":"^3.0.0"}}
 EOF
-      (cd ${local.layers_build_dir}/ssm/nodejs/clients/ssm && npm install --omit=dev)
-      (cd ${local.layers_build_dir}/ssm && zip -r ../ssm_layer.zip nodejs)
+      (cd ${local.layers_build_dir}/ssm/nodejs/clients/ssm && npm install --omit=dev --silent)
+      (cd ${local.layers_build_dir}/ssm && zip -rq ../ssm_layer.zip nodejs)
     EOT
   }
 }
@@ -206,8 +206,8 @@ resource "null_resource" "common_layer_build" {
          ${local.common_layer_source}/webhook_ingress.js \
          ${local.layers_build_dir}/common/nodejs/common/
       cp ${local.etc_dir}/runners.json ${local.layers_build_dir}/common/nodejs/common/etc/
-      (cd ${local.layers_build_dir}/common/nodejs/common && npm install --omit=dev)
-      (cd ${local.layers_build_dir}/common && zip -r ../common_layer.zip nodejs)
+      (cd ${local.layers_build_dir}/common/nodejs/common && npm install --omit=dev --silent)
+      (cd ${local.layers_build_dir}/common && zip -rq ../common_layer.zip nodejs)
     EOT
   }
 }
