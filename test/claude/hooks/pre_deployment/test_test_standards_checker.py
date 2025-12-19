@@ -187,3 +187,143 @@ it('should work', () => {
     violations = test_standards_checker.check_content(content, 'main.spec.ts')
     spec_file_is_processed = len(violations) > 0
     assert spec_file_is_processed
+
+
+def test_pre_deployment_integration_rejects_invalid_filename(test_standards_checker):
+    """Test that Pre-deployment integration rejects invalid filename."""
+    file_path = 'test/api/pre_deployment/integration/test_my_custom_file.py'
+    violations = test_standards_checker.check_integration_file_naming(file_path)
+    invalid_filename_is_rejected = len(violations) > 0
+    assert invalid_filename_is_rejected
+
+
+def test_pre_deployment_integration_allows_valid_authentication(test_standards_checker):
+    """Test that Pre-deployment integration allows valid authentication file."""
+    file_path = 'test/api/pre_deployment/integration/test_01_authentication.py'
+    violations = test_standards_checker.check_integration_file_naming(file_path)
+    valid_filename_is_allowed = len(violations) == 0
+    assert valid_filename_is_allowed
+
+
+def test_pre_deployment_integration_allows_conftest(test_standards_checker):
+    """Test that Pre-deployment integration allows conftest."""
+    file_path = 'test/api/pre_deployment/integration/conftest.py'
+    violations = test_standards_checker.check_integration_file_naming(file_path)
+    conftest_is_allowed = len(violations) == 0
+    assert conftest_is_allowed
+
+
+def test_post_deployment_integration_rejects_invalid_filename(test_standards_checker):
+    """Test that Post-deployment integration rejects invalid filename."""
+    file_path = 'test/api/post_deployment/integration/test_my_custom_file.py'
+    violations = test_standards_checker.check_integration_file_naming(file_path)
+    invalid_filename_is_rejected = len(violations) > 0
+    assert invalid_filename_is_rejected
+
+
+def test_post_deployment_integration_allows_valid_existence(test_standards_checker):
+    """Test that Post-deployment integration allows valid existence file."""
+    file_path = 'test/api/post_deployment/integration/test_01_existence.py'
+    violations = test_standards_checker.check_integration_file_naming(file_path)
+    valid_filename_is_allowed = len(violations) == 0
+    assert valid_filename_is_allowed
+
+
+def test_post_deployment_integration_allows_valid_wiring(test_standards_checker):
+    """Test that Post-deployment integration allows valid wiring file."""
+    file_path = 'test/api/post_deployment/integration/test_03_wiring.py'
+    violations = test_standards_checker.check_integration_file_naming(file_path)
+    valid_filename_is_allowed = len(violations) == 0
+    assert valid_filename_is_allowed
+
+
+def test_vague_test_name_test_works_is_rejected(test_standards_checker):
+    """Test that Vague name test_works is rejected."""
+    violation = test_standards_checker.check_descriptive_test_name('test_works')
+    vague_name_is_rejected = violation is not None
+    assert vague_name_is_rejected
+
+
+def test_vague_test_name_test_1_is_rejected(test_standards_checker):
+    """Test that Vague name test_1 is rejected."""
+    violation = test_standards_checker.check_descriptive_test_name('test_1')
+    vague_name_is_rejected = violation is not None
+    assert vague_name_is_rejected
+
+
+def test_vague_test_name_test_foo_is_rejected(test_standards_checker):
+    """Test that Vague name test_foo is rejected."""
+    violation = test_standards_checker.check_descriptive_test_name('test_foo')
+    vague_name_is_rejected = violation is not None
+    assert vague_name_is_rejected
+
+
+def test_descriptive_test_name_is_allowed(test_standards_checker):
+    """Test that Descriptive name is allowed."""
+    violation = test_standards_checker.check_descriptive_test_name(
+        'test_user_creation_returns_valid_id'
+    )
+    descriptive_name_is_allowed = violation is None
+    assert descriptive_name_is_allowed
+
+
+def test_e2e_without_docstring_is_rejected(test_standards_checker):
+    """Test that E2e without docstring is rejected."""
+    content = '''
+def test_webhook_flow():
+    pass
+'''
+    violations = test_standards_checker.check_python_tests(
+        content, 'test/api/e2e/test_happy_path.py'
+    )
+    missing_docstring_is_rejected = any('user journey' in v.lower() for v in violations)
+    assert missing_docstring_is_rejected
+
+
+def test_e2e_with_user_journey_docstring_is_allowed(test_standards_checker):
+    """Test that E2e with user journey docstring is allowed."""
+    content = '''
+def test_webhook_flow():
+    """
+    User Journey: GitHub webhook triggers runner provisioning.
+    """
+    result_is_valid = True
+    assert result_is_valid
+'''
+    violations = test_standards_checker.check_python_tests(
+        content, 'test/api/e2e/test_happy_path.py'
+    )
+    user_journey_docstring_is_allowed = not any('user journey' in v.lower() for v in violations)
+    assert user_journey_docstring_is_allowed
+
+
+def test_e2e_with_when_then_docstring_is_allowed(test_standards_checker):
+    """Test that E2e with when then docstring is allowed."""
+    content = '''
+def test_webhook_flow():
+    """
+    When: A webhook arrives.
+    Then: A runner is created.
+    """
+    result_is_valid = True
+    assert result_is_valid
+'''
+    violations = test_standards_checker.check_python_tests(
+        content, 'test/api/e2e/test_happy_path.py'
+    )
+    when_then_docstring_is_allowed = not any('user journey' in v.lower() for v in violations)
+    assert when_then_docstring_is_allowed
+
+
+def test_non_e2e_test_does_not_require_journey_docstring(test_standards_checker):
+    """Test that Non-e2e test does not require journey docstring."""
+    content = '''
+def test_simple_function():
+    result_is_valid = True
+    assert result_is_valid
+'''
+    violations = test_standards_checker.check_python_tests(
+        content, 'test/api/pre_deployment/unit/test_utils.py'
+    )
+    non_e2e_does_not_require_journey = not any('user journey' in v.lower() for v in violations)
+    assert non_e2e_does_not_require_journey
