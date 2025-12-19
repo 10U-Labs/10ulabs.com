@@ -20,6 +20,7 @@ class AmiCleanupParams:
     cleanup_snapshots_enabled: bool
     tags: dict
     exclude_tags: dict
+    ami_name_prefix: str = ""
 
 
 def has_excluded_tags(resource_tags, exclude_tags):
@@ -76,12 +77,10 @@ def get_snapshot_ids_for_ami(image):
     return snapshot_ids
 
 
-def cleanup_amis(ec2_client, params: AmiCleanupParams):
-    """Clean up old AMIs matching the specified tags."""
-    deleted_count = 0
-    snapshots_to_delete = set()
+def find_amis_by_tags(ec2_client, tags):
+    """Find AMIs matching the specified tags."""
     images_by_id = {}
-    for tag_key, tag_value in params.tags.items():
+    for tag_key, tag_value in tags.items():
         try:
             response = ec2_client.describe_images(
                 Owners=['self'],
@@ -94,6 +93,34 @@ def cleanup_amis(ec2_client, params: AmiCleanupParams):
                 images_by_id[image['ImageId']] = image
         except ClientError as e:
             print(f"Error listing AMIs: {e}")
+    return images_by_id
+
+
+def find_amis_by_name_prefix(ec2_client, ami_name_prefix):
+    """Find AMIs matching the specified name prefix."""
+    images_by_id = {}
+    if ami_name_prefix:
+        try:
+            response = ec2_client.describe_images(
+                Owners=['self'],
+                Filters=[
+                    {'Name': 'name', 'Values': [f'{ami_name_prefix}*']},
+                    {'Name': 'state', 'Values': ['available', 'pending', 'failed']}
+                ]
+            )
+            for image in response.get('Images', []):
+                images_by_id[image['ImageId']] = image
+        except ClientError as e:
+            print(f"Error listing AMIs by name prefix: {e}")
+    return images_by_id
+
+
+def cleanup_amis(ec2_client, params: AmiCleanupParams):
+    """Clean up old AMIs matching the specified tags or name prefix."""
+    deleted_count = 0
+    snapshots_to_delete = set()
+    images_by_id = find_amis_by_tags(ec2_client, params.tags)
+    images_by_id.update(find_amis_by_name_prefix(ec2_client, params.ami_name_prefix))
     for image in images_by_id.values():
         image_id = image['ImageId']
         if image_id == params.latest_ami_id:
@@ -333,14 +360,17 @@ def load_config(config_path):
         return json.load(f)
 
 
-def print_header(args, resource_types_set, tags, exclude_tags):
+def print_header(args, resource_types_set, tags, exclude_tags, ami_name_prefix):
     """Print the cleanup header information."""
     print("=" * 80)
     print("EC2 RUNNER IMAGE CLEANUP")
     print("=" * 80)
     print(f"Region: {args.region}")
     print(f"SSM Parameter: {args.ssm_parameter_name}")
-    print(f"Tag Filters: {', '.join(f'{k}={v}' for k, v in tags.items())}")
+    if tags:
+        print(f"Tag Filters: {', '.join(f'{k}={v}' for k, v in tags.items())}")
+    if ami_name_prefix:
+        print(f"AMI Name Prefix: {ami_name_prefix}*")
     if exclude_tags:
         print(f"Excluded Tags: {', '.join(f'{k}={v}' for k, v in exclude_tags.items())}")
     print(f"Dry Run: {args.dry_run}")
@@ -383,28 +413,32 @@ def parse_tags(tag_list):
     return tags
 
 
+def get_resource_types(args):
+    """Parse resource types from arguments."""
+    if args.resource_types.lower() == 'all':
+        return {
+            'amis', 'snapshots', 'instances', 'security-groups',
+            'key-pairs', 'launch-templates',
+        }
+    return set(rt.strip() for rt in args.resource_types.lower().split(','))
+
+
 def handle_ami_cleanup(args):
     """Handle the main cleanup process based on command line arguments."""
     ec2_client = boto3.client('ec2', region_name=args.region)
     ssm_client = boto3.client('ssm', region_name=args.region)
 
-    tags = load_config(args.config).get('tags', {})
-    tags.update(parse_tags(args.tag))
-    if not tags:
-        print("Error: No tags found in config file or --tag")
+    file_config = load_config(args.config)
+    tags = {**file_config.get('tags', {}), **parse_tags(args.tag)}
+    ami_name_prefix = file_config.get('ami_name_prefix', '')
+    if not tags and not ami_name_prefix:
+        print("Error: No tags or ami_name_prefix found in config file")
         return 1
 
     exclude_tags = parse_tags(args.exclude_tag)
+    resource_types_set = get_resource_types(args)
 
-    if args.resource_types.lower() == 'all':
-        resource_types_set = {
-            'amis', 'snapshots', 'instances', 'security-groups',
-            'key-pairs', 'launch-templates',
-        }
-    else:
-        resource_types_set = set(rt.strip() for rt in args.resource_types.lower().split(','))
-
-    print_header(args, resource_types_set, tags, exclude_tags)
+    print_header(args, resource_types_set, tags, exclude_tags, ami_name_prefix)
 
     latest_ami_id = get_latest_ami_id(ssm_client, args.ssm_parameter_name)
     latest_snapshot_ids = get_latest_snapshot_ids(ec2_client, latest_ami_id)
@@ -417,18 +451,18 @@ def handle_ami_cleanup(args):
         print("-" * 80)
         print("CLEANING UP AMIS")
         print("-" * 80)
-        ami_params = AmiCleanupParams(
+        ami_result, snapshots_to_delete = cleanup_amis(ec2_client, AmiCleanupParams(
             latest_ami_id=latest_ami_id,
             latest_snapshot_ids=latest_snapshot_ids,
             dry_run=args.dry_run,
             cleanup_snapshots_enabled='snapshots' in resource_types_set,
             tags=tags,
-            exclude_tags=exclude_tags
-        )
-        ami_count, snapshots_to_delete = cleanup_amis(ec2_client, ami_params)
-        print(f"Amis cleaned: {ami_count}")
+            exclude_tags=exclude_tags,
+            ami_name_prefix=ami_name_prefix
+        ))
+        print(f"Amis cleaned: {ami_result}")
         print()
-        total_deleted += ami_count
+        total_deleted += ami_result
 
     if 'snapshots' in resource_types_set:
         orphaned_snapshots = find_orphaned_snapshots(ec2_client, latest_snapshot_ids)
