@@ -12,7 +12,7 @@ from pathlib import Path
 
 import yaml
 
-from hook_utils import LINT_DISABLE_PATTERNS
+from hook_utils import BLOCKED_LINT_CONFIG_FILES, LINT_DISABLE_PATTERNS
 
 
 DEBUG_LOG = os.path.expanduser('~/.claude/hook_debug.log')
@@ -422,6 +422,38 @@ def run_javascript_lint(changed_files):
     return True
 
 
+def run_blocked_lint_config_check(changed_files):
+    """Check for blocked lint config files. Returns True if passed, False if failed.
+
+    Only blocks files that exist (being added or modified), not deleted files.
+    """
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: BLOCKED LINT CONFIG FILES CHECK")
+    capture_print("="*60)
+
+    violations = []
+    for file_path in changed_files:
+        filename = os.path.basename(file_path)
+        # Only block if file exists (being added/modified, not deleted)
+        if filename in BLOCKED_LINT_CONFIG_FILES and os.path.isfile(file_path):
+            violations.append(file_path)
+
+    if violations:
+        capture_print("\nBLOCKED LINT CONFIG FILES FOUND:")
+        for file_path in violations:
+            capture_print(f"  {file_path}")
+        capture_print("\n" + "="*60)
+        capture_print("BLOCKED LINT CONFIG FILES CHECK FAILED")
+        capture_print("These files can be used to disable lint checks.")
+        capture_print("Fix the actual code instead of configuring linters to ignore issues.")
+        capture_print("="*60)
+        print("BLOCKED LINT CONFIG FILES CHECK FAILED", file=sys.stderr)
+        return False
+
+    capture_print("No blocked lint config files found.")
+    return True
+
+
 def path_matches_pattern(file_path, pattern):
     """Check if a file path matches a glob pattern."""
     if pattern.endswith('/**'):
@@ -758,6 +790,7 @@ def run_phase(matching_workflows, phase_name, extract_fn):
 def run_file_level_checks(changed_files):
     """Run all file-level checks. Calls deny_tool_use on failure."""
     checks = [
+        (run_blocked_lint_config_check, "BLOCKED LINT CONFIG FILES - Remove lint config files"),
         (run_lint_disable_check, "LINT DISABLE CHECK FAILED - Remove lint disable comments"),
         (run_single_assert_check, "SINGLE ASSERT CHECK FAILED - Split into separate tests"),
         (run_workflow_yaml_lint, "WORKFLOW YAML LINT FAILED - Fix YAML lint errors"),

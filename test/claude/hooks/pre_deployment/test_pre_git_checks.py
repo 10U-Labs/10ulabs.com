@@ -292,8 +292,8 @@ def test_get_workflow_push_paths_handles_yaml_boolean_on(pre_git_checks):
     assert result == ['src/**']
 
 
-def test_find_workflows_by_push_paths_finds_matching(pre_git_checks, tmp_path):
-    """Test that find_workflows_by_push_paths finds workflows with matching paths."""
+def test_find_workflows_by_push_paths_finds_one_matching(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths finds exactly one matching workflow."""
     workflows_dir = tmp_path / 'workflows'
     workflows_dir.mkdir()
     workflow_file = workflows_dir / 'test_workflow.yml'
@@ -313,6 +313,28 @@ jobs:
     result = pre_git_checks.find_workflows_by_push_paths(
         changed_files, str(workflows_dir), known_workflows)
     assert len(result) == 1
+
+
+def test_find_workflows_by_push_paths_returns_correct_name(pre_git_checks, tmp_path):
+    """Test that find_workflows_by_push_paths returns workflow with correct name."""
+    workflows_dir = tmp_path / 'workflows'
+    workflows_dir.mkdir()
+    workflow_file = workflows_dir / 'test_workflow.yml'
+    workflow_file.write_text("""
+on:
+  push:
+    paths:
+      - 'src/**'
+jobs:
+  test:
+    steps:
+      - name: Run lint
+        run: echo lint
+""")
+    changed_files = ['src/main.py']
+    known_workflows = []
+    result = pre_git_checks.find_workflows_by_push_paths(
+        changed_files, str(workflows_dir), known_workflows)
     assert result[0]['name'] == 'test_workflow'
 
 
@@ -401,21 +423,38 @@ def test_run_workflow_yaml_lint_returns_true_when_no_workflow_files(pre_git_chec
     assert result is True
 
 
-def test_run_workflow_yaml_lint_identifies_workflow_files():
-    """Test that run_workflow_yaml_lint correctly identifies workflow files."""
+def test_run_workflow_yaml_lint_identifies_workflow_files_count():
+    """Test that run_workflow_yaml_lint identifies correct number of workflow files."""
     changed_files = [
         'src/main.py',
         '.github/workflows/test.yml',
         '.github/workflows/deploy.yml',
         'test/test_main.py'
     ]
-    # Extract workflow files using the same logic as the function
     workflow_files = [
         f for f in changed_files
         if f.startswith('.github/workflows/') and f.endswith('.yml')
     ]
     assert len(workflow_files) == 2
+
+
+def test_run_workflow_yaml_lint_identifies_test_workflow():
+    """Test that run_workflow_yaml_lint identifies test.yml as workflow file."""
+    changed_files = ['.github/workflows/test.yml', 'src/main.py']
+    workflow_files = [
+        f for f in changed_files
+        if f.startswith('.github/workflows/') and f.endswith('.yml')
+    ]
     assert '.github/workflows/test.yml' in workflow_files
+
+
+def test_run_workflow_yaml_lint_identifies_deploy_workflow():
+    """Test that run_workflow_yaml_lint identifies deploy.yml as workflow file."""
+    changed_files = ['.github/workflows/deploy.yml', 'src/main.py']
+    workflow_files = [
+        f for f in changed_files
+        if f.startswith('.github/workflows/') and f.endswith('.yml')
+    ]
     assert '.github/workflows/deploy.yml' in workflow_files
 
 
@@ -430,4 +469,84 @@ def test_run_workflow_yaml_lint_ignores_yaml_outside_workflows(pre_git_checks):
     """Test that run_workflow_yaml_lint ignores yaml files outside workflows dir."""
     changed_files = ['etc/config.yml', '.github/dependabot.yml']
     result = pre_git_checks.run_workflow_yaml_lint(changed_files)
+    assert result is True
+
+
+def test_run_blocked_lint_config_check_blocks_pylintrc(pre_git_checks, tmp_path):
+    """Test that run_blocked_lint_config_check blocks .pylintrc files."""
+    pylintrc = tmp_path / '.pylintrc'
+    pylintrc.write_text('[MESSAGES CONTROL]\ndisable=all\n')
+    changed_files = [str(pylintrc)]
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is False
+
+
+def test_run_blocked_lint_config_check_blocks_pylintrc_no_dot(pre_git_checks, tmp_path):
+    """Test that run_blocked_lint_config_check blocks pylintrc files without dot."""
+    pylintrc = tmp_path / 'pylintrc'
+    pylintrc.write_text('[MESSAGES CONTROL]\ndisable=all\n')
+    changed_files = [str(pylintrc)]
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is False
+
+
+def test_run_blocked_lint_config_check_blocks_flake8(pre_git_checks, tmp_path):
+    """Test that run_blocked_lint_config_check blocks .flake8 files."""
+    flake8 = tmp_path / '.flake8'
+    flake8.write_text('[flake8]\nmax-line-length = 999\n')
+    changed_files = [str(flake8)]
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is False
+
+
+def test_run_blocked_lint_config_check_blocks_mypy_ini(pre_git_checks, tmp_path):
+    """Test that run_blocked_lint_config_check blocks .mypy.ini files."""
+    mypy_ini = tmp_path / '.mypy.ini'
+    mypy_ini.write_text('[mypy]\nignore_missing_imports = True\n')
+    changed_files = [str(mypy_ini)]
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is False
+
+
+def test_run_blocked_lint_config_check_blocks_tox_ini(pre_git_checks, tmp_path):
+    """Test that run_blocked_lint_config_check blocks tox.ini files."""
+    tox_ini = tmp_path / 'tox.ini'
+    tox_ini.write_text('[flake8]\nmax-line-length = 999\n')
+    changed_files = [str(tox_ini)]
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is False
+
+
+def test_run_blocked_lint_config_check_allows_regular_files(pre_git_checks):
+    """Test that run_blocked_lint_config_check allows regular Python files."""
+    changed_files = ['src/main.py', 'test/test_main.py', 'README.md']
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is True
+
+
+def test_run_blocked_lint_config_check_allows_empty_list(pre_git_checks):
+    """Test that run_blocked_lint_config_check handles empty file list."""
+    changed_files = []
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is True
+
+
+def test_run_blocked_lint_config_check_blocks_nested_pylintrc(pre_git_checks, tmp_path):
+    """Test that run_blocked_lint_config_check blocks .pylintrc in nested paths."""
+    # Create the file so it exists (simulating adding a file)
+    nested_dir = tmp_path / 'deeply' / 'nested' / 'path'
+    nested_dir.mkdir(parents=True)
+    pylintrc = nested_dir / '.pylintrc'
+    pylintrc.write_text('[MESSAGES CONTROL]\ndisable=all\n')
+
+    changed_files = [str(pylintrc)]
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
+    assert result is False
+
+
+def test_run_blocked_lint_config_check_allows_deleted_pylintrc(pre_git_checks):
+    """Test that run_blocked_lint_config_check allows deletion of .pylintrc."""
+    # File path that doesn't exist (simulating deletion)
+    changed_files = ['nonexistent/path/.pylintrc']
+    result = pre_git_checks.run_blocked_lint_config_check(changed_files)
     assert result is True

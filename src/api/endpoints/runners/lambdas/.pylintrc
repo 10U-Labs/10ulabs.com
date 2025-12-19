@@ -1,5 +1,0 @@
-[MESSAGES CONTROL]
-# Disable duplicate-code check (R0801) because Lambda handlers intentionally
-# share common patterns for AWS client singletons, error handling, and metrics.
-# These patterns are duplicated for isolation - each Lambda should be independent.
-disable=duplicate-code

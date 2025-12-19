@@ -18,6 +18,24 @@ def allow_tool_use():
     sys.exit(0)
 
 
+# Lint config files that can be used to disable checks - block these entirely
+BLOCKED_LINT_CONFIG_FILES = [
+    '.pylintrc',
+    'pylintrc',
+    '.flake8',
+    '.bandit',
+    '.mypy.ini',
+    '.rubocop.yml',
+    '.stylelintrc',
+    '.stylelintrc.json',
+    '.stylelintrc.yml',
+    '.markdownlint.json',
+    '.markdownlint.yaml',
+    '.markdownlintrc',
+    'tox.ini',  # Can contain [flake8], [pylint] sections
+]
+
+
 LINT_DISABLE_PATTERNS = [
     # Inline code comments
     (r'eslint-disable', 'eslint-disable'),
