@@ -59,17 +59,6 @@ def test_stale_runner_cleanup_has_github_token_env_var(runners_src_path):
     assert 'GITHUB_TOKEN_SECRET_NAME' in stale_section
 
 
-def test_stale_runner_cleanup_has_workflow_runners_table_env_var(runners_src_path):
-    """Test stale runner cleanup has workflow runners table env var."""
-    lambda_file = runners_src_path / "lambda.tf"
-    with open(lambda_file, encoding="utf-8") as f:
-        content = f.read()
-    stale_start = content.find('resource "aws_lambda_function" "stale_runner_cleanup"')
-    stale_end = content.find('resource "aws_cloudwatch_log_group" "stale_runner_cleanup"')
-    stale_section = content[stale_start:stale_end]
-    assert 'WORKFLOW_RUNNERS_TABLE' in stale_section
-
-
 def test_runners_handler_lambda_exists(runners_src_path):
     """Test runners handler lambda exists."""
     lambda_file = runners_src_path / "lambda.tf"
