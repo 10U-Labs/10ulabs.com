@@ -1,31 +1,53 @@
 data "archive_file" "runners_handler" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/webhook_router.js"
   output_path = "${path.module}/.terraform/lambda_packages/runners_handler.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/webhook_router.py")
+    filename = "webhook_router.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/runner_labels.py")
+    filename = "common/runner_labels.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "common/etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "runners_handler" {
   filename                       = data.archive_file.runners_handler.output_path
   function_name                  = local.webhook_handler_function_name
   role                           = aws_iam_role.lambda_runners_handler.arn
-  handler                        = "webhook_router.handler"
+  handler                        = "webhook_router.lambda_handler"
   source_code_hash               = data.archive_file.runners_handler.output_base64sha256
-  runtime                        = "nodejs22.x"
+  runtime                        = "python3.13"
   architectures                  = ["arm64"]
   timeout                        = local.lambda_timeout_seconds
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "GitHub webhook router for GitHub self-hosted runners"
-  layers = [
-    aws_lambda_layer_version.ssm_client.arn,
-    aws_lambda_layer_version.cloudwatch_client.arn,
-    aws_lambda_layer_version.common.arn,
-  ]
 
   environment {
     variables = {
       CANCELLATION_QUEUE_URL   = aws_sqs_queue.cancellation.url
-      ETC_PATH                 = "/opt/nodejs/common"
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
       IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
@@ -89,27 +111,50 @@ resource "aws_lambda_event_source_mapping" "runners_handler_webhook_ingress" {
 # Runner Starter Lambda - processes job_queue messages and starts runners
 data "archive_file" "runner_starter" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/runner_starter.js"
   output_path = "${path.module}/.terraform/lambda_packages/runner_starter.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/runner_starter.py")
+    filename = "runner_starter.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/runner_labels.py")
+    filename = "common/runner_labels.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/webhook_ingress.py")
+    filename = "common/webhook_ingress.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "common/etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "runner_starter" {
   filename                       = data.archive_file.runner_starter.output_path
   function_name                  = local.runner_starter_function_name
   role                           = aws_iam_role.runner_starter.arn
-  handler                        = "runner_starter.handler"
+  handler                        = "runner_starter.lambda_handler"
   source_code_hash               = data.archive_file.runner_starter.output_base64sha256
-  runtime                        = "nodejs22.x"
+  runtime                        = "python3.13"
   architectures                  = ["arm64"]
   timeout                        = local.lambda_timeout_seconds
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "Processes job queue messages and starts GitHub runners"
-  layers = [
-    aws_lambda_layer_version.ssm_client.arn,
-    aws_lambda_layer_version.cloudwatch_client.arn,
-    aws_lambda_layer_version.common.arn,
-  ]
 
   environment {
     variables = {
@@ -163,27 +208,34 @@ resource "aws_lambda_event_source_mapping" "runner_starter_sqs" {
 # Runner Terminator Lambda - processes cancellation_queue and stops runners
 data "archive_file" "runner_terminator" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/runner_terminator.js"
   output_path = "${path.module}/.terraform/lambda_packages/runner_terminator.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/runner_terminator.py")
+    filename = "runner_terminator.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
 }
 
 resource "aws_lambda_function" "runner_terminator" {
   filename                       = data.archive_file.runner_terminator.output_path
   function_name                  = local.runner_terminator_function_name
   role                           = aws_iam_role.runner_terminator.arn
-  handler                        = "runner_terminator.handler"
+  handler                        = "runner_terminator.lambda_handler"
   source_code_hash               = data.archive_file.runner_terminator.output_base64sha256
-  runtime                        = "nodejs22.x"
+  runtime                        = "python3.13"
   architectures                  = ["arm64"]
   timeout                        = local.lambda_timeout_seconds
   memory_size                    = local.lambda_memory_mb
   reserved_concurrent_executions = -1
   description                    = "Processes cancellation queue and terminates GitHub runners"
-  layers = [
-    aws_lambda_layer_version.ecs_client.arn,
-    aws_lambda_layer_version.ec2_client.arn,
-    aws_lambda_layer_version.cloudwatch_client.arn,
-  ]
 
   environment {
     variables = {
@@ -238,23 +290,34 @@ resource "aws_lambda_event_source_mapping" "runner_terminator_sqs" {
 # Ignored Events Archiver Lambda - archives ignored events to S3
 data "archive_file" "ignored_events_archiver" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/ignored_events_archiver.js"
   output_path = "${path.module}/.terraform/lambda_packages/ignored_events_archiver.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/ignored_events_archiver.py")
+    filename = "ignored_events_archiver.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/cloudwatch.py")
+    filename = "common/cloudwatch.py"
+  }
 }
 
 resource "aws_lambda_function" "ignored_events_archiver" {
   filename                       = data.archive_file.ignored_events_archiver.output_path
   function_name                  = local.ignored_events_archiver_function_name
   role                           = aws_iam_role.ignored_events_archiver.arn
-  handler                        = "ignored_events_archiver.handler"
+  handler                        = "ignored_events_archiver.lambda_handler"
   source_code_hash               = data.archive_file.ignored_events_archiver.output_base64sha256
-  runtime                        = "nodejs22.x"
+  runtime                        = "python3.13"
   architectures                  = ["arm64"]
   timeout                        = 60
   memory_size                    = 256
   reserved_concurrent_executions = -1
   description                    = "Archives ignored webhook events to S3 for long-term storage"
-  layers                         = [aws_lambda_layer_version.cloudwatch_client.arn]
 
   environment {
     variables = {
@@ -541,25 +604,33 @@ resource "aws_cloudwatch_log_group" "circuit_breaker_recovery" {
 
 data "archive_file" "drift_recovery" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/drift_recovery.js"
   output_path = "${path.module}/.terraform/lambda_packages/drift_recovery.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/drift_recovery.py")
+    filename = "drift_recovery.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
 }
 
 resource "aws_lambda_function" "drift_recovery" {
   filename         = data.archive_file.drift_recovery.output_path
   function_name    = local.drift_recovery_function_name
   role             = aws_iam_role.drift_recovery.arn
-  handler          = "drift_recovery.handler"
+  handler          = "drift_recovery.lambda_handler"
   source_code_hash = data.archive_file.drift_recovery.output_base64sha256
-  runtime          = "nodejs22.x"
+  runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 30
   memory_size      = 256
   description      = "Triggers API workflow when infrastructure drift is detected"
-  layers = [
-    aws_lambda_layer_version.ssm_client.arn,
-    aws_lambda_layer_version.ec2_client.arn,
-  ]
 
   environment {
     variables = {
@@ -607,25 +678,41 @@ resource "aws_lambda_event_source_mapping" "drift_recovery_sqs" {
 
 data "archive_file" "spot_interruption_handler" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/spot_interruption_handler.js"
   output_path = "${path.module}/.terraform/lambda_packages/spot_interruption_handler.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/spot_interruption_handler.py")
+    filename = "spot_interruption_handler.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/runner_labels.py")
+    filename = "common/runner_labels.py"
+  }
+  source {
+    content  = file("${local.etc_dir}/runners.json")
+    filename = "common/etc/runners.json"
+  }
 }
 
 resource "aws_lambda_function" "spot_interruption_handler" {
   filename         = data.archive_file.spot_interruption_handler.output_path
   function_name    = local.spot_interruption_handler_function_name
   role             = aws_iam_role.spot_interruption_handler.arn
-  handler          = "spot_interruption_handler.handler"
+  handler          = "spot_interruption_handler.lambda_handler"
   source_code_hash = data.archive_file.spot_interruption_handler.output_base64sha256
-  runtime          = "nodejs22.x"
+  runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 60
   memory_size      = 256
   description      = "Handles spot interruption events and launches replacement runners"
-  layers = [
-    aws_lambda_layer_version.ecs_client.arn,
-    aws_lambda_layer_version.common.arn,
-  ]
 
   environment {
     variables = {
@@ -669,26 +756,33 @@ resource "aws_cloudwatch_log_group" "spot_interruption_handler" {
 
 data "archive_file" "stale_runner_cleanup" {
   type        = "zip"
-  source_file = "${path.module}/lambdas/stale_runner_cleanup.js"
   output_path = "${path.module}/.terraform/lambda_packages/stale_runner_cleanup.zip"
+
+  source {
+    content  = file("${path.module}/lambdas/stale_runner_cleanup.py")
+    filename = "stale_runner_cleanup.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/__init__.py")
+    filename = "common/__init__.py"
+  }
+  source {
+    content  = file("${path.module}/lambdas/common/github_api.py")
+    filename = "common/github_api.py"
+  }
 }
 
 resource "aws_lambda_function" "stale_runner_cleanup" {
   filename         = data.archive_file.stale_runner_cleanup.output_path
   function_name    = local.stale_runner_cleanup_function_name
   role             = aws_iam_role.stale_runner_cleanup.arn
-  handler          = "stale_runner_cleanup.handler"
+  handler          = "stale_runner_cleanup.lambda_handler"
   source_code_hash = data.archive_file.stale_runner_cleanup.output_base64sha256
-  runtime          = "nodejs22.x"
+  runtime          = "python3.13"
   architectures    = ["arm64"]
   timeout          = 300
   memory_size      = 256
   description      = "Cleans up stale runners from completed or failed workflows"
-  layers = [
-    aws_lambda_layer_version.ecs_client.arn,
-    aws_lambda_layer_version.ec2_client.arn,
-    aws_lambda_layer_version.common.arn,
-  ]
 
   environment {
     variables = {
@@ -696,7 +790,6 @@ resource "aws_lambda_function" "stale_runner_cleanup" {
       ECS_CLUSTER              = data.terraform_remote_state.ecs_runner.outputs.cluster_arn
       GITHUB_REPO              = local.github_repo_full
       GITHUB_TOKEN_SECRET_NAME = module.shared.ssm_github_pat_name
-      WORKFLOW_RUNNERS_TABLE   = aws_dynamodb_table.workflow_runners.name
     }
   }
 
