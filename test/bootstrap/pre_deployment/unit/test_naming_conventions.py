@@ -11,7 +11,7 @@ import pytest
 from naming_conventions import validate_name
 from terraform_config import get_resource_prefix
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
+REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 BOOTSTRAP_SRC = REPO_ROOT / "src" / "bootstrap"
 
 
