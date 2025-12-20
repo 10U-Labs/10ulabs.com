@@ -672,3 +672,125 @@ def test_store_workflow_runner_returns_false_on_client_error(ecs_runner_handler)
             )
             result = ecs_runner_handler.store_workflow_runner(runner)
             assert result is False
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_includes_github_token_env_var(
+    mock_boto_client, ecs_runner_handler
+):
+    """Test launch fargate runner includes GITHUB_TOKEN in container environment."""
+    env = {
+        'ECS_CLUSTER': 'test-cluster',
+        'TASK_DEFINITION': 'test-task',
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'CONTAINER_NAME': 'test-container',
+        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
+    }
+    with patch.dict('os.environ', env):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'github-token-value'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+
+        mock_boto_client.side_effect = mock_client
+        reg_token_patch = patch.object(
+            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
+        )
+        with reg_token_patch:
+            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            call_args = mock_ecs.run_task.call_args
+            container_overrides = call_args[1]['overrides']['containerOverrides'][0]
+            environment = container_overrides.get('environment', [])
+            github_token_env = next(
+                (e for e in environment if e['name'] == 'GITHUB_TOKEN'), None
+            )
+            assert github_token_env is not None
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_passes_correct_github_token_value(
+    mock_boto_client, ecs_runner_handler
+):
+    """Test launch fargate runner passes correct GITHUB_TOKEN value to container."""
+    env = {
+        'ECS_CLUSTER': 'test-cluster',
+        'TASK_DEFINITION': 'test-task',
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'CONTAINER_NAME': 'test-container',
+        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
+    }
+    with patch.dict('os.environ', env):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': 'github-token-value'}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+
+        mock_boto_client.side_effect = mock_client
+        reg_token_patch = patch.object(
+            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
+        )
+        with reg_token_patch:
+            ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            call_args = mock_ecs.run_task.call_args
+            container_overrides = call_args[1]['overrides']['containerOverrides'][0]
+            environment = container_overrides.get('environment', [])
+            github_token_env = next(
+                (e for e in environment if e['name'] == 'GITHUB_TOKEN'), None
+            )
+            assert github_token_env['value'] == 'github-token-value'
+
+
+@patch('boto3.client')
+def test_launch_fargate_runner_does_not_pass_empty_github_token(
+    mock_boto_client, ecs_runner_handler
+):
+    """Test launch fargate runner does not pass empty GITHUB_TOKEN to container."""
+    env = {
+        'ECS_CLUSTER': 'test-cluster',
+        'TASK_DEFINITION': 'test-task',
+        'SUBNETS': 'subnet-1',
+        'SECURITY_GROUPS': 'sg-1',
+        'CONTAINER_NAME': 'test-container',
+        'GITHUB_TOKEN_SECRET_NAME': '/test/token'
+    }
+    with patch.dict('os.environ', env):
+        mock_ecs = MagicMock()
+        mock_ssm = MagicMock()
+        # Return empty token
+        mock_ssm.get_parameter.return_value = {'Parameter': {'Value': ''}}
+        mock_ecs.run_task.return_value = {'tasks': [{'taskArn': 'test-arn'}]}
+
+        def mock_client(service):
+            if service == 'ecs':
+                return mock_ecs
+            if service == 'ssm':
+                return mock_ssm
+            return MagicMock()
+
+        mock_boto_client.side_effect = mock_client
+        reg_token_patch = patch.object(
+            ecs_runner_handler, 'get_runner_registration_token', return_value='test-reg-token'
+        )
+        # Note: launch_fargate_runner will fail early if github_token is empty
+        # because it checks for github_token before getting registration token
+        # So we test that run_task is not called when token is empty
+        with reg_token_patch:
+            result = ecs_runner_handler.launch_fargate_runner(123, ['test-label'], 'test/repo')
+            # Empty github token causes early failure
+            assert result['success'] is False

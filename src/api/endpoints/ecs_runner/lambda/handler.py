@@ -609,6 +609,24 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
     runner_name = f"fargate-runner-{run_id}" if run_id else f"fargate-runner-{job_id}"
     capacity_provider = _get_capacity_provider(cfg['job_labels'])
     logger.info("Using capacity provider %s for job %s", capacity_provider, job_id)
+
+    # Build container overrides with environment variable for run monitoring
+    container_overrides: Dict[str, Any] = {
+        'name': os.environ['CONTAINER_NAME'],
+        'command': [
+            '--repo', cfg['github_repo'], '--name', runner_name,
+            '--labels', ','.join(cfg['job_labels']), '--token', cfg['registration_token']
+        ],
+    }
+
+    # Pass GitHub token to container for workflow run status monitoring
+    # This enables the runner to detect cancelled jobs and exit early
+    github_token = cfg.get('github_token', '')
+    if github_token:
+        container_overrides['environment'] = [
+            {'name': 'GITHUB_TOKEN', 'value': github_token}
+        ]
+
     response = get_ecs_client().run_task(
         cluster=os.environ['ECS_CLUSTER'],
         taskDefinition=os.environ['TASK_DEFINITION'],
@@ -624,13 +642,7 @@ def _launch_fargate_task_in_subnet(cfg: Dict[str, Any], subnet: str) -> Dict[str
             'capacityProvider': capacity_provider, 'weight': 100, 'base': 0
         }],
         overrides={
-            'containerOverrides': [{
-                'name': os.environ['CONTAINER_NAME'],
-                'command': [
-                    '--repo', cfg['github_repo'], '--name', runner_name,
-                    '--labels', ','.join(cfg['job_labels']), '--token', cfg['registration_token']
-                ]
-            }]
+            'containerOverrides': [container_overrides]
         },
         tags=[
             {'key': 'Type', 'value': 'workflow-runner'},
@@ -770,7 +782,8 @@ def launch_fargate_runner(
     runner_labels = build_runner_labels(job_labels, run_id)
     runner_config = {
         'job_id': job_id, 'job_labels': runner_labels, 'github_repo': github_repo,
-        'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type
+        'registration_token': registration_token, 'run_id': run_id, 'runner_type': runner_type,
+        'github_token': github_token,  # For run status monitoring in container
     }
     return _try_launch_fargate_task(runner_config)
 
