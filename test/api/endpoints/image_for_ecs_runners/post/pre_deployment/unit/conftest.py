@@ -22,6 +22,14 @@ entrypoint = importlib.util.module_from_spec(entrypoint_spec)
 sys.modules['entrypoint'] = entrypoint
 entrypoint_spec.loader.exec_module(entrypoint)
 
+
+@pytest.fixture(autouse=True)
+def reset_monitor_state():
+    """Reset entrypoint monitor_state before each test to ensure test isolation."""
+    entrypoint.monitor_state["should_terminate"] = False
+    entrypoint.monitor_state["stop_event"] = None
+    yield
+
 promote_path = os.path.join(FILES_DIR, 'promote_docker_image.py')
 promote_spec = importlib.util.spec_from_file_location("promote_docker_image", promote_path)
 if promote_spec is None or promote_spec.loader is None:

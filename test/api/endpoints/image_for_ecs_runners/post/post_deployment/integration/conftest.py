@@ -12,6 +12,11 @@ def _read_config():
         return yaml.safe_load(f)
 
 
+ENTRYPOINT_IMPORT = (
+    "import sys; sys.path.insert(0, '/home/runner'); import entrypoint; "
+)
+
+
 def run_command_in_container(tag, command):
     """Execute a command inside a Docker container."""
     result = subprocess.run(

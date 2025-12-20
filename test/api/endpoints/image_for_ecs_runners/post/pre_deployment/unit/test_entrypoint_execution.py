@@ -13,14 +13,15 @@ def _setup_popen_mock(mock_popen, returncode=0):
     return exec_process
 
 
+@pytest.mark.parametrize("config_returncode", [1, 127])
 @patch('entrypoint.subprocess.run')
 @patch('sys.argv', [
     'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
     '--labels', 'lbl', '--token', 'tok'
 ])
-def test_main_exits_with_code_1_when_config_fails(mock_run):
-    """Test that main exits with code 1 when config fails."""
-    mock_run.return_value = Mock(returncode=1)
+def test_main_exits_with_code_1_when_config_fails(mock_run, config_returncode):
+    """Test that main exits with code 1 when config fails with any non-zero code."""
+    mock_run.return_value = Mock(returncode=config_returncode)
     with pytest.raises(SystemExit) as exc_info:
         entrypoint.main()
     assert exc_info.value.code == 1
@@ -72,19 +73,6 @@ def test_run_sh_uses_popen(mock_run, mock_popen):
         entrypoint.main()
     # Popen should be called at least once (for run.sh, plus CloudWatch agent)
     assert mock_popen.called
-
-
-@patch('entrypoint.subprocess.run')
-@patch('sys.argv', [
-    'entrypoint.py', '--repo', 'org/repo', '--name', 'runner',
-    '--labels', 'lbl', '--token', 'tok'
-])
-def test_config_sh_returns_non_zero_exit_code(mock_run):
-    """Test that config.sh returning non-zero exit code is handled."""
-    mock_run.return_value = Mock(returncode=127)
-    with pytest.raises(SystemExit) as exc_info:
-        entrypoint.main()
-    assert exc_info.value.code == 1
 
 
 @patch('entrypoint.subprocess.Popen')

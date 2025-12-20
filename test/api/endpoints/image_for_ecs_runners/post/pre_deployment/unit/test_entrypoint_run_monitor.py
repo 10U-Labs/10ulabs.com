@@ -9,6 +9,24 @@ import pytest
 import entrypoint
 
 
+def _setup_urlopen_response(mock_urlopen, status):
+    """Configure urlopen mock to return a workflow status response."""
+    mock_response = Mock()
+    mock_response.read.return_value = json.dumps({"status": status}).encode()
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    mock_response.__exit__ = Mock(return_value=False)
+    mock_urlopen.return_value = mock_response
+
+
+def _setup_main_mocks(mock_run, mock_popen, wait_returncode=0):
+    """Configure mocks for main() execution tests."""
+    mock_run.return_value = Mock(returncode=0)
+    mock_process = Mock()
+    mock_process.wait.return_value = wait_returncode
+    mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
+    mock_popen.return_value.__exit__ = Mock(return_value=False)
+
+
 class TestExtractRunIdFromName:
     """Tests for extract_run_id_from_name function."""
 
@@ -44,11 +62,7 @@ class TestGetWorkflowRunStatus:
     @patch('entrypoint.urllib.request.urlopen')
     def test_returns_status_on_success(self, mock_urlopen):
         """Test returns workflow run status on successful API call."""
-        mock_response = Mock()
-        mock_response.read.return_value = json.dumps({"status": "in_progress"}).encode()
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        _setup_urlopen_response(mock_urlopen, "in_progress")
 
         result = entrypoint.get_workflow_run_status("org/repo", "12345", "token123")
 
@@ -57,11 +71,7 @@ class TestGetWorkflowRunStatus:
     @patch('entrypoint.urllib.request.urlopen')
     def test_returns_completed_status(self, mock_urlopen):
         """Test returns completed status."""
-        mock_response = Mock()
-        mock_response.read.return_value = json.dumps({"status": "completed"}).encode()
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        _setup_urlopen_response(mock_urlopen, "completed")
 
         result = entrypoint.get_workflow_run_status("org/repo", "12345", "token123")
 
@@ -104,11 +114,7 @@ class TestGetWorkflowRunStatus:
     @patch('entrypoint.urllib.request.urlopen')
     def test_uses_correct_url(self, mock_urlopen, mock_request):
         """Test uses correct GitHub API URL."""
-        mock_response = Mock()
-        mock_response.read.return_value = json.dumps({"status": "queued"}).encode()
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        _setup_urlopen_response(mock_urlopen, "queued")
 
         entrypoint.get_workflow_run_status("myorg/myrepo", "99999", "mytoken")
 
@@ -120,11 +126,7 @@ class TestGetWorkflowRunStatus:
     @patch('entrypoint.urllib.request.urlopen')
     def test_includes_authorization_header(self, mock_urlopen, mock_request):
         """Test includes authorization header with token."""
-        mock_response = Mock()
-        mock_response.read.return_value = json.dumps({"status": "queued"}).encode()
-        mock_response.__enter__ = Mock(return_value=mock_response)
-        mock_response.__exit__ = Mock(return_value=False)
-        mock_urlopen.return_value = mock_response
+        _setup_urlopen_response(mock_urlopen, "queued")
 
         entrypoint.get_workflow_run_status("org/repo", "12345", "secret_token")
 
@@ -142,9 +144,6 @@ class TestMonitorWorkflowRun:
         """Test sets should_terminate flag when run status is completed."""
         mock_get_status.return_value = "completed"
         stop_event = threading.Event()
-
-        # Reset monitor state before test
-        entrypoint.monitor_state["should_terminate"] = False
 
         entrypoint.monitor_workflow_run("org/repo", "123", "token", stop_event, 0.01)
 
@@ -217,16 +216,12 @@ class TestStartRunMonitor:
 
     def test_does_not_start_without_run_id(self):
         """Test does not start monitor without run_id."""
-        entrypoint.monitor_state["stop_event"] = None
-
         entrypoint.start_run_monitor("org/repo", "", "token", 30)
 
         assert entrypoint.monitor_state["stop_event"] is None
 
     def test_does_not_start_without_github_token(self):
         """Test does not start monitor without github_token."""
-        entrypoint.monitor_state["stop_event"] = None
-
         entrypoint.start_run_monitor("org/repo", "12345", "", 30)
 
         assert entrypoint.monitor_state["stop_event"] is None
@@ -318,11 +313,7 @@ class TestMainWithRunMonitor:
         self, mock_run, mock_start_monitor, mock_popen
     ):
         """Test starts run monitor for fargate runner with token."""
-        mock_run.return_value = Mock(returncode=0)
-        mock_process = Mock()
-        mock_process.wait.return_value = 0
-        mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-        mock_popen.return_value.__exit__ = Mock(return_value=False)
+        _setup_main_mocks(mock_run, mock_popen)
 
         with pytest.raises(SystemExit):
             entrypoint.main()
@@ -341,11 +332,7 @@ class TestMainWithRunMonitor:
         self, mock_run, mock_start_monitor, mock_popen
     ):
         """Test does not start run monitor without GITHUB_TOKEN env var."""
-        mock_run.return_value = Mock(returncode=0)
-        mock_process = Mock()
-        mock_process.wait.return_value = 0
-        mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-        mock_popen.return_value.__exit__ = Mock(return_value=False)
+        _setup_main_mocks(mock_run, mock_popen)
 
         with pytest.raises(SystemExit):
             entrypoint.main()
@@ -364,11 +351,7 @@ class TestMainWithRunMonitor:
         self, mock_run, mock_start_monitor, mock_popen
     ):
         """Test does not start run monitor for non-fargate runner."""
-        mock_run.return_value = Mock(returncode=0)
-        mock_process = Mock()
-        mock_process.wait.return_value = 0
-        mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-        mock_popen.return_value.__exit__ = Mock(return_value=False)
+        _setup_main_mocks(mock_run, mock_popen)
 
         with pytest.raises(SystemExit):
             entrypoint.main()
@@ -388,11 +371,7 @@ class TestMainWithRunMonitor:
         self, mock_run, _mock_start_monitor, mock_stop_monitor, mock_popen
     ):
         """Test stops run monitor when main exits."""
-        mock_run.return_value = Mock(returncode=0)
-        mock_process = Mock()
-        mock_process.wait.return_value = 0
-        mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-        mock_popen.return_value.__exit__ = Mock(return_value=False)
+        _setup_main_mocks(mock_run, mock_popen)
 
         with pytest.raises(SystemExit):
             entrypoint.main()
@@ -411,11 +390,7 @@ class TestMainWithRunMonitor:
         self, mock_run, mock_start_monitor, mock_popen
     ):
         """Test uses custom check interval from argument."""
-        mock_run.return_value = Mock(returncode=0)
-        mock_process = Mock()
-        mock_process.wait.return_value = 0
-        mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-        mock_popen.return_value.__exit__ = Mock(return_value=False)
+        _setup_main_mocks(mock_run, mock_popen)
 
         with pytest.raises(SystemExit):
             entrypoint.main()
@@ -435,11 +410,7 @@ class TestMainWithRunMonitor:
         self, mock_run, mock_signal, mock_stop_monitor, mock_popen
     ):
         """Test signal handler stops run monitor."""
-        mock_run.return_value = Mock(returncode=0)
-        mock_process = Mock()
-        mock_process.wait.return_value = 0
-        mock_popen.return_value.__enter__ = Mock(return_value=mock_process)
-        mock_popen.return_value.__exit__ = Mock(return_value=False)
+        _setup_main_mocks(mock_run, mock_popen)
 
         with pytest.raises(SystemExit):
             entrypoint.main()
