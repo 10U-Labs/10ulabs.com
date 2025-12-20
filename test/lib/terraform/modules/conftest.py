@@ -1,7 +1,8 @@
 """Shared fixtures and utilities for Terraform module tests."""
-
 import pytest
 from repo_utils import REPO_ROOT
+
+pytest_plugins = ['test_fixtures.aws']
 
 MODULES_DIR = REPO_ROOT / "lib" / "terraform" / "modules"
 

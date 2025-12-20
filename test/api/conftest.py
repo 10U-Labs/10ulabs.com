@@ -19,6 +19,7 @@ from runner_labels import (
     DEFAULT_RUNNER_ID,
 )
 
+pytest_plugins = ['test_fixtures.aws']
 
 # Common directory constants
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"

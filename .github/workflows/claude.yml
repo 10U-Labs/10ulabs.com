@@ -61,7 +61,6 @@ jobs:
       - name: Run unit tests
         run: |
           python3 -m pytest test/claude/ \
-            --confcutdir=test/claude \
             --pythonwarnings=error \
             --verbose
 name: Testing Claude Code hooks

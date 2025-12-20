@@ -4,6 +4,8 @@ import re
 import pytest
 from repo_utils import REPO_ROOT
 
+pytest_plugins = ['test_fixtures.aws']
+
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 LOCALS_TF_PATH = BOOTSTRAP_DIR / "locals.tf"
 
