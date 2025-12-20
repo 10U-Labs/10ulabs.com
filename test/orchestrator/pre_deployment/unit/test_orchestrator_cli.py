@@ -43,7 +43,7 @@ class TestOrchestratorCLI:
         """Test that compute-roots subcommand routes to compute_roots.main."""
         mock_main = MagicMock()
         with patch.object(sys, "argv", ["orchestrator.py", "compute-roots", "file.txt"]):
-            with patch.dict("sys.modules", {"compute_roots": MagicMock(main=mock_main)}):
+            with patch.object(orchestrator.compute_roots, "main", mock_main):
                 orchestrator.main()
         mock_main.assert_called_once()
 
@@ -51,7 +51,7 @@ class TestOrchestratorCLI:
         """Test that get-running subcommand routes to get_running.main."""
         mock_main = MagicMock(return_value=0)
         with patch.object(sys, "argv", ["orchestrator.py", "get-running", "--repo", "test/repo"]):
-            with patch.dict("sys.modules", {"get_running": MagicMock(main=mock_main)}):
+            with patch.object(orchestrator.get_running, "main", mock_main):
                 result = orchestrator.main()
         mock_main.assert_called_once()
         assert result == 0
@@ -60,7 +60,7 @@ class TestOrchestratorCLI:
         """Test that cancel subcommand routes to cancel.main."""
         mock_main = MagicMock(return_value=0)
         with patch.object(sys, "argv", ["orchestrator.py", "cancel", "--repo", "test/repo", "--merge-roots", "[]"]):
-            with patch.dict("sys.modules", {"cancel": MagicMock(main=mock_main)}):
+            with patch.object(orchestrator.cancel, "main", mock_main):
                 result = orchestrator.main()
         mock_main.assert_called_once()
         assert result == 0
@@ -69,7 +69,7 @@ class TestOrchestratorCLI:
         """Test that dispatch subcommand routes to dispatch.main."""
         mock_main = MagicMock(return_value=0)
         with patch.object(sys, "argv", ["orchestrator.py", "dispatch", "--workflow", "test", "--repo", "test/repo"]):
-            with patch.dict("sys.modules", {"dispatch": MagicMock(main=mock_main)}):
+            with patch.object(orchestrator.dispatch, "main", mock_main):
                 result = orchestrator.main()
         mock_main.assert_called_once()
         assert result == 0

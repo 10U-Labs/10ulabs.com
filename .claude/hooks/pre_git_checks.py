@@ -527,24 +527,47 @@ def extract_static_analysis_commands(workflow):
         workflow, lambda name, _cmd: is_static_analysis_step(name))
 
 
-def get_workflow_push_paths(workflow):
-    """Extract on.push.paths from a workflow file.
+def get_workflow_push_config(workflow):
+    """Extract on.push config (paths and paths-ignore) from a workflow file.
 
     Note: YAML parses 'on' as boolean True, so we check both keys.
+
+    Returns:
+        Tuple of (paths, paths_ignore) lists.
     """
     # YAML parses 'on' as boolean True, so check both
     on_trigger = workflow.get('on') or workflow.get(True, {})
     if isinstance(on_trigger, dict):
         push_config = on_trigger.get('push', {})
         if isinstance(push_config, dict):
-            return push_config.get('paths', [])
-    return []
+            paths = push_config.get('paths', [])
+            paths_ignore = push_config.get('paths-ignore', [])
+            return paths, paths_ignore
+    return [], []
+
+
+def get_workflow_push_paths(workflow):
+    """Extract on.push.paths from a workflow file.
+
+    Note: YAML parses 'on' as boolean True, so we check both keys.
+    """
+    paths, _ = get_workflow_push_config(workflow)
+    return paths
+
+
+def file_excluded_by_paths_ignore(file_path, paths_ignore):
+    """Check if a file is excluded by paths-ignore patterns."""
+    for pattern in paths_ignore:
+        if path_matches_pattern(file_path, pattern):
+            return True
+    return False
 
 
 def find_workflows_by_push_paths(changed_files, workflows_dir, known_workflows):
-    """Find workflows whose on.push.paths match changed files.
+    """Find workflows whose on.push config matches changed files.
 
     This is a fallback for workflows not in workflow-dependencies.json.
+    Handles both 'paths' (include) and 'paths-ignore' (exclude) patterns.
     """
     known_names = {w['name'] for w in known_workflows}
     matching = []
@@ -567,18 +590,28 @@ def find_workflows_by_push_paths(changed_files, workflows_dir, known_workflows):
         if not workflow:
             continue
 
-        paths = get_workflow_push_paths(workflow)
-        if not paths:
-            continue
+        paths, paths_ignore = get_workflow_push_config(workflow)
 
-        for changed_file in changed_files:
-            if file_matches_workflow_paths(changed_file, paths):
-                matching.append({
-                    'name': workflow_name,
-                    'path': str(wf_file),
-                    'workflow': workflow
-                })
-                break
+        # If workflow has paths, check if any changed file matches
+        if paths:
+            for changed_file in changed_files:
+                if file_matches_workflow_paths(changed_file, paths):
+                    matching.append({
+                        'name': workflow_name,
+                        'path': str(wf_file),
+                        'workflow': workflow
+                    })
+                    break
+        # If workflow has paths-ignore, check if any changed file is NOT ignored
+        elif paths_ignore:
+            for changed_file in changed_files:
+                if not file_excluded_by_paths_ignore(changed_file, paths_ignore):
+                    matching.append({
+                        'name': workflow_name,
+                        'path': str(wf_file),
+                        'workflow': workflow
+                    })
+                    break
 
     return matching
 

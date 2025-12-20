@@ -10,31 +10,22 @@ Usage:
     python3 src/orchestrator/orchestrator.py dispatch --workflow bootstrap --repo owner/repo
 """
 import argparse
-import json
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
+from utils import create_base_parser, load_dependency_graph
+
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Dispatch descendant workflows after a workflow completes"
+    parser = create_base_parser(
+        "Dispatch descendant workflows after a workflow completes"
     )
     parser.add_argument(
         "--workflow",
         required=True,
         help="The workflow key that just completed (e.g., 'bootstrap')"
-    )
-    parser.add_argument(
-        "--repo",
-        required=True,
-        help="The GitHub repository (e.g., 'owner/repo')"
-    )
-    parser.add_argument(
-        "--graph",
-        default="etc/workflow-dependencies.json",
-        help="Path to the workflow dependency graph file"
     )
     parser.add_argument(
         "--dry-run",
@@ -53,12 +44,6 @@ def parse_args() -> argparse.Namespace:
         help="Pass trigger_descendants=true to dispatched workflows"
     )
     return parser.parse_args()
-
-
-def load_dependency_graph(graph_path: str) -> dict:
-    """Load the workflow dependency graph from JSON."""
-    with open(graph_path, encoding="utf-8") as f:
-        return json.load(f)
 
 
 def find_descendants(graph: dict, workflow: str) -> list[str]:

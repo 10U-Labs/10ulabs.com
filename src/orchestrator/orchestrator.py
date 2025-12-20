@@ -13,6 +13,11 @@ Usage:
 """
 import sys
 
+import cancel
+import compute_roots
+import dispatch
+import get_running
+
 
 def main() -> int:
     """Main entry point that dispatches to subcommands."""
@@ -31,22 +36,21 @@ def main() -> int:
     sys.argv = [sys.argv[0]] + sys.argv[2:]
 
     if command == "compute-roots":
-        import compute_roots
         compute_roots.main()
         return 0
-    elif command == "get-running":
-        import get_running
+
+    if command == "get-running":
         return get_running.main()
-    elif command == "cancel":
-        import cancel
+
+    if command == "cancel":
         return cancel.main()
-    elif command == "dispatch":
-        import dispatch
+
+    if command == "dispatch":
         return dispatch.main()
-    else:
-        print(f"Unknown command: {command}", file=sys.stderr)
-        print("Available commands: compute-roots, get-running, cancel, dispatch")
-        return 1
+
+    print(f"Unknown command: {command}", file=sys.stderr)
+    print("Available commands: compute-roots, get-running, cancel, dispatch")
+    return 1
 
 
 if __name__ == "__main__":
