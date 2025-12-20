@@ -19,9 +19,9 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
-from repo_utils import REPO_ROOT
+from repo_utils import REPO_ROOT as _REPO_ROOT
 
-SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
+SHARED_MODULE_DIR = _REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 
 
 def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:

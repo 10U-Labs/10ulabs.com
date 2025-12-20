@@ -8,7 +8,8 @@ import re
 import pytest
 
 from naming_conventions import validate_name
-from terraform_config import REPO_ROOT, get_resource_prefix
+from repo_utils import REPO_ROOT
+from terraform_config import get_resource_prefix
 
 BOOTSTRAP_SRC = REPO_ROOT / "src" / "bootstrap"
 
