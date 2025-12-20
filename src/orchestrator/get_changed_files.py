@@ -89,8 +89,11 @@ def main() -> int:
     args = parse_args()
     files = get_changed_files(args.base, args.head)
 
-    # Output in GitHub Actions format
-    print(f"changed={chr(10).join(files)}")
+    # Output in GitHub Actions heredoc format for multi-line values
+    print("changed<<EOF")
+    for f in files:
+        print(f)
+    print("EOF")
 
     return 0
 
