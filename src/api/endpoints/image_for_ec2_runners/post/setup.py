@@ -132,6 +132,11 @@ def install_eslint() -> None:
     run("npm install -g eslint")
 
 
+def install_jscpd() -> None:
+    """Install jscpd for duplicate code detection."""
+    run("npm install -g jscpd")
+
+
 def install_jsonlint() -> None:
     """Install jsonlint for JSON validation."""
     run("npm install -g jsonlint")
@@ -218,6 +223,7 @@ def main() -> None:
     install_python_packages()
     install_yq(arch, args.yq_version)
     install_eslint()
+    install_jscpd()
     install_jsonlint()
     install_hadolint(arch)
     install_terraform(arch, args.terraform_version)
