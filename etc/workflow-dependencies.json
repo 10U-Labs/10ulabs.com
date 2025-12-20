@@ -39,6 +39,7 @@
     "name": "Ensuring bootstrap infrastructure exists and is properly configured",
     "paths": [
       ".github/workflows/bootstrap.yml",
+      "etc/workflow-dependencies.json",
       "lib/python/terraform_config/**",
       "lib/terraform/**",
       "src/bootstrap/**",
