@@ -475,9 +475,10 @@ def load_workflow_dependencies(project_dir):
 def is_static_analysis_step(step_name):
     """Determine if a workflow step is a static analysis check."""
     step_lower = step_name.lower()
-    # Skip setup/install steps - they're not actual checks
+    # Skip setup/install/conditional steps - they're not actual checks
     skip_keywords = ['install', 'setup', 'checkout', 'configure', 'set up',
-                     'cloudfront', 'invalidate', 'cache', 'deploy', 'apply']
+                     'cloudfront', 'invalidate', 'cache', 'deploy', 'apply',
+                     'check if', 'should run']
     if any(kw in step_lower for kw in skip_keywords):
         return False
     # Look for specific linting/type-checking tool names and patterns
