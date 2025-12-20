@@ -276,7 +276,7 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     return locals_dict
 
 
-def _load_tf_file_context(tf_file: Path) -> tuple:
+def _load_tf_file_context(tf_file: Path) -> tuple | None:
     """Load a Terraform file and gather resolution context.
 
     Returns:
