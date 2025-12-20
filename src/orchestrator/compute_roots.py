@@ -80,6 +80,18 @@ def _insert_sorted(queue: list[str], item: str) -> None:
     queue.append(item)
 
 
+def _build_in_degree_map(
+    workflows: set[str], graph: dict[str, Any]
+) -> dict[str, int]:
+    """Build in-degree map counting dependencies within the workflow set."""
+    in_degree: dict[str, int] = {wf: 0 for wf in workflows}
+    for wf in workflows:
+        for dep in graph.get(wf, {}).get("depends_on", []):
+            if dep in workflows:
+                in_degree[wf] += 1
+    return in_degree
+
+
 def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
     """
     Sort workflows in topological order (dependencies before dependents).
@@ -87,14 +99,7 @@ def topological_sort(workflows: set[str], graph: dict[str, Any]) -> list[str]:
     Uses Kahn's algorithm to ensure workflows are ordered such that
     all dependencies come before their dependents.
     """
-    # Build in-degree map (only for workflows in our set)
-    in_degree: dict[str, int] = {wf: 0 for wf in workflows}
-    for wf in workflows:
-        for dep in graph.get(wf, {}).get("depends_on", []):
-            if dep in workflows:
-                in_degree[wf] += 1
-
-    # Start with workflows that have no dependencies (in our set)
+    in_degree = _build_in_degree_map(workflows, graph)
     queue = sorted([wf for wf, degree in in_degree.items() if degree == 0])
     result: list[str] = []
 
@@ -128,13 +133,7 @@ def topological_sort_levels(
     can run in parallel (all their dependencies are in earlier levels).
     Workflows within each level are sorted by display_order, then alphabetically.
     """
-    # Build in-degree map (only for workflows in our set)
-    in_degree: dict[str, int] = {wf: 0 for wf in workflows}
-    for wf in workflows:
-        for dep in graph.get(wf, {}).get("depends_on", []):
-            if dep in workflows:
-                in_degree[wf] += 1
-
+    in_degree = _build_in_degree_map(workflows, graph)
     levels: list[list[str]] = []
     remaining = set(workflows)
 
