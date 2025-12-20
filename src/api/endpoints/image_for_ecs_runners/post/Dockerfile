@@ -56,7 +56,7 @@ RUN apt-get update && \
     /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli && \
     rm -rf /tmp/aws && \
     dpkg -i /tmp/amazon-cloudwatch-agent.deb && rm /tmp/amazon-cloudwatch-agent.deb && \
-    npm install -g @eslint/js eslint globals jsonlint && npm cache clean --force && \
+    npm install -g @eslint/js eslint globals jscpd jsonlint && npm cache clean --force && \
     ln -s /usr/local/lib/node_modules /home/runner/node_modules && \
     python3 -m pip install --no-cache-dir --no-compile --break-system-packages \
         'boto3>=1.35.0' boto3-stubs 'botocore>=1.35.0' dockerfile-parse dnspython \
