@@ -226,7 +226,8 @@ class TestCloudwatchAgentConfiguration:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        cmd = "test -f /etc/amazon-cloudwatch-agent.json && echo exists"
+        config_path = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+        cmd = f"test -f {config_path} && echo exists"
         output = run_ssm_command(ssm_client, test_instance, cmd)
 
         assert output["StandardOutputContent"].strip() == "exists"
@@ -238,7 +239,8 @@ class TestCloudwatchAgentConfiguration:
         if not test_instance:
             pytest.fail("Test instance not created")
 
-        cmd = "grep -q 'namespace' /etc/amazon-cloudwatch-agent.json && echo found"
+        config_path = "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json"
+        cmd = f"grep -q 'namespace' {config_path} && echo found"
         output = run_ssm_command(ssm_client, test_instance, cmd)
 
         assert output["StandardOutputContent"].strip() == "found"
