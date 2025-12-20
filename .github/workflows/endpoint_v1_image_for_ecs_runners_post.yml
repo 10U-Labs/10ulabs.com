@@ -110,7 +110,7 @@ jobs:
           done
           BASE_DIR=src/api/endpoints/image_for_ecs_runners
           TEST_DIR=test/api/endpoints/image_for_ecs_runners/post/
-          PYTHONPATH=$BASE_DIR:$BASE_DIR/post pylint $TEST_DIR \
+          PYTHONPATH=lib/python:$BASE_DIR:$BASE_DIR/post pylint $TEST_DIR \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy

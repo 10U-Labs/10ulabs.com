@@ -3,13 +3,12 @@ import os
 import re
 import subprocess
 import sys
-from pathlib import Path
 from typing import Any, Dict
 
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners" / "post"
 CONFIG_PATH = POST_DIR / "config.json"
 DOCKERFILE_PATH = POST_DIR / "Dockerfile"

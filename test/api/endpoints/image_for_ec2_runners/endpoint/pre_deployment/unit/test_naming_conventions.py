@@ -3,14 +3,13 @@
 These tests parse Terraform files to validate naming conventions before deployment.
 Names must use PascalCase (no dashes, underscores, or other separators).
 """
-from pathlib import Path
 
 import pytest
 
 from naming_conventions import validate_name
 from terraform_config import extract_iam_role_names, extract_lambda_function_names
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 IMAGE_EC2_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 IAM_FILE = IMAGE_EC2_SRC / "iam.tf"
 LAMBDA_FILE = IMAGE_EC2_SRC / "lambda.tf"

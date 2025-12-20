@@ -1,7 +1,6 @@
 """Pytest fixtures for simulation-soc pre-deployment unit tests."""
 import importlib.util
 import json
-from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -12,6 +11,7 @@ from lambda_response import (
     assert_json_content_type,
     assert_cors_headers,
 )
+from repo_utils import REPO_ROOT
 
 # Re-export for backward compatibility
 __all__ = [
@@ -21,7 +21,6 @@ __all__ = [
     'assert_cors_headers',
 ]
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
 
 

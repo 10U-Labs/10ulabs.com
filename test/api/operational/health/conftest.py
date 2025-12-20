@@ -1,11 +1,10 @@
 """Pytest fixtures for health endpoint tests."""
 import re
-from pathlib import Path
 from typing import Dict
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
 
 

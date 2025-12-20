@@ -3,11 +3,10 @@ import json
 import os
 import re
 import subprocess
-from pathlib import Path
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 POST_DIR = ENDPOINT_SRC / "post"
 CONFIG_PATH = POST_DIR / "config.json"

@@ -1,11 +1,10 @@
 """Pytest fixtures for www shared tests."""
 import re
-from pathlib import Path
 from typing import Dict
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 def _parse_website_locals(shared_config: Dict[str, str]) -> Dict[str, str]:

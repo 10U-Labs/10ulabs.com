@@ -1,9 +1,8 @@
 """Pytest fixtures for api/shared/runners pre-deployment unit tests."""
-from pathlib import Path
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 API_SHARED_RUNNERS_DIR = REPO_ROOT / "src" / "api" / "shared" / "runners"
 SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 

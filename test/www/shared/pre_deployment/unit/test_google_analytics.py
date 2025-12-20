@@ -1,7 +1,6 @@
 """Tests for Google Analytics integration."""
-from pathlib import Path
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent
 HOME_PAGE_SRC = REPO_ROOT / "src" / "www" / "paths" / "index"
 GOOGLE_ANALYTICS_ID = "G-8YJFQC2EGV"
 GTAG_SCRIPT_URL = f"https://www.googletagmanager.com/gtag/js?id={GOOGLE_ANALYTICS_ID}"

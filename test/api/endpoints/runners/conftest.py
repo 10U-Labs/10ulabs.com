@@ -2,15 +2,14 @@
 import importlib
 import re
 import sys
-from pathlib import Path
 from typing import Any, Dict, List
 
 from test.api.conftest import get_runner_labels
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 ECS_RUNNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 

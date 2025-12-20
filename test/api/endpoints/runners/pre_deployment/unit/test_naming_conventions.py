@@ -3,20 +3,19 @@
 These tests parse Terraform files to validate naming conventions before deployment.
 Names must use PascalCase (no dashes, underscores, or other separators).
 """
-from pathlib import Path
 
 from naming_conventions.test_helpers import (
     create_iam_role_tests,
     create_lambda_function_tests,
     create_sqs_queue_tests,
 )
+from repo_utils import REPO_ROOT
 from terraform_config import (
     extract_iam_role_names,
     extract_lambda_function_names,
     extract_sqs_queue_names,
 )
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 RUNNERS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 IAM_ROLES = extract_iam_role_names(RUNNERS_SRC / "iam.tf")

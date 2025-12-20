@@ -9,6 +9,7 @@ import pytest
 import requests
 
 # Import canonical label values from runner_labels (single source of truth)
+from repo_utils import REPO_ROOT
 from runner_labels import (
     DEFAULT_ECS_ARCH,
     DEFAULT_EC2_ARCH,
@@ -20,7 +21,6 @@ from runner_labels import (
 
 
 # Common directory constants
-REPO_ROOT = Path(__file__).resolve().parents[2]
 API_BACKEND_DIR = REPO_ROOT / "src" / "api" / "backend"
 ECS_RUNNER_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "ecs_runner"
 

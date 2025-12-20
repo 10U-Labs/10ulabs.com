@@ -7,13 +7,12 @@ These tests follow the 5-layer testing model from PRE_DEPLOYMENT_INTEGRATION_TES
 - Layer 4: Configuration - Are resources configured correctly?
 - Layer 5: Capability - Can we perform required operations?
 """
-from pathlib import Path
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 API_SHARED_RUNNERS_SRC = REPO_ROOT / "src" / "api" / "shared" / "runners"
 
 STATE_BUCKET = "10ulabs-terraform-state-us-east-2"

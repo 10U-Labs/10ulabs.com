@@ -11,8 +11,8 @@ from test.api.endpoints.conftest import parse_locals_file, parse_tfvars
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 EC2_RUNNER_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "ec2_runner"
 
 

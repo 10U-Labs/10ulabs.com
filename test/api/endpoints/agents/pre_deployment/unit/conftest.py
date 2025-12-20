@@ -1,11 +1,11 @@
 """Pytest fixtures for agents pre-deployment unit tests."""
 import importlib.util
 import sys
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock
 
 import pytest
+from repo_utils import REPO_ROOT
 
 try:
     from lambda_response import (
@@ -44,7 +44,6 @@ __all__ = [
     "assert_cors_headers",
 ]
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 AGENTS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents"
 
 

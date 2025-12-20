@@ -1,12 +1,11 @@
 """Fixtures for image_for_ecs_runners endpoint unit tests."""
 import importlib.util
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parents[7]
 LAMBDA_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ecs_runners" / "lambda"
 HANDLER_PATH = LAMBDA_DIR / "handler.py"
 

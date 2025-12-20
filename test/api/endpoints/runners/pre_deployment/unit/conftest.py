@@ -36,6 +36,7 @@ from event_factories import (
 )
 from urllib_mocks import create_mock_urllib_response
 from module_utils import reset_module_state
+from repo_utils import REPO_ROOT
 
 # Re-export for backward compatibility with existing tests
 __all__ = [
@@ -104,7 +105,6 @@ def cb_dynamodb_reset_mock():
             yield mock_db
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 RUNNERS_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "runners"
 
 

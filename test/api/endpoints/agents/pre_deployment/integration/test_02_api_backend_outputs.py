@@ -3,11 +3,10 @@
 These tests verify that resources from the api_backend workflow exist,
 which is a dependency for the agents endpoint.
 """
-from pathlib import Path
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 API_BACKEND_SRC = REPO_ROOT / "src" / "api" / "backend"
 
 

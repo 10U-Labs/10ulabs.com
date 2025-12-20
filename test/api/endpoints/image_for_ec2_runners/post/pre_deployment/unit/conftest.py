@@ -1,11 +1,10 @@
 """Pytest fixtures for pre-deployment unit tests."""
 import importlib.util
 import json
-from pathlib import Path
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 POST_DIR = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners" / "post"
 
 

@@ -1,8 +1,7 @@
 """Unit tests for Lambda patterns in agents endpoint."""
 import re
-from pathlib import Path
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 AGENTS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents"
 
 

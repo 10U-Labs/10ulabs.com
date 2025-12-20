@@ -1,9 +1,8 @@
 """Tests for cloudwatch-agent-config.json file."""
 import json
-from pathlib import Path
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 CONFIG_PATH = (
     REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
     / "post" / "cloudwatch-agent-config.json"

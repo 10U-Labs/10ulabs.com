@@ -1,9 +1,8 @@
 """Shared fixtures and utilities for Terraform module tests."""
-from pathlib import Path
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
 MODULES_DIR = REPO_ROOT / "lib" / "terraform" / "modules"
 
 

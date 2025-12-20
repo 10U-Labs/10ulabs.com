@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 from botocore.exceptions import ClientError
 import pytest
+from repo_utils import REPO_ROOT
 
 from ...helpers import ENDPOINT_SRC, POST_DIR, get_aws_region, get_github_repo
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 LIB_PATH = str(REPO_ROOT / "lib")
 if LIB_PATH not in sys.path:
     sys.path.insert(0, LIB_PATH)

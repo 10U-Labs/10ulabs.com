@@ -1,11 +1,10 @@
 """Pytest fixtures for simulation-soc API tests."""
 import re
-from pathlib import Path
 from typing import Dict
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 SIMULATION_SOC_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "simulation_soc"
 
 

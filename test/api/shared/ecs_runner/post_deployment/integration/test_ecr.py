@@ -1,10 +1,9 @@
 """Post-deployment integration tests for api/shared/ecs_runner ECR configuration."""
 import json
 import re
-from pathlib import Path
+from repo_utils import REPO_ROOT
 
 # Add repo root to path to access shared module
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 
 
@@ -98,11 +97,14 @@ def test_runners_ecr_lifecycle_policy_has_stable_rule(ecr_client):
     assert has_stable_rule
 
 
-def test_runners_ecr_get_authorization_token_succeeds(ecr_client):
-    """Verify current credentials can get ECR authorization token."""
+def test_runners_ecr_get_authorization_token_returns_auth_data(ecr_client):
+    """Verify get_authorization_token returns authorizationData."""
     response = ecr_client.get_authorization_token()
-    assert "authorizationData" in response
-    assert len(response["authorizationData"]) > 0
+    assert "authorizationData" in response and len(response["authorizationData"]) > 0
+
+
+def test_runners_ecr_get_authorization_token_contains_token(ecr_client):
+    """Verify authorization data contains a non-empty token."""
+    response = ecr_client.get_authorization_token()
     auth_data = response["authorizationData"][0]
-    assert "authorizationToken" in auth_data
-    assert auth_data["authorizationToken"]
+    assert "authorizationToken" in auth_data and auth_data["authorizationToken"]

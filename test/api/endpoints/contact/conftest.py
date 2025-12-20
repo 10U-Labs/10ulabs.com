@@ -1,15 +1,14 @@
 """Pytest fixtures for contact endpoint tests."""
-from pathlib import Path
 from typing import Dict
 
 import pytest
 
+from repo_utils import REPO_ROOT
 from terraform_config import (
     extract_iam_role_names,
     extract_lambda_function_names,
 )
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 CONTACT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "contact"
 
 

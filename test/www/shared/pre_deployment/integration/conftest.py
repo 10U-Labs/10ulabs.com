@@ -4,9 +4,9 @@ from pathlib import Path
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).resolve().parents[5]
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 AWS_REGION_VALUE = "us-east-2"
 

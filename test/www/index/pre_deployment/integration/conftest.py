@@ -1,12 +1,11 @@
 """Pytest fixtures for pre-deployment integration tests."""
 import subprocess
-from pathlib import Path
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).resolve().parents[5]
 WWW_SHARED_DIR = REPO_ROOT / "src" / "www" / "shared"
 
 

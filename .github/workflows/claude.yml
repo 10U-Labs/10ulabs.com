@@ -51,7 +51,7 @@ jobs:
             --fail-under=10.0
       - name: Linting test files with pylint
         run: |
-          python3 -m pylint test/claude/ \
+          PYTHONPATH=lib/python python3 -m pylint test/claude/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Type checking hook files with mypy

@@ -1,13 +1,12 @@
 """Pytest fixtures for hook tests."""
 import importlib.util
 import sys
-from pathlib import Path
 from types import ModuleType
 
 import pytest
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
 
 # Add hooks directory to path for imports

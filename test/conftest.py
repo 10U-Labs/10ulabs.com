@@ -8,13 +8,15 @@ import sys
 from pathlib import Path
 
 # Add lib/python to path for imports - must be before other imports
-REPO_ROOT = Path(__file__).parent.parent
-LIB_DIR = REPO_ROOT / "lib" / "python"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
+# Note: Can't use repo_utils here since it's IN lib/python
+_REPO_ROOT = Path(__file__).parent.parent
+_LIB_DIR = _REPO_ROOT / "lib" / "python"
+if str(_LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(_LIB_DIR))
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 from terraform_config import get_shared_config
 
 

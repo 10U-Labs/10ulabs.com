@@ -1,10 +1,9 @@
 """Pytest fixtures for bootstrap tests."""
 import re
-from pathlib import Path
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent
 BOOTSTRAP_DIR = REPO_ROOT / "src" / "bootstrap"
 LOCALS_TF_PATH = BOOTSTRAP_DIR / "locals.tf"
 

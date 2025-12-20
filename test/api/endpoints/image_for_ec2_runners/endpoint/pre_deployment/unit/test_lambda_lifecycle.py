@@ -6,10 +6,9 @@ IAM roles are recreated and KMS grants become stale.
 """
 
 import re
-from pathlib import Path
+from repo_utils import REPO_ROOT
 
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent.parent
 ENDPOINT_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "image_for_ec2_runners"
 LAMBDA_TF_PATH = ENDPOINT_SRC / "lambda.tf"
 

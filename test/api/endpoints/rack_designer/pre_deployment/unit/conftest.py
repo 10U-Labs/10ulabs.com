@@ -1,13 +1,12 @@
 """Pytest fixtures for rack designer pre-deployment unit tests."""
 import importlib.util
 import os
-from pathlib import Path
 from types import ModuleType
 from unittest.mock import patch, MagicMock
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 RACK_DESIGNER_SRC_PATH = REPO_ROOT / "src" / "api" / "endpoints" / "rack_designer"
 RACK_DESIGNER_LAMBDAS_PATH = RACK_DESIGNER_SRC_PATH / "lambdas"
 

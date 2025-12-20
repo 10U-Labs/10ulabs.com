@@ -1,9 +1,8 @@
 """Unit tests for agent prompt files."""
-from pathlib import Path
 
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 AGENTS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents"
 PROMPTS_DIR = AGENTS_SRC / "prompts"
 

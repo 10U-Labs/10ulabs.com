@@ -12,12 +12,13 @@ Inherited fixtures from parent conftest files:
   kms_client, ecr_client, caller_identity, current_role_arn, current_role_name,
   ecr_repository_name
 """
+
 from pathlib import Path
 
 import boto3
 import pytest
+from repo_utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent.parent.parent
 AGENTS_SRC = REPO_ROOT / "src" / "api" / "endpoints" / "agents"
 
 
