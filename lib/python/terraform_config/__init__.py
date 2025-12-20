@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
-from repo_utils import REPO_ROOT as _REPO_ROOT
+from repo_utils import REPO_ROOT as _REPO_ROOT, extract_brace_block
 
 SHARED_MODULE_DIR = _REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 
@@ -39,19 +39,7 @@ def _parse_map_block(content: str, map_name: str) -> Dict[str, str]:
     if not match:
         return {}
 
-    start_pos = match.end() - 1
-    brace_count = 0
-    end_pos = start_pos
-    for i, char in enumerate(content[start_pos:]):
-        if char == '{':
-            brace_count += 1
-        elif char == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                end_pos = start_pos + i + 1
-                break
-
-    block_content = content[start_pos:end_pos]
+    block_content = extract_brace_block(content, match.end() - 1)
     values = {}
     entry_pattern = r'(\w+)\s*=\s*"([^"]+)"'
     for entry_match in re.finditer(entry_pattern, block_content):
@@ -288,17 +276,22 @@ def get_endpoint_local_values(tf_dir: Path) -> Dict[str, str]:
     return locals_dict
 
 
-def _extract_block_content(content: str, start_pos: int) -> str:
-    """Extract content of a Terraform block starting at the given brace position."""
-    brace_count = 0
-    for i, char in enumerate(content[start_pos:]):
-        if char == '{':
-            brace_count += 1
-        elif char == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                return content[start_pos:start_pos + i + 1]
-    return content[start_pos:]
+def _load_tf_file_context(tf_file: Path) -> tuple:
+    """Load a Terraform file and gather resolution context.
+
+    Returns:
+        Tuple of (content, prefix, local_values, tfvars_values) or None if file doesn't exist.
+    """
+    if not tf_file.exists():
+        return None
+    with open(tf_file, encoding="utf-8") as f:
+        content = f.read()
+    return (
+        content,
+        get_resource_prefix(),
+        get_endpoint_local_values(tf_file.parent),
+        get_tfvars_values(tf_file.parent),
+    )
 
 
 def extract_iam_role_names(tf_file: Path) -> list:
@@ -313,18 +306,14 @@ def extract_iam_role_names(tf_file: Path) -> list:
     Returns:
         List of (resource_name, resolved_role_name) tuples.
     """
-    if not tf_file.exists():
+    ctx = _load_tf_file_context(tf_file)
+    if ctx is None:
         return []
-    with open(tf_file, encoding="utf-8") as f:
-        content = f.read()
-
-    prefix = get_resource_prefix()
-    local_values = get_endpoint_local_values(tf_file.parent)
-    tfvars_values = get_tfvars_values(tf_file.parent)
+    content, prefix, local_values, tfvars_values = ctx
     roles = []
 
     for match in re.finditer(r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{', content):
-        block_content = _extract_block_content(content, match.end() - 1)
+        block_content = extract_brace_block(content, match.end() - 1)
         name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
             role_name = _resolve_prefix_refs(name_match.group(1), prefix)
@@ -359,19 +348,15 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
     Returns:
         List of (resource_name, resolved_function_name) tuples.
     """
-    if not tf_file.exists():
+    ctx = _load_tf_file_context(tf_file)
+    if ctx is None:
         return []
-    with open(tf_file, encoding="utf-8") as f:
-        content = f.read()
-
-    prefix = get_resource_prefix()
-    local_values = get_endpoint_local_values(tf_file.parent)
-    tfvars_values = get_tfvars_values(tf_file.parent)
+    content, prefix, local_values, tfvars_values = ctx
     handler_names = parse_lambda_handler_names() if use_handler_names else {}
     functions = []
 
     for match in re.finditer(r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{', content):
-        block_content = _extract_block_content(content, match.end() - 1)
+        block_content = extract_brace_block(content, match.end() - 1)
         name_match = re.search(
             r'^\s*function_name\s*=\s*"([^"]+)"', block_content, re.MULTILINE
         )
@@ -422,7 +407,7 @@ def extract_sqs_queue_names(tf_file: Path) -> list:
     queues = []
 
     for match in re.finditer(r'resource\s+"aws_sqs_queue"\s+"([^"]+)"\s*\{', content):
-        block_content = _extract_block_content(content, match.end() - 1)
+        block_content = extract_brace_block(content, match.end() - 1)
         name_match = re.search(r'^\s*name\s*=\s*"([^"]+)"', block_content, re.MULTILINE)
         if name_match:
             queue_name = _resolve_prefix_refs(name_match.group(1), prefix)

@@ -77,42 +77,34 @@ def get_snapshot_ids_for_ami(image):
     return snapshot_ids
 
 
+def _collect_images_by_filter(ec2_client, filters, error_context="AMIs"):
+    """Collect AMI images matching the specified filters."""
+    images_by_id = {}
+    all_filters = filters + [{'Name': 'state', 'Values': ['available', 'pending', 'failed']}]
+    try:
+        response = ec2_client.describe_images(Owners=['self'], Filters=all_filters)
+        for image in response.get('Images', []):
+            images_by_id[image['ImageId']] = image
+    except ClientError as e:
+        print(f"Error listing {error_context}: {e}")
+    return images_by_id
+
+
 def find_amis_by_tags(ec2_client, tags):
     """Find AMIs matching the specified tags."""
     images_by_id = {}
     for tag_key, tag_value in tags.items():
-        try:
-            response = ec2_client.describe_images(
-                Owners=['self'],
-                Filters=[
-                    {'Name': f'tag:{tag_key}', 'Values': [tag_value]},
-                    {'Name': 'state', 'Values': ['available', 'pending', 'failed']}
-                ]
-            )
-            for image in response.get('Images', []):
-                images_by_id[image['ImageId']] = image
-        except ClientError as e:
-            print(f"Error listing AMIs: {e}")
+        filters = [{'Name': f'tag:{tag_key}', 'Values': [tag_value]}]
+        images_by_id.update(_collect_images_by_filter(ec2_client, filters))
     return images_by_id
 
 
 def find_amis_by_name_prefix(ec2_client, ami_name_prefix):
     """Find AMIs matching the specified name prefix."""
-    images_by_id = {}
-    if ami_name_prefix:
-        try:
-            response = ec2_client.describe_images(
-                Owners=['self'],
-                Filters=[
-                    {'Name': 'name', 'Values': [f'{ami_name_prefix}*']},
-                    {'Name': 'state', 'Values': ['available', 'pending', 'failed']}
-                ]
-            )
-            for image in response.get('Images', []):
-                images_by_id[image['ImageId']] = image
-        except ClientError as e:
-            print(f"Error listing AMIs by name prefix: {e}")
-    return images_by_id
+    if not ami_name_prefix:
+        return {}
+    filters = [{'Name': 'name', 'Values': [f'{ami_name_prefix}*']}]
+    return _collect_images_by_filter(ec2_client, filters, "AMIs by name prefix")
 
 
 def cleanup_amis(ec2_client, params: AmiCleanupParams):

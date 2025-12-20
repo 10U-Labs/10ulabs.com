@@ -21,6 +21,8 @@ Example usage:
 import re
 from typing import List, Optional, Tuple
 
+from repo_utils import extract_brace_block
+
 
 def is_pascalcase(name: str) -> bool:
     """Check if a name follows PascalCase naming convention.
@@ -110,36 +112,16 @@ def extract_iam_role_names_from_terraform(content: str) -> List[Tuple[str, str]]
         List of tuples (resource_name, role_name) found in the file.
     """
     roles = []
-
-    # Match: resource "aws_iam_role" "name" { name = "RoleName" }
-    # Pattern to find aws_iam_role resources
     role_block_pattern = r'resource\s+"aws_iam_role"\s+"([^"]+)"\s*\{'
 
     for match in re.finditer(role_block_pattern, content):
         resource_name = match.group(1)
-        start_pos = match.end() - 1
+        block_content = extract_brace_block(content, match.end() - 1)
 
-        # Find matching closing brace
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-
-        block_content = content[start_pos:end_pos]
-
-        # Extract the name attribute
-        # Match: name = "SomeName" or name = "${...}SomeName"
         name_pattern = r'name\s*=\s*"([^"]+)"'
         name_match = re.search(name_pattern, block_content)
         if name_match:
-            role_name = name_match.group(1)
-            roles.append((resource_name, role_name))
+            roles.append((resource_name, name_match.group(1)))
 
     return roles
 
@@ -156,34 +138,16 @@ def extract_lambda_function_names_from_terraform(content: str) -> List[Tuple[str
         List of tuples (resource_name, function_name) found in the file.
     """
     functions = []
-
-    # Match: resource "aws_lambda_function" "name" { function_name = "FunctionName" }
     function_block_pattern = r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{'
 
     for match in re.finditer(function_block_pattern, content):
         resource_name = match.group(1)
-        start_pos = match.end() - 1
+        block_content = extract_brace_block(content, match.end() - 1)
 
-        # Find matching closing brace
-        brace_count = 0
-        end_pos = start_pos
-        for i, char in enumerate(content[start_pos:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0:
-                    end_pos = start_pos + i + 1
-                    break
-
-        block_content = content[start_pos:end_pos]
-
-        # Extract the function_name attribute
         name_pattern = r'function_name\s*=\s*"?([^"\n]+)"?'
         name_match = re.search(name_pattern, block_content)
         if name_match:
             function_name = name_match.group(1).strip()
-            # Handle variable references like var.webhook_handler_function_name
             if not function_name.startswith('var.'):
                 functions.append((resource_name, function_name))
 
