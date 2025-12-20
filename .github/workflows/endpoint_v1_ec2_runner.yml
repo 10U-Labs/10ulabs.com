@@ -117,14 +117,14 @@ jobs:
         run: cd src/api/endpoints/ec2_runner && terraform plan
       - name: Run unit tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/endpoints/ec2_runner/pre_deployment/unit/ \
             --confcutdir=test \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/ec2_runner/pre_deployment/integration/
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             $TEST \
             --capture=no --confcutdir=test \
             --verbose --pythonwarnings=error
@@ -133,7 +133,7 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/ec2_runner/post_deployment/integration/
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             $TEST \
             --confcutdir=test \
             --verbose --pythonwarnings=error
@@ -141,7 +141,7 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
         name: Run E2E tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/endpoints/ec2_runner/post_deployment/e2e/ \
             --confcutdir=test \
             --verbose --pythonwarnings=error

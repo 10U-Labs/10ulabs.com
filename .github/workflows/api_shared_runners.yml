@@ -93,19 +93,19 @@ jobs:
             .github/workflows/api_shared_runners.yml
       - name: Run unit tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/shared/runners/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/shared/runners/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: cd src/api/shared/runners && terraform apply -auto-approve
       - name: Run post-deployment integration tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/shared/runners/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:

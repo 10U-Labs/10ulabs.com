@@ -34,13 +34,13 @@ def _get_locals_derived_values(shared: dict) -> dict:
     }
 
 
-@pytest.fixture(name='bootstrap_dir')
+@pytest.fixture(scope="module", name='bootstrap_dir')
 def bootstrap_dir_fixture():
     """Provide path to bootstrap directory."""
     return BOOTSTRAP_DIR
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def config(shared_config, bootstrap_dir):
     """Provide combined configuration from shared module and tfvars."""
     tfvars_path = bootstrap_dir / "terraform.tfvars"

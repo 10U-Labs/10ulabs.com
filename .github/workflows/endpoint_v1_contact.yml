@@ -83,7 +83,7 @@ jobs:
         run: cd src/api/endpoints/contact && terraform plan
       - name: Run unit tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/endpoints/contact/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests

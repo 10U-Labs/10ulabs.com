@@ -142,7 +142,7 @@ jobs:
       - name: Run unit tests
         run: |
           TEST=test/api/endpoints/image_for_ecs_runners/post/pre_deployment/unit/
-          pytest --durations=0 \
+          pytest \
             $TEST --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
@@ -156,7 +156,7 @@ jobs:
       - name: Run pre-deployment integration tests
         run: |
           TEST=test/api/endpoints/image_for_ecs_runners/post/pre_deployment
-          pytest --durations=0 \
+          pytest \
             $TEST/integration/ \
             --capture=no --confcutdir=test --verbose --pythonwarnings=error
       - if: >-
@@ -283,7 +283,7 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/endpoints/image_for_ecs_runners/post/post_deployment
-          pytest --durations=0 \
+          pytest \
             $TEST/integration/ \
             --confcutdir=test --verbose --pythonwarnings=error
       - name: Get GitHub PAT from Parameter Store
@@ -299,7 +299,7 @@ jobs:
       - name: Run E2E tests
         run: |
           TEST=test/api/endpoints/image_for_ecs_runners/post/post_deployment
-          pytest --durations=0 \
+          pytest \
             $TEST/e2e/ --confcutdir=test --verbose --pythonwarnings=error
       - name: Promote image
         run: |

@@ -114,13 +114,13 @@ jobs:
       - name: Run unit tests
         run: |
           TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
-          pytest --durations=0 \
+          pytest \
             $TEST_DIR/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Run pre-deployment integration tests
         run: |
           TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
-          pytest --durations=0 \
+          pytest \
             $TEST_DIR/pre_deployment/integration/ \
             --capture=no --verbose --pythonwarnings=error
       - name: Terraform Apply
@@ -130,7 +130,7 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST_DIR=test/api/endpoints/image_for_ec2_runners/endpoint
-          pytest --durations=0 \
+          pytest \
             $TEST_DIR/post_deployment/integration/ \
             --verbose --pythonwarnings=error
       - env:

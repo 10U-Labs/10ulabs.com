@@ -96,7 +96,7 @@ jobs:
             .github/workflows/api_shared_ecs_runner.yml
       - name: Run pre-deployment tests
         run: |
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             test/api/shared/ecs_runner/pre_deployment/ \
             --verbose --pythonwarnings=error
       - name: Terraform Apply
@@ -104,7 +104,7 @@ jobs:
       - name: Run post-deployment integration tests
         run: |
           TEST=test/api/shared/ecs_runner/post_deployment/integration
-          python3 -m pytest --durations=0 --durations=0 \
+          python3 -m pytest \
             $TEST/ --verbose --pythonwarnings=error
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

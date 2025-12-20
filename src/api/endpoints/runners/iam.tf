@@ -68,7 +68,8 @@ resource "aws_iam_role_policy" "lambda_runners_handler_sqs" {
       {
         Effect = "Allow"
         Action = [
-          "sqs:SendMessage"
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes"
         ]
         Resource = [
           aws_sqs_queue.job_queue.arn,
