@@ -5,7 +5,7 @@ This module handles dispatching root workflows with proper trigger_descendants
 logic based on inputs, commit messages, and changed files.
 
 Usage:
-    python3 src/orchestrator/orchestrator.py dispatch-roots \
+    python3 src/workflowctl/workflowctl.py dispatch-roots \
         --repo owner/repo \
         --roots "bootstrap\\nwww_shared" \
         --changed "file1.py" \

@@ -968,7 +968,7 @@ class TestComputeMergeRoots:
     """Tests for compute_merge_roots function.
 
     This function merges running workflows with new root workflows to find
-    the optimal restart point when a new orchestrator run starts while
+    the optimal restart point when a new workflowctl run starts while
     workflows from a previous run are still executing.
     """
 

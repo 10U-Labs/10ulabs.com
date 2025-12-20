@@ -6,7 +6,7 @@ maps them to workflow keys using the dependency graph, and outputs a JSON array
 of workflow keys.
 
 Usage:
-    python3 src/orchestrator/orchestrator.py get-running --repo owner/repo
+    python3 src/workflowctl/workflowctl.py get-running --repo owner/repo
 
 Output:
     JSON array of workflow keys, e.g., ["api_backend", "www_shared"]
@@ -29,10 +29,10 @@ def parse_args() -> argparse.Namespace:
         "Get currently running workflows from GitHub Actions"
     )
     parser.add_argument(
-        "--exclude-orchestrator",
+        "--exclude-workflowctl",
         action="store_true",
         default=True,
-        help="Exclude the orchestrator workflow from results (default: true)"
+        help="Exclude the workflowctl workflow from results (default: true)"
     )
     return parser.parse_args()
 
@@ -67,8 +67,8 @@ def main() -> int:
     for name in workflow_names:
         if name in name_to_key:
             key = name_to_key[name]
-            # Optionally exclude orchestrator
-            if args.exclude_orchestrator and key == "orchestrator":
+            # Optionally exclude workflowctl
+            if args.exclude_workflowctl and key == "workflowctl":
                 continue
             workflow_keys.append(key)
 

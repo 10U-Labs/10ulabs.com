@@ -2,10 +2,10 @@
 """Determine if static analysis or unit tests should run.
 
 This module checks if any changed files match the patterns that require
-running static analysis or unit tests for the orchestrator.
+running static analysis or unit tests for the workflowctl.
 
 Usage:
-    python3 src/orchestrator/orchestrator.py should-run \
+    python3 src/workflowctl/workflowctl.py should-run \
         --check static-analysis --changed "file1.py\\nfile2.py"
 """
 import argparse
@@ -16,16 +16,16 @@ from utils import file_matches_pattern
 
 # Files that trigger static analysis
 STATIC_ANALYSIS_PATTERNS = [
-    ".github/workflows/orchestrator.yml",
+    ".github/workflows/workflowctl.yml",
     "etc/workflow-dependencies.json",
-    "src/orchestrator/*.py",
+    "src/workflowctl/*.py",
 ]
 
 # Files that trigger unit tests
 UNIT_TEST_PATTERNS = [
-    ".github/workflows/orchestrator.yml",
-    "src/orchestrator/*.py",
-    "test/orchestrator/**",
+    ".github/workflows/workflowctl.yml",
+    "src/workflowctl/*.py",
+    "test/workflowctl/**",
 ]
 
 

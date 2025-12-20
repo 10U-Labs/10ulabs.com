@@ -7,7 +7,7 @@ dependencies, it checks that all other dependencies have completed successfully
 before dispatching (fan-in behavior).
 
 Usage:
-    python3 src/orchestrator/orchestrator.py dispatch --workflow bootstrap --repo owner/repo
+    python3 src/workflowctl/workflowctl.py dispatch --workflow bootstrap --repo owner/repo
 """
 import argparse
 import subprocess

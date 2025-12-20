@@ -193,7 +193,7 @@ jobs:
           if [ "$TRIGGER_INPUT" = "true" ]
           then TRIGGER_FLAG="--trigger-descendants"
           fi
-          python3 src/orchestrator/orchestrator.py dispatch \
+          python3 src/workflowctl/workflowctl.py dispatch \
             $TRIGGER_FLAG \
             --workflow www_shared \
             --repo ${{ github.repository }}

@@ -10,8 +10,8 @@ also modified. The execution plan includes the root workflow(s) and all their
 descendants in topological order (dependencies before dependents).
 
 Usage:
-    python3 src/orchestrator/orchestrator.py compute-roots <changed_files>
-    python3 src/orchestrator/orchestrator.py compute-roots --execution-plan <changed_files>
+    python3 src/workflowctl/workflowctl.py compute-roots <changed_files>
+    python3 src/workflowctl/workflowctl.py compute-roots --execution-plan <changed_files>
 
     Where <changed_files> is a newline-separated list of file paths.
 
@@ -267,7 +267,7 @@ def compute_merge_roots(
     Compute the minimal set of root workflows that covers both
     running workflows and new roots.
 
-    This is used when a new orchestrator run starts while workflows from
+    This is used when a new workflowctl run starts while workflows from
     a previous run are still executing. The merge roots are the oldest
     ancestors that need to be (re)started to cover both the running
     workflows and the new changes.

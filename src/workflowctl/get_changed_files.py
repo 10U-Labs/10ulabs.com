@@ -5,7 +5,7 @@ This module handles edge cases like force pushes, shallow clones, and
 initial commits to reliably determine which files changed.
 
 Usage:
-    python3 src/orchestrator/orchestrator.py get-changed-files \
+    python3 src/workflowctl/workflowctl.py get-changed-files \
         --base <base_sha> --head <head_sha>
 """
 import argparse

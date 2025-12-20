@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Orchestrator CLI for workflow management.
+"""Workflowctl CLI for workflow management.
 
-This is the main entry point for orchestrator commands. It provides subcommands
+This is the main entry point for workflowctl commands. It provides subcommands
 for computing root workflows, getting running workflows, canceling workflows,
 and dispatching descendant workflows.
 
 Usage:
-    python3 src/orchestrator/orchestrator.py compute-roots <changed_files>
-    python3 src/orchestrator/orchestrator.py get-running --repo owner/repo
-    python3 src/orchestrator/orchestrator.py cancel --repo owner/repo --merge-roots '["x"]'
-    python3 src/orchestrator/orchestrator.py dispatch --workflow bootstrap --repo owner/repo
-    python3 src/orchestrator/orchestrator.py get-changed-files --base SHA --head SHA
-    python3 src/orchestrator/orchestrator.py should-run --check static-analysis --changed FILES
-    python3 src/orchestrator/orchestrator.py dispatch-roots --repo owner/repo --roots ROOTS
+    python3 src/workflowctl/workflowctl.py compute-roots <changed_files>
+    python3 src/workflowctl/workflowctl.py get-running --repo owner/repo
+    python3 src/workflowctl/workflowctl.py cancel --repo owner/repo --merge-roots '["x"]'
+    python3 src/workflowctl/workflowctl.py dispatch --workflow bootstrap --repo owner/repo
+    python3 src/workflowctl/workflowctl.py get-changed-files --base SHA --head SHA
+    python3 src/workflowctl/workflowctl.py should-run --check static-analysis --changed FILES
+    python3 src/workflowctl/workflowctl.py dispatch-roots --repo owner/repo --roots ROOTS
 """
 import sys
 
@@ -39,7 +39,7 @@ COMMANDS = {
 def main() -> int:
     """Main entry point that dispatches to subcommands."""
     if len(sys.argv) < 2:
-        print("Usage: orchestrator.py <command> [options]")
+        print("Usage: workflowctl.py <command> [options]")
         print("\nCommands:")
         for cmd, (desc, _) in COMMANDS.items():
             print(f"  {cmd:20} {desc}")
