@@ -81,8 +81,8 @@ def test_google_verification_record_resolves_via_public_dns(zone_nameservers, co
         pytest.fail(f"No TXT records found for {domain_name}")
 
 
-def test_google_verification_record_has_correct_content(zone_nameservers, config):
-    """Test that Google verification record has correct content."""
+def test_google_verification_record_has_correct_content_via_dns(zone_nameservers, config):
+    """Test that Google verification record has correct content via DNS."""
     domain_name = config['domain_name']
     google_verification = config['google_site_verification']
 

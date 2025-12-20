@@ -355,3 +355,53 @@ E2E tests answer: "Does the user journey work?"
 | Lambda has SQS trigger | Trigger actually fires |
 | IAM policy attached | IAM policy works in practice |
 | Configuration is correct | System behaves correctly |
+
+## 10. AWS Configuration vs Real-World Verification
+
+**Integration tests verify what AWS says. E2E tests verify what the real world experiences.**
+
+This is a critical distinction. Just because AWS reports a resource is configured correctly does not mean the outside world can actually use it. E2E tests must verify the real-world experience.
+
+### Why This Matters
+
+AWS API responses confirm configuration state. They do NOT confirm:
+- DNS propagation completed successfully
+- Nameserver delegation is working
+- Network paths are functioning
+- Caching layers are behaving correctly
+- External services can reach your resources
+
+### Examples
+
+| What You Want to Verify | Integration Test (AWS API) | E2E Test (Real World) |
+|------------------------|---------------------------|----------------------|
+| DNS record works | Route53 `list_resource_record_sets` returns record | `dns.resolver.resolve()` returns record |
+| API is reachable | API Gateway exists, Lambda attached | HTTP request to endpoint succeeds |
+| IAM role works | Role exists with correct policy | `assume-role-with-web-identity` succeeds |
+| S3 is accessible | Bucket exists with correct ACL | HTTP GET to S3 URL succeeds |
+| Certificate is valid | ACM shows certificate issued | TLS handshake succeeds |
+
+### The Test
+
+Ask yourself: "If AWS says it's configured correctly, could it still fail for a real user?"
+
+- **Yes** → E2E test (verify real-world behavior)
+- **No** → Integration test (verify AWS configuration)
+
+### DNS Example
+
+```python
+# INTEGRATION TEST - Verifies AWS configuration
+def test_mx_record_has_correct_priority(route53_client, hosted_zone):
+    """Verify Route53 has MX record with priority 1."""
+    records = route53_client.list_resource_record_sets(...)
+    # This confirms AWS has the record configured
+
+# E2E TEST - Verifies real-world behavior
+def test_mx_record_returns_correct_priority_via_dns(zone_nameservers):
+    """Verify DNS query returns MX record with priority 1."""
+    answers = resolver.resolve(domain, 'MX')
+    # This confirms the outside world can resolve the record
+```
+
+Both tests are necessary. The integration test catches deployment failures. The E2E test catches propagation, delegation, and resolution failures that the integration test cannot detect.
