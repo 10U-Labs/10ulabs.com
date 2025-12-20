@@ -7,11 +7,14 @@ Configuration values are parsed from the shared Terraform module.
 import sys
 from pathlib import Path
 
-# Add lib/python to path for imports - must be before other imports
+# Add lib/python and src/orchestrator to path for imports
 REPO_ROOT = Path(__file__).parent.parent
 LIB_DIR = REPO_ROOT / "lib" / "python"
+ORCHESTRATOR_DIR = REPO_ROOT / "src" / "orchestrator"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+if str(ORCHESTRATOR_DIR) not in sys.path:
+    sys.path.insert(0, str(ORCHESTRATOR_DIR))
 
 import boto3
 import pytest
