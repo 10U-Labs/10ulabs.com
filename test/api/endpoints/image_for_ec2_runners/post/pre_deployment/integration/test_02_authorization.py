@@ -65,9 +65,10 @@ def test_can_describe_images(ec2_client):
     """Verify permission to describe EC2 images."""
     try:
         # Just verify we can call describe_images - don't need specific AMI
+        # Note: AWS requires MaxResults >= 5 for describe_images
         ec2_client.describe_images(
             Filters=[{"Name": "state", "Values": ["available"]}],
-            MaxResults=1,
+            MaxResults=5,
         )
     except ClientError as e:
         if e.response["Error"]["Code"] == "AccessDenied":
