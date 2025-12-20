@@ -218,9 +218,7 @@ jobs:
           done
           echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
           echo "Should run unit tests: $SHOULD_RUN"
-      - env:
-          PYTHONPATH: src/orchestrator
-        if: >-
+      - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-ut.outputs.should_run == 'true'
         name: Run unit tests

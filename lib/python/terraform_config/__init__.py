@@ -19,17 +19,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
+from repo_utils import REPO_ROOT
 
-def _find_repo_root() -> Path:
-    """Find the repository root by looking for .git directory."""
-    current = Path(__file__).resolve()
-    for parent in [current] + list(current.parents):
-        if (parent / ".git").exists():
-            return parent
-    raise RuntimeError("Could not find repository root")
-
-
-REPO_ROOT = _find_repo_root()
 SHARED_MODULE_DIR = REPO_ROOT / "lib" / "terraform" / "modules" / "shared"
 
 
