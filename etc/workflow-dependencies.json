@@ -44,35 +44,6 @@
       "test/bootstrap/**"
     ]
   },
-  "endpoint_v1_agents_infrastructure": {
-    "depends_on": [
-      "endpoint_v1_simulation_soc"
-    ],
-    "name": "Deploying Agent Infrastructure",
-    "paths": [
-      ".github/workflows/endpoint_v1_agents_infrastructure.yml",
-      "src/api/endpoints/agents/ecr.tf",
-      "src/api/endpoints/agents/lambda_layer.tf",
-      "src/api/endpoints/agents/lambda_layer/**"
-    ]
-  },
-  "endpoint_v1_agents_runtime": {
-    "depends_on": [
-      "endpoint_v1_agents_infrastructure"
-    ],
-    "name": "Deploying Agent Runtime",
-    "paths": [
-      ".github/workflows/endpoint_v1_agents_runtime.yml",
-      "src/api/endpoints/agents/agentcore.tf",
-      "src/api/endpoints/agents/iam.tf",
-      "src/api/endpoints/agents/lambda.tf",
-      "src/api/endpoints/agents/locals.tf",
-      "src/api/endpoints/agents/outputs.tf",
-      "src/api/endpoints/agents/lambdas/**",
-      "src/api/endpoints/agents/prompts/**",
-      "src/api/endpoints/agents/runtime/**"
-    ]
-  },
   "endpoint_v1_contact": {
     "depends_on": [
       "endpoint_v1_echo"
