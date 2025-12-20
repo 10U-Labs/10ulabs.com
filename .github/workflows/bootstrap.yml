@@ -114,7 +114,7 @@ jobs:
       - name: Run unit tests
         run: |
           python3 -m pytest --durations=0 --durations=0 \
-            test/bootstrap/pre_deployment/ \
+            test/bootstrap/pre_deployment/unit/ \
             --verbose --pythonwarnings=error
       - name: Terraform Apply
         run: |
