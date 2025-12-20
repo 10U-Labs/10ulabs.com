@@ -4,14 +4,12 @@ These tests parse Terraform files to validate naming conventions before deployme
 Names must use PascalCase (no dashes, underscores, or other separators).
 """
 import re
-from pathlib import Path
 
 import pytest
 
 from naming_conventions import validate_name
-from terraform_config import get_resource_prefix
+from terraform_config import REPO_ROOT, get_resource_prefix
 
-REPO_ROOT = Path(__file__).parent.parent.parent.parent.parent
 BOOTSTRAP_SRC = REPO_ROOT / "src" / "bootstrap"
 
 
