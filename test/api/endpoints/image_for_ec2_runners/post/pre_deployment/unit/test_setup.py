@@ -6,6 +6,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+def _create_popen_with_output_mock():
+    """Create a mock Popen process that outputs lines to stdout."""
+    mock_process = MagicMock()
+    mock_process.stdout = iter(["line1\n", "line2\n"])
+    mock_process.returncode = 0
+    mock_process.__enter__ = MagicMock(return_value=mock_process)
+    mock_process.__exit__ = MagicMock(return_value=False)
+    return mock_process
+
+
 class TestRun:
     """Tests for the run function."""
 
@@ -43,12 +53,7 @@ class TestRun:
         """Run writes output to stdout."""
         with patch.object(setup_module.subprocess, "Popen") as mock_popen, \
              patch.object(setup_module.sys, "stdout") as mock_stdout:
-            mock_process = MagicMock()
-            mock_process.stdout = iter(["line1\n", "line2\n"])
-            mock_process.returncode = 0
-            mock_process.__enter__ = MagicMock(return_value=mock_process)
-            mock_process.__exit__ = MagicMock(return_value=False)
-            mock_popen.return_value = mock_process
+            mock_popen.return_value = _create_popen_with_output_mock()
             setup_module.run("echo hello")
             assert mock_stdout.write.call_count >= 2
 
@@ -56,12 +61,7 @@ class TestRun:
         """Run flushes stdout after each line."""
         with patch.object(setup_module.subprocess, "Popen") as mock_popen, \
              patch.object(setup_module.sys, "stdout") as mock_stdout:
-            mock_process = MagicMock()
-            mock_process.stdout = iter(["line1\n", "line2\n"])
-            mock_process.returncode = 0
-            mock_process.__enter__ = MagicMock(return_value=mock_process)
-            mock_process.__exit__ = MagicMock(return_value=False)
-            mock_popen.return_value = mock_process
+            mock_popen.return_value = _create_popen_with_output_mock()
             setup_module.run("echo hello")
             assert mock_stdout.flush.call_count >= 2
 
