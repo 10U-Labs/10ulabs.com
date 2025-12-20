@@ -1,4 +1,4 @@
-"""Unit tests for compute_root_workflows.py."""
+"""Unit tests for compute_roots.py."""
 
 import io
 import sys
@@ -7,10 +7,22 @@ from unittest.mock import patch
 
 import pytest
 
-# Add scripts directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "scripts"))
 
-from compute_root_workflows import (
+def _find_repo_root() -> Path:
+    """Find the repository root by looking for .git directory."""
+    current = Path(__file__).resolve()
+    for parent in [current] + list(current.parents):
+        if (parent / ".git").exists():
+            return parent
+    raise RuntimeError("Could not find repository root")
+
+
+REPO_ROOT = _find_repo_root()
+
+# Add src/orchestrator directory to path for imports
+sys.path.insert(0, str(REPO_ROOT / "src" / "orchestrator"))
+
+from compute_roots import (
     _insert_sorted,
     _output_levels_indexed,
     _output_results,
@@ -25,7 +37,7 @@ from compute_root_workflows import (
     topological_sort,
     topological_sort_levels,
 )
-from workflow_utils import get_all_descendants
+from utils import get_all_descendants
 
 
 # Sample dependency graph for testing

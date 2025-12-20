@@ -6,7 +6,7 @@ It identifies which running workflows are downstream of (or equal to) the
 merge roots and cancels them.
 
 Usage:
-    python3 scripts/cancel_workflows.py \
+    python3 src/orchestrator/orchestrator.py cancel \
         --repo owner/repo \
         --merge-roots '["www_shared"]' \
         --graph etc/workflow-dependencies.json
@@ -21,7 +21,7 @@ import subprocess
 import sys
 from typing import Any
 
-from workflow_utils import (
+from utils import (
     build_name_to_key_map,
     create_base_parser,
     get_all_descendants,

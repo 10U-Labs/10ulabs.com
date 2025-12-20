@@ -7,7 +7,7 @@ dependencies, it checks that all other dependencies have completed successfully
 before dispatching (fan-in behavior).
 
 Usage:
-    python3 scripts/dispatch_descendants.py --workflow bootstrap --repo owner/repo
+    python3 src/orchestrator/orchestrator.py dispatch --workflow bootstrap --repo owner/repo
 """
 import argparse
 import json
@@ -48,9 +48,9 @@ def parse_args() -> argparse.Namespace:
         help="Hours to look back for successful dependency runs (default: 24)"
     )
     parser.add_argument(
-        "--skip-descendants",
+        "--trigger-descendants",
         action="store_true",
-        help="Pass skip_descendants=true to dispatched workflows"
+        help="Pass trigger_descendants=true to dispatched workflows"
     )
     return parser.parse_args()
 
@@ -130,19 +130,19 @@ def dispatch_workflow(
     workflow: str,
     repo: str,
     dry_run: bool,
-    skip_descendants: bool = False
+    trigger_descendants: bool = False
 ) -> bool:
     """Dispatch a single workflow. Returns True on success."""
     workflow_file = f".github/workflows/{workflow}.yml"
     if dry_run:
-        skip_flag = " (with skip_descendants=true)" if skip_descendants else ""
-        print(f"  [DRY RUN] Would dispatch: {workflow_file}{skip_flag}")
+        trigger_flag = " (with trigger_descendants=true)" if trigger_descendants else ""
+        print(f"  [DRY RUN] Would dispatch: {workflow_file}{trigger_flag}")
         return True
 
     print(f"  Dispatching: {workflow_file}")
     cmd = ["gh", "workflow", "run", workflow_file, "--repo", repo]
-    if skip_descendants:
-        cmd.extend(["-f", "skip_descendants=true"])
+    if trigger_descendants:
+        cmd.extend(["-f", "trigger_descendants=true"])
     result = subprocess.run(
         cmd,
         capture_output=True,
@@ -182,7 +182,7 @@ def main() -> int:
             # Single dependency - dispatch immediately
             print(f"{descendant}: single dependency, dispatching...")
             if dispatch_workflow(
-                descendant, args.repo, args.dry_run, args.skip_descendants
+                descendant, args.repo, args.dry_run, args.trigger_descendants
             ):
                 dispatched += 1
         else:
@@ -194,7 +194,7 @@ def main() -> int:
             if all_met:
                 print("  All dependencies met, dispatching...")
                 if dispatch_workflow(
-                    descendant, args.repo, args.dry_run, args.skip_descendants
+                    descendant, args.repo, args.dry_run, args.trigger_descendants
                 ):
                     dispatched += 1
             else:

@@ -10,8 +10,8 @@ also modified. The execution plan includes the root workflow(s) and all their
 descendants in topological order (dependencies before dependents).
 
 Usage:
-    python3 scripts/compute_root_workflows.py <changed_files>
-    python3 scripts/compute_root_workflows.py --execution-plan <changed_files>
+    python3 src/orchestrator/orchestrator.py compute-roots <changed_files>
+    python3 src/orchestrator/orchestrator.py compute-roots --execution-plan <changed_files>
 
     Where <changed_files> is a newline-separated list of file paths.
 
@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from workflow_utils import get_all_descendants
+from utils import get_all_descendants
 
 
 def load_dependency_graph(graph_path: Path) -> dict[str, Any]:

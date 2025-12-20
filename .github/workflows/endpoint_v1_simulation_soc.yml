@@ -165,15 +165,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: >-
           github.event_name == 'workflow_dispatch' &&
-          github.event.inputs.skip_descendants != 'true' &&
-          !contains(github.event.head_commit.message, '[skip descendants]')
+          (
+          github.event.inputs.trigger_descendants == 'true' ||
+           contains(github.event.head_commit.message,
+           '[trigger descendants]'))
         name: Dispatch descendant workflows
         run: |
-          SKIP_FLAG=""
-          SKIP_INPUT="${{ github.event.inputs.skip_descendants }}"
-          if [ "$SKIP_INPUT" = "true" ]; then SKIP_FLAG="--skip-descendants"; fi
-          python3 scripts/dispatch_descendants.py \
-            $SKIP_FLAG \
+          TRIGGER_FLAG=""
+          TRIGGER_INPUT="${{ github.event.inputs.trigger_descendants }}"
+          if [ "$TRIGGER_INPUT" = "true" ]
+          then TRIGGER_FLAG="--trigger-descendants"
+          fi
+          python3 src/orchestrator/orchestrator.py dispatch \
+            $TRIGGER_FLAG \
             --workflow endpoint_v1_simulation_soc \
             --repo ${{ github.repository }}
 name: >-
@@ -190,14 +194,14 @@ on:
         default: false
         description: Force CloudFront cache invalidation
         type: boolean
-      skip_descendants:
-        default: false
-        description: Skip dispatching descendant workflows
-        type: boolean
       spot_recovery_reason:
         description: Spot recovery trigger reason
         required: false
         type: string
+      trigger_descendants:
+        default: false
+        description: Trigger descendant workflows after this workflow completes
+        type: boolean
 permissions:
   actions: write
   contents: read

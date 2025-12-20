@@ -1,4 +1,4 @@
-"""Unit tests for get_running_workflows.py and workflow_utils.py."""
+"""Unit tests for get_running.py and utils.py."""
 
 import json
 import sys
@@ -7,10 +7,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add scripts directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "scripts"))
 
-from workflow_utils import (
+def _find_repo_root() -> Path:
+    """Find the repository root by looking for .git directory."""
+    current = Path(__file__).resolve()
+    for parent in [current] + list(current.parents):
+        if (parent / ".git").exists():
+            return parent
+    raise RuntimeError("Could not find repository root")
+
+
+REPO_ROOT = _find_repo_root()
+
+# Add src/orchestrator directory to path for imports
+sys.path.insert(0, str(REPO_ROOT / "src" / "orchestrator"))
+
+from utils import (
     build_name_to_key_map,
     get_workflow_runs,
     load_dependency_graph,
@@ -68,7 +80,7 @@ class TestBuildNameToKeyMap:
 class TestGetWorkflowRuns:
     """Tests for get_workflow_runs function."""
 
-    @patch("workflow_utils.subprocess.run")
+    @patch("utils.subprocess.run")
     def test_returns_runs_on_success(self, mock_run: MagicMock) -> None:
         """Test successful API response parsing."""
         runs = [
@@ -83,7 +95,7 @@ class TestGetWorkflowRuns:
         result = get_workflow_runs("owner/repo", "in_progress")
         assert result == runs
 
-    @patch("workflow_utils.subprocess.run")
+    @patch("utils.subprocess.run")
     def test_returns_empty_on_api_error(self, mock_run: MagicMock) -> None:
         """Test API error returns empty list."""
         mock_run.return_value = MagicMock(
@@ -94,7 +106,7 @@ class TestGetWorkflowRuns:
         result = get_workflow_runs("owner/repo", "in_progress")
         assert result == []
 
-    @patch("workflow_utils.subprocess.run")
+    @patch("utils.subprocess.run")
     def test_returns_empty_on_invalid_json(self, mock_run: MagicMock) -> None:
         """Test invalid JSON returns empty list."""
         mock_run.return_value = MagicMock(
@@ -105,7 +117,7 @@ class TestGetWorkflowRuns:
         result = get_workflow_runs("owner/repo", "in_progress")
         assert result == []
 
-    @patch("workflow_utils.subprocess.run")
+    @patch("utils.subprocess.run")
     def test_returns_empty_on_empty_response(self, mock_run: MagicMock) -> None:
         """Test empty response returns empty list."""
         mock_run.return_value = MagicMock(

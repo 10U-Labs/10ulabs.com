@@ -35,20 +35,8 @@ jobs:
             echo "Error: etc/workflow-dependencies.json not found"
             exit 1
           fi
-          if [ ! -f "scripts/compute_root_workflows.py" ]; then
-            echo "Error: scripts/compute_root_workflows.py not found"
-            exit 1
-          fi
-          if [ ! -f "scripts/get_running_workflows.py" ]; then
-            echo "Error: scripts/get_running_workflows.py not found"
-            exit 1
-          fi
-          if [ ! -f "scripts/cancel_workflows.py" ]; then
-            echo "Error: scripts/cancel_workflows.py not found"
-            exit 1
-          fi
-          if [ ! -f "scripts/workflow_utils.py" ]; then
-            echo "Error: scripts/workflow_utils.py not found"
+          if [ ! -f "src/orchestrator/orchestrator.py" ]; then
+            echo "Error: src/orchestrator/orchestrator.py not found"
             exit 1
           fi
           echo "All required files present"
@@ -107,11 +95,12 @@ jobs:
           PATTERNS=(
             ".github/workflows/orchestrator.yml"
             "etc/workflow-dependencies.json"
-            "scripts/cancel_workflows.py"
-            "scripts/compute_root_workflows.py"
-            "scripts/execute_workflow_plan.py"
-            "scripts/get_running_workflows.py"
-            "scripts/workflow_utils.py"
+            "src/orchestrator/cancel.py"
+            "src/orchestrator/compute_roots.py"
+            "src/orchestrator/dispatch.py"
+            "src/orchestrator/get_running.py"
+            "src/orchestrator/orchestrator.py"
+            "src/orchestrator/utils.py"
           )
           SHOULD_RUN="false"
           for pattern in "${PATTERNS[@]}"; do
@@ -130,11 +119,12 @@ jobs:
           echo "Checking if unit testing should run..."
           echo "Changed files: $CHANGED"
           PATTERNS=(
-            "scripts/cancel_workflows.py"
-            "scripts/compute_root_workflows.py"
-            "scripts/execute_workflow_plan.py"
-            "scripts/get_running_workflows.py"
-            "scripts/workflow_utils.py"
+            "src/orchestrator/cancel.py"
+            "src/orchestrator/compute_roots.py"
+            "src/orchestrator/dispatch.py"
+            "src/orchestrator/get_running.py"
+            "src/orchestrator/orchestrator.py"
+            "src/orchestrator/utils.py"
             "test/orchestrator/"
           )
           SHOULD_RUN="false"
@@ -188,11 +178,12 @@ jobs:
         run: |
           echo "Running pylint..."
           python3 -m pylint \
-            scripts/cancel_workflows.py \
-            scripts/compute_root_workflows.py \
-            scripts/execute_workflow_plan.py \
-            scripts/get_running_workflows.py \
-            scripts/workflow_utils.py \
+            src/orchestrator/cancel.py \
+            src/orchestrator/compute_roots.py \
+            src/orchestrator/dispatch.py \
+            src/orchestrator/get_running.py \
+            src/orchestrator/orchestrator.py \
+            src/orchestrator/utils.py \
             --fail-on=C,R,W \
             --fail-under=10.0
           echo "Pylint completed"
@@ -203,11 +194,12 @@ jobs:
         run: |
           echo "Running mypy..."
           python3 -m mypy \
-            scripts/cancel_workflows.py \
-            scripts/compute_root_workflows.py \
-            scripts/execute_workflow_plan.py \
-            scripts/get_running_workflows.py \
-            scripts/workflow_utils.py
+            src/orchestrator/cancel.py \
+            src/orchestrator/compute_roots.py \
+            src/orchestrator/dispatch.py \
+            src/orchestrator/get_running.py \
+            src/orchestrator/orchestrator.py \
+            src/orchestrator/utils.py
           echo "Mypy completed"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
@@ -223,7 +215,7 @@ jobs:
         name: Get running workflows
         run: |
           echo "Getting currently running workflows..."
-          RUNNING=$(python3 scripts/get_running_workflows.py \
+          RUNNING=$(python3 src/orchestrator/orchestrator.py get-running \
             --repo ${{ github.repository }} \
             --graph etc/workflow-dependencies.json)
           echo "Running workflows: $RUNNING"
@@ -248,7 +240,7 @@ jobs:
             # Get level-1 workflows (independent roots), merge with running
             JQ='[.[] | select(.level == 1) | .name] | join("\n")'
             ROOTS=$(echo "$CHANGED" | \
-              python3 scripts/compute_root_workflows.py \
+              python3 src/orchestrator/orchestrator.py compute-roots \
               --graph $GRAPH --levels --indexed \
               --running "$RUNNING" | jq -r "$JQ" || echo "")
           fi
@@ -288,7 +280,7 @@ jobs:
           JQ_FILTER='split("\n") | map(select(length > 0))'
           ROOTS_JSON=$(echo "$ROOTS" | jq -R -s -c "$JQ_FILTER")
           echo "Merge roots: $ROOTS_JSON"
-          python3 scripts/cancel_workflows.py \
+          python3 src/orchestrator/orchestrator.py cancel \
             --repo ${{ github.repository }} \
             --merge-roots "$ROOTS_JSON" \
             --graph etc/workflow-dependencies.json
@@ -311,11 +303,11 @@ jobs:
             echo "GH_TOKEN length: ${#GH_TOKEN}"
             exit 1
           fi
-          # Check for skip_descendants input or [skip descendants]
-          SKIP_DESCENDANTS=""
-          if [ "${{ inputs.skip_descendants }}" = "true" ]; then
-            echo "skip_descendants input is true"
-            SKIP_DESCENDANTS="-f skip_descendants=true"
+          # Check for trigger_descendants input or [trigger descendants]
+          TRIGGER_DESCENDANTS=""
+          if [ "${{ inputs.trigger_descendants }}" = "true" ]; then
+            echo "trigger_descendants input is true"
+            TRIGGER_DESCENDANTS="-f trigger_descendants=true"
           else
             # Heredoc with single-quoted delimiter prevents bash
             # interpreting ${...} patterns in commit messages
@@ -323,9 +315,9 @@ jobs:
           ${{ github.event.head_commit.message }}
           COMMIT_EOF
             )
-            if echo "$COMMIT_MSG" | grep -qi '\[skip descendants\]'; then
-              echo "Found [skip descendants] in commit message"
-              SKIP_DESCENDANTS="-f skip_descendants=true"
+            if echo "$COMMIT_MSG" | grep -qi '\[trigger descendants\]'; then
+              echo "Found [trigger descendants] in commit message"
+              TRIGGER_DESCENDANTS="-f trigger_descendants=true"
             fi
           fi
           DISPATCH_COUNT=0
@@ -338,14 +330,14 @@ jobs:
                 echo "Warning: Workflow file $WORKFLOW_FILE not found, skipping"
                 continue
               fi
-              # Check if workflow accepts skip_descendants input
+              # Check if workflow accepts trigger_descendants input
               REPO="${{ github.repository }}"
-              if [ -n "$SKIP_DESCENDANTS" ]; then
-                if grep -q 'skip_descendants:' "$WORKFLOW_FILE"; then
+              if [ -n "$TRIGGER_DESCENDANTS" ]; then
+                if grep -q 'trigger_descendants:' "$WORKFLOW_FILE"; then
                   gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
-                    -f skip_descendants=true && RESULT=0 || RESULT=1
+                    -f trigger_descendants=true && RESULT=0 || RESULT=1
                 else
-                  echo "  (workflow does not accept skip_descendants)"
+                  echo "  (workflow does not accept trigger_descendants)"
                   gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
                     && RESULT=0 || RESULT=1
                 fi
@@ -363,10 +355,10 @@ jobs:
           done
           echo "Workflow dispatch completed"
           echo "Successfully dispatched $DISPATCH_COUNT workflow(s)"
-          if [ -n "$SKIP_DESCENDANTS" ]; then
-            echo "Note: Descendants skipped due to [skip descendants]"
+          if [ -n "$TRIGGER_DESCENDANTS" ]; then
+            echo "Note: Descendants triggered via [trigger descendants]"
           else
-            echo "Descendants triggered by each workflow's dispatch step"
+            echo "Descendants NOT triggered (default behavior)"
           fi
 name: Workflow Orchestrator
 on:
@@ -387,10 +379,6 @@ on:
         default: false
         description: Use GitHub-hosted runners
         type: boolean
-      skip_descendants:
-        default: false
-        description: Skip dispatching descendant workflows
-        type: boolean
       spot_recovery_reason:
         description: Spot recovery trigger reason
         required: false
@@ -398,6 +386,10 @@ on:
       start_from:
         description: 'Workflow(s) to start from (e.g., "health, bootstrap")'
         type: string
+      trigger_descendants:
+        default: false
+        description: Trigger descendant workflows after root workflows complete
+        type: boolean
 permissions:
   actions: write
   contents: read

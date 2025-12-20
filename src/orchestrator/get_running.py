@@ -6,7 +6,7 @@ maps them to workflow keys using the dependency graph, and outputs a JSON array
 of workflow keys.
 
 Usage:
-    python3 scripts/get_running_workflows.py --repo owner/repo
+    python3 src/orchestrator/orchestrator.py get-running --repo owner/repo
 
 Output:
     JSON array of workflow keys, e.g., ["api_backend", "www_shared"]
@@ -15,7 +15,7 @@ import argparse
 import json
 import sys
 
-from workflow_utils import (
+from utils import (
     build_name_to_key_map,
     create_base_parser,
     get_workflow_runs,

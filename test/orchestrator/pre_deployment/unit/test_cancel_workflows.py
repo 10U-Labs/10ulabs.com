@@ -1,4 +1,4 @@
-"""Unit tests for cancel_workflows.py."""
+"""Unit tests for cancel.py."""
 
 import sys
 from pathlib import Path
@@ -6,14 +6,26 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Add scripts directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent / "scripts"))
 
-from cancel_workflows import (
+def _find_repo_root() -> Path:
+    """Find the repository root by looking for .git directory."""
+    current = Path(__file__).resolve()
+    for parent in [current] + list(current.parents):
+        if (parent / ".git").exists():
+            return parent
+    raise RuntimeError("Could not find repository root")
+
+
+REPO_ROOT = _find_repo_root()
+
+# Add src/orchestrator directory to path for imports
+sys.path.insert(0, str(REPO_ROOT / "src" / "orchestrator"))
+
+from cancel import (
     cancel_run,
     get_workflows_to_cancel,
 )
-from workflow_utils import (
+from utils import (
     build_name_to_key_map,
     get_all_descendants,
 )
@@ -136,20 +148,20 @@ class TestCancelRun:
         result = cancel_run("owner/repo", 123, dry_run=True)
         assert result is True
 
-    @patch("cancel_workflows.subprocess.run")
+    @patch("cancel.subprocess.run")
     def test_dry_run_does_not_call_subprocess(self, mock_run: MagicMock) -> None:
         """Test dry run mode doesn't call subprocess."""
         cancel_run("owner/repo", 123, dry_run=True)
         mock_run.assert_not_called()
 
-    @patch("cancel_workflows.subprocess.run")
+    @patch("cancel.subprocess.run")
     def test_successful_cancel(self, mock_run: MagicMock) -> None:
         """Test successful cancellation returns True."""
         mock_run.return_value = MagicMock(returncode=0, stderr="")
         result = cancel_run("owner/repo", 123, dry_run=False)
         assert result is True
 
-    @patch("cancel_workflows.subprocess.run")
+    @patch("cancel.subprocess.run")
     def test_already_completed_is_success(self, mock_run: MagicMock) -> None:
         """Test already completed run is treated as success."""
         mock_run.return_value = MagicMock(
@@ -159,7 +171,7 @@ class TestCancelRun:
         result = cancel_run("owner/repo", 123, dry_run=False)
         assert result is True
 
-    @patch("cancel_workflows.subprocess.run")
+    @patch("cancel.subprocess.run")
     def test_other_error_is_failure(self, mock_run: MagicMock) -> None:
         """Test other errors return False."""
         mock_run.return_value = MagicMock(
