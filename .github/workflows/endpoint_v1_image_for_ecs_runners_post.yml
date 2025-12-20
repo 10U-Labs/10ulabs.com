@@ -100,25 +100,26 @@ jobs:
             echo "Validating $file"
             jsonlint -q "$file"
           done
-      - name: Run pylint
+      - name: Pylint source files
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post
           for file in $POST_DIR/*.py; do
-            pylint "$file" \
-              --fail-on=C,R,W \
-              --fail-under=10.0
+            pylint "$file" --fail-on=C,R,W --fail-under=10.0
           done
+      - name: Pylint test files
+        run: |
           BASE_DIR=src/api/endpoints/image_for_ecs_runners
           TEST_DIR=test/api/endpoints/image_for_ecs_runners/post/
           PYTHONPATH=lib/python:$BASE_DIR:$BASE_DIR/post pylint $TEST_DIR \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-      - name: Run mypy
+            --fail-on=C,R,W --fail-under=10.0
+      - name: Mypy source files
         run: |
           POST_DIR=src/api/endpoints/image_for_ecs_runners/post
           for file in $POST_DIR/*.py; do
             python3 -m mypy "$file"
           done
+      - name: Mypy test files
+        run: |
           BASE_DIR=src/api/endpoints/image_for_ecs_runners
           TEST_DIR=test/api/endpoints/image_for_ecs_runners/post/
           MYPYPATH=lib/python:$BASE_DIR:$BASE_DIR/post python3 -m mypy $TEST_DIR
