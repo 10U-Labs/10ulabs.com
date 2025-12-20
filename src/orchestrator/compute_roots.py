@@ -21,13 +21,12 @@ Output:
 """
 
 import argparse
-import fnmatch
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-from utils import get_all_descendants
+from utils import file_matches_pattern, get_all_descendants
 
 
 def load_dependency_graph(graph_path: Path) -> dict[str, Any]:
@@ -201,21 +200,7 @@ def compute_execution_plan_levels(
 
 def file_matches_patterns(filepath: str, patterns: list[str]) -> bool:
     """Check if a file path matches any of the given glob patterns."""
-    for pattern in patterns:
-        # Handle ** patterns for directory matching
-        if "**" in pattern:
-            # Convert glob pattern to work with fnmatch
-            # e.g., "src/bootstrap/**" matches "src/bootstrap/main.tf"
-            base_pattern = pattern.replace("**", "*")
-            if fnmatch.fnmatch(filepath, base_pattern):
-                return True
-            # Also check if file is under the directory
-            dir_prefix = pattern.split("**")[0]
-            if filepath.startswith(dir_prefix):
-                return True
-        elif fnmatch.fnmatch(filepath, pattern):
-            return True
-    return False
+    return any(file_matches_pattern(filepath, pattern) for pattern in patterns)
 
 
 def get_affected_workflows(

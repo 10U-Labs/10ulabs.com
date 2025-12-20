@@ -10,13 +10,30 @@ Usage:
     python3 src/orchestrator/orchestrator.py get-running --repo owner/repo
     python3 src/orchestrator/orchestrator.py cancel --repo owner/repo --merge-roots '["x"]'
     python3 src/orchestrator/orchestrator.py dispatch --workflow bootstrap --repo owner/repo
+    python3 src/orchestrator/orchestrator.py get-changed-files --base SHA --head SHA
+    python3 src/orchestrator/orchestrator.py should-run --check static-analysis --changed FILES
+    python3 src/orchestrator/orchestrator.py dispatch-roots --repo owner/repo --roots ROOTS
 """
 import sys
 
 import cancel
 import compute_roots
 import dispatch
+import dispatch_roots
+import get_changed_files
 import get_running
+import should_run
+
+
+COMMANDS = {
+    "compute-roots": ("Compute root workflows from changed files", compute_roots.main),
+    "get-running": ("Get currently running workflows", get_running.main),
+    "cancel": ("Cancel superseded workflow runs", cancel.main),
+    "dispatch": ("Dispatch descendant workflows", dispatch.main),
+    "get-changed-files": ("Get changed files between commits", get_changed_files.main),
+    "should-run": ("Check if static analysis/tests should run", should_run.main),
+    "dispatch-roots": ("Dispatch root workflows", dispatch_roots.main),
+}
 
 
 def main() -> int:
@@ -24,33 +41,23 @@ def main() -> int:
     if len(sys.argv) < 2:
         print("Usage: orchestrator.py <command> [options]")
         print("\nCommands:")
-        print("  compute-roots  Compute root workflows from changed files")
-        print("  get-running    Get currently running workflows")
-        print("  cancel         Cancel superseded workflow runs")
-        print("  dispatch       Dispatch descendant workflows")
+        for cmd, (desc, _) in COMMANDS.items():
+            print(f"  {cmd:20} {desc}")
         return 1
 
     command = sys.argv[1]
 
+    if command not in COMMANDS:
+        print(f"Unknown command: {command}", file=sys.stderr)
+        print(f"Available commands: {', '.join(COMMANDS.keys())}")
+        return 1
+
     # Remove the command from argv so submodules see correct args
     sys.argv = [sys.argv[0]] + sys.argv[2:]
 
-    if command == "compute-roots":
-        compute_roots.main()
-        return 0
-
-    if command == "get-running":
-        return get_running.main()
-
-    if command == "cancel":
-        return cancel.main()
-
-    if command == "dispatch":
-        return dispatch.main()
-
-    print(f"Unknown command: {command}", file=sys.stderr)
-    print("Available commands: compute-roots, get-running, cancel, dispatch")
-    return 1
+    _, handler = COMMANDS[command]
+    result = handler()
+    return result if result is not None else 0
 
 
 if __name__ == "__main__":

@@ -25,35 +25,51 @@ class TestOrchestratorCLI:
 
     def test_compute_roots_subcommand_routes_correctly(self) -> None:
         """Test that compute-roots subcommand routes to compute_roots.main."""
-        mock_main = MagicMock()
-        with patch.object(sys, "argv", ["orchestrator.py", "compute-roots", "file.txt"]):
-            with patch.object(orchestrator.compute_roots, "main", mock_main):
+        mock_main = MagicMock(return_value=None)
+        original = orchestrator.COMMANDS["compute-roots"]
+        try:
+            orchestrator.COMMANDS["compute-roots"] = (original[0], mock_main)
+            with patch.object(sys, "argv", ["orchestrator.py", "compute-roots", "file.txt"]):
                 orchestrator.main()
-        mock_main.assert_called_once()
+            mock_main.assert_called_once()
+        finally:
+            orchestrator.COMMANDS["compute-roots"] = original
 
     def test_get_running_subcommand_routes_correctly(self) -> None:
         """Test that get-running subcommand routes to get_running.main."""
         mock_main = MagicMock(return_value=0)
-        with patch.object(sys, "argv", ["orchestrator.py", "get-running", "--repo", "test/repo"]):
-            with patch.object(orchestrator.get_running, "main", mock_main):
+        original = orchestrator.COMMANDS["get-running"]
+        try:
+            orchestrator.COMMANDS["get-running"] = (original[0], mock_main)
+            with patch.object(sys, "argv", ["orchestrator.py", "get-running", "--repo", "test/repo"]):
                 result = orchestrator.main()
-        mock_main.assert_called_once()
-        assert result == 0
+            mock_main.assert_called_once()
+            assert result == 0
+        finally:
+            orchestrator.COMMANDS["get-running"] = original
 
     def test_cancel_subcommand_routes_correctly(self) -> None:
         """Test that cancel subcommand routes to cancel.main."""
         mock_main = MagicMock(return_value=0)
-        with patch.object(sys, "argv", ["orchestrator.py", "cancel", "--repo", "test/repo", "--merge-roots", "[]"]):
-            with patch.object(orchestrator.cancel, "main", mock_main):
+        original = orchestrator.COMMANDS["cancel"]
+        try:
+            orchestrator.COMMANDS["cancel"] = (original[0], mock_main)
+            with patch.object(sys, "argv", ["orchestrator.py", "cancel", "--repo", "test/repo", "--merge-roots", "[]"]):
                 result = orchestrator.main()
-        mock_main.assert_called_once()
-        assert result == 0
+            mock_main.assert_called_once()
+            assert result == 0
+        finally:
+            orchestrator.COMMANDS["cancel"] = original
 
     def test_dispatch_subcommand_routes_correctly(self) -> None:
         """Test that dispatch subcommand routes to dispatch.main."""
         mock_main = MagicMock(return_value=0)
-        with patch.object(sys, "argv", ["orchestrator.py", "dispatch", "--workflow", "test", "--repo", "test/repo"]):
-            with patch.object(orchestrator.dispatch, "main", mock_main):
+        original = orchestrator.COMMANDS["dispatch"]
+        try:
+            orchestrator.COMMANDS["dispatch"] = (original[0], mock_main)
+            with patch.object(sys, "argv", ["orchestrator.py", "dispatch", "--workflow", "test", "--repo", "test/repo"]):
                 result = orchestrator.main()
-        mock_main.assert_called_once()
-        assert result == 0
+            mock_main.assert_called_once()
+            assert result == 0
+        finally:
+            orchestrator.COMMANDS["dispatch"] = original

@@ -14,7 +14,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
-from utils import create_base_parser, load_dependency_graph
+from utils import create_base_parser, dispatch_gh_workflow, load_dependency_graph
 
 
 def parse_args() -> argparse.Namespace:
@@ -125,19 +125,8 @@ def dispatch_workflow(
         return True
 
     print(f"  Dispatching: {workflow_file}")
-    cmd = ["gh", "workflow", "run", workflow_file, "--repo", repo]
-    if trigger_descendants:
-        cmd.extend(["-f", "trigger_descendants=true"])
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    if result.returncode != 0:
-        print(f"    Error: {result.stderr.strip()}", file=sys.stderr)
-        return False
-    return True
+    extra_args = ["-f", "trigger_descendants=true"] if trigger_descendants else None
+    return dispatch_gh_workflow(workflow_file, repo, extra_args)
 
 
 def main() -> int:

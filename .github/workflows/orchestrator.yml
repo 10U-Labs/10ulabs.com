@@ -43,41 +43,9 @@ jobs:
       - id: files
         name: Get changed files
         run: |
-          echo "Getting changed files..."
-          echo "Event before: ${{ github.event.before }}"
-          echo "Current SHA: ${{ github.sha }}"
-          # More robust base commit detection
-          BEFORE="${{ github.event.before }}"
-          ZERO="0000000000000000000000000000000000000000"
-          if [ "$BEFORE" = "$ZERO" ]; then
-            # Initial commit or force push
-            BASE="HEAD~1"
-            echo "Using HEAD~1 for initial/force push"
-          elif git cat-file -e "${{ github.event.before }}" 2>/dev/null; then
-            BASE="${{ github.event.before }}"
-            echo "Using event.before: $BASE"
-          else
-            # Fallback for shallow clone issues
-            BASE="HEAD~1"
-            echo "Fallback to HEAD~1 due to missing commit"
-          fi
-          # Get changed files with error handling
-          SHA="${{ github.sha }}"
-          if CHANGED=$(git diff --name-only "$BASE" "$SHA" 2>/dev/null); then
-            echo "Successfully got changed files using git diff"
-          else
-            echo "Warning: git diff failed, using git show for current commit"
-            CHANGED=$(git show --name-only --format="" "$SHA" || echo "")
-          fi
-          echo "Changed files:"
-          echo "$CHANGED"
-          # Use a more secure EOF marker
-          EOF_MARKER=$(openssl rand -hex 8)
-          {
-            echo "changed<<$EOF_MARKER"
-            echo "$CHANGED"
-            echo "$EOF_MARKER"
-          } >> "$GITHUB_OUTPUT"
+          python3 src/orchestrator/orchestrator.py get-changed-files \
+            --base "${{ github.event.before }}" \
+            --head "${{ github.sha }}" >> "$GITHUB_OUTPUT"
       - if: >-
           vars.USE_GITHUB_HOSTED == 'true' ||
           github.event.inputs.github_hosted == 'true' ||
@@ -106,29 +74,9 @@ jobs:
       - id: check-sa
         name: Check if static analysis should run
         run: |
-          CHANGED="${{ steps.files.outputs.changed }}"
-          echo "Checking if static analysis should run..."
-          echo "Changed files: $CHANGED"
-          PATTERNS=(
-            ".github/workflows/orchestrator.yml"
-            "etc/workflow-dependencies.json"
-            "src/orchestrator/cancel.py"
-            "src/orchestrator/compute_roots.py"
-            "src/orchestrator/dispatch.py"
-            "src/orchestrator/get_running.py"
-            "src/orchestrator/orchestrator.py"
-            "src/orchestrator/utils.py"
-          )
-          SHOULD_RUN="false"
-          for pattern in "${PATTERNS[@]}"; do
-            if echo "$CHANGED" | grep -qE "^${pattern}$"; then
-              SHOULD_RUN="true"
-              echo "Pattern matched: $pattern"
-              break
-            fi
-          done
-          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
-          echo "Should run static analysis: $SHOULD_RUN"
+          python3 src/orchestrator/orchestrator.py should-run \
+            --check static-analysis \
+            --changed "${{ steps.files.outputs.changed }}" >> "$GITHUB_OUTPUT"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-sa.outputs.should_run == 'true'
@@ -153,31 +101,13 @@ jobs:
           steps.check-sa.outputs.should_run == 'true'
         name: Run pylint
         run: |
-          echo "Running pylint..."
-          python3 -m pylint \
-            src/orchestrator/cancel.py \
-            src/orchestrator/compute_roots.py \
-            src/orchestrator/dispatch.py \
-            src/orchestrator/get_running.py \
-            src/orchestrator/orchestrator.py \
-            src/orchestrator/utils.py \
-            --fail-on=C,R,W \
-            --fail-under=10.0
-          echo "Pylint completed"
+          python3 -m pylint src/orchestrator/*.py \
+            --fail-on=C,R,W --fail-under=10.0
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-sa.outputs.should_run == 'true'
         name: Run mypy
-        run: |
-          echo "Running mypy..."
-          python3 -m mypy \
-            src/orchestrator/cancel.py \
-            src/orchestrator/compute_roots.py \
-            src/orchestrator/dispatch.py \
-            src/orchestrator/get_running.py \
-            src/orchestrator/orchestrator.py \
-            src/orchestrator/utils.py
-          echo "Mypy completed"
+        run: python3 -m mypy src/orchestrator/*.py
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-sa.outputs.should_run == 'true'
@@ -195,29 +125,9 @@ jobs:
       - id: check-ut
         name: Check if unit tests should run
         run: |
-          CHANGED="${{ steps.files.outputs.changed }}"
-          echo "Checking if unit tests should run..."
-          echo "Changed files: $CHANGED"
-          PATTERNS=(
-            ".github/workflows/orchestrator.yml"
-            "src/orchestrator/cancel.py"
-            "src/orchestrator/compute_roots.py"
-            "src/orchestrator/dispatch.py"
-            "src/orchestrator/get_running.py"
-            "src/orchestrator/orchestrator.py"
-            "src/orchestrator/utils.py"
-            "test/orchestrator/**"
-          )
-          SHOULD_RUN="false"
-          for pattern in "${PATTERNS[@]}"; do
-            if echo "$CHANGED" | grep -qE "^${pattern}$"; then
-              SHOULD_RUN="true"
-              echo "Pattern matched: $pattern"
-              break
-            fi
-          done
-          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
-          echo "Should run unit tests: $SHOULD_RUN"
+          python3 src/orchestrator/orchestrator.py should-run \
+            --check unit-tests \
+            --changed "${{ steps.files.outputs.changed }}" >> "$GITHUB_OUTPUT"
       - if: >-
           github.event_name == 'workflow_dispatch' ||
           steps.check-ut.outputs.should_run == 'true'
@@ -307,82 +217,12 @@ jobs:
           !contains(github.event.head_commit.message, '[dry run]')
         name: Dispatch root workflows (fire-and-forget)
         run: |
-          echo "Dispatching root workflows..."
-          ROOTS="${{ steps.plan.outputs.root_workflows }}"
-          # Check if gh CLI is available and authenticated
-          if ! command -v gh >/dev/null 2>&1; then
-            echo "Error: gh CLI not found"
-            exit 1
-          fi
-          # Verify authentication
-          if ! gh auth status >/dev/null 2>&1; then
-            echo "Error: gh CLI not authenticated"
-            echo "GH_TOKEN length: ${#GH_TOKEN}"
-            exit 1
-          fi
-          # Check for trigger_descendants input or [trigger descendants]
-          TRIGGER_DESCENDANTS=""
-          if [ "${{ inputs.trigger_descendants }}" = "true" ]; then
-            echo "trigger_descendants input is true"
-            TRIGGER_DESCENDANTS="-f trigger_descendants=true"
-          else
-            # Heredoc with single-quoted delimiter prevents bash
-            # interpreting ${...} patterns in commit messages
-            COMMIT_MSG=$(cat <<'COMMIT_EOF'
-          ${{ github.event.head_commit.message }}
-          COMMIT_EOF
-            )
-            if echo "$COMMIT_MSG" | grep -qi '\[trigger descendants\]'; then
-              echo "Found [trigger descendants] in commit message"
-              TRIGGER_DESCENDANTS="-f trigger_descendants=true"
-            fi
-          fi
-          # Auto-enable trigger_descendants for dependency graph changes
-          CHANGED="${{ steps.files.outputs.changed }}"
-          if echo "$CHANGED" | grep -q 'etc/workflow-dependencies.json'; then
-            echo "workflow-dependencies.json changed, cascading"
-            TRIGGER_DESCENDANTS="-f trigger_descendants=true"
-          fi
-          DISPATCH_COUNT=0
-          echo "$ROOTS" | while read -r WORKFLOW; do
-            if [ -n "$WORKFLOW" ]; then
-              echo "Dispatching ${WORKFLOW}.yml..."
-              WORKFLOW_FILE=".github/workflows/${WORKFLOW}.yml"
-              # Verify workflow file exists
-              if [ ! -f "$WORKFLOW_FILE" ]; then
-                echo "Warning: Workflow file $WORKFLOW_FILE not found, skipping"
-                continue
-              fi
-              # Check if workflow accepts trigger_descendants input
-              REPO="${{ github.repository }}"
-              if [ -n "$TRIGGER_DESCENDANTS" ]; then
-                if grep -q 'trigger_descendants:' "$WORKFLOW_FILE"; then
-                  gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
-                    -f trigger_descendants=true && RESULT=0 || RESULT=1
-                else
-                  echo "  (workflow does not accept trigger_descendants)"
-                  gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
-                    && RESULT=0 || RESULT=1
-                fi
-              else
-                gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
-                  && RESULT=0 || RESULT=1
-              fi
-              if [ "$RESULT" -eq 0 ]; then
-                echo "  ✓ Successfully dispatched ${WORKFLOW}.yml"
-                DISPATCH_COUNT=$((DISPATCH_COUNT + 1))
-              else
-                echo "  ✗ Failed to dispatch ${WORKFLOW}.yml"
-              fi
-            fi
-          done
-          echo "Workflow dispatch completed"
-          echo "Successfully dispatched $DISPATCH_COUNT workflow(s)"
-          if [ -n "$TRIGGER_DESCENDANTS" ]; then
-            echo "Note: Descendants triggered via [trigger descendants]"
-          else
-            echo "Descendants NOT triggered (default behavior)"
-          fi
+          python3 src/orchestrator/orchestrator.py dispatch-roots \
+            --repo "${{ github.repository }}" \
+            --roots "${{ steps.plan.outputs.root_workflows }}" \
+            --changed "${{ steps.files.outputs.changed }}" \
+            --commit-message "${{ github.event.head_commit.message }}" \
+            --trigger-descendants "${{ inputs.trigger_descendants }}"
 name: Workflow Orchestrator
 on:
   push:

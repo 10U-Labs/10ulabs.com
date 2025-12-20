@@ -5,8 +5,10 @@ This module provides common functions used across multiple orchestration scripts
 to avoid code duplication.
 """
 import argparse
+import fnmatch
 import json
 import subprocess
+import sys
 from typing import Any
 
 
@@ -110,3 +112,48 @@ def get_workflow_runs(repo: str, status: str) -> list[dict[str, Any]]:
         return json.loads(result.stdout) if result.stdout.strip() else []
     except json.JSONDecodeError:
         return []
+
+
+def file_matches_pattern(filepath: str, pattern: str) -> bool:
+    """Check if a file path matches a glob pattern.
+
+    Supports ** for recursive directory matching.
+    """
+    if "**" in pattern:
+        base_pattern = pattern.replace("**", "*")
+        if fnmatch.fnmatch(filepath, base_pattern):
+            return True
+        dir_prefix = pattern.split("**")[0]
+        if filepath.startswith(dir_prefix):
+            return True
+    return fnmatch.fnmatch(filepath, pattern)
+
+
+def run_subprocess(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+    """Run a subprocess with standard options."""
+    return subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False
+    )
+
+
+def dispatch_gh_workflow(
+    workflow_file: str,
+    repo: str,
+    extra_args: list[str] | None = None
+) -> bool:
+    """Dispatch a GitHub workflow using gh CLI.
+
+    Returns True on success, False on failure.
+    """
+    cmd = ["gh", "workflow", "run", workflow_file, "--repo", repo]
+    if extra_args:
+        cmd.extend(extra_args)
+
+    result = run_subprocess(cmd)
+    if result.returncode != 0:
+        print(f"    Error: {result.stderr.strip()}", file=sys.stderr)
+        return False
+    return True
