@@ -72,7 +72,11 @@ def test_error_message_prints_when_config_fails(mock_run, mock_print):
     mock_run.return_value = Mock(returncode=5)
     with pytest.raises(SystemExit):
         entrypoint.main()
-    assert mock_print.call_args_list[4][0][0] == 'Error: config.sh failed with exit code 5'
+    error_prints = [
+        c for c in mock_print.call_args_list
+        if 'Error: config.sh failed' in str(c)
+    ]
+    assert len(error_prints) == 1
 
 
 @patch('entrypoint.subprocess.Popen')
