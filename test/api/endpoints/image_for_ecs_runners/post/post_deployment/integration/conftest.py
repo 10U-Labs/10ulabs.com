@@ -13,7 +13,7 @@ def _read_config():
 
 
 ENTRYPOINT_IMPORT = (
-    "import sys; sys.path.insert(0, '/home/runner'); import entrypoint; "
+    'import sys; sys.path.insert(0, "/home/runner"); import entrypoint; '
 )
 
 

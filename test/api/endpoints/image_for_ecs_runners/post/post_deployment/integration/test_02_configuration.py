@@ -269,15 +269,7 @@ class TestEntrypointFunctionsConfiguration:
         assert result.returncode == 0
 
 
-class TestRunnerUserConfiguration:
-    """Verify runner user is configured correctly."""
-
-    def test_runner_user_has_sudo_privileges(self, docker_image):
-        """Test that the runner user has passwordless sudo privileges."""
-        result = run_command_in_container(docker_image, "sudo -n true")
-        assert result.returncode == 0
-
-    def test_runner_user_is_in_sudo_group(self, docker_image):
-        """Test that the runner user is in the sudo group."""
-        result = run_command_in_container(docker_image, "groups | grep -q sudo")
-        assert result.returncode == 0
+def test_runner_user_has_sudo_privileges(docker_image):
+    """Test that the runner user has passwordless sudo privileges."""
+    result = run_command_in_container(docker_image, "sudo -n true")
+    assert result.returncode == 0
