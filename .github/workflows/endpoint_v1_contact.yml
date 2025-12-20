@@ -64,6 +64,15 @@ jobs:
         run: python3 -m mypy src/api/endpoints/contact/lambda/handler.py
       - name: Run mypy on tests
         run: MYPYPATH=lib/python python3 -m mypy test/api/endpoints/contact/
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/contact/lambda/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/contact/
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/contact && \

@@ -72,6 +72,15 @@ jobs:
             python3 -m mypy "$file"
           done
           MYPYPATH=lib/python python3 -m mypy test/api/endpoints/rack_designer/
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/rack_designer/lambdas/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py test/api/endpoints/rack_designer/
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/rack_designer

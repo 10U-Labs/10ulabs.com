@@ -110,6 +110,15 @@ jobs:
         run: python3 -m mypy src/api/operational/health/lambda/handler.py
       - name: Run mypy on tests
         run: MYPYPATH=lib/python python3 -m mypy test/api/operational/health/
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/operational/health/lambda/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/operational/health/
       - name: Terraform Format Check
         run: |
           cd src/api/operational/health

@@ -144,6 +144,16 @@ jobs:
           MYPYPATH=lib/python python3 -m mypy $SRC/*.py
           MYPYPATH=lib/python:$TEST/post_deployment python3 -m mypy \
             --explicit-package-bases lib/python/ec2_fleet/ $TEST/
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/image_for_ec2_runners/post/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/image_for_ec2_runners/post/
       - name: Run unit tests
         run: |
           TEST=test/api/endpoints/image_for_ec2_runners/post/pre_deployment

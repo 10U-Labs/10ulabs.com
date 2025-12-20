@@ -412,10 +412,21 @@ def run_javascript_lint(changed_files):
     return True
 
 
+def is_jscpd_available():
+    """Check if jscpd is installed and available."""
+    result = subprocess.run(
+        ['which', 'jscpd'], capture_output=True, text=True, check=False
+    )
+    return result.returncode == 0
+
+
 def run_python_duplicate_check(changed_files):
     """Run jscpd duplicate code check on Python files. Returns True if passed."""
     python_files = [f for f in changed_files if f.endswith('.py') and os.path.isfile(f)]
     if not python_files:
+        return True
+
+    if not is_jscpd_available():
         return True
 
     capture_print("\n" + "="*60)

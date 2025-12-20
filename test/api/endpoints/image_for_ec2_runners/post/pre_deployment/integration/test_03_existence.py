@@ -10,22 +10,29 @@ from botocore.exceptions import ClientError
 class TestIamResourcesExist:
     """Tests for IAM resources existence."""
 
-    def test_iam_instance_profile_exists(self, iam_client, config):
+    def test_iam_instance_profile_exists(
+        self, fetched_instance_profile, instance_profile_name
+    ):
         """Verify runner instance profile exists."""
-        profile_name = config.get("github_runner_iam_instance_profile_name", "")
-        if not profile_name:
+        if not instance_profile_name:
             pytest.skip("github_runner_iam_instance_profile_name not configured")
 
-        try:
-            response = iam_client.get_instance_profile(InstanceProfileName=profile_name)
-            assert response.get("InstanceProfile") is not None
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                pytest.fail(
-                    f"Instance profile '{profile_name}' does not exist. "
-                    "Run terraform apply in src/bootstrap/"
-                )
-            raise
+        assert fetched_instance_profile is not None, (
+            f"Instance profile '{instance_profile_name}' does not exist. "
+            "Run terraform apply in src/bootstrap/"
+        )
+
+    def test_iam_instance_profile_has_arn(
+        self, fetched_instance_profile, instance_profile_name
+    ):
+        """Verify runner instance profile has an ARN."""
+        if not instance_profile_name:
+            pytest.skip("github_runner_iam_instance_profile_name not configured")
+
+        if fetched_instance_profile is None:
+            pytest.skip("Instance profile does not exist")
+
+        assert fetched_instance_profile.get("Arn", "").startswith("arn:aws:iam::")
 
 
 class TestTerraformOutputsExist:
@@ -76,6 +83,20 @@ class TestSecurityGroupExists:
                 pytest.fail(f"Security group '{security_group_id}' does not exist")
             raise
 
+    def test_security_group_returns_group_id(self, ec2_client, security_group_id):
+        """Verify security group returns its group ID."""
+        if not security_group_id:
+            pytest.skip("No security group ID configured")
+
+        try:
+            response = ec2_client.describe_security_groups(GroupIds=[security_group_id])
+            sg = response.get("SecurityGroups", [{}])[0]
+            assert sg.get("GroupId") == security_group_id
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "InvalidGroup.NotFound":
+                pytest.skip("Security group does not exist")
+            raise
+
 
 class TestSubnetsExist:
     """Tests for subnets existence."""
@@ -94,29 +115,41 @@ class TestSubnetsExist:
                 pytest.fail(f"One or more subnets do not exist: {subnet_ids}")
             raise
 
+    def test_subnets_return_subnet_ids(self, ec2_client, subnet_ids):
+        """Verify subnets return their IDs."""
+        if not subnet_ids:
+            pytest.skip("No subnet IDs configured")
+
+        try:
+            response = ec2_client.describe_subnets(SubnetIds=subnet_ids)
+            found_ids = [s["SubnetId"] for s in response.get("Subnets", [])]
+            assert set(found_ids) == set(subnet_ids)
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "InvalidSubnetID.NotFound":
+                pytest.skip("One or more subnets do not exist")
+            raise
+
 
 class TestSourceAmiExists:
     """Tests for source AMI existence."""
 
-    def test_source_ami_exists_in_aws(self, ec2_client, source_ami_pattern):
+    def test_source_ami_exists_in_aws(
+        self, source_ami_images, source_ami_pattern_configured
+    ):
         """Verify source AMI exists in AWS."""
-        os_family = source_ami_pattern.get("os_family", "")
-        os_version = source_ami_pattern.get("os_version", "")
-        os_arch = source_ami_pattern.get("os_architecture", "arm64")
-
-        if not os_family or not os_version:
+        if not source_ami_pattern_configured:
             pytest.skip("Source AMI pattern not configured")
 
-        arch_filter = "arm64" if os_arch == "arm64" else "x86_64"
-        response = ec2_client.describe_images(
-            Filters=[
-                {"Name": "name", "Values": [f"{os_family}-{os_version}-*"]},
-                {"Name": "architecture", "Values": [arch_filter]},
-                {"Name": "state", "Values": ["available"]},
-            ],
-            Owners=["amazon", "self", "aws-marketplace"],
-        )
+        assert len(source_ami_images) > 0
 
-        assert len(response.get("Images", [])) > 0, (
-            f"No AMI found matching pattern: {os_family}-{os_version}-* ({arch_filter})"
-        )
+    def test_source_ami_has_image_id(
+        self, source_ami_images, source_ami_pattern_configured
+    ):
+        """Verify source AMI has an image ID."""
+        if not source_ami_pattern_configured:
+            pytest.skip("Source AMI pattern not configured")
+
+        if not source_ami_images:
+            pytest.skip("No matching AMI found")
+
+        assert source_ami_images[0].get("ImageId", "").startswith("ami-")

@@ -14,6 +14,7 @@ from test.api.conftest import (
 
 import boto3
 import pytest
+from botocore.exceptions import ClientError
 
 
 @pytest.fixture(scope="session")
@@ -115,6 +116,73 @@ def source_ami_pattern(config):
         "os_architecture": config.get("os_architecture", "arm64"),
     }
     return result
+
+
+@pytest.fixture(scope="session")
+def instance_profile_name(config):
+    """Get instance profile name from config."""
+    return config.get("github_runner_iam_instance_profile_name", "")
+
+
+@pytest.fixture(scope="session")
+def fetched_instance_profile(request):
+    """Fetch instance profile from IAM.
+
+    Returns the instance profile dict or None if not found.
+    """
+    client = request.getfixturevalue("iam_client")
+    profile_name = request.getfixturevalue("instance_profile_name")
+
+    if not profile_name:
+        return None
+
+    try:
+        response = client.get_instance_profile(InstanceProfileName=profile_name)
+        return response.get("InstanceProfile", {})
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchEntity":
+            return None
+        raise
+
+
+@pytest.fixture(scope="session")
+def source_ami_pattern_configured(request):
+    """Check if source AMI pattern is configured.
+
+    Returns True if os_family and os_version are set.
+    """
+    pattern = request.getfixturevalue("source_ami_pattern")
+    return bool(pattern.get("os_family") and pattern.get("os_version"))
+
+
+@pytest.fixture(scope="session")
+def source_ami_images(request):
+    """Fetch matching AMIs for the source_ami_pattern.
+
+    Returns a list of AMI images matching the OS family, version, and
+    architecture from the source_ami_pattern fixture.
+    """
+    client = request.getfixturevalue("ec2_client")
+    pattern = request.getfixturevalue("source_ami_pattern")
+
+    os_family = pattern.get("os_family", "")
+    os_version = pattern.get("os_version", "")
+    os_arch = pattern.get("os_architecture", "arm64")
+
+    if not os_family or not os_version:
+        return []
+
+    arch_filter = "arm64" if os_arch == "arm64" else "x86_64"
+    response = client.describe_images(
+        Filters=[
+            {"Name": "name", "Values": [f"{os_family}-{os_version}-*"]},
+            {"Name": "architecture", "Values": [arch_filter]},
+            {"Name": "state", "Values": ["available"]},
+        ],
+        Owners=["amazon", "self", "aws-marketplace"],
+    )
+
+    return response.get("Images", [])
 
 
 @pytest.fixture(scope="session")

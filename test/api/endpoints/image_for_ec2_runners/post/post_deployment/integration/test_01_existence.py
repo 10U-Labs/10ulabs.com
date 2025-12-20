@@ -42,6 +42,14 @@ class TestInstanceLaunches:
         waiter = ec2_client.get_waiter("instance_status_ok")
         waiter.wait(InstanceIds=[test_instance])
 
+    def test_instance_passes_system_status_checks(self, ec2_client, test_instance):
+        """Verify instance passes system status checks."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        waiter = ec2_client.get_waiter("system_status_ok")
+        waiter.wait(InstanceIds=[test_instance])
+
 
 class TestSsmAgentInstalled:
     """Tests for SSM agent installation."""
@@ -55,6 +63,15 @@ class TestSsmAgentInstalled:
 
         assert output["Status"] == "Success"
 
+    def test_ssm_agent_returns_path(self, ssm_client, test_instance, run_ssm_command):
+        """Verify SSM agent path is returned."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "which amazon-ssm-agent")
+
+        assert output["StandardOutputContent"].strip() != ""
+
 
 class TestDockerInstalled:
     """Tests for Docker installation."""
@@ -67,6 +84,15 @@ class TestDockerInstalled:
         output = run_ssm_command(ssm_client, test_instance, "which docker")
 
         assert output["Status"] == "Success"
+
+    def test_docker_returns_path(self, ssm_client, test_instance, run_ssm_command):
+        """Verify Docker path is returned."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(ssm_client, test_instance, "which docker")
+
+        assert output["StandardOutputContent"].strip() != ""
 
 
 class TestCloudwatchAgentInstalled:
@@ -84,6 +110,19 @@ class TestCloudwatchAgentInstalled:
         )
 
         assert output["Status"] == "Success"
+
+    def test_cloudwatch_agent_returns_path(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify CloudWatch agent path is returned."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        output = run_ssm_command(
+            ssm_client, test_instance, "which amazon-cloudwatch-agent-ctl"
+        )
+
+        assert output["StandardOutputContent"].strip() != ""
 
 
 class TestGithubRunnerFilesExist:

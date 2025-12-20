@@ -4,30 +4,41 @@ These tests verify that prerequisite resources are configured correctly.
 Assumes existence (Layer 3) has passed.
 """
 import pytest
-from botocore.exceptions import ClientError
 
 
 class TestIamResourcesConfiguration:
     """Tests for IAM resources configuration."""
 
-    def test_instance_profile_has_role_attached(self, iam_client, config):
+    def test_instance_profile_has_role_attached(
+        self, fetched_instance_profile, instance_profile_name
+    ):
         """Verify runner instance profile has a role attached."""
-        profile_name = config.get("github_runner_iam_instance_profile_name", "")
-        if not profile_name:
+        if not instance_profile_name:
             pytest.skip("github_runner_iam_instance_profile_name not configured")
 
-        try:
-            response = iam_client.get_instance_profile(InstanceProfileName=profile_name)
-            profile = response.get("InstanceProfile", {})
-            roles = profile.get("Roles", [])
-            assert len(roles) > 0, (
-                f"Instance profile '{profile_name}' has no roles attached. "
-                "The profile must have an IAM role for EC2 instances to assume."
-            )
-        except ClientError as e:
-            if e.response["Error"]["Code"] == "NoSuchEntity":
-                pytest.skip("Instance profile does not exist")
-            raise
+        if fetched_instance_profile is None:
+            pytest.skip("Instance profile does not exist")
+
+        roles = fetched_instance_profile.get("Roles", [])
+        assert len(roles) > 0, (
+            f"Instance profile '{instance_profile_name}' has no roles attached. "
+            "The profile must have an IAM role for EC2 instances to assume."
+        )
+
+    def test_instance_profile_role_has_arn(
+        self, fetched_instance_profile, instance_profile_name
+    ):
+        """Verify attached role has a valid ARN."""
+        if not instance_profile_name:
+            pytest.skip("github_runner_iam_instance_profile_name not configured")
+
+        if fetched_instance_profile is None:
+            pytest.skip("Instance profile does not exist")
+
+        roles = fetched_instance_profile.get("Roles", [])
+        if not roles:
+            pytest.skip("No roles attached to instance profile")
+        assert roles[0].get("Arn", "").startswith("arn:aws:iam::")
 
 
 class TestTerraformOutputFormats:
@@ -135,32 +146,29 @@ class TestSubnetsConfiguration:
 class TestSourceAmiConfiguration:
     """Tests for source AMI configuration."""
 
-    def test_source_ami_is_available(self, ec2_client, source_ami_pattern):
+    def test_source_ami_is_available(
+        self, source_ami_images, source_ami_pattern_configured
+    ):
         """Verify source AMI is in available state."""
-        os_family = source_ami_pattern.get("os_family", "")
-        os_version = source_ami_pattern.get("os_version", "")
-        os_arch = source_ami_pattern.get("os_architecture", "arm64")
-
-        if not os_family or not os_version:
+        if not source_ami_pattern_configured:
             pytest.skip("Source AMI pattern not configured")
 
-        arch_filter = "arm64" if os_arch == "arm64" else "x86_64"
-        response = ec2_client.describe_images(
-            Filters=[
-                {"Name": "name", "Values": [f"{os_family}-{os_version}-*"]},
-                {"Name": "architecture", "Values": [arch_filter]},
-                {"Name": "state", "Values": ["available"]},
-            ],
-            Owners=["amazon", "self", "aws-marketplace"],
-        )
-
-        images = response.get("Images", [])
-        if not images:
+        if not source_ami_images:
             pytest.skip("No matching AMI found")
 
-        assert images[0].get("State") == "available", (
-            f"Source AMI is not available: {images[0].get('State')}"
-        )
+        assert source_ami_images[0].get("State") == "available"
+
+    def test_source_ami_is_ebs_backed(
+        self, source_ami_images, source_ami_pattern_configured
+    ):
+        """Verify source AMI uses EBS root device."""
+        if not source_ami_pattern_configured:
+            pytest.skip("Source AMI pattern not configured")
+
+        if not source_ami_images:
+            pytest.skip("No matching AMI found")
+
+        assert source_ami_images[0].get("RootDeviceType") == "ebs"
 
 
 class TestInstanceTypesConfiguration:

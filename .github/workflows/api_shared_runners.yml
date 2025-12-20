@@ -91,6 +91,11 @@ jobs:
           yamllint --strict \
             --config-data "{extends: default, rules: {$RULES}}" \
             .github/workflows/api_shared_runners.yml
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/shared/runners/
       - name: Run unit tests
         run: |
           python3 -m pytest \

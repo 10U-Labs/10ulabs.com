@@ -104,6 +104,16 @@ jobs:
           TEST="test/api/endpoints/image_for_ecs_runners/endpoint/"
           MYPYPATH=lib/python python3 -m mypy $SRC
           MYPYPATH=lib/python python3 -m mypy --explicit-package-bases $TEST
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/image_for_ecs_runners/lambda/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/api/conftest.py \
+            test/api/endpoints/conftest.py \
+            test/api/endpoints/image_for_ecs_runners/endpoint/
       - name: Terraform Format Check
         run: |
           cd src/api/endpoints/image_for_ecs_runners

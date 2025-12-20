@@ -51,6 +51,18 @@ class TestSsmAgentWiring:
 
         assert output["StandardOutputContent"].strip() == "active"
 
+    def test_ssm_agent_service_is_enabled(
+        self, ssm_client, test_instance, run_ssm_command
+    ):
+        """Verify SSM agent service is enabled."""
+        if not test_instance:
+            pytest.fail("Test instance not created")
+
+        cmd = "systemctl is-enabled amazon-ssm-agent"
+        output = run_ssm_command(ssm_client, test_instance, cmd)
+
+        assert output["StandardOutputContent"].strip() == "enabled"
+
 
 class TestDotNetDependenciesResolved:
     """Tests for .NET shared library dependencies."""

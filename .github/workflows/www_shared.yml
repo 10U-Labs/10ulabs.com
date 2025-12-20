@@ -103,6 +103,11 @@ jobs:
             --fail-under=10.0
       - name: Run mypy
         run: MYPYPATH=lib/python python3 -m mypy test/www/shared/
+      - name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/www/shared/ \
+            test/lib/terraform/modules/
       - name: Terraform Format Check
         run: cd src/www/shared && terraform fmt -diff -check -recursive
       - name: Terraform Init

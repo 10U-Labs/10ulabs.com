@@ -13,12 +13,19 @@ def test_aws_credentials_valid(sts_client):
     assert response.get("Account") is not None
 
 
-def test_aws_credentials_return_account_id(sts_client):
-    """Verify GetCallerIdentity returns a valid AWS account ID."""
+def test_aws_credentials_return_numeric_account_id(sts_client):
+    """Verify GetCallerIdentity returns a numeric account ID."""
     response = sts_client.get_caller_identity()
     account_id = response.get("Account", "")
 
     assert account_id.isdigit()
+
+
+def test_aws_credentials_return_12_digit_account_id(sts_client):
+    """Verify GetCallerIdentity returns a 12-digit account ID."""
+    response = sts_client.get_caller_identity()
+    account_id = response.get("Account", "")
+
     assert len(account_id) == 12
 
 
@@ -27,4 +34,10 @@ def test_aws_credentials_return_arn(sts_client):
     response = sts_client.get_caller_identity()
 
     assert "Arn" in response
+
+
+def test_aws_credentials_arn_has_correct_prefix(sts_client):
+    """Verify ARN has correct AWS prefix."""
+    response = sts_client.get_caller_identity()
+
     assert response["Arn"].startswith("arn:aws:")

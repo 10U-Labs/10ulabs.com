@@ -562,3 +562,9 @@ def test_run_python_duplicate_check_returns_true_for_empty_list(pre_git_checks):
     """Test run_python_duplicate_check returns True for empty file list."""
     result = pre_git_checks.run_python_duplicate_check([])
     assert result is True
+
+
+def test_is_jscpd_available_returns_boolean(pre_git_checks):
+    """Test is_jscpd_available returns a boolean value."""
+    result = pre_git_checks.is_jscpd_available()
+    assert isinstance(result, bool)

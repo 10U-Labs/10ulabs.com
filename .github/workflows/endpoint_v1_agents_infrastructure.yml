@@ -117,6 +117,10 @@ jobs:
       - name: Run mypy
         run: |
           python3 -m mypy src/api/endpoints/agents/runtime/
+      - name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/api/endpoints/agents/runtime/
       - name: Terraform Apply
         run: |
           cd src/api/endpoints/agents

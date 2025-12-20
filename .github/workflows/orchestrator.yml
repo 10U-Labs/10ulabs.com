@@ -178,6 +178,20 @@ jobs:
             src/orchestrator/orchestrator.py \
             src/orchestrator/utils.py
           echo "Mypy completed"
+      - if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check-sa.outputs.should_run == 'true'
+        name: Check for duplicate code in source Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ src/orchestrator/
+      - if: >-
+          github.event_name == 'workflow_dispatch' ||
+          steps.check-sa.outputs.should_run == 'true'
+        name: Check for duplicate code in test Python files
+        run: |
+          jscpd --pattern "**/*.py" --threshold 0 --reporters console \
+            lib/python/ test/conftest.py test/orchestrator/
       - id: check-ut
         name: Check if unit tests should run
         run: |
