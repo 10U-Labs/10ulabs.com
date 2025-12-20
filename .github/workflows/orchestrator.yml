@@ -337,6 +337,12 @@ jobs:
               TRIGGER_DESCENDANTS="-f trigger_descendants=true"
             fi
           fi
+          # Auto-enable trigger_descendants for dependency graph changes
+          CHANGED="${{ steps.files.outputs.changed }}"
+          if echo "$CHANGED" | grep -q 'etc/workflow-dependencies.json'; then
+            echo "workflow-dependencies.json changed, cascading"
+            TRIGGER_DESCENDANTS="-f trigger_descendants=true"
+          fi
           DISPATCH_COUNT=0
           echo "$ROOTS" | while read -r WORKFLOW; do
             if [ -n "$WORKFLOW" ]; then
