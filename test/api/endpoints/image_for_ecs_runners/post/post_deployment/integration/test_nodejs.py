@@ -40,6 +40,13 @@ def test_jsonlint_installed_globally(docker_image):
     assert result.returncode == 0
 
 
+def test_jscpd_installed_globally(docker_image):
+    """Test that jscpd is installed globally."""
+    result = run_command_in_container(docker_image, "which jscpd")
+
+    assert result.returncode == 0
+
+
 def test_node_path_includes_global_modules(docker_image):
     """Test that NODE_PATH includes global node_modules."""
     result = run_command_in_container(

@@ -94,6 +94,12 @@ def instance_types(request):
 
 
 @pytest.fixture(scope="session")
+def sts_client(aws_region):
+    """Create an STS client for authentication tests."""
+    return boto3.client("sts", region_name=aws_region)
+
+
+@pytest.fixture(scope="session")
 def ssm_client(aws_region):
     """Create an SSM client for the test session."""
     return boto3.client("ssm", region_name=aws_region)

@@ -550,3 +550,15 @@ def test_run_blocked_lint_config_check_allows_deleted_pylintrc(pre_git_checks):
     changed_files = ['nonexistent/path/.pylintrc']
     result = pre_git_checks.run_blocked_lint_config_check(changed_files)
     assert result is True
+
+
+def test_run_python_duplicate_check_returns_true_for_no_python_files(pre_git_checks):
+    """Test run_python_duplicate_check returns True when no Python files."""
+    result = pre_git_checks.run_python_duplicate_check(['README.md', 'package.json'])
+    assert result is True
+
+
+def test_run_python_duplicate_check_returns_true_for_empty_list(pre_git_checks):
+    """Test run_python_duplicate_check returns True for empty file list."""
+    result = pre_git_checks.run_python_duplicate_check([])
+    assert result is True

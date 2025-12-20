@@ -216,6 +216,65 @@ def test_install_jsonlint_installs_globally(setup_module):
         mock_run.assert_called_once_with("npm install -g jsonlint")
 
 
+def test_install_jscpd_installs_globally(setup_module):
+    """Test install_jscpd installs jscpd globally via npm."""
+    with patch.object(setup_module, "run") as mock_run:
+        setup_module.install_jscpd()
+        mock_run.assert_called_once_with("npm install -g jscpd")
+
+
+class TestInstallHadolint:
+    """Tests for the install_hadolint function."""
+
+    def test_downloads_hadolint(self, setup_module):
+        """Downloads hadolint binary."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_hadolint("arm64")
+            calls = [str(c) for c in mock_run.call_args_list]
+            download_call = [c for c in calls if "curl" in c][0]
+            assert "hadolint-Linux-arm64" in download_call
+
+    def test_installs_to_usr_local_bin(self, setup_module):
+        """Installs to usr local bin."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_hadolint("arm64")
+            calls = [str(c) for c in mock_run.call_args_list]
+            assert any("/usr/local/bin/hadolint" in c for c in calls)
+
+    def test_makes_executable(self, setup_module):
+        """Makes executable."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_hadolint("arm64")
+            calls = [str(c) for c in mock_run.call_args_list]
+            assert any("chmod +x" in c for c in calls)
+
+
+class TestInstallTerraform:
+    """Tests for the install_terraform function."""
+
+    def test_downloads_correct_version(self, setup_module):
+        """Downloads correct version."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_terraform("arm64", "1.10.3")
+            calls = [str(c) for c in mock_run.call_args_list]
+            download_call = [c for c in calls if "curl" in c][0]
+            assert "terraform_1.10.3_linux_arm64.zip" in download_call
+
+    def test_extracts_to_usr_local_bin(self, setup_module):
+        """Extracts to usr local bin."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_terraform("arm64", "1.10.3")
+            calls = [str(c) for c in mock_run.call_args_list]
+            assert any("unzip" in c and "/usr/local/bin" in c for c in calls)
+
+    def test_cleans_up_zip_file(self, setup_module):
+        """Cleans up zip file."""
+        with patch.object(setup_module, "run") as mock_run:
+            setup_module.install_terraform("arm64", "1.10.3")
+            calls = [str(c) for c in mock_run.call_args_list]
+            assert any("rm /tmp/terraform.zip" in c for c in calls)
+
+
 class TestInstallYq:
     """Tests for the install_yq function."""
 
@@ -378,6 +437,7 @@ class TestMain:
              patch.object(setup_module, "install_yq"), \
              patch.object(setup_module, "install_eslint"), \
              patch.object(setup_module, "install_jsonlint"), \
+             patch.object(setup_module, "install_jscpd"), \
              patch.object(setup_module, "install_hadolint"), \
              patch.object(setup_module, "install_terraform"), \
              patch.object(setup_module, "create_runner_user"), \
@@ -408,6 +468,7 @@ class TestMain:
              patch.object(setup_module, "install_yq") as mocks["yq"], \
              patch.object(setup_module, "install_eslint") as mocks["eslint"], \
              patch.object(setup_module, "install_jsonlint") as mocks["jsonlint"], \
+             patch.object(setup_module, "install_jscpd") as mocks["jscpd"], \
              patch.object(setup_module, "install_hadolint") as mocks["hadolint"], \
              patch.object(setup_module, "install_terraform") as mocks["terraform"], \
              patch.object(setup_module, "create_runner_user") as mocks["user"], \
@@ -428,6 +489,7 @@ class TestMain:
         mocks["yq"].assert_called_once_with("arm64", config["yq_version"])
         mocks["eslint"].assert_called_once()
         mocks["jsonlint"].assert_called_once()
+        mocks["jscpd"].assert_called_once()
         mocks["hadolint"].assert_called_once_with("arm64")
         mocks["terraform"].assert_called_once_with("arm64", config["terraform_version"])
         mocks["user"].assert_called_once_with(config["runner_user"])

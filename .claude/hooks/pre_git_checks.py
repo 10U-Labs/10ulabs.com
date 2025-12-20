@@ -412,6 +412,51 @@ def run_javascript_lint(changed_files):
     return True
 
 
+def run_python_duplicate_check(changed_files):
+    """Run jscpd duplicate code check on Python files. Returns True if passed."""
+    python_files = [f for f in changed_files if f.endswith('.py') and os.path.isfile(f)]
+    if not python_files:
+        return True
+
+    capture_print("\n" + "="*60)
+    capture_print("PHASE: PYTHON DUPLICATE CODE CHECK")
+    capture_print("="*60)
+
+    check_src = any(f.startswith('src/') for f in python_files)
+    check_test = any(f.startswith('test/') for f in python_files)
+    failed = False
+
+    for directory, should_check in [('src', check_src), ('test', check_test)]:
+        if should_check and os.path.isdir(directory):
+            capture_print(f"\nChecking {directory}/ for duplicate Python code...")
+            result = subprocess.run(
+                ['jscpd', f'{directory}/', '--format', 'python',
+                 '--min-lines', '5', '--min-tokens', '50', '--reporters', 'console'],
+                capture_output=True, text=True, check=False
+            )
+            # jscpd outputs "Found X clones" - check for non-zero clones
+            if 'clones found' in result.stdout.lower():
+                if 'Found 0 clones' not in result.stdout:
+                    capture_print(f"  DUPLICATES FOUND in {directory}/:")
+                    for line in result.stdout.strip().split('\n'):
+                        capture_print(f"    {line}")
+                    failed = True
+                else:
+                    capture_print(f"  No duplicates found in {directory}/")
+            else:
+                capture_print(f"  No duplicates found in {directory}/")
+
+    if failed:
+        capture_print("\n" + "="*60)
+        capture_print("PYTHON DUPLICATE CODE CHECK FAILED")
+        capture_print("Refactor duplicate code before committing.")
+        capture_print("="*60)
+        return False
+
+    capture_print("No duplicate Python code found.")
+    return True
+
+
 def run_blocked_lint_config_check(changed_files):
     """Check for blocked lint config files. Returns True if passed, False if failed.
 
@@ -820,6 +865,7 @@ def run_file_level_checks(changed_files):
         (run_workflow_yaml_lint, "WORKFLOW YAML LINT FAILED - Fix YAML lint errors"),
         (run_json_lint, "JSON LINT FAILED - Fix JSON syntax errors"),
         (run_javascript_lint, "JAVASCRIPT LINT FAILED - Fix ESLint errors"),
+        (run_python_duplicate_check, "PYTHON DUPLICATE CODE CHECK FAILED - Refactor duplicates"),
     ]
     for check_fn, failure_msg in checks:
         if not check_fn(changed_files):
