@@ -338,11 +338,17 @@ jobs:
                 echo "Warning: Workflow file $WORKFLOW_FILE not found, skipping"
                 continue
               fi
-              # Dispatch with error handling (include skip flag if set)
+              # Check if workflow accepts skip_descendants input
               REPO="${{ github.repository }}"
               if [ -n "$SKIP_DESCENDANTS" ]; then
-                gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
-                  -f skip_descendants=true && RESULT=0 || RESULT=1
+                if grep -q 'skip_descendants:' "$WORKFLOW_FILE"; then
+                  gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
+                    -f skip_descendants=true && RESULT=0 || RESULT=1
+                else
+                  echo "  (workflow does not accept skip_descendants)"
+                  gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
+                    && RESULT=0 || RESULT=1
+                fi
               else
                 gh workflow run "$WORKFLOW_FILE" --repo "$REPO" \
                   && RESULT=0 || RESULT=1
