@@ -1,12 +1,15 @@
 """Pytest fixtures for hook tests."""
 import importlib.util
 import sys
+from pathlib import Path
 from types import ModuleType
 
 import pytest
-from repo_utils import REPO_ROOT
 
-
+# Calculate repo root for path setup and HOOKS_DIR
+# Note: Can't use repo_utils here because --confcutdir=test/claude prevents
+# loading test/conftest.py which sets up lib/python path
+REPO_ROOT = Path(__file__).resolve().parents[4]
 HOOKS_DIR = REPO_ROOT / ".claude" / "hooks"
 
 # Add hooks directory to path for imports
