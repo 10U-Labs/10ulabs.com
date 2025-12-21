@@ -1,5 +1,6 @@
 """Pytest fixtures for pre-deployment integration tests."""
 import subprocess
+from pathlib import Path
 
 import boto3
 import pytest
