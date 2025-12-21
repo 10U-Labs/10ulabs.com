@@ -15,87 +15,100 @@ def shared_config():
 
 
 @pytest.fixture(scope="session")
-def aws_region(shared_config):
+def aws_region(request):
     """Provide the AWS region from shared config."""
-    return shared_config["aws_region"]
+    config = request.getfixturevalue("shared_config")
+    return config["aws_region"]
 
 
 @pytest.fixture(scope="session")
-def ssm_github_pat_name(shared_config):
+def ssm_github_pat_name(request):
     """Provide the SSM parameter name for GitHub PAT."""
-    return shared_config["ssm_github_pat_name"]
+    config = request.getfixturevalue("shared_config")
+    return config["ssm_github_pat_name"]
 
 
 @pytest.fixture(scope="session")
-def state_bucket_name(shared_config):
+def state_bucket_name(request):
     """Provide the Terraform state bucket name."""
-    return shared_config["name_for_terraform_state_bucket"]
+    config = request.getfixturevalue("shared_config")
+    return config["name_for_terraform_state_bucket"]
 
 
 @pytest.fixture(scope="session")
-def sts_client(aws_region):
+def sts_client(request):
     """Create an STS client."""
-    return boto3.client("sts", region_name=aws_region)
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("sts", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def iam_client(aws_region):
+def iam_client(request):
     """Create an IAM client."""
-    return boto3.client("iam", region_name=aws_region)
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("iam", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def s3_client(aws_region):
+def s3_client(request):
     """Create an S3 client."""
-    return boto3.client("s3", region_name=aws_region)
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("s3", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def ssm_client(aws_region):
+def ssm_client(request):
     """Create an SSM client."""
-    return boto3.client("ssm", region_name=aws_region)
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("ssm", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def kms_client(aws_region):
+def kms_client(request):
     """Create a KMS client."""
-    return boto3.client("kms", region_name=aws_region)
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("kms", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def ecr_client(aws_region):
+def ecr_client(request):
     """Create an ECR client."""
-    return boto3.client("ecr", region_name=aws_region)
+    region = request.getfixturevalue("aws_region")
+    return boto3.client("ecr", region_name=region)
 
 
 @pytest.fixture(scope="session")
-def caller_identity(sts_client):
+def caller_identity(request):
     """Get the current caller identity."""
-    return sts_client.get_caller_identity()
+    client = request.getfixturevalue("sts_client")
+    return client.get_caller_identity()
 
 
 @pytest.fixture(scope="session")
-def current_role_arn(caller_identity):
+def current_role_arn(request):
     """Extract the role ARN from caller identity."""
-    arn = caller_identity.get("Arn", "")
+    identity = request.getfixturevalue("caller_identity")
+    arn = identity.get("Arn", "")
     # Convert assumed-role ARN to role ARN
     # arn:aws:sts::123:assumed-role/role-name/session -> arn:aws:iam::123:role/role-name
     if ":assumed-role/" in arn:
-        account = caller_identity.get("Account", "")
+        account = identity.get("Account", "")
         role_name = arn.split("/")[1]
         return f"arn:aws:iam::{account}:role/{role_name}"
     return arn
 
 
 @pytest.fixture(scope="session")
-def current_role_name(current_role_arn):
+def current_role_name(request):
     """Extract the role name from the role ARN."""
-    if not current_role_arn:
+    role_arn = request.getfixturevalue("current_role_arn")
+    if not role_arn:
         return ""
-    return current_role_arn.split("/")[-1]
+    return role_arn.split("/")[-1]
 
 
 @pytest.fixture(scope="session")
-def ecr_repository_name(shared_config):
+def ecr_repository_name(request):
     """Provide the ECR repository name for agents."""
-    return shared_config["ecr_repository_name_agents"]
+    config = request.getfixturevalue("shared_config")
+    return config["ecr_repository_name_agents"]

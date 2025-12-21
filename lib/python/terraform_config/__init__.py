@@ -17,7 +17,7 @@ Example usage:
 
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from repo_utils import REPO_ROOT as _REPO_ROOT, extract_brace_block
 
@@ -335,6 +335,36 @@ def extract_iam_role_names(tf_file: Path) -> list:
     return roles
 
 
+def _resolve_lambda_function_name(
+    block: str, prefix: str, locals_map: Dict, tfvars: Dict, handlers: Dict
+) -> Optional[str]:
+    """Resolve a Lambda function name from a resource block."""
+    # Try quoted string
+    match = re.search(r'^\s*function_name\s*=\s*"([^"]+)"', block, re.MULTILINE)
+    if match:
+        return _resolve_prefix_refs(match.group(1), prefix)
+
+    # Try local reference
+    match = re.search(r'^\s*function_name\s*=\s*local\.(\w+)', block, re.MULTILINE)
+    if match and match.group(1) in locals_map:
+        return locals_map[match.group(1)]
+
+    # Try var reference
+    match = re.search(r'^\s*function_name\s*=\s*var\.(\w+)', block, re.MULTILINE)
+    if match and match.group(1) in tfvars:
+        return tfvars[match.group(1)]
+
+    # Try module.shared.lambda_handler_names reference
+    match = re.search(
+        r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
+        block, re.MULTILINE
+    )
+    if match and match.group(1) in handlers:
+        return handlers[match.group(1)]
+
+    return None
+
+
 def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False) -> list:
     """Extract Lambda function names from a Terraform file.
 
@@ -357,31 +387,11 @@ def extract_lambda_function_names(tf_file: Path, use_handler_names: bool = False
 
     for match in re.finditer(r'resource\s+"aws_lambda_function"\s+"([^"]+)"\s*\{', content):
         block_content = extract_brace_block(content, match.end() - 1)
-        name_match = re.search(
-            r'^\s*function_name\s*=\s*"([^"]+)"', block_content, re.MULTILINE
+        func_name = _resolve_lambda_function_name(
+            block_content, prefix, local_values, tfvars_values, handler_names
         )
-        if name_match:
-            func_name = _resolve_prefix_refs(name_match.group(1), prefix)
+        if func_name:
             functions.append((match.group(1), func_name))
-        else:
-            local_match = re.search(
-                r'^\s*function_name\s*=\s*local\.(\w+)', block_content, re.MULTILINE
-            )
-            if local_match and local_match.group(1) in local_values:
-                functions.append((match.group(1), local_values[local_match.group(1)]))
-            else:
-                var_match = re.search(
-                    r'^\s*function_name\s*=\s*var\.(\w+)', block_content, re.MULTILINE
-                )
-                if var_match and var_match.group(1) in tfvars_values:
-                    functions.append((match.group(1), tfvars_values[var_match.group(1)]))
-                elif use_handler_names:
-                    module_match = re.search(
-                        r'^\s*function_name\s*=\s*module\.shared\.lambda_handler_names\.(\w+)',
-                        block_content, re.MULTILINE
-                    )
-                    if module_match and module_match.group(1) in handler_names:
-                        functions.append((match.group(1), handler_names[module_match.group(1)]))
 
     return functions
 

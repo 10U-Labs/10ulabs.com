@@ -64,21 +64,18 @@ def validate_name(name: str) -> Optional[str]:
     if not name:
         return "Name is empty"
 
-    if not name[0].isupper():
-        return f"Name '{name}' must start with uppercase letter"
+    # Define validation rules as (condition, error_message) tuples
+    violations = [
+        (not name[0].isupper(), f"Name '{name}' must start with uppercase letter"),
+        ('-' in name, f"Name '{name}' contains dash (-), use PascalCase instead"),
+        ('_' in name, f"Name '{name}' contains underscore (_), use PascalCase instead"),
+        (' ' in name, f"Name '{name}' contains space, use PascalCase instead"),
+        (not name.isalnum(), f"Name '{name}' contains non-alphanumeric characters"),
+    ]
 
-    # Check for common violations
-    if '-' in name:
-        return f"Name '{name}' contains dash (-), use PascalCase instead"
-
-    if '_' in name:
-        return f"Name '{name}' contains underscore (_), use PascalCase instead"
-
-    if ' ' in name:
-        return f"Name '{name}' contains space, use PascalCase instead"
-
-    if not name.isalnum():
-        return f"Name '{name}' contains non-alphanumeric characters"
+    for condition, error_msg in violations:
+        if condition:
+            return error_msg
 
     return None
 

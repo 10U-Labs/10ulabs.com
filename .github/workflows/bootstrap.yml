@@ -109,11 +109,11 @@ jobs:
       - name: Run pylint
         run: |
           PYTHONPATH=lib/python python3 -m pylint \
-            test/bootstrap/ \
+            lib/python/ test/bootstrap/ \
             --fail-on=C,R,W \
             --fail-under=10.0
       - name: Run mypy
-        run: MYPYPATH=lib/python python3 -m mypy test/bootstrap/
+        run: MYPYPATH=lib/python python3 -m mypy lib/python/ test/bootstrap/
       - name: Check for duplicate code in test Python files
         run: |
           jscpd --pattern "**/*.py" --threshold 0 --reporters console \

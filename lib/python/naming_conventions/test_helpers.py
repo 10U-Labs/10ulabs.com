@@ -16,6 +16,11 @@ def create_iam_role_tests(roles: list):
     class TestIAMRoleNamingConventions:
         """Tests for IAM role naming conventions."""
 
+        @staticmethod
+        def get_role_count():
+            """Return the number of roles being tested."""
+            return len(roles)
+
         @pytest.mark.parametrize(
             "resource_name,role_name",
             roles,
@@ -42,6 +47,11 @@ def create_lambda_function_tests(functions: list):
     """
     class TestLambdaFunctionNamingConventions:
         """Tests for Lambda function naming conventions."""
+
+        @staticmethod
+        def get_function_count():
+            """Return the number of functions being tested."""
+            return len(functions)
 
         @pytest.mark.parametrize(
             "resource_name,function_name",
@@ -70,6 +80,11 @@ def create_sqs_queue_tests(queues: list):
     """
     class TestSQSQueueNamingConventions:
         """Tests for SQS queue naming conventions."""
+
+        @staticmethod
+        def get_queue_count():
+            """Return the number of queues being tested."""
+            return len(queues)
 
         @pytest.mark.parametrize(
             "resource_name,queue_name",

@@ -185,7 +185,7 @@ def parse_labels(label_list: List[str]) -> ParsedLabels:
         raise LabelParseError(
             f"Multiple compute labels found: {sorted(compute_labels)}"
         )
-    compute = compute_labels.pop()
+    compute_type = compute_labels.pop()
 
     # Extract architecture (may be None for gpu/fpga)
     arch_labels = labels & ALL_ARCHITECTURES
@@ -224,7 +224,7 @@ def parse_labels(label_list: List[str]) -> ParsedLabels:
 
     return ParsedLabels(
         platform=platform,
-        compute=compute,
+        compute=compute_type,
         pricing=pricing,
         runner_id=runner_id,
         architecture=architecture,
