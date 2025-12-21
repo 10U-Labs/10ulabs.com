@@ -1,8 +1,4 @@
-"""Pytest fixtures for health endpoint tests.
-
-Implements the layer marker system for integration tests with automatic skip
-when earlier layers fail.
-"""
+"""Pytest fixtures for health endpoint tests."""
 import re
 from typing import Dict
 
@@ -10,46 +6,10 @@ import boto3
 import pytest
 from repo_utils import REPO_ROOT
 
+# Use shared layer marker plugin
+pytest_plugins = ['pytest_layers']
+
 HEALTH_SRC = REPO_ROOT / "src" / "api" / "operational" / "health"
-
-# Track layer results across test session for layer-based skip
-_layer_results: Dict[int, Dict[str, int]] = {}
-
-
-def pytest_configure(config):
-    """Register custom markers."""
-    config.addinivalue_line(
-        "markers",
-        "layer(num): mark test as belonging to layer N"
-    )
-
-
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    """Track pass/fail counts per layer."""
-    del call  # Required by hook signature but unused
-    outcome = yield
-    result = outcome.get_result()
-
-    if result.when == "call":
-        for marker in item.iter_markers("layer"):
-            layer_num = marker.args[0]
-            if layer_num not in _layer_results:
-                _layer_results[layer_num] = {"passed": 0, "failed": 0}
-
-            if result.passed:
-                _layer_results[layer_num]["passed"] += 1
-            elif result.failed:
-                _layer_results[layer_num]["failed"] += 1
-
-
-def pytest_runtest_setup(item):
-    """Skip tests if earlier layers failed."""
-    for marker in item.iter_markers("layer"):
-        layer_num = marker.args[0]
-        for prev_layer in range(1, layer_num):
-            if _layer_results.get(prev_layer, {}).get("failed", 0) > 0:
-                pytest.skip(f"Skipped: layer {prev_layer} had failures")
 
 
 @pytest.fixture(scope="module")
